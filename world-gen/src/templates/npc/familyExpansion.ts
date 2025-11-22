@@ -1,6 +1,6 @@
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, NPCSubtype } from '../../types/worldTypes';
-import { generateName, pickRandom, findEntities } from '../../utils/helpers';
+import { generateName, pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 
 /**
  * Family Expansion Template
@@ -79,7 +79,7 @@ export const familyExpansion: GrowthTemplate = {
         description: `Child of ${target.name}, raised in ${colony.name}`,
         status: 'alive',
         prominence: 'marginal',
-        tags: ['second_generation', colony.name.toLowerCase()]
+        tags: ['second_generation', `name:${slugifyName(colony.name)}`]
       });
 
       // Create relationships for each child

@@ -8,7 +8,7 @@
 
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { pickRandom } from '../../utils/helpers';
+import { pickRandom, generateName } from '../../utils/helpers';
 import {
   analyzeMagicPresence,
   generateMysticalTheme,
@@ -95,12 +95,18 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     // PROCEDURALLY GENERATE theme based on magical state
     const theme = generateMysticalTheme(magic, graph.currentEra.id);
 
+    // Generate penguin-style name with themeString as descriptor
+    const locationName = generateName('location');
+    const formattedTheme = theme.themeString.split('_').map(w =>
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,  // 'anomaly'
-      name: `PLACEHOLDER_${theme.themeString}`,
-      description: `PLACEHOLDER_mystical_${magic.manifestationType}`,
+      name: `${locationName} ${formattedTheme}`,
+      description: `A mystical ${formattedTheme.toLowerCase()} manifesting ${magic.manifestationType} energies`,
       status: 'unspoiled',
       prominence: 'recognized',  // Mystical places are notable
       tags: theme.tags,

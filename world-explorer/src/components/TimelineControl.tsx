@@ -1,19 +1,49 @@
-import { useState, useEffect } from 'react';
-import type { WorldState } from '../types/world.ts';
+import { useState, useEffect, useRef } from 'react';
+import type { WorldState, LoreData, EraNarrativeLore } from '../types/world.ts';
+import EraNarrative from './EraNarrative.tsx';
 import './TimelineControl.css';
 
 interface TimelineControlProps {
   worldData: WorldState;
+  loreData: LoreData | null;
   currentTick: number;
   onTickChange: (tick: number) => void;
 }
 
-export default function TimelineControl({ worldData, currentTick, onTickChange }: TimelineControlProps) {
+export default function TimelineControl({ worldData, loreData, currentTick, onTickChange }: TimelineControlProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
+  const [selectedEraNarrative, setSelectedEraNarrative] = useState<EraNarrativeLore | null>(null);
+  const previousTickRef = useRef(currentTick);
 
   const maxTick = worldData.metadata.tick;
   const minTick = 0;
+
+  // Get all era narratives from lore
+  const eraNarratives = (loreData?.records.filter(
+    record => record.type === 'era_narrative'
+  ) as EraNarrativeLore[]) || [];
+
+  // Detect when crossing era transition ticks
+  useEffect(() => {
+    const previousTick = previousTickRef.current;
+    previousTickRef.current = currentTick;
+
+    // Check if we crossed an era transition
+    const crossedNarrative = eraNarratives.find(
+      narrative => {
+        const tick = narrative.metadata.tick;
+        return (previousTick < tick && currentTick >= tick) ||
+               (previousTick > tick && currentTick <= tick);
+      }
+    );
+
+    if (crossedNarrative && isPlaying) {
+      // Auto-show narrative when playing through
+      setSelectedEraNarrative(crossedNarrative);
+      setIsPlaying(false);
+    }
+  }, [currentTick, eraNarratives, isPlaying]);
 
   // Auto-play functionality
   useEffect(() => {
@@ -151,6 +181,35 @@ export default function TimelineControl({ worldData, currentTick, onTickChange }
           )}
         </div>
       </div>
+
+      {/* Era Narrative Milestones */}
+      {eraNarratives.length > 0 && (
+        <div className="timeline-milestones">
+          {eraNarratives.map(narrative => {
+            const tick = narrative.metadata.tick;
+            const percent = (tick / maxTick) * 100;
+            return (
+              <button
+                key={narrative.id}
+                className={`timeline-milestone ${currentTick === tick ? 'active' : ''}`}
+                style={{ left: `${percent}%` }}
+                onClick={() => setSelectedEraNarrative(narrative)}
+                title={`${narrative.metadata.from} → ${narrative.metadata.to} (Tick ${tick})`}
+              >
+                📜
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Era Narrative Modal */}
+      {selectedEraNarrative && (
+        <EraNarrative
+          lore={selectedEraNarrative}
+          onClose={() => setSelectedEraNarrative(null)}
+        />
+      )}
     </div>
   );
 }

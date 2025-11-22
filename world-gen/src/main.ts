@@ -44,8 +44,8 @@ const llmConfig = {
 const enrichmentConfig = {
   batchSize: Number(process.env.LLM_BATCH_SIZE) || 3,
   mode: llmMode,
-  maxEntityEnrichments: llmPartial ? 5 : undefined,
-  maxRelationshipEnrichments: llmPartial ? 3 : undefined,
+  maxEntityEnrichments: llmPartial ? 1 : undefined,
+  maxRelationshipEnrichments: llmPartial ? 1 : undefined,
   maxEraNarratives: llmPartial ? 1 : undefined
 };
 const enrichmentService = llmEnabled

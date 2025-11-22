@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import type { WorldState } from '../types/world.ts';
+import type { WorldState, LoreData, DescriptionLore, RelationshipBackstoryLore } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships } from '../utils/dataTransform.ts';
+import LoreSection from './LoreSection.tsx';
+import RelationshipStoryModal from './RelationshipStoryModal.tsx';
 import './EntityDetail.css';
 
 interface EntityDetailProps {
   entityId?: string;
   worldData: WorldState;
+  loreData: LoreData | null;
   onRelatedClick: (entityId: string) => void;
 }
 
-export default function EntityDetail({ entityId, worldData, onRelatedClick }: EntityDetailProps) {
+export default function EntityDetail({ entityId, worldData, loreData, onRelatedClick }: EntityDetailProps) {
+  // Hooks must be called before any early returns
+  const [selectedRelationshipLore, setSelectedRelationshipLore] = useState<RelationshipBackstoryLore | null>(null);
+  const [expandedOutgoing, setExpandedOutgoing] = useState<Set<string>>(new Set());
+  const [expandedIncoming, setExpandedIncoming] = useState<Set<string>>(new Set());
+
   if (!entityId) {
     return (
       <div className="entity-detail empty">
@@ -34,6 +42,24 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
   const relatedEntities = getRelatedEntities(worldData, entityId);
   const relationships = getRelationships(worldData, entityId);
 
+  // Find lore for this entity
+  const descriptionLore = loreData?.records.find(
+    record => record.type === 'description' && record.targetId === entityId
+  ) as DescriptionLore | undefined;
+
+  // Helper to find relationship lore
+  const findRelationshipLore = (srcId: string, dstId: string, kind: string): RelationshipBackstoryLore | undefined => {
+    return loreData?.records.find(
+      record => {
+        if (record.type !== 'relationship_backstory') return false;
+        const relLore = record as RelationshipBackstoryLore;
+        return relLore.relationship.src === srcId &&
+               relLore.relationship.dst === dstId &&
+               relLore.relationship.kind === kind;
+      }
+    ) as RelationshipBackstoryLore | undefined;
+  };
+
   const outgoingRels = relationships.filter(r => r.src === entityId);
   const incomingRels = relationships.filter(r => r.dst === entityId);
 
@@ -54,9 +80,6 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
 
   const outgoingGroups = groupByKind(outgoingRels);
   const incomingGroups = groupByKind(incomingRels);
-
-  const [expandedOutgoing, setExpandedOutgoing] = useState<Set<string>>(new Set());
-  const [expandedIncoming, setExpandedIncoming] = useState<Set<string>>(new Set());
 
   const toggleOutgoing = (kind: string) => {
     const newExpanded = new Set(expandedOutgoing);
@@ -117,6 +140,9 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
         </p>
       </div>
 
+      {/* Lore */}
+      {descriptionLore && <LoreSection lore={descriptionLore} />}
+
       {/* Status */}
       <div className="mb-6">
         <div className="section-header">Status</div>
@@ -176,15 +202,29 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
                     <div className="accordion-content">
                       {rels.map((rel, i) => {
                         const target = getRelatedEntity(rel.dst);
+                        const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         return target ? (
-                          <button
-                            key={i}
-                            onClick={() => onRelatedClick(target.id)}
-                            className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}
-                          >
-                            <div className="accordion-row-name">{target.name}</div>
-                            <div className="accordion-row-kind">({target.kind})</div>
-                          </button>
+                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
+                            <button
+                              onClick={() => onRelatedClick(target.id)}
+                              className="accordion-row-button"
+                            >
+                              <div className="accordion-row-name">{target.name}</div>
+                              <div className="accordion-row-kind">({target.kind})</div>
+                            </button>
+                            {relLore && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRelationshipLore(relLore);
+                                }}
+                                className="lore-indicator"
+                                title="View relationship story"
+                              >
+                                📜
+                              </button>
+                            )}
+                          </div>
                         ) : null;
                       })}
                     </div>
@@ -218,15 +258,29 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
                     <div className="accordion-content">
                       {rels.map((rel, i) => {
                         const source = getRelatedEntity(rel.src);
+                        const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         return source ? (
-                          <button
-                            key={i}
-                            onClick={() => onRelatedClick(source.id)}
-                            className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}
-                          >
-                            <div className="accordion-row-name">{source.name}</div>
-                            <div className="accordion-row-kind">({source.kind})</div>
-                          </button>
+                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
+                            <button
+                              onClick={() => onRelatedClick(source.id)}
+                              className="accordion-row-button"
+                            >
+                              <div className="accordion-row-name">{source.name}</div>
+                              <div className="accordion-row-kind">({source.kind})</div>
+                            </button>
+                            {relLore && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRelationshipLore(relLore);
+                                }}
+                                className="lore-indicator"
+                                title="View relationship story"
+                              >
+                                📜
+                              </button>
+                            )}
+                          </div>
                         ) : null;
                       })}
                     </div>
@@ -252,6 +306,15 @@ export default function EntityDetail({ entityId, worldData, onRelatedClick }: En
           </div>
         </div>
       </div>
+
+      {/* Relationship Story Modal */}
+      {selectedRelationshipLore && (
+        <RelationshipStoryModal
+          lore={selectedRelationshipLore}
+          worldData={worldData}
+          onClose={() => setSelectedRelationshipLore(null)}
+        />
+      )}
     </div>
   );
 }

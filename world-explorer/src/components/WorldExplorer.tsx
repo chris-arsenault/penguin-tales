@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WorldState, Filters, EntityKind } from '../types/world.ts';
+import type { WorldState, Filters, EntityKind, LoreData } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
 import GraphView from './GraphView.tsx';
 import FilterPanel from './FilterPanel.tsx';
@@ -9,9 +9,10 @@ import './WorldExplorer.css';
 
 interface WorldExplorerProps {
   worldData: WorldState;
+  loreData: LoreData | null;
 }
 
-export default function WorldExplorer({ worldData }: WorldExplorerProps) {
+export default function WorldExplorer({ worldData, loreData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
   const [filters, setFilters] = useState<Filters>({
@@ -76,6 +77,7 @@ export default function WorldExplorer({ worldData }: WorldExplorerProps) {
         <EntityDetail
           entityId={selectedEntityId}
           worldData={worldData}
+          loreData={loreData}
           onRelatedClick={setSelectedEntityId}
         />
       </div>
@@ -83,6 +85,7 @@ export default function WorldExplorer({ worldData }: WorldExplorerProps) {
       {/* Timeline Control */}
       <TimelineControl
         worldData={worldData}
+        loreData={loreData}
         currentTick={currentTick}
         onTickChange={setCurrentTick}
       />

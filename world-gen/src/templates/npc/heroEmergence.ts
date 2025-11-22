@@ -1,6 +1,6 @@
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { generateName, pickRandom, findEntities } from '../../utils/helpers';
+import { generateName, pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -36,8 +36,8 @@ export const heroEmergence: GrowthTemplate = {
       name: generateName('hero'),
       description: `A brave penguin who emerged during troubled times in ${colony.name}`,
       status: 'alive',
-      prominence: 'recognized',
-      tags: ['brave', 'emergent', colony.name.toLowerCase()]
+      prominence: 'marginal', // Heroes start marginal, must earn prominence
+      tags: ['brave', 'emergent', `name:${slugifyName(colony.name)}`]
     };
     
     const abilities = findEntities(graph, { kind: 'abilities' });

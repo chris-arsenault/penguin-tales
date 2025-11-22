@@ -159,6 +159,22 @@ export function adjustProminence(
   return order[newIndex];
 }
 
+// Name tag helpers (for deterministic slug tags that track final names)
+export function slugifyName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+export function upsertNameTag(entity: HardState, sourceName: string): void {
+  const slug = slugifyName(sourceName);
+  const withoutNameTags = (entity.tags || []).filter(tag => !tag.startsWith('name:'));
+  const base = withoutNameTags.slice(0, 4); // reserve space for name tag
+  entity.tags = [...base, `name:${slug}`];
+}
+
 // Initial state normalization
 export function normalizeInitialState(entities: any[]): HardState[] {
   return entities.map(entity => ({
@@ -412,9 +428,11 @@ export function areRelationshipsCompatible(
   const CONTRADICTIONS: Record<string, string[]> = {
     'enemy_of': ['lover_of', 'follower_of', 'ally_of', 'allied_with'],
     'lover_of': ['enemy_of', 'rival_of'],
-    'rival_of': ['lover_of', 'follower_of'],
+    'rival_of': ['lover_of', 'follower_of', 'mentor_of'],  // Can't mentor your rival
     'follower_of': ['enemy_of', 'rival_of'],
-    'at_war_with': ['allied_with']
+    'at_war_with': ['allied_with'],
+    'mentor_of': ['rival_of'],  // Can't mentor your rival
+    'searching_for': ['lover_of', 'follower_of']  // Implies absence/distance
   };
 
   const incompatible = CONTRADICTIONS[newKind] || [];

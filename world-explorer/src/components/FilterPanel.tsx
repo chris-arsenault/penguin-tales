@@ -135,7 +135,12 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
                 </button>
               </div>
               {sortedRelationshipTypes.map(type => {
-                const isChecked = filters.relationshipTypes.length === 0 || filters.relationshipTypes.includes(type);
+                // Empty array = all checked
+                // Array with all types = all unchecked (special "none" case)
+                // Otherwise = checked if included
+                const isChecked = filters.relationshipTypes.length === 0 ? true
+                  : filters.relationshipTypes.length === sortedRelationshipTypes.length ? false
+                  : filters.relationshipTypes.includes(type);
                 return (
                   <label key={type} className="filter-checkbox-label">
                     <input

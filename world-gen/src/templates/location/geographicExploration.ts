@@ -7,7 +7,7 @@
 
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { pickRandom } from '../../utils/helpers';
+import { pickRandom, generateName } from '../../utils/helpers';
 import {
   generateExplorationTheme,
   shouldDiscoverLocation,
@@ -88,12 +88,18 @@ export const geographicExploration: GrowthTemplate = {
     // PROCEDURALLY GENERATE neutral theme based on era
     const theme = generateExplorationTheme(graph);
 
+    // Generate penguin-style name with themeString as descriptor
+    const locationName = generateName('location');
+    const formattedTheme = theme.themeString.split('_').map(w =>
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,
-      name: `PLACEHOLDER_${theme.themeString}`,
-      description: `PLACEHOLDER_exploration_${graph.currentEra.id}`,
+      name: `${locationName} ${formattedTheme}`,
+      description: `A newly discovered ${formattedTheme.toLowerCase()} during the ${graph.currentEra.name}`,
       status: 'unspoiled',
       prominence: 'marginal',
       tags: theme.tags,

@@ -1,6 +1,6 @@
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { generateName, pickRandom, findEntities } from '../../utils/helpers';
+import { generateName, pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -45,8 +45,8 @@ export const succession: GrowthTemplate = {
       name: generateName('mayor'),
       description: `Successor to ${oldLeader.name} in ${colony.name}`,
       status: 'alive',
-      prominence: 'recognized',
-      tags: ['successor', colony.name.toLowerCase()]
+      prominence: 'marginal', // New leaders start marginal, must earn respect
+      tags: ['successor', `name:${slugifyName(colony.name)}`]
     };
 
     const relationships: Relationship[] = [

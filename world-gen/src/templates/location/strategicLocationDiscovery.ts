@@ -8,7 +8,7 @@
 
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { pickRandom } from '../../utils/helpers';
+import { pickRandom, generateName } from '../../utils/helpers';
 import {
   analyzeConflictPatterns,
   generateStrategicTheme,
@@ -87,12 +87,18 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     // PROCEDURALLY GENERATE theme based on conflict state
     const theme = generateStrategicTheme(conflict, graph.currentEra.id);
 
+    // Generate penguin-style name with themeString as descriptor
+    const locationName = generateName('location');
+    const formattedTheme = theme.themeString.split('_').map(w =>
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,
-      name: `PLACEHOLDER_${theme.themeString}`,
-      description: `PLACEHOLDER_strategic_${conflict.type}`,
+      name: `${locationName} ${formattedTheme}`,
+      description: `A strategic ${formattedTheme.toLowerCase()} providing tactical advantage in the ${conflict.type} conflict`,
       status: 'unspoiled',
       prominence: 'recognized',  // Strategic locations are notable
       tags: theme.tags,
