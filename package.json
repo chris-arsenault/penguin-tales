@@ -10,6 +10,8 @@
     "build:viz": "cd world-explorer && npm run build",
     "sync": "cp world-gen/output/generated_world.json world-explorer/src/data/worldData.json && echo '✅ World data synced to visualization'",
     "generate:sync": "npm run generate && npm run sync",
+    "generate:sync:partial": "LLM_ENABLED=partial npm run generate && npm run sync",
+    "generate:sync:full": "LLM_ENABLED=full npm run generate && npm run sync",
     "dev": "npm run generate:sync && npm run viz",
     "install:all": "cd world-gen && npm install && cd ../world-explorer && npm install",
     "clean:gen": "cd world-gen && npm run clean",

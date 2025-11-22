@@ -29,7 +29,11 @@ export class EnrichmentService {
     this.loreIndex = loreIndex;
     this.validator = new LoreValidator(loreIndex);
     this.config = {
-      batchSize: config?.batchSize || 3
+      batchSize: config?.batchSize || 3,
+      mode: config?.mode || 'full',
+      maxEntityEnrichments: config?.maxEntityEnrichments,
+      maxRelationshipEnrichments: config?.maxRelationshipEnrichments,
+      maxEraNarratives: config?.maxEraNarratives
     };
   }
 

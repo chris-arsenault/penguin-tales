@@ -9,8 +9,14 @@ export interface LLMConfig {
   temperature?: number;
 }
 
+export type EnrichmentMode = 'off' | 'partial' | 'full';
+
 export interface EnrichmentConfig {
   batchSize: number;
+  mode: EnrichmentMode;
+  maxEntityEnrichments?: number;
+  maxRelationshipEnrichments?: number;
+  maxEraNarratives?: number;
 }
 
 // Era definition
@@ -39,6 +45,12 @@ export interface Graph {
 
   // Discovery tracking (emergent system)
   discoveryState: import('./worldTypes').DiscoveryState;
+
+  // Relationship growth monitoring
+  growthMetrics: {
+    relationshipsPerTick: number[];  // Rolling window of last 20 ticks
+    averageGrowthRate: number;       // Average relationships added per tick
+  };
 }
 
 // History tracking
@@ -115,6 +127,10 @@ export interface EngineConfig {
   targetEntitiesPerKind: number;
   maxTicks: number;
   maxRelationshipsPerType: number;  // max relationships of same type per entity
+  relationshipBudget?: {
+    maxPerSimulationTick: number;  // Hard cap on relationships per simulation tick
+    maxPerGrowthPhase: number;     // Hard cap on relationships per growth phase
+  };
   llmConfig?: LLMConfig;
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;

@@ -26,7 +26,10 @@ import { validateWorld } from './utils/validators';
 import initialStateData from '../data/initialState.json';
 
 // LLM / lore configuration (default disabled to prevent accidents)
-const llmEnabled = process.env.LLM_ENABLED === 'true';
+const llmEnv = (process.env.LLM_ENABLED || '').toLowerCase();
+const llmPartial = llmEnv === 'partial';
+const llmEnabled = llmEnv === 'true' || llmEnv === 'full' || llmPartial;
+const llmMode: 'off' | 'partial' | 'full' = llmEnabled ? (llmPartial ? 'partial' : 'full') : 'off';
 const llmModel = process.env.LLM_MODEL || 'claude-3-5-haiku-20241022';
 const loreIndex = loadLoreIndex('./data/LORE_BIBLE.md');
 const llmConfig = {
@@ -36,8 +39,15 @@ const llmConfig = {
   maxTokens: 512,
   temperature: 0.4
 };
+const enrichmentConfig = {
+  batchSize: Number(process.env.LLM_BATCH_SIZE) || 3,
+  mode: llmMode,
+  maxEntityEnrichments: llmPartial ? 5 : undefined,
+  maxRelationshipEnrichments: llmPartial ? 3 : undefined,
+  maxEraNarratives: llmPartial ? 1 : undefined
+};
 const enrichmentService = llmEnabled
-  ? new EnrichmentService(llmConfig, loreIndex, { batchSize: Number(process.env.LLM_BATCH_SIZE) || 3 })
+  ? new EnrichmentService(llmConfig, loreIndex, enrichmentConfig)
   : undefined;
 
 // Configuration
@@ -53,7 +63,7 @@ const config: EngineConfig = {
   systems: allSystems,
   pressures: pressures,
   llmConfig,
-  enrichmentConfig: { batchSize: Number(process.env.LLM_BATCH_SIZE) || 3 },
+  enrichmentConfig,
   loreIndex,
 
   // Tuning parameters
@@ -61,7 +71,13 @@ const config: EngineConfig = {
   simulationTicksPerGrowth: 15,       // simulation ticks between growth phases (increased to reduce NPC spam)
   targetEntitiesPerKind: 30,          // target ~150 total entities (5 kinds)
   maxTicks: 500,                      // maximum simulation ticks
-  maxRelationshipsPerType: 3          // DEPRECATED: now using per-kind warning thresholds in helpers.ts
+  maxRelationshipsPerType: 3,         // DEPRECATED: now using per-kind warning thresholds in helpers.ts
+
+  // Engine-level safeguards
+  relationshipBudget: {
+    maxPerSimulationTick: 50,         // Hard cap: prevent exponential growth during simulation
+    maxPerGrowthPhase: 150            // Hard cap: prevent template spam during growth
+  }
 };
 
 // Main execution
@@ -70,7 +86,8 @@ async function generateWorld() {
   console.log('   PROCEDURAL WORLD HISTORY GENERATOR');
   console.log('      Super Penguin Colony Simulation');
   console.log('===========================================\n');
-  console.log(`LLM enrichment: ${llmEnabled ? 'enabled' : 'disabled'}${llmEnabled ? ` (${llmModel})` : ''}\n`);
+  const llmStatus = llmEnabled ? (llmPartial ? 'partial' : 'full') : 'disabled';
+  console.log(`LLM enrichment: ${llmStatus}${llmEnabled ? ` (${llmModel})` : ''}\n`);
 
   // Parse and normalize initial state
   const initialState: HardState[] = normalizeInitialState(initialStateData.hardState);

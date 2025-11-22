@@ -1,7 +1,7 @@
 import { Graph, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
 import { LoreRecord } from '../types/lore';
 import { HardState, Relationship } from '../types/worldTypes';
-import {
+import { 
   generateId,
   addEntity,
   addRelationship,
@@ -20,6 +20,13 @@ export class WorldEngine {
   private currentEpoch: number;
   private enrichmentService?: EnrichmentService;
   private pendingEnrichments: Promise<void>[] = [];
+  private entityEnrichmentsUsed = 0;
+  private relationshipEnrichmentsUsed = 0;
+  private eraNarrativesUsed = 0;
+
+  // Engine-level safeguards
+  private systemMetrics: Map<string, { relationshipsCreated: number; lastThrottleCheck: number }> = new Map();
+  private lastRelationshipCount: number = 0;
   
   constructor(config: EngineConfig, initialState: HardState[], enrichmentService?: EnrichmentService) {
     this.config = config;
@@ -44,6 +51,12 @@ export class WorldEngine {
         currentThreshold: 0.3,  // Base threshold
         lastDiscoveryTick: -999,  // Start far in past so first discovery can happen
         discoveriesThisEpoch: 0
+      },
+
+      // Relationship growth monitoring
+      growthMetrics: {
+        relationshipsPerTick: [],
+        averageGrowthRate: 0
       }
     };
     
@@ -241,6 +254,10 @@ export class WorldEngine {
     const relationshipsThisTick: Relationship[] = [];
     const modifiedEntityIds: string[] = [];
 
+    // Budget enforcement
+    const budget = this.config.relationshipBudget?.maxPerSimulationTick || Infinity;
+    let relationshipsAddedThisTick = 0;
+
     for (const system of this.config.systems) {
       const modifier = getSystemModifier(era, system.id);
       if (modifier === 0) continue; // System disabled
@@ -248,15 +265,36 @@ export class WorldEngine {
       try {
         const result = system.apply(this.graph, modifier);
 
-        // Apply relationships
-        result.relationshipsAdded.forEach(rel => {
+        // Track system metrics
+        const metric = this.systemMetrics.get(system.id) || { relationshipsCreated: 0, lastThrottleCheck: 0 };
+
+        // Apply relationships with budget check
+        for (const rel of result.relationshipsAdded) {
+          // Check budget
+          if (relationshipsAddedThisTick >= budget) {
+            console.warn(`⚠️  RELATIONSHIP BUDGET REACHED: ${budget}/tick at tick ${this.graph.tick}`);
+            console.warn(`   Remaining systems may not add relationships this tick`);
+            break;
+          }
+
           const before = this.graph.relationships.length;
           addRelationship(this.graph, rel.kind, rel.src, rel.dst);
           const after = this.graph.relationships.length;
+
           if (after > before) {
             relationshipsThisTick.push(rel);
+            relationshipsAddedThisTick++;
+            metric.relationshipsCreated++;
           }
-        });
+        }
+
+        // Update system metrics and check for aggressive systems
+        if (metric.relationshipsCreated > 500 && this.graph.tick - metric.lastThrottleCheck > 20) {
+          console.warn(`⚠️  AGGRESSIVE SYSTEM: ${system.id} has created ${metric.relationshipsCreated} relationships`);
+          console.warn(`   Consider adding throttling or reducing probabilities`);
+          metric.lastThrottleCheck = this.graph.tick;
+        }
+        this.systemMetrics.set(system.id, metric);
 
         // Apply modifications
         result.entitiesModified.forEach(mod => {
@@ -294,6 +332,9 @@ export class WorldEngine {
         entitiesModified: modifiedEntityIds
       });
     }
+
+    // Monitor relationship growth rate
+    this.monitorRelationshipGrowth();
   }
   
   private updatePressures(era: Era): void {
@@ -301,15 +342,40 @@ export class WorldEngine {
       const current = this.graph.pressures.get(pressure.id) || pressure.value;
       const growth = pressure.growth(this.graph);
       const decay = current > 50 ? pressure.decay : -pressure.decay;
-      
+
       // Apply era modifier if present
       const eraModifier = era.pressureModifiers?.[pressure.id] || 1.0;
-      
+
       const newValue = current + (growth + decay) * eraModifier;
       this.graph.pressures.set(pressure.id, Math.max(0, Math.min(100, newValue)));
     });
   }
-  
+
+  private monitorRelationshipGrowth(): void {
+    const currentCount = this.graph.relationships.length;
+    const growth = currentCount - this.lastRelationshipCount;
+
+    // Update rolling window
+    this.graph.growthMetrics.relationshipsPerTick.push(growth);
+    if (this.graph.growthMetrics.relationshipsPerTick.length > 20) {
+      this.graph.growthMetrics.relationshipsPerTick.shift();
+    }
+
+    // Calculate average growth rate
+    const window = this.graph.growthMetrics.relationshipsPerTick;
+    const avgGrowth = window.reduce((a, b) => a + b, 0) / (window.length || 1);
+    this.graph.growthMetrics.averageGrowthRate = avgGrowth;
+
+    // Warn if exponential growth detected
+    if (avgGrowth > 30 && window.length >= 10) {
+      console.warn(`⚠️  HIGH RELATIONSHIP GROWTH RATE: ${avgGrowth.toFixed(1)}/tick`);
+      console.warn(`   Current: ${currentCount} relationships, growing at ${avgGrowth.toFixed(1)}/tick`);
+      console.warn(`   Consider reducing system probabilities or adding throttling`);
+    }
+
+    this.lastRelationshipCount = currentCount;
+  }
+
   private pruneAndConsolidate(): void {
     // Mark very old, unconnected entities as 'forgotten'
     for (const entity of this.graph.entities.values()) {
@@ -355,10 +421,18 @@ export class WorldEngine {
   private queueEntityEnrichment(entities: HardState[]): void {
     if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
     
+    const limit = this.config.enrichmentConfig?.maxEntityEnrichments;
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      const remaining = (limit ?? 0) - this.entityEnrichmentsUsed;
+      if (remaining <= 0) return;
+      entities = entities.slice(0, remaining);
+    }
+    
     const context = this.buildEnrichmentContext();
     const enrichmentPromise = (async () => {
       const records = await this.enrichmentService!.enrichEntities(entities, context);
       this.graph.loreRecords.push(...records);
+      this.entityEnrichmentsUsed += entities.length;
       
       // Abilities get an extra pass to keep tech/magic in bounds
       const abilityRecords = await Promise.all(
@@ -397,9 +471,18 @@ export class WorldEngine {
     });
     
     const context = this.buildEnrichmentContext();
-    const promise = this.enrichmentService.enrichRelationships(notable, actors, context)
+    let relationshipsToEnrich = notable;
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      const limit = this.config.enrichmentConfig?.maxRelationshipEnrichments ?? 0;
+      const remaining = limit - this.relationshipEnrichmentsUsed;
+      if (remaining <= 0) return;
+      relationshipsToEnrich = notable.slice(0, remaining);
+    }
+    
+    const promise = this.enrichmentService.enrichRelationships(relationshipsToEnrich, actors, context)
       .then(records => {
         this.graph.loreRecords.push(...records);
+        this.relationshipEnrichmentsUsed += relationshipsToEnrich.length;
       })
       .catch(error => console.warn('Relationship enrichment failed:', error));
     
@@ -409,6 +492,10 @@ export class WorldEngine {
   private queueEraNarrative(fromEra: Era, toEra: Era): void {
     if (!this.enrichmentService?.isEnabled()) return;
     if (fromEra.id === toEra.id) return;
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      const limit = this.config.enrichmentConfig?.maxEraNarratives ?? 0;
+      if (this.eraNarrativesUsed >= limit) return;
+    }
     
     const actors = Array.from(this.graph.entities.values())
       .filter(e => getProminenceValue(e.prominence) >= 3)
@@ -424,6 +511,7 @@ export class WorldEngine {
     }).then(record => {
       if (record) {
         this.graph.loreRecords.push(record);
+        this.eraNarrativesUsed += 1;
         this.graph.history.push({
           tick: this.graph.tick,
           era: toEra.id,

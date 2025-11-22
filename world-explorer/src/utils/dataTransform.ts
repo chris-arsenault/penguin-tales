@@ -118,6 +118,14 @@ export function getAllTags(worldState: WorldState): string[] {
   return Array.from(tagSet).sort();
 }
 
+export function getAllRelationshipTypes(worldState: WorldState): string[] {
+  const typeSet = new Set<string>();
+  worldState.relationships.forEach(rel => {
+    typeSet.add(rel.kind);
+  });
+  return Array.from(typeSet).sort();
+}
+
 export function getEntityById(worldState: WorldState, id: string): HardState | undefined {
   return worldState.hardState.find(e => e.id === id);
 }
