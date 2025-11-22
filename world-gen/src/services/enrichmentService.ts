@@ -262,6 +262,116 @@ export class EnrichmentService {
     }
   }
 
+  public async enrichDiscoveryEvent(params: {
+    location: HardState;
+    explorer: HardState;
+    discoveryType: 'pressure' | 'exploration' | 'chain';
+    triggerContext: {
+      pressure?: string;
+      chainSource?: HardState;
+    };
+    tick: number;
+  }): Promise<LoreRecord | null> {
+    if (!this.isEnabled()) return null;
+
+    let contextClue = '';
+    if (params.discoveryType === 'pressure' && params.triggerContext.pressure) {
+      contextClue = `driven by ${params.triggerContext.pressure} pressure`;
+    } else if (params.discoveryType === 'chain' && params.triggerContext.chainSource) {
+      contextClue = `following clues from ${params.triggerContext.chainSource.name}`;
+    } else {
+      contextClue = 'through exploratory ventures';
+    }
+
+    const prompt = [
+      `Generate a lore-consistent discovery narrative for a new location.`,
+      `Explorer: ${params.explorer.name} (${params.explorer.subtype}) - ${params.explorer.description}`,
+      `Discovered: ${params.location.name} (${params.location.subtype})`,
+      `Discovery method: ${contextClue}`,
+      `Geographic context: ${this.loreIndex.geography.constraints.totalArea}, vertical depth matters`,
+      `Recent discovery precedent: ${this.loreIndex.geography.discoveryPrecedents[0]?.significance || 'none'}`,
+      `Keep it grounded in canon (${this.loreIndex.canon.join('; ')}).`,
+      `Return JSON: { "narrative": string, "significance": string }.`
+    ].join('\n');
+
+    const result = await this.llm.complete({
+      systemPrompt: 'You write concise, lore-aware discovery narratives. Output JSON only.',
+      prompt,
+      json: true,
+      maxTokens: 300
+    });
+
+    if (!result.text) return null;
+
+    try {
+      const parsed = JSON.parse(result.text);
+      const record: LoreRecord = {
+        id: nextLoreId('discovery'),
+        type: 'discovery_event',
+        targetId: params.location.id,
+        text: `${params.explorer.name} discovered ${params.location.name}: ${parsed.narrative}`,
+        cached: result.cached,
+        metadata: {
+          explorer: params.explorer.id,
+          discoveryType: params.discoveryType,
+          significance: parsed.significance,
+          tick: params.tick
+        }
+      };
+      this.loreLog.push(record);
+      return record;
+    } catch (error) {
+      console.warn('Failed to parse discovery event response', error);
+      return null;
+    }
+  }
+
+  public async generateChainLink(params: {
+    sourceLocation: HardState;
+    revealedLocationTheme: string;
+    explorer?: HardState;
+  }): Promise<LoreRecord | null> {
+    if (!this.isEnabled()) return null;
+
+    const prompt = [
+      `Explain why discovering ${params.sourceLocation.name} would lead to finding a ${params.revealedLocationTheme}.`,
+      `Source location: ${params.sourceLocation.name} (${params.sourceLocation.subtype}) - ${params.sourceLocation.description}`,
+      params.explorer ? `Explorer: ${params.explorer.name}` : 'Explorers investigating the site',
+      `Geographic constraints: ${this.loreIndex.geography.constraints.totalArea}`,
+      `Examples of connections: ice caves lead to underground lakes, ruins reveal artifact chambers`,
+      `Return JSON: { "connection": string, "clue": string }.`
+    ].join('\n');
+
+    const result = await this.llm.complete({
+      systemPrompt: 'You explain logical geographic connections in discovery chains. Output JSON only.',
+      prompt,
+      json: true,
+      maxTokens: 200
+    });
+
+    if (!result.text) return null;
+
+    try {
+      const parsed = JSON.parse(result.text);
+      const record: LoreRecord = {
+        id: nextLoreId('chain'),
+        type: 'chain_link',
+        targetId: params.sourceLocation.id,
+        text: `${parsed.connection} | Clue: ${parsed.clue}`,
+        cached: result.cached,
+        metadata: {
+          sourceLocation: params.sourceLocation.id,
+          revealedTheme: params.revealedLocationTheme
+        }
+      };
+      this.loreLog.push(record);
+      return record;
+    } catch (error) {
+      console.warn('Failed to parse chain link response', error);
+      return null;
+    }
+  }
+
   private buildLoreHighlights(): string {
     const colonyLines = this.loreIndex.colonies
       .map(c => `${c.name}: ${c.style} | values: ${c.values.join(', ')}`)

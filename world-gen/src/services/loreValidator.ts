@@ -39,6 +39,39 @@ export class LoreValidator {
     return { valid: warnings.length === 0, warnings };
   }
 
+  validateLocation(location: HardState, discoveryContext?: any): ValidationResult {
+    const warnings: string[] = [];
+
+    // Check if location name uses lore-appropriate geographic terms
+    const geoTerms = ['shelf', 'ridge', 'hollow', 'stack', 'pools', 'reach', 'pass', 'peak', 'bridge', 'valley', 'cavern', 'grotto', 'ledge', 'terrace'];
+    const hasGeoTerm = geoTerms.some(term => location.name.toLowerCase().includes(term));
+    if (!hasGeoTerm && location.subtype === 'geographic_feature') {
+      warnings.push('Geographic feature name lacks typical terrain terminology');
+    }
+
+    // Check for mysterious/mystical locations
+    const mysticalTerms = ['glow', 'aurora', 'singing', 'echo', 'frozen', 'ancient', 'crystal', 'mirror', 'shadow', 'lost'];
+    const hasMysticalCue = mysticalTerms.some(term => location.name.toLowerCase().includes(term));
+    if (location.subtype === 'anomaly' && !hasMysticalCue) {
+      warnings.push('Anomaly name lacks mystical framing');
+    }
+
+    // Validate against established canon (avoid duplicate names)
+    const isDuplicate = this.loreIndex.geography.knownLocations.some(
+      known => known.name.toLowerCase() === location.name.toLowerCase()
+    );
+    if (isDuplicate) {
+      warnings.push(`Location name conflicts with established location in lore`);
+    }
+
+    // Check description has lore cues
+    if (location.description && !this.containsLoreCue(location.description)) {
+      warnings.push('Location description missing lore-specific elements');
+    }
+
+    return { valid: warnings.length === 0, warnings };
+  }
+
   private containsLoreCue(text: string): boolean {
     const cues = [
       'aurora',

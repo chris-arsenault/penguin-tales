@@ -115,12 +115,14 @@
       "npc": [
         "birthplace_of",
         "burial_site_of",
-        "host_to"
+        "host_to",
+        "discovered_by"
       ],
       "location": [
         "adjacent_to",
         "contains",
-        "contained_by"
+        "contained_by",
+        "hidden_path_to"
       ],
       "faction": [
         "stronghold_of",

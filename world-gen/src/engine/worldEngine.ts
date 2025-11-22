@@ -1,7 +1,7 @@
 import { Graph, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
 import { LoreRecord } from '../types/lore';
 import { HardState, Relationship } from '../types/worldTypes';
-import { 
+import {
   generateId,
   addEntity,
   addRelationship,
@@ -37,7 +37,14 @@ export class WorldEngine {
       config: config,
       relationshipCooldowns: new Map(),
       loreRecords: [],
-      loreIndex: config.loreIndex
+      loreIndex: config.loreIndex,
+
+      // Discovery tracking (emergent system)
+      discoveryState: {
+        currentThreshold: 0.3,  // Base threshold
+        lastDiscoveryTick: -999,  // Start far in past so first discovery can happen
+        discoveriesThisEpoch: 0
+      }
     };
     
     // Load initial entities
@@ -110,9 +117,12 @@ export class WorldEngine {
     const previousEra = this.graph.currentEra;
     const era = selectEra(this.currentEpoch, this.config.eras);
     this.graph.currentEra = era;
-    
+
     console.log(`\n=== Epoch ${this.currentEpoch}: ${era.name} ===`);
-    
+
+    // Reset discovery counter for new epoch
+    this.graph.discoveryState.discoveriesThisEpoch = 0;
+
     // Growth phase
     this.runGrowthPhase(era);
     

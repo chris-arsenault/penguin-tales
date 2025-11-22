@@ -43,3 +43,10 @@ export type LocationSubtype = 'iceberg' | 'colony' | 'igloo' | 'geographic_featu
 export type FactionSubtype = 'political' | 'criminal' | 'cult' | 'company';
 export type RulesSubtype = 'edict' | 'taboo' | 'social' | 'natural';
 export type AbilitiesSubtype = 'magic' | 'faith' | 'technology' | 'physical';
+
+// Discovery tracking (emergent system)
+export interface DiscoveryState {
+  currentThreshold: number;     // Difficulty threshold for next discovery
+  lastDiscoveryTick: number;    // Last tick a discovery occurred
+  discoveriesThisEpoch: number; // Count for current epoch
+}

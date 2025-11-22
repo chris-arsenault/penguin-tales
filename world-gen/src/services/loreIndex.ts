@@ -84,6 +84,54 @@ export function loadLoreIndex(lorePath: string): LoreIndex {
       'Starfall Reach vanished mysteriously',
       'Aurora lights carry ancestral messages',
       'The berg swims toward a destination'
-    ]
+    ],
+
+    geography: {
+      constraints: {
+        totalArea: '10 sq km of surface',
+        verticalDepth: true,
+        secretPassages: true
+      },
+      knownLocations: [
+        { name: 'Aurora Stack', type: 'colony', status: 'active', notes: 'Main sunlit colony on terraces' },
+        { name: 'Nightfall Shelf', type: 'colony', status: 'active', notes: 'Shadow-side colony with bioluminescent ice' },
+        { name: 'Windward Ridge', type: 'geographic_feature', status: 'active', notes: 'Watchtower settlement for scouts' },
+        { name: 'The Middle Pools', type: 'geographic_feature', status: 'active', notes: 'Neutral fishing grounds' },
+        { name: 'Echo Hollow', type: 'geographic_feature', status: 'abandoned', notes: 'Abandoned settlement where sounds resonate' },
+        { name: 'Starfall Reach', type: 'colony', status: 'vanished', notes: 'Third colony that mysteriously disappeared' }
+      ],
+      discoveryPrecedents: [
+        { location: 'Glow-Fissure', significance: 'Recent discovery that disrupted balance, pulses with otherworldly light' }
+      ]
+    },
+
+    locationThemes: {
+      resources: [
+        'krill blooms',
+        'fishing grounds',
+        'ice types (clear/blue/black)',
+        'guano deposits',
+        'underground springs',
+        'kelp forests'
+      ],
+      mystical: [
+        'Glow-Fissure phenomena',
+        'aurora convergence',
+        'ice memory sites',
+        'frozen artifacts',
+        'singing caves',
+        'time-locked ice',
+        'meditation sites'
+      ],
+      strategic: [
+        'watchtower positions',
+        'neutral zones',
+        'rope bridge connections',
+        'secret passages',
+        'defensible peaks',
+        'hidden passes',
+        'observation points'
+      ]
+    }
   };
 }
