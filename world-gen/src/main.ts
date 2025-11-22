@@ -20,6 +20,7 @@ import { allSystems } from './systems';
 import { normalizeInitialState } from './utils/helpers';
 import { loadLoreIndex } from './services/loreIndex';
 import { EnrichmentService } from './services/enrichmentService';
+import { validateWorld } from './utils/validators';
 
 // Load initial state (you'll need to adjust the path)
 import initialStateData from '../data/initialState.json';
@@ -57,7 +58,7 @@ const config: EngineConfig = {
 
   // Tuning parameters
   epochLength: 20,                    // ticks per epoch
-  simulationTicksPerGrowth: 10,       // simulation ticks between growth phases
+  simulationTicksPerGrowth: 15,       // simulation ticks between growth phases (increased to reduce NPC spam)
   targetEntitiesPerKind: 30,          // target ~150 total entities (5 kinds)
   maxTicks: 500,                      // maximum simulation ticks
   maxRelationshipsPerType: 3          // DEPRECATED: now using per-kind warning thresholds in helpers.ts
@@ -85,6 +86,22 @@ async function generateWorld() {
   // Export results
   const worldState = engine.exportState();
   
+  // Validation
+  console.log('\n=== WORLD VALIDATION ===');
+  const validationReport = validateWorld(finalGraph);
+  console.log(`Total Checks: ${validationReport.totalChecks}`);
+  console.log(`Passed: ${validationReport.passed} ✓`);
+  console.log(`Failed: ${validationReport.failed} ✗\n`);
+
+  validationReport.results.forEach(result => {
+    const status = result.passed ? '✓' : '✗';
+    const color = result.passed ? '' : '';
+    console.log(`${status} ${result.name}`);
+    if (!result.passed) {
+      console.log(`   ${result.details}`);
+    }
+  });
+
   // Statistics
   console.log('\n=== FINAL STATISTICS ===');
   console.log(`Total Entities: ${worldState.metadata.entityCount}`);
@@ -144,13 +161,29 @@ async function generateWorld() {
   // Write output to file
   const fs = require('fs');
   const outputPath = './output/generated_world.json';
-  
+
   // Create output directory if it doesn't exist
   if (!fs.existsSync('./output')) {
     fs.mkdirSync('./output');
   }
-  
-  fs.writeFileSync(outputPath, JSON.stringify(worldState, null, 2));
+
+  // Add validation results to export
+  const exportData = {
+    ...worldState,
+    validation: {
+      totalChecks: validationReport.totalChecks,
+      passed: validationReport.passed,
+      failed: validationReport.failed,
+      results: validationReport.results.map(r => ({
+        name: r.name,
+        passed: r.passed,
+        failureCount: r.failureCount,
+        details: r.details
+      }))
+    }
+  };
+
+  fs.writeFileSync(outputPath, JSON.stringify(exportData, null, 2));
   console.log(`\n✅ World state exported to ${outputPath}`);
   
   // Also export a graph visualization format

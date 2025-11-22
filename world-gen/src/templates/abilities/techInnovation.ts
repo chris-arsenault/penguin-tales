@@ -18,7 +18,44 @@ export const techInnovation: GrowthTemplate = {
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const faction = target || pickRandom(findEntities(graph, { kind: 'faction', subtype: 'company' }));
-    
+
+    if (!faction) {
+      // No company faction exists - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot develop technology - no company factions exist'
+      };
+    }
+
+    // Find faction members who can practice the new tech
+    const members = Array.from(graph.entities.values()).filter(
+      e => e.kind === 'npc' && e.links.some(l => l.kind === 'member_of' && l.dst === faction.id)
+    );
+
+    if (members.length === 0) {
+      // Faction has no members to practice the technology - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: `${faction.name} has no members to develop new technology`
+      };
+    }
+
+    const relationships: any[] = [
+      { kind: 'wields', src: faction.id, dst: 'will-be-assigned-0' }
+    ];
+
+    // Add practitioner relationships for some faction members (up to 3)
+    const practitioners = members.slice(0, Math.min(3, members.length));
+    practitioners.forEach(npc => {
+      relationships.push({
+        kind: 'practitioner_of',
+        src: npc.id,
+        dst: 'will-be-assigned-0'
+      });
+    });
+
     return {
       entities: [{
         kind: 'abilities',
@@ -29,9 +66,7 @@ export const techInnovation: GrowthTemplate = {
         prominence: 'marginal',
         tags: ['tech', 'innovation']
       }],
-      relationships: [
-        { kind: 'wields', src: faction.id, dst: 'will-be-assigned-0' }
-      ],
+      relationships,
       description: `${faction.name} develops new technology`
     };
   }

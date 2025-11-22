@@ -64,7 +64,7 @@ export class WorldEngine {
         // Find actual IDs from names
         const srcEntity = this.findEntityByName(link.src) || entity;
         const dstEntity = this.findEntityByName(link.dst);
-        
+
         if (srcEntity && dstEntity) {
           this.graph.relationships.push({
             kind: link.kind,
@@ -73,6 +73,19 @@ export class WorldEngine {
           });
         }
       });
+    });
+
+    // Record initial state as first history event
+    const initialEntityIds = Array.from(this.graph.entities.keys());
+    const initialRelationships = [...this.graph.relationships];
+    this.graph.history.push({
+      tick: 0,
+      era: config.eras[0].id,
+      type: 'special',
+      description: `World initialized: ${initialEntityIds.length} entities, ${initialRelationships.length} relationships`,
+      entitiesCreated: initialEntityIds,
+      relationshipsCreated: initialRelationships,
+      entitiesModified: []
     });
   }
   
@@ -226,14 +239,15 @@ export class WorldEngine {
     let totalRelationships = 0;
     let totalModifications = 0;
     const relationshipsThisTick: Relationship[] = [];
-    
+    const modifiedEntityIds: string[] = [];
+
     for (const system of this.config.systems) {
       const modifier = getSystemModifier(era, system.id);
       if (modifier === 0) continue; // System disabled
-      
+
       try {
         const result = system.apply(this.graph, modifier);
-        
+
         // Apply relationships
         result.relationshipsAdded.forEach(rel => {
           const before = this.graph.relationships.length;
@@ -243,30 +257,31 @@ export class WorldEngine {
             relationshipsThisTick.push(rel);
           }
         });
-        
+
         // Apply modifications
         result.entitiesModified.forEach(mod => {
           updateEntity(this.graph, mod.id, mod.changes);
+          modifiedEntityIds.push(mod.id);
         });
-        
+
         // Apply pressure changes
         for (const [pressure, delta] of Object.entries(result.pressureChanges)) {
           const current = this.graph.pressures.get(pressure) || 0;
           this.graph.pressures.set(pressure, Math.max(0, Math.min(100, current + delta)));
         }
-        
+
         totalRelationships += result.relationshipsAdded.length;
         totalModifications += result.entitiesModified.length;
-        
+
       } catch (error) {
         console.error(`System ${system.id} failed:`, error);
       }
     }
-    
+
     if (relationshipsThisTick.length > 0) {
       this.queueRelationshipEnrichment(relationshipsThisTick);
     }
-    
+
     if (totalRelationships > 0 || totalModifications > 0) {
       // Record significant ticks only
       this.graph.history.push({
@@ -275,8 +290,8 @@ export class WorldEngine {
         type: 'simulation',
         description: `Systems: +${totalRelationships} relationships, ${totalModifications} modifications`,
         entitiesCreated: [],
-        relationshipsCreated: [],
-        entitiesModified: []
+        relationshipsCreated: relationshipsThisTick,
+        entitiesModified: modifiedEntityIds
       });
     }
   }
@@ -463,12 +478,13 @@ export class WorldEngine {
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
         entityCount: entities.length,
-        relationshipCount: this.graph.relationships.length
+        relationshipCount: this.graph.relationships.length,
+        historyEventCount: this.graph.history.length
       },
       hardState: entities,
       relationships: this.graph.relationships,
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history.slice(-50), // Last 50 events
+      history: this.graph.history,  // Export ALL events, not just last 50
       loreRecords: this.graph.loreRecords
     };
   }
