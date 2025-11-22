@@ -53,6 +53,7 @@ export interface Filters {
   timeRange: [number, number];
   tags: string[];
   searchQuery: string;
+  relationshipTypes: string[];
 }
 
 export type GraphMode = 'full' | 'radial' | 'temporal' | 'faction' | 'conflict' | 'economic';
