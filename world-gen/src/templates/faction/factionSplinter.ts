@@ -36,7 +36,16 @@ export const factionSplinter: GrowthTemplate = {
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const parentFaction = target || pickRandom(findEntities(graph, { kind: 'faction' }));
-    
+
+    if (!parentFaction) {
+      // No faction exists - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot create splinter - no factions exist'
+      };
+    }
+
     const splinterType = determineSplinterType(parentFaction.subtype as FactionSubtype);
     
     const splinter: Partial<HardState> = {
@@ -62,20 +71,31 @@ export const factionSplinter: GrowthTemplate = {
     const parentLocation = graph.entities.get(
       parentFaction.links.find(l => l.kind === 'controls' || l.kind === 'occupies')?.dst || ''
     );
-    
+
+    // Fallback: if parent has no location, use any colony
+    let location = parentLocation;
+    if (!location) {
+      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+      location = colonies.length > 0 ? pickRandom(colonies) : undefined;
+    }
+
+    if (!location) {
+      // No location to splinter at - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: `${parentFaction.name} cannot splinter - no locations available`
+      };
+    }
+
     const relationships: Relationship[] = [
       { kind: 'splinter_of', src: 'will-be-assigned-0', dst: parentFaction.id },
       { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-      { kind: 'at_war_with', src: 'will-be-assigned-0', dst: parentFaction.id }
+      { kind: 'member_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
+      { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id },
+      { kind: 'at_war_with', src: 'will-be-assigned-0', dst: parentFaction.id },
+      { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id }
     ];
-    
-    if (parentLocation) {
-      relationships.push({
-        kind: 'occupies',
-        src: 'will-be-assigned-0',
-        dst: parentLocation.id
-      });
-    }
     
     return {
       entities: [splinter, leader],

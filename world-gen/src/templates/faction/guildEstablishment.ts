@@ -31,7 +31,16 @@ export const guildEstablishment: GrowthTemplate = {
     const colony = target || pickRandom(
       findEntities(graph, { kind: 'location', subtype: 'colony' })
     );
-    
+
+    if (!colony) {
+      // No colony exists - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot establish guild - no colonies exist'
+      };
+    }
+
     const guild: Partial<HardState> = {
       kind: 'faction',
       subtype: 'company',

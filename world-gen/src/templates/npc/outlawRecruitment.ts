@@ -33,27 +33,37 @@ export const outlawRecruitment: GrowthTemplate = {
       });
     }
     
-    const stronghold = graph.entities.get(
-      faction.links.find(l => l.kind === 'controls')?.dst || ''
-    );
-    
-    const relationships: Relationship[] = outlaws.flatMap((_, i) => {
-      const rels: Relationship[] = [{
+    // Find faction stronghold or any colony
+    const strongholdLink = faction.links.find(l => l.kind === 'controls');
+    let location = strongholdLink ? graph.entities.get(strongholdLink.dst) : undefined;
+
+    // Fallback: if faction has no stronghold, use any colony
+    if (!location) {
+      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+      location = colonies.length > 0 ? pickRandom(colonies) : undefined;
+    }
+
+    // If still no location, fail gracefully
+    if (!location) {
+      return {
+        entities: [],
+        relationships: [],
+        description: `${faction.name} has nowhere to recruit outlaws`
+      };
+    }
+
+    const relationships: Relationship[] = outlaws.flatMap((_, i) => [
+      {
         kind: 'member_of',
         src: `will-be-assigned-${i}`,
         dst: faction.id
-      }];
-
-      if (stronghold) {
-        rels.push({
-          kind: 'resident_of',
-          src: `will-be-assigned-${i}`,
-          dst: stronghold.id
-        });
+      },
+      {
+        kind: 'resident_of',
+        src: `will-be-assigned-${i}`,
+        dst: location.id
       }
-
-      return rels;
-    });
+    ]);
     
     return {
       entities: outlaws,

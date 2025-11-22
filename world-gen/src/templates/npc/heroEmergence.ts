@@ -20,7 +20,16 @@ export const heroEmergence: GrowthTemplate = {
     const colony = target || pickRandom(
       findEntities(graph, { kind: 'location', subtype: 'colony' })
     );
-    
+
+    if (!colony) {
+      // No colony exists - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot create hero - no colonies exist'
+      };
+    }
+
     const hero: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',

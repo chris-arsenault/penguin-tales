@@ -40,9 +40,9 @@ export function transformWorldData(worldState: WorldState) {
     classes: `${entity.kind} ${entity.subtype} ${entity.prominence}`
   }));
 
-  const edges = worldState.relationships.map((rel, i) => ({
+  const edges = worldState.relationships.map((rel) => ({
     data: {
-      id: `edge-${i}`,
+      id: `edge-${rel.src}-${rel.dst}-${rel.kind}`,
       source: rel.src,
       target: rel.dst,
       kind: rel.kind,

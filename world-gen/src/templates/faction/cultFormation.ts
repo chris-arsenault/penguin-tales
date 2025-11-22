@@ -36,7 +36,16 @@ export const cultFormation: GrowthTemplate = {
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const location = target || pickRandom(findEntities(graph, { kind: 'location' }));
-    
+
+    if (!location) {
+      // No location exists - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot form cult - no locations exist'
+      };
+    }
+
     const cult: Partial<HardState> = {
       kind: 'faction',
       subtype: 'cult',
@@ -72,9 +81,10 @@ export const cultFormation: GrowthTemplate = {
     
     const relationships: Relationship[] = [
       { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id },
-      { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' }
+      { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
+      { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
     ];
-    
+
     cultists.forEach((_, i) => {
       relationships.push({
         kind: 'member_of',
@@ -85,6 +95,11 @@ export const cultFormation: GrowthTemplate = {
         kind: 'follower_of',
         src: `will-be-assigned-${i + 2}`,
         dst: 'will-be-assigned-1'
+      });
+      relationships.push({
+        kind: 'resident_of',
+        src: `will-be-assigned-${i + 2}`,
+        dst: location.id
       });
     });
     

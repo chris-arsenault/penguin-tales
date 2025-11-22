@@ -38,14 +38,30 @@ export const familyExpansion: GrowthTemplate = {
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     if (!target) throw new Error('Family expansion requires a target NPC');
 
-    // Find partner in same location
-    const colony = graph.entities.get(
-      target.links.find(l => l.kind === 'resident_of')?.dst || ''
-    );
+    // Find parent's location
+    const residentLink = target.links.find(l => l.kind === 'resident_of');
+    if (!residentLink) {
+      // Parent has no home - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: `${target.name} is homeless, cannot raise children`
+      };
+    }
+
+    const colony = graph.entities.get(residentLink.dst);
+    if (!colony) {
+      return {
+        entities: [],
+        relationships: [],
+        description: `${target.name}'s home no longer exists`
+      };
+    }
 
     // Generate 1-3 children
     const numChildren = Math.floor(Math.random() * 3) + 1;
     const children: Partial<HardState>[] = [];
+    const relationships: any[] = [];
 
     // Inherit subtype from parents with variation
     const subtypes: NPCSubtype[] = ['merchant', 'hero', 'mayor', 'outlaw'];
@@ -60,21 +76,41 @@ export const familyExpansion: GrowthTemplate = {
         kind: 'npc',
         subtype: childSubtype,
         name: generateName(),
-        description: `Child of ${target.name}, raised in ${colony?.name}`,
+        description: `Child of ${target.name}, raised in ${colony.name}`,
         status: 'alive',
         prominence: 'marginal',
-        tags: ['second_generation', colony?.name.toLowerCase() || '']
+        tags: ['second_generation', colony.name.toLowerCase()]
       });
+
+      // Create relationships for each child
+      relationships.push({
+        kind: 'mentor_of',
+        src: target.id,
+        dst: `will-be-assigned-${i}`
+      });
+
+      // Children live in parent's colony
+      relationships.push({
+        kind: 'resident_of',
+        src: `will-be-assigned-${i}`,
+        dst: colony.id
+      });
+
+      // If parent is in a faction, children might join (50% chance)
+      const parentFaction = target.links.find(l => l.kind === 'member_of');
+      if (parentFaction && Math.random() > 0.5) {
+        relationships.push({
+          kind: 'member_of',
+          src: `will-be-assigned-${i}`,
+          dst: parentFaction.dst
+        });
+      }
     }
 
     return {
       entities: children,
-      relationships: children.map((child, i) => ({
-        kind: 'mentor_of',
-        src: target.id,
-        dst: `will-be-assigned-${i}` // Will be resolved when entities get IDs
-      })),
-      description: `${target.name} raises a family in ${colony?.name}`
+      relationships,
+      description: `${target.name} raises ${numChildren} ${numChildren === 1 ? 'child' : 'children'} in ${colony.name}`
     };
   }
 };

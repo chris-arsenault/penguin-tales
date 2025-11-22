@@ -18,45 +18,71 @@ export const succession: GrowthTemplate = {
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const oldLeader = target || pickRandom(findEntities(graph, { kind: 'npc', subtype: 'mayor' }));
-    
-    const colony = graph.entities.get(
-      oldLeader.links.find(l => l.kind === 'leader_of')?.dst || ''
-    );
-    
+
+    // Find the colony the old leader governed
+    const leaderOfLink = oldLeader.links.find(l => l.kind === 'leader_of');
+    if (!leaderOfLink) {
+      // Old leader has no colony - fail gracefully
+      return {
+        entities: [],
+        relationships: [],
+        description: `${oldLeader.name} had no colony to succeed`
+      };
+    }
+
+    const colony = graph.entities.get(leaderOfLink.dst);
+    if (!colony) {
+      return {
+        entities: [],
+        relationships: [],
+        description: `${oldLeader.name}'s colony no longer exists`
+      };
+    }
+
     const newLeader: Partial<HardState> = {
       kind: 'npc',
       subtype: 'mayor',
       name: generateName('mayor'),
-      description: `Successor to ${oldLeader.name} in ${colony?.name}`,
+      description: `Successor to ${oldLeader.name} in ${colony.name}`,
       status: 'alive',
       prominence: 'recognized',
-      tags: ['successor', colony?.name.toLowerCase() || '']
+      tags: ['successor', colony.name.toLowerCase()]
     };
 
-    const relationships: Relationship[] = [];
-
-    if (colony) {
-      relationships.push({
+    const relationships: Relationship[] = [
+      {
         kind: 'leader_of',
         src: 'will-be-assigned-0',
         dst: colony.id
-      });
-    }
+      },
+      {
+        kind: 'resident_of',  // New mayor lives in the colony
+        src: 'will-be-assigned-0',
+        dst: colony.id
+      }
+    ];
 
-    const faction = oldLeader.links.find(l => l.kind === 'leader_of' &&
-      graph.entities.get(l.dst)?.kind === 'faction');
-    if (faction) {
+    // Check for faction leadership too
+    const factionLeaderLink = oldLeader.links.find(l =>
+      l.kind === 'leader_of' && graph.entities.get(l.dst)?.kind === 'faction'
+    );
+    if (factionLeaderLink) {
       relationships.push({
         kind: 'leader_of',
         src: 'will-be-assigned-0',
-        dst: faction.dst
+        dst: factionLeaderLink.dst
+      });
+      relationships.push({
+        kind: 'member_of',  // New leader joins faction
+        src: 'will-be-assigned-0',
+        dst: factionLeaderLink.dst
       });
     }
-    
+
     return {
       entities: [newLeader],
       relationships,
-      description: `${newLeader.name} succeeds ${oldLeader.name}`
+      description: `${newLeader.name} succeeds ${oldLeader.name} in ${colony.name}`
     };
   }
 };

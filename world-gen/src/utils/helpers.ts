@@ -334,7 +334,14 @@ export function weightedRandom<T>(
  * }
  */
 export function rollProbability(baseProbability: number, eraModifier: number = 1.0): boolean {
-  return Math.random() < Math.min(1, baseProbability * eraModifier);
+    const p = baseProbability;
+
+    // odds scaling
+    const odds = p / (1 - p);
+    const scaledOdds = Math.pow(odds, eraModifier);
+    const scaledP = scaledOdds / (1 + scaledOdds);
+
+    return Math.random() < scaledP;
 }
 
 // Relationship Cooldown Management
@@ -383,4 +390,88 @@ export function recordRelationshipFormation(
   }
 
   entityCooldowns.set(relationshipType, graph.tick);
+}
+
+/**
+ * Check if a new relationship is compatible with existing relationships.
+ * Prevents contradictory relationships like being both lover and enemy.
+ *
+ * @param graph - The world graph
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param newKind - The relationship kind to check
+ * @returns true if the new relationship is compatible with existing ones
+ */
+export function areRelationshipsCompatible(
+  graph: Graph,
+  srcId: string,
+  dstId: string,
+  newKind: string
+): boolean {
+  // Define mutually exclusive relationship types
+  const CONTRADICTIONS: Record<string, string[]> = {
+    'enemy_of': ['lover_of', 'follower_of', 'ally_of', 'allied_with'],
+    'lover_of': ['enemy_of', 'rival_of'],
+    'rival_of': ['lover_of', 'follower_of'],
+    'follower_of': ['enemy_of', 'rival_of'],
+    'at_war_with': ['allied_with']
+  };
+
+  const incompatible = CONTRADICTIONS[newKind] || [];
+
+  // Check if any existing relationship contradicts the new one
+  const existingRelationships = graph.relationships.filter(
+    r => r.src === srcId && r.dst === dstId
+  );
+
+  return !existingRelationships.some(rel => incompatible.includes(rel.kind));
+}
+
+/**
+ * Calculate relationship formation weight based on existing connection count.
+ * Favors underconnected entities to balance network density and prevent hubs.
+ *
+ * @param entity - The entity to calculate weight for
+ * @returns Weight multiplier (higher = more likely to form relationships)
+ */
+export function getConnectionWeight(entity: HardState): number {
+  const connectionCount = entity.links.length;
+
+  // Boost isolated/underconnected entities
+  if (connectionCount === 0) return 3.0;    // Strongly boost isolated
+  if (connectionCount <= 2) return 2.0;     // Boost underconnected (below median)
+  if (connectionCount <= 5) return 1.0;     // Normal
+  if (connectionCount <= 10) return 0.5;    // Reduce well-connected
+  return 0.2;                               // Heavily reduce hubs (15+)
+}
+
+/**
+ * Determine the relationship between two sets of factions.
+ *
+ * @param factions1 - First set of factions
+ * @param factions2 - Second set of factions
+ * @param graph - The world graph
+ * @returns 'allied', 'enemy', or 'neutral'
+ */
+export function getFactionRelationship(
+  factions1: HardState[],
+  factions2: HardState[],
+  graph: Graph
+): 'allied' | 'enemy' | 'neutral' {
+  // Check for warfare/enmity
+  const atWar = factions1.some(f1 =>
+    factions2.some(f2 =>
+      hasRelationship(graph, f1.id, f2.id, 'at_war_with') ||
+      hasRelationship(graph, f1.id, f2.id, 'enemy_of')
+    )
+  );
+  if (atWar) return 'enemy';
+
+  // Check for alliances
+  const allied = factions1.some(f1 =>
+    factions2.some(f2 => hasRelationship(graph, f1.id, f2.id, 'allied_with'))
+  );
+  if (allied) return 'allied';
+
+  return 'neutral';
 }

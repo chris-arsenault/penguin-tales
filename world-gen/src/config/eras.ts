@@ -22,12 +22,12 @@ export const penguinEras: Era[] = [
       'faction_splinter': 0.2,  // few conflicts yet
 
       // Rules templates
-      'cultural_tradition': 1.0,
+      'cultural_tradition': 2.0,  // Boost rules generation
       'crisis_legislation': 0,   // no crises yet
 
       // Abilities templates
-      'tech_innovation': 0.5,
-      'magic_discovery': 0.3
+      'tech_innovation': 1.0,     // Boost abilities generation
+      'magic_discovery': 0.8
     },
     systemModifiers: {
       'resource_flow': 1.5,       // resources plentiful
@@ -90,8 +90,8 @@ export const penguinEras: Era[] = [
       'cult_formation': 1.0,
 
       // Rules templates
-      'natural_law_discovery': 2.0,
-      'regulation_creation': 1.5,
+      'natural_law_discovery': 2.5,  // Boost rules in innovation era
+      'regulation_creation': 2.0,
 
       // Abilities templates
       'tech_innovation': 3.0,
@@ -164,12 +164,12 @@ export const penguinEras: Era[] = [
 
       // Rules templates
       'peace_treaty': 2.0,
-      'cultural_codification': 2.5,
-      'trade_agreement': 2.0,
+      'cultural_codification': 3.0,  // Boost cultural rules
+      'trade_agreement': 2.5,
 
       // Abilities templates
-      'tradition_preservation': 1.5,
-      'hybrid_technique': 1.0     // combining war knowledge
+      'tradition_preservation': 2.0,  // Boost abilities preservation
+      'hybrid_technique': 1.5     // combining war knowledge
     },
     systemModifiers: {
       'cultural_drift': 1.5,      // cultures diverge in peace
