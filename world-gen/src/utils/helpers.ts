@@ -198,6 +198,34 @@ export function addEntity(graph: Graph, entity: Partial<HardState>): string {
   return id;
 }
 
+// Per-kind relationship warning thresholds
+const RELATIONSHIP_WARNING_THRESHOLDS: Record<string, Record<string, number>> = {
+  npc: {
+    default: 5,        // NPCs shouldn't have too many of any single relationship type
+    member_of: 3,      // NPCs rarely in more than 3 factions
+    enemy_of: 5,
+    ally_of: 5,
+    lover_of: 2        // Keep romantic relationships limited
+  },
+  location: {
+    default: 15,       // Locations can have many connections
+    resident_of: 50,   // Colonies can have many residents
+    adjacent_to: 10
+  },
+  faction: {
+    default: 20,       // Factions can have many members and relationships
+    member_of: 50,     // Factions can have many members (as dst)
+    allied_to: 8,
+    enemy_of: 8
+  },
+  rules: {
+    default: 10        // Rules can apply to multiple entities
+  },
+  abilities: {
+    default: 10        // Abilities can be practiced by multiple entities
+  }
+};
+
 export function addRelationship(
   graph: Graph,
   kind: string,
@@ -209,27 +237,30 @@ export function addRelationship(
     return;
   }
 
-  // Check relationship limit per type
+  // Check relationship warning thresholds (per-kind, non-blocking)
   const srcEntity = graph.entities.get(srcId);
-  if (srcEntity && graph.config) {
+  if (srcEntity) {
     const existingOfType = srcEntity.links.filter(link => link.kind === kind).length;
+    const kindThresholds = RELATIONSHIP_WARNING_THRESHOLDS[srcEntity.kind] || {};
+    const threshold = kindThresholds[kind] || kindThresholds.default || 10;
 
-    if (existingOfType >= graph.config.maxRelationshipsPerType) {
+    if (existingOfType >= threshold) {
       console.warn(
-        `⚠️  RELATIONSHIP LIMIT EXCEEDED:\n` +
+        `⚠️  RELATIONSHIP WARNING (${srcEntity.kind.toUpperCase()}):\n` +
         `   Entity: ${srcEntity.name} (${srcEntity.id})\n` +
-        `   Type: ${kind}\n` +
+        `   Kind: ${srcEntity.kind}\n` +
+        `   Relationship Type: ${kind}\n` +
         `   Current count: ${existingOfType}\n` +
-        `   Limit: ${graph.config.maxRelationshipsPerType}\n` +
+        `   Warning threshold: ${threshold}\n` +
         `   Target: ${graph.entities.get(dstId)?.name || dstId}\n` +
         `   Tick: ${graph.tick}\n` +
-        `   Era: ${graph.currentEra.name}`
+        `   Era: ${graph.currentEra.name}\n` +
+        `   ℹ️  This is a WARNING only - relationship will still be added`
       );
-      return;
     }
   }
 
-  // Add relationship
+  // Add relationship (always, no hard limit)
   graph.relationships.push({ kind, src: srcId, dst: dstId });
 
   // Update entity links

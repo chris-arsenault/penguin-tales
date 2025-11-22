@@ -60,7 +60,7 @@ const config: EngineConfig = {
   simulationTicksPerGrowth: 10,       // simulation ticks between growth phases
   targetEntitiesPerKind: 30,          // target ~150 total entities (5 kinds)
   maxTicks: 500,                      // maximum simulation ticks
-  maxRelationshipsPerType: 3          // max relationships of same type per entity
+  maxRelationshipsPerType: 3          // DEPRECATED: now using per-kind warning thresholds in helpers.ts
 };
 
 // Main execution

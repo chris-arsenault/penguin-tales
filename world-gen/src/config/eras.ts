@@ -10,19 +10,21 @@ export const penguinEras: Era[] = [
       'colony_founding': 2.0,
       'geographic_discovery': 1.5,
       'structure_building': 1.2,
-      
+      'resource_location_discovery': 1.2,
+      'geographic_exploration': 1.5,
+
       // NPC templates
       'family_expansion': 2.0,
       'merchant_arrival': 1.5,
-      
-      // Faction templates  
+
+      // Faction templates
       'guild_establishment': 1.0,
       'faction_splinter': 0.2,  // few conflicts yet
-      
+
       // Rules templates
       'cultural_tradition': 1.0,
       'crisis_legislation': 0,   // no crises yet
-      
+
       // Abilities templates
       'tech_innovation': 0.5,
       'magic_discovery': 0.3
@@ -43,19 +45,20 @@ export const penguinEras: Era[] = [
       // Location templates
       'colony_founding': 0,        // no new colonies during war
       'fortification_building': 2.0,
-      
+      'strategic_location_discovery': 1.5,  // War drives strategic finds
+
       // NPC templates
       'hero_emergence': 2.0,
       'outlaw_recruitment': 2.0,
-      
+
       // Faction templates
       'faction_splinter': 2.0,
       'underground_formation': 1.5,
-      
+
       // Rules templates
       'crisis_legislation': 2.0,
       'martial_law': 1.5,
-      
+
       // Abilities templates
       'combat_technique': 1.5
     },
@@ -75,19 +78,21 @@ export const penguinEras: Era[] = [
       // Location templates
       'anomaly_manifestation': 1.5,
       'research_site': 2.0,
-      
+      'mystical_location_discovery': 1.3,
+      'resource_location_discovery': 0.8,
+
       // NPC templates
       'scholar_emergence': 2.0,
       'merchant_arrival': 1.5,
-      
+
       // Faction templates
       'guild_establishment': 2.0,
       'cult_formation': 1.0,
-      
+
       // Rules templates
       'natural_law_discovery': 2.0,
       'regulation_creation': 1.5,
-      
+
       // Abilities templates
       'tech_innovation': 3.0,
       'magic_discovery': 2.5,
@@ -109,19 +114,20 @@ export const penguinEras: Era[] = [
       // Location templates
       'defensive_structure': 3.0,
       'refugee_camp': 2.0,
-      
+      'strategic_location_discovery': 1.0,  // Escape routes, defensive positions
+
       // NPC templates
       'hero_emergence': 3.0,
       'war_leader': 2.0,
-      
+
       // Faction templates
       'military_order': 2.0,
       'resistance_cell': 1.5,
-      
+
       // Rules templates
       'emergency_decree': 2.0,
       'alliance_pact': 3.0,
-      
+
       // Abilities templates
       'combat_technique': 2.0,
       'defensive_magic': 2.5
@@ -146,20 +152,21 @@ export const penguinEras: Era[] = [
       // Location templates
       'memorial_sites': 1.5,
       'trade_posts': 2.0,
-      
+      'geographic_exploration': 1.3,  // Peaceful rediscovery
+
       // NPC templates
       'succession': 2.0,          // generational change
       'diplomat_emergence': 1.5,
-      
+
       // Faction templates
       'merchant_consortium': 1.5,
       'veteran_society': 1.0,
-      
+
       // Rules templates
       'peace_treaty': 2.0,
       'cultural_codification': 2.5,
       'trade_agreement': 2.0,
-      
+
       // Abilities templates
       'tradition_preservation': 1.5,
       'hybrid_technique': 1.0     // combining war knowledge

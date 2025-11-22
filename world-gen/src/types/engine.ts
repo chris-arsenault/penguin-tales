@@ -36,6 +36,9 @@ export interface Graph {
   relationshipCooldowns: Map<string, Map<string, number>>;  // entityId → (relationshipType → lastFormationTick)
   loreIndex?: LoreIndex;
   loreRecords: LoreRecord[];
+
+  // Discovery tracking (emergent system)
+  discoveryState: import('./worldTypes').DiscoveryState;
 }
 
 // History tracking

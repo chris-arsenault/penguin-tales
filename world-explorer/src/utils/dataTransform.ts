@@ -148,3 +148,33 @@ export function getRelationships(
     rel => rel.src === entityId || rel.dst === entityId
   );
 }
+
+export function applyTemporalFilter(worldState: WorldState, maxTick: number): WorldState {
+  // Filter entities created at or before maxTick
+  const filteredEntities = worldState.hardState.filter(entity => entity.createdAt <= maxTick);
+
+  // Filter relationships where both source and destination entities exist at maxTick
+  const filteredRelationships = worldState.relationships.filter(rel => {
+    const srcEntity = worldState.hardState.find(e => e.id === rel.src);
+    const dstEntity = worldState.hardState.find(e => e.id === rel.dst);
+    return srcEntity && dstEntity &&
+           srcEntity.createdAt <= maxTick &&
+           dstEntity.createdAt <= maxTick;
+  });
+
+  // Filter history to only include events up to maxTick
+  const filteredHistory = worldState.history.filter(event => event.tick <= maxTick);
+
+  return {
+    ...worldState,
+    hardState: filteredEntities,
+    relationships: filteredRelationships,
+    history: filteredHistory,
+    metadata: {
+      ...worldState.metadata,
+      tick: maxTick,
+      entityCount: filteredEntities.length,
+      relationshipCount: filteredRelationships.length
+    }
+  };
+}

@@ -20,6 +20,33 @@ export interface LoreIndex {
   tensions: string[];
   canon: string[];
   legends: string[];
+
+  // Geographic knowledge for exploration system
+  geography: {
+    constraints: {
+      totalArea: string;
+      verticalDepth: boolean;
+      secretPassages: boolean;
+    };
+    knownLocations: Array<{
+      name: string;
+      type: string;
+      status: 'active' | 'abandoned' | 'vanished';
+      notes: string;
+    }>;
+    discoveryPrecedents: Array<{
+      location: string;
+      discoverer?: string;
+      significance: string;
+    }>;
+  };
+
+  // Location themes for discovery generation
+  locationThemes: {
+    resources: string[];
+    mystical: string[];
+    strategic: string[];
+  };
 }
 
 export type LoreRecordType =
@@ -27,7 +54,9 @@ export type LoreRecordType =
   | 'description'
   | 'era_narrative'
   | 'relationship_backstory'
-  | 'tech_magic';
+  | 'tech_magic'
+  | 'discovery_event'
+  | 'chain_link';
 
 export interface LoreRecord {
   id: string;
