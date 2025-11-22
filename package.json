@@ -1,0 +1,19 @@
+{
+  "name": "penguin-history-engine",
+  "version": "1.0.0",
+  "description": "Procedural world history generation for super penguin colonies",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "clean": "rm -rf dist output"
+  },
+  "dependencies": {
+    "typescript": "^5.9.3",
+    "ts-node": "^10.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}
