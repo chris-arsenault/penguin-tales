@@ -1,16 +1,51 @@
-# Penguin History Engine
+# Penguin History - Procedural World Generation & Visualization
 
-A procedural world history generator that creates rich, interconnected knowledge graphs through a hybrid approach of growth templates and simulation systems.
+A complete system for generating and visualizing rich, interconnected world histories through a hybrid approach of growth templates and simulation systems.
 
-## Overview
+## Projects
 
-This engine generates a lived-in world history by:
-1. Starting with a minimal seed state (14 entities)
-2. Running alternating phases of:
-   - **Growth Phase**: Rapidly populate the graph using templates
-   - **Simulation Phase**: Let entities interact and form relationships
-3. Progressing through different **Eras** that modify template weights and system behaviors
-4. Ending with a rich knowledge graph of ~150+ entities with complex relationships
+This repository contains two sub-projects:
+
+### 📊 [world-gen/](./world-gen/) - History Generation Engine
+Procedural world generation system that creates knowledge graphs of ~150-200 entities with complex relationships.
+
+```bash
+cd world-gen
+npm install
+npm run dev
+```
+
+**Output**: `world-gen/output/generated_world.json`
+
+### 🌐 [world-explorer/](./world-explorer/) - Interactive Visualization
+React + Cytoscape.js application for exploring generated worlds through an interactive graph interface.
+
+```bash
+cd world-explorer
+npm install
+npm run dev
+```
+
+**Access**: http://localhost:5173/
+
+## Quick Start
+
+```bash
+# 1. Generate a world
+cd world-gen
+npm install
+npm run dev
+
+# 2. Copy to explorer (in new terminal)
+cd ../world-explorer
+npm install
+cp ../world-gen/output/generated_world.json src/data/worldData.json
+
+# 3. Launch visualization
+npm run dev
+```
+
+Then open http://localhost:5173/ to explore the generated world!
 
 ## Key Concepts
 
@@ -20,84 +55,77 @@ This engine generates a lived-in world history by:
 - **Eras**: Time periods that influence what happens (expansion, conflict, innovation, etc.)
 - **Pressures**: Background forces that build up and trigger events
 
-## Setup
+## Documentation
 
-```bash
-# Install dependencies
-npm install
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system design and implementation guide
+- **[CLAUDE.md](./CLAUDE.md)** - Guide for Claude Code when working in this repository
+- **[UI.md](./UI.md)** - Visualization strategies and implementation options
+- **[LLM_INTEGRATION.md](./LLM_INTEGRATION.md)** - LLM-based narrative generation
+- **[NEW_MECHANICS.md](./NEW_MECHANICS.md)** - Advanced mechanics and extensions
 
-# Create data directory and add initial state
-mkdir data
-cp /path/to/initialState.json data/
-```
-
-## Running
-
-```bash
-# Development (with TypeScript)
-npm run dev
-
-# Or build and run
-npm run build
-npm start
-```
-
-## Output
-
-The engine generates:
-- `output/generated_world.json` - Complete world state with all entities and relationships
-- `output/graph_viz.json` - Visualization-ready graph format
-
-## Architecture
+## Project Structure
 
 ```
-src/
-├── engine/           # Main orchestration
-│   └── worldEngine.ts
-├── templates/        # Entity creation templates
-│   ├── npc/
-│   ├── faction/
-│   └── additionalTemplates.ts
-├── systems/          # Simulation systems
-│   └── simulationSystems.ts
-├── config/           # Eras and pressures
-│   ├── eras.ts
-│   └── pressures.ts
-├── types/            # TypeScript definitions
-└── utils/            # Helper functions
+penguin-history/
+├── world-gen/              # History generation engine
+│   ├── src/
+│   │   ├── engine/         # Main orchestration
+│   │   ├── templates/      # Entity creation
+│   │   ├── systems/        # Simulation rules
+│   │   ├── config/         # Eras and pressures
+│   │   └── types/          # TypeScript definitions
+│   ├── data/               # Initial seed state
+│   └── output/             # Generated worlds
+│
+├── world-explorer/         # Interactive visualization
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── types/          # TypeScript definitions
+│   │   ├── utils/          # Data transformation
+│   │   └── data/           # World data (JSON)
+│   └── public/
+│
+├── ARCHITECTURE.md         # Technical documentation
+├── CLAUDE.md              # Development guide
+└── UI.md                  # Visualization guide
 ```
 
-## Customization
+## Workflow
 
-### Adding New Templates
-Create new templates in `src/templates/` that implement the `GrowthTemplate` interface.
+1. **Generate**: Run `world-gen` to create a procedural history
+2. **Explore**: Copy output to `world-explorer` and visualize
+3. **Iterate**: Adjust templates/systems and regenerate
+4. **Customize**: Modify eras, pressures, and initial state
 
-### Adding New Systems
-Create new systems in `src/systems/` that implement the `SimulationSystem` interface.
+## Example Output
 
-### Modifying Eras
-Edit `src/config/eras.ts` to change the progression of history.
+A typical generation produces:
+- **~150-200 entities** across 5 types
+- **~300-500 relationships** forming a dense graph
+- **10 epochs** spanning 5 historical eras
+- **Rich narrative elements** with interconnected stories
 
-### Tuning Parameters
-Adjust parameters in `src/main.ts`:
-- `epochLength`: How long each era lasts
-- `simulationTicksPerGrowth`: Balance between growth and simulation
-- `targetEntitiesPerKind`: Final world size
-- `maxTicks`: Maximum simulation length
+Entity distribution:
+- NPCs: heroes, mayors, merchants, outlaws
+- Locations: icebergs, colonies, anomalies
+- Factions: political, criminal, cults, companies
+- Rules: edicts, taboos, social norms
+- Abilities: magic, technology, physical skills
 
-## Schema Coverage
+## Technologies
 
-The engine generates all entity types and relationship types defined in the world schema:
-- **NPCs**: merchants, mayors, heroes, outlaws
-- **Locations**: icebergs, colonies, igloos, geographic features, anomalies
-- **Factions**: political, criminal, cult, company
-- **Rules**: edicts, taboos, social, natural
-- **Abilities**: magic, faith, technology, physical
+**Generation Engine**:
+- TypeScript
+- Node.js
+- JSON output
 
-## Example Output Stats
+**Visualization**:
+- React 18
+- TypeScript
+- Cytoscape.js (graph visualization)
+- Vite (build tool)
+- Tailwind CSS (styling)
 
-A typical run generates:
-- ~150-200 entities
-- ~300-500 relationships
-- 5 distinct eras of history
-- Rich interconnected narrative elements
+## License
+
+See individual project directories for licensing information.
