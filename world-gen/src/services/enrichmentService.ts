@@ -66,8 +66,14 @@ export class EnrichmentService {
     }
 
     const records: LoreRecord[] = [];
-    const batches = chunk(entities, this.config.batchSize);
     const loreHighlights = this.buildLoreHighlights();
+
+    // Treat the entire cluster as one batch (up to 6 entities max for token safety)
+    // If cluster is larger than 6, split it but maintain sub-clusters
+    const maxClusterSize = 6;
+    const batches = entities.length > maxClusterSize
+      ? chunk(entities, maxClusterSize)
+      : [entities];
 
     for (const batch of batches) {
       const promptEntities = batch.map(e => ({
@@ -92,13 +98,19 @@ export class EnrichmentService {
         `Aurora Stack practical; Nightfall Shelf poetic; two-part names with earned names.`,
         `Do not invent new mechanics; stay within canon list; avoid legends unless noting rumor.`,
         `You MUST change the placeholder names; do not repeat the provided placeholder.`,
+        `IMPORTANT: Keep each description under 50 words. Be concise and evocative.`,
         `Return JSON array only.`
       ].join('\n');
 
+      // Scale token limit based on batch size (150 tokens per entity baseline)
+      const tokensPerEntity = 150;
+      const dynamicMaxTokens = Math.min(1000, tokensPerEntity * batch.length + 200);
+
       const result = await this.llm.complete({
-        systemPrompt: 'You are a precise lore keeper. Respond only with JSON when asked.',
+        systemPrompt: 'You are a precise lore keeper. Maximum 50 words per description. Respond only with JSON when asked.',
         prompt,
-        maxTokens: 400
+        maxTokens: dynamicMaxTokens,
+        temperature: 0.2
       });
 
       let parsed: Array<{ id: string; name?: string; description?: string }> = [];
@@ -153,13 +165,15 @@ export class EnrichmentService {
       `Pressures: ${JSON.stringify(params.pressures)}`,
       `Notable actors: ${params.actors.map(a => a.name).join(', ') || 'none'}.`,
       `Reference lore tensions (${this.loreIndex.tensions.join('; ')}) and stay within canon (${this.loreIndex.canon.join('; ')}).`,
+      `IMPORTANT: Keep description under 100 words. Be concise and direct.`,
       `Return JSON: { "eventName": string, "description": string }.`
     ].join('\n');
 
     const result = await this.llm.complete({
-      systemPrompt: 'You write concise historical events grounded in provided lore. Output JSON only.',
+      systemPrompt: 'You write brief, punchy historical events. Maximum 100 words per description. Output JSON only.',
       prompt,
-      maxTokens: 300
+      maxTokens: 400,
+      temperature: 0.2
     });
 
     const parsed = parseJsonSafe<any>(result.text);
@@ -303,13 +317,15 @@ export class EnrichmentService {
       `Geographic context: ${this.loreIndex.geography.constraints.totalArea}, vertical depth matters`,
       `Recent discovery precedent: ${this.loreIndex.geography.discoveryPrecedents[0]?.significance || 'none'}`,
       `Keep it grounded in canon (${this.loreIndex.canon.join('; ')}).`,
+      `IMPORTANT: Keep each field under 75 words. Be direct and atmospheric.`,
       `Return JSON: { "narrative": string, "significance": string }.`
     ].join('\n');
 
     const result = await this.llm.complete({
-      systemPrompt: 'You write concise, lore-aware discovery narratives. Output JSON only.',
+      systemPrompt: 'You write brief, atmospheric discovery narratives. Maximum 75 words per field. Output JSON only.',
       prompt,
-      maxTokens: 300
+      maxTokens: 400,
+      temperature: 0.2
     });
 
     const parsed = parseJsonSafe<any>(result.text);
@@ -348,13 +364,15 @@ export class EnrichmentService {
       params.explorer ? `Explorer: ${params.explorer.name}` : 'Explorers investigating the site',
       `Geographic constraints: ${this.loreIndex.geography.constraints.totalArea}`,
       `Examples of connections: ice caves lead to underground lakes, ruins reveal artifact chambers`,
+      `IMPORTANT: Keep each field under 40 words. Be direct.`,
       `Return JSON: { "connection": string, "clue": string }.`
     ].join('\n');
 
     const result = await this.llm.complete({
-      systemPrompt: 'You explain logical geographic connections in discovery chains. Output JSON only.',
+      systemPrompt: 'You explain brief geographic connections. Maximum 40 words per field. Output JSON only.',
       prompt,
-      maxTokens: 200
+      maxTokens: 250,
+      temperature: 0.2
     });
 
     const parsed = parseJsonSafe<any>(result.text);

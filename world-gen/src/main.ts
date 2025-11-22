@@ -42,7 +42,7 @@ const llmConfig = {
   temperature: 0.4
 };
 const enrichmentConfig = {
-  batchSize: Number(process.env.LLM_BATCH_SIZE) || 3,
+  batchSize: Number(process.env.LLM_BATCH_SIZE) || 2,
   mode: llmMode,
   maxEntityEnrichments: llmPartial ? 1 : undefined,
   maxRelationshipEnrichments: llmPartial ? 1 : undefined,
