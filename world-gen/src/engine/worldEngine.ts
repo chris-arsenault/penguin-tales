@@ -205,11 +205,15 @@ export class WorldEngine {
 
         // Add entities to graph
         const newIds: string[] = [];
+        const clusterEntities: HardState[] = [];
         result.entities.forEach((entity, i) => {
           const id = addEntity(this.graph, entity);
           newIds.push(id);
           const ref = this.graph.entities.get(id);
-          if (ref) createdEntities.push(ref);
+          if (ref) {
+            createdEntities.push(ref);
+            clusterEntities.push(ref);
+          }
         });
 
         // Add relationships (resolve placeholder IDs)
@@ -239,15 +243,18 @@ export class WorldEngine {
 
         entitiesCreated += result.entities.length;
 
+        // Queue enrichment for this template's cluster immediately
+        if (clusterEntities.length > 0) {
+          this.queueEntityEnrichment(clusterEntities);
+          this.queueDiscoveryEnrichment(clusterEntities);
+        }
+
       } catch (error) {
         console.error(`Template ${template.id} failed:`, error);
       }
     }
 
     console.log(`  Growth: +${entitiesCreated} entities (target: ${growthTargets})`);
-
-    this.queueEntityEnrichment(createdEntities);
-    this.queueDiscoveryEnrichment(createdEntities);
   }
 
   /**

@@ -59,12 +59,12 @@ export interface Filters {
 export type GraphMode = 'full' | 'radial' | 'temporal' | 'faction' | 'conflict' | 'economic';
 
 // Lore types
-export type LoreType = 'description' | 'relationship_backstory' | 'era_narrative';
+export type LoreType = 'description' | 'relationship_backstory' | 'era_narrative' | 'chain_link' | 'discovery_event';
 
 export interface LoreRecord {
   id: string;
   type: LoreType;
-  targetId?: string;  // For description and relationship_backstory
+  targetId?: string;  // For description, relationship_backstory, chain_link, discovery_event
   text: string;
   cached?: boolean;
   warnings?: string[];
@@ -94,8 +94,28 @@ export interface EraNarrativeLore extends LoreRecord {
   };
 }
 
+export interface ChainLinkLore extends LoreRecord {
+  type: 'chain_link';
+  targetId: string;
+  metadata: {
+    sourceLocation: string;
+    revealedTheme: string;
+  };
+}
+
+export interface DiscoveryEventLore extends LoreRecord {
+  type: 'discovery_event';
+  targetId: string;
+  metadata: {
+    explorer: string;
+    discoveryType: 'pressure' | 'chain';
+    significance: string;
+    tick: number;
+  };
+}
+
 export interface LoreData {
   llmEnabled: boolean;
   model: string;
-  records: (DescriptionLore | RelationshipBackstoryLore | EraNarrativeLore)[];
+  records: (DescriptionLore | RelationshipBackstoryLore | EraNarrativeLore | ChainLinkLore | DiscoveryEventLore)[];
 }

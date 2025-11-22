@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     // Load both world data and lore data
     Promise.all([
-      fetch('/src/data/worldData.json').then(res => {
+      fetch('/src/data/generated_world.json').then(res => {
         if (!res.ok) throw new Error('Failed to load world data');
         return res.json();
       }),

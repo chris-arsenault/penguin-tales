@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import type { WorldState, LoreData, DescriptionLore, RelationshipBackstoryLore } from '../types/world.ts';
+import type { WorldState, LoreData, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships } from '../utils/dataTransform.ts';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
+import ChainLinkSection from './ChainLinkSection.tsx';
+import DiscoveryStory from './DiscoveryStory.tsx';
 import './EntityDetail.css';
 
 interface EntityDetailProps {
@@ -46,6 +48,14 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
   const descriptionLore = loreData?.records.find(
     record => record.type === 'description' && record.targetId === entityId
   ) as DescriptionLore | undefined;
+
+  const chainLinkLore = loreData?.records.find(
+    record => record.type === 'chain_link' && record.targetId === entityId
+  ) as ChainLinkLore | undefined;
+
+  const discoveryEventLore = loreData?.records.find(
+    record => record.type === 'discovery_event' && record.targetId === entityId
+  ) as DiscoveryEventLore | undefined;
 
   // Helper to find relationship lore
   const findRelationshipLore = (srcId: string, dstId: string, kind: string): RelationshipBackstoryLore | undefined => {
@@ -142,6 +152,17 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
 
       {/* Lore */}
       {descriptionLore && <LoreSection lore={descriptionLore} />}
+
+      {/* Chain Link */}
+      {chainLinkLore && <ChainLinkSection lore={chainLinkLore} />}
+
+      {/* Discovery Story */}
+      {discoveryEventLore && (
+        <DiscoveryStory
+          lore={discoveryEventLore}
+          onExplorerClick={onRelatedClick}
+        />
+      )}
 
       {/* Status */}
       <div className="mb-6">

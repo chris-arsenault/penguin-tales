@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import type { WorldState, LoreData, EraNarrativeLore } from '../types/world.ts';
+import type { WorldState, LoreData, EraNarrativeLore, DiscoveryEventLore } from '../types/world.ts';
 import EraNarrative from './EraNarrative.tsx';
+import DiscoveryStory from './DiscoveryStory.tsx';
 import './TimelineControl.css';
 
 interface TimelineControlProps {
@@ -14,6 +15,7 @@ export default function TimelineControl({ worldData, loreData, currentTick, onTi
   const [isPlaying, setIsPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
   const [selectedEraNarrative, setSelectedEraNarrative] = useState<EraNarrativeLore | null>(null);
+  const [selectedDiscovery, setSelectedDiscovery] = useState<DiscoveryEventLore | null>(null);
   const previousTickRef = useRef(currentTick);
 
   const maxTick = worldData.metadata.tick;
@@ -23,6 +25,11 @@ export default function TimelineControl({ worldData, loreData, currentTick, onTi
   const eraNarratives = (loreData?.records.filter(
     record => record.type === 'era_narrative'
   ) as EraNarrativeLore[]) || [];
+
+  // Get all discovery events from lore
+  const discoveryEvents = (loreData?.records.filter(
+    record => record.type === 'discovery_event'
+  ) as DiscoveryEventLore[]) || [];
 
   // Detect when crossing era transition ticks
   useEffect(() => {
@@ -182,21 +189,38 @@ export default function TimelineControl({ worldData, loreData, currentTick, onTi
         </div>
       </div>
 
-      {/* Era Narrative Milestones */}
-      {eraNarratives.length > 0 && (
+      {/* Era Narrative & Discovery Milestones */}
+      {(eraNarratives.length > 0 || discoveryEvents.length > 0) && (
         <div className="timeline-milestones">
+          {/* Era Narratives */}
           {eraNarratives.map(narrative => {
             const tick = narrative.metadata.tick;
             const percent = (tick / maxTick) * 100;
             return (
               <button
                 key={narrative.id}
-                className={`timeline-milestone ${currentTick === tick ? 'active' : ''}`}
+                className={`timeline-milestone timeline-milestone-era ${currentTick === tick ? 'active' : ''}`}
                 style={{ left: `${percent}%` }}
                 onClick={() => setSelectedEraNarrative(narrative)}
                 title={`${narrative.metadata.from} → ${narrative.metadata.to} (Tick ${tick})`}
               >
                 📜
+              </button>
+            );
+          })}
+          {/* Discovery Events */}
+          {discoveryEvents.map(discovery => {
+            const tick = discovery.metadata.tick;
+            const percent = (tick / maxTick) * 100;
+            return (
+              <button
+                key={discovery.id}
+                className={`timeline-milestone timeline-milestone-discovery timeline-milestone-${discovery.metadata.discoveryType} ${currentTick === tick ? 'active' : ''}`}
+                style={{ left: `${percent}%` }}
+                onClick={() => setSelectedDiscovery(discovery)}
+                title={`Discovery by ${discovery.metadata.explorer} (Tick ${tick})`}
+              >
+                🧭
               </button>
             );
           })}
@@ -208,6 +232,16 @@ export default function TimelineControl({ worldData, loreData, currentTick, onTi
         <EraNarrative
           lore={selectedEraNarrative}
           onClose={() => setSelectedEraNarrative(null)}
+        />
+      )}
+
+      {/* Discovery Story Modal */}
+      {selectedDiscovery && (
+        <DiscoveryStory
+          lore={selectedDiscovery}
+          onExplorerClick={() => {}}
+          onClose={() => setSelectedDiscovery(null)}
+          isModal={true}
         />
       )}
     </div>
