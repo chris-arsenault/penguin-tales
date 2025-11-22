@@ -9,7 +9,8 @@ import {
   pickRandom,
   weightedRandom,
   findEntities,
-  getProminenceValue
+  getProminenceValue,
+  upsertNameTag
 } from '../utils/helpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../config/eras';
 import { EnrichmentService } from '../services/enrichmentService';
@@ -20,6 +21,7 @@ export class WorldEngine {
   private currentEpoch: number;
   private enrichmentService?: EnrichmentService;
   private pendingEnrichments: Promise<void>[] = [];
+  private pendingNameEnrichments: Promise<void>[] = [];
   private entityEnrichmentsUsed = 0;
   private relationshipEnrichmentsUsed = 0;
   private eraNarrativesUsed = 0;
@@ -175,33 +177,32 @@ export class WorldEngine {
   }
   
   private runGrowthPhase(era: Era): void {
-    const growthTargets = Math.floor(5 + Math.random() * 10); // 5-15 new entities
+    // Calculate dynamic growth target based on remaining entity deficits
+    const growthTargets = this.calculateGrowthTarget();
     let entitiesCreated = 0;
     const createdEntities: HardState[] = [];
-    
-    // Shuffle templates for variety
-    const shuffledTemplates = [...this.config.templates].sort(() => Math.random() - 0.5);
-    
-    for (const template of shuffledTemplates) {
+
+    // Calculate entity kind deficits for weighted template selection
+    const deficits = this.calculateEntityDeficits();
+
+    // Weighted template selection based on entity kind deficits
+    const weightedTemplates = this.selectWeightedTemplates(era, deficits, growthTargets);
+
+    for (const template of weightedTemplates) {
       if (entitiesCreated >= growthTargets) break;
-      
-      // Check era weight
-      const weight = getTemplateWeight(era, template.id);
-      if (weight === 0) continue; // Template disabled in this era
-      if (Math.random() > weight / 2) continue; // Weighted chance
-      
+
       // Check if template can apply
       if (!template.canApply(this.graph)) continue;
-      
+
       // Find targets
       const targets = template.findTargets(this.graph);
       if (targets.length === 0) continue;
-      
+
       // Apply template to random target
       const target = pickRandom(targets);
       try {
         const result = template.expand(this.graph, target);
-        
+
         // Add entities to graph
         const newIds: string[] = [];
         result.entities.forEach((entity, i) => {
@@ -210,21 +211,21 @@ export class WorldEngine {
           const ref = this.graph.entities.get(id);
           if (ref) createdEntities.push(ref);
         });
-        
+
         // Add relationships (resolve placeholder IDs)
         result.relationships.forEach(rel => {
-          const srcId = rel.src.startsWith('will-be-assigned-') 
+          const srcId = rel.src.startsWith('will-be-assigned-')
             ? newIds[parseInt(rel.src.split('-')[3])]
             : rel.src;
           const dstId = rel.dst.startsWith('will-be-assigned-')
             ? newIds[parseInt(rel.dst.split('-')[3])]
             : rel.dst;
-          
+
           if (srcId && dstId) {
             addRelationship(this.graph, rel.kind, srcId, dstId);
           }
         });
-        
+
         // Record history
         this.graph.history.push({
           tick: this.graph.tick,
@@ -235,17 +236,160 @@ export class WorldEngine {
           relationshipsCreated: result.relationships as Relationship[],
           entitiesModified: []
         });
-        
+
         entitiesCreated += result.entities.length;
-        
+
       } catch (error) {
         console.error(`Template ${template.id} failed:`, error);
       }
     }
-    
-    console.log(`  Growth: +${entitiesCreated} entities`);
-    
+
+    console.log(`  Growth: +${entitiesCreated} entities (target: ${growthTargets})`);
+
     this.queueEntityEnrichment(createdEntities);
+    this.queueDiscoveryEnrichment(createdEntities);
+  }
+
+  /**
+   * Calculate dynamic growth target based on remaining entity deficits
+   */
+  private calculateGrowthTarget(): number {
+    const entityKinds = ['npc', 'faction', 'rules', 'abilities', 'location'];
+    const currentCounts = new Map<string, number>();
+
+    // Count current entities by kind
+    for (const entity of this.graph.entities.values()) {
+      currentCounts.set(entity.kind, (currentCounts.get(entity.kind) || 0) + 1);
+    }
+
+    // Calculate total remaining entities needed
+    let totalRemaining = 0;
+    for (const kind of entityKinds) {
+      const current = currentCounts.get(kind) || 0;
+      const target = this.config.targetEntitiesPerKind;
+      const remaining = Math.max(0, target - current);
+      totalRemaining += remaining;
+    }
+
+    // If we're close to target, reduce growth rate
+    if (totalRemaining === 0) return 3; // Minimal growth when at target
+
+    // Calculate epochs remaining (rough estimate)
+    const totalTarget = this.config.targetEntitiesPerKind * entityKinds.length;
+    const currentTotal = this.graph.entities.size;
+    const progressRatio = currentTotal / totalTarget;
+    const epochsRemaining = Math.max(1, this.config.eras.length * 2 - this.currentEpoch);
+
+    // Dynamic target: spread remaining entities over remaining epochs
+    const baseTarget = Math.ceil(totalRemaining / epochsRemaining);
+
+    // Add some variance for organic feel (±30%)
+    const variance = 0.3;
+    const target = Math.floor(baseTarget * (1 - variance + Math.random() * variance * 2));
+
+    // Cap at reasonable bounds (3-25 entities per epoch)
+    return Math.max(3, Math.min(25, target));
+  }
+
+  /**
+   * Calculate entity kind deficits (how underrepresented each kind is)
+   */
+  private calculateEntityDeficits(): Map<string, number> {
+    const entityKinds = ['npc', 'faction', 'rules', 'abilities', 'location'];
+    const deficits = new Map<string, number>();
+
+    // Count current entities by kind
+    const currentCounts = new Map<string, number>();
+    for (const entity of this.graph.entities.values()) {
+      currentCounts.set(entity.kind, (currentCounts.get(entity.kind) || 0) + 1);
+    }
+
+    // Calculate deficit for each kind
+    for (const kind of entityKinds) {
+      const current = currentCounts.get(kind) || 0;
+      const target = this.config.targetEntitiesPerKind;
+      const deficit = Math.max(0, target - current);
+      deficits.set(kind, deficit);
+    }
+
+    return deficits;
+  }
+
+  /**
+   * Select templates using weighted randomization based on entity deficits
+   */
+  private selectWeightedTemplates(era: Era, deficits: Map<string, number>, growthTarget: number): GrowthTemplate[] {
+    // Build template weights based on era and deficits
+    const templateWeights: Array<{ template: GrowthTemplate; weight: number }> = [];
+
+    for (const template of this.config.templates) {
+      // Get era weight
+      const eraWeight = getTemplateWeight(era, template.id);
+      if (eraWeight === 0) continue; // Template disabled in this era
+
+      // Estimate what entity kind(s) this template creates
+      // by looking at template naming convention or ID
+      const templateId = template.id.toLowerCase();
+      let deficitWeight = 1.0;
+
+      // Map template IDs to entity kinds (heuristic based on naming)
+      if (templateId.includes('npc') || templateId.includes('family') || templateId.includes('hero') ||
+          templateId.includes('outlaw') || templateId.includes('succession') || templateId.includes('kinship') ||
+          templateId.includes('vanishing') || templateId.includes('merchant')) {
+        deficitWeight = (deficits.get('npc') || 0) + 1;
+      } else if (templateId.includes('faction') || templateId.includes('guild') || templateId.includes('cult') ||
+                 templateId.includes('splinter')) {
+        deficitWeight = (deficits.get('faction') || 0) + 1;
+      } else if (templateId.includes('rule') || templateId.includes('tradition') || templateId.includes('legislation') ||
+                 templateId.includes('festival') || templateId.includes('law')) {
+        deficitWeight = (deficits.get('rules') || 0) + 1;
+      } else if (templateId.includes('abilit') || templateId.includes('tech') || templateId.includes('magic') ||
+                 templateId.includes('innovation')) {
+        deficitWeight = (deficits.get('abilities') || 0) + 1;
+      } else if (templateId.includes('location') || templateId.includes('colony') || templateId.includes('geographic') ||
+                 templateId.includes('krill') || templateId.includes('structure') || templateId.includes('discovery')) {
+        deficitWeight = (deficits.get('location') || 0) + 1;
+      }
+
+      // Normalize deficit weight to be a multiplier (0.5x to 3x)
+      // This ensures templates for underrepresented kinds are 2-6x more likely
+      const normalizedDeficitWeight = 0.5 + (deficitWeight / this.config.targetEntitiesPerKind) * 2.5;
+
+      // Combined weight = era weight × deficit weight
+      const combinedWeight = eraWeight * normalizedDeficitWeight;
+
+      templateWeights.push({ template, weight: combinedWeight });
+    }
+
+    // Select templates using weighted randomization
+    // We select more templates than growth target to account for failures
+    const selectCount = Math.min(templateWeights.length, growthTarget * 3);
+    const selected: GrowthTemplate[] = [];
+
+    for (let i = 0; i < selectCount; i++) {
+      if (templateWeights.length === 0) break;
+
+      // Weighted random selection
+      const totalWeight = templateWeights.reduce((sum, tw) => sum + tw.weight, 0);
+      if (totalWeight === 0) break;
+
+      let roll = Math.random() * totalWeight;
+      let selectedIndex = 0;
+
+      for (let j = 0; j < templateWeights.length; j++) {
+        roll -= templateWeights[j].weight;
+        if (roll <= 0) {
+          selectedIndex = j;
+          break;
+        }
+      }
+
+      // Add selected template and remove from pool (sample without replacement)
+      selected.push(templateWeights[selectedIndex].template);
+      templateWeights.splice(selectedIndex, 1);
+    }
+
+    return selected;
   }
   
   private runSimulationTick(era: Era): void {
@@ -418,6 +562,21 @@ export class WorldEngine {
     console.log(`  Pressures:`, Object.fromEntries(this.graph.pressures));
   }
   
+  private async waitForNameEnrichmentsSnapshot(): Promise<void> {
+    if (this.pendingNameEnrichments.length === 0) return;
+    const pending = [...this.pendingNameEnrichments];
+    await Promise.allSettled(pending);
+    this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => !pending.includes(p));
+  }
+  
+  private syncNameTags(): void {
+    this.graph.entities.forEach(entity => {
+      const hasNameTag = (entity.tags || []).some(t => t.startsWith('name:'));
+      if (!hasNameTag) return;
+      upsertNameTag(entity, entity.name);
+    });
+  }
+  
   private queueEntityEnrichment(entities: HardState[]): void {
     if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
     
@@ -427,12 +586,15 @@ export class WorldEngine {
       if (remaining <= 0) return;
       entities = entities.slice(0, remaining);
     }
+    // Consume budget up front so failures don't re-attempt
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      this.entityEnrichmentsUsed += entities.length;
+    }
     
     const context = this.buildEnrichmentContext();
     const enrichmentPromise = (async () => {
       const records = await this.enrichmentService!.enrichEntities(entities, context);
       this.graph.loreRecords.push(...records);
-      this.entityEnrichmentsUsed += entities.length;
       
       // Abilities get an extra pass to keep tech/magic in bounds
       const abilityRecords = await Promise.all(
@@ -446,7 +608,12 @@ export class WorldEngine {
         .forEach(r => this.graph.loreRecords.push(r));
     })().catch(error => console.warn('Enrichment failed:', error));
     
-    this.pendingEnrichments.push(enrichmentPromise.then(() => undefined));
+    const tracked = enrichmentPromise.then(() => undefined);
+    this.pendingEnrichments.push(tracked);
+    this.pendingNameEnrichments.push(tracked);
+    tracked.finally(() => {
+      this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => p !== tracked);
+    });
   }
   
   private queueRelationshipEnrichment(newRelationships: Relationship[]): void {
@@ -457,7 +624,7 @@ export class WorldEngine {
       const b = this.graph.entities.get(rel.dst);
       if (!a || !b) return false;
       
-      return getProminenceValue(a.prominence) >= 2 && getProminenceValue(b.prominence) >= 2;
+      return getProminenceValue(a.prominence) >= 3 && getProminenceValue(b.prominence) >= 3;
     }).slice(0, 3); // keep batches small for quality
     
     if (notable.length === 0) return;
@@ -478,11 +645,14 @@ export class WorldEngine {
       if (remaining <= 0) return;
       relationshipsToEnrich = notable.slice(0, remaining);
     }
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      this.relationshipEnrichmentsUsed += relationshipsToEnrich.length;
+    }
     
-    const promise = this.enrichmentService.enrichRelationships(relationshipsToEnrich, actors, context)
+    const promise = this.waitForNameEnrichmentsSnapshot()
+      .then(() => this.enrichmentService!.enrichRelationships(relationshipsToEnrich, actors, context))
       .then(records => {
         this.graph.loreRecords.push(...records);
-        this.relationshipEnrichmentsUsed += relationshipsToEnrich.length;
       })
       .catch(error => console.warn('Relationship enrichment failed:', error));
     
@@ -496,37 +666,136 @@ export class WorldEngine {
       const limit = this.config.enrichmentConfig?.maxEraNarratives ?? 0;
       if (this.eraNarrativesUsed >= limit) return;
     }
-    
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      this.eraNarrativesUsed += 1;
+    }
+
     const actors = Array.from(this.graph.entities.values())
       .filter(e => getProminenceValue(e.prominence) >= 3)
       .slice(0, 5);
-    
+
     const pressures = Object.fromEntries(this.graph.pressures);
-    const promise = this.enrichmentService.generateEraNarrative({
-      fromEra: fromEra.name,
-      toEra: toEra.name,
-      pressures,
-      actors,
-      tick: this.graph.tick
-    }).then(record => {
-      if (record) {
-        this.graph.loreRecords.push(record);
-        this.eraNarrativesUsed += 1;
-        this.graph.history.push({
-          tick: this.graph.tick,
-          era: toEra.id,
-          type: 'special',
-          description: record.text,
-          entitiesCreated: [],
-          relationshipsCreated: [],
-          entitiesModified: []
-        });
-      }
-    }).catch(error => console.warn('Era narrative enrichment failed:', error));
-    
+    const currentTick = this.graph.tick; // Capture tick at time of era transition
+
+    const promise = this.waitForNameEnrichmentsSnapshot()
+      .then(() => this.enrichmentService!.generateEraNarrative({
+        fromEra: fromEra.name,
+        toEra: toEra.name,
+        pressures,
+        actors,
+        tick: currentTick
+      })).then(record => {
+        if (record) {
+          this.graph.loreRecords.push(record);
+          this.eraNarrativesUsed += 1;
+          this.graph.history.push({
+            tick: currentTick,
+            era: toEra.id,
+            type: 'special',
+            description: record.text,
+            entitiesCreated: [],
+            relationshipsCreated: [],
+            entitiesModified: []
+          });
+        }
+      }).catch(error => console.warn('Era narrative enrichment failed:', error));
+
     this.pendingEnrichments.push(promise.then(() => undefined));
   }
-  
+
+  private queueDiscoveryEnrichment(entities: HardState[]): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+
+    // Find newly created locations that were discovered
+    const discoveries = entities.filter(e => e.kind === 'location');
+    if (discoveries.length === 0) return;
+
+    discoveries.forEach(location => {
+      // Find the explorer via discovered_by or explorer_of relationships
+      const discoveryRel = this.graph.relationships.find(r =>
+        (r.kind === 'discovered_by' && r.src === location.id) ||
+        (r.kind === 'explorer_of' && r.dst === location.id)
+      );
+
+      if (!discoveryRel) return;
+
+      const explorerId = discoveryRel.kind === 'discovered_by' ? discoveryRel.dst : discoveryRel.src;
+      const explorer = this.graph.entities.get(explorerId);
+      if (!explorer || explorer.kind !== 'npc') return;
+
+      // Capture tick at time of discovery
+      const discoveryTick = this.graph.tick;
+
+      // Determine discovery type based on tags and world state
+      let discoveryType: 'pressure' | 'exploration' | 'chain' = 'exploration';
+      let triggerContext: { pressure?: string; chainSource?: HardState } = {};
+
+      // Check if pressure-driven (resource, strategic, mystical locations)
+      if (location.subtype === 'geographic_feature' && location.tags.includes('resource')) {
+        discoveryType = 'pressure';
+        triggerContext.pressure = 'resource_scarcity';
+      } else if (location.tags.includes('strategic')) {
+        discoveryType = 'pressure';
+        triggerContext.pressure = 'conflict';
+      } else if (location.subtype === 'anomaly' || location.tags.includes('mystical')) {
+        discoveryType = 'pressure';
+        triggerContext.pressure = 'magical_instability';
+      }
+
+      // Check for chain discoveries (adjacent to other discovered locations)
+      const adjacentLocations = this.graph.relationships
+        .filter(r => r.kind === 'adjacent_to' && r.src === location.id)
+        .map(r => this.graph.entities.get(r.dst))
+        .filter((e): e is HardState => e !== undefined && e.kind === 'location');
+
+      if (adjacentLocations.length > 0) {
+        const recentlyDiscovered = adjacentLocations.find(loc =>
+          (this.graph.tick - loc.createdAt) <= 20
+        );
+        if (recentlyDiscovered) {
+          discoveryType = 'chain';
+          triggerContext.chainSource = recentlyDiscovered;
+        }
+      }
+
+      // Queue discovery event enrichment
+      const promise = this.waitForNameEnrichmentsSnapshot()
+        .then(() => this.enrichmentService!.enrichDiscoveryEvent({
+          location,
+          explorer,
+          discoveryType,
+          triggerContext,
+          tick: discoveryTick
+        }))
+        .then(record => {
+          if (record) {
+            this.graph.loreRecords.push(record);
+          }
+        })
+        .catch(error => console.warn('Discovery enrichment failed:', error));
+
+      this.pendingEnrichments.push(promise.then(() => undefined));
+
+      // If this was a chain discovery, also generate chain link explanation
+      if (discoveryType === 'chain' && triggerContext.chainSource) {
+        const chainPromise = this.waitForNameEnrichmentsSnapshot()
+          .then(() => this.enrichmentService!.generateChainLink({
+            sourceLocation: triggerContext.chainSource!,
+            revealedLocationTheme: location.subtype,
+            explorer
+          }))
+          .then(record => {
+            if (record) {
+              this.graph.loreRecords.push(record);
+            }
+          })
+          .catch(error => console.warn('Chain link enrichment failed:', error));
+
+        this.pendingEnrichments.push(chainPromise.then(() => undefined));
+      }
+    });
+  }
+
   private buildEnrichmentContext() {
     return {
       graphSnapshot: {
@@ -552,10 +821,16 @@ export class WorldEngine {
   }
   
   public async finalizeEnrichments(): Promise<void> {
-    if (this.pendingEnrichments.length === 0) return;
+    if (this.pendingEnrichments.length === 0) {
+      await this.waitForNameEnrichmentsSnapshot();
+      this.syncNameTags();
+      return;
+    }
     const pending = [...this.pendingEnrichments];
     this.pendingEnrichments = [];
     await Promise.allSettled(pending);
+    await this.waitForNameEnrichmentsSnapshot();
+    this.syncNameTags();
   }
   
   public exportState(): any {

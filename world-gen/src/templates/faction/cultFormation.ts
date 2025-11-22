@@ -62,7 +62,7 @@ export const cultFormation: GrowthTemplate = {
       name: generateName('mystic'),
       description: `The enigmatic prophet of ${cult.name}`,
       status: 'alive',
-      prominence: 'recognized',
+      prominence: 'marginal', // Prophets start marginal
       tags: ['prophet', 'mystic']
     };
     

@@ -8,7 +8,7 @@
 
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { pickRandom } from '../../utils/helpers';
+import { pickRandom, generateName } from '../../utils/helpers';
 import {
   analyzeResourceDeficit,
   generateResourceTheme,
@@ -88,12 +88,18 @@ export const resourceLocationDiscovery: GrowthTemplate = {
     // PROCEDURALLY GENERATE theme based on world state
     const theme = generateResourceTheme(deficit, graph.currentEra.id);
 
+    // Generate penguin-style name with themeString as descriptor
+    const locationName = generateName('location');
+    const formattedTheme = theme.themeString.split('_').map(w =>
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,
-      name: `PLACEHOLDER_${theme.themeString}`,  // LLM will enrich
-      description: `PLACEHOLDER_resource_${deficit.specific}`,
+      name: `${locationName} ${formattedTheme}`,
+      description: `A resource-rich ${formattedTheme.toLowerCase()} discovered to address ${deficit.specific} scarcity`,
       status: 'unspoiled',
       prominence: 'marginal',
       tags: theme.tags,

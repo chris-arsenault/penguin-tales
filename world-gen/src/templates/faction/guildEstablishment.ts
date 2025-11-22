@@ -1,6 +1,6 @@
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { generateName, pickRandom, findEntities } from '../../utils/helpers';
+import { generateName, pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 
 /**
  * Guild Establishment Template
@@ -48,7 +48,7 @@ export const guildEstablishment: GrowthTemplate = {
       description: `A merchant guild controlling trade in ${colony.name}`,
       status: 'state_sanctioned',
       prominence: 'recognized',
-      tags: ['trade', 'guild', colony.name.toLowerCase()]
+      tags: ['trade', 'guild', `name:${slugifyName(colony.name)}`]
     };
     
     const merchants: Partial<HardState>[] = [];

@@ -57,3 +57,45 @@ export interface Filters {
 }
 
 export type GraphMode = 'full' | 'radial' | 'temporal' | 'faction' | 'conflict' | 'economic';
+
+// Lore types
+export type LoreType = 'description' | 'relationship_backstory' | 'era_narrative';
+
+export interface LoreRecord {
+  id: string;
+  type: LoreType;
+  targetId?: string;  // For description and relationship_backstory
+  text: string;
+  cached?: boolean;
+  warnings?: string[];
+}
+
+export interface DescriptionLore extends LoreRecord {
+  type: 'description';
+  targetId: string;
+}
+
+export interface RelationshipBackstoryLore extends LoreRecord {
+  type: 'relationship_backstory';
+  targetId: string;
+  relationship: {
+    kind: string;
+    src: string;
+    dst: string;
+  };
+}
+
+export interface EraNarrativeLore extends LoreRecord {
+  type: 'era_narrative';
+  metadata: {
+    from: string;
+    to: string;
+    tick: number;
+  };
+}
+
+export interface LoreData {
+  llmEnabled: boolean;
+  model: string;
+  records: (DescriptionLore | RelationshipBackstoryLore | EraNarrativeLore)[];
+}

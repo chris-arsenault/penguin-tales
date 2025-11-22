@@ -14,7 +14,7 @@ export interface HardState {
     description: string;
     status: string;
     prominence: Prominence;
-    tags: string[];          // <= 5
+    tags: string[];          // <= 10
     links: Relationship[];
     createdAt: number;       // tick or epoch index
     updatedAt: number;
@@ -43,6 +43,13 @@ export type LocationSubtype = 'iceberg' | 'colony' | 'igloo' | 'geographic_featu
 export type FactionSubtype = 'political' | 'criminal' | 'cult' | 'company';
 export type RulesSubtype = 'edict' | 'taboo' | 'social' | 'natural';
 export type AbilitiesSubtype = 'magic' | 'faith' | 'technology' | 'physical';
+
+// Status types for each entity kind (expanded for new mechanics)
+export type NPCStatus = 'alive' | 'dead' | 'fictional' | 'missing';
+export type FactionStatus = 'active' | 'disbanded' | 'waning';
+export type LocationStatus = 'thriving' | 'waning' | 'abandoned';
+export type RulesStatus = 'active' | 'forgotten' | 'proposed' | 'enacted' | 'repealed';
+export type AbilitiesStatus = 'active' | 'lost';
 
 // Discovery tracking (emergent system)
 export interface DiscoveryState {

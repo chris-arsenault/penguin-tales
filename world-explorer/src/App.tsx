@@ -1,20 +1,36 @@
 import { useEffect, useState } from 'react';
 import WorldExplorer from './components/WorldExplorer.tsx';
-import type { WorldState } from './types/world.ts';
+import type { WorldState, LoreData } from './types/world.ts';
 
 function App() {
   const [worldData, setWorldData] = useState<WorldState | null>(null);
+  const [loreData, setLoreData] = useState<LoreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/src/data/worldData.json')
-      .then(res => {
+    // Load both world data and lore data
+    Promise.all([
+      fetch('/src/data/worldData.json').then(res => {
         if (!res.ok) throw new Error('Failed to load world data');
         return res.json();
-      })
-      .then(data => {
-        setWorldData(data);
+      }),
+      fetch('/src/data/lore.json')
+        .then(res => {
+          if (!res.ok) {
+            console.warn('Lore data not found, continuing without it');
+            return null;
+          }
+          return res.json();
+        })
+        .catch(() => {
+          console.warn('Lore data not available');
+          return null;
+        })
+    ])
+      .then(([world, lore]) => {
+        setWorldData(world);
+        setLoreData(lore);
         setLoading(false);
       })
       .catch(err => {
@@ -46,7 +62,7 @@ function App() {
     );
   }
 
-  return <WorldExplorer worldData={worldData} />;
+  return <WorldExplorer worldData={worldData} loreData={loreData} />;
 }
 
 export default App;

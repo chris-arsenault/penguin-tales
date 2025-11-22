@@ -167,12 +167,15 @@
 
 .accordion-row {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 14px;
   text-align: left;
   border: none;
   border-bottom: 1px solid rgba(59, 130, 246, 0.1);
-  cursor: pointer;
   transition: background 0.2s;
+  gap: 8px;
 }
 
 .accordion-row:last-child {
@@ -201,6 +204,16 @@
 
 .accordion-item.incoming .accordion-row:hover {
   background: rgba(20, 83, 45, 0.4) !important;
+}
+
+.accordion-row-button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
 }
 
 .accordion-row-name {
@@ -245,4 +258,27 @@
   font-size: 16px;
   font-weight: bold;
   color: #ffffff;
+}
+
+/* Lore Indicator */
+.lore-indicator {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.lore-indicator:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(217, 119, 6, 0.3) 100%);
+  border-color: rgba(251, 191, 36, 0.6);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
 }

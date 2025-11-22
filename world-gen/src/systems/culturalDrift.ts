@@ -33,7 +33,7 @@ export const culturalDrift: SimulationSystem = {
           if (sharedTags.length < 2 && Math.random() < 0.3 / modifier) {
             // Add a shared cultural tag
             const newTag = pickRandom(['unified', 'trading', 'peaceful']);
-            if (!colony.tags.includes(newTag) && colony.tags.length < 5) {
+            if (!colony.tags.includes(newTag) && colony.tags.length < 10) {
               modifications.push({
                 id: colony.id,
                 changes: { tags: [...colony.tags, newTag] }
@@ -44,7 +44,7 @@ export const culturalDrift: SimulationSystem = {
           // Disconnected colonies diverge (30% base chance)
           if (rollProbability(0.3, modifier)) {
             const divergentTag = pickRandom(['isolated', 'unique', 'divergent']);
-            if (!colony.tags.includes(divergentTag) && colony.tags.length < 5) {
+            if (!colony.tags.includes(divergentTag) && colony.tags.length < 10) {
               modifications.push({
                 id: colony.id,
                 changes: { tags: [...colony.tags, divergentTag] }

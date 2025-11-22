@@ -12,6 +12,7 @@ export { resourceLocationDiscovery } from './resourceLocationDiscovery';
 export { strategicLocationDiscovery } from './strategicLocationDiscovery';
 export { mysticalLocationDiscovery } from './mysticalLocationDiscovery';
 export { geographicExploration } from './geographicExploration';
+export { krillBloomMigration } from './krillBloomMigration';
 
 import { colonyFounding } from './colonyFounding';
 import { anomalyManifestation } from './anomalyManifestation';
@@ -19,6 +20,7 @@ import { resourceLocationDiscovery } from './resourceLocationDiscovery';
 import { strategicLocationDiscovery } from './strategicLocationDiscovery';
 import { mysticalLocationDiscovery } from './mysticalLocationDiscovery';
 import { geographicExploration } from './geographicExploration';
+import { krillBloomMigration } from './krillBloomMigration';
 
 export const locationTemplates: GrowthTemplate[] = [
   colonyFounding,
@@ -26,5 +28,6 @@ export const locationTemplates: GrowthTemplate[] = [
   resourceLocationDiscovery,
   strategicLocationDiscovery,
   mysticalLocationDiscovery,
-  geographicExploration
+  geographicExploration,
+  krillBloomMigration
 ];

@@ -266,3 +266,53 @@
   font-style: italic;
   padding: 6px 12px;
 }
+
+/* Timeline Milestones */
+.timeline-milestones {
+  position: relative;
+  height: 0;
+  margin-top: -20px;
+  pointer-events: none;
+}
+
+.timeline-milestone {
+  position: absolute;
+  top: -8px;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  pointer-events: all;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.timeline-milestone:hover {
+  transform: translateX(-50%) scale(1.3);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.timeline-milestone.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #ffffff;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.9), 0 2px 4px rgba(0, 0, 0, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.2);
+  }
+}

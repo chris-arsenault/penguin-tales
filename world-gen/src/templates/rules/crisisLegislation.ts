@@ -1,6 +1,6 @@
 import { GrowthTemplate, TemplateResult, Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { pickRandom, findEntities } from '../../utils/helpers';
+import { pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 
 /**
  * Crisis Legislation Template
@@ -32,7 +32,7 @@ export const crisisLegislation: GrowthTemplate = {
         description: `Emergency measure enacted in ${colony.name}`,
         status: 'enacted',
         prominence: 'recognized',
-        tags: ['crisis', colony.name.toLowerCase()]
+        tags: ['crisis', `name:${slugifyName(colony.name)}`]
       }],
       relationships: [
         { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }

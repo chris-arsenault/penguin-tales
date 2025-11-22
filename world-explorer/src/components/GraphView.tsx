@@ -24,7 +24,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
 
     const layout = cyRef.current.layout({
       name: 'cose-bilkent',
-      randomize: false,
+      randomize: true,  // Add jitter to break out of local minima
       fit: true,
       idealEdgeLength: 100,
       nodeRepulsion: 100000,
@@ -327,13 +327,19 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
       {/* Recalculate Layout Button */}
       <button
         onClick={handleRecalculateLayout}
-        className="absolute top-6 right-6 px-4 py-2 rounded-lg text-white text-xs font-semibold shadow-2xl border border-blue-500/30 transition-all"
+        className="px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-2xl border border-blue-500/50 transition-all hover:scale-105"
         style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)'
+          position: 'absolute',
+          top: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)',
+          zIndex: 1000
         }}
         title="Recalculate graph layout"
       >
-        ♻️ Recalculate Layout
+        <span style={{ fontSize: '16px', marginRight: '8px' }}>♻️</span>
+        Recalculate Layout
       </button>
     </div>
   );

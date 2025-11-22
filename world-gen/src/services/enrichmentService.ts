@@ -3,6 +3,18 @@ import { EnrichmentConfig, LLMConfig } from '../types/engine';
 import { EnrichmentContext, LoreIndex, LoreRecord } from '../types/lore';
 import { LLMClient } from './llmClient';
 import { LoreValidator } from './loreValidator';
+import { generateName, upsertNameTag } from '../utils/helpers';
+
+function parseJsonSafe<T = any>(raw: string): T | null {
+  if (!raw) return null;
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const result: T[][] = [];
@@ -79,32 +91,35 @@ export class EnrichmentService {
         `Use colony tone differences:`,
         `Aurora Stack practical; Nightfall Shelf poetic; two-part names with earned names.`,
         `Do not invent new mechanics; stay within canon list; avoid legends unless noting rumor.`,
+        `You MUST change the placeholder names; do not repeat the provided placeholder.`,
         `Return JSON array only.`
       ].join('\n');
 
       const result = await this.llm.complete({
         systemPrompt: 'You are a precise lore keeper. Respond only with JSON when asked.',
         prompt,
-        json: true,
         maxTokens: 400
       });
 
       let parsed: Array<{ id: string; name?: string; description?: string }> = [];
-
-      if (result.text) {
-        try {
-          parsed = JSON.parse(result.text);
-        } catch (error) {
-          console.warn('Failed to parse enrichment response, using placeholders.', error);
-        }
+      const parsedResult = parseJsonSafe<Array<{ id: string; name?: string; description?: string }>>(result.text);
+      if (parsedResult) {
+        parsed = parsedResult;
+      } else if (result.text) {
+        console.warn('Failed to parse enrichment response, using placeholders.');
       }
 
       parsed.forEach(entry => {
         const entity = batch.find(e => e.id === entry.id);
         if (!entity) return;
 
+        const oldName = entity.name;
         if (entry.name) entity.name = entry.name;
         if (entry.description) entity.description = entry.description;
+
+        if (entry.name && entry.name !== oldName) {
+          upsertNameTag(entity, entry.name);
+        }
 
         const validation = this.validator.validateEntity(entity, entry.description);
         const record: LoreRecord = {
@@ -144,27 +159,24 @@ export class EnrichmentService {
     const result = await this.llm.complete({
       systemPrompt: 'You write concise historical events grounded in provided lore. Output JSON only.',
       prompt,
-      json: true,
       maxTokens: 300
     });
 
-    if (!result.text) return null;
-
-    try {
-      const parsed = JSON.parse(result.text);
-      const record: LoreRecord = {
-        id: nextLoreId('era'),
-        type: 'era_narrative',
-        text: `${parsed.eventName}: ${parsed.description}`,
-        metadata: { from: params.fromEra, to: params.toEra, tick: params.tick },
-        cached: result.cached
-      };
-      this.loreLog.push(record);
-      return record;
-    } catch (error) {
-      console.warn('Failed to parse era narrative response', error);
+    const parsed = parseJsonSafe<any>(result.text);
+    if (!parsed) {
+      if (result.text) console.warn('Failed to parse era narrative response');
       return null;
     }
+
+    const record: LoreRecord = {
+      id: nextLoreId('era'),
+      type: 'era_narrative',
+      text: `${parsed.eventName}: ${parsed.description}`,
+      metadata: { from: params.fromEra, to: params.toEra, tick: params.tick },
+      cached: result.cached
+    };
+    this.loreLog.push(record);
+    return record;
   }
 
   public async enrichRelationships(
@@ -193,14 +205,11 @@ export class EnrichmentService {
       const result = await this.llm.complete({
         systemPrompt: 'You write concise, lore-aware relationship backstories. Output JSON only.',
         prompt,
-        json: true,
-        maxTokens: 240
+        maxTokens: 440
       });
 
-      if (!result.text) continue;
-
-      try {
-        const parsed = JSON.parse(result.text);
+      const parsed = parseJsonSafe<any>(result.text);
+      if (parsed) {
         const text = `${parsed.incident} | Stakes: ${parsed.stakes} | Perception: ${parsed.publicPerception}`;
         const record: LoreRecord = {
           id: nextLoreId('relationship'),
@@ -212,8 +221,8 @@ export class EnrichmentService {
         };
         this.loreLog.push(record);
         records.push(record);
-      } catch (error) {
-        console.warn('Failed to parse relationship backstory response', error);
+      } else if (result.text) {
+        console.warn('Failed to parse relationship backstory response');
       }
     }
 
@@ -238,14 +247,11 @@ export class EnrichmentService {
     const result = await this.llm.complete({
       systemPrompt: 'You design abilities consistent with penguin lore. Output JSON only.',
       prompt,
-      json: true,
       maxTokens: 260
     });
 
-    if (!result.text) return null;
-
-    try {
-      const parsed = JSON.parse(result.text);
+    const parsed = parseJsonSafe<any>(result.text);
+    if (parsed) {
       ability.name = parsed.name || ability.name;
       ability.description = parsed.description || ability.description;
       const validation = this.validator.validateEntity(ability, parsed.description);
@@ -260,10 +266,12 @@ export class EnrichmentService {
       };
       this.loreLog.push(record);
       return record;
-    } catch (error) {
-      console.warn('Failed to parse ability enrichment response', error);
-      return null;
     }
+    
+    if (result.text) {
+      console.warn('Failed to parse ability enrichment response');
+    }
+    return null;
   }
 
   public async enrichDiscoveryEvent(params: {
@@ -301,33 +309,30 @@ export class EnrichmentService {
     const result = await this.llm.complete({
       systemPrompt: 'You write concise, lore-aware discovery narratives. Output JSON only.',
       prompt,
-      json: true,
       maxTokens: 300
     });
 
-    if (!result.text) return null;
-
-    try {
-      const parsed = JSON.parse(result.text);
-      const record: LoreRecord = {
-        id: nextLoreId('discovery'),
-        type: 'discovery_event',
-        targetId: params.location.id,
-        text: `${params.explorer.name} discovered ${params.location.name}: ${parsed.narrative}`,
-        cached: result.cached,
-        metadata: {
-          explorer: params.explorer.id,
-          discoveryType: params.discoveryType,
-          significance: parsed.significance,
-          tick: params.tick
-        }
-      };
-      this.loreLog.push(record);
-      return record;
-    } catch (error) {
-      console.warn('Failed to parse discovery event response', error);
+    const parsed = parseJsonSafe<any>(result.text);
+    if (!parsed) {
+      if (result.text) console.warn('Failed to parse discovery event response');
       return null;
     }
+
+    const record: LoreRecord = {
+      id: nextLoreId('discovery'),
+      type: 'discovery_event',
+      targetId: params.location.id,
+      text: `${params.explorer.name} discovered ${params.location.name}: ${parsed.narrative}`,
+      cached: result.cached,
+      metadata: {
+        explorer: params.explorer.id,
+        discoveryType: params.discoveryType,
+        significance: parsed.significance,
+        tick: params.tick
+      }
+    };
+    this.loreLog.push(record);
+    return record;
   }
 
   public async generateChainLink(params: {
@@ -349,31 +354,28 @@ export class EnrichmentService {
     const result = await this.llm.complete({
       systemPrompt: 'You explain logical geographic connections in discovery chains. Output JSON only.',
       prompt,
-      json: true,
       maxTokens: 200
     });
 
-    if (!result.text) return null;
-
-    try {
-      const parsed = JSON.parse(result.text);
-      const record: LoreRecord = {
-        id: nextLoreId('chain'),
-        type: 'chain_link',
-        targetId: params.sourceLocation.id,
-        text: `${parsed.connection} | Clue: ${parsed.clue}`,
-        cached: result.cached,
-        metadata: {
-          sourceLocation: params.sourceLocation.id,
-          revealedTheme: params.revealedLocationTheme
-        }
-      };
-      this.loreLog.push(record);
-      return record;
-    } catch (error) {
-      console.warn('Failed to parse chain link response', error);
+    const parsed = parseJsonSafe<any>(result.text);
+    if (!parsed) {
+      if (result.text) console.warn('Failed to parse chain link response');
       return null;
     }
+
+    const record: LoreRecord = {
+      id: nextLoreId('chain'),
+      type: 'chain_link',
+      targetId: params.sourceLocation.id,
+      text: `${parsed.connection} | Clue: ${parsed.clue}`,
+      cached: result.cached,
+      metadata: {
+        sourceLocation: params.sourceLocation.id,
+        revealedTheme: params.revealedLocationTheme
+      }
+    };
+    this.loreLog.push(record);
+    return record;
   }
 
   private buildLoreHighlights(): string {

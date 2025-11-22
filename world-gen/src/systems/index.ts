@@ -14,6 +14,10 @@ export { resourceFlow } from './resourceFlow';
 export { culturalDrift } from './culturalDrift';
 export { prominenceEvolution } from './prominenceEvolution';
 export { allianceFormation } from './allianceFormation';
+export { legendCrystallization } from './legendCrystallization';
+export { thermalCascade } from './thermalCascade';
+export { beliefContagion } from './beliefContagion';
+export { successionVacuum } from './successionVacuum';
 
 // Import for aggregation
 import { relationshipFormation } from './relationshipFormation';
@@ -22,6 +26,10 @@ import { resourceFlow } from './resourceFlow';
 import { culturalDrift } from './culturalDrift';
 import { prominenceEvolution } from './prominenceEvolution';
 import { allianceFormation } from './allianceFormation';
+import { legendCrystallization } from './legendCrystallization';
+import { thermalCascade } from './thermalCascade';
+import { beliefContagion } from './beliefContagion';
+import { successionVacuum } from './successionVacuum';
 
 /**
  * All simulation systems
@@ -34,5 +42,9 @@ export const allSystems: SimulationSystem[] = [
   resourceFlow,
   culturalDrift,
   prominenceEvolution,
-  allianceFormation
+  allianceFormation,
+  legendCrystallization,
+  thermalCascade,
+  beliefContagion,
+  successionVacuum
 ];
