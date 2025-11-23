@@ -14,6 +14,7 @@ import {
 } from '../utils/helpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../config/eras';
 import { EnrichmentService } from '../services/enrichmentService';
+import { ImageGenerationService } from '../services/imageGenerationService';
 import { TemplateSelector } from '../services/templateSelector';
 import { SystemSelector } from '../services/systemSelector';
 import { DistributionTracker } from '../services/distributionTracker';
@@ -283,6 +284,7 @@ export class WorldEngine {
   private graph: Graph;
   private currentEpoch: number;
   private enrichmentService?: EnrichmentService;
+  private imageGenerationService?: ImageGenerationService;
   private templateSelector?: TemplateSelector;  // Optional statistical template selector
   private systemSelector?: SystemSelector;      // Optional statistical system weighting
   private distributionTracker?: DistributionTracker;  // Distribution measurement
@@ -309,9 +311,15 @@ export class WorldEngine {
     npcEnrichments: 0
   };
   
-  constructor(config: EngineConfig, initialState: HardState[], enrichmentService?: EnrichmentService) {
+  constructor(
+    config: EngineConfig,
+    initialState: HardState[],
+    enrichmentService?: EnrichmentService,
+    imageGenerationService?: ImageGenerationService
+  ) {
     this.config = config;
     this.enrichmentService = enrichmentService;
+    this.imageGenerationService = imageGenerationService;
     this.currentEpoch = 0;
 
     // Initialize warning log file
@@ -1540,6 +1548,49 @@ export class WorldEngine {
       },
       relatedHistory: this.graph.history.slice(-5).map(h => h.description)
     };
+  }
+
+  /**
+   * Queue image generation for mythic entities
+   * Called at the end of world generation
+   */
+  public async generateMythicImages(): Promise<void> {
+    if (!this.imageGenerationService?.isEnabled()) {
+      return;
+    }
+
+    const entities = Array.from(this.graph.entities.values());
+    const context = this.buildEnrichmentContext();
+
+    console.log(`\n=== Generating Images for Mythic Entities ===`);
+
+    const results = await this.imageGenerationService.generateImagesForMythicEntities(
+      entities,
+      context
+    );
+
+    const stats = this.imageGenerationService.getStats();
+    console.log(`✓ Generated ${stats.imagesGenerated} images`);
+    console.log(`  Output: ${path.relative(process.cwd(), stats.outputDir)}`);
+    console.log(`  Log: ${path.relative(process.cwd(), stats.logPath)}`);
+
+    // Export image metadata
+    const imageMetadata = {
+      generatedAt: new Date().toISOString(),
+      totalImages: stats.imagesGenerated,
+      results: results.map(r => ({
+        entityId: r.entityId,
+        entityName: r.entityName,
+        entityKind: r.entityKind,
+        prompt: r.prompt,
+        localPath: r.localPath ? path.relative(process.cwd(), r.localPath) : undefined,
+        error: r.error
+      }))
+    };
+
+    const metadataPath = path.join(stats.outputDir, 'image_metadata.json');
+    fs.writeFileSync(metadataPath, JSON.stringify(imageMetadata, null, 2));
+    console.log(`  Metadata: ${path.relative(process.cwd(), metadataPath)}`);
   }
   
   // Export methods

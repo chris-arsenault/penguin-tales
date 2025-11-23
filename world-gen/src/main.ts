@@ -23,6 +23,7 @@ import { allSystems } from './systems';
 import { normalizeInitialState } from './utils/helpers';
 import { loadLoreIndex } from './services/loreIndex';
 import { EnrichmentService } from './services/enrichmentService';
+import { ImageGenerationService } from './services/imageGenerationService';
 import { validateWorld } from './utils/validators';
 import { applyParameterOverrides } from './utils/parameterOverrides';
 
@@ -54,6 +55,20 @@ const enrichmentConfig = {
 };
 const enrichmentService = llmEnabled
   ? new EnrichmentService(llmConfig, loreIndex, enrichmentConfig)
+  : undefined;
+
+// Image generation configuration (using OpenAI DALL-E)
+const imageGenEnv = sanitize(process.env.IMAGE_GENERATION_ENABLED).toLowerCase();
+const imageGenEnabled = imageGenEnv === 'true';
+const imageGenConfig = {
+  enabled: imageGenEnabled,
+  apiKey: sanitize(process.env.OPENAI_API_KEY),
+  model: sanitize(process.env.IMAGE_MODEL) || 'dall-e-3',
+  size: (sanitize(process.env.IMAGE_SIZE) || '1024x1024') as '1024x1024' | '1792x1024' | '1024x1792',
+  quality: (sanitize(process.env.IMAGE_QUALITY) || 'standard') as 'standard' | 'hd'
+};
+const imageGenerationService = imageGenEnabled
+  ? new ImageGenerationService(imageGenConfig)
   : undefined;
 
 // Apply parameter overrides from config file
@@ -105,18 +120,22 @@ async function generateWorld() {
   console.log('      Super Penguin Colony Simulation');
   console.log('===========================================\n');
   const llmStatus = llmEnabled ? (llmPartial ? 'partial' : 'full') : 'disabled';
-  console.log(`LLM enrichment: ${llmStatus}${llmEnabled ? ` (${llmModel})` : ''}\n`);
+  console.log(`LLM enrichment: ${llmStatus}${llmEnabled ? ` (${llmModel})` : ''}`);
+  console.log(`Image generation: ${imageGenEnabled ? 'enabled (DALL-E 3)' : 'disabled'}\n`);
 
   // Parse and normalize initial state
   const initialState: HardState[] = normalizeInitialState(initialStateData.hardState);
 
   // Create and run engine
-  const engine = new WorldEngine(config, initialState, enrichmentService);
-  
+  const engine = new WorldEngine(config, initialState, enrichmentService, imageGenerationService);
+
   console.time('Generation Time');
   const finalGraph = engine.run();
   console.timeEnd('Generation Time');
   await engine.finalizeEnrichments();
+
+  // Generate images for mythic entities
+  await engine.generateMythicImages();
   
   // Export results
   const worldState = engine.exportState();
