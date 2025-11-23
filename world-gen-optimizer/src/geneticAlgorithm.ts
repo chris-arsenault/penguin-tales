@@ -4,17 +4,25 @@
 
 import { Genome, Individual, Population, ParameterMetadata, GAConfig } from './types';
 import { ConfigLoader } from './configLoader';
+import { AdaptiveMutation } from './adaptiveMutation';
 
 export class GeneticAlgorithm {
   private config: GAConfig;
   private configLoader: ConfigLoader;
   private parameterMetadata: ParameterMetadata[];
   private generationCounter: number = 0;
+  private adaptiveMutation?: AdaptiveMutation;
 
-  constructor(config: GAConfig, configLoader: ConfigLoader, parameterMetadata: ParameterMetadata[]) {
+  constructor(
+    config: GAConfig,
+    configLoader: ConfigLoader,
+    parameterMetadata: ParameterMetadata[],
+    adaptiveMutation?: AdaptiveMutation
+  ) {
     this.config = config;
     this.configLoader = configLoader;
     this.parameterMetadata = parameterMetadata;
+    this.adaptiveMutation = adaptiveMutation;
   }
 
   /**
@@ -43,6 +51,11 @@ export class GeneticAlgorithm {
     this.generationCounter++;
     const nextGeneration: Individual[] = [];
 
+    // Update adaptive mutation generation counter
+    if (this.adaptiveMutation) {
+      this.adaptiveMutation.setGeneration(this.generationCounter);
+    }
+
     // Sort by fitness (descending)
     const sorted = [...currentPopulation].sort((a, b) => b.fitness - a.fitness);
 
@@ -64,8 +77,9 @@ export class GeneticAlgorithm {
       // Crossover
       const childGenome = this.crossover(parent1.genome, parent2.genome);
 
-      // Mutation
-      const mutatedGenome = this.mutateGenome(childGenome, this.config.mutationRate);
+      // Mutation (use parent fitness breakdown as hint for component-focused mutation)
+      const fitnessHint = parent1.fitness > parent2.fitness ? parent1.fitnessBreakdown : parent2.fitnessBreakdown;
+      const mutatedGenome = this.mutateGenome(childGenome, this.config.mutationRate, fitnessHint);
 
       nextGeneration.push({
         id: `gen${this.generationCounter}_ind${nextGeneration.length}`,
@@ -118,11 +132,17 @@ export class GeneticAlgorithm {
 
   /**
    * Mutate genome by randomly adjusting values
+   * Uses adaptive mutation if available
    */
-  private mutateGenome(genome: Genome, mutationRate: number): Genome {
+  private mutateGenome(genome: Genome, baseMutationRate: number, fitnessBreakdown?: Individual['fitnessBreakdown']): Genome {
     const mutated = new Map(genome);
 
     for (const metadata of this.parameterMetadata) {
+      // Get adaptive mutation rate if available, otherwise use base rate
+      const mutationRate = this.adaptiveMutation
+        ? this.adaptiveMutation.getMutationRate(metadata.path, baseMutationRate, fitnessBreakdown)
+        : baseMutationRate;
+
       if (Math.random() < mutationRate) {
         const currentValue = mutated.get(metadata.path);
         if (currentValue !== undefined) {
@@ -160,6 +180,24 @@ export class GeneticAlgorithm {
     while (u === 0) u = Math.random();
     while (v === 0) v = Math.random();
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  }
+
+  /**
+   * Record individuals for adaptive learning
+   */
+  recordPopulation(individuals: Individual[]): void {
+    if (!this.adaptiveMutation) return;
+
+    for (const individual of individuals) {
+      this.adaptiveMutation.recordIndividual(individual);
+    }
+  }
+
+  /**
+   * Get adaptive mutation system
+   */
+  getAdaptiveMutation(): AdaptiveMutation | undefined {
+    return this.adaptiveMutation;
   }
 
   /**

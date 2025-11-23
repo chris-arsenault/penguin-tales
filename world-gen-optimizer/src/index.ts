@@ -11,6 +11,7 @@ import { FitnessEvaluator } from './fitnessEvaluator';
 import { GeneticAlgorithm } from './geneticAlgorithm';
 import { WorldGenRunner } from './worldGenRunner';
 import { EvolutionTracker } from './tracker';
+import { AdaptiveMutation } from './adaptiveMutation';
 import { GAConfig, Population } from './types';
 
 async function main() {
@@ -52,7 +53,17 @@ async function main() {
   console.log(`  Float parameters: ${parameterMetadata.filter(p => p.type === 'float').length}\n`);
 
   const fitnessEvaluator = new FitnessEvaluator();
-  const geneticAlgorithm = new GeneticAlgorithm(gaConfig, configLoader, parameterMetadata);
+
+  // Initialize adaptive mutation
+  const adaptiveMutation = new AdaptiveMutation(configLoader, parameterMetadata, {
+    strategy: 'hybrid',              // Use combined strategies
+    impactBoostFactor: 3.0,          // 3x mutation for high-impact params
+    initialMutationRate: 0.20,       // Start with 20% mutation
+    finalMutationRate: 0.05,         // End with 5% mutation
+    annealingSchedule: 'exponential' // Exponential decay
+  });
+
+  const geneticAlgorithm = new GeneticAlgorithm(gaConfig, configLoader, parameterMetadata, adaptiveMutation);
   const worldGenRunner = new WorldGenRunner(
     worldGenPath,
     configLoader,
@@ -67,7 +78,13 @@ async function main() {
   console.log(`  Prominence distribution: ${weights.prominenceDistribution.toFixed(2)}`);
   console.log(`  Relationship diversity: ${weights.relationshipDiversity.toFixed(2)}`);
   console.log(`  Connectivity: ${weights.connectivity.toFixed(2)}`);
-  console.log(`  Overall fitness: ${weights.overall.toFixed(2)}\n`);
+  console.log(`  Overall fitness: ${weights.overall.toFixed(2)}`);
+  console.log(`  Violation penalty: 0.10\n`);
+
+  console.log('Adaptive mutation enabled (hybrid strategy):');
+  console.log(`  Initial mutation rate: 20% → 5% (exponential annealing)`);
+  console.log(`  Impact-based boosting: 3x for influential parameters`);
+  console.log(`  Component-focused: 2x for weak fitness components\n`);
 
   // Create initial population
   console.log('Creating initial population...');
@@ -99,6 +116,9 @@ async function main() {
     // Update individuals with fitness scores
     currentPopulation = results.map(r => r.individual);
 
+    // Record population for adaptive learning
+    geneticAlgorithm.recordPopulation(currentPopulation);
+
     // Calculate population stats
     const stats = geneticAlgorithm.calculatePopulationStats(currentPopulation);
 
@@ -114,6 +134,14 @@ async function main() {
 
     const genTime = ((Date.now() - genStartTime) / 1000).toFixed(1);
     console.log(`\nGeneration completed in ${genTime}s`);
+
+    // Print parameter impact report every 10 generations
+    if ((generation + 1) % 10 === 0) {
+      const adaptive = geneticAlgorithm.getAdaptiveMutation();
+      if (adaptive) {
+        adaptive.printImpactReport();
+      }
+    }
 
     // Check for convergence (optional early stopping)
     if (generation > 10 && stats.diversity < 0.05) {

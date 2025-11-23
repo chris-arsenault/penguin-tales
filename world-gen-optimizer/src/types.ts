@@ -58,6 +58,14 @@ export interface WorldGenStats {
     passed: number;
     failed: number;
   };
+  performanceStats: {
+    protectedRelationshipViolations: {
+      totalViolations: number;
+      violationsByKind: Record<string, number>;
+      violationRate: number;
+      avgStrength: number;
+    };
+  };
   finalEntityCount: number;
   finalRelationshipCount: number;
   totalTicks: number;

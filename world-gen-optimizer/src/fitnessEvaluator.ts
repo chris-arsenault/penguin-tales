@@ -13,10 +13,14 @@ import { WorldGenStats, FitnessWeights, Individual } from './types';
 const DEFAULT_WEIGHTS: FitnessWeights = {
   entityDistribution: 0.15,      // How balanced entity kinds are
   prominenceDistribution: 0.15,  // How balanced prominence levels are
-  relationshipDiversity: 0.2,    // How diverse relationship types are
+  relationshipDiversity: 0.15,   // How diverse relationship types are
   connectivity: 0.15,            // How well-connected the graph is
-  overall: 0.35                  // Overall fitness from world-gen
+  overall: 0.30                  // Overall fitness from world-gen
 };
+
+// Violation penalty configuration
+const VIOLATION_PENALTY_WEIGHT = 0.10;  // Weight for violation penalties
+const VIOLATION_RATE_THRESHOLD = 5.0;   // Violations per tick threshold (lower is better)
 // ============================================================================
 
 export class FitnessEvaluator {
@@ -51,19 +55,42 @@ export class FitnessEvaluator {
   }
 
   /**
+   * Calculate violation penalty (normalized to 0-1, where 1 is no violations)
+   */
+  private calculateViolationPenalty(stats: WorldGenStats): number {
+    const violations = stats.performanceStats?.protectedRelationshipViolations;
+    if (!violations) {
+      return 1.0; // No penalty if data not available
+    }
+
+    // Normalize violation rate to 0-1 score (inverted, so lower violations = higher score)
+    // Use exponential decay: score = e^(-rate/threshold)
+    const violationScore = Math.exp(-violations.violationRate / VIOLATION_RATE_THRESHOLD);
+
+    return violationScore;
+  }
+
+  /**
    * Calculate weighted fitness from stats
    */
   calculateFitness(stats: WorldGenStats): number {
     const metrics = stats.fitnessMetrics;
 
-    const weightedFitness =
+    // Calculate component fitness
+    const componentFitness =
       this.weights.entityDistribution * metrics.entityDistributionFitness +
       this.weights.prominenceDistribution * metrics.prominenceDistributionFitness +
       this.weights.relationshipDiversity * metrics.relationshipDiversityFitness +
       this.weights.connectivity * metrics.connectivityFitness +
       this.weights.overall * metrics.overallFitness;
 
-    return weightedFitness;
+    // Calculate violation penalty
+    const violationPenalty = this.calculateViolationPenalty(stats);
+
+    // Combine component fitness with violation penalty
+    const totalFitness = componentFitness + (VIOLATION_PENALTY_WEIGHT * violationPenalty);
+
+    return totalFitness;
   }
 
   /**
