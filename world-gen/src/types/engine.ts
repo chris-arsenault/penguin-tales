@@ -52,6 +52,12 @@ export interface Graph {
     relationshipsPerTick: number[];  // Rolling window of last 20 ticks
     averageGrowthRate: number;       // Average relationships added per tick
   };
+
+  // Protected relationship violation tracking (for genetic algorithm fitness)
+  protectedRelationshipViolations?: Array<{
+    tick: number;
+    violations: Array<{ kind: string; strength: number }>;
+  }>;
 }
 
 // History tracking

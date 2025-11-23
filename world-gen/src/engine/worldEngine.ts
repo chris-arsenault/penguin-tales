@@ -18,6 +18,8 @@ import { ImageGenerationService } from '../services/imageGenerationService';
 import { TemplateSelector } from '../services/templateSelector';
 import { SystemSelector } from '../services/systemSelector';
 import { DistributionTracker } from '../services/distributionTracker';
+import { StatisticsCollector } from '../services/statisticsCollector';
+import { SimulationStatistics, ValidationStats } from '../types/statistics';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -288,6 +290,7 @@ export class WorldEngine {
   private templateSelector?: TemplateSelector;  // Optional statistical template selector
   private systemSelector?: SystemSelector;      // Optional statistical system weighting
   private distributionTracker?: DistributionTracker;  // Distribution measurement
+  private statisticsCollector: StatisticsCollector;  // Statistics tracking for fitness evaluation
   private pendingEnrichments: Promise<void>[] = [];
   private pendingNameEnrichments: Promise<void>[] = [];
   private entityEnrichmentsUsed = 0;
@@ -320,6 +323,7 @@ export class WorldEngine {
     this.config = config;
     this.enrichmentService = enrichmentService;
     this.imageGenerationService = imageGenerationService;
+    this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
 
     // Initialize warning log file
@@ -393,7 +397,8 @@ export class WorldEngine {
           this.graph.relationships.push({
             kind: link.kind,
             src: srcEntity.id,
-            dst: dstEntity.id
+            dst: dstEntity.id,
+            strength: link.strength
           });
         }
       });
@@ -426,6 +431,18 @@ export class WorldEngine {
    * Write warning to log file instead of console
    */
   private logWarning(message: string): void {
+    // Record warning in statistics
+    if (message.includes('BUDGET')) {
+      this.statisticsCollector.recordWarning('budget');
+    } else if (message.includes('AGGRESSIVE SYSTEM')) {
+      const match = message.match(/AGGRESSIVE SYSTEM: (\S+)/);
+      if (match) {
+        this.statisticsCollector.recordWarning('aggressive', match[1]);
+      }
+    } else if (message.includes('GROWTH RATE')) {
+      this.statisticsCollector.recordWarning('growth');
+    }
+
     try {
       const timestamp = new Date().toISOString();
       const logEntry = `[${timestamp}] [Tick ${this.graph.tick}] ${message}\n`;
@@ -500,26 +517,42 @@ export class WorldEngine {
     // Reset discovery counter for new epoch
     this.graph.discoveryState.discoveriesThisEpoch = 0;
 
+    // Track initial counts for statistics
+    const initialEntityCount = this.graph.entities.size;
+    const initialRelationshipCount = this.graph.relationships.length;
+
     // Growth phase
-    this.runGrowthPhase(era);
-    
+    const growthTargets = this.calculateGrowthTarget();
+    this.runGrowthPhase(era, growthTargets);
+
     // Simulation phase
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
       this.runSimulationTick(era);
       this.graph.tick++;
     }
-    
+
     // Apply era special rules if any
     if (era.specialRules) {
       era.specialRules(this.graph);
     }
-    
+
     // Update pressures
     this.updatePressures(era);
-    
+
     // Prune and consolidate
     this.pruneAndConsolidate();
-    
+
+    // Record epoch statistics
+    const entitiesCreated = this.graph.entities.size - initialEntityCount;
+    const relationshipsCreated = this.graph.relationships.length - initialRelationshipCount;
+    this.statisticsCollector.recordEpoch(
+      this.graph,
+      this.currentEpoch,
+      entitiesCreated,
+      relationshipsCreated,
+      growthTargets
+    );
+
     this.reportEpochStats();
 
     this.queueEraNarrative(previousEra, era);
@@ -528,9 +561,9 @@ export class WorldEngine {
     this.queueChangeEnrichments();
   }
 
-  private runGrowthPhase(era: Era): void {
-    // Calculate dynamic growth target based on remaining entity deficits
-    const growthTargets = this.calculateGrowthTarget();
+  private runGrowthPhase(era: Era, growthTargets?: number): void {
+    // Use provided growth targets or calculate new ones
+    const targets = growthTargets ?? this.calculateGrowthTarget();
     let entitiesCreated = 0;
     const createdEntities: HardState[] = [];
 
@@ -553,28 +586,31 @@ export class WorldEngine {
         this.graph,
         applicableTemplates,
         eraWeights,
-        growthTargets * 3  // Select more than needed to account for failures
+        targets * 3  // Select more than needed to account for failures
       );
     } else {
       // Fallback to heuristic method
       const deficits = this.calculateEntityDeficits();
-      weightedTemplates = this.selectWeightedTemplates(era, deficits, growthTargets);
+      weightedTemplates = this.selectWeightedTemplates(era, deficits, targets);
     }
 
     for (const template of weightedTemplates) {
-      if (entitiesCreated >= growthTargets) break;
+      if (entitiesCreated >= targets) break;
 
       // Check if template can apply
       if (!template.canApply(this.graph)) continue;
 
       // Find targets
-      const targets = template.findTargets(this.graph);
-      if (targets.length === 0) continue;
+      const templateTargets = template.findTargets(this.graph);
+      if (templateTargets.length === 0) continue;
 
       // Apply template to random target
-      const target = pickRandom(targets);
+      const target = pickRandom(templateTargets);
       try {
         const result = template.expand(this.graph, target);
+
+        // Record template application
+        this.statisticsCollector.recordTemplateApplication(template.id);
 
         // Add entities to graph
         const newIds: string[] = [];
@@ -627,7 +663,7 @@ export class WorldEngine {
       }
     }
 
-    console.log(`  Growth: +${entitiesCreated} entities (target: ${growthTargets})`);
+    console.log(`  Growth: +${entitiesCreated} entities (target: ${targets})`);
   }
 
   /**
@@ -796,6 +832,9 @@ export class WorldEngine {
 
       try {
         const result = system.apply(this.graph, modifier);
+
+        // Record system execution
+        this.statisticsCollector.recordSystemExecution(system.id);
 
         // Track system metrics
         const metric = this.systemMetrics.get(system.id) || { relationshipsCreated: 0, lastThrottleCheck: 0 };
@@ -1666,5 +1705,24 @@ export class WorldEngine {
     }
 
     return exportData;
+  }
+
+  /**
+   * Export statistics for fitness evaluation
+   */
+  public exportStatistics(validationResults: ValidationStats): SimulationStatistics {
+    return this.statisticsCollector.generateStatistics(
+      this.graph,
+      this.config,
+      {
+        locationEnrichments: this.enrichmentAnalytics.locationEnrichments,
+        factionEnrichments: this.enrichmentAnalytics.factionEnrichments,
+        ruleEnrichments: this.enrichmentAnalytics.ruleEnrichments,
+        abilityEnrichments: this.enrichmentAnalytics.abilityEnrichments,
+        npcEnrichments: this.enrichmentAnalytics.npcEnrichments,
+        totalEnrichments: Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0)
+      },
+      validationResults
+    );
   }
 }

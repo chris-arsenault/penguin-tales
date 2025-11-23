@@ -58,7 +58,11 @@ export const relationshipCulling: SimulationSystem = {
     const gracePeriod = params.gracePeriod?.value ?? 20;
 
     // Protected relationship kinds (hardcoded - these are core narrative elements)
-    const protectedKinds = new Set(['member_of', 'leader_of', 'resident_of', 'practitioner_of', 'originated_in']);
+    const protectedKinds = new Set([
+      'member_of', 'leader_of', 'resident_of', 'practitioner_of', 'originated_in',
+      'contains', 'contained_by', 'adjacent_to',  // Spatial relationships
+      'manifests_at', 'slumbers_beneath', 'discoverer_of'  // Ability relationships
+    ]);
 
     // Only run every N ticks
     if (graph.tick % cullFrequency !== 0) {
@@ -71,11 +75,18 @@ export const relationshipCulling: SimulationSystem = {
     }
 
     const removed: Relationship[] = [];
+    const protectedBelowThreshold: { kind: string; strength: number }[] = [];
     const originalCount = graph.relationships.length;
 
     graph.relationships = graph.relationships.filter(rel => {
-      // Protected kinds never get culled
-      if (protectedKinds.has(rel.kind)) return true;
+      // Protected kinds never get culled, but track if they're weak
+      if (protectedKinds.has(rel.kind)) {
+        const strength = rel.strength ?? 0.5;
+        if (strength < cullThreshold) {
+          protectedBelowThreshold.push({ kind: rel.kind, strength });
+        }
+        return true;
+      }
 
       // Calculate relationship age (minimum age of both entities)
       const srcEntity = graph.entities.get(rel.src);
@@ -118,6 +129,17 @@ export const relationshipCulling: SimulationSystem = {
     });
 
     const culledCount = removed.length;
+
+    // Store violation data in graph metadata for genetic algorithm fitness evaluation
+    if (!graph.protectedRelationshipViolations) {
+      graph.protectedRelationshipViolations = [];
+    }
+    if (protectedBelowThreshold.length > 0) {
+      graph.protectedRelationshipViolations.push({
+        tick: graph.tick,
+        violations: protectedBelowThreshold
+      });
+    }
 
     return {
       relationshipsAdded: [],

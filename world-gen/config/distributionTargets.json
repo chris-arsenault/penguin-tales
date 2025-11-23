@@ -13,11 +13,11 @@
       "type": "uniform",
       "comment": "Distribution of entity kinds - should sum to 1.0",
       "targets": {
-        "npc": 0.30,
+        "npc": 0.2,
         "location": 0.25,
         "faction": 0.20,
         "rules": 0.15,
-        "abilities": 0.10
+        "abilities": 0.20
       },
       "tolerance": 0.05
     },

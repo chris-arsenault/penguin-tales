@@ -29,8 +29,29 @@ import { applyParameterOverrides } from './utils/parameterOverrides';
 
 const sanitize = (value?: string | null): string => (value ?? '').trim();
 
+// Parse CLI arguments
+function parseArgs(): { runId?: string; configPath?: string } {
+  const args = process.argv.slice(2);
+  let runId: string | undefined;
+  let configPath: string | undefined;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--run-id' && i + 1 < args.length) {
+      runId = args[i + 1];
+      i++;
+    } else if (args[i] === '--config' && i + 1 < args.length) {
+      configPath = args[i + 1];
+      i++;
+    }
+  }
+
+  return { runId, configPath };
+}
+
 // Load initial state (you'll need to adjust the path)
 import initialStateData from '../data/initialState.json';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // LLM / lore configuration (default disabled to prevent accidents)
 const llmEnv = sanitize(process.env.LLM_ENABLED).toLowerCase();
@@ -71,6 +92,36 @@ const imageGenerationService = imageGenEnabled
   ? new ImageGenerationService(imageGenConfig)
   : undefined;
 
+// Parse CLI arguments and load appropriate config
+const cliArgs = parseArgs();
+let parameterOverrides = parameterOverridesData;
+
+// Load config in priority order:
+// 1. Explicit --config path
+// 2. Run-specific config (./config/runs/{runId}/templateSystemParameters.json)
+// 3. Default config (./config/templateSystemParameters.json)
+if (cliArgs.configPath) {
+  // Explicit config path provided
+  const customConfigPath = path.join(__dirname, '../config', cliArgs.configPath);
+  if (fs.existsSync(customConfigPath)) {
+    parameterOverrides = JSON.parse(fs.readFileSync(customConfigPath, 'utf-8'));
+    console.log(`📂 Using config: ${cliArgs.configPath}`);
+  } else {
+    console.warn(`⚠️  Custom config not found: ${customConfigPath}, using default`);
+  }
+} else if (cliArgs.runId) {
+  // Check for run-specific config
+  const runConfigPath = path.join(__dirname, `../config/runs/${cliArgs.runId}/templateSystemParameters.json`);
+  if (fs.existsSync(runConfigPath)) {
+    parameterOverrides = JSON.parse(fs.readFileSync(runConfigPath, 'utf-8'));
+    console.log(`📂 Using run-specific config: config/runs/${cliArgs.runId}/templateSystemParameters.json`);
+  } else {
+    console.log(`📂 Using default config (no run-specific config found)`);
+  }
+} else {
+  console.log(`📂 Using default config`);
+}
+
 // Apply parameter overrides from config file
 const allTemplates = [
   ...npcTemplates,
@@ -83,7 +134,7 @@ const allTemplates = [
 const { templates: configuredTemplates, systems: configuredSystems } = applyParameterOverrides(
   allTemplates,
   allSystems,
-  parameterOverridesData as any
+  parameterOverrides as any
 );
 
 // Configuration
@@ -213,12 +264,19 @@ async function generateWorld() {
   });
   
   // Write output to file
-  const fs = require('fs');
-  const outputPath = './output/generated_world.json';
+  // Use run-id to segregate output if provided
+  const outputDir = cliArgs.runId ? `./output/runs/${cliArgs.runId}` : './output';
+  const outputPath = `${outputDir}/generated_world.json`;
 
   // Create output directory if it doesn't exist
-  if (!fs.existsSync('./output')) {
-    fs.mkdirSync('./output');
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  // Log output directory for GA tracking
+  if (cliArgs.runId) {
+    console.log(`\n📁 Run ID: ${cliArgs.runId}`);
+    console.log(`📁 Output directory: ${outputDir}`);
   }
 
   // Add validation results to export
@@ -239,7 +297,7 @@ async function generateWorld() {
 
   fs.writeFileSync(outputPath, JSON.stringify(exportData, null, 2));
   console.log(`\n✅ World state exported to ${outputPath}`);
-  
+
   // Also export a graph visualization format
   const graphViz = {
     nodes: worldState.hardState.map((e: HardState) => ({
@@ -255,17 +313,58 @@ async function generateWorld() {
       label: r.kind
     }))
   };
-  
-  fs.writeFileSync('./output/graph_viz.json', JSON.stringify(graphViz, null, 2));
-  console.log(`✅ Graph visualization exported to ./output/graph_viz.json`);
-  
+
+  fs.writeFileSync(`${outputDir}/graph_viz.json`, JSON.stringify(graphViz, null, 2));
+  console.log(`✅ Graph visualization exported to ${outputDir}/graph_viz.json`);
+
   const loreOutput = {
     llmEnabled,
     model: llmEnabled ? llmModel : 'disabled',
     records: engine.getLoreRecords()
   };
-  fs.writeFileSync('./output/lore.json', JSON.stringify(loreOutput, null, 2));
-  console.log(`✅ Lore output exported to ./output/lore.json (${llmEnabled ? 'enabled' : 'disabled'})`);
+  fs.writeFileSync(`${outputDir}/lore.json`, JSON.stringify(loreOutput, null, 2));
+  console.log(`✅ Lore output exported to ${outputDir}/lore.json (${llmEnabled ? 'enabled' : 'disabled'})`);
+
+  // Export statistics for genetic algorithm fitness evaluation
+  const statistics = engine.exportStatistics({
+    totalChecks: validationReport.totalChecks,
+    passed: validationReport.passed,
+    failed: validationReport.failed,
+    results: validationReport.results.map(r => ({
+      name: r.name,
+      passed: r.passed,
+      failureCount: r.failureCount,
+      details: r.details
+    }))
+  });
+  fs.writeFileSync(`${outputDir}/stats.json`, JSON.stringify(statistics, null, 2));
+  console.log(`✅ Statistics exported to ${outputDir}/stats.json`);
+
+  // Add entry to run manifest for GA tracking (JSONL format for easy streaming)
+  if (cliArgs.runId) {
+    const manifestPath = './output/runs/manifest.jsonl';
+    const manifestEntry = {
+      runId: cliArgs.runId,
+      timestamp: new Date().toISOString(),
+      config: cliArgs.configPath || `runs/${cliArgs.runId}/templateSystemParameters.json`,
+      fitness: statistics.fitnessMetrics.overallFitness,
+      entityCount: statistics.finalEntityCount,
+      relationshipCount: statistics.finalRelationshipCount,
+      violations: statistics.performanceStats.protectedRelationshipViolations.totalViolations,
+      validationPassed: statistics.validationStats.passed,
+      validationFailed: statistics.validationStats.failed,
+      generationTimeMs: statistics.generationTimeMs
+    };
+
+    // Ensure runs directory exists
+    if (!fs.existsSync('./output/runs')) {
+      fs.mkdirSync('./output/runs', { recursive: true });
+    }
+
+    // Append to manifest (JSONL: one JSON object per line)
+    fs.appendFileSync(manifestPath, JSON.stringify(manifestEntry) + '\n');
+    console.log(`✅ Run manifest updated: ${manifestPath}`);
+  }
 }
 
 // Run the generator

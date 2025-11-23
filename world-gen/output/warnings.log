@@ -1,1479 +1,1263 @@
 World Generation Warnings Log
-Started: 2025-11-23T06:20:41.164Z
+Started: 2025-11-23T08:15:55.945Z
 ================================================================================
 
-[2025-11-23T06:20:41.287Z] [Tick 45]
+[2025-11-23T08:15:56.041Z] [Tick 45]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
+   Entity: Silent Chillhunter (npc_1002)
    Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Shadow Shimmercaller
+   Relationship Type: follower_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Silent Blizzardkeeper
    Tick: 45
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.287Z] [Tick 45]
+[2025-11-23T08:15:56.060Z] [Tick 49]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Chilldiver (npc_1007)
+   Entity: Silent Blizzardsinger (npc_1001)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Silent Glacierkeeper
-   Tick: 45
+   Target: Quick Crystalwalker
+   Tick: 49
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.295Z] [Tick 47]
+[2025-11-23T08:15:56.060Z] [Tick 49]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
+   Entity: Shimmerhunter (npc_1007)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Shadow Floehunter
-   Tick: 47
+   Target: Prophet Glacierwalker
+   Tick: 49
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.295Z] [Tick 47]
+[2025-11-23T08:15:56.069Z] [Tick 51]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Shadow Shimmercaller
-   Tick: 47
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.332Z] [Tick 57]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: rival_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 57
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.333Z] [Tick 57]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
+   Entity: Shadow Driftfisher (npc_1000)
    Kind: npc
    Relationship Type: follower_of
    Current count: 5
    Warning threshold: 5
-   Target: Quick Stormwalker
-   Tick: 57
+   Target: Sly Chillwatcher
+   Tick: 51
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.333Z] [Tick 57]
+[2025-11-23T08:15:56.087Z] [Tick 56]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
+   Entity: Fissure-Walker Draen (Fissure-Walker Draen)
    Kind: npc
    Relationship Type: follower_of
    Current count: 5
    Warning threshold: 5
-   Target: Silent Blizzardswimmer
-   Tick: 57
+   Target: Sly Chillwatcher
+   Tick: 56
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.333Z] [Tick 57]
+[2025-11-23T08:15:56.087Z] [Tick 56]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormcaller (npc_1005)
+   Entity: Silent Chillhunter (npc_1002)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Shadow Shimmercaller
-   Tick: 57
+   Target: Sly Tidebeak
+   Tick: 56
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.333Z] [Tick 57]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Wavehunter
-   Tick: 57
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.333Z] [Tick 57]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Captain Icewatcher
-   Tick: 57
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.345Z] [Tick 60]
+[2025-11-23T08:15:56.101Z] [Tick 60]
 ⚠️  RELATIONSHIP WARNING (NPC):
    Entity: Tide-Splitter Rukan (Tide-Splitter Rukan)
    Kind: npc
    Relationship Type: practitioner_of
    Current count: 5
    Warning threshold: 5
-   Target: Improved Ice Tech
+   Target: Improved Navigation Tech
    Tick: 60
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.357Z] [Tick 60]
+[2025-11-23T08:15:56.180Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Tide-Splitter Rukan (Tide-Splitter Rukan)
+   Kind: npc
+   Relationship Type: practitioner_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Enhanced Fishing Tech
+   Tick: 75
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.207Z] [Tick 78]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Shimmerslider (npc_1003)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Shadow Tidesinger
+   Tick: 78
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.207Z] [Tick 78]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Sly Chillwatcher
+   Tick: 78
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.247Z] [Tick 83]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Glintdiver
+   Tick: 83
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.323Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Guild Shimmercaller
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.323Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Floebeak
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.323Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidebeak (npc_1016)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Master Aurorawatcher
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Chillhunter (npc_1002)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Silent Blizzardsinger
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
 ⚠️  RELATIONSHIP WARNING (NPC):
    Entity: Fissure-Walker Draen (Fissure-Walker Draen)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Silent Tidebreaker
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Shadow Driftfisher
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Driftfisher (npc_1000)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Shimmerslider (npc_1003)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Floewatcher
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.324Z] [Tick 92]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Order of the Ice
+   Tick: 92
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.347Z] [Tick 94]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Driftfisher (npc_1000)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Shadow Blizzardfisher
-   Tick: 60
-   Era: The Clever Ice Age
+   Target: Stormwalker
+   Tick: 94
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.357Z] [Tick 60]
+[2025-11-23T08:15:56.347Z] [Tick 94]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
+   Entity: Shimmerhunter (npc_1007)
    Kind: npc
-   Relationship Type: follower_of
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Snowslider
+   Tick: 94
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.347Z] [Tick 94]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Floebeak
+   Tick: 94
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.347Z] [Tick 94]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidebeak (npc_1016)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Oracle Aurorawalker
+   Tick: 94
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.426Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Driftfisher (npc_1000)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Master Wavefisher
+   Tick: 102
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.426Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Floewing
+   Tick: 102
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.426Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Floewatcher
+   Tick: 102
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.426Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Floewing
+   Tick: 102
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.426Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Snowfisher (npc_1018)
+   Kind: npc
+   Relationship Type: enemy_of
    Current count: 5
    Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 60
-   Era: The Clever Ice Age
+   Target: Guild Shimmercaller
+   Tick: 102
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.423Z] [Tick 71]
+[2025-11-23T08:15:56.426Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
+   Entity: Floewatcher (npc_1029)
    Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Driftwatcher
-   Tick: 71
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.423Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Quick Stormcaller
-   Tick: 71
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.424Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 6
+   Relationship Type: enemy_of
+   Current count: 5
    Warning threshold: 5
    Target: Sly Tidecaller
-   Tick: 71
-   Era: The Clever Ice Age
+   Tick: 102
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.424Z] [Tick 71]
+[2025-11-23T08:15:56.426Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 71
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.424Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
+   Entity: Shadow Floehunter (npc_1061)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Driftwatcher
-   Tick: 71
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.424Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Sly Glacierhunter
-   Tick: 71
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.429Z] [Tick 72]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Shadow Floehunter
-   Tick: 72
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.429Z] [Tick 72]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: The Midnight Claws
-   Tick: 72
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.480Z] [Tick 77]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 77
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.498Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Shadow Blizzardfisher
-   Tick: 79
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.498Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Quick Stormwalker
-   Tick: 79
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.498Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Glacierhunter
-   Tick: 79
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.498Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 79
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.498Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Chilldiver (npc_1007)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Sly Driftwing
-   Tick: 79
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Shadow Driftkeeper
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Silent Glacierkeeper (npc_1010)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Stormwalker
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Quick Floebeak
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Silent Glacierkeeper
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Fissure-Walker Draen (Fissure-Walker Draen)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Silent Blizzardswimmer
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Captain Icewatcher
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.556Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormcaller (npc_1005)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Sly Glacierhunter
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.566Z] [Tick 87]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Shadow Chilldiver
-   Tick: 87
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.597Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 4
-   Warning threshold: 2
-   Target: Elder Glacierkeeper
-   Tick: 90
+   Target: Sly Tideswimmer
+   Tick: 102
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.598Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Shadow Shimmercaller
-   Tick: 90
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.598Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormwalker (npc_1022)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Driftwatcher
-   Tick: 90
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.627Z] [Tick 92]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Elder Glacierkeeper
-   Tick: 92
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.627Z] [Tick 92]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Elder Glacierkeeper
-   Tick: 92
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.627Z] [Tick 92]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Sly Glacierhunter
-   Tick: 92
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.627Z] [Tick 92]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Shadow Shimmercaller
-   Tick: 92
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.652Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: The Midnight Claws
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Fissure-Walker Draen
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Fissure-Walker Draen (Fissure-Walker Draen)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: The Midnight Claws
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Chilldiver (npc_1007)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Shadow Blizzardfisher
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Shadow Blizzardfisher
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Silent Glacierkeeper
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormcaller (npc_1005)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Shadow Blizzardfisher
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Silent Glacierkeeper (npc_1010)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Quick Crystalsinger
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.653Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Shadow Blizzardfisher
-   Tick: 94
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.668Z] [Tick 95]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Quick Stormcaller
-   Tick: 95
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.668Z] [Tick 95]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Floebeak (npc_1020)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Wavehunter
-   Tick: 95
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.701Z] [Tick 97]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow-Broker Nyla (Shadow-Broker Nyla)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Quick Stormwalker
-   Tick: 97
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.701Z] [Tick 97]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 4
-   Warning threshold: 2
-   Target: Shadow Blizzardfisher
-   Tick: 97
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.701Z] [Tick 97]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 4
-   Warning threshold: 2
-   Target: Captain Icewatcher
-   Tick: 97
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.701Z] [Tick 97]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Elder Glacierkeeper
-   Tick: 97
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.745Z] [Tick 100]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Elder Glacierkeeper
-   Tick: 100
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.745Z] [Tick 100]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Driftwing (npc_1040)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Sly Glacierhunter
-   Tick: 100
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.745Z] [Tick 100]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Dealer Tidebreaker (npc_1056)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Elder Glacierkeeper
-   Tick: 100
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.762Z] [Tick 101]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: follower_of
-   Current count: 9
-   Warning threshold: 5
-   Target: Elder Glacierkeeper
-   Tick: 101
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.762Z] [Tick 101]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Quick Wavehunter
-   Tick: 101
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
+[2025-11-23T08:15:56.429Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (FACTION):
    Entity: The Midnight Claws (The Midnight Claws)
    Kind: faction
    Relationship Type: enemy_of
    Current count: 8
    Warning threshold: 8
-   Target: Quick Crystalsinger
-   Tick: 103
+   Target: Shadow Driftfisher
+   Tick: 102
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.792Z] [Tick 103]
+[2025-11-23T08:15:56.429Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
+   Entity: Sly Tidebeak (npc_1016)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Shadow Tidesinger
+   Tick: 102
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.429Z] [Tick 102]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Shimmerslider (npc_1003)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 7
    Warning threshold: 5
-   Target: Quick Floebeak
-   Tick: 103
+   Target: Silent Chillhunter
+   Tick: 102
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.792Z] [Tick 103]
+[2025-11-23T08:15:56.429Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Chilldiver (npc_1007)
+   Entity: Silent Chillhunter (npc_1002)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 6
    Warning threshold: 5
-   Target: Quick Stormwalker
-   Tick: 103
+   Target: Sly Chillwatcher
+   Tick: 102
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Fissure-Walker Draen
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
+[2025-11-23T08:15:56.429Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (NPC):
    Entity: Fissure-Walker Draen (Fissure-Walker Draen)
    Kind: npc
    Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Glacierhunter
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 9
-   Warning threshold: 5
-   Target: Quick Wavehunter
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Captain Icewatcher
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Silent Glacierkeeper (npc_1010)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Snowwatcher
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Floebeak (npc_1020)
-   Kind: npc
-   Relationship Type: enemy_of
    Current count: 6
    Warning threshold: 5
-   Target: Shadow Driftkeeper
-   Tick: 103
+   Target: Quick Crystalwalker
+   Tick: 102
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.792Z] [Tick 103]
+[2025-11-23T08:15:56.472Z] [Tick 105]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
+   Entity: Silent Blizzardsinger (npc_1001)
    Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormcaller (npc_1005)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Driftwing
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.792Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Sly Glacierhunter
-   Tick: 103
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.879Z] [Tick 107]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: lover_of
+   Relationship Type: follower_of
    Current count: 5
-   Warning threshold: 2
-   Target: Quick Crystalsinger
-   Tick: 107
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.880Z] [Tick 107]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Wavehunter (npc_1041)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Frostsinger
-   Tick: 107
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.880Z] [Tick 107]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Shimmercaller (npc_1043)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Frostsinger
-   Tick: 107
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.906Z] [Tick 108]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormwalker (npc_1022)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Sly Glacierhunter
-   Tick: 108
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.972Z] [Tick 111]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
    Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 111
+   Target: Quick Snowfisher
+   Tick: 105
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:41.972Z] [Tick 111]
+[2025-11-23T08:15:56.472Z] [Tick 105]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Driftwatcher
-   Tick: 111
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:41.972Z] [Tick 111]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Driftwing (npc_1040)
+   Entity: Captain Glintwing (npc_1037)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 5
    Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 111
+   Target: Master Aurorawatcher
+   Tick: 105
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.050Z] [Tick 115]
+[2025-11-23T08:15:56.472Z] [Tick 105]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 5
-   Warning threshold: 2
-   Target: Sly Driftwing
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.050Z] [Tick 115]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 5
-   Warning threshold: 2
-   Target: Frostsinger
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.050Z] [Tick 115]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Tideslider (npc_1015)
+   Entity: Quick Iceslider (npc_1062)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Commander Frostslider
-   Tick: 115
+   Target: Sly Tideswimmer
+   Tick: 105
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.050Z] [Tick 115]
+[2025-11-23T08:15:56.507Z] [Tick 107]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Icekeeper (npc_1017)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Commander Frostslider
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.050Z] [Tick 115]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Captain Icewatcher (npc_1027)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Driftwatcher
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.050Z] [Tick 115]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Glintcaller (npc_1033)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Snowbeak
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.050Z] [Tick 115]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Driftwing (npc_1040)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Quick Wavehunter
-   Tick: 115
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.095Z] [Tick 117]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Dealer Wavediver
-   Tick: 117
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.095Z] [Tick 117]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
+   Entity: Silent Blizzardsinger (npc_1001)
    Kind: npc
    Relationship Type: lover_of
    Current count: 4
    Warning threshold: 2
-   Target: Shadow Shimmercaller
-   Tick: 117
+   Target: Shadow Tidesinger
+   Tick: 107
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.095Z] [Tick 117]
+[2025-11-23T08:15:56.507Z] [Tick 107]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Snowwatcher (npc_1006)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 9
-   Warning threshold: 5
-   Target: Dealer Chillbeak
-   Tick: 117
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.095Z] [Tick 117]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 10
-   Warning threshold: 5
-   Target: Dealer Chillbeak
-   Tick: 117
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.095Z] [Tick 117]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Floebeak (npc_1020)
+   Entity: Quick Snowfisher (npc_1018)
    Kind: npc
    Relationship Type: lover_of
    Current count: 2
    Warning threshold: 2
-   Target: Dealer Chillbeak
-   Tick: 117
+   Target: Silent Blizzardkeeper
+   Tick: 107
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.095Z] [Tick 117]
+[2025-11-23T08:15:56.507Z] [Tick 107]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Dealer Tidebreaker (npc_1056)
+   Entity: Sly Chillwatcher (npc_1045)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Captain Chillslider
+   Tick: 107
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.541Z] [Tick 109]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
    Kind: npc
    Relationship Type: lover_of
    Current count: 3
    Warning threshold: 2
-   Target: Mighty Chillslider
-   Tick: 117
+   Target: Guild Shimmercaller
+   Tick: 109
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.249Z] [Tick 123]
+[2025-11-23T08:15:56.541Z] [Tick 109]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
+   Entity: Sly Tidebeak (npc_1016)
    Kind: npc
    Relationship Type: lover_of
-   Current count: 6
+   Current count: 3
    Warning threshold: 2
-   Target: Quick Stormwalker
-   Tick: 123
-   Era: The Frozen Peace
+   Target: Master Wavefisher
+   Tick: 109
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.249Z] [Tick 123]
+[2025-11-23T08:15:56.541Z] [Tick 109]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
+   Entity: Stormwalker (npc_1028)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Oracle Aurorawalker
+   Tick: 109
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.541Z] [Tick 109]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Crystalwalker (npc_1043)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Oracle Aurorawalker
+   Tick: 109
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.541Z] [Tick 109]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidecaller (npc_1046)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Stormwatcher
+   Tick: 109
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.541Z] [Tick 109]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Frostwalker (npc_1063)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Lord Wavekeeper
+   Tick: 109
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Mighty Wavesinger
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 7
    Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 123
-   Era: The Frozen Peace
+   Target: Captain Glintwing
+   Tick: 111
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.249Z] [Tick 123]
+[2025-11-23T08:15:56.573Z] [Tick 111]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Floebeak (npc_1020)
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Glintdiver
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Master Wavefisher
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Snowfisher (npc_1018)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Stormwalker
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Stormwalker (npc_1028)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Master Aurorawatcher
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.573Z] [Tick 111]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Swift Glintwalker (npc_1040)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Quick Crystalwalker
+   Tick: 111
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidebeak (npc_1016)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 7
    Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 123
-   Era: The Frozen Peace
+   Target: Silent Tidebreaker
+   Tick: 113
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormwalker (npc_1022)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 4
-   Warning threshold: 2
-   Target: Dealer Chillbeak
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Captain Icewatcher (npc_1027)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Shadow Shimmercaller
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Commander Frostslider (npc_1037)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Trader Glacierslider
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Wavehunter (npc_1041)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Shadow Shimmercaller
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Shimmercaller (npc_1043)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 3
-   Warning threshold: 2
-   Target: Dealer Chillbeak
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.249Z] [Tick 123]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Frostwalker (npc_1091)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Sly Icediver
-   Tick: 123
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.285Z] [Tick 124]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 9
-   Warning threshold: 5
-   Target: Commander Frostbreaker
-   Tick: 124
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.286Z] [Tick 124]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Dealer Chillbeak (npc_1057)
-   Kind: npc
-   Relationship Type: lover_of
-   Current count: 2
-   Warning threshold: 2
-   Target: Mighty Chillslider
-   Tick: 124
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.324Z] [Tick 125]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: rival_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Sly Tidecaller
-   Tick: 125
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.324Z] [Tick 125]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
-   Kind: npc
-   Relationship Type: rival_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Floebeak
-   Tick: 125
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.324Z] [Tick 125]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Lord Crystalbreaker (npc_1029)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Trader Tidewing
-   Tick: 125
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
+[2025-11-23T08:15:56.602Z] [Tick 113]
 ⚠️  RELATIONSHIP WARNING (FACTION):
    Entity: The Midnight Claws (The Midnight Claws)
    Kind: faction
    Relationship Type: enemy_of
    Current count: 9
    Warning threshold: 8
-   Target: Silent Glacierkeeper
-   Tick: 133
+   Target: Quick Snowfisher
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Shimmerslider (npc_1003)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Driftfisher (npc_1000)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Silent Tidebreaker
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Fissure-Walker Draen (Fissure-Walker Draen)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Stormhunter (npc_1017)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Chillhunter (npc_1002)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.602Z] [Tick 113]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Shadow Shimmerslider
+   Tick: 113
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.621Z] [Tick 114]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Captain Glintwing (npc_1037)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Guild Shimmercaller
+   Tick: 114
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.690Z] [Tick 118]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Floewatcher (npc_1029)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Silent Blizzardkeeper
+   Tick: 118
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Sly Stormhunter
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 9
+   Warning threshold: 5
+   Target: Silent Blizzardkeeper
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Snowfisher (npc_1018)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Quick Crystalwalker
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Crystalwalker (npc_1043)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Silent Blizzardkeeper
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Stormwalker (npc_1028)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Fissure-Walker Draen
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.709Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Chillwatcher (npc_1045)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Floewatcher
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.710Z] [Tick 119]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardkeeper (npc_1044)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Master Wavefisher
+   Tick: 119
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 5
+   Warning threshold: 2
+   Target: Master Wavefisher
+   Tick: 122
    Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.544Z] [Tick 133]
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardkeeper (npc_1044)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Stormwatcher
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Chillwatcher (npc_1045)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Brave Floebeak
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Wavesinger (npc_1050)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Dealer Glaciersinger
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Floehunter (npc_1061)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Swift Crystalwing
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Iceslider (npc_1062)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Trader Floewalker
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Stormdiver (npc_1064)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Guild Icewing
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.782Z] [Tick 122]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Chillslider (npc_1071)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Trader Driftdiver
+   Tick: 122
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.876Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: enemy_of
+   Current count: 10
+   Warning threshold: 8
+   Target: Sly Tidecaller
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidebeak (npc_1016)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Quick Crystalwalker
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Stormhunter (npc_1017)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Silent Tidebreaker
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Crystalwalker (npc_1043)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 10
+   Warning threshold: 5
+   Target: Silent Blizzardsinger
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Tidesinger (npc_1004)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 9
+   Warning threshold: 5
+   Target: Order of the Ice
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Chillwatcher (npc_1045)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Captain Glintwing
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
 ⚠️  RELATIONSHIP WARNING (NPC):
    Entity: Fissure-Walker Draen (Fissure-Walker Draen)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 8
    Warning threshold: 5
-   Target: Silent Glacierkeeper
-   Tick: 133
+   Target: The Midnight Claws
+   Tick: 127
    Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.544Z] [Tick 133]
+[2025-11-23T08:15:56.877Z] [Tick 127]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Chilldiver (npc_1007)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 7
-   Warning threshold: 5
-   Target: Shadow Floehunter
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Tidecaller (npc_1009)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 11
-   Warning threshold: 5
-   Target: Shadow Chilldiver
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Driftkeeper (npc_1000)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Quick Wavehunter
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Floebeak (npc_1020)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Silent Glacierkeeper
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Silent Blizzardswimmer (npc_1021)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Wavehunter
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormwalker (npc_1022)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Shadow Driftkeeper
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Glacierhunter (npc_1042)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 5
-   Warning threshold: 5
-   Target: Quick Stormcaller
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Stormcaller (npc_1005)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Captain Icewatcher
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.544Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Sly Driftwing (npc_1040)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 6
-   Warning threshold: 5
-   Target: Captain Icewatcher
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.545Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Floehunter (npc_1003)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Dealer Chillbeak
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.545Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Silent Glacierkeeper (npc_1010)
-   Kind: npc
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 5
-   Target: Sly Tidecaller
-   Tick: 133
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-23T06:20:42.545Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Shadow Blizzardfisher (npc_1002)
+   Entity: Shadow Shimmerslider (npc_1003)
    Kind: npc
    Relationship Type: enemy_of
    Current count: 9
    Warning threshold: 5
-   Target: Dealer Tidebreaker
-   Tick: 133
+   Target: Floewing
+   Tick: 127
    Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-23T06:20:42.545Z] [Tick 133]
+[2025-11-23T08:15:56.877Z] [Tick 127]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Quick Crystalsinger (npc_1001)
+   Entity: Shadow Driftfisher (npc_1000)
    Kind: npc
    Relationship Type: enemy_of
-   Current count: 10
+   Current count: 8
    Warning threshold: 5
-   Target: Shadow Shimmercaller
+   Target: Floebeak
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardsinger (npc_1001)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 9
+   Warning threshold: 5
+   Target: Sly Chillwatcher
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.877Z] [Tick 127]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Chillhunter (npc_1002)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Nightfall Shelf Traders
+   Tick: 127
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.922Z] [Tick 129]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Tidebreaker (npc_1015)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 4
+   Warning threshold: 2
+   Target: Captain Chillslider
+   Tick: 129
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.922Z] [Tick 129]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Silent Blizzardkeeper (npc_1044)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 6
+   Warning threshold: 5
+   Target: Captain Chillslider
+   Tick: 129
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.922Z] [Tick 129]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow Stormwatcher (npc_1072)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Floehunter
+   Tick: 129
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.922Z] [Tick 129]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Oracle Aurorawalker (npc_1093)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Master Aurorawatcher
+   Tick: 129
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.928Z] [Tick 129]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Snowfisher (npc_1018)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 8
+   Warning threshold: 5
+   Target: Glintdiver
+   Tick: 129
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Stormwalker (npc_1028)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Stormwatcher
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Stormwalker (npc_1028)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Guild Shimmercaller
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Floebeak (npc_1030)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Captain Chillslider
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Chief Blizzardwalker (npc_1039)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Swift Icesinger
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Sly Tidecaller (npc_1046)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Oracle Aurorawalker
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.955Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Guild Shimmercaller (npc_1106)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 2
+   Warning threshold: 2
+   Target: Brave Floebeak
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:56.961Z] [Tick 130]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Floewatcher (npc_1029)
+   Kind: npc
+   Relationship Type: enemy_of
+   Current count: 7
+   Warning threshold: 5
+   Target: Shadow Tidesinger
+   Tick: 130
+   Era: The Frozen Peace
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-23T08:15:57.037Z] [Tick 133]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Quick Frostwalker (npc_1063)
+   Kind: npc
+   Relationship Type: lover_of
+   Current count: 3
+   Warning threshold: 2
+   Target: Blizzardkeeper
    Tick: 133
    Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added

@@ -19,6 +19,7 @@ export const penguinEras: Era[] = [
       'merchant_arrival': 1.5,
       'kinship_constellation': 1.5,  // NEW: Family formation
       'mysterious_vanishing': 0.1,   // NEW: Very rare, mysterious
+      'orca_raider_arrival': 0,      // No orcas during expansion
 
       // Faction templates
       'guild_establishment': 1.0,
@@ -32,7 +33,8 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'tech_innovation': 1.0,     // Boost abilities generation
-      'magic_discovery': 0.8
+      'magic_discovery': 0.8,
+      'orca_combat_technique': 0  // No orcas during expansion
     },
     systemModifiers: {
       'resource_flow': 1.5,       // resources plentiful
@@ -62,6 +64,7 @@ export const penguinEras: Era[] = [
       'outlaw_recruitment': 2.0,
       'kinship_constellation': 0.5,  // NEW: Families torn apart by war
       'mysterious_vanishing': 0.3,   // NEW: War casualties and disappearances
+      'orca_raider_arrival': 0,      // No orcas during faction wars
 
       // Faction templates
       'faction_splinter': 2.0,
@@ -74,7 +77,8 @@ export const penguinEras: Era[] = [
       'ideology_emergence': 2.5,  // NEW: War creates competing ideologies
 
       // Abilities templates
-      'combat_technique': 1.5
+      'combat_technique': 1.5,
+      'orca_combat_technique': 0  // No orcas during faction wars
     },
     systemModifiers: {
       'conflict_contagion': 2.0,   // conflicts spread rapidly
@@ -105,6 +109,7 @@ export const penguinEras: Era[] = [
       'merchant_arrival': 1.5,
       'kinship_constellation': 1.0,  // NEW: Moderate family formation
       'mysterious_vanishing': 0.5,   // NEW: Anomaly-related vanishings
+      'orca_raider_arrival': 0,      // No orcas during innovation
 
       // Faction templates
       'guild_establishment': 2.0,
@@ -119,7 +124,8 @@ export const penguinEras: Era[] = [
       // Abilities templates
       'tech_innovation': 3.0,
       'magic_discovery': 2.5,
-      'technique_evolution': 2.0
+      'technique_evolution': 2.0,
+      'orca_combat_technique': 0  // No orcas during innovation
     },
     systemModifiers: {
       'knowledge_spread': 2.0,
@@ -149,6 +155,7 @@ export const penguinEras: Era[] = [
       'war_leader': 2.0,
       'kinship_constellation': 0.3,  // NEW: Families fractured
       'mysterious_vanishing': 0.8,   // NEW: War casualties
+      'orca_raider_arrival': 4.0,    // ORCA INVASION: High probability of orca raiders
 
       // Faction templates
       'military_order': 2.0,
@@ -162,7 +169,8 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'combat_technique': 2.0,
-      'defensive_magic': 2.5
+      'defensive_magic': 2.5,
+      'orca_combat_technique': 3.0  // ORCA INVASION: Orca combat abilities
     },
     systemModifiers: {
       'external_pressure': 3.0,
@@ -173,10 +181,6 @@ export const penguinEras: Era[] = [
       'belief_contagion': 1.2,    // NEW: Unity beliefs spread
       'legend_crystallization': 3.0, // NEW: Many heroes fall, become legends
       'succession_vacuum': 2.0    // NEW: Leaders die in battle
-    },
-    specialRules: (graph) => {
-      // Add external threat entities if not present
-      // Suspend internal faction conflicts
     }
   },
   
@@ -196,6 +200,7 @@ export const penguinEras: Era[] = [
       'diplomat_emergence': 1.5,
       'kinship_constellation': 2.0,  // NEW: Families reunite and form
       'mysterious_vanishing': 0.2,   // NEW: Rare peacetime mysteries
+      'orca_raider_arrival': 0,      // No orcas during reconstruction
 
       // Faction templates
       'merchant_consortium': 1.5,
@@ -210,7 +215,8 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'tradition_preservation': 2.0,  // Boost abilities preservation
-      'hybrid_technique': 1.5     // combining war knowledge
+      'hybrid_technique': 1.5,    // combining war knowledge
+      'orca_combat_technique': 0  // No orcas during reconstruction
     },
     systemModifiers: {
       'cultural_drift': 1.5,      // cultures diverge in peace
