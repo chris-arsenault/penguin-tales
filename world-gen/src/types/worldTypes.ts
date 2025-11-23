@@ -18,6 +18,30 @@ export interface HardState {
     links: Relationship[];
     createdAt: number;       // tick or epoch index
     updatedAt: number;
+
+    // Catalyst properties (optional - only for entities that can act)
+    catalyst?: CatalystProperties;
+
+    // Temporal properties (optional - only for era and occurrence entities)
+    temporal?: {
+        startTick: number;
+        endTick: number | null;
+    };
+}
+
+// Catalyst system types
+export interface CatalyzedEvent {
+    relationshipId?: string;  // ID of relationship this catalyzed
+    entityId?: string;        // ID of entity this catalyzed
+    action: string;           // Description of action taken
+    tick: number;             // When this occurred
+}
+
+export interface CatalystProperties {
+    canAct: boolean;              // Can this entity perform actions?
+    actionDomains: string[];      // Domain-defined action categories
+    influence: number;            // 0-1, affects action success probability
+    catalyzedEvents: CatalyzedEvent[]; // What has this entity caused
 }
 
 export interface Relationship {
@@ -25,6 +49,9 @@ export interface Relationship {
     src: string;    // HardState.id
     dst: string;    // HardState.id
     strength?: number;  // 0.0 (weak/spatial) to 1.0 (strong/narrative) - optional for backward compat
+    catalyzedBy?: string;  // ID of agent that caused this relationship
+    category?: string;     // Domain-defined relationship category (e.g., 'political', 'immutable_fact')
+    createdAt?: number;    // Tick when relationship was created
 }
 
 // Schema types

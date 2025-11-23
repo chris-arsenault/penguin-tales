@@ -4,20 +4,21 @@ import { HardState } from './types/worldTypes';
 import { DistributionTargets } from './types/distribution';
 
 // Import configuration
-import { penguinEras } from './config/eras';
-import { pressures } from './config/pressures';
 import distributionTargetsData from '../config/distributionTargets.json';
 import parameterOverridesData from '../config/templateSystemParameters.json';
 
-// Import templates
-import { npcTemplates } from './templates/npc';
-import { factionTemplates } from './templates/faction';
-import { rulesTemplates } from './templates/rules';
-import { abilitiesTemplates } from './templates/abilities';
-import { locationTemplates } from './templates/location';
+// Import penguin domain (all domain-specific components)
+import {
+  penguinDomain,
+  penguinEras,
+  pressures,
+  allTemplates,
+  allSystems as penguinSystems,
+  initialState as penguinInitialState
+} from './domain/penguin';
 
-// Import systems
-import { allSystems } from './systems';
+// Import framework systems
+import { relationshipCulling } from './systems/relationshipCulling';
 
 // Import helpers
 import { normalizeInitialState } from './utils/helpers';
@@ -26,9 +27,6 @@ import { EnrichmentService } from './services/enrichmentService';
 import { ImageGenerationService } from './services/imageGenerationService';
 import { validateWorld } from './utils/validators';
 import { applyParameterOverrides } from './utils/parameterOverrides';
-
-// Import domain schema
-import { penguinDomain } from './domain/penguinDomain';
 
 const sanitize = (value?: string | null): string => (value ?? '').trim();
 
@@ -51,8 +49,6 @@ function parseArgs(): { runId?: string; configPath?: string } {
   return { runId, configPath };
 }
 
-// Load initial state (you'll need to adjust the path)
-import initialStateData from '../data/initialState.json';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -125,18 +121,13 @@ if (cliArgs.configPath) {
   console.log(`📂 Using default config`);
 }
 
-// Apply parameter overrides from config file
-const allTemplates = [
-  ...npcTemplates,
-  ...factionTemplates,
-  ...rulesTemplates,
-  ...abilitiesTemplates,
-  ...locationTemplates
-];
+// Combine domain systems with framework systems
+const allSystemsCombined = [...penguinSystems, relationshipCulling];
 
+// Apply parameter overrides from config file
 const { templates: configuredTemplates, systems: configuredSystems } = applyParameterOverrides(
   allTemplates,
-  allSystems,
+  allSystemsCombined,
   parameterOverrides as any
 );
 
@@ -181,7 +172,7 @@ async function generateWorld() {
   console.log(`Image generation: ${imageGenEnabled ? 'enabled (DALL-E 3)' : 'disabled'}\n`);
 
   // Parse and normalize initial state
-  const initialState: HardState[] = normalizeInitialState(initialStateData.hardState);
+  const initialState: HardState[] = normalizeInitialState(penguinInitialState.hardState);
 
   // Create and run engine
   const engine = new WorldEngine(config, initialState, enrichmentService, imageGenerationService);

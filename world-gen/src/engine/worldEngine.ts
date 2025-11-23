@@ -12,7 +12,7 @@ import {
   getProminenceValue,
   upsertNameTag
 } from '../utils/helpers';
-import { selectEra, getTemplateWeight, getSystemModifier } from '../config/eras';
+import { selectEra, getTemplateWeight, getSystemModifier } from '../domain/penguin/config/eras';
 import { EnrichmentService } from '../services/enrichmentService';
 import { ImageGenerationService } from '../services/imageGenerationService';
 import { TemplateSelector } from '../services/templateSelector';

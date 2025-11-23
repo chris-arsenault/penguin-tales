@@ -6,7 +6,7 @@ import * as path from 'path';
 // DEPRECATED: Name generation should use domain schema
 // Kept for backward compatibility - templates still use this
 // TODO: Refactor templates to use graph.config.domain.nameGenerator
-import { penguinDomain } from '../domain/penguinDomain';
+import { penguinDomain } from '../domain/penguin/schema';
 
 export function generateName(type: string = 'default'): string {
   // Use penguin domain for now (backward compat)
