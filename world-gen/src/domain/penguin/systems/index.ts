@@ -10,6 +10,11 @@
 
 import { SimulationSystem } from '../../../types/engine';
 
+// Import framework systems (NEW)
+import { universalCatalyst } from '../../../systems/universalCatalyst';
+import { occurrenceCreation } from '../../../systems/occurrenceCreation';
+import { eraTransition } from '../../../systems/eraTransition';
+
 // Import all penguin-specific systems
 export { relationshipFormation } from './relationshipFormation';
 export { conflictContagion } from './conflictContagion';
@@ -42,22 +47,38 @@ import { relationshipReinforcement } from './relationshipReinforcement';
  * All penguin-specific simulation systems
  *
  * Order matters - systems execute in this sequence each tick.
- * Relationship dynamics run first (decay/reinforcement), then formation.
+ *
+ * EXECUTION ORDER:
+ * 1. Era transition (check if world state triggers new era)
+ * 2. Agent actions (catalyst system - NPCs/factions/abilities act)
+ * 3. Relationship dynamics (decay, reinforcement, formation)
+ * 4. Domain systems (conflicts, resources, culture, prominence)
+ * 5. Occurrence creation (wars, disasters emerge from accumulated state)
  *
  * NOTE: relationshipCulling is NOT included here as it's framework-level.
  * It will be added by the engine configuration automatically.
  */
 export const allSystems: SimulationSystem[] = [
-  relationshipDecay,           // Run decay first
-  relationshipReinforcement,   // Then reinforcement
-  relationshipFormation,       // Then new relationship formation
-  conflictContagion,
-  resourceFlow,
-  culturalDrift,
-  prominenceEvolution,
-  allianceFormation,
-  legendCrystallization,
-  thermalCascade,
-  beliefContagion,
-  successionVacuum
+  // Phase 1: Era & Agent Actions
+  eraTransition,               // Check for era transitions first
+  universalCatalyst,           // Agents take actions (seize control, declare war, etc.)
+
+  // Phase 2: Relationship Dynamics
+  relationshipDecay,           // Decay weak relationships
+  relationshipReinforcement,   // Reinforce strong relationships
+  // relationshipFormation,    // REMOVED: Created social drama (follower_of, lover_of) that we eliminated
+
+  // Phase 3: Domain Dynamics
+  conflictContagion,           // Conflicts spread through networks
+  resourceFlow,                // Resources move through world
+  culturalDrift,               // Cultural evolution
+  prominenceEvolution,         // Fame and obscurity
+  allianceFormation,           // Diplomatic alliances
+  legendCrystallization,       // Heroes become legends
+  thermalCascade,              // Environmental effects
+  beliefContagion,             // Ideologies spread
+  successionVacuum,            // Leadership transitions
+
+  // Phase 4: Occurrence Creation
+  occurrenceCreation           // Create war/disaster occurrences based on accumulated state
 ];

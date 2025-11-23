@@ -46,7 +46,18 @@ export const techInnovation: GrowthTemplate = {
 
   canApply: (graph: Graph) => findEntities(graph, { kind: 'faction', subtype: 'company' }).length > 0,
 
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'faction', subtype: 'company' }),
+  findTargets: (graph: Graph) => {
+    const maxTechPerFaction = 4; // Limit to 4 technologies per faction
+    const companies = findEntities(graph, { kind: 'faction', subtype: 'company' });
+
+    // Filter out factions that have already developed too many technologies
+    return companies.filter(faction => {
+      const techCount = graph.relationships.filter(r =>
+        r.kind === 'wields' && r.src === faction.id
+      ).length;
+      return techCount < maxTechPerFaction;
+    });
+  },
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const faction = target || pickRandom(findEntities(graph, { kind: 'faction', subtype: 'company' }));

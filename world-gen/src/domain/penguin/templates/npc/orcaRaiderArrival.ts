@@ -35,11 +35,25 @@ export const orcaRaiderArrival: GrowthTemplate = {
   },
 
   canApply: (graph: Graph) => {
+    // Pressure-based trigger
     const externalThreat = graph.pressures.get('external_threat') || 0;
     const invasionEra = graph.currentEra.id === 'invasion';
 
-    // Only apply if invasion era OR very high external threat
-    return invasionEra || externalThreat > 70;
+    if (!invasionEra && externalThreat < 70) {
+      return false;
+    }
+
+    // SATURATION LIMIT: Check if orca count is at or above threshold
+    const existingOrcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
+    const targets = graph.config.distributionTargets as any;
+    const target = targets?.entities?.npc?.orca?.target || 5;
+    const saturationThreshold = target * 1.5; // Allow 50% overshoot
+
+    if (existingOrcas.length >= saturationThreshold) {
+      return false; // Too many orcas, suppress creation
+    }
+
+    return true;
   },
 
   findTargets: (graph: Graph) => {
@@ -61,8 +75,8 @@ export const orcaRaiderArrival: GrowthTemplate = {
       };
     }
 
-    // Create 2-4 orca raiders
-    const raiderCount = 2 + Math.floor(Math.random() * 3); // 2-4
+    // Create 1-2 orca raiders (reduced from 2-4)
+    const raiderCount = 1 + Math.floor(Math.random() * 2); // 1-2
     const orcas: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 

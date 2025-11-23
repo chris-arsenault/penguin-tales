@@ -28,7 +28,7 @@ export const occurrenceCreation: SimulationSystem = {
         { kind: 'triggered_by', frequency: 'rare', comment: 'Occurrences triggered by agents' }
       ],
       modifications: [
-        { type: 'entity', frequency: 'rare', comment: 'Creates occurrence entities' }
+        { type: 'status', frequency: 'rare', comment: 'Creates occurrence entities' }
       ]
     },
     effects: {
@@ -199,29 +199,45 @@ function checkForWar(
 
   if (largestCluster.factions.length < 2) return null;
 
+  // Generate war name
+  const factionNames = largestCluster.factions.slice(0, 2).map(f => f.name);
+  const expectedWarName = trigger?.nameGenerator?.(factionNames) ||
+    `The ${factionNames[0]}-${factionNames[1]} War`;
+
   // Check if war occurrence already exists for this cluster
-  const existingWar = Array.from(graph.entities.values()).find(e =>
-    e.kind === 'occurrence' &&
-    e.subtype === 'war' &&
-    e.status !== 'ended' &&
-    largestCluster.factions.some(f =>
-      e.links.some(l => l.kind === 'participant_in' && l.dst === f.id)
-    )
+  // Use faction tags to detect recent war participation (more reliable than relationships)
+  const factionsInRecentWar = largestCluster.factions.some(f =>
+    f.tags?.some(tag => tag.startsWith('war:') && parseInt(tag.split(':')[1]) > graph.tick - 50)
   );
 
-  if (existingWar) return null; // War already exists
+  if (factionsInRecentWar) return null; // Factions recently involved in war
+
+  // Also check for existing active war involving these factions
+  const existingWar = Array.from(graph.entities.values()).find(e => {
+    if (e.kind !== 'occurrence' || e.subtype !== 'war' || e.status === 'ended') {
+      return false;
+    }
+
+    // Check if any faction in THIS cluster already participates in this war
+    return largestCluster.factions.some(f =>
+      graph.relationships.some(r =>
+        r.kind === 'participant_in' &&
+        r.src === f.id &&
+        r.dst === e.id
+      )
+    );
+  });
+
+  if (existingWar) return null; // War already exists for these factions
 
   // Create war occurrence
   const warId = generateId('occurrence');
-  const factionNames = largestCluster.factions.slice(0, 2).map(f => f.name);
-  const warName = trigger?.nameGenerator?.(factionNames) ||
-    `The ${factionNames[0]}-${factionNames[1]} Conflict`;
 
   const warOccurrence: HardState = {
     id: warId,
     kind: 'occurrence',
     subtype: 'war',
-    name: warName,
+    name: expectedWarName,
     description: `A major conflict between ${largestCluster.factions.length} factions`,
     status: 'active',
     prominence: 'recognized',
@@ -238,7 +254,7 @@ function checkForWar(
   // Initialize catalyst properties
   initializeCatalyst(warOccurrence, true, ['military', 'conflict_escalation', 'political'], 0.7);
 
-  // Create participant relationships
+  // Create participant relationships and tag factions
   const relationships: Relationship[] = [];
   largestCluster.factions.forEach(faction => {
     relationships.push({
@@ -250,11 +266,12 @@ function checkForWar(
       createdAt: graph.tick
     });
 
-    warOccurrence.links.push({
-      kind: 'participant_in',
-      src: faction.id,
-      dst: warId
-    });
+    // Tag faction with war participation timestamp for cooldown tracking
+    if (!faction.tags) faction.tags = [];
+    faction.tags = faction.tags.filter(t => !t.startsWith('war:'));  // Remove old war tags
+    faction.tags.push(`war:${graph.tick}`);
+    if (faction.tags.length > 10) faction.tags = faction.tags.slice(-10);  // Keep last 10 tags
+    faction.updatedAt = graph.tick;
   });
 
   // Add epicenter if there's a contested location
@@ -267,18 +284,14 @@ function checkForWar(
       strength: 1.0,
       createdAt: graph.tick
     });
-
-    warOccurrence.links.push({
-      kind: 'epicenter_of',
-      src: warId,
-      dst: contestedLocation.id
-    });
   }
+
+  // Note: warOccurrence.links will be populated by addRelationship() in worldEngine
 
   return {
     occurrence: warOccurrence,
     relationships,
-    description: `${warName} erupts between ${largestCluster.factions.length} factions`
+    description: `${expectedWarName} erupts between ${largestCluster.factions.length} factions`
   };
 }
 
@@ -352,12 +365,7 @@ function checkForMagicalDisaster(
       strength: 1.0,
       createdAt: graph.tick
     });
-
-    disaster.links.push({
-      kind: 'epicenter_of',
-      src: disasterId,
-      dst: epicenterId
-    });
+    // Note: disaster.links will be populated by addRelationship() in worldEngine
   }
 
   return {
@@ -403,25 +411,36 @@ function checkForCulturalMovement(
   if (!rule) return null;
 
   // Check if movement already exists
-  const existingMovement = Array.from(graph.entities.values()).find(e =>
-    e.kind === 'occurrence' &&
-    e.subtype === 'cultural_movement' &&
-    e.status === 'active' &&
-    e.links.some(l => l.dst === ruleId)
-  );
+  // Check both by name (immediate) and by relationships (after engine adds them)
+  const expectedMovementName = trigger?.nameGenerator?.(rule.name) ||
+    `The ${rule.name} Movement`;
+
+  const existingMovement = Array.from(graph.entities.values()).find(e => {
+    if (e.kind !== 'occurrence' || e.subtype !== 'cultural_movement' || e.status !== 'active') {
+      return false;
+    }
+
+    // Check by name first (works immediately)
+    if (e.name === expectedMovementName) {
+      return true;
+    }
+
+    // Also check if this movement is already about this rule
+    return graph.relationships.some(r =>
+      r.src === e.id && r.dst === ruleId
+    );
+  });
 
   if (existingMovement) return null;
 
   // Create cultural movement occurrence
   const movementId = generateId('occurrence');
-  const movementName = trigger?.nameGenerator?.(rule.name) ||
-    `The ${rule.name} Movement`;
 
   const movement: HardState = {
     id: movementId,
     kind: 'occurrence',
     subtype: 'cultural_movement',
-    name: movementName,
+    name: expectedMovementName,
     description: `Widespread adoption of ${rule.name}`,
     status: 'active',
     prominence: 'recognized',
@@ -449,18 +468,13 @@ function checkForCulturalMovement(
       catalyzedBy: faction.id,
       createdAt: graph.tick
     });
-
-    movement.links.push({
-      kind: 'participant_in',
-      src: faction.id,
-      dst: movementId
-    });
+    // Note: movement.links will be populated by addRelationship() in worldEngine
   });
 
   return {
     occurrence: movement,
     relationships,
-    description: `${movementName} spreads across ${factions.length} factions`
+    description: `${expectedMovementName} spreads across ${factions.length} factions`
   };
 }
 

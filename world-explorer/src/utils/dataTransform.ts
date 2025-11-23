@@ -22,7 +22,7 @@ export function getKindColor(kind: string): string {
   return colors[kind] || '#999';
 }
 
-export function transformWorldData(worldState: WorldState) {
+export function transformWorldData(worldState: WorldState, showCatalyzedBy: boolean = false) {
   const nodes = worldState.hardState.map(entity => ({
     data: {
       id: entity.id,
@@ -40,17 +40,29 @@ export function transformWorldData(worldState: WorldState) {
     classes: `${entity.kind} ${entity.subtype} ${entity.prominence}`
   }));
 
-  const edges = worldState.relationships.map((rel) => ({
-    data: {
-      id: `edge-${rel.src}-${rel.dst}-${rel.kind}`,
-      source: rel.src,
-      target: rel.dst,
-      kind: rel.kind,
-      label: rel.kind.replace(/_/g, ' '),
-      strength: rel.strength ?? 0.5  // Default to 0.5 if not specified
-    },
-    classes: rel.kind.replace(/_/g, '-')
-  }));
+  const edges = worldState.relationships.map((rel) => {
+    // Check if this relationship was catalyzed by an event or entity
+    // In a full implementation, this would check for catalyzedBy metadata
+    const catalyzedBy = (rel as any).catalyzedBy;
+    const hasCatalyst = !!catalyzedBy;
+
+    return {
+      data: {
+        id: `edge-${rel.src}-${rel.dst}-${rel.kind}`,
+        source: rel.src,
+        target: rel.dst,
+        kind: rel.kind,
+        label: rel.kind.replace(/_/g, ' '),
+        strength: rel.strength ?? 0.5,
+        catalyzedBy: catalyzedBy,
+        hasCatalyst: hasCatalyst
+      },
+      classes: [
+        rel.kind.replace(/_/g, '-'),
+        hasCatalyst && showCatalyzedBy ? 'catalyzed' : ''
+      ].filter(Boolean).join(' ')
+    };
+  });
 
   return [...nodes, ...edges];
 }
@@ -98,10 +110,14 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
   const allRelTypes = new Set(worldState.relationships.map(r => r.kind));
 
   // Filter relationships to only include those between filtered entities
-  // Also filter by relationship type if specified
+  // Also filter by relationship type and strength if specified
   const filteredRelationships = worldState.relationships.filter(rel => {
     // Must be between visible entities
     if (!filteredIds.has(rel.src) || !filteredIds.has(rel.dst)) return false;
+
+    // Filter by minimum strength
+    const strength = rel.strength ?? 0.5;
+    if (strength < filters.minStrength) return false;
 
     // If relationship type filter has ALL types selected, show none (special "clear all" case)
     if (filters.relationshipTypes.length === allRelTypes.size &&

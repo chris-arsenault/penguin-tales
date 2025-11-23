@@ -260,7 +260,9 @@ export const krillBloomMigration: GrowthTemplate = {
     const discovererCount = Math.min(2, actualBloomCount);
 
     for (let i = 0; i < discovererCount; i++) {
-      const faction = pickRandom(findEntities(graph, { kind: 'faction', status: 'active' }));
+      // FIXED: Don't filter by status='active' - use any faction
+      const allFactions = findEntities(graph, { kind: 'faction' });
+      const faction = allFactions.length > 0 ? pickRandom(allFactions) : undefined;
       const homeColony = pickRandom(colonies);
 
       if (!faction || !homeColony) continue;

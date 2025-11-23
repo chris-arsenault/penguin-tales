@@ -45,8 +45,16 @@ export const orcaCombatTechnique: GrowthTemplate = {
   },
 
   findTargets: (graph: Graph) => {
-    // Target orcas to give them abilities
-    return findEntities(graph, { kind: 'npc', subtype: 'orca' });
+    const maxTechniquesPerOrca = 2; // Limit to 2 techniques per orca
+    const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
+
+    // Filter out orcas who already practice too many techniques
+    return orcas.filter(orca => {
+      const techniqueCount = graph.relationships.filter(r =>
+        r.kind === 'practitioner_of' && r.src === orca.id
+      ).length;
+      return techniqueCount < maxTechniquesPerOrca;
+    });
   },
 
   expand: (graph: Graph, target?: HardState): TemplateResult => {

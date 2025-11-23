@@ -106,7 +106,7 @@ export const prominenceEvolution: SimulationSystem = {
 
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
 
-    // NPCs: Harsher prominence requirements - most should be forgotten/marginal
+    // NPCs: Prominence based on catalyzed events (agency and impact)
     const npcs = findEntities(graph, { kind: 'npc' });
 
     npcs.forEach(npc => {
@@ -114,17 +114,22 @@ export const prominenceEvolution: SimulationSystem = {
         r.src === npc.id || r.dst === npc.id
       );
 
-      const connectionScore = relationships.length;
+      // Use catalyzedEvents if available, otherwise fall back to connection count
+      const catalyzedEvents = npc.catalyst?.catalyzedEvents?.length ?? 0;
+      const connectionScore = catalyzedEvents > 0
+        ? catalyzedEvents * 2  // Each catalyzed event worth 2 connections
+        : relationships.length;  // Fallback for entities without catalyst data
+
       const currentProminence = getProminenceValue(npc.prominence);
 
       // Only heroes and mayors get a small bonus (reduced from +1 to +0.5 effective)
       const roleBonus = (npc.subtype === 'hero' || npc.subtype === 'mayor') ? 2 : 0;
 
       // Much harsher thresholds for prominence gain
-      // forgotten (0) -> marginal (1): needs 6+ connections
-      // marginal (1) -> recognized (2): needs 12+ connections
-      // recognized (2) -> renowned (3): needs 20+ connections
-      // renowned (3) -> mythic (4): needs 30+ connections
+      // forgotten (0) -> marginal (1): needs 6+ impact
+      // marginal (1) -> recognized (2): needs 12+ impact
+      // recognized (2) -> renowned (3): needs 20+ impact
+      // renowned (3) -> mythic (4): needs 30+ impact
       let prominenceDelta = 0;
       const gainThreshold = (currentProminence + 1) * 6;
 

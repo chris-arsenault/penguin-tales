@@ -124,6 +124,25 @@ export interface DomainSchema {
 
   /** Optional: Validate that an entity has all required relationships */
   validateEntityStructure?(entity: HardState): { valid: boolean; missing: string[] };
+
+  // ===========================
+  // CATALYST SYSTEM EXTENSIONS
+  // ===========================
+
+  /** Optional: Get action domains for catalyst system */
+  getActionDomains?(): any[];
+
+  /** Optional: Get pressure-domain mappings */
+  getPressureDomainMappings?(): Record<string, string[]>;
+
+  /** Optional: Get occurrence creation triggers */
+  getOccurrenceTriggers?(): Record<string, any>;
+
+  /** Optional: Get era transition conditions */
+  getEraTransitionConditions?(eraSubtype: string): any[];
+
+  /** Optional: Get era transition effects */
+  getEraTransitionEffects?(fromEra: HardState, toEra: HardState, graph: any): any;
 }
 
 /**

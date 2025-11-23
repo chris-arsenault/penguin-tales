@@ -1,6 +1,6 @@
 export type Prominence = 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic';
 
-export type EntityKind = 'npc' | 'location' | 'faction' | 'rules' | 'abilities';
+export type EntityKind = 'npc' | 'location' | 'faction' | 'rules' | 'abilities' | 'era' | 'occurrence';
 
 export interface Relationship {
   kind: string;
@@ -33,11 +33,58 @@ export interface HistoryEvent {
   entitiesModified: string[];
 }
 
+export interface EnrichmentTriggers {
+  total: number;
+  byKind: {
+    locationEnrichments: number;
+    factionEnrichments: number;
+    ruleEnrichments: number;
+    abilityEnrichments: number;
+    npcEnrichments: number;
+  };
+  comment: string;
+}
+
 export interface WorldMetadata {
   tick: number;
   epoch: number;
+  era: string;
   entityCount: number;
   relationshipCount: number;
+  historyEventCount: number;
+  enrichmentTriggers: EnrichmentTriggers;
+}
+
+export interface ValidationResult {
+  name: string;
+  passed: boolean;
+  failureCount: number;
+  details: string;
+}
+
+export interface Validation {
+  totalChecks: number;
+  passed: number;
+  failed: number;
+  results: ValidationResult[];
+}
+
+export interface GraphMetrics {
+  clusters: number;
+  avgClusterSize: number;
+  intraClusterDensity: number;
+  interClusterDensity: number;
+  isolatedNodes: number;
+  isolatedNodeRatio: number;
+}
+
+export interface DistributionMetrics {
+  entityKindRatios: Record<string, number>;
+  prominenceRatios: Record<string, number>;
+  relationshipTypeRatios: Record<string, number>;
+  graphMetrics: GraphMetrics;
+  deviation: Record<string, number>;
+  targets: Record<string, any>;
 }
 
 export interface WorldState {
@@ -46,6 +93,8 @@ export interface WorldState {
   relationships: Relationship[];
   pressures: Record<string, number>;
   history: HistoryEvent[];
+  distributionMetrics?: DistributionMetrics;
+  validation?: Validation;
 }
 
 export interface Filters {
@@ -55,6 +104,8 @@ export interface Filters {
   tags: string[];
   searchQuery: string;
   relationshipTypes: string[];
+  minStrength: number;
+  showCatalyzedBy: boolean;
 }
 
 export type GraphMode = 'full' | 'radial' | 'temporal' | 'faction' | 'conflict' | 'economic';
@@ -119,4 +170,18 @@ export interface LoreData {
   llmEnabled: boolean;
   model: string;
   records: (DescriptionLore | RelationshipBackstoryLore | EraNarrativeLore | ChainLinkLore | DiscoveryEventLore)[];
+}
+
+export interface EntityImage {
+  entityId: string;
+  entityName: string;
+  entityKind: string;
+  prompt: string;
+  localPath: string;
+}
+
+export interface ImageMetadata {
+  generatedAt: string;
+  totalImages: number;
+  results: EntityImage[];
 }

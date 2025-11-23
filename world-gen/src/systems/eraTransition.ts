@@ -148,6 +148,27 @@ export const eraTransition: SimulationSystem = {
       graph.currentEra = configEra;
     }
 
+    // Create active_during relationships for prominent entities in the ending era
+    const relationshipsAdded: any[] = [];
+    const prominentEntities = Array.from(graph.entities.values()).filter(e =>
+      (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
+      e.kind !== 'era' &&
+      e.createdAt >= currentEra.temporal!.startTick &&
+      e.createdAt < graph.tick
+    );
+
+    // Link up to 10 most prominent entities to the ending era
+    prominentEntities.slice(0, 10).forEach(entity => {
+      relationshipsAdded.push({
+        kind: 'active_during',
+        src: entity.id,
+        dst: currentEra.id,
+        strength: 1.0,
+        createdAt: graph.tick
+      });
+      // Note: entity.links will be updated by addRelationship() in worldEngine
+    });
+
     // Create history event
     graph.history.push({
       tick: graph.tick,
@@ -155,7 +176,7 @@ export const eraTransition: SimulationSystem = {
       type: 'special',
       description: `The ${currentEra.name} ends. The ${nextEra.name} begins.`,
       entitiesCreated: [],
-      relationshipsCreated: [],
+      relationshipsCreated: relationshipsAdded,
       entitiesModified: [currentEra.id, nextEra.id]
     });
 
@@ -163,13 +184,13 @@ export const eraTransition: SimulationSystem = {
     const transitionEffects = graph.config.domain.getEraTransitionEffects?.(currentEra, nextEra, graph) || {};
 
     return {
-      relationshipsAdded: [],
+      relationshipsAdded,
       entitiesModified: [
         { id: currentEra.id, changes: { status: 'past', temporal: currentEra.temporal } },
         { id: nextEra.id, changes: { status: 'current', temporal: nextEra.temporal } }
       ],
       pressureChanges: transitionEffects.pressureChanges || {},
-      description: `Era transition: ${currentEra.name} → ${nextEra.name}`
+      description: `Era transition: ${currentEra.name} → ${nextEra.name} (${prominentEntities.length} entities linked)`
     };
   }
 };

@@ -14,10 +14,10 @@
       "comment": "Distribution of entity kinds - should sum to 1.0",
       "targets": {
         "npc": 0.2,
-        "location": 0.25,
+        "location": 0.3,
         "faction": 0.20,
         "rules": 0.15,
-        "abilities": 0.20
+        "abilities": 0.15
       },
       "tolerance": 0.05
     },
@@ -166,6 +166,96 @@
       "relationshipDistribution": {
         "preferredTypes": ["resident_of", "member_of", "allied_with"],
         "preferredRatio": 0.25
+      }
+    }
+  },
+
+  "entities": {
+    "comment": "Per-subtype entity targets for homeostatic population control. Total ~150 entities.",
+    "npc": {
+      "hero": {
+        "target": 20,
+        "comment": "Heroes that emerge during conflict (reduced from unbounded)"
+      },
+      "merchant": {
+        "target": 10,
+        "comment": "Trade network NPCs"
+      },
+      "mayor": {
+        "target": 5,
+        "comment": "Colony leaders (1 per colony + succession)"
+      },
+      "orca": {
+        "target": 5,
+        "comment": "External threat NPCs (reduced from unbounded)"
+      },
+      "outlaw": {
+        "target": 5,
+        "comment": "Criminal faction members"
+      }
+    },
+    "location": {
+      "colony": {
+        "target": 5,
+        "comment": "Major settlements (2 initial + 3 founded)"
+      },
+      "geographic_feature": {
+        "target": 15,
+        "comment": "Resource locations (krill blooms, hunting grounds)"
+      },
+      "anomaly": {
+        "target": 8,
+        "comment": "Magical locations (enables cult/magic creation)"
+      },
+      "landmark": {
+        "target": 10,
+        "comment": "Named locations of cultural significance"
+      }
+    },
+    "faction": {
+      "political": {
+        "target": 10,
+        "comment": "Major political factions (including splinters)"
+      },
+      "merchant_guild": {
+        "target": 3,
+        "comment": "Economic organizations"
+      },
+      "criminal": {
+        "target": 3,
+        "comment": "Criminal syndicates"
+      },
+      "cult": {
+        "target": 10,
+        "comment": "Mystical factions (reduced from unbounded, hard cap 15 in template)"
+      },
+      "military": {
+        "target": 4,
+        "comment": "Defense organizations"
+      }
+    },
+    "rules": {
+      "social": {
+        "target": 12,
+        "comment": "Cultural norms and ideologies"
+      },
+      "economic": {
+        "target": 10,
+        "comment": "Trade laws and resource management"
+      },
+      "cultural": {
+        "target": 1,
+        "comment": "Rare cultural traditions"
+      }
+    },
+    "abilities": {
+      "magic": {
+        "target": 15,
+        "comment": "Mystical techniques (reduced from unbounded)"
+      },
+      "technology": {
+        "target": 15,
+        "comment": "Practical innovations"
       }
     }
   },

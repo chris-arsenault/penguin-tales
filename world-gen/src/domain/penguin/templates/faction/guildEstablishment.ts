@@ -21,12 +21,6 @@ export const guildEstablishment: GrowthTemplate = {
           count: { min: 1, max: 1 },
           prominence: [{ level: 'recognized', probability: 1.0 }],
         },
-        {
-          kind: 'npc',
-          subtype: 'merchant',
-          count: { min: 2, max: 3 },
-          prominence: [{ level: 'marginal', probability: 1.0 }],
-        },
       ],
       relationships: [
         { kind: 'controls', category: 'political', probability: 1.0, comment: 'Guild controls colony trade' },
@@ -82,42 +76,37 @@ export const guildEstablishment: GrowthTemplate = {
       tags: ['trade', 'guild', `name:${slugifyName(colony.name)}`]
     };
     
-    const merchants: Partial<HardState>[] = [];
-    const numMerchants = Math.floor(Math.random() * 2) + 2;
-    
-    for (let i = 0; i < numMerchants; i++) {
-      merchants.push({
-        kind: 'npc',
-        subtype: 'merchant',
-        name: generateName('merchant'),
-        description: `A trader affiliated with ${guild.name}`,
-        status: 'alive',
-        prominence: 'marginal',
-        tags: ['trader', 'guild_member']
-      });
-    }
-    
+    // Use existing merchants instead of creating new ones (catalyst model)
+    const existingMerchants = findEntities(graph, { kind: 'npc', subtype: 'merchant', status: 'alive' })
+      .filter(m => !m.links.some(l => l.kind === 'member_of')) // Prefer unaffiliated merchants
+      .slice(0, 3);
+
+    // If no unaffiliated merchants, take any merchants
+    const merchantsToRecruit = existingMerchants.length > 0
+      ? existingMerchants
+      : findEntities(graph, { kind: 'npc', subtype: 'merchant', status: 'alive' }).slice(0, 3);
+
     const relationships: Relationship[] = [
       { kind: 'controls', src: 'will-be-assigned-0', dst: colony.id }
     ];
-    
-    merchants.forEach((_, i) => {
+
+    merchantsToRecruit.forEach(merchant => {
       relationships.push({
         kind: 'member_of',
-        src: `will-be-assigned-${i + 1}`,
+        src: merchant.id,
         dst: 'will-be-assigned-0'
       });
       relationships.push({
         kind: 'resident_of',
-        src: `will-be-assigned-${i + 1}`,
+        src: merchant.id,
         dst: colony.id
       });
     });
-    
+
     return {
-      entities: [guild, ...merchants],
+      entities: [guild], // No new NPCs created, use existing merchants
       relationships,
-      description: `Merchants organize into ${guild.name}`
+      description: `${merchantsToRecruit.length} merchants organize into ${guild.name}`
     };
   }
 };

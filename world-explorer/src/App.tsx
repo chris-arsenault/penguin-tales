@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import WorldExplorer from './components/WorldExplorer.tsx';
-import type { WorldState, LoreData } from './types/world.ts';
+import type { WorldState, LoreData, ImageMetadata } from './types/world.ts';
 
 function App() {
   const [worldData, setWorldData] = useState<WorldState | null>(null);
   const [loreData, setLoreData] = useState<LoreData | null>(null);
+  const [imageData, setImageData] = useState<ImageMetadata | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load both world data and lore data
+    // Load world data, lore data, and image metadata
     // In production, these files should be in the public folder
     // Paths are relative to the root of the deployed site
     Promise.all([
@@ -28,11 +29,24 @@ function App() {
         .catch(() => {
           console.warn('Lore data not available');
           return null;
+        }),
+      fetch('/images/image_metadata.json')
+        .then(res => {
+          if (!res.ok) {
+            console.warn('Image metadata not found, continuing without it');
+            return null;
+          }
+          return res.json();
+        })
+        .catch(() => {
+          console.warn('Image metadata not available');
+          return null;
         })
     ])
-      .then(([world, lore]) => {
+      .then(([world, lore, images]) => {
         setWorldData(world);
         setLoreData(lore);
+        setImageData(images);
         setLoading(false);
       })
       .catch(err => {
@@ -64,7 +78,7 @@ function App() {
     );
   }
 
-  return <WorldExplorer worldData={worldData} loreData={loreData} />;
+  return <WorldExplorer worldData={worldData} loreData={loreData} imageData={imageData} />;
 }
 
 export default App;

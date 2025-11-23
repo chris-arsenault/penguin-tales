@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WorldState, LoreData, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore } from '../types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships } from '../utils/dataTransform.ts';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
@@ -11,10 +11,11 @@ interface EntityDetailProps {
   entityId?: string;
   worldData: WorldState;
   loreData: LoreData | null;
+  imageData: ImageMetadata | null;
   onRelatedClick: (entityId: string) => void;
 }
 
-export default function EntityDetail({ entityId, worldData, loreData, onRelatedClick }: EntityDetailProps) {
+export default function EntityDetail({ entityId, worldData, loreData, imageData, onRelatedClick }: EntityDetailProps) {
   // Hooks must be called before any early returns
   const [selectedRelationshipLore, setSelectedRelationshipLore] = useState<RelationshipBackstoryLore | null>(null);
   const [expandedOutgoing, setExpandedOutgoing] = useState<Set<string>>(new Set());
@@ -56,6 +57,11 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
   const discoveryEventLore = loreData?.records.find(
     record => record.type === 'discovery_event' && record.targetId === entityId
   ) as DiscoveryEventLore | undefined;
+
+  // Find image for this entity
+  const entityImage = imageData?.results.find(img => img.entityId === entityId);
+  // Convert path from "output/images/..." to "images/..."
+  const imagePath = entityImage?.localPath.replace('output/images/', 'images/');
 
   // Helper to find relationship lore
   const findRelationshipLore = (srcId: string, dstId: string, kind: string): RelationshipBackstoryLore | undefined => {
@@ -141,6 +147,20 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
           <span className="capitalize text-blue-200">{entity.subtype}</span>
         </div>
       </div>
+
+      {/* Entity Image */}
+      {imagePath && (
+        <div className="mb-6">
+          <div className="entity-image-container">
+            <img
+              src={`/${imagePath}`}
+              alt={entity.name}
+              className="entity-image"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Description or Lore */}
       {descriptionLore ? (

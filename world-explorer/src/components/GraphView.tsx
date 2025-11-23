@@ -12,9 +12,10 @@ interface GraphViewProps {
   data: WorldState;
   selectedNodeId?: string;
   onNodeSelect: (nodeId: string | undefined) => void;
+  showCatalyzedBy?: boolean;
 }
 
-export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphViewProps) {
+export default function GraphView({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false }: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
@@ -111,12 +112,12 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
           // - Opacity: 0.2-1.0 (stronger = fully opaque, weak = nearly invisible)
           selector: 'edge',
           style: {
-            'width': 'mapData(strength, 0, 1, 0.5, 7)',
-            'line-color': 'mapData(strength, 0, 1, #aaa, #000)',
-            'target-arrow-color': 'mapData(strength, 0, 1, #aaa, #000)',
+            'width': 'mapData(strength, 0, 1, 0.5, 7)' as any,
+            'line-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
+            'target-arrow-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            'opacity': 'mapData(strength, 0, 1, 0.2, 1)',
+            'opacity': 'mapData(strength, 0, 1, 0.2, 1)' as any,
             'label': 'data(label)',
             'font-size': '8px',
             'color': '#999',
@@ -130,6 +131,18 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
             'line-color': '#FFD700',
             'target-arrow-color': '#FFD700',
             'width': 3
+          }
+        },
+        {
+          // Catalyzed edges - special styling to show meta-relationships
+          selector: 'edge.catalyzed',
+          style: {
+            'line-style': 'dashed' as any,
+            'line-dash-pattern': [6, 3] as any,
+            'line-color': '#a78bfa' as any,  // Purple color for catalyzed relationships
+            'target-arrow-color': '#a78bfa' as any,
+            'width': 'mapData(strength, 0, 1, 1, 4)' as any,
+            'opacity': 0.9 as any
           }
         }
       ],
@@ -179,7 +192,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
     if (!cyRef.current) return;
 
     const cy = cyRef.current;
-    const newElements = transformWorldData(data);
+    const newElements = transformWorldData(data, showCatalyzedBy);
 
     // Get current element IDs
     const currentNodeIds = new Set(cy.nodes().map(n => n.id()));
@@ -238,7 +251,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
 
       layout.run();
     }
-  }, [data]);
+  }, [data, showCatalyzedBy]);
 
   // Handle selection changes from outside
   useEffect(() => {

@@ -2,32 +2,32 @@
  * NPC Growth Templates
  *
  * Templates for creating and evolving NPC entities.
+ *
+ * REMOVED (NPC bloat):
+ * - familyExpansion (created 3-5 family NPCs per invocation)
+ * - outlawRecruitment (created outlaws, 39 existed!)
+ * - kinshipConstellation (created 2-4 related NPCs)
+ * - mysteriousVanishing (pure narrative, low game value)
+ *
+ * KEPT (catalysts for world events):
+ * - heroEmergence (creates 1 NPC that drives major events)
+ * - succession (creates 1 NPC to resolve power vacuum)
+ * - orcaRaiderArrival (creates external threat NPC)
  */
 
 import { GrowthTemplate } from '../../../../types/engine';
 
-export { familyExpansion } from './familyExpansion';
+// REMOVED: familyExpansion, outlawRecruitment, kinshipConstellation, mysteriousVanishing
 export { heroEmergence } from './heroEmergence';
-export { outlawRecruitment } from './outlawRecruitment';
 export { succession } from './succession';
-export { kinshipConstellation } from './kinshipConstellation';
-export { mysteriousVanishing } from './mysteriousVanishing';
 export { orcaRaiderArrival } from './orcaRaiderArrival';
 
-import { familyExpansion } from './familyExpansion';
 import { heroEmergence } from './heroEmergence';
-import { outlawRecruitment } from './outlawRecruitment';
 import { succession } from './succession';
-import { kinshipConstellation } from './kinshipConstellation';
-import { mysteriousVanishing } from './mysteriousVanishing';
 import { orcaRaiderArrival } from './orcaRaiderArrival';
 
 export const npcTemplates: GrowthTemplate[] = [
-  familyExpansion,
   heroEmergence,
-  outlawRecruitment,
   succession,
-  kinshipConstellation,
-  mysteriousVanishing,
   orcaRaiderArrival
 ];

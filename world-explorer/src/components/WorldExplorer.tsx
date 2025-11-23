@@ -1,27 +1,32 @@
 import { useState } from 'react';
-import type { WorldState, Filters, EntityKind, LoreData } from '../types/world.ts';
+import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
 import GraphView from './GraphView.tsx';
 import FilterPanel from './FilterPanel.tsx';
 import EntityDetail from './EntityDetail.tsx';
 import TimelineControl from './TimelineControl.tsx';
+import StatsPanel from './StatsPanel.tsx';
 import './WorldExplorer.css';
 
 interface WorldExplorerProps {
   worldData: WorldState;
   loreData: LoreData | null;
+  imageData: ImageMetadata | null;
 }
 
-export default function WorldExplorer({ worldData, loreData }: WorldExplorerProps) {
+export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
+  const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>({
-    kinds: ['npc', 'faction', 'location', 'rules', 'abilities'] as EntityKind[],
+    kinds: ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'] as EntityKind[],
     minProminence: 'forgotten',
     timeRange: [0, worldData.metadata.tick],
     tags: [],
     searchQuery: '',
-    relationshipTypes: []
+    relationshipTypes: [],
+    minStrength: 0.0,
+    showCatalyzedBy: false
   });
 
   // Apply temporal filter first, then regular filters
@@ -43,12 +48,24 @@ export default function WorldExplorer({ worldData, loreData }: WorldExplorerProp
           <div className="world-header-right">
             <div className="world-header-stats">
               <div className="world-header-stat">
+                <div className="world-header-stat-label">Era</div>
+                <div className="world-header-stat-value" style={{ fontSize: '0.85rem' }}>{worldData.metadata.era}</div>
+              </div>
+              <div className="world-header-stat">
                 <div className="world-header-stat-label">Epoch</div>
                 <div className="world-header-stat-value">{worldData.metadata.epoch}</div>
               </div>
               <div className="world-header-stat">
                 <div className="world-header-stat-label">Tick</div>
                 <div className="world-header-stat-value">{worldData.metadata.tick}</div>
+              </div>
+              <div className="world-header-stat">
+                <div className="world-header-stat-label">History</div>
+                <div className="world-header-stat-value">{worldData.metadata.historyEventCount}</div>
+              </div>
+              <div className="world-header-stat">
+                <div className="world-header-stat-label">Enriched</div>
+                <div className="world-header-stat-value">{worldData.metadata.enrichmentTriggers.total}</div>
               </div>
             </div>
           </div>
@@ -70,6 +87,7 @@ export default function WorldExplorer({ worldData, loreData }: WorldExplorerProp
             data={filteredData}
             selectedNodeId={selectedEntityId}
             onNodeSelect={setSelectedEntityId}
+            showCatalyzedBy={filters.showCatalyzedBy}
           />
         </main>
 
@@ -78,6 +96,7 @@ export default function WorldExplorer({ worldData, loreData }: WorldExplorerProp
           entityId={selectedEntityId}
           worldData={worldData}
           loreData={loreData}
+          imageData={imageData}
           onRelatedClick={setSelectedEntityId}
         />
       </div>
@@ -88,6 +107,13 @@ export default function WorldExplorer({ worldData, loreData }: WorldExplorerProp
         loreData={loreData}
         currentTick={currentTick}
         onTickChange={setCurrentTick}
+      />
+
+      {/* Stats Panel */}
+      <StatsPanel
+        worldData={worldData}
+        isOpen={isStatsPanelOpen}
+        onToggle={() => setIsStatsPanelOpen(!isStatsPanelOpen)}
       />
 
       {/* Footer Status Bar */}

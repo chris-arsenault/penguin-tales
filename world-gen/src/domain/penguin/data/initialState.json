@@ -205,6 +205,61 @@
         { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Krill Shoals", "strength": 0.6 },
         { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Aurora Stack", "strength": 0.6 }
       ]
+    },
+
+    {
+      "kind": "era",
+      "subtype": "expansion",
+      "name": "The Great Thaw",
+      "description": "A period of exploration and colony founding as the ice recedes",
+      "status": "current",
+      "prominence": "mythic",
+      "tags": ["era", "expansion", "settlement"],
+      "links": []
+    },
+
+    {
+      "kind": "era",
+      "subtype": "conflict",
+      "name": "The Faction Wars",
+      "description": "Resource scarcity leads to inter-colony conflicts",
+      "status": "future",
+      "prominence": "marginal",
+      "tags": ["era", "conflict", "war"],
+      "links": []
+    },
+
+    {
+      "kind": "era",
+      "subtype": "innovation",
+      "name": "The Clever Ice Age",
+      "description": "Technology and magic flourish as penguins seek solutions",
+      "status": "future",
+      "prominence": "marginal",
+      "tags": ["era", "innovation", "technology"],
+      "links": []
+    },
+
+    {
+      "kind": "era",
+      "subtype": "invasion",
+      "name": "The Orca Incursion",
+      "description": "External threats unite the colonies against common enemies",
+      "status": "future",
+      "prominence": "marginal",
+      "tags": ["era", "invasion", "orca"],
+      "links": []
+    },
+
+    {
+      "kind": "era",
+      "subtype": "reconstruction",
+      "name": "The Frozen Peace",
+      "description": "Rebuilding and consolidation after the wars",
+      "status": "future",
+      "prominence": "marginal",
+      "tags": ["era", "reconstruction", "peace"],
+      "links": []
     }
   ]
 }

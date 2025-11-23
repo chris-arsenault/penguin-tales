@@ -12,13 +12,14 @@ export const penguinEras: Era[] = [
       'structure_building': 1.2,
       'resource_location_discovery': 1.2,
       'geographic_exploration': 1.5,
-      'krill_bloom_migration': 2.0,  // NEW: Resource discovery in expansion
+      'krill_bloom_migration': 2.0,
 
-      // NPC templates
-      'family_expansion': 2.0,
-      'merchant_arrival': 1.5,
-      'kinship_constellation': 1.5,  // NEW: Family formation
-      'mysterious_vanishing': 0.1,   // NEW: Very rare, mysterious
+      // NPC templates (REDUCED - NPCs as catalysts, not protagonists)
+      // REMOVED: family_expansion (NPC bloat)
+      // REMOVED: kinship_constellation (NPC bloat)
+      // REMOVED: mysterious_vanishing (low value)
+      'hero_emergence': 0.3,         // Reduced from 1.0 to 0.3
+      'merchant_arrival': 0.5,       // Reduced from 1.5
       'orca_raider_arrival': 0,      // No orcas during expansion
 
       // Faction templates
@@ -33,8 +34,14 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'tech_innovation': 1.0,     // Boost abilities generation
-      'magic_discovery': 0.8,
-      'orca_combat_technique': 0  // No orcas during expansion
+      'magic_discovery': 0.2,     // Reduced from 0.8 to 0.2
+      'orca_combat_technique': 0,  // No orcas during expansion
+
+      // World-level templates
+      'territorial_expansion': 2.5,    // High expansion during Great Thaw
+      'trade_route_establishment': 1.5, // Moderate trade establishment
+      'magical_site_discovery': 1.0,   // Some magical discoveries
+      'tech_breakthrough': 1.2         // Innovation is growing
     },
     systemModifiers: {
       'resource_flow': 1.5,       // resources plentiful
@@ -59,11 +66,11 @@ export const penguinEras: Era[] = [
       'strategic_location_discovery': 1.5,  // War drives strategic finds
       'krill_bloom_migration': 0.3,  // NEW: Resource scarcity during war
 
-      // NPC templates
-      'hero_emergence': 2.0,
-      'outlaw_recruitment': 2.0,
-      'kinship_constellation': 0.5,  // NEW: Families torn apart by war
-      'mysterious_vanishing': 0.3,   // NEW: War casualties and disappearances
+      // NPC templates (REDUCED)
+      // REMOVED: outlaw_recruitment (NPC bloat - created 39 outlaws!)
+      // REMOVED: kinship_constellation (NPC bloat)
+      // REMOVED: mysterious_vanishing (low value)
+      'hero_emergence': 0.5,         // Reduced from 2.0 - heroes emerge from conflict
       'orca_raider_arrival': 0,      // No orcas during faction wars
 
       // Faction templates
@@ -78,7 +85,13 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'combat_technique': 1.5,
-      'orca_combat_technique': 0  // No orcas during faction wars
+      'orca_combat_technique': 0,  // No orcas during faction wars
+
+      // World-level templates
+      'territorial_expansion': 3.0,    // Very high during faction wars
+      'trade_route_establishment': 0.3, // Trade disrupted by war
+      'magical_site_discovery': 0.5,   // Few discoveries during conflict
+      'tech_breakthrough': 0.8         // Some war-driven innovation
     },
     systemModifiers: {
       'conflict_contagion': 2.0,   // conflicts spread rapidly
@@ -104,16 +117,16 @@ export const penguinEras: Era[] = [
       'resource_location_discovery': 0.8,
       'krill_bloom_migration': 1.0,  // NEW: Resource innovation
 
-      // NPC templates
-      'scholar_emergence': 2.0,
-      'merchant_arrival': 1.5,
-      'kinship_constellation': 1.0,  // NEW: Moderate family formation
-      'mysterious_vanishing': 0.5,   // NEW: Anomaly-related vanishings
+      // NPC templates (REDUCED)
+      // REMOVED: kinship_constellation (NPC bloat)
+      // REMOVED: mysterious_vanishing (low value)
+      'scholar_emergence': 0.5,      // Reduced from 2.0
+      'merchant_arrival': 0.5,       // Reduced from 1.5
       'orca_raider_arrival': 0,      // No orcas during innovation
 
       // Faction templates
       'guild_establishment': 2.0,
-      'cult_formation': 1.0,
+      'cult_formation': 0.1,      // Reduced from 1.0 to 0.1 (very rare)
 
       // Rules templates
       'natural_law_discovery': 2.5,  // Boost rules in innovation era
@@ -123,9 +136,15 @@ export const penguinEras: Era[] = [
 
       // Abilities templates
       'tech_innovation': 3.0,
-      'magic_discovery': 2.5,
+      'magic_discovery': 0.6,     // Reduced from 2.5 to 0.6
       'technique_evolution': 2.0,
-      'orca_combat_technique': 0  // No orcas during innovation
+      'orca_combat_technique': 0,  // No orcas during innovation
+
+      // World-level templates
+      'territorial_expansion': 0.8,    // Low territorial expansion during innovation
+      'trade_route_establishment': 2.5, // High trade for knowledge sharing
+      'magical_site_discovery': 3.0,   // Very high magical discoveries
+      'tech_breakthrough': 3.5         // Peak technological innovation
     },
     systemModifiers: {
       'knowledge_spread': 2.0,
@@ -150,12 +169,12 @@ export const penguinEras: Era[] = [
       'strategic_location_discovery': 1.0,  // Escape routes, defensive positions
       'krill_bloom_migration': 0.2,  // NEW: Resources scarce during invasion
 
-      // NPC templates
-      'hero_emergence': 3.0,
-      'war_leader': 2.0,
-      'kinship_constellation': 0.3,  // NEW: Families fractured
-      'mysterious_vanishing': 0.8,   // NEW: War casualties
-      'orca_raider_arrival': 4.0,    // ORCA INVASION: High probability of orca raiders
+      // NPC templates (REDUCED)
+      // REMOVED: kinship_constellation (NPC bloat)
+      // REMOVED: mysterious_vanishing (low value)
+      'hero_emergence': 0.8,         // Reduced from 3.0 - crisis creates heroes
+      'war_leader': 0.5,             // Reduced from 2.0
+      'orca_raider_arrival': 2.0,    // Reduced from 4.0 (half) - ORCA INVASION
 
       // Faction templates
       'military_order': 2.0,
@@ -170,7 +189,13 @@ export const penguinEras: Era[] = [
       // Abilities templates
       'combat_technique': 2.0,
       'defensive_magic': 2.5,
-      'orca_combat_technique': 3.0  // ORCA INVASION: Orca combat abilities
+      'orca_combat_technique': 3.0,  // ORCA INVASION: Orca combat abilities
+
+      // World-level templates
+      'territorial_expansion': 1.5,    // Moderate as territories change hands
+      'trade_route_establishment': 0.2, // Trade heavily disrupted
+      'magical_site_discovery': 1.0,   // Some defensive discoveries
+      'tech_breakthrough': 1.5         // War-driven defensive innovation
     },
     systemModifiers: {
       'external_pressure': 3.0,
@@ -195,11 +220,11 @@ export const penguinEras: Era[] = [
       'geographic_exploration': 1.3,  // Peaceful rediscovery
       'krill_bloom_migration': 1.5,  // NEW: Resource recovery
 
-      // NPC templates
-      'succession': 2.0,          // generational change
-      'diplomat_emergence': 1.5,
-      'kinship_constellation': 2.0,  // NEW: Families reunite and form
-      'mysterious_vanishing': 0.2,   // NEW: Rare peacetime mysteries
+      // NPC templates (REDUCED)
+      // REMOVED: kinship_constellation (NPC bloat)
+      // REMOVED: mysterious_vanishing (low value)
+      'succession': 1.0,             // Reduced from 2.0 - generational change
+      'diplomat_emergence': 0.4,     // Reduced from 1.5
       'orca_raider_arrival': 0,      // No orcas during reconstruction
 
       // Faction templates
@@ -216,7 +241,13 @@ export const penguinEras: Era[] = [
       // Abilities templates
       'tradition_preservation': 2.0,  // Boost abilities preservation
       'hybrid_technique': 1.5,    // combining war knowledge
-      'orca_combat_technique': 0  // No orcas during reconstruction
+      'orca_combat_technique': 0,  // No orcas during reconstruction
+
+      // World-level templates
+      'territorial_expansion': 1.0,    // Some consolidation
+      'trade_route_establishment': 3.0, // High trade during reconstruction
+      'magical_site_discovery': 1.2,   // Moderate rediscovery
+      'tech_breakthrough': 1.8         // Rebuilding innovation
     },
     systemModifiers: {
       'cultural_drift': 1.5,      // cultures diverge in peace

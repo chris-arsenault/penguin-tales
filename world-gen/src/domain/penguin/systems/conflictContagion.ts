@@ -84,9 +84,10 @@ export const conflictContagion: SimulationSystem = {
 
     conflicts.forEach(conflict => {
       // Only strong allies (>= 0.5 loyalty) will join the conflict
-      const srcAllies = getRelated(graph, conflict.src, 'follower_of', 'dst', { minStrength: 0.5 })
+      // Use allied_with and member_of relationships (follower_of was removed)
+      const srcAllies = getRelated(graph, conflict.src, 'allied_with', 'src', { minStrength: 0.5 })
         .concat(getRelated(graph, conflict.src, 'member_of', 'src', { minStrength: 0.5 }));
-      const dstAllies = getRelated(graph, conflict.dst, 'follower_of', 'dst', { minStrength: 0.5 })
+      const dstAllies = getRelated(graph, conflict.dst, 'allied_with', 'src', { minStrength: 0.5 })
         .concat(getRelated(graph, conflict.dst, 'member_of', 'src', { minStrength: 0.5 }));
 
       // Conflicts spread to strong allies only
@@ -102,7 +103,8 @@ export const conflictContagion: SimulationSystem = {
             relationships.push({
               kind: 'enemy_of',
               src: ally.id,
-              dst: conflict.dst
+              dst: conflict.dst,
+              catalyzedBy: conflict.src  // Catalyst is the conflict participant who dragged ally in
             });
             recordRelationshipFormation(graph, ally.id, 'enemy_of');
           }
@@ -121,7 +123,8 @@ export const conflictContagion: SimulationSystem = {
             relationships.push({
               kind: 'enemy_of',
               src: ally.id,
-              dst: conflict.src
+              dst: conflict.src,
+              catalyzedBy: conflict.dst  // Catalyst is the conflict participant who dragged ally in
             });
             recordRelationshipFormation(graph, ally.id, 'enemy_of');
           }

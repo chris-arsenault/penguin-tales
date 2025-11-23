@@ -27,19 +27,12 @@ export const cultFormation: GrowthTemplate = {
           count: { min: 1, max: 1 },
           prominence: [{ level: 'marginal', probability: 1.0 }],
         },
-        {
-          kind: 'npc',
-          subtype: 'various',
-          count: { min: 3, max: 3 },
-          prominence: [{ level: 'forgotten', probability: 1.0 }],
-        },
       ],
       relationships: [
         { kind: 'occupies', category: 'spatial', probability: 1.0, comment: 'Cult occupies anomaly/location' },
         { kind: 'leader_of', category: 'political', probability: 1.0, comment: 'Prophet leads cult' },
         { kind: 'resident_of', category: 'spatial', probability: 4.0, comment: 'Prophet + 3 cultists reside' },
         { kind: 'member_of', category: 'political', probability: 3.0, comment: '3 cultists join' },
-        { kind: 'follower_of', category: 'social', probability: 3.0, comment: 'Cultists follow prophet' },
         { kind: 'seeks', category: 'cultural', probability: 0.8, comment: 'Cult seeks magic if exists' },
         { kind: 'practitioner_of', category: 'cultural', probability: 0.8, comment: 'Prophet practices magic if exists' },
       ],
@@ -52,9 +45,9 @@ export const cultFormation: GrowthTemplate = {
     },
     parameters: {
       numCultists: {
-        value: 3,
-        min: 2,
-        max: 8,
+        value: 1,               // Reduced from 3
+        min: 1,                 // Reduced from 2
+        max: 3,                 // Reduced from 8
         description: 'Number of initial cultist followers',
       },
     },
@@ -62,9 +55,24 @@ export const cultFormation: GrowthTemplate = {
   },
 
   canApply: (graph: Graph) => {
+    // Prerequisite: anomalies or magic must exist
     const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
     const magic = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
-    return anomalies.length > 0 || magic.length > 0;
+    if (anomalies.length === 0 && magic.length === 0) {
+      return false;
+    }
+
+    // SATURATION LIMIT: Check if cult count is at or above threshold
+    const existingCults = findEntities(graph, { kind: 'faction', subtype: 'cult' });
+    const targets = graph.config.distributionTargets as any;
+    const target = targets?.entities?.faction?.cult?.target || 10;
+    const saturationThreshold = target * 1.5; // Allow 50% overshoot (15 cults with target=10)
+
+    if (existingCults.length >= saturationThreshold) {
+      return false; // Too many cults, suppress creation
+    }
+
+    return true;
   },
   
   findTargets: (graph: Graph) => {
@@ -119,39 +127,32 @@ export const cultFormation: GrowthTemplate = {
       tags: ['prophet', 'mystic']
     };
 
-    const cultists: Partial<HardState>[] = [];
-    for (let i = 0; i < numCultists; i++) {
-      cultists.push({
-        kind: 'npc',
-        subtype: pickRandom(['merchant', 'outlaw']),
-        name: generateName(),
-        description: `A devoted follower of ${cult.name}`,
-        status: 'alive',
-        prominence: 'forgotten',
-        tags: ['cultist', 'devoted']
-      });
-    }
-    
+    // Use existing NPCs as cultists instead of creating new ones (catalyst model)
+    const potentialCultists = findEntities(graph, { kind: 'npc', status: 'alive' })
+      .filter(npc => !npc.links.some(l => l.kind === 'member_of')) // Prefer unaffiliated NPCs
+      .filter(npc => npc.subtype === 'merchant' || npc.subtype === 'outlaw' || npc.subtype === 'hero')
+      .slice(0, numCultists);
+
+    // If not enough unaffiliated, take any NPCs
+    const cultists = potentialCultists.length >= numCultists
+      ? potentialCultists
+      : findEntities(graph, { kind: 'npc', status: 'alive' }).slice(0, numCultists);
+
     const relationships: Relationship[] = [
       { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id },
       { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
       { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
     ];
 
-    cultists.forEach((_, i) => {
+    cultists.forEach(cultist => {
       relationships.push({
         kind: 'member_of',
-        src: `will-be-assigned-${i + 2}`,
+        src: cultist.id,
         dst: 'will-be-assigned-0'
       });
       relationships.push({
-        kind: 'follower_of',
-        src: `will-be-assigned-${i + 2}`,
-        dst: 'will-be-assigned-1'
-      });
-      relationships.push({
         kind: 'resident_of',
-        src: `will-be-assigned-${i + 2}`,
+        src: cultist.id,
         dst: location.id
       });
     });
@@ -171,9 +172,9 @@ export const cultFormation: GrowthTemplate = {
     }
     
     return {
-      entities: [cult, prophet, ...cultists],
+      entities: [cult, prophet], // Only create prophet, use existing NPCs for cultists
       relationships,
-      description: `${cult.name} forms around mystical beliefs`
+      description: `${cult.name} forms with ${prophet.name} as prophet and ${cultists.length} followers`
     };
   }
 };

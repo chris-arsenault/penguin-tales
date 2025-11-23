@@ -1,0 +1,44 @@
+component_type,component_id,action,target_type,target_subtype,relationship_kind,pressure_dependency,creates_feedback,notes
+template,hero_emergence,create,npc,hero,,,no,Creates heroes but no counter-pressure
+template,hero_emergence,create,relationship,,practitioner_of,,no,
+template,hero_emergence,trigger,,,,conflict>30,no,Triggered by conflict but doesn't reduce it
+template,succession,create,npc,mayor,,,no,Replaces dead mayors but no lifecycle feedback
+template,orca_raider_arrival,create,npc,orca,,,no,Creates orcas but no counter-pressure
+template,orca_raider_arrival,trigger,,,,external_threat>70,no,
+template,faction_splinter,create,faction,various,,,no,Creates factions but no limit
+template,guild_establishment,create,faction,company,,,no,
+template,cult_formation,create,faction,cult,,,yes,HAS HARD CAP (15) - good!
+template,crisis_legislation,create,rules,various,,,no,
+template,crisis_legislation,trigger,,,,conflict>40,no,
+template,great_festival,create,rules,social,,,no,
+template,ideology_emergence,create,rules,various,,,no,
+template,ideology_emergence,trigger,,,,cultural_tension>30,no,
+template,tech_innovation,create,abilities,technology,,,no,No limit on tech abilities
+template,magic_discovery,create,abilities,magic,,,partial,Per-hero limit (2) but no global limit
+template,orca_combat_technique,create,abilities,combat,,,partial,Per-orca limit (2) but no global limit
+template,colony_founding,create,location,colony,,,partial,Has count check (<5) but no pressure feedback
+template,anomaly_manifestation,create,location,anomaly,,,no,
+template,krill_bloom_migration,create,location,geographic_feature,,,no,
+template,krill_bloom_migration,trigger,,,,resource_scarcity>60,no,
+system,universal_catalyst,create,relationship,various,various,,no,Creates relationships but no limits
+system,occurrence_creation,create,entity,occurrence,,,no,Creates occurrences but no counter-pressure
+system,era_transition,modify,entity,era,,,yes,Self-regulating - eras transition based on time
+system,relationship_culling,remove,relationship,all,all,,yes,GOOD - removes weak relationships
+system,conflict_contagion,create,relationship,,enemy_of,,no,Spreads conflict but no damping
+system,conflict_contagion,modify,pressure,conflict,,,yes,Increases conflict pressure
+system,resource_flow,modify,pressure,resource_scarcity,,,yes,Bidirectional pressure changes
+system,cultural_drift,modify,pressure,cultural_tension,,,yes,Increases cultural_tension
+system,alliance_formation,create,relationship,,allied_with,,no,Creates alliances but no limit
+system,alliance_formation,modify,pressure,stability,,,yes,Increases stability
+system,prominence_evolution,modify,entity,all,,,yes,Self-regulating based on connections
+system,relationship_decay,modify,relationship,all,all,,yes,GOOD - natural decay
+system,relationship_reinforcement,modify,relationship,all,all,,yes,GOOD - context-based growth
+system,belief_contagion,modify,entity,npc,,,yes,SIR model - self-limiting
+system,succession_vacuum,modify,pressure,stability,,,yes,Decreases stability
+system,succession_vacuum,modify,pressure,conflict,,,yes,Increases conflict
+pressure,resource_scarcity,measure,ratio,,,,yes,Measures resources/residents
+pressure,conflict,measure,ratio,,,,yes,Measures hostile/friendly relationships
+pressure,magical_instability,measure,count,anomaly,,,yes,Measures anomaly density + magic/tech ratio
+pressure,cultural_tension,measure,ratio,,,,yes,Measures faction fragmentation
+pressure,stability,measure,ratio,,,,yes,Measures cooperation + leadership
+pressure,external_threat,measure,count,npc,orca,,yes,Measures external entities

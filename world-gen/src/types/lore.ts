@@ -76,7 +76,12 @@ export interface EnrichmentContext {
     era: string;
     pressures?: Record<string, number>;
     entities: Map<string, HardState>;
+    relationships: Relationship[];
   };
   nearbyEntities?: HardState[];
   relatedHistory?: string[];
+  catalystInfo?: {
+    entityId: string;
+    relationshipKind?: string;
+  };
 }

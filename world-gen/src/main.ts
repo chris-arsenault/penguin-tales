@@ -22,7 +22,7 @@ import { relationshipCulling } from './systems/relationshipCulling';
 
 // Import helpers
 import { normalizeInitialState } from './utils/helpers';
-import { loadLoreIndex } from './services/loreIndex';
+import { penguinLoreProvider } from './domain/penguin/config/loreProvider';
 import { EnrichmentService } from './services/enrichmentService';
 import { ImageGenerationService } from './services/imageGenerationService';
 import { validateWorld } from './utils/validators';
@@ -58,7 +58,6 @@ const llmPartial = llmEnv === 'partial';
 const llmEnabled = llmEnv === 'true' || llmEnv === 'full' || llmPartial;
 const llmMode: 'off' | 'partial' | 'full' = llmEnabled ? (llmPartial ? 'partial' : 'full') : 'off';
 const llmModel = sanitize(process.env.LLM_MODEL) || 'claude-3-5-haiku-20241022';
-const loreIndex = loadLoreIndex('./data/LORE_BIBLE.md');
 const llmConfig = {
   enabled: llmEnabled,
   model: llmModel,
@@ -74,7 +73,7 @@ const enrichmentConfig = {
   maxEraNarratives: llmPartial ? 1 : undefined
 };
 const enrichmentService = llmEnabled
-  ? new EnrichmentService(llmConfig, loreIndex, enrichmentConfig)
+  ? new EnrichmentService(llmConfig, penguinLoreProvider, enrichmentConfig)
   : undefined;
 
 // Image generation configuration (using OpenAI DALL-E)
@@ -142,7 +141,6 @@ const config: EngineConfig = {
   pressures: pressures,
   llmConfig,
   enrichmentConfig,
-  loreIndex,
 
   // Statistical distribution targets (enables mid-run tuning)
   distributionTargets: distributionTargetsData as DistributionTargets,
@@ -313,6 +311,9 @@ async function generateWorld() {
 
   fs.writeFileSync(`${outputDir}/graph_viz.json`, JSON.stringify(graphViz, null, 2));
   console.log(`✅ Graph visualization exported to ${outputDir}/graph_viz.json`);
+
+  // Finalize name logging and write report
+  engine.finalizeNameLogging();
 
   const loreOutput = {
     llmEnabled,

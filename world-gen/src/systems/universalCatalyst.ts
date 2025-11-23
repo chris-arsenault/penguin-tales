@@ -31,7 +31,7 @@ export const universalCatalyst: SimulationSystem = {
         { kind: 'various', frequency: 'common', comment: 'Agents create world relationships via actions' }
       ],
       modifications: [
-        { type: 'catalyst', frequency: 'common', comment: 'Agent influence and catalyzedEvents updated' }
+        { type: 'prominence', frequency: 'common', comment: 'Agent influence and catalyzedEvents updated' }
       ]
     },
     effects: {

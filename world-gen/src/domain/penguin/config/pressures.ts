@@ -12,6 +12,7 @@ export const pressures: Pressure[] = [
       const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
       const resources = findEntities(graph, { kind: 'location' })
         .filter(loc => loc.tags.includes('resource'));
+      const geographicFeatures = findEntities(graph, { kind: 'location', subtype: 'geographic_feature' });
 
       if (colonies.length === 0) return 0;
 
@@ -45,7 +46,15 @@ export const pressures: Pressure[] = [
       // Map 0-1 availability to 0-8 growth (reduced max)
       const scarcityGrowth = (1 - avgAvailability) * 8;
 
-      return scarcityGrowth;
+      // FEEDBACK LOOP: Colony count drives scarcity (positive feedback coefficient 0.3)
+      // More colonies = more demand = more scarcity pressure
+      const colonyPressure = colonies.length * 0.3;
+
+      // FEEDBACK LOOP: Geographic features reduce scarcity (negative feedback coefficient 0.4)
+      // More resource locations = less scarcity
+      const resourceRelief = geographicFeatures.length * 0.4;
+
+      return Math.max(0, scarcityGrowth + colonyPressure - resourceRelief);
     }
   },
   
@@ -61,7 +70,7 @@ export const pressures: Pressure[] = [
       );
 
       const friendlyRelations = graph.relationships.filter(r =>
-        r.kind === 'ally_of' || r.kind === 'allied_with' || r.kind === 'friend_of'
+        r.kind === 'allied_with' || r.kind === 'trades_with' || r.kind === 'member_of'
       );
 
       const totalSocialBonds = hostileRelations.length + friendlyRelations.length;
@@ -74,8 +83,13 @@ export const pressures: Pressure[] = [
       const factionWars = graph.relationships.filter(r => r.kind === 'at_war_with');
       const warBonus = Math.min(factionWars.length * 2, 5); // Cap war bonus at 5
 
-      // Map 0-1 ratio to 0-6 growth, plus war bonus
-      return hostileRatio * 6 + warBonus;
+      // FEEDBACK LOOP: Heroes reduce conflict
+      // Each hero reduces conflict growth by 0.4% (negative feedback)
+      const heroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
+      const heroSuppression = heroes.length * 0.4;
+
+      // Map 0-1 ratio to 0-6 growth, plus war bonus, minus hero suppression
+      return Math.max(0, hostileRatio * 6 + warBonus - heroSuppression);
     }
   },
   
@@ -88,6 +102,7 @@ export const pressures: Pressure[] = [
       // Measure magic saturation as RATIO, not absolute count
       const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
       const magicAbilities = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
+      const techAbilities = findEntities(graph, { kind: 'abilities', subtype: 'technology' });
       const allAbilities = findEntities(graph, { kind: 'abilities' });
       const totalEntities = graph.entities.size;
 
@@ -96,13 +111,16 @@ export const pressures: Pressure[] = [
       // Anomaly density (anomalies per 20 entities)
       const anomalyDensity = (anomalies.length / Math.max(1, totalEntities)) * 20;
 
-      // Magic vs tech ratio
+      // FEEDBACK LOOP: Magic count drives instability (positive feedback coefficient 0.5)
+      const magicPressure = magicAbilities.length * 0.5;
+
+      // Magic vs tech ratio (tech stabilizes magic)
       const magicRatio = allAbilities.length > 0
         ? magicAbilities.length / allAbilities.length
         : 0;
 
-      // Combine: anomaly density (0-5) + magic dominance (0-5)
-      return Math.min(anomalyDensity * 2.5, 5) + magicRatio * 5;
+      // Combine: anomaly density (0-5) + magic pressure (direct count feedback) + magic dominance (0-5)
+      return Math.min(anomalyDensity * 2.5, 5) + Math.min(magicPressure, 10) + magicRatio * 5;
     }
   },
   
@@ -114,6 +132,7 @@ export const pressures: Pressure[] = [
     growth: (graph) => {
       // Measure cultural fragmentation as RATIO
       const allFactions = findEntities(graph, { kind: 'faction' });
+      const politicalFactions = findEntities(graph, { kind: 'faction', subtype: 'political' });
       const splinterFactions = graph.relationships.filter(r => r.kind === 'splinter_of');
 
       if (allFactions.length === 0) return 0;
@@ -131,9 +150,23 @@ export const pressures: Pressure[] = [
         ? isolatedColonies.length / colonies.length
         : 0;
 
-      // Combine: fragmentation (0-4) + isolation (0-4)
+      // FEEDBACK LOOP: Political faction count drives tension (positive feedback coefficient 0.4)
+      const factionPressure = politicalFactions.length * 0.4;
+
+      // FEEDBACK LOOP: Alliances reduce tension (negative feedback)
+      const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
+      const allianceReduction = alliances.length * 0.3;
+
+      // FEEDBACK LOOP: Social rules reduce tension (negative feedback)
+      const socialRules = findEntities(graph, { kind: 'rules', subtype: 'social' });
+      const ruleReduction = socialRules.length * 0.2;
+
+      // Combine: fragmentation (0-4) + isolation (0-4) + faction pressure - alliance reduction - rule reduction
       // Cap total growth at 8
-      return Math.min(fragmentationRatio * 8 + isolationRatio * 4, 8);
+      return Math.max(0, Math.min(
+        fragmentationRatio * 8 + isolationRatio * 4 + factionPressure - allianceReduction - ruleReduction,
+        8
+      ));
     }
   },
   
@@ -161,8 +194,18 @@ export const pressures: Pressure[] = [
         ? aliveLeaders.length / allLeaders.length
         : 1; // No leaders = stable (not tracked yet)
 
-      // Map to growth: cooperation (0-7) + leadership (0-3)
-      return cooperationRatio * 7 + leadershipRatio * 3;
+      // FEEDBACK LOOP: Leader count increases stability (positive feedback coefficient 0.3)
+      const leadershipRelations = graph.relationships.filter(r => r.kind === 'leader_of');
+      const leadershipBonus = leadershipRelations.length * 0.3;
+
+      // FEEDBACK LOOP: Mayor count (succession events) can reduce stability over time
+      // (Leadership changes create vacuum, but we measure current state not change rate)
+      const successionPenalty = allLeaders.length > 0 && aliveLeaders.length < allLeaders.length
+        ? (allLeaders.length - aliveLeaders.length) * 0.2
+        : 0;
+
+      // Map to growth: cooperation (0-7) + leadership ratio (0-3) + leadership bonus - succession penalty
+      return Math.max(0, cooperationRatio * 7 + leadershipRatio * 3 + leadershipBonus - successionPenalty);
     }
   },
   
@@ -176,7 +219,11 @@ export const pressures: Pressure[] = [
       const externalTags = Array.from(graph.entities.values())
         .filter(e => e.tags.includes('external') || e.tags.includes('invader'));
 
-      return externalTags.length * 10;
+      // FEEDBACK LOOP: Orca count drives external threat (positive feedback coefficient 0.8)
+      const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
+      const orcaPressure = orcas.length * 0.8;
+
+      return externalTags.length * 10 + orcaPressure;
     }
   }
 ];

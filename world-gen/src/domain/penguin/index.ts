@@ -13,6 +13,24 @@ export { penguinDomain } from './schema';
 export { penguinEras } from './config/eras';
 export { pressures } from './config/pressures';
 
+// NEW: Action Domains
+export {
+  penguinActionDomains,
+  getActionDomains,
+  getActionsForDomain,
+  getPressureDomainMappings
+} from './config/actionDomains';
+
+// NEW: Relationship Categories
+export {
+  relationshipCategories,
+  getCategoryForRelationship,
+  getImmutableRelationshipKinds,
+  getProtectedRelationshipKinds,
+  getRelationshipKindsByCategory,
+  getAllCategories
+} from './config/relationshipCategories';
+
 // Templates
 export { allTemplates } from './templates';
 

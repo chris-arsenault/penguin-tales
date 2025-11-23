@@ -200,13 +200,16 @@ export const successionVacuum: SimulationSystem = {
 
       // === STEP 5: Escalation to Conflict ===
       // Tunable chance rivalries escalate to enemy_of between supporter groups
+      // Use faction members as proxy for supporters (since follower_of was removed)
       if (claimants.length >= 2 && Math.random() < escalationChance) {
-        const claimant1Supporters = getRelated(graph, claimants[0].id, 'follower_of', 'dst');
-        const claimant2Supporters = getRelated(graph, claimants[1].id, 'follower_of', 'dst');
+        const factionMembers = getRelated(graph, faction.id, 'member_of', 'dst');
+        const potentialSupporters = factionMembers.filter(m =>
+          m.status === 'alive' && !claimants.some(c => c.id === m.id)
+        );
 
-        if (claimant1Supporters.length > 0 && claimant2Supporters.length > 0) {
-          const supporter1 = pickRandom(claimant1Supporters);
-          const supporter2 = pickRandom(claimant2Supporters);
+        if (potentialSupporters.length >= 2) {
+          const supporter1 = pickRandom(potentialSupporters);
+          const supporter2 = pickRandom(potentialSupporters.filter(s => s.id !== supporter1.id));
 
           if (areRelationshipsCompatible(graph, supporter1.id, supporter2.id, 'enemy_of') &&
               canFormRelationship(graph, supporter1.id, 'enemy_of', 8)) {
@@ -215,7 +218,8 @@ export const successionVacuum: SimulationSystem = {
               relationships.push({
                 kind: 'enemy_of',
                 src: supporter1.id,
-                dst: supporter2.id
+                dst: supporter2.id,
+                catalyzedBy: faction.id  // Faction's crisis catalyzes internal conflict
               });
               recordRelationshipFormation(graph, supporter1.id, 'enemy_of');
             }

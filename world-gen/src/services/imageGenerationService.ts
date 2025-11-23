@@ -153,7 +153,7 @@ export class ImageGenerationService {
       return [];
     }
 
-    const mythicEntities = entities.filter(e => e.prominence === 'mythic');
+    const mythicEntities = entities.filter(e => e.prominence === 'mythic' || e.prominence === 'renowned');
 
     if (mythicEntities.length === 0) {
       this.writeToLog('No mythic entities found for image generation\n');
@@ -193,14 +193,14 @@ export class ImageGenerationService {
    * Get world-building context for prompt
    */
   private getWorldContext(entity: HardState): string {
-    const baseWorld = 'A frozen Antarctic world of super-intelligent penguins living on massive icebergs.';
+    const baseWorld = 'Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations.';
 
     const kindContext: Record<string, string> = {
-      npc: 'The character is an anthropomorphic penguin with human-like intelligence and personality.',
-      location: 'This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.',
-      faction: 'This represents a penguin organization or group, shown through its members and symbols.',
-      abilities: 'This represents a magical or technological ability used by penguins, shown through its manifestation or effects.',
-      rules: 'This represents a cultural rule or tradition, shown through symbolic imagery or its cultural impact.'
+      npc: 'Field guide portrait: anthropomorphic penguin specimen displaying remarkable intelligence and distinct character.',
+      location: 'Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.',
+      faction: 'Symbolic heraldry: visual representation of a penguin collective through emblematic imagery and compositional elements.',
+      abilities: 'Phenomenon illustration: mystical or technological forces manifesting through visual energy and environmental effects.',
+      rules: 'Cultural iconography: symbolic visualization representing societal customs and traditions through allegorical imagery.'
     };
 
     return `${baseWorld} ${kindContext[entity.kind] || ''}`;
@@ -254,17 +254,21 @@ export class ImageGenerationService {
    * Get style guidance for consistent art direction
    */
   private getStyleGuidance(entity: HardState): string {
-    const baseStyle = 'Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples).';
+    // Geographic atlas style guidance with explicit no-text instruction
+    const baseStyle = 'Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration.';
 
     const kindStyle: Record<string, string> = {
-      npc: 'Character portrait style, focus on personality and details.',
-      location: 'Wide establishing shot, atmospheric, sense of scale.',
-      faction: 'Group composition or symbolic representation.',
-      abilities: 'Abstract magical/technological effects, ethereal and dynamic.',
-      rules: 'Symbolic or metaphorical imagery, cultural significance.'
+      npc: 'Character portrait in naturalist field guide style, detailed feather texture, expressive pose, scientific illustration quality.',
+      location: 'Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.',
+      faction: 'Symbolic heraldry or group composition, emblematic design, visual identity through imagery alone.',
+      abilities: 'Abstract phenomenon illustration, ethereal effects, mystical energy visualization, scientific diagram aesthetic.',
+      rules: 'Allegorical or symbolic imagery, cultural iconography, metaphorical visual representation.'
     };
 
-    return `Style: ${baseStyle} ${kindStyle[entity.kind] || ''}`;
+    // CRITICAL: Explicit instructions to prevent text generation
+    const noTextInstruction = 'IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.';
+
+    return `${baseStyle} ${kindStyle[entity.kind] || ''}\n\n${noTextInstruction}`;
   }
 
   /**

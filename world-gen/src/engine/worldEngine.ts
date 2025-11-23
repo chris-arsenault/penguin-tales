@@ -19,6 +19,10 @@ import { TemplateSelector } from '../services/templateSelector';
 import { SystemSelector } from '../services/systemSelector';
 import { DistributionTracker } from '../services/distributionTracker';
 import { StatisticsCollector } from '../services/statisticsCollector';
+import { PopulationTracker, PopulationMetrics } from '../services/populationTracker';
+import { DynamicWeightCalculator } from '../services/dynamicWeightCalculator';
+import { FeedbackAnalyzer } from '../services/feedbackAnalyzer';
+import { feedbackLoops } from '../config/feedbackLoops';
 import { SimulationStatistics, ValidationStats } from '../types/statistics';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -291,6 +295,9 @@ export class WorldEngine {
   private systemSelector?: SystemSelector;      // Optional statistical system weighting
   private distributionTracker?: DistributionTracker;  // Distribution measurement
   private statisticsCollector: StatisticsCollector;  // Statistics tracking for fitness evaluation
+  private populationTracker: PopulationTracker;  // Population metrics for homeostatic control
+  private dynamicWeightCalculator: DynamicWeightCalculator;  // Dynamic template weight adjustment
+  private feedbackAnalyzer: FeedbackAnalyzer;  // Feedback loop validation
   private pendingEnrichments: Promise<void>[] = [];
   private pendingNameEnrichments: Promise<void>[] = [];
   private entityEnrichmentsUsed = 0;
@@ -302,6 +309,10 @@ export class WorldEngine {
   private lastRelationshipCount: number = 0;
   private warningLogPath: string;
 
+  // Template diversity tracking
+  private templateRunCounts: Map<string, number> = new Map();
+  private maxRunsPerTemplate: number = 12;  // Hard cap per template
+
   // Track entity state for change detection
   private entitySnapshots = new Map<string, EntitySnapshot>();
 
@@ -311,7 +322,9 @@ export class WorldEngine {
     factionEnrichments: 0,
     ruleEnrichments: 0,
     abilityEnrichments: 0,
-    npcEnrichments: 0
+    npcEnrichments: 0,
+    occurrenceEnrichments: 0,
+    eraEnrichments: 0
   };
   
   constructor(
@@ -347,6 +360,13 @@ export class WorldEngine {
       console.log('✓ Statistical template selection enabled');
       console.log('✓ Statistical system weighting enabled');
     }
+
+    // Initialize homeostatic control system
+    this.populationTracker = new PopulationTracker(config.distributionTargets || {} as any);
+    this.dynamicWeightCalculator = new DynamicWeightCalculator();
+    this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops);
+    console.log('✓ Homeostatic feedback control enabled');
+    console.log(`  - Tracking ${feedbackLoops.length} feedback loops`);
     
     // Initialize graph from initial state
     this.graph = {
@@ -466,6 +486,9 @@ export class WorldEngine {
       this.currentEpoch++;
     }
 
+    // Link final era to prominent entities (since it never "ends")
+    this.linkFinalEra();
+
     console.log(`\nGeneration complete!`);
     console.log(`Final state: ${this.graph.entities.size} entities, ${this.graph.relationships.length} relationships`);
 
@@ -473,14 +496,19 @@ export class WorldEngine {
     const totalTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
     console.log(`\n=== Atlas Enrichment Analytics ===`);
     console.log(`Total enrichment triggers: ${totalTriggers}`);
-    console.log(`  Locations: ${this.enrichmentAnalytics.locationEnrichments}`);
-    console.log(`  Factions:  ${this.enrichmentAnalytics.factionEnrichments}`);
-    console.log(`  Rules:     ${this.enrichmentAnalytics.ruleEnrichments}`);
-    console.log(`  Abilities: ${this.enrichmentAnalytics.abilityEnrichments}`);
-    console.log(`  NPCs:      ${this.enrichmentAnalytics.npcEnrichments}`);
+    console.log(`  Locations:    ${this.enrichmentAnalytics.locationEnrichments}`);
+    console.log(`  Factions:     ${this.enrichmentAnalytics.factionEnrichments}`);
+    console.log(`  Rules:        ${this.enrichmentAnalytics.ruleEnrichments}`);
+    console.log(`  Abilities:    ${this.enrichmentAnalytics.abilityEnrichments}`);
+    console.log(`  NPCs:         ${this.enrichmentAnalytics.npcEnrichments}`);
+    console.log(`  Occurrences:  ${this.enrichmentAnalytics.occurrenceEnrichments}`);
+    console.log(`  Eras:         ${this.enrichmentAnalytics.eraEnrichments}`);
     if (!this.enrichmentService?.isEnabled()) {
       console.log(`Note: Enrichment disabled - these are detected triggers only`);
     }
+
+    // FINAL HOMEOSTATIC SYSTEM REPORT
+    this.printFinalFeedbackReport();
 
     // Log warning file location
     try {
@@ -496,21 +524,86 @@ export class WorldEngine {
   }
   
   private shouldContinue(): boolean {
-    // Stop conditions
-    if (this.graph.tick >= this.config.maxTicks) return false;
-    if (this.currentEpoch >= this.config.eras.length * 2) return false;
-    
-    // Check if we've reached target population
-    const targetTotal = this.config.targetEntitiesPerKind * 5; // 5 kinds
-    if (this.graph.entities.size >= targetTotal) return false;
-    
+    // PRIORITY 1: Complete all eras (each era should run ~2 epochs)
+    const allErasCompleted = this.currentEpoch >= this.config.eras.length * 2;
+
+    // PRIORITY 2: Respect maximum tick limit (safety valve)
+    const hitTickLimit = this.graph.tick >= this.config.maxTicks;
+
+    // PRIORITY 3: Excessive growth safety valve (only if WAY over target AND all eras done)
+    const safetyLimit = this.config.targetEntitiesPerKind * 10; // 10x target = ~300 entities
+    const excessiveGrowth = this.graph.entities.size >= safetyLimit;
+
+    // Stop only if:
+    // - Hit tick limit, OR
+    // - Completed all eras AND (hit tick limit OR excessive growth)
+    if (hitTickLimit) {
+      console.log(`\n⚠️  Stopped: Hit maximum tick limit (${this.config.maxTicks})`);
+      return false;
+    }
+
+    if (allErasCompleted) {
+      if (excessiveGrowth) {
+        console.log(`\n⚠️  Stopped: All eras complete + excessive growth (${this.graph.entities.size} entities)`);
+        return false;
+      }
+      console.log(`\n✓ All eras completed at epoch ${this.currentEpoch}`);
+      return false;
+    }
+
     return true;
   }
-  
+
+  /**
+   * Link final era to prominent entities
+   * Called at end of generation since final era never "ends"
+   */
+  private linkFinalEra(): void {
+    // Find current era entity
+    const currentEra = Array.from(this.graph.entities.values()).find(e =>
+      e.kind === 'era' && e.status === 'current'
+    );
+
+    if (!currentEra || !currentEra.temporal) return;
+
+    const eraStartTick = currentEra.temporal.startTick;
+
+    // Find prominent entities created during this era (include 'recognized' for better coverage)
+    const prominentEntities = Array.from(this.graph.entities.values()).filter(e =>
+      (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
+      e.kind !== 'era' &&
+      e.createdAt >= eraStartTick
+    );
+
+    // If no prominent entities from this era, link to most prominent entities from any time
+    const entitiesToLink = prominentEntities.length > 0
+      ? prominentEntities
+      : Array.from(this.graph.entities.values())
+          .filter(e => (e.prominence === 'renowned' || e.prominence === 'mythic') && e.kind !== 'era')
+          .sort((a, b) => {
+            const prominenceOrder = { mythic: 3, renowned: 2, recognized: 1, marginal: 0, forgotten: 0 };
+            return (prominenceOrder[b.prominence] || 0) - (prominenceOrder[a.prominence] || 0);
+          });
+
+    // Link up to 10 most prominent entities
+    let linkedCount = 0;
+    entitiesToLink.slice(0, 10).forEach(entity => {
+      // Use addRelationship to avoid duplicate links
+      const { addRelationship } = require('../utils/helpers');
+      addRelationship(this.graph, 'active_during', entity.id, currentEra.id);
+      linkedCount++;
+    });
+
+    if (linkedCount > 0) {
+      console.log(`\n✓ Linked final era "${currentEra.name}" to ${linkedCount} prominent entities`);
+    }
+  }
+
   private runEpoch(): void {
+    // Era progression is handled by eraTransition system, not selectEra()
+    // The eraTransition system manages era entity status and updates graph.currentEra
     const previousEra = this.graph.currentEra;
-    const era = selectEra(this.currentEpoch, this.config.eras);
-    this.graph.currentEra = era;
+    const era = this.graph.currentEra;
 
     console.log(`\n=== Epoch ${this.currentEpoch}: ${era.name} ===`);
 
@@ -559,6 +652,199 @@ export class WorldEngine {
 
     // Check for significant entity changes and enrich them
     this.queueChangeEnrichments();
+
+    // HOMEOSTATIC CONTROL: Validate feedback loops every 5 epochs
+    if (this.currentEpoch % 5 === 0 && this.currentEpoch > 0) {
+      this.validateFeedbackLoops();
+    }
+  }
+
+  /**
+   * Validate all declared feedback loops and report broken loops
+   */
+  private validateFeedbackLoops(): void {
+    const metrics = this.populationTracker.getMetrics();
+    const results = this.feedbackAnalyzer.validateAll(metrics, this.graph);
+    const brokenLoops = this.feedbackAnalyzer.getBrokenLoops(results);
+
+    if (brokenLoops.length > 0) {
+      console.warn(`\n⚠️  ${brokenLoops.length} feedback loops not functioning correctly:`);
+      brokenLoops.forEach(result => {
+        console.warn(`  - ${result.loop.id}: ${result.reason}`);
+        if (result.recommendation) {
+          console.warn(`    → ${result.recommendation}`);
+        }
+      });
+    } else {
+      console.log(`\n✓ All ${results.length} feedback loops functioning correctly`);
+    }
+
+    // Report population outliers
+    const outliers = this.populationTracker.getOutliers(0.3);
+    if (outliers.overpopulated.length > 0 || outliers.underpopulated.length > 0) {
+      console.log(`\n=== Population Deviations ===`);
+      if (outliers.overpopulated.length > 0) {
+        console.log(`Overpopulated (>30% above target):`);
+        outliers.overpopulated.forEach(metric => {
+          console.log(`  - ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (+${(metric.deviation * 100).toFixed(0)}%)`);
+        });
+      }
+      if (outliers.underpopulated.length > 0) {
+        console.log(`Underpopulated (>30% below target):`);
+        outliers.underpopulated.forEach(metric => {
+          console.log(`  - ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (${(metric.deviation * 100).toFixed(0)}%)`);
+        });
+      }
+    }
+  }
+
+  /**
+   * Print comprehensive final feedback system report
+   */
+  private printFinalFeedbackReport(): void {
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`HOMEOSTATIC FEEDBACK SYSTEM - FINAL REPORT`);
+    console.log('='.repeat(80));
+
+    // Update metrics one final time
+    this.populationTracker.update(this.graph);
+    const metrics = this.populationTracker.getMetrics();
+    const summary = this.populationTracker.getSummary();
+
+    // Validate feedback loops
+    const results = this.feedbackAnalyzer.validateAll(metrics, this.graph);
+    const brokenLoops = this.feedbackAnalyzer.getBrokenLoops(results);
+    const workingLoops = results.filter(r => r.valid);
+
+    // 1. Feedback Loop Health
+    console.log(`\n📊 FEEDBACK LOOP HEALTH`);
+    console.log(`  Total loops tracked: ${results.length}`);
+    console.log(`  ✓ Working correctly: ${workingLoops.length} (${((workingLoops.length / results.length) * 100).toFixed(0)}%)`);
+    console.log(`  ⚠️  Not functioning: ${brokenLoops.length} (${((brokenLoops.length / results.length) * 100).toFixed(0)}%)`);
+
+    if (brokenLoops.length > 0) {
+      console.log(`\n  Broken loops requiring attention:`);
+      brokenLoops.slice(0, 5).forEach(result => {
+        console.log(`    • ${result.loop.id}`);
+        console.log(`      ${result.reason}`);
+        if (result.recommendation) {
+          console.log(`      → ${result.recommendation}`);
+        }
+      });
+      if (brokenLoops.length > 5) {
+        console.log(`    ... and ${brokenLoops.length - 5} more`);
+      }
+    }
+
+    // 2. Population Metrics
+    console.log(`\n📈 POPULATION METRICS`);
+    console.log(`  Total entities: ${summary.totalEntities}`);
+    console.log(`  Total relationships: ${summary.totalRelationships}`);
+    console.log(`  Average deviation from targets: ${(summary.avgEntityDeviation * 100).toFixed(1)}%`);
+    console.log(`  Maximum deviation: ${(summary.maxEntityDeviation * 100).toFixed(1)}%`);
+
+    // 3. Entity Type Summary
+    console.log(`\n🎯 ENTITY POPULATIONS (vs targets)`);
+    const entityMetrics = Array.from(metrics.entities.values())
+      .filter(m => m.target > 0)
+      .sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+
+    entityMetrics.forEach(metric => {
+      const status = Math.abs(metric.deviation) < 0.2 ? '✓' :
+                     Math.abs(metric.deviation) < 0.5 ? '⚠️' : '❌';
+      const sign = metric.deviation > 0 ? '+' : '';
+      console.log(`  ${status} ${metric.kind}:${metric.subtype.padEnd(20)} ${metric.count.toString().padStart(3)}/${metric.target.toString().padStart(3)} (${sign}${(metric.deviation * 100).toFixed(0)}%)`);
+    });
+
+    // 4. Critical Outliers
+    const outliers = this.populationTracker.getOutliers(0.3);
+    if (outliers.overpopulated.length > 0 || outliers.underpopulated.length > 0) {
+      console.log(`\n⚠️  CRITICAL DEVIATIONS (>30%)`);
+      if (outliers.overpopulated.length > 0) {
+        console.log(`  Overpopulated:`);
+        outliers.overpopulated.forEach(metric => {
+          console.log(`    • ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (+${(metric.deviation * 100).toFixed(0)}%)`);
+        });
+      }
+      if (outliers.underpopulated.length > 0) {
+        console.log(`  Underpopulated:`);
+        outliers.underpopulated.forEach(metric => {
+          console.log(`    • ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (${(metric.deviation * 100).toFixed(0)}%)`);
+        });
+      }
+    }
+
+    // 5. Pressure States
+    console.log(`\n🌡️  PRESSURE EQUILIBRIUM`);
+    summary.pressureDeviations.forEach((deviation, pressureId) => {
+      const metric = metrics.pressures.get(pressureId);
+      if (metric) {
+        const status = Math.abs(deviation) < 0.2 ? '✓' :
+                       Math.abs(deviation) < 0.5 ? '⚠️' : '❌';
+        const sign = deviation > 0 ? '+' : '';
+        console.log(`  ${status} ${pressureId.padEnd(22)} ${metric.value.toFixed(1).padStart(5)}/${metric.target.toString().padStart(5)} (${sign}${(deviation * 100).toFixed(0)}%)`);
+      }
+    });
+
+    // 6. Template Usage Statistics
+    console.log(`\n📋 TEMPLATE USAGE (Diversity Report)`);
+    const sortedTemplates = Array.from(this.templateRunCounts.entries())
+      .sort((a, b) => b[1] - a[1]);
+
+    if (sortedTemplates.length > 0) {
+      const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
+      console.log(`  Total template applications: ${totalRuns}`);
+      console.log(`  Unique templates used: ${sortedTemplates.length}/${this.config.templates.length}`);
+      console.log(`\n  Top templates by usage:`);
+
+      sortedTemplates.slice(0, 10).forEach(([templateId, count]) => {
+        const percentage = ((count / totalRuns) * 100).toFixed(1);
+        const status = count >= this.maxRunsPerTemplate ? '🔴' :
+                       count >= this.maxRunsPerTemplate * 0.7 ? '🟡' : '🟢';
+        console.log(`    ${status} ${templateId.padEnd(35)} ${count.toString().padStart(3)}x (${percentage}%)`);
+      });
+
+      const unusedTemplates = this.config.templates.filter(t => !this.templateRunCounts.has(t.id));
+      if (unusedTemplates.length > 0) {
+        console.log(`\n  ⚠️  Unused templates (${unusedTemplates.length}) - Diagnostic Analysis:`);
+        unusedTemplates.forEach(t => {
+          // Test canApply to diagnose why it didn't run
+          const canApply = t.canApply(this.graph);
+          const targets = t.findTargets ? t.findTargets(this.graph) : [];
+
+          console.log(`    • ${t.id.padEnd(35)}`);
+          console.log(`      canApply: ${canApply ? '✓' : '✗'}  |  targets: ${targets.length}`);
+
+          // If it can't apply now, provide hints
+          if (!canApply) {
+            console.log(`      → Check canApply() constraints (pressures, prerequisites, saturation)`);
+          } else if (targets.length === 0) {
+            console.log(`      → No valid targets found (check findTargets() logic)`);
+          } else {
+            console.log(`      → Could apply but wasn't selected (check era weights)`);
+          }
+        });
+      }
+    }
+
+    // 7. Overall System Health
+    const systemHealth = workingLoops.length / results.length;
+    const populationHealth = 1 - summary.avgEntityDeviation;
+    const overallHealth = (systemHealth + populationHealth) / 2;
+
+    console.log(`\n🏥 OVERALL SYSTEM HEALTH: ${(overallHealth * 100).toFixed(0)}%`);
+    console.log(`  Feedback loops: ${(systemHealth * 100).toFixed(0)}%`);
+    console.log(`  Population control: ${(populationHealth * 100).toFixed(0)}%`);
+
+    if (overallHealth > 0.8) {
+      console.log(`  ✓ System is STABLE - populations are well-regulated`);
+    } else if (overallHealth > 0.6) {
+      console.log(`  ⚠️  System is FUNCTIONAL - some tuning needed`);
+    } else {
+      console.log(`  ❌ System needs ATTENTION - significant deviations detected`);
+    }
+
+    console.log('='.repeat(80));
   }
 
   private runGrowthPhase(era: Era, growthTargets?: number): void {
@@ -567,35 +853,36 @@ export class WorldEngine {
     let entitiesCreated = 0;
     const createdEntities: HardState[] = [];
 
-    // Template selection: Use statistical selector if available, otherwise use heuristic method
-    let weightedTemplates: GrowthTemplate[];
+    // HOMEOSTATIC CONTROL: Update population metrics and calculate dynamic weights
+    this.populationTracker.update(this.graph);
+    const metrics = this.populationTracker.getMetrics();
 
-    if (this.templateSelector) {
-      // Statistical template selection based on distribution targets
-      // Filter templates that can apply
-      const applicableTemplates = this.config.templates.filter(t => t.canApply(this.graph));
+    // Sample templates ONE AT A TIME until target reached
+    let attempts = 0;
+    const maxAttempts = targets * 10;  // Safety limit
 
-      // Build era weights map
-      const eraWeights: Record<string, number> = {};
-      applicableTemplates.forEach(t => {
-        eraWeights[t.id] = getTemplateWeight(era, t.id);
+    while (entitiesCreated < targets && attempts < maxAttempts) {
+      attempts++;
+
+      // Re-filter applicable templates each iteration (graph state changes)
+      const applicableTemplates = this.config.templates.filter(t => {
+        if (!t.canApply(this.graph)) return false;
+
+        // DIVERSITY PRESSURE: Hard cap on template runs
+        const runCount = this.templateRunCounts.get(t.id) || 0;
+        if (runCount >= this.maxRunsPerTemplate) return false;
+
+        return true;
       });
 
-      // Use TemplateSelector for guided selection
-      weightedTemplates = this.templateSelector.selectTemplates(
-        this.graph,
-        applicableTemplates,
-        eraWeights,
-        targets * 3  // Select more than needed to account for failures
-      );
-    } else {
-      // Fallback to heuristic method
-      const deficits = this.calculateEntityDeficits();
-      weightedTemplates = this.selectWeightedTemplates(era, deficits, targets);
-    }
+      if (applicableTemplates.length === 0) {
+        console.warn(`  No applicable templates remaining (${entitiesCreated}/${targets} entities created)`);
+        break;
+      }
 
-    for (const template of weightedTemplates) {
-      if (entitiesCreated >= targets) break;
+      // Sample ONE template with weighted probability
+      const template = this.sampleSingleTemplate(era, applicableTemplates, metrics);
+      if (!template) continue;
 
       // Check if template can apply
       if (!template.canApply(this.graph)) continue;
@@ -611,6 +898,10 @@ export class WorldEngine {
 
         // Record template application
         this.statisticsCollector.recordTemplateApplication(template.id);
+
+        // DIVERSITY TRACKING: Increment run count for this template
+        const currentCount = this.templateRunCounts.get(template.id) || 0;
+        this.templateRunCounts.set(template.id, currentCount + 1);
 
         // Add entities to graph
         const newIds: string[] = [];
@@ -653,9 +944,11 @@ export class WorldEngine {
         entitiesCreated += result.entities.length;
 
         // Queue enrichment for this template's cluster immediately
-        if (clusterEntities.length > 0) {
-          this.queueEntityEnrichment(clusterEntities);
-          this.queueDiscoveryEnrichment(clusterEntities);
+        // Filter out eras - they get enriched separately and shouldn't go through entity enrichment
+        const enrichableEntities = clusterEntities.filter(e => e.kind !== 'era');
+        if (enrichableEntities.length > 0) {
+          this.queueEntityEnrichment(enrichableEntities);
+          this.queueDiscoveryEnrichment(enrichableEntities);
         }
 
       } catch (error) {
@@ -664,6 +957,57 @@ export class WorldEngine {
     }
 
     console.log(`  Growth: +${entitiesCreated} entities (target: ${targets})`);
+  }
+
+  /**
+   * Sample a single template with weighted probability
+   * Applies diversity pressure to prevent template overuse
+   */
+  private sampleSingleTemplate(
+    era: Era,
+    applicableTemplates: GrowthTemplate[],
+    metrics: PopulationMetrics
+  ): GrowthTemplate | undefined {
+    if (applicableTemplates.length === 0) return undefined;
+
+    // Build era weights
+    const baseEraWeights: Record<string, number> = {};
+    applicableTemplates.forEach(t => {
+      baseEraWeights[t.id] = getTemplateWeight(era, t.id);
+    });
+
+    // Apply dynamic weight adjustments (homeostatic control)
+    const adjustments = this.dynamicWeightCalculator.calculateAllWeights(
+      applicableTemplates,
+      new Map(Object.entries(baseEraWeights)),
+      metrics
+    );
+
+    // Build final weights with diversity pressure
+    const finalWeights: number[] = [];
+    applicableTemplates.forEach(t => {
+      const adjustment = adjustments.get(t.id);
+      let weight = adjustment?.adjustedWeight || baseEraWeights[t.id];
+
+      // DIVERSITY PRESSURE: Extreme negative pressure based on run count
+      // Formula: weight * (1 / (1 + runCount^2))
+      // Effect: 0 runs = 100%, 1 run = 50%, 2 runs = 20%, 3 runs = 10%, 4+ runs = <6%
+      const runCount = this.templateRunCounts.get(t.id) || 0;
+      const diversityPenalty = 1 / (1 + runCount * runCount);
+      weight *= diversityPenalty;
+
+      finalWeights.push(Math.max(0, weight));
+    });
+
+    // Check if all weights are zero
+    const totalWeight = finalWeights.reduce((sum, w) => sum + w, 0);
+    if (totalWeight === 0) {
+      // All templates exhausted, pick randomly
+      return pickRandom(applicableTemplates);
+    }
+
+    // Weighted random selection
+    return weightedRandom(applicableTemplates, finalWeights);
   }
 
   /**
@@ -688,8 +1032,8 @@ export class WorldEngine {
       totalRemaining += remaining;
     }
 
-    // If we're close to target, reduce growth rate
-    if (totalRemaining === 0) return 3; // Minimal growth when at target
+    // If we've met minimum target, reduce (but don't stop) growth rate
+    if (totalRemaining === 0) return 3; // Minimal growth when minimum target met
 
     // Calculate epochs remaining (rough estimate)
     const totalTarget = this.config.targetEntitiesPerKind * entityKinds.length;
@@ -1188,7 +1532,7 @@ export class WorldEngine {
 
   private queueEntityEnrichment(entities: HardState[]): void {
     if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
-    
+
     const limit = this.config.enrichmentConfig?.maxEntityEnrichments;
     if (this.config.enrichmentConfig?.mode === 'partial') {
       const remaining = (limit ?? 0) - this.entityEnrichmentsUsed;
@@ -1199,9 +1543,39 @@ export class WorldEngine {
     if (this.config.enrichmentConfig?.mode === 'partial') {
       this.entityEnrichmentsUsed += entities.length;
     }
-    
-    const context = this.buildEnrichmentContext();
-    const enrichmentPromise = (async () => {
+
+    // Track analytics for initial enrichments
+    entities.forEach(entity => {
+      switch (entity.kind) {
+        case 'location':
+          this.enrichmentAnalytics.locationEnrichments++;
+          break;
+        case 'faction':
+          this.enrichmentAnalytics.factionEnrichments++;
+          break;
+        case 'rules':
+          this.enrichmentAnalytics.ruleEnrichments++;
+          break;
+        case 'abilities':
+          this.enrichmentAnalytics.abilityEnrichments++;
+          break;
+        case 'npc':
+          this.enrichmentAnalytics.npcEnrichments++;
+          break;
+        case 'occurrence':
+          this.enrichmentAnalytics.occurrenceEnrichments++;
+          break;
+        case 'era':
+          this.enrichmentAnalytics.eraEnrichments++;
+          break;
+      }
+    });
+
+    // CRITICAL: Wait for all previous name enrichments to complete before enriching new entities
+    // This ensures that lore references use final entity names, not placeholder names
+    const enrichmentPromise = this.waitForNameEnrichmentsSnapshot().then(async () => {
+      // Build context AFTER name enrichments complete, so snapshot has final names
+      const context = this.buildEnrichmentContext();
       const records = await this.enrichmentService!.enrichEntities(entities, context);
       this.graph.loreRecords.push(...records);
       
@@ -1215,7 +1589,7 @@ export class WorldEngine {
       abilityRecords
         .filter((r): r is LoreRecord => Boolean(r))
         .forEach(r => this.graph.loreRecords.push(r));
-    })().catch(error => console.warn('Enrichment failed:', error));
+    }).catch(error => console.warn('Enrichment failed:', error));
     
     const tracked = enrichmentPromise.then(() => undefined);
     this.pendingEnrichments.push(tracked);
@@ -1267,7 +1641,55 @@ export class WorldEngine {
     
     this.pendingEnrichments.push(promise.then(() => undefined));
   }
-  
+
+  /**
+   * Queue occurrence enrichment
+   * Called after occurrence creation systems run
+   */
+  private queueOccurrenceEnrichment(occurrence: HardState, catalystId?: string): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+
+    const context: any = this.buildEnrichmentContext();
+    // Add catalyst info to context
+    if (catalystId) {
+      context.catalystInfo = { entityId: catalystId };
+    }
+
+    const enrichmentPromise = (async () => {
+      const record = await this.enrichmentService!.enrichOccurrence(occurrence, context);
+      if (record) {
+        this.graph.loreRecords.push(record);
+        // Update occurrence with enriched data
+        occurrence.name = (record.metadata?.name as string) || occurrence.name;
+        occurrence.description = record.text;
+      }
+    })().catch(error => console.warn('Occurrence enrichment failed:', error));
+
+    this.pendingEnrichments.push(enrichmentPromise.then(() => undefined));
+  }
+
+  /**
+   * Queue era enrichment
+   * Called after era transitions
+   */
+  private queueEraEnrichment(era: HardState): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+
+    const context = this.buildEnrichmentContext();
+
+    const enrichmentPromise = (async () => {
+      const record = await this.enrichmentService!.enrichEra(era, context);
+      if (record) {
+        this.graph.loreRecords.push(record);
+        // Update era with enriched data
+        era.name = (record.metadata?.name as string) || era.name;
+        era.description = record.text;
+      }
+    })().catch(error => console.warn('Era enrichment failed:', error));
+
+    this.pendingEnrichments.push(enrichmentPromise.then(() => undefined));
+  }
+
   private queueChangeEnrichments(): void {
     const changedEntities: Array<{ entity: HardState; changes: string[] }> = [];
 
@@ -1319,6 +1741,12 @@ export class WorldEngine {
             break;
           case 'npc':
             this.enrichmentAnalytics.npcEnrichments++;
+            break;
+          case 'occurrence':
+            this.enrichmentAnalytics.occurrenceEnrichments++;
+            break;
+          case 'era':
+            this.enrichmentAnalytics.eraEnrichments++;
             break;
         }
 
@@ -1585,7 +2013,8 @@ export class WorldEngine {
         tick: this.graph.tick,
         era: this.graph.currentEra.name,
         pressures: Object.fromEntries(this.graph.pressures),
-        entities: this.graph.entities
+        entities: this.graph.entities,
+        relationships: this.graph.relationships
       },
       relatedHistory: this.graph.history.slice(-5).map(h => h.description)
     };
@@ -1638,11 +2067,17 @@ export class WorldEngine {
   public getGraph(): Graph {
     return this.graph;
   }
-  
+
   public getLoreRecords(): LoreRecord[] {
     return this.graph.loreRecords;
   }
-  
+
+  public finalizeNameLogging(): void {
+    if (this.enrichmentService?.isEnabled()) {
+      this.enrichmentService.getNameLogger().writeFinalReport();
+    }
+  }
+
   public getHistory(): HistoryEvent[] {
     return this.graph.history;
   }

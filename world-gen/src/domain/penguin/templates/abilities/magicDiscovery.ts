@@ -36,9 +36,45 @@ export const magicDiscovery: GrowthTemplate = {
     tags: ['mystical', 'ability-creation'],
   },
 
-  canApply: (graph: Graph) => findEntities(graph, { kind: 'location', subtype: 'anomaly' }).length > 0,
+  canApply: (graph: Graph) => {
+    // Prerequisite: anomalies must exist
+    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
+    if (anomalies.length === 0) {
+      return false;
+    }
 
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'npc', subtype: 'hero' }),
+    // BIDIRECTIONAL PRESSURE THRESHOLD: High magical instability suppresses magic discovery
+    // (Too much magical energy makes new discoveries dangerous/unstable)
+    const magicalInstability = graph.pressures.get('magical_instability') || 0;
+    if (magicalInstability > 70) {
+      return Math.random() < 0.4; // Only 40% chance when instability is very high
+    }
+
+    // SATURATION LIMIT: Check if magic count is at or above threshold
+    const existingMagic = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
+    const targets = graph.config.distributionTargets as any;
+    const target = targets?.entities?.abilities?.magic?.target || 15;
+    const saturationThreshold = target * 1.5; // Allow 50% overshoot
+
+    if (existingMagic.length >= saturationThreshold) {
+      return false; // Too much magic, suppress creation
+    }
+
+    return true;
+  },
+
+  findTargets: (graph: Graph) => {
+    const maxDiscoveriesPerHero = 2; // Reduced from 3 to 2 discoveries per hero
+    const heroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
+
+    // Filter out heroes who have already discovered too many abilities
+    return heroes.filter(hero => {
+      const discoveryCount = graph.relationships.filter(r =>
+        r.kind === 'discoverer_of' && r.src === hero.id
+      ).length;
+      return discoveryCount < maxDiscoveriesPerHero;
+    });
+  },
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const hero = target || pickRandom(findEntities(graph, { kind: 'npc', subtype: 'hero' }));

@@ -281,7 +281,47 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     protected: false
   },
 
-  // RULE RELATIONSHIPS (Mutable)
+  // RULE RELATIONSHIPS (Mixed - some structural, some mutable)
+  {
+    kind: 'applies_in',
+    description: 'Rule applies in a location',
+    srcKinds: ['rules'],
+    dstKinds: ['location'],
+    mutability: 'immutable',
+    protected: true
+  },
+  {
+    kind: 'champion_of',
+    description: 'NPC champions an ideology/rule',
+    srcKinds: ['npc'],
+    dstKinds: ['rules'],
+    mutability: 'mutable',
+    protected: true
+  },
+  {
+    kind: 'believer_of',
+    description: 'NPC believes in an ideology/rule',
+    srcKinds: ['npc'],
+    dstKinds: ['rules'],
+    mutability: 'mutable',
+    protected: false
+  },
+  {
+    kind: 'celebrated_by',
+    description: 'Festival/tradition celebrated by faction',
+    srcKinds: ['rules'],
+    dstKinds: ['faction'],
+    mutability: 'mutable',
+    protected: true
+  },
+  {
+    kind: 'wields',
+    description: 'Faction wields an ability',
+    srcKinds: ['faction'],
+    dstKinds: ['abilities'],
+    mutability: 'mutable',
+    protected: true
+  },
   {
     kind: 'weaponized_by',
     description: 'Rule is enforced by a faction',
@@ -370,13 +410,65 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
-export const penguinDomain = new BaseDomainSchema({
+// Create base domain
+const baseDomain = new BaseDomainSchema({
   id: 'penguin-colony',
   name: 'Super Penguin Colony',
   version: '1.0.0',
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
   nameGenerator: penguinNameGenerator
+});
+
+// Extend with catalyst system methods
+export const penguinDomain = Object.assign(baseDomain, {
+  // Action domains for catalyst system
+  getActionDomains() {
+    // Import here to avoid circular dependencies
+    const { getActionDomains } = require('./config/actionDomains');
+    return getActionDomains();
+  },
+
+  // Pressure-domain mappings
+  getPressureDomainMappings() {
+    const { getPressureDomainMappings } = require('./config/actionDomains');
+    return getPressureDomainMappings();
+  },
+
+  // Occurrence triggers (placeholder - can be customized)
+  getOccurrenceTriggers() {
+    return {
+      war: {
+        nameGenerator: (factionNames: string[]) =>
+          `The ${factionNames[0]}-${factionNames[1]} War`
+      },
+      magical_disaster: {
+        nameGenerator: () => `The ${pickRandom(['Corruption', 'Void', 'Chaos', 'Shadow'])} Cascade`
+      },
+      cultural_movement: {
+        nameGenerator: (ruleName: string) => `The ${ruleName} Movement`
+      },
+      economic_boom: {
+        nameGenerator: () => `The ${pickRandom(['Prosperity', 'Abundance', 'Wealth', 'Fortune'])} Era`
+      }
+    };
+  },
+
+  // Era transition conditions (placeholder - can be customized)
+  getEraTransitionConditions(eraSubtype: string) {
+    // Default: time-based transitions
+    // Each era should last ~2 epochs (2 × 15 ticks = 30 ticks)
+    return [
+      { type: 'time', minTicks: 30 }
+    ];
+  },
+
+  // Era transition effects
+  getEraTransitionEffects(fromEra: any, toEra: any, graph: any) {
+    return {
+      pressureChanges: {}
+    };
+  }
 });
 
 // Export penguin-specific constants for backward compatibility

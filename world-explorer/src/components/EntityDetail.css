@@ -282,3 +282,26 @@
   transform: scale(1.1);
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
 }
+
+/* Entity Image */
+.entity-image-container {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(30, 58, 95, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.entity-image {
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: cover;
+  display: block;
+  opacity: 0.95;
+  transition: opacity 0.3s ease;
+}
+
+.entity-image:hover {
+  opacity: 1;
+}

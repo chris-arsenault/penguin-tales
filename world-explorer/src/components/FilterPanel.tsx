@@ -58,7 +58,7 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
     onChange({ ...filters, relationshipTypes });
   };
 
-  const entityKinds: EntityKind[] = ['npc', 'faction', 'location', 'rules', 'abilities'];
+  const entityKinds: EntityKind[] = ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
   const prominenceLevels: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
   return (
@@ -225,6 +225,44 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
         </div>
       </div>
 
+      {/* Minimum Relationship Strength */}
+      <div className="filter-section">
+        <label className="filter-section-label">
+          Min Relationship Strength <span className="text-blue-400 font-normal">({filters.minStrength.toFixed(2)})</span>
+        </label>
+        <div className="strength-slider-container">
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={filters.minStrength}
+            onChange={(e) => onChange({ ...filters, minStrength: parseFloat(e.target.value) })}
+            className="strength-slider"
+          />
+          <div className="strength-slider-labels">
+            <span>0.0</span>
+            <span>0.5</span>
+            <span>1.0</span>
+          </div>
+        </div>
+      </div>
+
+      {/* CatalyzedBy Relationships */}
+      <div className="filter-section">
+        <label className="filter-checkbox-label catalyzed-checkbox">
+          <input
+            type="checkbox"
+            checked={filters.showCatalyzedBy}
+            onChange={(e) => onChange({ ...filters, showCatalyzedBy: e.target.checked })}
+          />
+          <span>Show Catalyzed-By Chains</span>
+        </label>
+        <div className="filter-help-text">
+          Visualizes meta-relationships showing which events or entities catalyzed the formation of relationships
+        </div>
+      </div>
+
       {/* Reset Button */}
       <button
         onClick={() => onChange({
@@ -233,7 +271,9 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
           timeRange: [0, maxTick],
           tags: [],
           searchQuery: '',
-          relationshipTypes: []
+          relationshipTypes: [],
+          minStrength: 0.0,
+          showCatalyzedBy: false
         })}
         className="reset-button"
       >

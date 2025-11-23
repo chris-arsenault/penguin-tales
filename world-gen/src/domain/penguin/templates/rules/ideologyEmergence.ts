@@ -159,12 +159,18 @@ export const ideologyEmergence: GrowthTemplate = {
       });
     }
 
-    // Seed initial believers from champion's followers and faction members
-    const followers = graph.relationships
-      .filter(r => r.kind === 'follower_of' && r.dst === champion.id)
-      .slice(0, 5); // Up to 5 initial believers (increased from 3)
+    // Seed initial believers from champion's faction members
+    const championMembership = graph.relationships.find(r =>
+      r.src === champion.id && r.kind === 'member_of'
+    );
 
-    followers.forEach(follower => {
+    const factionMembers = championMembership
+      ? graph.relationships
+          .filter(r => r.kind === 'member_of' && r.dst === championMembership.dst && r.src !== champion.id)
+          .slice(0, 5) // Up to 5 initial believers (increased from 3)
+      : [];
+
+    factionMembers.forEach(follower => {
       relationships.push({
         kind: 'believer_of',
         src: follower.src,

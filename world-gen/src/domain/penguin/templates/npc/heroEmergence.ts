@@ -31,8 +31,29 @@ export const heroEmergence: GrowthTemplate = {
   },
 
   canApply: (graph: Graph) => {
+    // Pressure-based trigger: need moderate conflict to spawn heroes
     const conflictPressure = graph.pressures.get('conflict') || 0;
-    return conflictPressure > 30 || graph.entities.size > 20;
+    if (conflictPressure < 30 && graph.entities.size <= 20) {
+      return false;
+    }
+
+    // BIDIRECTIONAL PRESSURE THRESHOLD: TOO much conflict suppresses hero creation
+    // (Extreme chaos prevents training, heroes get killed before emerging)
+    if (conflictPressure > 80) {
+      return Math.random() < 0.3; // Only 30% chance when conflict is extreme
+    }
+
+    // SATURATION LIMIT: Check if hero count is at or above threshold
+    const existingHeroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
+    const targets = graph.config.distributionTargets as any;
+    const target = targets?.entities?.npc?.hero?.target || 20;
+    const saturationThreshold = target * 1.5; // Allow 50% overshoot
+
+    if (existingHeroes.length >= saturationThreshold) {
+      return false; // Too many heroes, suppress creation
+    }
+
+    return true;
   },
   
   findTargets: (graph: Graph) => {
