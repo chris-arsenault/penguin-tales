@@ -56,7 +56,8 @@ export type LoreRecordType =
   | 'relationship_backstory'
   | 'tech_magic'
   | 'discovery_event'
-  | 'chain_link';
+  | 'chain_link'
+  | 'entity_change';
 
 export interface LoreRecord {
   id: string;
@@ -74,6 +75,7 @@ export interface EnrichmentContext {
     tick: number;
     era: string;
     pressures?: Record<string, number>;
+    entities: Map<string, HardState>;
   };
   nearbyEntities?: HardState[];
   relatedHistory?: string[];

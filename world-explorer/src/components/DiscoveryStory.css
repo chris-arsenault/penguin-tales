@@ -8,6 +8,11 @@
   overflow: hidden;
 }
 
+/* Make modal content opaque */
+.discovery-story-modal-content {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
+}
+
 .discovery-story-header {
   display: flex;
   align-items: center;
@@ -32,7 +37,7 @@
 
 .discovery-story-meta {
   padding: 10px 12px;
-  background: rgba(217, 119, 6, 0.08);
+  background: rgba(30, 58, 95, 0.4);
   border-bottom: 1px solid rgba(217, 119, 6, 0.15);
   display: flex;
   flex-direction: column;
@@ -144,7 +149,7 @@
   line-height: 1.7;
   color: #fed7aa;
   font-style: italic;
-  background: rgba(10, 25, 41, 0.3);
+  background: rgba(10, 25, 41, 0.8);
 }
 
 /* Modal Mode */
@@ -168,6 +173,7 @@
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
 }
 
 .discovery-story-footer {

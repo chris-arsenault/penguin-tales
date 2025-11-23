@@ -29,6 +29,14 @@ export class WorldEngine {
   // Engine-level safeguards
   private systemMetrics: Map<string, { relationshipsCreated: number; lastThrottleCheck: number }> = new Map();
   private lastRelationshipCount: number = 0;
+
+  // Track entity state for change detection
+  private entitySnapshots = new Map<string, {
+    tick: number;
+    status: string;
+    prominence: string;
+    keyRelationshipIds: Set<string>;
+  }>();
   
   constructor(config: EngineConfig, initialState: HardState[], enrichmentService?: EnrichmentService) {
     this.config = config;
@@ -117,15 +125,18 @@ export class WorldEngine {
   public run(): Graph {
     console.log('Starting world generation...');
     console.log(`Initial state: ${this.graph.entities.size} entities`);
-    
+
+    // Enrich initial entities (descriptions only, preserve canonical names)
+    this.enrichInitialEntities();
+
     while (this.shouldContinue()) {
       this.runEpoch();
       this.currentEpoch++;
     }
-    
+
     console.log(`\nGeneration complete!`);
     console.log(`Final state: ${this.graph.entities.size} entities, ${this.graph.relationships.length} relationships`);
-    
+
     return this.graph;
   }
   
@@ -172,10 +183,13 @@ export class WorldEngine {
     this.pruneAndConsolidate();
     
     this.reportEpochStats();
-    
+
     this.queueEraNarrative(previousEra, era);
+
+    // Check for significant entity changes and enrich them
+    this.queueChangeEnrichments();
   }
-  
+
   private runGrowthPhase(era: Era): void {
     // Calculate dynamic growth target based on remaining entity deficits
     const growthTargets = this.calculateGrowthTarget();
@@ -584,6 +598,32 @@ export class WorldEngine {
     });
   }
   
+  private enrichInitialEntities(): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+
+    const initialEntities = Array.from(this.graph.entities.values()).filter(e => e.createdAt === 0);
+    if (initialEntities.length === 0) return;
+
+    console.log(`Enriching ${initialEntities.length} initial entities (descriptions only)...`);
+
+    const context = this.buildEnrichmentContext();
+    const enrichmentPromise = (async () => {
+      const records = await this.enrichmentService!.enrichEntities(
+        initialEntities,
+        context,
+        { preserveNames: true } // Keep canonical names
+      );
+      this.graph.loreRecords.push(...records);
+    })().catch(error => console.warn('Initial entity enrichment failed:', error));
+
+    const tracked = enrichmentPromise.then(() => undefined);
+    this.pendingEnrichments.push(tracked);
+    this.pendingNameEnrichments.push(tracked);
+    tracked.finally(() => {
+      this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => p !== tracked);
+    });
+  }
+
   private queueEntityEnrichment(entities: HardState[]): void {
     if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
     
@@ -666,6 +706,105 @@ export class WorldEngine {
     this.pendingEnrichments.push(promise.then(() => undefined));
   }
   
+  private queueChangeEnrichments(): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+
+    const changedEntities: Array<{ entity: HardState; changes: string[] }> = [];
+
+    // Check all entities for significant changes
+    this.graph.entities.forEach(entity => {
+      const snapshot = this.entitySnapshots.get(entity.id);
+
+      // Skip if no snapshot (newly created entities already enriched)
+      if (!snapshot) {
+        // Create snapshot for next epoch
+        this.snapshotEntity(entity);
+        return;
+      }
+
+      const changes: string[] = [];
+
+      // Detect significant changes
+      if (entity.status !== snapshot.status) {
+        changes.push(`status: ${snapshot.status} → ${entity.status}`);
+      }
+
+      if (entity.prominence !== snapshot.prominence) {
+        changes.push(`prominence: ${snapshot.prominence} → ${entity.prominence}`);
+      }
+
+      // Check for major relationship changes (faction, location)
+      const currentKeyRels = new Set(
+        entity.links
+          .filter(l => l.kind === 'member_of' || l.kind === 'resident_of' || l.kind === 'leader_of')
+          .map(l => `${l.kind}:${l.dst}`)
+      );
+
+      const addedRels = Array.from(currentKeyRels).filter(r => !snapshot.keyRelationshipIds.has(r));
+      const removedRels = Array.from(snapshot.keyRelationshipIds).filter(r => !currentKeyRels.has(r));
+
+      if (addedRels.length > 0) {
+        addedRels.forEach(rel => {
+          const [kind, dstId] = rel.split(':');
+          const target = this.graph.entities.get(dstId);
+          if (target) {
+            changes.push(`gained ${kind}: ${target.name}`);
+          }
+        });
+      }
+
+      if (removedRels.length > 0) {
+        removedRels.forEach(rel => {
+          const [kind, dstId] = rel.split(':');
+          const target = this.graph.entities.get(dstId);
+          if (target) {
+            changes.push(`lost ${kind}: ${target.name}`);
+          }
+        });
+      }
+
+      // If significant changes detected, queue enrichment
+      if (changes.length > 0) {
+        changedEntities.push({ entity, changes });
+        // Update snapshot
+        this.snapshotEntity(entity);
+      }
+    });
+
+    // Enrich changed entities (batch by up to 3)
+    if (changedEntities.length > 0) {
+      const context = this.buildEnrichmentContext();
+
+      changedEntities.forEach(({ entity, changes }) => {
+        const promise = this.waitForNameEnrichmentsSnapshot()
+          .then(() => this.enrichmentService!.enrichEntityChanges(entity, changes, context))
+          .then(record => {
+            if (record) {
+              this.graph.loreRecords.push(record);
+            }
+          })
+          .catch(error => console.warn('Change enrichment failed:', error));
+
+        this.pendingEnrichments.push(promise.then(() => undefined));
+      });
+    }
+  }
+
+  private snapshotEntity(entity: HardState): void {
+    const keyRelationshipIds = new Set(
+      entity.links
+        .filter(l => l.kind === 'member_of' || l.kind === 'resident_of' || l.kind === 'leader_of')
+        .map(l => `${l.kind}:${l.dst}`)
+    );
+
+    this.entitySnapshots.set(entity.id, {
+      tick: this.graph.tick,
+      status: entity.status,
+      prominence: entity.prominence,
+      keyRelationshipIds
+    });
+  }
+
   private queueEraNarrative(fromEra: Era, toEra: Era): void {
     if (!this.enrichmentService?.isEnabled()) return;
     if (fromEra.id === toEra.id) return;
@@ -808,7 +947,8 @@ export class WorldEngine {
       graphSnapshot: {
         tick: this.graph.tick,
         era: this.graph.currentEra.name,
-        pressures: Object.fromEntries(this.graph.pressures)
+        pressures: Object.fromEntries(this.graph.pressures),
+        entities: this.graph.entities
       },
       relatedHistory: this.graph.history.slice(-5).map(h => h.description)
     };

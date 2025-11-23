@@ -59,7 +59,8 @@ export class EnrichmentService {
 
   public async enrichEntities(
     entities: HardState[],
-    context: EnrichmentContext
+    context: EnrichmentContext,
+    options?: { preserveNames?: boolean }
   ): Promise<LoreRecord[]> {
     if (!this.isEnabled() || entities.length === 0) {
       return [];
@@ -67,6 +68,7 @@ export class EnrichmentService {
 
     const records: LoreRecord[] = [];
     const loreHighlights = this.buildLoreHighlights();
+    const preserveNames = options?.preserveNames || false;
 
     // Treat the entire cluster as one batch (up to 6 entities max for token safety)
     // If cluster is larger than 6, split it but maintain sub-clusters
@@ -76,16 +78,38 @@ export class EnrichmentService {
       : [entities];
 
     for (const batch of batches) {
-      const promptEntities = batch.map(e => ({
-        id: e.id,
-        kind: e.kind,
-        subtype: e.subtype,
-        prominence: e.prominence,
-        placeholders: {
-          name: e.name,
-          description: e.description
+      const promptEntities = batch.map(e => {
+        // Build relationship context using the SNAPSHOT to avoid timing issues
+        // (entity relationships might change during simulation after enrichment is queued)
+        const snapshotEntity = context.graphSnapshot.entities.get(e.id);
+        const relationships: Record<string, string[]> = {};
+
+        if (snapshotEntity) {
+          snapshotEntity.links.forEach(link => {
+            const target = context.graphSnapshot.entities.get(link.dst);
+            if (target) {
+              if (!relationships[link.kind]) relationships[link.kind] = [];
+              relationships[link.kind].push(target.name);
+            }
+          });
         }
-      }));
+
+        return {
+          id: e.id,
+          kind: e.kind,
+          subtype: e.subtype,
+          prominence: e.prominence,
+          relationships: relationships,
+          placeholders: {
+            name: e.name,
+            description: e.description
+          }
+        };
+      });
+
+      const nameInstruction = preserveNames
+        ? `Keep the existing names unchanged - only enrich descriptions.`
+        : `You MUST change the placeholder names; do not repeat the provided placeholder.`;
 
       const prompt = [
         `You are enriching a penguin history simulation using the lore below.`,
@@ -94,17 +118,21 @@ export class EnrichmentService {
         `Context tick ${context.graphSnapshot.tick} in era ${context.graphSnapshot.era}.`,
         `Entities to enrich (JSON array expected with id,name,description):`,
         JSON.stringify(promptEntities, null, 2),
+        `CRITICAL: Use each entity's "relationships" field to inform descriptions.`,
+        `If an NPC has "resident_of": ["Sunbreak Outpost"], mention Sunbreak Outpost in their description.`,
+        `If they have "member_of": ["Frost Guard"], reference the Frost Guard faction.`,
+        `Descriptions must be consistent with actual relationships shown above.`,
         `Use colony tone differences:`,
         `Aurora Stack practical; Nightfall Shelf poetic; two-part names with earned names.`,
         `Do not invent new mechanics; stay within canon list; avoid legends unless noting rumor.`,
-        `You MUST change the placeholder names; do not repeat the provided placeholder.`,
+        nameInstruction,
         `IMPORTANT: Keep each description under 50 words. Be concise and evocative.`,
         `Return JSON array only.`
       ].join('\n');
 
-      // Scale token limit based on batch size (150 tokens per entity baseline)
-      const tokensPerEntity = 150;
-      const dynamicMaxTokens = Math.min(1000, tokensPerEntity * batch.length + 200);
+      // Scale token limit based on batch size (180 tokens per entity to account for relationship context)
+      const tokensPerEntity = 180;
+      const dynamicMaxTokens = Math.min(1200, tokensPerEntity * batch.length + 250);
 
       const result = await this.llm.complete({
         systemPrompt: 'You are a precise lore keeper. Maximum 50 words per description. Respond only with JSON when asked.',
@@ -126,12 +154,17 @@ export class EnrichmentService {
         if (!entity) return;
 
         const oldName = entity.name;
-        if (entry.name) entity.name = entry.name;
-        if (entry.description) entity.description = entry.description;
 
-        if (entry.name && entry.name !== oldName) {
-          upsertNameTag(entity, entry.name);
+        // Only update name if not preserving names
+        if (entry.name && !preserveNames) {
+          entity.name = entry.name;
+          if (entry.name !== oldName) {
+            upsertNameTag(entity, entry.name);
+          }
         }
+
+        // Always update description
+        if (entry.description) entity.description = entry.description;
 
         const validation = this.validator.validateEntity(entity, entry.description);
         const record: LoreRecord = {
@@ -392,6 +425,54 @@ export class EnrichmentService {
         revealedTheme: params.revealedLocationTheme
       }
     };
+    this.loreLog.push(record);
+    return record;
+  }
+
+  public async enrichEntityChanges(
+    entity: HardState,
+    changes: string[],
+    context: EnrichmentContext
+  ): Promise<LoreRecord | null> {
+    if (!this.isEnabled()) return null;
+
+    const prompt = [
+      `An entity has undergone significant changes in the penguin history simulation.`,
+      `Entity: ${entity.name} (${entity.kind}:${entity.subtype})`,
+      `Current description: ${entity.description}`,
+      `Changes that occurred: ${changes.join('; ')}`,
+      `Era: ${context.graphSnapshot.era} at tick ${context.graphSnapshot.tick}`,
+      `Write a brief narrative supplement (2-3 sentences) describing what happened.`,
+      `Reference the changes above and stay consistent with the existing description.`,
+      `Stay within canon (${this.loreIndex.canon.join('; ')}).`,
+      `Return JSON: { "narrative": string }.`
+    ].join('\n');
+
+    const result = await this.llm.complete({
+      systemPrompt: 'You write brief narrative supplements for entity changes. Maximum 60 words. Output JSON only.',
+      prompt,
+      maxTokens: 300,
+      temperature: 0.2
+    });
+
+    const parsed = parseJsonSafe<any>(result.text);
+    if (!parsed) {
+      if (result.text) console.warn('Failed to parse change enrichment response');
+      return null;
+    }
+
+    const record: LoreRecord = {
+      id: nextLoreId('change'),
+      type: 'entity_change',
+      targetId: entity.id,
+      text: parsed.narrative,
+      cached: result.cached,
+      metadata: {
+        changes: changes,
+        tick: context.graphSnapshot.tick
+      }
+    };
+
     this.loreLog.push(record);
     return record;
   }

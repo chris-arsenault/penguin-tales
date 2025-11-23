@@ -10,12 +10,14 @@ function App() {
 
   useEffect(() => {
     // Load both world data and lore data
+    // In production, these files should be in the public folder
+    // Paths are relative to the root of the deployed site
     Promise.all([
-      fetch('/src/data/generated_world.json').then(res => {
+      fetch('/generated_world.json').then(res => {
         if (!res.ok) throw new Error('Failed to load world data');
         return res.json();
       }),
-      fetch('/src/data/lore.json')
+      fetch('/lore.json')
         .then(res => {
           if (!res.ok) {
             console.warn('Lore data not found, continuing without it');

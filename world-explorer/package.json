@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync": "cp ../world-gen/output/generated_world.json public/ && cp ../world-gen/output/lore.json public/ 2>/dev/null || echo 'Warning: lore.json not found, skipping'",
+    "deploy": "npm run sync && npm run build"
   },
   "dependencies": {
     "@types/cytoscape": "^3.21.9",
