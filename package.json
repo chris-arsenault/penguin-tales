@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Procedural world history generation and visualization",
   "private": true,
+  "license": "Polyform-Noncommercial-1.0.0",
   "scripts": {
     "generate": "cd world-gen && npm run dev",
     "build:gen": "cd world-gen && npm run build",
@@ -29,6 +30,5 @@
     "graph",
     "cytoscape"
   ],
-  "author": "",
-  "license": "ISC"
+  "author": "Tsonu",
 }
