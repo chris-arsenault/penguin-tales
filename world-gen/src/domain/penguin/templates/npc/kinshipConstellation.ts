@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities, generateName, pickMultiple } from '../../../../utils/helpers';
+import { pickRandom, generateName, pickMultiple } from '../../../../utils/helpers';
 
 /**
  * Kinship Constellation Template
@@ -111,19 +112,20 @@ export const kinshipConstellation: GrowthTemplate = {
     tags: ['family', 'ising-model', 'cluster-forming'],
   },
 
-  canApply: (graph: Graph) => {
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
+  canApply: (graphView: TemplateGraphView) => {
+    // FIXED: Don't filter by status='active' - use any faction
+    const factions = graphView.findEntities({ kind: 'faction' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
 
     // Requires at least 1 faction, 1 colony, and not too many NPCs yet
     return factions.length >= 1 && colonies.length >= 1 && npcs.length < 100;
   },
 
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'faction', status: 'active' }),
+  findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'faction' }),
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const faction = target || pickRandom(findEntities(graph, { kind: 'faction', status: 'active' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const faction = target || pickRandom(graphView.findEntities({ kind: 'faction' }));
 
     // VALIDATION: Check if faction exists
     if (!faction) {
@@ -135,12 +137,12 @@ export const kinshipConstellation: GrowthTemplate = {
     }
 
     // VALIDATION: Find faction's location
-    const factionLocation = faction.links.find(l => l.kind === 'controls');
-    let location = factionLocation ? graph.entities.get(factionLocation.dst) : undefined;
+    const controlledLocations = graphView.getRelatedEntities(faction.id, 'controls', 'src');
+    let location = controlledLocations.length > 0 ? controlledLocations[0] : undefined;
 
     // Fallback to any colony
     if (!location) {
-      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+      const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
       location = colonies.length > 0 ? pickRandom(colonies) : undefined;
     }
 

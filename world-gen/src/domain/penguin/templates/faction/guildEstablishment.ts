@@ -1,4 +1,5 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
 
@@ -37,24 +38,27 @@ export const guildEstablishment: GrowthTemplate = {
     tags: ['economic', 'colony-centric', 'cluster-forming'],
   },
 
-  canApply: (graph: Graph) => {
-    const merchants = findEntities(graph, { kind: 'npc', subtype: 'merchant' });
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-    return merchants.length >= 2 && colonies.length > 0;
+  canApply: (graphView: TemplateGraphView) => {
+    const merchantCount = graphView.getEntityCount('npc', 'merchant');
+    const colonyCount = graphView.getEntityCount('location', 'colony');
+    return merchantCount >= 2 && colonyCount > 0;
+  },
+
+  findTargets: (graphView: TemplateGraphView) => {
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    const companies = graphView.findEntities({ kind: 'faction', subtype: 'company' });
+
+    // Filter out colonies that already have a guild controlling them
+    return colonies.filter(colony => {
+      return !companies.some(company =>
+        graphView.hasRelationship(company.id, colony.id, 'controls')
+      );
+    });
   },
   
-  findTargets: (graph: Graph) => {
-    return findEntities(graph, { kind: 'location', subtype: 'colony' })
-      .filter(c => !Array.from(graph.entities.values()).some(e =>
-        e.kind === 'faction' &&
-        e.subtype === 'company' &&
-        e.links.some(l => l.kind === 'controls' && l.dst === c.id)
-      ));
-  },
-  
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(
-      findEntities(graph, { kind: 'location', subtype: 'colony' })
+      graphView.findEntities({ kind: 'location', subtype: 'colony' })
     );
 
     if (!colony) {
@@ -76,20 +80,49 @@ export const guildEstablishment: GrowthTemplate = {
       tags: ['trade', 'guild', `name:${slugifyName(colony.name)}`]
     };
     
-    // Use existing merchants instead of creating new ones (catalyst model)
-    const existingMerchants = findEntities(graph, { kind: 'npc', subtype: 'merchant', status: 'alive' })
-      .filter(m => !m.links.some(l => l.kind === 'member_of')) // Prefer unaffiliated merchants
-      .slice(0, 3);
+    // Use targetSelector to intelligently select merchants (prevents super-hubs)
+    let merchantsToRecruit: HardState[] = [];
+    let newMerchants: Array<Partial<HardState>> = [];
 
-    // If no unaffiliated merchants, take any merchants
-    const merchantsToRecruit = existingMerchants.length > 0
-      ? existingMerchants
-      : findEntities(graph, { kind: 'npc', subtype: 'merchant', status: 'alive' }).slice(0, 3);
+    // Smart selection with aggressive hub penalties (guilds are exclusive)
+    const result = graphView.selectTargets('npc', 3, {
+        prefer: {
+          subtypes: ['merchant'],
+          sameLocationAs: colony.id, // Prefer local merchants
+          preferenceBoost: 3.0 // Strong preference for merchants
+        },
+        avoid: {
+          relationshipKinds: ['member_of', 'leader_of'], // Penalize multi-faction NPCs
+          hubPenaltyStrength: 3.0, // Very aggressive penalty (cubic)
+          maxTotalRelationships: 10 // Hard cap on super-hubs
+        },
+        createIfSaturated: {
+          threshold: 0.2, // If best score < 0.2, create new merchant
+          factory: (gv, ctx) => ({
+            kind: 'npc',
+            subtype: 'merchant',
+            name: generateName('npc'),
+            description: `An independent merchant seeking guild membership`,
+            status: 'alive',
+            prominence: 'marginal',
+            tags: ['trader', 'guild-founder']
+          }),
+          maxCreated: 2 // Max 2 new merchants per guild
+        },
+        diversityTracking: {
+          trackingId: 'guild_recruitment',
+          strength: 2.0 // Strong diversity pressure
+        }
+      });
+
+    merchantsToRecruit = result.existing;
+    newMerchants = result.created;
 
     const relationships: Relationship[] = [
       { kind: 'controls', src: 'will-be-assigned-0', dst: colony.id }
     ];
 
+    // Add relationships for existing merchants
     merchantsToRecruit.forEach(merchant => {
       relationships.push({
         kind: 'member_of',
@@ -103,10 +136,31 @@ export const guildEstablishment: GrowthTemplate = {
       });
     });
 
+    // Add relationships for newly created merchants
+    // Base index: 0=guild, 1+ =new merchants
+    newMerchants.forEach((newMerchant, index) => {
+      const merchantPlaceholderId = `will-be-assigned-${1 + index}`;
+      relationships.push({
+        kind: 'member_of',
+        src: merchantPlaceholderId,
+        dst: 'will-be-assigned-0'
+      });
+      relationships.push({
+        kind: 'resident_of',
+        src: merchantPlaceholderId,
+        dst: colony.id
+      });
+    });
+
+    const totalMerchants = merchantsToRecruit.length + newMerchants.length;
+    const creationNote = newMerchants.length > 0
+      ? ` (${newMerchants.length} new merchants recruited)`
+      : '';
+
     return {
-      entities: [guild], // No new NPCs created, use existing merchants
+      entities: [guild, ...newMerchants], // Include new merchants
       relationships,
-      description: `${merchantsToRecruit.length} merchants organize into ${guild.name}`
+      description: `${totalMerchants} merchants organize into ${guild.name}${creationNote}`
     };
   }
 };

@@ -6,7 +6,7 @@ export const pressures: Pressure[] = [
     id: 'resource_scarcity',
     name: 'Resource Scarcity',
     value: 20,
-    decay: 6,
+    decay: 18,  // TUNED: Increased from 12 to 18 (still at 88 vs target 30)
     growth: (graph) => {
       // Calculate resource strain as a RATIO, not absolute count
       const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
@@ -62,7 +62,7 @@ export const pressures: Pressure[] = [
     id: 'conflict',
     name: 'Conflict Tension',
     value: 15,
-    decay: 5,
+    decay: 2,  // TUNED: Decreased from 3 to 2 (still at 21 vs target 40)
     growth: (graph) => {
       // Measure conflict as RATIO of hostile vs friendly relationships
       const hostileRelations = graph.relationships.filter(r =>
@@ -84,12 +84,13 @@ export const pressures: Pressure[] = [
       const warBonus = Math.min(factionWars.length * 2, 5); // Cap war bonus at 5
 
       // FEEDBACK LOOP: Heroes reduce conflict
-      // Each hero reduces conflict growth by 0.4% (negative feedback)
+      // FIXED: Reduced hero suppression from 0.4 to 0.2 (was too aggressive)
       const heroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
-      const heroSuppression = heroes.length * 0.4;
+      const heroSuppression = heroes.length * 0.2;
 
-      // Map 0-1 ratio to 0-6 growth, plus war bonus, minus hero suppression
-      return Math.max(0, hostileRatio * 6 + warBonus - heroSuppression);
+      // FIXED: Increased growth multiplier from 6 to 10 to reach target faster
+      // Map 0-1 ratio to 0-10 growth, plus war bonus, minus hero suppression
+      return Math.max(0, hostileRatio * 10 + warBonus - heroSuppression);
     }
   },
   
@@ -97,7 +98,7 @@ export const pressures: Pressure[] = [
     id: 'magical_instability',
     name: 'Magical Instability',
     value: 10,
-    decay: 3,
+    decay: 8,  // TUNED: Set to 8 as middle ground (was 6→too high, 10→too low)
     growth: (graph) => {
       // Measure magic saturation as RATIO, not absolute count
       const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
@@ -128,7 +129,7 @@ export const pressures: Pressure[] = [
     id: 'cultural_tension',
     name: 'Cultural Divergence',
     value: 5,
-    decay: 5,
+    decay: 15,  // TUNED: Increased from 10 to 15 (still at 90 vs target 35)
     growth: (graph) => {
       // Measure cultural fragmentation as RATIO
       const allFactions = findEntities(graph, { kind: 'faction' });
@@ -213,7 +214,7 @@ export const pressures: Pressure[] = [
     id: 'external_threat',
     name: 'External Danger',
     value: 0,
-    decay: 2,
+    decay: 6,  // TUNED: Increased from 4 to 6 (still at 30 vs target 15)
     growth: (graph) => {
       // Increases during invasion era or when entities marked as external appear
       const externalTags = Array.from(graph.entities.values())

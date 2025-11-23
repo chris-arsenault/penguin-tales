@@ -1,6 +1,6 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { findEntities, getRelated } from '../../../../utils/helpers';
 
 /**
  * Trade Route Establishment Template
@@ -45,51 +45,51 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     tags: ['world-level', 'economic', 'trade']
   },
 
-  canApply(graph: Graph): boolean {
-    // Need active factions that aren't already trading
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+  canApply(graphView: TemplateGraphView): boolean {
+    // Need factions that aren't already trading
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     if (factions.length < 2) return false;
 
     // Check if there are potential trade partners
     return factions.some(faction => {
-      const tradingPartners = graph.relationships
-        .filter(r => r.kind === 'trades_with' && (r.src === faction.id || r.dst === faction.id))
-        .map(r => r.src === faction.id ? r.dst : r.src);
+      const tradingWith = graphView.getRelatedEntities(faction.id, 'trades_with', 'both');
+      const tradingPartnerIds = new Set(tradingWith.map(t => t.id));
 
       const potentialPartners = factions.filter(f =>
         f.id !== faction.id &&
-        !tradingPartners.includes(f.id)
+        !tradingPartnerIds.has(f.id)
       );
 
       return potentialPartners.length > 0;
     });
   },
 
-  findTargets(graph: Graph): HardState[] {
+  findTargets(graphView: TemplateGraphView): HardState[] {
     // Return factions with potential trade partners
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     return factions.filter(faction => {
-      const tradingPartners = graph.relationships
-        .filter(r => r.kind === 'trades_with' && (r.src === faction.id || r.dst === faction.id))
-        .map(r => r.src === faction.id ? r.dst : r.src);
+      const tradingWith = graphView.getRelatedEntities(faction.id, 'trades_with', 'both');
+      const tradingPartnerIds = new Set(tradingWith.map(t => t.id));
 
-      const potentialPartners = factions.filter(f =>
-        f.id !== faction.id &&
-        !tradingPartners.includes(f.id) &&
+      const potentialPartners = factions.filter(f => {
+        if (f.id === faction.id || tradingPartnerIds.has(f.id)) {
+          return false;
+        }
+
         // Can't trade with enemies
-        !graph.relationships.some(r =>
-          r.kind === 'at_war_with' &&
-          ((r.src === faction.id && r.dst === f.id) || (r.src === f.id && r.dst === faction.id))
-        )
-      );
+        const atWar = graphView.hasRelationship(faction.id, f.id, 'at_war_with') ||
+                      graphView.hasRelationship(f.id, faction.id, 'at_war_with');
+
+        return !atWar;
+      });
 
       return potentialPartners.length > 0;
     });
   },
 
-  expand(graph: Graph, target?: HardState): TemplateResult {
+  expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'faction') {
       return {
         entities: [],
@@ -99,21 +99,22 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     }
 
     // Find existing trade partners
-    const tradingPartners = graph.relationships
-      .filter(r => r.kind === 'trades_with' && (r.src === target.id || r.dst === target.id))
-      .map(r => r.src === target.id ? r.dst : r.src);
+    const tradingWith = graphView.getRelatedEntities(target.id, 'trades_with', 'both');
+    const tradingPartnerIds = new Set(tradingWith.map(t => t.id));
 
     // Find potential trade partners (factions that aren't at war)
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
-    const potentialPartners = factions.filter(faction =>
-      faction.id !== target.id &&
-      !tradingPartners.includes(faction.id) &&
+    const factions = graphView.findEntities({ kind: 'faction' });
+    const potentialPartners = factions.filter(faction => {
+      if (faction.id === target.id || tradingPartnerIds.has(faction.id)) {
+        return false;
+      }
+
       // Can't trade with enemies
-      !graph.relationships.some(r =>
-        r.kind === 'at_war_with' &&
-        ((r.src === target.id && r.dst === faction.id) || (r.src === faction.id && r.dst === target.id))
-      )
-    );
+      const atWar = graphView.hasRelationship(target.id, faction.id, 'at_war_with') ||
+                    graphView.hasRelationship(faction.id, target.id, 'at_war_with');
+
+      return !atWar;
+    });
 
     if (potentialPartners.length === 0) {
       return {
@@ -125,10 +126,8 @@ export const tradeRouteEstablishment: GrowthTemplate = {
 
     // Prefer partners who are allied or neutral
     const allies = potentialPartners.filter(f =>
-      graph.relationships.some(r =>
-        r.kind === 'allied_with' &&
-        ((r.src === target.id && r.dst === f.id) || (r.src === f.id && r.dst === target.id))
-      )
+      graphView.hasRelationship(target.id, f.id, 'allied_with') ||
+      graphView.hasRelationship(f.id, target.id, 'allied_with')
     );
 
     const partner = allies.length > 0
@@ -136,12 +135,9 @@ export const tradeRouteEstablishment: GrowthTemplate = {
       : potentialPartners[Math.floor(Math.random() * potentialPartners.length)];
 
     // Find catalyst (merchant NPC if exists, otherwise leader, otherwise faction)
-    const merchants = graph.relationships
-      .filter(r => r.kind === 'member_of' && r.dst === target.id)
-      .map(r => graph.entities.get(r.src))
-      .filter((e): e is HardState => !!e && e.subtype === 'merchant');
-
-    const leaders = getRelated(graph, target.id, 'leader_of', 'dst');
+    const members = graphView.getRelatedEntities(target.id, 'member_of', 'dst');
+    const merchants = members.filter(m => m.subtype === 'merchant');
+    const leaders = graphView.getRelatedEntities(target.id, 'leader_of', 'dst');
 
     const catalyst = merchants.length > 0
       ? merchants[0]

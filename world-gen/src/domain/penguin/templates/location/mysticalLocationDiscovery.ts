@@ -6,7 +6,8 @@
  * appropriate mystical phenomena.
  */
 
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName } from '../../../../utils/helpers';
 import {
@@ -45,18 +46,18 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     tags: ['emergent', 'mystical', 'magic-driven'],
   },
 
-  canApply: (graph: Graph): boolean => {
+  canApply: (graphView: TemplateGraphView): boolean => {
     // Must have magical instability
-    const magic = analyzeMagicPresence(graph);
+    const magic = analyzeMagicPresence(graphView.getInternalGraph());
     if (!magic) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graph);
+    return shouldDiscoverLocation(graphView.getInternalGraph());
   },
 
-  findTargets: (graph: Graph): HardState[] => {
+  findTargets: (graphView: TemplateGraphView): HardState[] => {
     // Find explorers, preferring those with magic connections
-    const npcs = Array.from(graph.entities.values()).filter(
+    const npcs = graphView.findEntities({}).filter(
       e => e.kind === 'npc' && e.status === 'alive'
     );
 
@@ -74,12 +75,12 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     return npcs;
   },
 
-  expand: (graph: Graph, explorer?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
     // Analyze magical patterns
-    const magic = analyzeMagicPresence(graph);
+    const magic = analyzeMagicPresence(graphView.getInternalGraph());
     if (!magic) {
       return {
         entities: [],
@@ -91,15 +92,15 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     // Find explorer
     let discoverer = explorer;
     if (!discoverer) {
-      const npcs = Array.from(graph.entities.values()).filter(
+      const npcs = graphView.findEntities({}).filter(
         e => e.kind === 'npc' && e.status === 'alive'
       );
 
       // Prefer those connected to magic/abilities
       const magical = npcs.filter(npc => {
-        return graph.relationships.some(r =>
+        return graphView.getAllRelationships().some(r =>
           (r.src === npc.id || r.dst === npc.id) &&
-          graph.entities.get(r.src === npc.id ? r.dst : r.src)?.kind === 'abilities'
+          graphView.getEntity(r.src === npc.id ? r.dst : r.src)?.kind === 'abilities'
         );
       });
 
@@ -118,7 +119,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE theme based on magical state
-    const theme = generateMysticalTheme(magic, graph.currentEra.id);
+    const theme = generateMysticalTheme(magic, graphView.currentEra.id);
 
     // Generate penguin-style name with themeString as descriptor
     const locationName = generateName('location');
@@ -154,7 +155,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graph);
+    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({
@@ -170,8 +171,8 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     }
 
     // Update discovery state
-    graph.discoveryState.lastDiscoveryTick = graph.tick;
-    graph.discoveryState.discoveriesThisEpoch += 1;
+    graphView.discoveryState.lastDiscoveryTick = graphView.tick;
+    graphView.discoveryState.discoveriesThisEpoch += 1;
 
     const description = `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} manifestation`;
 

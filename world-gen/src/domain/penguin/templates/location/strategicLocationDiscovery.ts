@@ -6,7 +6,8 @@
  * tactically relevant positions.
  */
 
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName } from '../../../../utils/helpers';
 import {
@@ -45,18 +46,18 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     tags: ['emergent', 'strategic', 'conflict-driven'],
   },
 
-  canApply: (graph: Graph): boolean => {
+  canApply: (graphView: TemplateGraphView): boolean => {
     // Must have active conflicts
-    const conflict = analyzeConflictPatterns(graph);
+    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
     if (!conflict) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graph);
+    return shouldDiscoverLocation(graphView.getInternalGraph());
   },
 
-  findTargets: (graph: Graph): HardState[] => {
+  findTargets: (graphView: TemplateGraphView): HardState[] => {
     // Find explorers, preferring heroes (military) and outlaws (scouts)
-    const npcs = Array.from(graph.entities.values()).filter(
+    const npcs = graphView.findEntities({}).filter(
       e => e.kind === 'npc' && e.status === 'alive'
     );
 
@@ -69,12 +70,12 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     return npcs.filter(e => e.subtype === 'mayor'); // Defensive mayors
   },
 
-  expand: (graph: Graph, explorer?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
     // Analyze conflict patterns
-    const conflict = analyzeConflictPatterns(graph);
+    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
     if (!conflict) {
       return {
         entities: [],
@@ -86,7 +87,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     // Find explorer
     let discoverer = explorer;
     if (!discoverer) {
-      const npcs = Array.from(graph.entities.values()).filter(
+      const npcs = graphView.findEntities({}).filter(
         e => e.kind === 'npc' && e.status === 'alive'
       );
       const heroes = npcs.filter(e => e.subtype === 'hero');
@@ -110,7 +111,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE theme based on conflict state
-    const theme = generateStrategicTheme(conflict, graph.currentEra.id);
+    const theme = generateStrategicTheme(conflict, graphView.currentEra.id);
 
     // Generate penguin-style name with themeString as descriptor
     const locationName = generateName('location');
@@ -146,7 +147,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graph);
+    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({
@@ -162,8 +163,8 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     }
 
     // Update discovery state
-    graph.discoveryState.lastDiscoveryTick = graph.tick;
-    graph.discoveryState.discoveriesThisEpoch += 1;
+    graphView.discoveryState.lastDiscoveryTick = graphView.tick;
+    graphView.discoveryState.discoveriesThisEpoch += 1;
 
     const description = `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} for ${conflict.type} advantage`;
 

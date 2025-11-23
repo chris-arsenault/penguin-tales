@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities } from '../../../../utils/helpers';
+import { pickRandom } from '../../../../utils/helpers';
 
 /**
  * Colony Founding Template
@@ -35,15 +36,15 @@ export const colonyFounding: GrowthTemplate = {
     tags: ['expansion', 'colony-formation'],
   },
 
-  canApply: (graph: Graph) => {
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-    return colonies.length < 5 && graph.entities.size > 20;
+  canApply: (graphView: TemplateGraphView) => {
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    return colonies.length < 5 && graphView.getEntityCount() > 20;
   },
   
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'location', subtype: 'iceberg' }),
+  findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'iceberg' }),
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const iceberg = target || pickRandom(findEntities(graph, { kind: 'location', subtype: 'iceberg' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const iceberg = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'iceberg' }));
     
     return {
       entities: [{

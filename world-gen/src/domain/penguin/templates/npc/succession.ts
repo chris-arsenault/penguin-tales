@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -31,22 +32,32 @@ export const succession: GrowthTemplate = {
     tags: ['succession', 'leadership-change'],
   },
 
-  canApply: (graph: Graph) => {
-    const mayors = findEntities(graph, { kind: 'npc', subtype: 'mayor' });
-    return mayors.some(m => m.status === 'dead' || graph.tick > 50);
+  canApply: (graphView: TemplateGraphView) => {
+    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
+    return mayors.some(m => m.status === 'dead' || graphView.tick > 50);
   },
-  
-  findTargets: (graph: Graph) => {
-    const mayors = findEntities(graph, { kind: 'npc', subtype: 'mayor' });
-    return mayors.filter(m => m.status === 'dead' || (graph.tick - m.createdAt) > 40);
+
+  findTargets: (graphView: TemplateGraphView) => {
+    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
+    return mayors.filter(m => m.status === 'dead' || (graphView.tick - m.createdAt) > 40);
   },
-  
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const oldLeader = target || pickRandom(findEntities(graph, { kind: 'npc', subtype: 'mayor' }));
+
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const oldLeader = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'mayor' }));
+
+    if (!oldLeader) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'No mayor to succeed'
+      };
+    }
 
     // Find the colony the old leader governed
-    const leaderOfLink = oldLeader.links.find(l => l.kind === 'leader_of');
-    if (!leaderOfLink) {
+    const leadsColonies = graphView.getRelatedEntities(oldLeader.id, 'leader_of', 'src')
+      .filter(e => e.kind === 'location');
+
+    if (leadsColonies.length === 0) {
       // Old leader has no colony - fail gracefully
       return {
         entities: [],
@@ -55,14 +66,7 @@ export const succession: GrowthTemplate = {
       };
     }
 
-    const colony = graph.entities.get(leaderOfLink.dst);
-    if (!colony) {
-      return {
-        entities: [],
-        relationships: [],
-        description: `${oldLeader.name}'s colony no longer exists`
-      };
-    }
+    const colony = leadsColonies[0];
 
     const newLeader: Partial<HardState> = {
       kind: 'npc',
@@ -88,19 +92,20 @@ export const succession: GrowthTemplate = {
     ];
 
     // Check for faction leadership too
-    const factionLeaderLink = oldLeader.links.find(l =>
-      l.kind === 'leader_of' && graph.entities.get(l.dst)?.kind === 'faction'
-    );
-    if (factionLeaderLink) {
+    const leadsFactions = graphView.getRelatedEntities(oldLeader.id, 'leader_of', 'src')
+      .filter(e => e.kind === 'faction');
+
+    if (leadsFactions.length > 0) {
+      const faction = leadsFactions[0];
       relationships.push({
         kind: 'leader_of',
         src: 'will-be-assigned-0',
-        dst: factionLeaderLink.dst
+        dst: faction.id
       });
       relationships.push({
         kind: 'member_of',  // New leader joins faction
         src: 'will-be-assigned-0',
-        dst: factionLeaderLink.dst
+        dst: faction.id
       });
     }
 

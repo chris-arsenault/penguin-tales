@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { pickRandom, slugifyName } from '../../../../utils/helpers';
 
 /**
  * Crisis Legislation Template
@@ -35,16 +36,16 @@ export const crisisLegislation: GrowthTemplate = {
     tags: ['crisis-driven', 'legislation'],
   },
 
-  canApply: (graph: Graph) => {
-    const conflict = graph.pressures.get('conflict') || 0;
-    const scarcity = graph.pressures.get('resource_scarcity') || 0;
+  canApply: (graphView: TemplateGraphView) => {
+    const conflict = graphView.getPressure('conflict') || 0;
+    const scarcity = graphView.getPressure('resource_scarcity') || 0;
     return conflict > 40 || scarcity > 40;
   },
   
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'location', subtype: 'colony' }),
+  findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'colony' }),
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const colony = target || pickRandom(findEntities(graph, { kind: 'location', subtype: 'colony' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const colony = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'colony' }));
     const ruleType = pickRandom(['edict', 'taboo', 'social']);
     
     return {

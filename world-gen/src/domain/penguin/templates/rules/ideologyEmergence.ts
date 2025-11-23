@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { pickRandom, slugifyName } from '../../../../utils/helpers';
 
 /**
  * Ideology Emergence Template
@@ -55,28 +56,28 @@ export const ideologyEmergence: GrowthTemplate = {
     tags: ['ideology', 'cultural-shift', 'belief-driven'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     const params = ideologyEmergence.metadata?.parameters || {};
     const unstableActivationChance = params.unstableActivationChance?.value ?? 0.3;
 
-    const culturalTension = graph.pressures.get('cultural_tension') || 0;
-    const stability = graph.pressures.get('stability') || 0;
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
+    const culturalTension = graphView.getPressure('cultural_tension') || 0;
+    const stability = graphView.getPressure('stability') || 0;
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
 
     // Need enough NPCs for ideology to spread
     if (npcs.length < 10) return false;
 
     // Triggered by cultural tension OR during innovation/reconstruction eras
     const hasTension = culturalTension > 30;
-    const isReformEra = ['innovation', 'reconstruction'].includes(graph.currentEra.id);
+    const isReformEra = ['innovation', 'reconstruction'].includes(graphView.currentEra.id);
     const unstable = stability < 40 && Math.random() < unstableActivationChance;
 
     return hasTension || isReformEra || unstable;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     // Ideologies are championed by charismatic NPCs
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
     const charismatic = npcs.filter(npc =>
       npc.subtype === 'hero' ||
       npc.tags.includes('charismatic') ||
@@ -86,8 +87,8 @@ export const ideologyEmergence: GrowthTemplate = {
     return charismatic.length > 0 ? charismatic : npcs;
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const champion = target || pickRandom(findEntities(graph, { kind: 'npc', status: 'alive' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const champion = target || pickRandom(graphView.findEntities({ kind: 'npc', status: 'alive' }));
 
     if (!champion) {
       return {
@@ -97,8 +98,8 @@ export const ideologyEmergence: GrowthTemplate = {
       };
     }
 
-    const culturalTension = graph.pressures.get('cultural_tension') || 0;
-    const conflict = graph.pressures.get('conflict') || 0;
+    const culturalTension = graphView.getPressure('cultural_tension') || 0;
+    const conflict = graphView.getPressure('conflict') || 0;
 
     // Select ideology type based on world state
     let ideologyType: 'edict' | 'taboo' | 'social';
@@ -147,7 +148,7 @@ export const ideologyEmergence: GrowthTemplate = {
     });
 
     // Find champion's location if they have one
-    const championLocation = graph.relationships.find(r =>
+    const championLocation = graphView.getAllRelationships().find(r =>
       r.src === champion.id && r.kind === 'resident_of'
     );
 
@@ -160,12 +161,12 @@ export const ideologyEmergence: GrowthTemplate = {
     }
 
     // Seed initial believers from champion's faction members
-    const championMembership = graph.relationships.find(r =>
+    const championMembership = graphView.getAllRelationships().find(r =>
       r.src === champion.id && r.kind === 'member_of'
     );
 
     const factionMembers = championMembership
-      ? graph.relationships
+      ? graphView.getAllRelationships()
           .filter(r => r.kind === 'member_of' && r.dst === championMembership.dst && r.src !== champion.id)
           .slice(0, 5) // Up to 5 initial believers (increased from 3)
       : [];
@@ -179,12 +180,12 @@ export const ideologyEmergence: GrowthTemplate = {
     });
 
     // Also seed believers from champion's faction if they have one
-    const factionMembership = graph.relationships.find(r =>
+    const factionMembership = graphView.getAllRelationships().find(r =>
       r.src === champion.id && r.kind === 'member_of'
     );
 
     if (factionMembership) {
-      const factionMembers = graph.relationships
+      const factionMembers = graphView.getAllRelationships()
         .filter(r => r.kind === 'member_of' && r.dst === factionMembership.dst && r.src !== champion.id)
         .slice(0, 3); // Up to 3 faction members
 

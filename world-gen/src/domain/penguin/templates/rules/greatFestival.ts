@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, pickMultiple, findEntities, slugifyName } from '../../../../utils/helpers';
+import { pickRandom, pickMultiple, slugifyName } from '../../../../utils/helpers';
 
 /**
  * Great Festival Template
@@ -58,26 +59,28 @@ export const greatFestival: GrowthTemplate = {
     tags: ['festival', 'unity', 'cultural'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     const params = greatFestival.metadata?.parameters || {};
     const stableActivationChance = params.stableActivationChance?.value ?? 0.05;
 
-    const conflict = graph.pressures.get('conflict') || 0;
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const conflict = graphView.getPressure('conflict') || 0;
+    // FIXED: Don't filter by status='active' - use any faction
+    const factions = graphView.findEntities({ kind: 'faction' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     // Requires at least 2 factions and 1 colony
-    // Triggered by high conflict OR randomly during stable periods
-    const hasConflict = conflict > 80;
-    const stableRandom = conflict < 30 && Math.random() < stableActivationChance;
+    // FIXED: Remove dead zone - allow festivals at any conflict level with scaled probability
+    const hasConflict = conflict > 60;  // Lowered from 80
+    const moderateConflict = conflict >= 15 && conflict <= 60 && Math.random() < stableActivationChance * 2;
+    const stableRandom = conflict < 15 && Math.random() < stableActivationChance;
 
-    return (hasConflict || stableRandom) && factions.length >= 2 && colonies.length >= 1;
+    return (hasConflict || moderateConflict || stableRandom) && factions.length >= 2 && colonies.length >= 1;
   },
 
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'location', subtype: 'colony' }),
+  findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'colony' }),
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const colony = target || pickRandom(findEntities(graph, { kind: 'location', subtype: 'colony' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const colony = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'colony' }));
 
     // VALIDATION: Check if colony exists
     if (!colony) {
@@ -88,7 +91,8 @@ export const greatFestival: GrowthTemplate = {
       };
     }
 
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    // FIXED: Don't filter by status='active' - use any faction
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     // VALIDATION: Check if enough factions exist
     if (factions.length < 2) {
@@ -99,7 +103,7 @@ export const greatFestival: GrowthTemplate = {
       };
     }
 
-    const conflict = graph.pressures.get('conflict') || 0;
+    const conflict = graphView.getPressure('conflict') || 0;
 
     // Select festival type based on trigger
     let festivalType: 'harvest' | 'memorial' | 'treaty' | 'celestial';

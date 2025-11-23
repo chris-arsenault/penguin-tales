@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState } from '../../../../types/worldTypes';
-import { pickRandom, findEntities } from '../../../../utils/helpers';
+import { pickRandom } from '../../../../utils/helpers';
 
 /**
  * Anomaly Manifestation Template
@@ -44,19 +45,19 @@ export const anomalyManifestation: GrowthTemplate = {
     tags: ['mystical', 'pressure-driven'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     const params = anomalyManifestation.metadata?.parameters || {};
     const activationChance = params.activationChance?.value ?? 0.2;
 
-    const magic = graph.pressures.get('magical_instability') || 0;
+    const magic = graphView.getPressure('magical_instability') || 0;
     return magic > 30 || Math.random() < activationChance;
   },
   
-  findTargets: (graph: Graph) => findEntities(graph, { kind: 'location' }),
+  findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location' }),
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     // Find a location to be adjacent to (prefer colonies for discoverability)
-    const locations = findEntities(graph, { kind: 'location' });
+    const locations = graphView.findEntities({ kind: 'location' });
     const nearbyLocation = target || pickRandom(locations);
 
     if (!nearbyLocation) {
@@ -79,7 +80,7 @@ export const anomalyManifestation: GrowthTemplate = {
     ];
 
     // If there are magic users, one might discover it
-    const magicUsers = Array.from(graph.entities.values()).filter(
+    const magicUsers = graphView.findEntities({}).filter(
       e => (e.kind === 'npc' && e.tags.includes('magic')) ||
            (e.kind === 'npc' && e.links.some(l => l.kind === 'practitioner_of'))
     );

@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities } from '../../../../utils/helpers';
+import { pickRandom } from '../../../../utils/helpers';
 
 /**
  * Orca Combat Technique Template
@@ -38,27 +39,27 @@ export const orcaCombatTechnique: GrowthTemplate = {
     tags: ['combat', 'external-threat', 'ability-creation'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Only apply if orcas exist in the world
-    const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
+    const orcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' });
     return orcas.length > 0;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     const maxTechniquesPerOrca = 2; // Limit to 2 techniques per orca
-    const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
+    const orcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' });
 
     // Filter out orcas who already practice too many techniques
     return orcas.filter(orca => {
-      const techniqueCount = graph.relationships.filter(r =>
+      const techniqueCount = graphView.getAllRelationships().filter(r =>
         r.kind === 'practitioner_of' && r.src === orca.id
       ).length;
       return techniqueCount < maxTechniquesPerOrca;
     });
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const orca = target || pickRandom(findEntities(graph, { kind: 'npc', subtype: 'orca' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const orca = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'orca' }));
 
     if (!orca) {
       return {
@@ -102,7 +103,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
     ];
 
     // Other orcas might also practice this technique
-    const otherOrcas = findEntities(graph, { kind: 'npc', subtype: 'orca' })
+    const otherOrcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' })
       .filter(o => o.id !== orca.id);
 
     if (otherOrcas.length > 0 && Math.random() < 0.6) {

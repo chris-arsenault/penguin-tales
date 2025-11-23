@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities, generateName, pickMultiple } from '../../../../utils/helpers';
+import { pickRandom, generateName, pickMultiple } from '../../../../utils/helpers';
 
 /**
  * Krill Bloom Migration Template
@@ -26,7 +27,7 @@ import { pickRandom, findEntities, generateName, pickMultiple } from '../../../.
  */
 
 // Helper: Calculate graph distance (BFS)
-function graphDistance(graph: Graph, from: string, to: string): number {
+function graphDistance(graphView: TemplateGraphView, from: string, to: string): number {
   if (from === to) return 0;
 
   const visited = new Set<string>();
@@ -39,7 +40,7 @@ function graphDistance(graph: Graph, from: string, to: string): number {
     if (visited.has(current.id)) continue;
     visited.add(current.id);
 
-    const entity = graph.entities.get(current.id);
+    const entity = graphView.getEntity(current.id);
     if (!entity) continue;
 
     entity.links
@@ -117,13 +118,13 @@ export const krillBloomMigration: GrowthTemplate = {
     tags: ['resource', 'voronoi-placement', 'frontier'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     const params = krillBloomMigration.metadata?.parameters || {};
     const activationChance = params.activationChance?.value ?? 0.05;
 
-    const scarcity = graph.pressures.get('resource_scarcity') || 0;
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-    const existingBlooms = findEntities(graph, { kind: 'location', subtype: 'geographic_feature' })
+    const scarcity = graphView.getPressure('resource_scarcity') || 0;
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    const existingBlooms = graphView.findEntities({ kind: 'location', subtype: 'geographic_feature' })
       .filter(gf => gf.tags.includes('krill') || gf.tags.includes('bloom'));
 
     // Triggered by high scarcity or random chance
@@ -133,19 +134,19 @@ export const krillBloomMigration: GrowthTemplate = {
     return triggered && colonies.length >= 2 && existingBlooms.length < 10;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     // Targets are colonies (blooms appear between them)
-    return findEntities(graph, { kind: 'location', subtype: 'colony' });
+    return graphView.findEntities({ kind: 'location', subtype: 'colony' });
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     // Extract parameters from metadata
     const params = krillBloomMigration.metadata?.parameters || {};
     const bloomCountMin = params.bloomCountMin?.value ?? 2;
     const bloomCountMax = params.bloomCountMax?.value ?? 4;
     const techDiscoveryChance = params.techDiscoveryChance?.value ?? 0.1;
 
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     // VALIDATION: Need at least 2 colonies
     if (colonies.length < 2) {
@@ -164,7 +165,7 @@ export const krillBloomMigration: GrowthTemplate = {
 
     // === STEP 1: Find Frontier Locations ===
     // Score existing geographic features by distance from nearest colony
-    const allLocations = findEntities(graph, { kind: 'location' });
+    const allLocations = graphView.findEntities({ kind: 'location' });
     const candidates = allLocations.filter(loc =>
       loc.subtype === 'geographic_feature' &&
       !loc.tags.includes('krill') &&
@@ -174,7 +175,7 @@ export const krillBloomMigration: GrowthTemplate = {
     // Score each candidate by minimum distance to any colony
     const scoredCandidates = candidates.map(candidate => {
       const distances = colonies.map(colony =>
-        graphDistance(graph, candidate.id, colony.id)
+        graphDistance(graphView, candidate.id, colony.id)
       );
       const minDistance = Math.min(...distances);
 
@@ -208,7 +209,7 @@ export const krillBloomMigration: GrowthTemplate = {
           // Find 2 nearest colonies by calculating distances
           const coloniesWithDistance = colonies.map(colony => ({
             colony,
-            distance: graphDistance(graph, location.id, colony.id)
+            distance: graphDistance(graphView, location.id, colony.id)
           }));
 
           // Sort by distance and take nearest 2
@@ -261,7 +262,7 @@ export const krillBloomMigration: GrowthTemplate = {
 
     for (let i = 0; i < discovererCount; i++) {
       // FIXED: Don't filter by status='active' - use any faction
-      const allFactions = findEntities(graph, { kind: 'faction' });
+      const allFactions = graphView.findEntities({ kind: 'faction' });
       const faction = allFactions.length > 0 ? pickRandom(allFactions) : undefined;
       const homeColony = pickRandom(colonies);
 
@@ -308,7 +309,8 @@ export const krillBloomMigration: GrowthTemplate = {
     // === STEP 4: Technology Innovation ===
     // Chance to discover new fishing technology
     if (Math.random() < techDiscoveryChance) {
-      const abilities = findEntities(graph, { kind: 'abilities', subtype: 'technology', status: 'active' });
+      // FIXED: Don't filter by status='active' - accept any status
+      const abilities = graphView.findEntities({ kind: 'abilities', subtype: 'technology' });
       if (abilities.length > 0 && entities.length > 0) {
         const ability = pickRandom(abilities);
         const discoverer = entities.length - 1; // Last NPC created

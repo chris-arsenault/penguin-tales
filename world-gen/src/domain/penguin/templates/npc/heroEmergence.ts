@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -30,10 +31,10 @@ export const heroEmergence: GrowthTemplate = {
     tags: ['crisis-driven', 'individual'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Pressure-based trigger: need moderate conflict to spawn heroes
-    const conflictPressure = graph.pressures.get('conflict') || 0;
-    if (conflictPressure < 30 && graph.entities.size <= 20) {
+    const conflictPressure = graphView.getPressure('conflict') || 0;
+    if (conflictPressure < 30 && graphView.getEntityCount() <= 20) {
       return false;
     }
 
@@ -44,26 +45,26 @@ export const heroEmergence: GrowthTemplate = {
     }
 
     // SATURATION LIMIT: Check if hero count is at or above threshold
-    const existingHeroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
-    const targets = graph.config.distributionTargets as any;
+    const existingHeroes = graphView.getEntityCount('npc', 'hero');
+    const targets = graphView.config.distributionTargets as any;
     const target = targets?.entities?.npc?.hero?.target || 20;
     const saturationThreshold = target * 1.5; // Allow 50% overshoot
 
-    if (existingHeroes.length >= saturationThreshold) {
+    if (existingHeroes >= saturationThreshold) {
       return false; // Too many heroes, suppress creation
     }
 
     return true;
   },
-  
-  findTargets: (graph: Graph) => {
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+
+  findTargets: (graphView: TemplateGraphView) => {
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     return colonies.filter(c => c.status === 'thriving' || c.status === 'waning');
   },
-  
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(
-      findEntities(graph, { kind: 'location', subtype: 'colony' })
+      graphView.findEntities({ kind: 'location', subtype: 'colony' })
     );
 
     if (!colony) {
@@ -84,8 +85,8 @@ export const heroEmergence: GrowthTemplate = {
       prominence: 'marginal', // Heroes start marginal, must earn prominence
       tags: ['brave', 'emergent', `name:${slugifyName(colony.name)}`]
     };
-    
-    const abilities = findEntities(graph, { kind: 'abilities' });
+
+    const abilities = graphView.findEntities({ kind: 'abilities' });
     const relationships: Relationship[] = [];
 
     if (abilities.length > 0) {
@@ -101,7 +102,7 @@ export const heroEmergence: GrowthTemplate = {
       src: 'will-be-assigned-0',
       dst: colony.id
     });
-    
+
     return {
       entities: [hero],
       relationships,

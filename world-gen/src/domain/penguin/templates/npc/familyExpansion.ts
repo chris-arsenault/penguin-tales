@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, NPCSubtype } from '../../../../types/worldTypes';
-import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
 
 /**
  * Family Expansion Template
@@ -63,21 +64,21 @@ export const familyExpansion: GrowthTemplate = {
     tags: ['generational', 'colony-based', 'family'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Need at least 2 NPCs in same location
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
     return npcs.length >= 2;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     // Find pairs of NPCs in same colony
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     const validTargets: HardState[] = [];
     for (const colony of colonies) {
       const colonyNpcs = npcs.filter(npc =>
-        npc.links.some(l => l.kind === 'resident_of' && l.dst === colony.id)
+        graphView.hasRelationship(npc.id, colony.id, 'resident_of')
       );
       if (colonyNpcs.length >= 2) {
         validTargets.push(colonyNpcs[0]); // Use first as target
@@ -86,12 +87,12 @@ export const familyExpansion: GrowthTemplate = {
     return validTargets;
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     if (!target) throw new Error('Family expansion requires a target NPC');
 
     // Find parent's location
-    const residentLink = target.links.find(l => l.kind === 'resident_of');
-    if (!residentLink) {
+    const residentOf = graphView.getRelatedEntities(target.id, 'resident_of', 'src');
+    if (residentOf.length === 0) {
       // Parent has no home - fail gracefully
       return {
         entities: [],
@@ -100,7 +101,7 @@ export const familyExpansion: GrowthTemplate = {
       };
     }
 
-    const colony = graph.entities.get(residentLink.dst);
+    const colony = residentOf[0];
     if (!colony) {
       return {
         entities: [],
@@ -155,12 +156,12 @@ export const familyExpansion: GrowthTemplate = {
       });
 
       // If parent is in a faction, children might join
-      const parentFaction = target.links.find(l => l.kind === 'member_of');
-      if (parentFaction && Math.random() < joinParentFactionChance) {
+      const parentFactions = graphView.getRelatedEntities(target.id, 'member_of', 'src');
+      if (parentFactions.length > 0 && Math.random() < joinParentFactionChance) {
         relationships.push({
           kind: 'member_of',
           src: `will-be-assigned-${i}`,
-          dst: parentFaction.dst
+          dst: parentFactions[0].id
         });
       }
     }

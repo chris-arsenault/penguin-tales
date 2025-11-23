@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom, findEntities } from '../../../../utils/helpers';
+import { generateName, pickRandom } from '../../../../utils/helpers';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -58,30 +59,28 @@ export const factionSplinter: GrowthTemplate = {
     tags: ['conflict', 'faction-diversity'],
   },
 
-  canApply: (graph: Graph) => {
-    const factions = findEntities(graph, { kind: 'faction' });
+  canApply: (graphView: TemplateGraphView) => {
+    const factions = graphView.findEntities({ kind: 'faction' });
     return factions.some(f => {
-      const members = findEntities(graph, { kind: 'npc' })
-        .filter(npc => npc.links.some(l => l.kind === 'member_of' && l.dst === f.id));
+      const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
       return members.length >= 3;
     });
   },
-  
-  findTargets: (graph: Graph) => {
-    const factions = findEntities(graph, { kind: 'faction' });
+
+  findTargets: (graphView: TemplateGraphView) => {
+    const factions = graphView.findEntities({ kind: 'faction' });
     return factions.filter(f => {
-      const members = findEntities(graph, { kind: 'npc' })
-        .filter(npc => npc.links.some(l => l.kind === 'member_of' && l.dst === f.id));
+      const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
       return members.length >= 3;
     });
   },
-  
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     // Extract parameters from metadata
     const params = factionSplinter.metadata?.parameters || {};
     const leaderHeroChance = params.leaderHeroChance?.value ?? 0.5;
 
-    const parentFaction = target || pickRandom(findEntities(graph, { kind: 'faction' }));
+    const parentFaction = target || pickRandom(graphView.findEntities({ kind: 'faction' }));
 
     if (!parentFaction) {
       // No faction exists - fail gracefully
@@ -104,24 +103,42 @@ export const factionSplinter: GrowthTemplate = {
       tags: ['splinter', ...parentFaction.tags.slice(0, 2)]
     };
 
-    const leader: Partial<HardState> = {
-      kind: 'npc',
-      subtype: Math.random() < leaderHeroChance ? 'hero' : 'outlaw',
-      name: generateName('leader'),
-      description: `Charismatic leader of the ${splinter.name}`,
-      status: 'alive',
-      prominence: 'recognized',
-      tags: ['rebel', 'charismatic']
-    };
-    
-    const parentLocation = graph.entities.get(
-      parentFaction.links.find(l => l.kind === 'controls' || l.kind === 'occupies')?.dst || ''
-    );
+    // Use targetSelector to find NPCs from the parent faction to lead the splinter
+    let leader: Partial<HardState> | undefined = undefined;
+    let leaderEntity: HardState | undefined = undefined;
+
+    const members = graphView.getRelatedEntities(parentFaction.id, 'member_of', 'dst');
+
+    if (members.length > 0) {
+      // Select a member from the parent faction to lead the splinter
+      // Prefer non-leaders
+      const nonLeaders = members.filter(m => !graphView.getRelationships(m.id, 'leader_of').length);
+      leaderEntity = nonLeaders.length > 0 ? pickRandom(nonLeaders) : pickRandom(members);
+    }
+
+    // If no suitable leader from faction, create a new one
+    if (!leaderEntity) {
+      leader = {
+        kind: 'npc',
+        subtype: Math.random() < leaderHeroChance ? 'hero' : 'outlaw',
+        name: generateName('leader'),
+        description: `Charismatic leader of the ${splinter.name}`,
+        status: 'alive',
+        prominence: 'recognized',
+        tags: ['rebel', 'charismatic']
+      };
+    }
+
+    // Find parent faction's location
+    const controlsRelations = graphView.getRelatedEntities(parentFaction.id, 'controls', 'src');
+    const occupiesRelations = graphView.getRelatedEntities(parentFaction.id, 'occupies', 'src');
+
+    let location = controlsRelations.length > 0 ? controlsRelations[0] :
+                   occupiesRelations.length > 0 ? occupiesRelations[0] : undefined;
 
     // Fallback: if parent has no location, use any colony
-    let location = parentLocation;
     if (!location) {
-      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+      const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
       location = colonies.length > 0 ? pickRandom(colonies) : undefined;
     }
 
@@ -136,17 +153,34 @@ export const factionSplinter: GrowthTemplate = {
 
     const relationships: Relationship[] = [
       { kind: 'splinter_of', src: 'will-be-assigned-0', dst: parentFaction.id },
-      { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-      { kind: 'member_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-      { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id },
       { kind: 'at_war_with', src: 'will-be-assigned-0', dst: parentFaction.id },
       { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id }
     ];
-    
+
+    // Add leader relationships (either existing or new)
+    if (leaderEntity) {
+      // Use existing NPC as leader
+      relationships.push(
+        { kind: 'leader_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },
+        { kind: 'member_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },
+        { kind: 'resident_of', src: leaderEntity.id, dst: location.id }
+      );
+    } else if (leader) {
+      // Use newly created leader
+      relationships.push(
+        { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
+        { kind: 'member_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
+        { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
+      );
+    }
+
+    const entities = leader ? [splinter, leader] : [splinter];
+    const leaderName = leaderEntity ? leaderEntity.name : (leader ? leader.name : 'unknown leader');
+
     return {
-      entities: [splinter, leader],
+      entities,
       relationships,
-      description: `${parentFaction.name} splinters into rival factions`
+      description: `${leaderName} leads ${splinter.name} in breaking away from ${parentFaction.name}`
     };
   }
 };

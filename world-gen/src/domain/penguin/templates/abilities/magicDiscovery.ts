@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities } from '../../../../utils/helpers';
+import { pickRandom } from '../../../../utils/helpers';
 
 /**
  * Magic Discovery Template
@@ -36,23 +37,23 @@ export const magicDiscovery: GrowthTemplate = {
     tags: ['mystical', 'ability-creation'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Prerequisite: anomalies must exist
-    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
+    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
     if (anomalies.length === 0) {
       return false;
     }
 
     // BIDIRECTIONAL PRESSURE THRESHOLD: High magical instability suppresses magic discovery
     // (Too much magical energy makes new discoveries dangerous/unstable)
-    const magicalInstability = graph.pressures.get('magical_instability') || 0;
+    const magicalInstability = graphView.getPressure('magical_instability') || 0;
     if (magicalInstability > 70) {
       return Math.random() < 0.4; // Only 40% chance when instability is very high
     }
 
     // SATURATION LIMIT: Check if magic count is at or above threshold
-    const existingMagic = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
-    const targets = graph.config.distributionTargets as any;
+    const existingMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
+    const targets = graphView.config.distributionTargets as any;
     const target = targets?.entities?.abilities?.magic?.target || 15;
     const saturationThreshold = target * 1.5; // Allow 50% overshoot
 
@@ -63,22 +64,22 @@ export const magicDiscovery: GrowthTemplate = {
     return true;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     const maxDiscoveriesPerHero = 2; // Reduced from 3 to 2 discoveries per hero
-    const heroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
+    const heroes = graphView.findEntities({ kind: 'npc', subtype: 'hero' });
 
     // Filter out heroes who have already discovered too many abilities
     return heroes.filter(hero => {
-      const discoveryCount = graph.relationships.filter(r =>
+      const discoveryCount = graphView.getAllRelationships().filter(r =>
         r.kind === 'discoverer_of' && r.src === hero.id
       ).length;
       return discoveryCount < maxDiscoveriesPerHero;
     });
   },
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const hero = target || pickRandom(findEntities(graph, { kind: 'npc', subtype: 'hero' }));
-    const anomaly = pickRandom(findEntities(graph, { kind: 'location', subtype: 'anomaly' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const hero = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'hero' }));
+    const anomaly = pickRandom(graphView.findEntities({ kind: 'location', subtype: 'anomaly' }));
     
     return {
       entities: [{

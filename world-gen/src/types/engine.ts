@@ -72,6 +72,12 @@ export interface HistoryEvent {
   entitiesModified: string[];
 }
 
+// Template execution context (framework services available to templates)
+// DEPRECATED: No longer used - TemplateGraphView provides all services
+export interface TemplateContext {
+  targetSelector: import('../services/targetSelector').TargetSelector;
+}
+
 // Growth template interface
 export interface GrowthTemplate {
   id: string;
@@ -80,13 +86,16 @@ export interface GrowthTemplate {
   metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
 
   // Check if template can be applied
-  canApply: (graph: Graph) => boolean;
+  // Uses TemplateGraphView for safe, restricted graph access
+  canApply: (graphView: import('../services/templateGraphView').TemplateGraphView) => boolean;
 
   // Find valid targets for this template
-  findTargets: (graph: Graph) => HardState[];
+  // Uses TemplateGraphView for safe, restricted graph access
+  findTargets: (graphView: import('../services/templateGraphView').TemplateGraphView) => HardState[];
 
   // Execute the template on a target
-  expand: (graph: Graph, target?: HardState) => TemplateResult;
+  // Uses TemplateGraphView which includes targetSelector for entity selection
+  expand: (graphView: import('../services/templateGraphView').TemplateGraphView, target?: HardState) => TemplateResult;
 }
 
 export interface TemplateResult {

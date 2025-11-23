@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities } from '../../../../utils/helpers';
+import { pickRandom } from '../../../../utils/helpers';
 
 /**
  * Technology Innovation Template
@@ -44,23 +45,23 @@ export const techInnovation: GrowthTemplate = {
     tags: ['technology', 'ability-creation'],
   },
 
-  canApply: (graph: Graph) => findEntities(graph, { kind: 'faction', subtype: 'company' }).length > 0,
+  canApply: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'faction', subtype: 'company' }).length > 0,
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     const maxTechPerFaction = 4; // Limit to 4 technologies per faction
-    const companies = findEntities(graph, { kind: 'faction', subtype: 'company' });
+    const companies = graphView.findEntities({ kind: 'faction', subtype: 'company' });
 
     // Filter out factions that have already developed too many technologies
     return companies.filter(faction => {
-      const techCount = graph.relationships.filter(r =>
+      const techCount = graphView.getAllRelationships().filter(r =>
         r.kind === 'wields' && r.src === faction.id
       ).length;
       return techCount < maxTechPerFaction;
     });
   },
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
-    const faction = target || pickRandom(findEntities(graph, { kind: 'faction', subtype: 'company' }));
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const faction = target || pickRandom(graphView.findEntities({ kind: 'faction', subtype: 'company' }));
 
     if (!faction) {
       // No company faction exists - fail gracefully
@@ -72,7 +73,7 @@ export const techInnovation: GrowthTemplate = {
     }
 
     // Find faction members who can practice the new tech
-    const members = Array.from(graph.entities.values()).filter(
+    const members = graphView.findEntities({}).filter(
       e => e.kind === 'npc' && e.links.some(l => l.kind === 'member_of' && l.dst === faction.id)
     );
 

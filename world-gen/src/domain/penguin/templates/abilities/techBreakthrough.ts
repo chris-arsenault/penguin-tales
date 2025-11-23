@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateId, findEntities, getRelated } from '../../../../utils/helpers';
+import { generateId } from '../../../../utils/helpers';
 
 /**
  * Tech Breakthrough Template
@@ -59,32 +60,34 @@ export const techBreakthrough: GrowthTemplate = {
     tags: ['world-level', 'technological', 'innovation']
   },
 
-  canApply(graph: Graph): boolean {
+  canApply(graphView: TemplateGraphView): boolean {
     // Need active factions with locations (innovation requires resources)
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    // FIXED: Don't filter by status='active' - use any faction
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     if (factions.length === 0) return false;
 
     // Check if any faction controls a location (has resources to innovate)
     return factions.some(faction =>
-      graph.relationships.some(r =>
+      graphView.getAllRelationships().some(r =>
         r.kind === 'controls' && r.src === faction.id
       )
     );
   },
 
-  findTargets(graph: Graph): HardState[] {
+  findTargets(graphView: TemplateGraphView): HardState[] {
     // Return factions that control locations
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    // FIXED: Don't filter by status='active' - use any faction
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     return factions.filter(faction =>
-      graph.relationships.some(r =>
+      graphView.getAllRelationships().some(r =>
         r.kind === 'controls' && r.src === faction.id
       )
     );
   },
 
-  expand(graph: Graph, target?: HardState): TemplateResult {
+  expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'faction') {
       return {
         entities: [],
@@ -94,9 +97,9 @@ export const techBreakthrough: GrowthTemplate = {
     }
 
     // Find location where tech is developed (faction stronghold or controlled location)
-    const controlledLocations = graph.relationships
+    const controlledLocations = graphView.getAllRelationships()
       .filter(r => r.kind === 'controls' && r.src === target.id)
-      .map(r => graph.entities.get(r.dst))
+      .map(r => graphView.getEntity(r.dst))
       .filter((e): e is HardState => !!e);
 
     if (controlledLocations.length === 0) {
@@ -110,7 +113,7 @@ export const techBreakthrough: GrowthTemplate = {
     const originLocation = controlledLocations[Math.floor(Math.random() * controlledLocations.length)];
 
     // Find catalyst (leader if exists, otherwise faction)
-    const leaders = getRelated(graph, target.id, 'leader_of', 'dst');
+    const leaders = graphView.getRelatedEntities( target.id, 'leader_of', 'dst');
     const catalyst = leaders.length > 0 ? leaders[0] : target;
 
     // Create new technology

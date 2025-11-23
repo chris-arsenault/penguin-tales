@@ -1,4 +1,5 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities } from '../../../../utils/helpers';
 
@@ -54,49 +55,45 @@ export const cultFormation: GrowthTemplate = {
     tags: ['mystical', 'anomaly-driven', 'cluster-forming'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Prerequisite: anomalies or magic must exist
-    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
-    const magic = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
-    if (anomalies.length === 0 && magic.length === 0) {
+    const anomalyCount = graphView.getEntityCount('location', 'anomaly');
+    const magicCount = graphView.getEntityCount('abilities', 'magic');
+    if (anomalyCount === 0 && magicCount === 0) {
       return false;
     }
 
     // SATURATION LIMIT: Check if cult count is at or above threshold
-    const existingCults = findEntities(graph, { kind: 'faction', subtype: 'cult' });
-    const targets = graph.config.distributionTargets as any;
+    const existingCults = graphView.getEntityCount('faction', 'cult');
+    const targets = graphView.config.distributionTargets as any;
     const target = targets?.entities?.faction?.cult?.target || 10;
     const saturationThreshold = target * 1.5; // Allow 50% overshoot (15 cults with target=10)
 
-    if (existingCults.length >= saturationThreshold) {
+    if (existingCults >= saturationThreshold) {
       return false; // Too many cults, suppress creation
     }
 
     return true;
   },
   
-  findTargets: (graph: Graph) => {
-    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
+  findTargets: (graphView: TemplateGraphView) => {
+    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
     const nearbyLocations: HardState[] = [];
-    
+
     anomalies.forEach(anomaly => {
-      anomaly.links
-        .filter(l => l.kind === 'adjacent_to')
-        .forEach(l => {
-          const adjacent = graph.entities.get(l.dst);
-          if (adjacent) nearbyLocations.push(adjacent);
-        });
+      const adjacent = graphView.getRelatedEntities(anomaly.id, 'adjacent_to');
+      nearbyLocations.push(...adjacent);
     });
-    
+
     return [...anomalies, ...nearbyLocations];
   },
   
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     // Extract parameters from metadata
     const params = cultFormation.metadata?.parameters || {};
     const numCultists = params.numCultists?.value ?? 3;
 
-    const location = target || pickRandom(findEntities(graph, { kind: 'location' }));
+    const location = target || pickRandom(graphView.findEntities({ kind: 'location' }));
 
     if (!location) {
       // No location exists - fail gracefully
@@ -127,16 +124,43 @@ export const cultFormation: GrowthTemplate = {
       tags: ['prophet', 'mystic']
     };
 
-    // Use existing NPCs as cultists instead of creating new ones (catalyst model)
-    const potentialCultists = findEntities(graph, { kind: 'npc', status: 'alive' })
-      .filter(npc => !npc.links.some(l => l.kind === 'member_of')) // Prefer unaffiliated NPCs
-      .filter(npc => npc.subtype === 'merchant' || npc.subtype === 'outlaw' || npc.subtype === 'hero')
-      .slice(0, numCultists);
+    // Use targetSelector to intelligently select cultists (prevents super-hubs)
+    let cultists: HardState[] = [];
+    let newCultists: Array<Partial<HardState>> = [];
 
-    // If not enough unaffiliated, take any NPCs
-    const cultists = potentialCultists.length >= numCultists
-      ? potentialCultists
-      : findEntities(graph, { kind: 'npc', status: 'alive' }).slice(0, numCultists);
+    // Smart selection with hub penalties
+    const result = graphView.selectTargets('npc', numCultists, {
+        prefer: {
+          subtypes: ['merchant', 'outlaw', 'hero'],
+          sameLocationAs: location.id, // Prefer local NPCs
+          preferenceBoost: 2.0
+        },
+        avoid: {
+          relationshipKinds: ['member_of'], // Penalize multi-faction NPCs
+          hubPenaltyStrength: 2.0, // Quadratic penalty: 1/(1+count^2)
+          maxTotalRelationships: 15 // Hard cap on super-hubs
+        },
+        createIfSaturated: {
+          threshold: 0.15, // If best score < 0.15, create new NPC
+          factory: (gv, ctx) => ({
+            kind: 'npc',
+            subtype: pickRandom(['merchant', 'outlaw']),
+            name: generateName('npc'),
+            description: `A convert drawn to the cult's mystical teachings`,
+            status: 'alive',
+            prominence: 'marginal',
+            tags: ['cultist']
+          }),
+          maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
+        },
+        diversityTracking: {
+          trackingId: 'cult_recruitment',
+          strength: 1.5
+        }
+      });
+
+    cultists = result.existing;
+    newCultists = result.created;
 
     const relationships: Relationship[] = [
       { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id },
@@ -144,6 +168,7 @@ export const cultFormation: GrowthTemplate = {
       { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
     ];
 
+    // Add relationships for existing cultists
     cultists.forEach(cultist => {
       relationships.push({
         kind: 'member_of',
@@ -156,9 +181,26 @@ export const cultFormation: GrowthTemplate = {
         dst: location.id
       });
     });
-    
-    const magic = findEntities(graph, { kind: 'abilities', subtype: 'magic' })[0];
-    if (magic) {
+
+    // Add relationships for newly created cultists
+    // Base index: 0=cult, 1=prophet, 2+ =new cultists
+    newCultists.forEach((newCultist, index) => {
+      const cultistPlaceholderId = `will-be-assigned-${2 + index}`;
+      relationships.push({
+        kind: 'member_of',
+        src: cultistPlaceholderId,
+        dst: 'will-be-assigned-0'
+      });
+      relationships.push({
+        kind: 'resident_of',
+        src: cultistPlaceholderId,
+        dst: location.id
+      });
+    });
+
+    const magicAbilities = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
+    if (magicAbilities.length > 0) {
+      const magic = magicAbilities[0];
       relationships.push({
         kind: 'seeks',
         src: 'will-be-assigned-0',
@@ -170,11 +212,16 @@ export const cultFormation: GrowthTemplate = {
         dst: magic.id
       });
     }
-    
+
+    const totalCultists = cultists.length + newCultists.length;
+    const creationNote = newCultists.length > 0
+      ? ` (${newCultists.length} new converts recruited)`
+      : '';
+
     return {
-      entities: [cult, prophet], // Only create prophet, use existing NPCs for cultists
+      entities: [cult, prophet, ...newCultists], // Include new cultists
       relationships,
-      description: `${cult.name} forms with ${prophet.name} as prophet and ${cultists.length} followers`
+      description: `${cult.name} forms with ${prophet.name} as prophet and ${totalCultists} followers${creationNote}`
     };
   }
 };

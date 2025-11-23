@@ -5,7 +5,8 @@
  * Creates general-purpose locations when no specific pressure drives discovery.
  */
 
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName } from '../../../../utils/helpers';
 import {
@@ -51,23 +52,23 @@ export const geographicExploration: GrowthTemplate = {
     tags: ['emergent', 'exploration', 'era-driven'],
   },
 
-  canApply: (graph: Graph): boolean => {
+  canApply: (graphView: TemplateGraphView): boolean => {
     // Can apply during expansion and reconstruction eras
-    if (!['expansion', 'reconstruction', 'innovation'].includes(graph.currentEra.id)) {
+    if (!['expansion', 'reconstruction', 'innovation'].includes(graphView.currentEra.id)) {
       return false;
     }
 
     // Use emergent discovery probability (but lower threshold)
-    const locationCount = Array.from(graph.entities.values()).filter(
+    const locationCount = graphView.findEntities({}).filter(
       e => e.kind === 'location'
     ).length;
 
     if (locationCount >= 35) return false;
 
-    const ticksSince = graph.tick - graph.discoveryState.lastDiscoveryTick;
+    const ticksSince = graphView.tick - graphView.discoveryState.lastDiscoveryTick;
     if (ticksSince < 8) return false; // Slower than pressure-driven
 
-    if (graph.discoveryState.discoveriesThisEpoch >= 2) return false;
+    if (graphView.discoveryState.discoveriesThisEpoch >= 2) return false;
 
     // Lower base probability - pure exploration is rarer
     const params = geographicExploration.metadata?.parameters || {};
@@ -75,9 +76,9 @@ export const geographicExploration: GrowthTemplate = {
     return Math.random() < baseChance;
   },
 
-  findTargets: (graph: Graph): HardState[] => {
+  findTargets: (graphView: TemplateGraphView): HardState[] => {
     // Any living NPC can explore
-    const npcs = Array.from(graph.entities.values()).filter(
+    const npcs = graphView.findEntities({}).filter(
       e => e.kind === 'npc' && e.status === 'alive'
     );
 
@@ -90,14 +91,14 @@ export const geographicExploration: GrowthTemplate = {
     return npcs;
   },
 
-  expand: (graph: Graph, explorer?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
     // Find explorer
     let discoverer = explorer;
     if (!discoverer) {
-      const npcs = Array.from(graph.entities.values()).filter(
+      const npcs = graphView.findEntities({}).filter(
         e => e.kind === 'npc' && e.status === 'alive'
       );
       const heroes = npcs.filter(e => e.subtype === 'hero');
@@ -120,7 +121,7 @@ export const geographicExploration: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE neutral theme based on era
-    const theme = generateExplorationTheme(graph);
+    const theme = generateExplorationTheme(graphView.getInternalGraph());
 
     // Generate penguin-style name with themeString as descriptor
     const locationName = generateName('location');
@@ -133,7 +134,7 @@ export const geographicExploration: GrowthTemplate = {
       kind: 'location',
       subtype: theme.subtype,
       name: `${locationName} ${formattedTheme}`,
-      description: `A newly discovered ${formattedTheme.toLowerCase()} during the ${graph.currentEra.name}`,
+      description: `A newly discovered ${formattedTheme.toLowerCase()} during the ${graphView.currentEra.name}`,
       status: 'unspoiled',
       prominence: 'marginal',
       tags: theme.tags,
@@ -156,7 +157,7 @@ export const geographicExploration: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graph);
+    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({
@@ -172,8 +173,8 @@ export const geographicExploration: GrowthTemplate = {
     }
 
     // Update discovery state
-    graph.discoveryState.lastDiscoveryTick = graph.tick;
-    graph.discoveryState.discoveriesThisEpoch += 1;
+    graphView.discoveryState.lastDiscoveryTick = graphView.tick;
+    graphView.discoveryState.discoveriesThisEpoch += 1;
 
     const description = `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} while exploring`;
 

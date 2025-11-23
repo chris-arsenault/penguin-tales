@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom, pickMultiple, findEntities } from '../../../../utils/helpers';
+import { pickRandom, pickMultiple } from '../../../../utils/helpers';
 
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
@@ -12,7 +13,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
         {
           kind: 'npc',
           subtype: 'orca',
-          count: { min: 2, max: 4 },
+          count: { min: 1, max: 2 },
           prominence: [
             { level: 'marginal', probability: 0.6 },
             { level: 'recognized', probability: 0.3 },
@@ -34,37 +35,37 @@ export const orcaRaiderArrival: GrowthTemplate = {
     tags: ['external-threat', 'invasion', 'cluster'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Pressure-based trigger
-    const externalThreat = graph.pressures.get('external_threat') || 0;
-    const invasionEra = graph.currentEra.id === 'invasion';
+    const externalThreat = graphView.getPressure('external_threat') || 0;
+    const invasionEra = graphView.currentEra.id === 'invasion';
 
     if (!invasionEra && externalThreat < 70) {
       return false;
     }
 
     // SATURATION LIMIT: Check if orca count is at or above threshold
-    const existingOrcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });
-    const targets = graph.config.distributionTargets as any;
+    const existingOrcas = graphView.getEntityCount('npc', 'orca');
+    const targets = graphView.config.distributionTargets as any;
     const target = targets?.entities?.npc?.orca?.target || 5;
     const saturationThreshold = target * 1.5; // Allow 50% overshoot
 
-    if (existingOrcas.length >= saturationThreshold) {
+    if (existingOrcas >= saturationThreshold) {
       return false; // Too many orcas, suppress creation
     }
 
     return true;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     // Target any colony that orcas could threaten
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     return colonies;
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(
-      findEntities(graph, { kind: 'location', subtype: 'colony' })
+      graphView.findEntities({ kind: 'location', subtype: 'colony' })
     );
 
     if (!colony) {
@@ -75,7 +76,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
       };
     }
 
-    // Create 1-2 orca raiders (reduced from 2-4)
+    // Create 1-2 orca raiders
     const raiderCount = 1 + Math.floor(Math.random() * 2); // 1-2
     const orcas: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
@@ -107,8 +108,8 @@ export const orcaRaiderArrival: GrowthTemplate = {
     }
 
     // Find heroes and leaders to oppose the orcas
-    const heroes = findEntities(graph, { kind: 'npc', subtype: 'hero' });
-    const mayors = findEntities(graph, { kind: 'npc', subtype: 'mayor' });
+    const heroes = graphView.findEntities({ kind: 'npc', subtype: 'hero' });
+    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
     const defenders = [...heroes, ...mayors];
 
     if (defenders.length > 0) {
@@ -124,7 +125,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
     }
 
     // Orcas might also be enemies of factions in the colony
-    const factions = findEntities(graph, { kind: 'faction' });
+    const factions = graphView.findEntities({ kind: 'faction' });
     if (factions.length > 0 && Math.random() < 0.5) {
       const targetFaction = pickRandom(factions);
       const randomOrca = Math.floor(Math.random() * raiderCount);
@@ -136,7 +137,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
     }
 
     // Give orcas combat abilities
-    const combatAbilities = findEntities(graph, { kind: 'abilities' })
+    const combatAbilities = graphView.findEntities({ kind: 'abilities' })
       .filter(a => a.tags.includes('combat') || a.tags.includes('offensive'));
 
     if (combatAbilities.length > 0) {

@@ -1,6 +1,6 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState } from '../../../../types/worldTypes';
-import { findEntities, getRelated } from '../../../../utils/helpers';
 
 /**
  * Territorial Expansion Template
@@ -45,51 +45,49 @@ export const territorialExpansion: GrowthTemplate = {
     tags: ['world-level', 'political', 'territorial']
   },
 
-  canApply(graph: Graph): boolean {
+  canApply(graphView: TemplateGraphView): boolean {
     // Need factions with leaders and available locations to control
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     if (factions.length === 0) return false;
 
     // Check if any faction has expansion opportunities
     return factions.some(faction => {
-      const controlled = graph.relationships
-        .filter(r => r.kind === 'controls' && r.src === faction.id)
-        .map(r => r.dst);
+      const controlled = graphView.getRelatedEntities(faction.id, 'controls', 'src');
 
       // Find uncontrolled adjacent locations
-      const adjacentUncontrolled = graph.relationships
-        .filter(r =>
-          r.kind === 'adjacent_to' &&
-          controlled.includes(r.src) &&
-          !controlled.includes(r.dst)
-        );
+      const hasExpansionOpportunity = controlled.some(controlledLoc => {
+        const adjacent = graphView.getRelatedEntities(controlledLoc.id, 'adjacent_to', 'src');
+        return adjacent.some(adjLoc => !controlled.some(c => c.id === adjLoc.id));
+      });
 
-      return adjacentUncontrolled.length > 0;
+      return hasExpansionOpportunity;
     });
   },
 
-  findTargets(graph: Graph): HardState[] {
+  findTargets(graphView: TemplateGraphView): HardState[] {
     // Return factions with expansion opportunities
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     return factions.filter(faction => {
-      const controlled = graph.relationships
-        .filter(r => r.kind === 'controls' && r.src === faction.id)
-        .map(r => r.dst);
+      const controlled = graphView.getRelatedEntities(faction.id, 'controls', 'src');
 
-      const adjacentUncontrolled = graph.relationships
-        .filter(r =>
-          r.kind === 'adjacent_to' &&
-          controlled.includes(r.src) &&
-          !controlled.includes(r.dst)
-        );
+      if (controlled.length === 0) {
+        // Factions with no territory can expand
+        return true;
+      }
 
-      return adjacentUncontrolled.length > 0 || controlled.length === 0;
+      // Check if any controlled location has uncontrolled adjacent locations
+      const hasExpansionOpportunity = controlled.some(controlledLoc => {
+        const adjacent = graphView.getRelatedEntities(controlledLoc.id, 'adjacent_to', 'src');
+        return adjacent.some(adjLoc => !controlled.some(c => c.id === adjLoc.id));
+      });
+
+      return hasExpansionOpportunity;
     });
   },
 
-  expand(graph: Graph, target?: HardState): TemplateResult {
+  expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'faction') {
       return {
         entities: [],
@@ -99,28 +97,29 @@ export const territorialExpansion: GrowthTemplate = {
     }
 
     // Find locations this faction already controls
-    const controlled = graph.relationships
-      .filter(r => r.kind === 'controls' && r.src === target.id)
-      .map(r => r.dst);
+    const controlled = graphView.getRelatedEntities(target.id, 'controls', 'src');
 
     // Find candidate locations (adjacent to controlled, or any if none controlled)
     let candidates: HardState[] = [];
 
     if (controlled.length > 0) {
       // Find adjacent uncontrolled locations
-      const adjacentLocations = graph.relationships
-        .filter(r =>
-          r.kind === 'adjacent_to' &&
-          controlled.includes(r.src)
-        )
-        .map(r => graph.entities.get(r.dst))
-        .filter((e): e is HardState => !!e && e.kind === 'location');
+      const adjacentSet = new Set<string>();
+      controlled.forEach(controlledLoc => {
+        const adjacent = graphView.getRelatedEntities(controlledLoc.id, 'adjacent_to', 'src');
+        adjacent.forEach(adjLoc => {
+          if (!controlled.some(c => c.id === adjLoc.id)) {
+            adjacentSet.add(adjLoc.id);
+          }
+        });
+      });
 
-      // Filter out already controlled
-      candidates = adjacentLocations.filter(loc => !controlled.includes(loc.id));
+      candidates = Array.from(adjacentSet)
+        .map(id => graphView.getEntity(id))
+        .filter((e): e is HardState => !!e && e.kind === 'location');
     } else {
       // No controlled locations yet - can expand to any thriving location
-      candidates = findEntities(graph, { kind: 'location', status: 'thriving' });
+      candidates = graphView.findEntities({ kind: 'location', status: 'thriving' });
     }
 
     if (candidates.length === 0) {
@@ -135,7 +134,7 @@ export const territorialExpansion: GrowthTemplate = {
     const targetLocation = candidates[Math.floor(Math.random() * candidates.length)];
 
     // Find catalyst (leader NPC if exists, otherwise faction itself)
-    const leaders = getRelated(graph, target.id, 'leader_of', 'dst');
+    const leaders = graphView.getRelatedEntities(target.id, 'leader_of', 'dst');
     const catalyst = leaders.length > 0 ? leaders[0] : target;
 
     // Create controls relationship with catalyst attribution

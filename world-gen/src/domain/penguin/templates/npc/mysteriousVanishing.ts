@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, findEntities, getLocation, pickMultiple, slugifyName } from '../../../../utils/helpers';
+import { pickRandom, pickMultiple, slugifyName } from '../../../../utils/helpers';
 
 /**
  * Mysterious Vanishing Template
@@ -84,34 +85,34 @@ export const mysteriousVanishing: GrowthTemplate = {
     tags: ['mystery', 'rare-event', 'status-changing'],
   },
 
-  canApply: (graph: Graph) => {
+  canApply: (graphView: TemplateGraphView) => {
     // Throttle check using parameter
     const params = mysteriousVanishing.metadata?.parameters || {};
     const activationChance = params.activationChance?.value ?? 0.1;
     if (Math.random() > activationChance) return false;
 
-    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
-    const highProminenceNPCs = findEntities(graph, { kind: 'npc', status: 'alive' })
+    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
+    const highProminenceNPCs = graphView.findEntities({ kind: 'npc', status: 'alive' })
       .filter(npc => npc.prominence === 'recognized' || npc.prominence === 'renowned' || npc.prominence === 'mythic');
 
     // Requires at least 1 anomaly and 1 high-prominence NPC
     return anomalies.length >= 1 && highProminenceNPCs.length >= 1;
   },
 
-  findTargets: (graph: Graph) => {
+  findTargets: (graphView: TemplateGraphView) => {
     // Targets are high-prominence NPCs
-    return findEntities(graph, { kind: 'npc', status: 'alive' })
+    return graphView.findEntities({ kind: 'npc', status: 'alive' })
       .filter(npc => npc.prominence === 'recognized' || npc.prominence === 'renowned' || npc.prominence === 'mythic');
   },
 
-  expand: (graph: Graph, target?: HardState): TemplateResult => {
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     // Extract parameters from metadata
     const params = mysteriousVanishing.metadata?.parameters || {};
     const mythicProximityMultiplier = params.mythicProximityMultiplier?.value ?? 2.0;
     const renownedProximityMultiplier = params.renownedProximityMultiplier?.value ?? 1.5;
     const maxSearchers = params.maxSearchers?.value ?? 3;
 
-    const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
+    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
 
     // VALIDATION: Check if anomalies exist
     if (anomalies.length === 0) {
@@ -122,7 +123,7 @@ export const mysteriousVanishing: GrowthTemplate = {
       };
     }
 
-    const candidates = findEntities(graph, { kind: 'npc', status: 'alive' })
+    const candidates = graphView.findEntities({ kind: 'npc', status: 'alive' })
       .filter(npc => npc.prominence === 'recognized' || npc.prominence === 'renowned' || npc.prominence === 'mythic');
 
     // VALIDATION: Check if candidates exist
@@ -137,7 +138,7 @@ export const mysteriousVanishing: GrowthTemplate = {
     // === STEP 1: Select Victim Based on Anomaly Proximity ===
     // Weight candidates by their proximity to anomalies
     const weightedCandidates = candidates.map(candidate => {
-      const location = getLocation(graph, candidate.id);
+      const location = graphView.getLocation(candidate.id);
       if (!location) return { candidate, weight: 0 };
 
       // Calculate proximity score (higher = closer to anomalies)
@@ -150,7 +151,7 @@ export const mysteriousVanishing: GrowthTemplate = {
         // Check adjacency to anomalies
         const adjacentLocations = location.links
           .filter(l => l.kind === 'adjacent_to')
-          .map(l => graph.entities.get(l.dst))
+          .map(l => graphView.getEntity(l.dst))
           .filter(loc => loc !== undefined) as HardState[];
 
         const nearbyAnomalies = adjacentLocations.filter(loc => loc.subtype === 'anomaly');
@@ -185,7 +186,7 @@ export const mysteriousVanishing: GrowthTemplate = {
       }
     }
 
-    const victimLocation = getLocation(graph, victim.id);
+    const victimLocation = graphView.getLocation(victim.id);
 
     // VALIDATION: Victim must have a location
     if (!victimLocation) {
@@ -239,21 +240,14 @@ export const mysteriousVanishing: GrowthTemplate = {
 
     // === STEP 5: Create searching_for Relationships ===
     // Find loved ones (followers, lovers, family)
-    const lovedOnes = [
-      ...graph.relationships.filter(r => r.kind === 'lover_of' && r.dst === victim.id)
-        .map(r => graph.entities.get(r.src))
-        .filter(e => e !== undefined) as HardState[],
-      ...graph.relationships.filter(r => r.kind === 'follower_of' && r.dst === victim.id)
-        .map(r => graph.entities.get(r.src))
-        .filter(e => e !== undefined) as HardState[],
-      ...graph.relationships.filter(r => r.kind === 'mentor_of' && r.src === victim.id)
-        .map(r => graph.entities.get(r.dst))
-        .filter(e => e !== undefined) as HardState[]
-    ];
+    const lovers = graphView.getRelatedEntities(victim.id, 'lover_of', 'dst');
+    const followers = graphView.getRelatedEntities(victim.id, 'follower_of', 'dst');
+    const mentees = graphView.getRelatedEntities(victim.id, 'mentor_of', 'src');
+    const lovedOnes = [...lovers, ...followers, ...mentees];
 
     // Remove duplicates
     const uniqueLovedOnes = Array.from(new Set(lovedOnes.map(lo => lo.id)))
-      .map(id => graph.entities.get(id))
+      .map(id => graphView.getEntity(id))
       .filter(e => e !== undefined && e.status === 'alive') as HardState[];
 
     // Create searching_for relationships for 1-maxSearchers loved ones

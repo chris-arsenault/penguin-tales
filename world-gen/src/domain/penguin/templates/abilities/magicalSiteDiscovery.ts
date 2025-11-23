@@ -1,6 +1,7 @@
-import { GrowthTemplate, TemplateResult, Graph } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateId, findEntities } from '../../../../utils/helpers';
+import { generateId } from '../../../../utils/helpers';
 
 /**
  * Magical Site Discovery Template
@@ -59,19 +60,19 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     tags: ['world-level', 'magical', 'discovery']
   },
 
-  canApply(graph: Graph): boolean {
+  canApply(graphView: TemplateGraphView): boolean {
     // Need magical abilities and practitioners
-    const magicalAbilities = findEntities(graph, {
+    // FIXED: Don't filter by status='active' - accept any status
+    const magicalAbilities = graphView.findEntities({
       kind: 'abilities',
-      subtype: 'magic',
-      status: 'active'
+      subtype: 'magic'
     });
 
     if (magicalAbilities.length === 0) return false;
 
     // Check for practitioners
     const hasPractitioners = magicalAbilities.some(ability =>
-      graph.relationships.some(r =>
+      graphView.getAllRelationships().some(r =>
         r.kind === 'practitioner_of' && r.dst === ability.id
       )
     );
@@ -79,22 +80,22 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     return hasPractitioners;
   },
 
-  findTargets(graph: Graph): HardState[] {
+  findTargets(graphView: TemplateGraphView): HardState[] {
     // Return magical abilities with practitioners
-    const magicalAbilities = findEntities(graph, {
+    // FIXED: Don't filter by status='active' - accept any status
+    const magicalAbilities = graphView.findEntities({
       kind: 'abilities',
-      subtype: 'magic',
-      status: 'active'
+      subtype: 'magic'
     });
 
     return magicalAbilities.filter(ability =>
-      graph.relationships.some(r =>
+      graphView.getAllRelationships().some(r =>
         r.kind === 'practitioner_of' && r.dst === ability.id
       )
     );
   },
 
-  expand(graph: Graph, target?: HardState): TemplateResult {
+  expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'abilities' || target.subtype !== 'magic') {
       return {
         entities: [],
@@ -104,9 +105,9 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     }
 
     // Find a practitioner to be the catalyst
-    const practitioners = graph.relationships
+    const practitioners = graphView.getAllRelationships()
       .filter(r => r.kind === 'practitioner_of' && r.dst === target.id)
-      .map(r => graph.entities.get(r.src))
+      .map(r => graphView.getEntity(r.src))
       .filter((e): e is HardState => !!e);
 
     if (practitioners.length === 0) {

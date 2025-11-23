@@ -22,6 +22,8 @@ import { StatisticsCollector } from '../services/statisticsCollector';
 import { PopulationTracker, PopulationMetrics } from '../services/populationTracker';
 import { DynamicWeightCalculator } from '../services/dynamicWeightCalculator';
 import { FeedbackAnalyzer } from '../services/feedbackAnalyzer';
+import { TargetSelector } from '../services/targetSelector';
+import { TemplateGraphView } from '../services/templateGraphView';
 import { feedbackLoops } from '../config/feedbackLoops';
 import { SimulationStatistics, ValidationStats } from '../types/statistics';
 import * as fs from 'fs';
@@ -313,6 +315,9 @@ export class WorldEngine {
   private templateRunCounts: Map<string, number> = new Map();
   private maxRunsPerTemplate: number = 12;  // Hard cap per template
 
+  // Target selection service (prevents super-hub formation)
+  private targetSelector: TargetSelector;
+
   // Track entity state for change detection
   private entitySnapshots = new Map<string, EntitySnapshot>();
 
@@ -367,6 +372,10 @@ export class WorldEngine {
     this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops);
     console.log('✓ Homeostatic feedback control enabled');
     console.log(`  - Tracking ${feedbackLoops.length} feedback loops`);
+
+    // Initialize target selector (prevents super-hub formation)
+    this.targetSelector = new TargetSelector();
+    console.log('✓ Intelligent target selection enabled (anti-super-hub)');
     
     // Initialize graph from initial state
     this.graph = {
@@ -809,8 +818,9 @@ export class WorldEngine {
         console.log(`\n  ⚠️  Unused templates (${unusedTemplates.length}) - Diagnostic Analysis:`);
         unusedTemplates.forEach(t => {
           // Test canApply to diagnose why it didn't run
-          const canApply = t.canApply(this.graph);
-          const targets = t.findTargets ? t.findTargets(this.graph) : [];
+          const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector);
+          const canApply = t.canApply(diagnosticView);
+          const targets = t.findTargets ? t.findTargets(diagnosticView) : [];
 
           console.log(`    • ${t.id.padEnd(35)}`);
           console.log(`      canApply: ${canApply ? '✓' : '✗'}  |  targets: ${targets.length}`);
@@ -864,9 +874,12 @@ export class WorldEngine {
     while (entitiesCreated < targets && attempts < maxAttempts) {
       attempts++;
 
+      // Create restricted graph view for template (enforces targetSelector usage)
+      const graphView = new TemplateGraphView(this.graph, this.targetSelector);
+
       // Re-filter applicable templates each iteration (graph state changes)
       const applicableTemplates = this.config.templates.filter(t => {
-        if (!t.canApply(this.graph)) return false;
+        if (!t.canApply(graphView)) return false;
 
         // DIVERSITY PRESSURE: Hard cap on template runs
         const runCount = this.templateRunCounts.get(t.id) || 0;
@@ -885,16 +898,17 @@ export class WorldEngine {
       if (!template) continue;
 
       // Check if template can apply
-      if (!template.canApply(this.graph)) continue;
+      if (!template.canApply(graphView)) continue;
 
       // Find targets
-      const templateTargets = template.findTargets(this.graph);
+      const templateTargets = template.findTargets(graphView);
       if (templateTargets.length === 0) continue;
 
       // Apply template to random target
       const target = pickRandom(templateTargets);
       try {
-        const result = template.expand(this.graph, target);
+        // Execute template with restricted graph view
+        const result = template.expand(graphView, target);
 
         // Record template application
         this.statisticsCollector.recordTemplateApplication(template.id);
