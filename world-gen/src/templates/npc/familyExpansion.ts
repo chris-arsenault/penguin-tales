@@ -12,6 +12,57 @@ export const familyExpansion: GrowthTemplate = {
   id: 'family_expansion',
   name: 'Family Growth',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'npc',
+          subtype: 'various',
+          count: { min: 1, max: 3 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'mentor_of', category: 'social', probability: 2.0, comment: 'Parent mentors 1-3 children' },
+        { kind: 'resident_of', category: 'spatial', probability: 2.0, comment: 'Children live in colony' },
+        { kind: 'member_of', category: 'political', probability: 1.0, comment: '~50% join parent faction' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.6,
+      diversityImpact: 0.2,
+      comment: 'Expands family clusters in colonies with modest subtype variation',
+    },
+    parameters: {
+      numChildrenMin: {
+        value: 1,
+        min: 1,
+        max: 3,
+        description: 'Minimum number of children per family expansion',
+      },
+      numChildrenMax: {
+        value: 3,
+        min: 1,
+        max: 10,
+        description: 'Maximum number of children per family expansion',
+      },
+      inheritSubtypeChance: {
+        value: 0.7,
+        min: 0.0,
+        max: 1.0,
+        description: 'Probability child inherits parent subtype (vs random)',
+      },
+      joinParentFactionChance: {
+        value: 0.5,
+        min: 0.0,
+        max: 1.0,
+        description: 'Probability child joins parent faction (if parent has one)',
+      },
+    },
+    tags: ['generational', 'colony-based', 'family'],
+  },
+
   canApply: (graph: Graph) => {
     // Need at least 2 NPCs in same location
     const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
@@ -58,8 +109,15 @@ export const familyExpansion: GrowthTemplate = {
       };
     }
 
-    // Generate 1-3 children
-    const numChildren = Math.floor(Math.random() * 3) + 1;
+    // Extract parameters from metadata
+    const params = familyExpansion.metadata?.parameters || {};
+    const numChildrenMin = params.numChildrenMin?.value ?? 1;
+    const numChildrenMax = params.numChildrenMax?.value ?? 3;
+    const inheritSubtypeChance = params.inheritSubtypeChance?.value ?? 0.7;
+    const joinParentFactionChance = params.joinParentFactionChance?.value ?? 0.5;
+
+    // Generate children
+    const numChildren = Math.floor(Math.random() * (numChildrenMax - numChildrenMin + 1)) + numChildrenMin;
     const children: Partial<HardState>[] = [];
     const relationships: any[] = [];
 
@@ -68,7 +126,7 @@ export const familyExpansion: GrowthTemplate = {
     const parentSubtype = target.subtype as NPCSubtype;
 
     for (let i = 0; i < numChildren; i++) {
-      const childSubtype = Math.random() > 0.7
+      const childSubtype = Math.random() > inheritSubtypeChance
         ? pickRandom(subtypes)
         : parentSubtype;
 
@@ -96,9 +154,9 @@ export const familyExpansion: GrowthTemplate = {
         dst: colony.id
       });
 
-      // If parent is in a faction, children might join (50% chance)
+      // If parent is in a faction, children might join
       const parentFaction = target.links.find(l => l.kind === 'member_of');
-      if (parentFaction && Math.random() > 0.5) {
+      if (parentFaction && Math.random() < joinParentFactionChance) {
         relationships.push({
           kind: 'member_of',
           src: `will-be-assigned-${i}`,

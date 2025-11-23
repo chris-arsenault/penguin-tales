@@ -11,7 +11,56 @@ import { generateName, pickRandom, findEntities } from '../../utils/helpers';
 export const cultFormation: GrowthTemplate = {
   id: 'cult_formation',
   name: 'Cult Awakening',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'faction',
+          subtype: 'cult',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+        {
+          kind: 'npc',
+          subtype: 'hero',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+        {
+          kind: 'npc',
+          subtype: 'various',
+          count: { min: 3, max: 3 },
+          prominence: [{ level: 'forgotten', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'occupies', category: 'spatial', probability: 1.0, comment: 'Cult occupies anomaly/location' },
+        { kind: 'leader_of', category: 'political', probability: 1.0, comment: 'Prophet leads cult' },
+        { kind: 'resident_of', category: 'spatial', probability: 4.0, comment: 'Prophet + 3 cultists reside' },
+        { kind: 'member_of', category: 'political', probability: 3.0, comment: '3 cultists join' },
+        { kind: 'follower_of', category: 'social', probability: 3.0, comment: 'Cultists follow prophet' },
+        { kind: 'seeks', category: 'cultural', probability: 0.8, comment: 'Cult seeks magic if exists' },
+        { kind: 'practitioner_of', category: 'cultural', probability: 0.8, comment: 'Prophet practices magic if exists' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.7,
+      clusterFormation: 0.9,
+      diversityImpact: 0.5,
+      comment: 'Creates tight mystical clusters near anomalies',
+    },
+    parameters: {
+      numCultists: {
+        value: 3,
+        min: 2,
+        max: 8,
+        description: 'Number of initial cultist followers',
+      },
+    },
+    tags: ['mystical', 'anomaly-driven', 'cluster-forming'],
+  },
+
   canApply: (graph: Graph) => {
     const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
     const magic = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
@@ -35,6 +84,10 @@ export const cultFormation: GrowthTemplate = {
   },
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
+    // Extract parameters from metadata
+    const params = cultFormation.metadata?.parameters || {};
+    const numCultists = params.numCultists?.value ?? 3;
+
     const location = target || pickRandom(findEntities(graph, { kind: 'location' }));
 
     if (!location) {
@@ -55,7 +108,7 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal',
       tags: ['mystical', 'secretive', 'cult']
     };
-    
+
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
@@ -65,9 +118,9 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal', // Prophets start marginal
       tags: ['prophet', 'mystic']
     };
-    
+
     const cultists: Partial<HardState>[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < numCultists; i++) {
       cultists.push({
         kind: 'npc',
         subtype: pickRandom(['merchant', 'outlaw']),

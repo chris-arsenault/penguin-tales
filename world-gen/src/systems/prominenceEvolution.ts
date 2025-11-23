@@ -4,7 +4,8 @@ import {
   findEntities,
   getFactionMembers,
   getProminenceValue,
-  adjustProminence
+  adjustProminence,
+  getRelated
 } from '../utils/helpers';
 
 /**
@@ -23,7 +24,86 @@ export const prominenceEvolution: SimulationSystem = {
   id: 'prominence_evolution',
   name: 'Fame and Obscurity',
 
+  metadata: {
+    produces: {
+      relationships: [],
+      modifications: [
+        { type: 'prominence', frequency: 'common', comment: 'All entity types can gain/lose prominence' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.0,
+      clusterFormation: 0.2,
+      diversityImpact: 0.5,
+      comment: 'Well-connected entities gain fame, isolated entities fade to obscurity',
+    },
+    parameters: {
+      npcGainChance: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability NPC gains prominence when connection threshold met',
+      },
+      npcDecayChance: {
+        value: 0.7,
+        min: 0.3,
+        max: 0.95,
+        description: 'Probability NPC loses prominence when under-connected',
+      },
+      locationGainChance: {
+        value: 0.4,
+        min: 0.1,
+        max: 0.8,
+        description: 'Probability location gains prominence when connection threshold met',
+      },
+      locationDecayChance: {
+        value: 0.5,
+        min: 0.2,
+        max: 0.8,
+        description: 'Probability location loses prominence when under-connected',
+      },
+      abilityGainChance: {
+        value: 0.35,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability ability gains prominence with many practitioners',
+      },
+      abilityDecayChance: {
+        value: 0.4,
+        min: 0.2,
+        max: 0.7,
+        description: 'Probability ability loses prominence with few practitioners',
+      },
+      ruleGainChance: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability rule gains prominence when well-connected',
+      },
+      ruleDecayChance: {
+        value: 0.5,
+        min: 0.2,
+        max: 0.8,
+        description: 'Probability rule loses prominence when forgotten',
+      },
+    },
+    triggers: {
+      graphConditions: ['Entity connection counts'],
+      comment: 'Runs every tick, evaluates all entities',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+    const params = prominenceEvolution.metadata?.parameters || {};
+    const npcGainChance = params.npcGainChance?.value ?? 0.3;
+    const npcDecayChance = params.npcDecayChance?.value ?? 0.7;
+    const locationGainChance = params.locationGainChance?.value ?? 0.4;
+    const locationDecayChance = params.locationDecayChance?.value ?? 0.5;
+    const abilityGainChance = params.abilityGainChance?.value ?? 0.35;
+    const abilityDecayChance = params.abilityDecayChance?.value ?? 0.4;
+    const ruleGainChance = params.ruleGainChance?.value ?? 0.3;
+    const ruleDecayChance = params.ruleDecayChance?.value ?? 0.5;
+
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
 
     // NPCs: Harsher prominence requirements - most should be forgotten/marginal
@@ -49,13 +129,13 @@ export const prominenceEvolution: SimulationSystem = {
       const gainThreshold = (currentProminence + 1) * 6;
 
       if (connectionScore + roleBonus >= gainThreshold) {
-        // Only 30% chance to gain even with enough connections
-        if (Math.random() < 0.3 * modifier) {
+        // Tunable chance to gain even with enough connections
+        if (Math.random() < npcGainChance * modifier) {
           prominenceDelta = 1;
         }
       } else if (connectionScore < currentProminence * 2) {
-        // Much more likely to decay (70% chance)
-        if (Math.random() > 0.3) {
+        // Tunable chance to decay
+        if (Math.random() > (1 - npcDecayChance)) {
           prominenceDelta = -1;
         }
       }
@@ -74,12 +154,13 @@ export const prominenceEvolution: SimulationSystem = {
     const factions = findEntities(graph, { kind: 'faction' });
 
     factions.forEach(faction => {
-      const members = getFactionMembers(graph, faction.id);
-      const memberProminence = members.reduce((sum, m) =>
+      // Only core members (>= 0.6 strength) contribute to faction prominence
+      const coreMembers = getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.6 });
+      const memberProminence = coreMembers.reduce((sum, m) =>
         sum + getProminenceValue(m.prominence), 0
       );
 
-      if (memberProminence > getProminenceValue(faction.prominence) * members.length) {
+      if (memberProminence > getProminenceValue(faction.prominence) * coreMembers.length) {
         modifications.push({
           id: faction.id,
           changes: {
@@ -105,9 +186,9 @@ export const prominenceEvolution: SimulationSystem = {
       let prominenceDelta = 0;
       const gainThreshold = (currentProminence + 1) * 5;
 
-      if (connectionScore + typeBonus >= gainThreshold && Math.random() < 0.4 * modifier) {
+      if (connectionScore + typeBonus >= gainThreshold && Math.random() < locationGainChance * modifier) {
         prominenceDelta = 1;
-      } else if (connectionScore < currentProminence * 2 && Math.random() > 0.5) {
+      } else if (connectionScore < currentProminence * 2 && Math.random() > (1 - locationDecayChance)) {
         prominenceDelta = -1;
       }
 
@@ -130,14 +211,14 @@ export const prominenceEvolution: SimulationSystem = {
       );
       const currentProminence = getProminenceValue(ability.prominence);
 
-      if (practitioners.length > (currentProminence + 1) * 3 && Math.random() < 0.35 * modifier) {
+      if (practitioners.length > (currentProminence + 1) * 3 && Math.random() < abilityGainChance * modifier) {
         modifications.push({
           id: ability.id,
           changes: {
             prominence: adjustProminence(ability.prominence, 1)
           }
         });
-      } else if (practitioners.length < currentProminence && Math.random() > 0.6) {
+      } else if (practitioners.length < currentProminence && Math.random() > (1 - abilityDecayChance)) {
         modifications.push({
           id: ability.id,
           changes: {
@@ -159,14 +240,14 @@ export const prominenceEvolution: SimulationSystem = {
       // Enacted rules are more prominent
       const statusBonus = rule.status === 'enacted' ? 3 : 0;
 
-      if (connections.length + statusBonus > (currentProminence + 1) * 4 && Math.random() < 0.3 * modifier) {
+      if (connections.length + statusBonus > (currentProminence + 1) * 4 && Math.random() < ruleGainChance * modifier) {
         modifications.push({
           id: rule.id,
           changes: {
             prominence: adjustProminence(rule.prominence, 1)
           }
         });
-      } else if (connections.length === 0 && rule.status !== 'enacted' && Math.random() > 0.5) {
+      } else if (connections.length === 0 && rule.status !== 'enacted' && Math.random() > (1 - ruleDecayChance)) {
         modifications.push({
           id: rule.id,
           changes: {

@@ -18,6 +18,39 @@ export const geographicExploration: GrowthTemplate = {
   id: 'geographic_exploration',
   name: 'Geographic Exploration',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'various',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'explorer_of', category: 'spatial', probability: 1.0, comment: 'NPC explores location' },
+        { kind: 'discovered_by', category: 'spatial', probability: 1.0, comment: 'Location discovered by NPC' },
+        { kind: 'adjacent_to', category: 'spatial', probability: 0.8, comment: 'Adjacent to nearby location' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.3,
+      diversityImpact: 0.7,
+      comment: 'Procedurally generates neutral locations based on era themes',
+    },
+    parameters: {
+      baseChance: {
+        value: 0.08,
+        min: 0.01,
+        max: 0.3,
+        description: 'Base probability of discovery when other conditions met',
+      },
+    },
+    tags: ['emergent', 'exploration', 'era-driven'],
+  },
+
   canApply: (graph: Graph): boolean => {
     // Can apply during expansion and reconstruction eras
     if (!['expansion', 'reconstruction', 'innovation'].includes(graph.currentEra.id)) {
@@ -37,7 +70,8 @@ export const geographicExploration: GrowthTemplate = {
     if (graph.discoveryState.discoveriesThisEpoch >= 2) return false;
 
     // Lower base probability - pure exploration is rarer
-    const baseChance = 0.08;
+    const params = geographicExploration.metadata?.parameters || {};
+    const baseChance = params.baseChance?.value ?? 0.08;
     return Math.random() < baseChance;
   },
 

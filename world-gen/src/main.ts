@@ -1,10 +1,13 @@
 import { WorldEngine } from './engine/worldEngine';
 import { EngineConfig } from './types/engine';
 import { HardState } from './types/worldTypes';
+import { DistributionTargets } from './types/distribution';
 
 // Import configuration
 import { penguinEras } from './config/eras';
 import { pressures } from './config/pressures';
+import distributionTargetsData from '../config/distributionTargets.json';
+import parameterOverridesData from '../config/templateSystemParameters.json';
 
 // Import templates
 import { npcTemplates } from './templates/npc';
@@ -21,6 +24,7 @@ import { normalizeInitialState } from './utils/helpers';
 import { loadLoreIndex } from './services/loreIndex';
 import { EnrichmentService } from './services/enrichmentService';
 import { validateWorld } from './utils/validators';
+import { applyParameterOverrides } from './utils/parameterOverrides';
 
 const sanitize = (value?: string | null): string => (value ?? '').trim();
 
@@ -52,21 +56,33 @@ const enrichmentService = llmEnabled
   ? new EnrichmentService(llmConfig, loreIndex, enrichmentConfig)
   : undefined;
 
+// Apply parameter overrides from config file
+const allTemplates = [
+  ...npcTemplates,
+  ...factionTemplates,
+  ...rulesTemplates,
+  ...abilitiesTemplates,
+  ...locationTemplates
+];
+
+const { templates: configuredTemplates, systems: configuredSystems } = applyParameterOverrides(
+  allTemplates,
+  allSystems,
+  parameterOverridesData as any
+);
+
 // Configuration
 const config: EngineConfig = {
   eras: penguinEras,
-  templates: [
-    ...npcTemplates,
-    ...factionTemplates,
-    ...rulesTemplates,
-    ...abilitiesTemplates,
-    ...locationTemplates
-  ],
-  systems: allSystems,
+  templates: configuredTemplates,
+  systems: configuredSystems,
   pressures: pressures,
   llmConfig,
   enrichmentConfig,
   loreIndex,
+
+  // Statistical distribution targets (enables mid-run tuning)
+  distributionTargets: distributionTargetsData as DistributionTargets,
 
   // Tuning parameters
   epochLength: 20,                    // ticks per epoch

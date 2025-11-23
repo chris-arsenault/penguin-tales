@@ -22,7 +22,46 @@ export const greatFestival: GrowthTemplate = {
   id: 'great_festival',
   name: 'Great Festival',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'rules',
+          subtype: 'social',
+          count: { min: 1, max: 1 },
+          prominence: [
+            { level: 'recognized', probability: 0.7 },
+            { level: 'renowned', probability: 0.3 },
+          ],
+        },
+      ],
+      relationships: [
+        { kind: 'originated_in', category: 'spatial', probability: 1.0, comment: 'Festival originated in colony' },
+        { kind: 'celebrated_by', category: 'cultural', probability: 3.0, comment: '2-4 factions celebrate' },
+        { kind: 'allied_with', category: 'political', probability: 6.0, comment: 'Temporary festival alliances' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.8,
+      clusterFormation: 0.7,
+      diversityImpact: 0.6,
+      comment: 'Creates festivals that unite factions and reduce conflict',
+    },
+    parameters: {
+      stableActivationChance: {
+        value: 0.05,
+        min: 0.01,
+        max: 0.2,
+        description: 'Probability when conflict is low (peaceful festivals)',
+      },
+    },
+    tags: ['festival', 'unity', 'cultural'],
+  },
+
   canApply: (graph: Graph) => {
+    const params = greatFestival.metadata?.parameters || {};
+    const stableActivationChance = params.stableActivationChance?.value ?? 0.05;
+
     const conflict = graph.pressures.get('conflict') || 0;
     const factions = findEntities(graph, { kind: 'faction', status: 'active' });
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
@@ -30,7 +69,7 @@ export const greatFestival: GrowthTemplate = {
     // Requires at least 2 factions and 1 colony
     // Triggered by high conflict OR randomly during stable periods
     const hasConflict = conflict > 80;
-    const stableRandom = conflict < 30 && Math.random() < 0.05; // 5% chance when stable
+    const stableRandom = conflict < 30 && Math.random() < stableActivationChance;
 
     return (hasConflict || stableRandom) && factions.length >= 2 && colonies.length >= 1;
   },

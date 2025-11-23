@@ -27,6 +27,14 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
       randomize: true,  // Add jitter to break out of local minima
       fit: true,
       idealEdgeLength: 100,
+      // Edge strength influences spring length: stronger edges pull nodes closer
+      edgeLength: (edge: any) => {
+        const strength = edge.data('strength') ?? 0.5;
+        // Map strength 0-1 to edge length 200-50
+        // Stronger edges (1.0) = shorter length (50) = tighter clustering
+        // Weaker edges (0.0) = longer length (200) = looser connections
+        return 200 - (strength * 150);
+      },
       nodeRepulsion: 100000,
       gravity: 0.25,
       numIter: 2500,
@@ -92,13 +100,18 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
           }
         },
         {
+          // Edge strength visualization: strength values (0-1) control visual prominence
+          // - Width: 1-5px (stronger = thicker)
+          // - Color: light gray to dark gray (stronger = darker)
+          // - Opacity: 0.4-1.0 (stronger = more visible)
           selector: 'edge',
           style: {
-            'width': 2,
-            'line-color': '#555',
-            'target-arrow-color': '#555',
+            'width': 'mapData(strength, 0, 1, 1, 5)',
+            'line-color': 'mapData(strength, 0, 1, #888, #222)',
+            'target-arrow-color': 'mapData(strength, 0, 1, #888, #222)',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
+            'opacity': 'mapData(strength, 0, 1, 0.4, 1)',
             'label': 'data(label)',
             'font-size': '8px',
             'color': '#999',
@@ -119,6 +132,10 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
         name: 'cose-bilkent',
         randomize: true,
         idealEdgeLength: 100,
+        edgeLength: (edge: any) => {
+          const strength = edge.data('strength') ?? 0.5;
+          return 200 - (strength * 150);
+        },
         nodeRepulsion: 100000,
         gravity: 0.25,
         numIter: 2500,
@@ -199,6 +216,10 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
         randomize: false,
         fit: false,
         idealEdgeLength: 100,
+        edgeLength: (edge: any) => {
+          const strength = edge.data('strength') ?? 0.5;
+          return 200 - (strength * 150);
+        },
         nodeRepulsion: 100000,
         gravity: 0.25,
         numIter: 1000,

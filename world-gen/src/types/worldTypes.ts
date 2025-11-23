@@ -24,6 +24,7 @@ export interface Relationship {
     kind: string;   // must be allowed by the (src.kind, dst.kind) matrix
     src: string;    // HardState.id
     dst: string;    // HardState.id
+    strength?: number;  // 0.0 (weak/spatial) to 1.0 (strong/narrative) - optional for backward compat
 }
 
 // Schema types

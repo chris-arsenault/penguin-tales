@@ -5,7 +5,31 @@ import { generateName, pickRandom, findEntities, slugifyName } from '../../utils
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
   name: 'Hero Rises',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'npc',
+          subtype: 'hero',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'practitioner_of', category: 'cultural', probability: 0.8, comment: 'If abilities exist' },
+        { kind: 'resident_of', category: 'spatial', probability: 1.0, comment: 'Hero lives in colony' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.2,
+      clusterFormation: 0.3,
+      diversityImpact: 0.5,
+      comment: 'Creates individual heroes with potential for ability practice',
+    },
+    tags: ['crisis-driven', 'individual'],
+  },
+
   canApply: (graph: Graph) => {
     const conflictPressure = graph.pressures.get('conflict') || 0;
     return conflictPressure > 30 || graph.entities.size > 20;

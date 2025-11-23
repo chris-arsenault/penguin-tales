@@ -20,6 +20,31 @@ export const strategicLocationDiscovery: GrowthTemplate = {
   id: 'strategic_location_discovery',
   name: 'Strategic Location Discovery',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'geographic_feature',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'explorer_of', category: 'spatial', probability: 1.0, comment: 'Scout/hero finds strategic position' },
+        { kind: 'discovered_by', category: 'spatial', probability: 1.0, comment: 'Strategic location discovered' },
+        { kind: 'adjacent_to', category: 'spatial', probability: 0.8, comment: 'Adjacent to nearby location' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.4,
+      diversityImpact: 0.7,
+      comment: 'Procedurally generates strategic locations based on conflict patterns',
+    },
+    tags: ['emergent', 'strategic', 'conflict-driven'],
+  },
+
   canApply: (graph: Graph): boolean => {
     // Must have active conflicts
     const conflict = analyzeConflictPatterns(graph);

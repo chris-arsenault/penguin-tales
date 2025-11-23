@@ -5,7 +5,45 @@ import { generateName, pickRandom, findEntities } from '../../utils/helpers';
 export const outlawRecruitment: GrowthTemplate = {
   id: 'outlaw_recruitment',
   name: 'Criminal Recruitment',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'npc',
+          subtype: 'outlaw',
+          count: { min: 2, max: 4 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'member_of', category: 'political', probability: 3.0, comment: '2-4 outlaws join faction' },
+        { kind: 'resident_of', category: 'spatial', probability: 3.0, comment: 'Outlaws reside in stronghold/colony' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.5,
+      clusterFormation: 0.7,
+      diversityImpact: 0.3,
+      comment: 'Expands criminal faction clusters',
+    },
+    parameters: {
+      numOutlawsMin: {
+        value: 2,
+        min: 1,
+        max: 4,
+        description: 'Minimum number of outlaws recruited',
+      },
+      numOutlawsMax: {
+        value: 4,
+        min: 2,
+        max: 10,
+        description: 'Maximum number of outlaws recruited',
+      },
+    },
+    tags: ['criminal', 'faction-expansion'],
+  },
+
   canApply: (graph: Graph) => {
     const criminalFactions = findEntities(graph, { kind: 'faction', subtype: 'criminal' });
     return criminalFactions.length > 0;
@@ -17,8 +55,13 @@ export const outlawRecruitment: GrowthTemplate = {
   
   expand: (graph: Graph, target?: HardState): TemplateResult => {
     const faction = target || pickRandom(findEntities(graph, { kind: 'faction', subtype: 'criminal' }));
-    
-    const numOutlaws = Math.floor(Math.random() * 3) + 2;
+
+    // Extract parameters from metadata
+    const params = outlawRecruitment.metadata?.parameters || {};
+    const numOutlawsMin = params.numOutlawsMin?.value ?? 2;
+    const numOutlawsMax = params.numOutlawsMax?.value ?? 4;
+
+    const numOutlaws = Math.floor(Math.random() * (numOutlawsMax - numOutlawsMin + 1)) + numOutlawsMin;
     const outlaws: Partial<HardState>[] = [];
     
     for (let i = 0; i < numOutlaws; i++) {

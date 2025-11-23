@@ -22,7 +22,43 @@ export const ideologyEmergence: GrowthTemplate = {
   id: 'ideology_emergence',
   name: 'Ideological Movement',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'rules',
+          subtype: 'various',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'champion_of', category: 'cultural', probability: 1.0, comment: 'Champion promotes ideology' },
+        { kind: 'originated_in', category: 'spatial', probability: 0.8, comment: 'Ideology originated in location' },
+        { kind: 'believer_of', category: 'cultural', probability: 7.0, comment: '3-8 initial believers' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.6,
+      clusterFormation: 0.7,
+      diversityImpact: 0.8,
+      comment: 'Creates ideological movements that spread through social networks',
+    },
+    parameters: {
+      unstableActivationChance: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability when stability is low',
+      },
+    },
+    tags: ['ideology', 'cultural-shift', 'belief-driven'],
+  },
+
   canApply: (graph: Graph) => {
+    const params = ideologyEmergence.metadata?.parameters || {};
+    const unstableActivationChance = params.unstableActivationChance?.value ?? 0.3;
+
     const culturalTension = graph.pressures.get('cultural_tension') || 0;
     const stability = graph.pressures.get('stability') || 0;
     const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
@@ -33,7 +69,7 @@ export const ideologyEmergence: GrowthTemplate = {
     // Triggered by cultural tension OR during innovation/reconstruction eras
     const hasTension = culturalTension > 30;
     const isReformEra = ['innovation', 'reconstruction'].includes(graph.currentEra.id);
-    const unstable = stability < 40 && Math.random() < 0.3;
+    const unstable = stability < 40 && Math.random() < unstableActivationChance;
 
     return hasTension || isReformEra || unstable;
   },

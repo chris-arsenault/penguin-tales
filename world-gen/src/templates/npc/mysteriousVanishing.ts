@@ -33,9 +33,62 @@ export const mysteriousVanishing: GrowthTemplate = {
   id: 'mysterious_vanishing',
   name: 'Unexplained Disappearance',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'anomaly',
+          count: { min: 0, max: 1 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'last_seen_at', category: 'spatial', probability: 1.0, comment: 'Victim linked to disappearance site' },
+        { kind: 'searching_for', category: 'social', probability: 2.0, comment: '1-3 loved ones search' },
+        { kind: 'adjacent_to', category: 'spatial', probability: 0.5, comment: 'New anomaly adjacent to location' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.1,
+      clusterFormation: 0.2,
+      diversityImpact: 0.7,
+      comment: 'Creates mystery nodes with searcher connections; changes NPC status to missing',
+    },
+    parameters: {
+      activationChance: {
+        value: 0.1,
+        min: 0.01,
+        max: 0.5,
+        description: 'Probability this template activates per epoch (throttle)',
+      },
+      mythicProximityMultiplier: {
+        value: 2.0,
+        min: 1.0,
+        max: 5.0,
+        description: 'Weight multiplier for mythic NPCs near anomalies',
+      },
+      renownedProximityMultiplier: {
+        value: 1.5,
+        min: 1.0,
+        max: 3.0,
+        description: 'Weight multiplier for renowned NPCs near anomalies',
+      },
+      maxSearchers: {
+        value: 3,
+        min: 1,
+        max: 10,
+        description: 'Maximum number of loved ones who search for victim',
+      },
+    },
+    tags: ['mystery', 'rare-event', 'status-changing'],
+  },
+
   canApply: (graph: Graph) => {
-    // 10% chance per epoch check
-    if (Math.random() > 0.1) return false;
+    // Throttle check using parameter
+    const params = mysteriousVanishing.metadata?.parameters || {};
+    const activationChance = params.activationChance?.value ?? 0.1;
+    if (Math.random() > activationChance) return false;
 
     const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
     const highProminenceNPCs = findEntities(graph, { kind: 'npc', status: 'alive' })
@@ -52,6 +105,12 @@ export const mysteriousVanishing: GrowthTemplate = {
   },
 
   expand: (graph: Graph, target?: HardState): TemplateResult => {
+    // Extract parameters from metadata
+    const params = mysteriousVanishing.metadata?.parameters || {};
+    const mythicProximityMultiplier = params.mythicProximityMultiplier?.value ?? 2.0;
+    const renownedProximityMultiplier = params.renownedProximityMultiplier?.value ?? 1.5;
+    const maxSearchers = params.maxSearchers?.value ?? 3;
+
     const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
 
     // VALIDATION: Check if anomalies exist
@@ -98,9 +157,9 @@ export const mysteriousVanishing: GrowthTemplate = {
         proximityScore = nearbyAnomalies.length * 3;
       }
 
-      // Boost for mythic NPCs (dramatic impact)
-      if (candidate.prominence === 'mythic') proximityScore *= 2;
-      if (candidate.prominence === 'renowned') proximityScore *= 1.5;
+      // Boost for mythic/renowned NPCs (dramatic impact)
+      if (candidate.prominence === 'mythic') proximityScore *= mythicProximityMultiplier;
+      if (candidate.prominence === 'renowned') proximityScore *= renownedProximityMultiplier;
 
       return { candidate, weight: proximityScore };
     }).filter(wc => wc.weight > 0);
@@ -197,8 +256,8 @@ export const mysteriousVanishing: GrowthTemplate = {
       .map(id => graph.entities.get(id))
       .filter(e => e !== undefined && e.status === 'alive') as HardState[];
 
-    // Create searching_for relationships for 1-3 loved ones
-    const searchers = pickMultiple(uniqueLovedOnes, Math.min(3, uniqueLovedOnes.length));
+    // Create searching_for relationships for 1-maxSearchers loved ones
+    const searchers = pickMultiple(uniqueLovedOnes, Math.min(maxSearchers, uniqueLovedOnes.length));
     searchers.forEach(searcher => {
       relationships.push({
         kind: 'searching_for',

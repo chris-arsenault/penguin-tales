@@ -11,7 +11,30 @@ import { pickRandom, findEntities, slugifyName } from '../../utils/helpers';
 export const crisisLegislation: GrowthTemplate = {
   id: 'crisis_legislation',
   name: 'Crisis Law',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'rules',
+          subtype: 'various',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'applies_in', category: 'political', probability: 1.0, comment: 'Law applies in colony' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.2,
+      clusterFormation: 0.3,
+      diversityImpact: 0.5,
+      comment: 'Creates emergency laws in response to crises',
+    },
+    tags: ['crisis-driven', 'legislation'],
+  },
+
   canApply: (graph: Graph) => {
     const conflict = graph.pressures.get('conflict') || 0;
     const scarcity = graph.pressures.get('resource_scarcity') || 0;

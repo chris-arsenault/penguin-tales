@@ -11,7 +11,30 @@ import { pickRandom, findEntities } from '../../utils/helpers';
 export const colonyFounding: GrowthTemplate = {
   id: 'colony_founding',
   name: 'Colony Foundation',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'colony',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'contained_by', category: 'spatial', probability: 1.0, comment: 'Colony on iceberg' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.1,
+      clusterFormation: 0.3,
+      diversityImpact: 0.3,
+      comment: 'Adds new colony nodes for population expansion',
+    },
+    tags: ['expansion', 'colony-formation'],
+  },
+
   canApply: (graph: Graph) => {
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
     return colonies.length < 5 && graph.entities.size > 20;

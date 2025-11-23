@@ -1,5 +1,7 @@
 import { Graph } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Name generation
 const penguinFirstNames = [
@@ -74,30 +76,49 @@ export function findEntities(
   return results;
 }
 
+// Relationship query options
+export interface RelationshipQueryOptions {
+  minStrength?: number;      // Filter by minimum strength
+  maxStrength?: number;      // Filter by maximum strength
+  sortByStrength?: boolean;  // Sort by strength descending
+}
+
 // Relationship helpers
 export function getRelated(
   graph: Graph,
   entityId: string,
   relationshipKind?: string,
-  direction: 'src' | 'dst' | 'both' = 'both'
+  direction: 'src' | 'dst' | 'both' = 'both',
+  options?: RelationshipQueryOptions
 ): HardState[] {
-  const related: HardState[] = [];
-  
+  const related: Array<{ entity: HardState; strength: number }> = [];
+  const opts = options || {};
+
   graph.relationships.forEach(rel => {
     if (relationshipKind && rel.kind !== relationshipKind) return;
-    
+
+    // Strength filtering
+    const strength = rel.strength ?? 0.5;
+    if (opts.minStrength !== undefined && strength < opts.minStrength) return;
+    if (opts.maxStrength !== undefined && strength > opts.maxStrength) return;
+
     if ((direction === 'src' || direction === 'both') && rel.src === entityId) {
       const entity = graph.entities.get(rel.dst);
-      if (entity) related.push(entity);
+      if (entity) related.push({ entity, strength });
     }
-    
+
     if ((direction === 'dst' || direction === 'both') && rel.dst === entityId) {
       const entity = graph.entities.get(rel.src);
-      if (entity) related.push(entity);
+      if (entity) related.push({ entity, strength });
     }
   });
-  
-  return related;
+
+  // Sort by strength if requested
+  if (opts.sortByStrength) {
+    related.sort((a, b) => b.strength - a.strength);
+  }
+
+  return related.map(r => r.entity);
 }
 
 export function hasRelationship(
@@ -131,6 +152,22 @@ export function getFactionMembers(graph: Graph, factionId: string): HardState[] 
 export function getFactionLeader(graph: Graph, factionId: string): HardState | undefined {
   const leaders = getRelated(graph, factionId, 'leader_of', 'dst');
   return leaders[0];
+}
+
+// Strength-aware faction helpers
+export function getCoreFactionMembers(graph: Graph, factionId: string): HardState[] {
+  return getRelated(graph, factionId, 'member_of', 'dst', { minStrength: 0.7 });
+}
+
+export function getStrongAllies(graph: Graph, entityId: string): HardState[] {
+  return getRelated(graph, entityId, 'ally_of', 'src', { minStrength: 0.6 });
+}
+
+export function getWeakRelationships(graph: Graph, entityId: string): Relationship[] {
+  return graph.relationships.filter(r =>
+    (r.src === entityId || r.dst === entityId) &&
+    (r.strength ?? 0.5) < 0.3
+  );
 }
 
 // Prominence helpers
@@ -214,6 +251,48 @@ export function addEntity(graph: Graph, entity: Partial<HardState>): string {
   return id;
 }
 
+// Relationship strength by kind (0.0 = weak/spatial, 1.0 = strong/narrative)
+const RELATIONSHIP_STRENGTHS: Record<string, number> = {
+  // Strong (1.0-0.8): Narrative-defining relationships
+  'member_of': 1.0,           // Faction membership defines identity
+  'leader_of': 1.0,           // Leadership is core narrative
+  'practitioner_of': 0.9,     // Ability practice defines character
+  'originated_in': 0.9,       // Rule origins are narrative anchors
+  'founded_by': 0.9,          // Foundation relationships are strong
+  'mastered_by': 0.9,         // Mastery is significant
+
+  // Medium-Strong (0.7-0.6): Important but not defining
+  'controls': 0.7,            // Territorial control matters
+  'commemorates': 0.7,        // Cultural memory is important
+  'ally_of': 0.7,             // Alliances shape story
+  'enemy_of': 0.7,            // Conflicts shape story
+  'follower_of': 0.6,         // Following is notable
+  'manifests_at': 0.6,        // Ability manifestation locations
+
+  // Medium (0.5-0.4): Contextual relationships
+  'friend_of': 0.5,
+  'rival_of': 0.5,
+  'mentor_of': 0.5,
+  'family_of': 0.5,
+  'lover_of': 0.5,
+  'weaponized_by': 0.5,       // Faction uses ability/tech
+  'kept_secret_by': 0.5,      // Faction protects secret
+  'adherent_of': 0.6,         // Belief/practice (weaker than practitioner)
+  'stronghold_of': 0.7,       // Political control of location
+
+  // Weak (0.3-0.1): Spatial/contextual
+  'resident_of': 0.3,         // Just where they live, not who they are
+  'located_at': 0.3,
+  'slumbers_beneath': 0.3,    // Spatial containment
+  'discovered_by': 0.2,
+  'adjacent_to': 0.2,         // Just geography
+  'contains': 0.2,            // Structural containment
+  'contained_by': 0.2,        // Structural containment
+
+  // Default for unknown types
+  'default': 0.5
+};
+
 // Per-kind relationship warning thresholds
 const RELATIONSHIP_WARNING_THRESHOLDS: Record<string, Record<string, number>> = {
   npc: {
@@ -253,6 +332,9 @@ export function addRelationship(
     return;
   }
 
+  // Auto-assign strength based on relationship kind
+  const strength = RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default;
+
   // Check relationship warning thresholds (per-kind, non-blocking)
   const srcEntity = graph.entities.get(srcId);
   if (srcEntity) {
@@ -261,7 +343,8 @@ export function addRelationship(
     const threshold = kindThresholds[kind] || kindThresholds.default || 10;
 
     if (existingOfType >= threshold) {
-      console.warn(
+      // Write to warnings log file instead of console
+      const warningMessage =
         `⚠️  RELATIONSHIP WARNING (${srcEntity.kind.toUpperCase()}):\n` +
         `   Entity: ${srcEntity.name} (${srcEntity.id})\n` +
         `   Kind: ${srcEntity.kind}\n` +
@@ -271,19 +354,27 @@ export function addRelationship(
         `   Target: ${graph.entities.get(dstId)?.name || dstId}\n` +
         `   Tick: ${graph.tick}\n` +
         `   Era: ${graph.currentEra.name}\n` +
-        `   ℹ️  This is a WARNING only - relationship will still be added`
-      );
+        `   ℹ️  This is a WARNING only - relationship will still be added\n`;
+
+      try {
+        const warningLogPath = path.join(process.cwd(), 'output', 'warnings.log');
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] [Tick ${graph.tick}]\n${warningMessage}\n`;
+        fs.appendFileSync(warningLogPath, logEntry);
+      } catch (error) {
+        // Silently fail - don't spam console with file write errors
+      }
     }
   }
 
-  // Add relationship (always, no hard limit)
-  graph.relationships.push({ kind, src: srcId, dst: dstId });
+  // Add relationship (always, no hard limit) with strength
+  graph.relationships.push({ kind, src: srcId, dst: dstId, strength });
 
   // Update entity links
   const dstEntity = graph.entities.get(dstId);
 
   if (srcEntity) {
-    srcEntity.links.push({ kind, src: srcId, dst: dstId });
+    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength });
     srcEntity.updatedAt = graph.tick;
   }
 
@@ -301,6 +392,48 @@ export function updateEntity(
   if (entity) {
     Object.assign(entity, changes, { updatedAt: graph.tick });
   }
+}
+
+/**
+ * Modify relationship strength by delta
+ * @param delta - Amount to change strength (+/- value)
+ * @returns true if relationship was modified, false if not found
+ */
+export function modifyRelationshipStrength(
+  graph: Graph,
+  srcId: string,
+  dstId: string,
+  kind: string,
+  delta: number
+): boolean {
+  // Find relationship in graph
+  const rel = graph.relationships.find(r =>
+    r.src === srcId && r.dst === dstId && r.kind === kind
+  );
+
+  if (!rel) return false;
+
+  // Update strength (clamp to 0.0-1.0)
+  const currentStrength = rel.strength ?? 0.5;
+  rel.strength = Math.max(0.0, Math.min(1.0, currentStrength + delta));
+
+  // Also update in entity links
+  const srcEntity = graph.entities.get(srcId);
+  const dstEntity = graph.entities.get(dstId);
+
+  if (srcEntity) {
+    const link = srcEntity.links.find(l =>
+      l.kind === kind && l.src === srcId && l.dst === dstId
+    );
+    if (link) link.strength = rel.strength;
+    srcEntity.updatedAt = graph.tick;
+  }
+
+  if (dstEntity) {
+    dstEntity.updatedAt = graph.tick;
+  }
+
+  return true;
 }
 
 // Validation helpers

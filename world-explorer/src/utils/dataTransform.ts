@@ -46,7 +46,8 @@ export function transformWorldData(worldState: WorldState) {
       source: rel.src,
       target: rel.dst,
       kind: rel.kind,
-      label: rel.kind.replace(/_/g, ' ')
+      label: rel.kind.replace(/_/g, ' '),
+      strength: rel.strength ?? 0.5  // Default to 0.5 if not specified
     },
     classes: rel.kind.replace(/_/g, '-')
   }));

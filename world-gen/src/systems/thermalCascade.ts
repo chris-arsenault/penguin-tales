@@ -56,12 +56,84 @@ export const thermalCascade: SimulationSystem = {
   id: 'thermal_cascade',
   name: 'Thermal Dynamics',
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    const FREQUENCY = 5; // Run every 5 ticks
-    const ALPHA = 0.1;   // Thermal diffusivity
-    const THRESHOLD = 0.3; // Temperature change threshold for events
+  metadata: {
+    produces: {
+      relationships: [
+        { kind: 'resident_of', category: 'spatial', frequency: 'uncommon', comment: 'NPCs migrate from extreme temperatures' },
+        { kind: 'manifests_at', category: 'spatial', frequency: 'rare', comment: 'Warming reveals frozen abilities' },
+      ],
+      modifications: [
+        { type: 'tags', frequency: 'common', comment: 'Location temperature tags updated' },
+        { type: 'status', frequency: 'uncommon', comment: 'Colony status changes based on temperature' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.3,
+      diversityImpact: 0.6,
+      comment: 'Heat diffusion through location graph using discrete Laplacian',
+    },
+    parameters: {
+      frequency: {
+        value: 5,
+        min: 1,
+        max: 20,
+        description: 'Run every N ticks (thermal physics update rate)',
+      },
+      alpha: {
+        value: 0.1,
+        min: 0.01,
+        max: 0.5,
+        description: 'Thermal diffusivity constant (higher = faster temperature propagation)',
+      },
+      threshold: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Temperature change threshold for triggering events',
+      },
+      migrationCooldown: {
+        value: 10,
+        min: 3,
+        max: 30,
+        description: 'Ticks between NPC migrations',
+      },
+      recoveryChance: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability waning colony recovers when temperatures stabilize',
+      },
+      migrationChance: {
+        value: 0.5,
+        min: 0.2,
+        max: 0.9,
+        description: 'Probability NPC migrates from extreme temperature zone',
+      },
+      discoveryChance: {
+        value: 0.1,
+        min: 0.01,
+        max: 0.5,
+        description: 'Probability warming reveals frozen ability',
+      },
+    },
+    triggers: {
+      graphConditions: ['Locations with adjacent_to relationships'],
+      comment: 'Requires location graph for heat diffusion; runs every N ticks',
+    },
+  },
 
-    // Throttle: Only run every 5 ticks
+  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+    const params = thermalCascade.metadata?.parameters || {};
+    const FREQUENCY = params.frequency?.value ?? 5;
+    const ALPHA = params.alpha?.value ?? 0.1;
+    const THRESHOLD = params.threshold?.value ?? 0.3;
+    const MIGRATION_COOLDOWN = params.migrationCooldown?.value ?? 10;
+    const recoveryChance = params.recoveryChance?.value ?? 0.3;
+    const migrationChance = params.migrationChance?.value ?? 0.5;
+    const discoveryChance = params.discoveryChance?.value ?? 0.1;
+
+    // Throttle: Only run every FREQUENCY ticks
     if (graph.tick % FREQUENCY !== 0) {
       return {
         relationshipsAdded: [],
@@ -73,7 +145,6 @@ export const thermalCascade: SimulationSystem = {
 
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const relationships: Relationship[] = [];
-    const MIGRATION_COOLDOWN = 10; // Ticks between migrations
 
     // === STEP 1: Heat Diffusion ===
     const locations = findEntities(graph, { kind: 'location' });
@@ -147,8 +218,8 @@ export const thermalCascade: SimulationSystem = {
         }
         // Moderate temperatures allow recovery
         else if (newTemp >= 0.3 && newTemp <= 0.7 && location.status === 'waning') {
-          const recoveryChance = Math.min(0.95, 0.3 * modifier);
-          if (rollProbability(recoveryChance, modifier)) {
+          const recoveryProb = Math.min(0.95, recoveryChance * modifier);
+          if (rollProbability(recoveryProb, modifier)) {
             modifications.push({
               id: location.id,
               changes: {
@@ -188,8 +259,8 @@ export const thermalCascade: SimulationSystem = {
 
             // Remove old resident_of, add new one
             // Note: This creates a new relationship; old one removed by graph normalization
-            const migrationChance = Math.min(0.95, 0.5 * modifier);
-            if (rollProbability(migrationChance, modifier)) {
+            const migrationProb = Math.min(0.95, migrationChance * modifier);
+            if (rollProbability(migrationProb, modifier)) {
               relationships.push({
                 kind: 'resident_of',
                 src: migrant.id,
@@ -208,8 +279,8 @@ export const thermalCascade: SimulationSystem = {
         const discoveries = Math.floor(Math.random() * 2); // 0-1 discoveries
 
         for (let i = 0; i < discoveries; i++) {
-          const discoveryChance = Math.min(0.95, 0.1 * modifier);
-          if (rollProbability(discoveryChance, modifier)) {
+          const discoveryProb = Math.min(0.95, discoveryChance * modifier);
+          if (rollProbability(discoveryProb, modifier)) {
             // Find existing abilities that could manifest here
             const abilities = findEntities(graph, { kind: 'abilities', status: 'active' });
             if (abilities.length > 0) {

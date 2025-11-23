@@ -16,6 +16,26 @@ export const resourceFlow: SimulationSystem = {
   id: 'resource_flow',
   name: 'Economic Dynamics',
 
+  metadata: {
+    produces: {
+      relationships: [],
+      modifications: [
+        { type: 'status', frequency: 'common', comment: 'Colony status changes (thriving/waning)' },
+        { type: 'prominence', frequency: 'uncommon', comment: 'Merchant factions gain prominence' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.0,
+      clusterFormation: 0.3,
+      diversityImpact: 0.4,
+      comment: 'Models economic health based on resource availability vs consumption',
+    },
+    triggers: {
+      graphConditions: ['Colonies with adjacent resources', 'Colony residents'],
+      comment: 'Requires colonies with varying resource ratios',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });

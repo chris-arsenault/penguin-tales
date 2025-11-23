@@ -41,9 +41,77 @@ export const successionVacuum: SimulationSystem = {
   id: 'succession_vacuum',
   name: 'Leadership Crisis',
 
+  metadata: {
+    produces: {
+      relationships: [
+        { kind: 'rival_of', category: 'social', frequency: 'uncommon', comment: 'Claimants rival each other' },
+        { kind: 'enemy_of', category: 'social', frequency: 'rare', comment: 'Supporter groups may escalate to conflict' },
+      ],
+      modifications: [
+        { type: 'status', frequency: 'uncommon', comment: 'Factions become waning, rules repealed' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.3,
+      clusterFormation: -0.2,
+      diversityImpact: 0.6,
+      comment: 'Leadership vacuums create succession crises with multiple claimants',
+    },
+    parameters: {
+      throttleChance: {
+        value: 0.2,
+        min: 0.05,
+        max: 0.5,
+        description: 'Probability system runs each tick (event-driven, no need to check constantly)',
+      },
+      rivalryCooldown: {
+        value: 8,
+        min: 3,
+        max: 20,
+        description: 'Ticks before same NPC can form another rivalry',
+      },
+      rivalryChance: {
+        value: 0.7,
+        min: 0.3,
+        max: 0.95,
+        description: 'Probability claimants become rivals',
+      },
+      escalationChance: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.7,
+        description: 'Probability rivalry escalates to enemy_of between supporters',
+      },
+      conflictChance: {
+        value: 0.5,
+        min: 0.2,
+        max: 0.9,
+        description: 'Probability supporters actually form enemy_of when escalation triggered',
+      },
+      repealChance: {
+        value: 0.4,
+        min: 0.1,
+        max: 0.8,
+        description: 'Probability dead leader rules get repealed during crisis',
+      },
+    },
+    triggers: {
+      graphConditions: ['Factions with dead leaders'],
+      comment: 'Detects leaderless factions and triggers succession cascades',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    // Throttle: Only check 20% of ticks (don't need to check every tick)
-    if (!rollProbability(0.2, modifier)) {
+    const params = successionVacuum.metadata?.parameters || {};
+    const throttleChance = params.throttleChance?.value ?? 0.2;
+    const RIVALRY_COOLDOWN = params.rivalryCooldown?.value ?? 8;
+    const rivalryChance = params.rivalryChance?.value ?? 0.7;
+    const escalationChance = params.escalationChance?.value ?? 0.3;
+    const conflictChance = params.conflictChance?.value ?? 0.5;
+    const repealChance = params.repealChance?.value ?? 0.4;
+
+    // Throttle: Only check throttleChance% of ticks (don't need to check every tick)
+    if (!rollProbability(throttleChance, modifier)) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -55,7 +123,6 @@ export const successionVacuum: SimulationSystem = {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const relationships: Relationship[] = [];
     const pressureChanges: Record<string, number> = {};
-    const RIVALRY_COOLDOWN = 8;
 
     // === STEP 1: Detect Leaderless Factions ===
     const factions = findEntities(graph, { kind: 'faction', status: 'active' });
@@ -83,8 +150,9 @@ export const successionVacuum: SimulationSystem = {
 
     // === STEP 2: Process Each Succession Crisis ===
     leaderlessFactions.forEach(faction => {
-      const members = getFactionMembers(graph, faction.id);
-      const eligibleClaimants = members.filter(npc =>
+      // Only core members (>= 0.7 strength) with sufficient prominence can claim leadership
+      const coreMembers = getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.7 });
+      const eligibleClaimants = coreMembers.filter(npc =>
         npc.status === 'alive' &&
         (npc.prominence === 'recognized' || npc.prominence === 'renowned' || npc.prominence === 'mythic')
       );
@@ -118,8 +186,8 @@ export const successionVacuum: SimulationSystem = {
             continue;
           }
 
-          const rivalryChance = Math.min(0.95, 0.7 * modifier);
-          if (rollProbability(rivalryChance, modifier)) {
+          const rivalryProb = Math.min(0.95, rivalryChance * modifier);
+          if (rollProbability(rivalryProb, modifier)) {
             relationships.push({
               kind: 'rival_of',
               src: claimant1.id,
@@ -131,8 +199,8 @@ export const successionVacuum: SimulationSystem = {
       }
 
       // === STEP 5: Escalation to Conflict ===
-      // 30% chance rivalries escalate to enemy_of between supporter groups
-      if (claimants.length >= 2 && Math.random() < 0.3) {
+      // Tunable chance rivalries escalate to enemy_of between supporter groups
+      if (claimants.length >= 2 && Math.random() < escalationChance) {
         const claimant1Supporters = getRelated(graph, claimants[0].id, 'follower_of', 'dst');
         const claimant2Supporters = getRelated(graph, claimants[1].id, 'follower_of', 'dst');
 
@@ -142,8 +210,8 @@ export const successionVacuum: SimulationSystem = {
 
           if (areRelationshipsCompatible(graph, supporter1.id, supporter2.id, 'enemy_of') &&
               canFormRelationship(graph, supporter1.id, 'enemy_of', 8)) {
-            const conflictChance = Math.min(0.95, 0.5 * modifier);
-            if (rollProbability(conflictChance, modifier)) {
+            const conflictProb = Math.min(0.95, conflictChance * modifier);
+            if (rollProbability(conflictProb, modifier)) {
               relationships.push({
                 kind: 'enemy_of',
                 src: supporter1.id,
@@ -172,8 +240,8 @@ export const successionVacuum: SimulationSystem = {
           const rulesRepaled = pickMultiple(leaderRules, repealCount);
 
           rulesRepaled.forEach(rule => {
-            const repealChance = Math.min(0.95, 0.4 * modifier);
-            if (rollProbability(repealChance, modifier)) {
+            const repealProb = Math.min(0.95, repealChance * modifier);
+            if (rollProbability(repealProb, modifier)) {
               modifications.push({
                 id: rule.id,
                 changes: {

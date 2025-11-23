@@ -19,9 +19,53 @@ export const conflictContagion: SimulationSystem = {
   id: 'conflict_contagion',
   name: 'Conflict Spread',
 
+  metadata: {
+    produces: {
+      relationships: [
+        { kind: 'enemy_of', category: 'social', frequency: 'uncommon', comment: 'Conflicts spread to allies' },
+      ],
+      modifications: [],
+    },
+    effects: {
+      graphDensity: 0.5,
+      clusterFormation: 0.4,
+      diversityImpact: 0.6,
+      comment: 'Spreads conflicts through alliance networks',
+    },
+    parameters: {
+      throttleChance: {
+        value: 0.2,
+        min: 0.05,
+        max: 0.5,
+        description: 'Probability system runs each tick (prevents conflict spam)',
+      },
+      spreadChance: {
+        value: 0.15,
+        min: 0.05,
+        max: 0.5,
+        description: 'Probability conflict spreads to an ally',
+      },
+      cooldown: {
+        value: 8,
+        min: 3,
+        max: 20,
+        description: 'Ticks before same NPC can form another enemy relationship',
+      },
+    },
+    triggers: {
+      graphConditions: ['Existing conflicts', 'Allied NPCs/factions'],
+      comment: 'Requires enemy_of/rival_of/at_war_with relationships',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    // Throttle: Only run 20% of ticks to reduce conflict spam
-    if (!rollProbability(0.2, modifier)) {
+    const params = conflictContagion.metadata?.parameters || {};
+    const throttleChance = params.throttleChance?.value ?? 0.2;
+    const spreadChance = params.spreadChance?.value ?? 0.15;
+    const COOLDOWN = params.cooldown?.value ?? 8;
+
+    // Throttle: Only run throttleChance% of ticks to reduce conflict spam
+    if (!rollProbability(throttleChance, modifier)) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -32,7 +76,6 @@ export const conflictContagion: SimulationSystem = {
 
     const relationships: Relationship[] = [];
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
-    const COOLDOWN = 8;  // Same as enemy_of cooldown in relationshipFormation
 
     // Find existing conflicts
     const conflicts = graph.relationships.filter(r =>
@@ -40,17 +83,18 @@ export const conflictContagion: SimulationSystem = {
     );
 
     conflicts.forEach(conflict => {
-      const srcAllies = getRelated(graph, conflict.src, 'follower_of', 'dst')
-        .concat(getRelated(graph, conflict.src, 'member_of', 'src'));
-      const dstAllies = getRelated(graph, conflict.dst, 'follower_of', 'dst')
-        .concat(getRelated(graph, conflict.dst, 'member_of', 'src'));
+      // Only strong allies (>= 0.5 loyalty) will join the conflict
+      const srcAllies = getRelated(graph, conflict.src, 'follower_of', 'dst', { minStrength: 0.5 })
+        .concat(getRelated(graph, conflict.src, 'member_of', 'src', { minStrength: 0.5 }));
+      const dstAllies = getRelated(graph, conflict.dst, 'follower_of', 'dst', { minStrength: 0.5 })
+        .concat(getRelated(graph, conflict.dst, 'member_of', 'src', { minStrength: 0.5 }));
 
-      // Conflicts spread to allies (15% base chance, reduced from 30%)
+      // Conflicts spread to strong allies only
       srcAllies.forEach(ally => {
         // Prevent self-referential relationships
         if (ally.id === conflict.dst) return;
 
-        if (rollProbability(0.15, modifier)) {
+        if (rollProbability(spreadChance, modifier)) {
           // Check: no existing enemy_of, not on cooldown, no contradictions
           if (!hasRelationship(graph, ally.id, conflict.dst, 'enemy_of') &&
               canFormRelationship(graph, ally.id, 'enemy_of', COOLDOWN) &&
@@ -69,7 +113,7 @@ export const conflictContagion: SimulationSystem = {
         // Prevent self-referential relationships
         if (ally.id === conflict.src) return;
 
-        if (rollProbability(0.15, modifier)) {
+        if (rollProbability(spreadChance, modifier)) {
           // Check: no existing enemy_of, not on cooldown, no contradictions
           if (!hasRelationship(graph, ally.id, conflict.src, 'enemy_of') &&
               canFormRelationship(graph, ally.id, 'enemy_of', COOLDOWN) &&

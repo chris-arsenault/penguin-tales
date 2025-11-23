@@ -1,5 +1,6 @@
 import { HardState, Relationship } from './worldTypes';
 import { LoreIndex, LoreRecord } from './lore';
+import { TemplateMetadata, SystemMetadata, DistributionTargets } from './distribution';
 
 export interface LLMConfig {
   enabled: boolean;
@@ -69,13 +70,14 @@ export interface GrowthTemplate {
   id: string;
   name: string;
   requiredEra?: string[];  // optional era restrictions
-  
+  metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
+
   // Check if template can be applied
   canApply: (graph: Graph) => boolean;
-  
+
   // Find valid targets for this template
   findTargets: (graph: Graph) => HardState[];
-  
+
   // Execute the template on a target
   expand: (graph: Graph, target?: HardState) => TemplateResult;
 }
@@ -90,7 +92,8 @@ export interface TemplateResult {
 export interface SimulationSystem {
   id: string;
   name: string;
-  
+  metadata?: SystemMetadata;  // Statistical metadata for distribution tuning
+
   // Run one tick of this system
   apply: (graph: Graph, modifier: number) => SystemResult;
 }
@@ -134,4 +137,5 @@ export interface EngineConfig {
   llmConfig?: LLMConfig;
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;
+  distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
 }

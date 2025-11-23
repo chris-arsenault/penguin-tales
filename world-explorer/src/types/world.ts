@@ -6,6 +6,7 @@ export interface Relationship {
   kind: string;
   src: string;
   dst: string;
+  strength?: number;
 }
 
 export interface HardState {

@@ -20,6 +20,31 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
   id: 'mystical_location_discovery',
   name: 'Mystical Location Discovery',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'anomaly',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'explorer_of', category: 'spatial', probability: 1.0, comment: 'Magic user explores anomaly' },
+        { kind: 'discovered_by', category: 'spatial', probability: 1.0, comment: 'Anomaly discovered by magic user' },
+        { kind: 'adjacent_to', category: 'spatial', probability: 0.8, comment: 'Adjacent to nearby location' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.5,
+      diversityImpact: 0.8,
+      comment: 'Procedurally generates mystical locations based on magical state',
+    },
+    tags: ['emergent', 'mystical', 'magic-driven'],
+  },
+
   canApply: (graph: Graph): boolean => {
     // Must have magical instability
     const magic = analyzeMagicPresence(graph);

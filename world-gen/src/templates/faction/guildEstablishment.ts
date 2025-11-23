@@ -11,7 +11,38 @@ import { generateName, pickRandom, findEntities, slugifyName } from '../../utils
 export const guildEstablishment: GrowthTemplate = {
   id: 'guild_establishment',
   name: 'Guild Formation',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'faction',
+          subtype: 'company',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+        {
+          kind: 'npc',
+          subtype: 'merchant',
+          count: { min: 2, max: 3 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'controls', category: 'political', probability: 1.0, comment: 'Guild controls colony trade' },
+        { kind: 'member_of', category: 'political', probability: 2.5, comment: '2-3 merchants join guild' },
+        { kind: 'resident_of', category: 'spatial', probability: 2.5, comment: 'Merchants reside in colony' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.6,
+      clusterFormation: 0.8,
+      diversityImpact: 0.4,
+      comment: 'Forms tight economic clusters within colonies',
+    },
+    tags: ['economic', 'colony-centric', 'cluster-forming'],
+  },
+
   canApply: (graph: Graph) => {
     const merchants = findEntities(graph, { kind: 'npc', subtype: 'merchant' });
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });

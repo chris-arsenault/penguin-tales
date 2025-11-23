@@ -1,7 +1,7 @@
 import { Graph, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
 import { LoreRecord } from '../types/lore';
 import { HardState, Relationship } from '../types/worldTypes';
-import { 
+import {
   generateId,
   addEntity,
   addRelationship,
@@ -14,12 +14,20 @@ import {
 } from '../utils/helpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../config/eras';
 import { EnrichmentService } from '../services/enrichmentService';
+import { TemplateSelector } from '../services/templateSelector';
+import { SystemSelector } from '../services/systemSelector';
+import { DistributionTracker } from '../services/distributionTracker';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class WorldEngine {
   private config: EngineConfig;
   private graph: Graph;
   private currentEpoch: number;
   private enrichmentService?: EnrichmentService;
+  private templateSelector?: TemplateSelector;  // Optional statistical template selector
+  private systemSelector?: SystemSelector;      // Optional statistical system weighting
+  private distributionTracker?: DistributionTracker;  // Distribution measurement
   private pendingEnrichments: Promise<void>[] = [];
   private pendingNameEnrichments: Promise<void>[] = [];
   private entityEnrichmentsUsed = 0;
@@ -29,6 +37,7 @@ export class WorldEngine {
   // Engine-level safeguards
   private systemMetrics: Map<string, { relationshipsCreated: number; lastThrottleCheck: number }> = new Map();
   private lastRelationshipCount: number = 0;
+  private warningLogPath: string;
 
   // Track entity state for change detection
   private entitySnapshots = new Map<string, {
@@ -42,6 +51,28 @@ export class WorldEngine {
     this.config = config;
     this.enrichmentService = enrichmentService;
     this.currentEpoch = 0;
+
+    // Initialize warning log file
+    this.warningLogPath = path.join(process.cwd(), 'output', 'warnings.log');
+    try {
+      const dir = path.dirname(this.warningLogPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      // Clear previous log
+      fs.writeFileSync(this.warningLogPath, `World Generation Warnings Log\nStarted: ${new Date().toISOString()}\n${'='.repeat(80)}\n\n`);
+    } catch (error) {
+      console.warn('Could not initialize warning log file:', error);
+    }
+
+    // Initialize statistical distribution system if targets are provided
+    if (config.distributionTargets) {
+      this.distributionTracker = new DistributionTracker(config.distributionTargets);
+      this.templateSelector = new TemplateSelector(config.distributionTargets, config.templates);
+      this.systemSelector = new SystemSelector(config.distributionTargets);
+      console.log('✓ Statistical template selection enabled');
+      console.log('✓ Statistical system weighting enabled');
+    }
     
     // Initialize graph from initial state
     this.graph = {
@@ -120,6 +151,20 @@ export class WorldEngine {
     }
     return undefined;
   }
+
+  /**
+   * Write warning to log file instead of console
+   */
+  private logWarning(message: string): void {
+    try {
+      const timestamp = new Date().toISOString();
+      const logEntry = `[${timestamp}] [Tick ${this.graph.tick}] ${message}\n`;
+      fs.appendFileSync(this.warningLogPath, logEntry);
+    } catch (error) {
+      // Fallback to console if file write fails
+      console.warn(message);
+    }
+  }
   
   // Main execution loop
   public run(): Graph {
@@ -136,6 +181,16 @@ export class WorldEngine {
 
     console.log(`\nGeneration complete!`);
     console.log(`Final state: ${this.graph.entities.size} entities, ${this.graph.relationships.length} relationships`);
+
+    // Log warning file location
+    try {
+      const stats = fs.statSync(this.warningLogPath);
+      if (stats.size > 100) {  // If there are warnings beyond header
+        console.log(`⚠️  Warnings logged to: ${path.relative(process.cwd(), this.warningLogPath)}`);
+      }
+    } catch (error) {
+      // File doesn't exist or is empty - no warnings
+    }
 
     return this.graph;
   }
@@ -196,11 +251,32 @@ export class WorldEngine {
     let entitiesCreated = 0;
     const createdEntities: HardState[] = [];
 
-    // Calculate entity kind deficits for weighted template selection
-    const deficits = this.calculateEntityDeficits();
+    // Template selection: Use statistical selector if available, otherwise use heuristic method
+    let weightedTemplates: GrowthTemplate[];
 
-    // Weighted template selection based on entity kind deficits
-    const weightedTemplates = this.selectWeightedTemplates(era, deficits, growthTargets);
+    if (this.templateSelector) {
+      // Statistical template selection based on distribution targets
+      // Filter templates that can apply
+      const applicableTemplates = this.config.templates.filter(t => t.canApply(this.graph));
+
+      // Build era weights map
+      const eraWeights: Record<string, number> = {};
+      applicableTemplates.forEach(t => {
+        eraWeights[t.id] = getTemplateWeight(era, t.id);
+      });
+
+      // Use TemplateSelector for guided selection
+      weightedTemplates = this.templateSelector.selectTemplates(
+        this.graph,
+        applicableTemplates,
+        eraWeights,
+        growthTargets * 3  // Select more than needed to account for failures
+      );
+    } else {
+      // Fallback to heuristic method
+      const deficits = this.calculateEntityDeficits();
+      weightedTemplates = this.selectWeightedTemplates(era, deficits, growthTargets);
+    }
 
     for (const template of weightedTemplates) {
       if (entitiesCreated >= growthTargets) break;
@@ -423,9 +499,17 @@ export class WorldEngine {
     const budget = this.config.relationshipBudget?.maxPerSimulationTick || Infinity;
     let relationshipsAddedThisTick = 0;
 
+    // Calculate distribution-based system modifiers if available
+    const distributionModifiers = this.systemSelector
+      ? this.calculateDistributionSystemModifiers(era)
+      : {};
+
     for (const system of this.config.systems) {
-      const modifier = getSystemModifier(era, system.id);
-      if (modifier === 0) continue; // System disabled
+      const baseModifier = getSystemModifier(era, system.id);
+      if (baseModifier === 0) continue; // System disabled by era
+
+      // Apply distribution-based adjustment on top of era modifier
+      const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
         const result = system.apply(this.graph, modifier);
@@ -437,8 +521,8 @@ export class WorldEngine {
         for (const rel of result.relationshipsAdded) {
           // Check budget
           if (relationshipsAddedThisTick >= budget) {
-            console.warn(`⚠️  RELATIONSHIP BUDGET REACHED: ${budget}/tick at tick ${this.graph.tick}`);
-            console.warn(`   Remaining systems may not add relationships this tick`);
+            this.logWarning(`⚠️  RELATIONSHIP BUDGET REACHED: ${budget}/tick`);
+            this.logWarning(`   Remaining systems may not add relationships this tick`);
             break;
           }
 
@@ -455,8 +539,8 @@ export class WorldEngine {
 
         // Update system metrics and check for aggressive systems
         if (metric.relationshipsCreated > 500 && this.graph.tick - metric.lastThrottleCheck > 20) {
-          console.warn(`⚠️  AGGRESSIVE SYSTEM: ${system.id} has created ${metric.relationshipsCreated} relationships`);
-          console.warn(`   Consider adding throttling or reducing probabilities`);
+          this.logWarning(`⚠️  AGGRESSIVE SYSTEM: ${system.id} has created ${metric.relationshipsCreated} relationships`);
+          this.logWarning(`   Consider adding throttling or reducing probabilities`);
           metric.lastThrottleCheck = this.graph.tick;
         }
         this.systemMetrics.set(system.id, metric);
@@ -503,17 +587,109 @@ export class WorldEngine {
   }
   
   private updatePressures(era: Era): void {
+    // Calculate distribution-based pressure adjustments if we have a tracker
+    const distributionAdjustments = this.templateSelector
+      ? this.calculateDistributionPressureAdjustments()
+      : {};
+
     this.config.pressures.forEach(pressure => {
       const current = this.graph.pressures.get(pressure.id) || pressure.value;
-      const growth = pressure.growth(this.graph);
-      const decay = current > 50 ? pressure.decay : -pressure.decay;
+      const rawGrowth = pressure.growth(this.graph);
+
+      // Apply diminishing returns for high pressure values to prevent maxing out
+      // Growth is scaled down as pressure approaches 100
+      // Use exponential decay to prevent maxing out
+      const growthScaling = Math.max(0.1, 1 - Math.pow(current / 100, 2)); // At 80, ~36%; at 100, ~10%
+      const growth = rawGrowth * growthScaling;
+
+      // Decay always subtracts (no conditional flip)
+      const decay = -pressure.decay;
 
       // Apply era modifier if present
       const eraModifier = era.pressureModifiers?.[pressure.id] || 1.0;
 
-      const newValue = current + (growth + decay) * eraModifier;
+      // Apply distribution feedback adjustment
+      const distributionFeedback = distributionAdjustments[pressure.id] || 0;
+
+      const delta = (growth + decay) * eraModifier + distributionFeedback;
+
+      // Smooth large changes to prevent spikes (max change per epoch: ±15)
+      const smoothedDelta = Math.max(-15, Math.min(15, delta));
+
+      const newValue = current + smoothedDelta;
       this.graph.pressures.set(pressure.id, Math.max(0, Math.min(100, newValue)));
     });
+  }
+
+  /**
+   * Calculate distribution-based system modifier adjustments
+   */
+  private calculateDistributionSystemModifiers(era: Era): Record<string, number> {
+    if (!this.systemSelector) return {};
+
+    // Build era modifiers map
+    const eraModifiers: Record<string, number> = {};
+    this.config.systems.forEach(system => {
+      eraModifiers[system.id] = getSystemModifier(era, system.id);
+    });
+
+    return this.systemSelector.calculateSystemModifiers(
+      this.graph,
+      this.config.systems,
+      eraModifiers
+    );
+  }
+
+  /**
+   * Calculate pressure adjustments based on distribution deviation
+   * High deviation in certain areas should boost relevant pressures
+   */
+  private calculateDistributionPressureAdjustments(): Record<string, number> {
+    if (!this.templateSelector) return {};
+
+    const state = this.distributionTracker!.measureState(this.graph);
+    const deviation = this.distributionTracker!.calculateDeviation(state, this.graph.currentEra.name);
+    const adjustments: Record<string, number> = {};
+
+    const threshold = this.config.distributionTargets!.tuning.convergenceThreshold;
+
+    // High faction deficit → boost cultural_tension to trigger faction templates
+    if (deviation.entityKind.score > threshold) {
+      const factionDeviation = deviation.entityKind.deviations['faction'] || 0;
+      if (factionDeviation > 0.1) {
+        // We need more factions
+        adjustments['cultural_tension'] = Math.min(factionDeviation * 20, 5);
+      }
+    }
+
+    // High conflict/rivalry → boost conflict pressure
+    if (deviation.relationship.score > threshold) {
+      const enemyRatio = state.relationshipTypeRatios['enemy_of'] || 0;
+      const rivalRatio = state.relationshipTypeRatios['rival_of'] || 0;
+      const conflictRatio = enemyRatio + rivalRatio;
+
+      if (conflictRatio > 0.15) {
+        adjustments['conflict'] = Math.min(conflictRatio * 15, 5);
+      }
+    }
+
+    // High abilities deficit → boost magical_instability to trigger ability discovery
+    if (deviation.entityKind.score > threshold) {
+      const abilityDeviation = deviation.entityKind.deviations['abilities'] || 0;
+      if (abilityDeviation > 0.08) {
+        adjustments['magical_instability'] = Math.min(abilityDeviation * 25, 5);
+      }
+    }
+
+    // Low isolated nodes and good connectivity → boost stability
+    if (deviation.connectivity.score < threshold) {
+      const isolatedRatio = state.graphMetrics.isolatedNodeRatio;
+      if (isolatedRatio < 0.1) {
+        adjustments['stability'] = 3;
+      }
+    }
+
+    return adjustments;
   }
 
   private monitorRelationshipGrowth(): void {
@@ -533,9 +709,9 @@ export class WorldEngine {
 
     // Warn if exponential growth detected
     if (avgGrowth > 30 && window.length >= 10) {
-      console.warn(`⚠️  HIGH RELATIONSHIP GROWTH RATE: ${avgGrowth.toFixed(1)}/tick`);
-      console.warn(`   Current: ${currentCount} relationships, growing at ${avgGrowth.toFixed(1)}/tick`);
-      console.warn(`   Consider reducing system probabilities or adding throttling`);
+      this.logWarning(`⚠️  HIGH RELATIONSHIP GROWTH RATE: ${avgGrowth.toFixed(1)}/tick`);
+      this.logWarning(`   Current: ${currentCount} relationships, growing at ${avgGrowth.toFixed(1)}/tick`);
+      this.logWarning(`   Consider reducing system probabilities or adding throttling`);
     }
 
     this.lastRelationshipCount = currentCount;
@@ -571,16 +747,78 @@ export class WorldEngine {
   private reportEpochStats(): void {
     const byKind = new Map<string, number>();
     const bySubtype = new Map<string, number>();
-    
+
     for (const entity of this.graph.entities.values()) {
       byKind.set(entity.kind, (byKind.get(entity.kind) || 0) + 1);
       const key = `${entity.kind}:${entity.subtype}`;
       bySubtype.set(key, (bySubtype.get(key) || 0) + 1);
     }
-    
+
     console.log(`  Entities by kind:`, Object.fromEntries(byKind));
     console.log(`  Relationships: ${this.graph.relationships.length}`);
     console.log(`  Pressures:`, Object.fromEntries(this.graph.pressures));
+
+    // Report distribution statistics if using TemplateSelector
+    if (this.templateSelector) {
+      this.reportDistributionStats();
+    }
+  }
+
+  /**
+   * Report distribution statistics and deviation from targets
+   */
+  private reportDistributionStats(): void {
+    if (!this.templateSelector) return;
+
+    const state = this.templateSelector.getState(this.graph);
+    const deviation = this.templateSelector.getDeviation(this.graph);
+
+    // Entity kind distribution
+    console.log(`\n  === Distribution Statistics ===`);
+    console.log(`  Entity Kinds (current vs target):`);
+    Object.entries(state.entityKindRatios).forEach(([kind, ratio]) => {
+      const target = this.config.distributionTargets?.global.entityKindDistribution.targets[kind] || 0;
+      const delta = ratio - target;
+      const sign = delta > 0 ? '+' : '';
+      const status = Math.abs(delta) > 0.05 ? '⚠️' : '✓';
+      console.log(`    ${status} ${kind}: ${(ratio * 100).toFixed(1)}% (target: ${(target * 100).toFixed(1)}%, ${sign}${(delta * 100).toFixed(1)}%)`);
+    });
+
+    // Prominence distribution
+    console.log(`  Prominence (current vs target):`);
+    Object.entries(state.prominenceRatios).forEach(([level, ratio]) => {
+      const target = this.config.distributionTargets?.global.prominenceDistribution.targets[level as any] || 0;
+      const delta = ratio - target;
+      const sign = delta > 0 ? '+' : '';
+      const status = Math.abs(delta) > 0.05 ? '⚠️' : '✓';
+      console.log(`    ${status} ${level}: ${(ratio * 100).toFixed(1)}% (target: ${(target * 100).toFixed(1)}%, ${sign}${(delta * 100).toFixed(1)}%)`);
+    });
+
+    // Relationship diversity
+    const topRelTypes = Object.entries(state.relationshipTypeRatios)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    console.log(`  Top relationship types:`);
+    topRelTypes.forEach(([type, ratio]) => {
+      const status = ratio > 0.15 ? '⚠️' : '✓';
+      console.log(`    ${status} ${type}: ${(ratio * 100).toFixed(1)}%`);
+    });
+
+    // Graph metrics
+    const avgDegree = (this.graph.relationships.length * 2) / state.totalEntities; // Each relationship connects 2 entities
+    console.log(`  Graph Connectivity:`);
+    console.log(`    Clusters: ${state.graphMetrics.clusters} (target: ${this.config.distributionTargets?.global.graphConnectivity.targetClusters.preferred || 5})`);
+    console.log(`    Avg cluster size: ${state.graphMetrics.avgClusterSize.toFixed(1)}`);
+    console.log(`    Avg connections/entity: ${avgDegree.toFixed(1)}`);
+    console.log(`    Isolated nodes: ${state.graphMetrics.isolatedNodes} (${(state.graphMetrics.isolatedNodeRatio * 100).toFixed(1)}%)`);
+
+    // Overall deviation score
+    console.log(`\n  Overall Deviation Score: ${deviation.overall.toFixed(3)}`);
+    if (deviation.overall > 0.15) {
+      console.log(`  ⚠️  HIGH DEVIATION - template selection will be heavily guided`);
+    } else if (deviation.overall < 0.08) {
+      console.log(`  ✓ CONVERGED - template selection is lightly guided`);
+    }
   }
   
   private async waitForNameEnrichmentsSnapshot(): Promise<void> {
@@ -982,7 +1220,7 @@ export class WorldEngine {
   
   public exportState(): any {
     const entities = Array.from(this.graph.entities.values());
-    return {
+    const exportData: any = {
       metadata: {
         tick: this.graph.tick,
         epoch: this.currentEpoch,
@@ -997,5 +1235,28 @@ export class WorldEngine {
       history: this.graph.history,  // Export ALL events, not just last 50
       loreRecords: this.graph.loreRecords
     };
+
+    // Include distribution metrics if using statistical template selection
+    if (this.templateSelector) {
+      const state = this.templateSelector.getState(this.graph);
+      const deviation = this.templateSelector.getDeviation(this.graph);
+
+      exportData.distributionMetrics = {
+        entityKindRatios: state.entityKindRatios,
+        prominenceRatios: state.prominenceRatios,
+        relationshipTypeRatios: state.relationshipTypeRatios,
+        graphMetrics: state.graphMetrics,
+        deviation: {
+          overall: deviation.overall,
+          entityKind: deviation.entityKind.score,
+          prominence: deviation.prominence.score,
+          relationship: deviation.relationship.score,
+          connectivity: deviation.connectivity.score
+        },
+        targets: this.config.distributionTargets?.global
+      };
+    }
+
+    return exportData;
   }
 }

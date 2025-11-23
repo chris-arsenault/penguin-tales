@@ -20,6 +20,31 @@ export const resourceLocationDiscovery: GrowthTemplate = {
   id: 'resource_location_discovery',
   name: 'Resource Location Discovery',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'geographic_feature',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'explorer_of', category: 'spatial', probability: 1.0, comment: 'Explorer finds resource' },
+        { kind: 'discovered_by', category: 'spatial', probability: 1.0, comment: 'Resource discovered' },
+        { kind: 'adjacent_to', category: 'spatial', probability: 0.8, comment: 'Adjacent to nearby location' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.4,
+      clusterFormation: 0.3,
+      diversityImpact: 0.6,
+      comment: 'Procedurally generates resource locations based on scarcity',
+    },
+    tags: ['emergent', 'resource', 'scarcity-driven'],
+  },
+
   canApply: (graph: Graph): boolean => {
     // Must have resource deficit
     const deficit = analyzeResourceDeficit(graph);

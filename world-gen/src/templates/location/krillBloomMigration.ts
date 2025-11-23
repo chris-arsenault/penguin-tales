@@ -58,14 +58,76 @@ export const krillBloomMigration: GrowthTemplate = {
   id: 'krill_bloom_migration',
   name: 'Krill Bloom Discovery',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'location',
+          subtype: 'geographic_feature',
+          count: { min: 2, max: 4 },
+          prominence: [{ level: 'recognized', probability: 1.0 }],
+        },
+        {
+          kind: 'npc',
+          subtype: 'merchant',
+          count: { min: 1, max: 2 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'adjacent_to', category: 'spatial', probability: 6.0, comment: '2-4 blooms connected to colonies' },
+        { kind: 'resident_of', category: 'spatial', probability: 2.0, comment: '1-2 merchants reside' },
+        { kind: 'member_of', category: 'political', probability: 2.0, comment: 'Merchants join factions' },
+        { kind: 'explorer_of', category: 'spatial', probability: 2.0, comment: 'Merchants explore blooms' },
+        { kind: 'discoverer_of', category: 'cultural', probability: 0.1, comment: 'Rare tech discovery' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.7,
+      clusterFormation: 0.5,
+      diversityImpact: 0.6,
+      comment: 'Creates resource frontier using Voronoi-like placement',
+    },
+    parameters: {
+      activationChance: {
+        value: 0.05,
+        min: 0.01,
+        max: 0.2,
+        description: 'Probability when scarcity is low',
+      },
+      bloomCountMin: {
+        value: 2,
+        min: 1,
+        max: 3,
+        description: 'Minimum blooms per discovery',
+      },
+      bloomCountMax: {
+        value: 4,
+        min: 2,
+        max: 8,
+        description: 'Maximum blooms per discovery',
+      },
+      techDiscoveryChance: {
+        value: 0.1,
+        min: 0.0,
+        max: 0.5,
+        description: 'Probability of discovering fishing technology',
+      },
+    },
+    tags: ['resource', 'voronoi-placement', 'frontier'],
+  },
+
   canApply: (graph: Graph) => {
+    const params = krillBloomMigration.metadata?.parameters || {};
+    const activationChance = params.activationChance?.value ?? 0.05;
+
     const scarcity = graph.pressures.get('resource_scarcity') || 0;
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
     const existingBlooms = findEntities(graph, { kind: 'location', subtype: 'geographic_feature' })
       .filter(gf => gf.tags.includes('krill') || gf.tags.includes('bloom'));
 
     // Triggered by high scarcity or random chance
-    const triggered = scarcity > 60 || Math.random() < 0.05;
+    const triggered = scarcity > 60 || Math.random() < activationChance;
 
     // Requires at least 2 colonies and not too many existing blooms
     return triggered && colonies.length >= 2 && existingBlooms.length < 10;
@@ -77,6 +139,12 @@ export const krillBloomMigration: GrowthTemplate = {
   },
 
   expand: (graph: Graph, target?: HardState): TemplateResult => {
+    // Extract parameters from metadata
+    const params = krillBloomMigration.metadata?.parameters || {};
+    const bloomCountMin = params.bloomCountMin?.value ?? 2;
+    const bloomCountMax = params.bloomCountMax?.value ?? 4;
+    const techDiscoveryChance = params.techDiscoveryChance?.value ?? 0.1;
+
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
 
     // VALIDATION: Need at least 2 colonies
@@ -91,8 +159,8 @@ export const krillBloomMigration: GrowthTemplate = {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    // Determine bloom count (2-4)
-    const bloomCount = 2 + Math.floor(Math.random() * 3);
+    // Determine bloom count
+    const bloomCount = Math.floor(Math.random() * (bloomCountMax - bloomCountMin + 1)) + bloomCountMin;
 
     // === STEP 1: Find Frontier Locations ===
     // Score existing geographic features by distance from nearest colony
@@ -236,8 +304,8 @@ export const krillBloomMigration: GrowthTemplate = {
     }
 
     // === STEP 4: Technology Innovation ===
-    // 10% chance to discover new fishing technology
-    if (Math.random() < 0.1) {
+    // Chance to discover new fishing technology
+    if (Math.random() < techDiscoveryChance) {
       const abilities = findEntities(graph, { kind: 'abilities', subtype: 'technology', status: 'active' });
       if (abilities.length > 0 && entities.length > 0) {
         const ability = pickRandom(abilities);

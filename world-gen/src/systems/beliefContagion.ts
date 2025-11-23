@@ -76,12 +76,66 @@ export const beliefContagion: SimulationSystem = {
   id: 'belief_contagion',
   name: 'Ideological Spread',
 
+  metadata: {
+    produces: {
+      relationships: [],
+      modifications: [
+        { type: 'tags', frequency: 'common', comment: 'NPCs adopt/reject belief tags' },
+        { type: 'status', frequency: 'uncommon', comment: 'Rules transition proposed → enacted/forgotten' },
+        { type: 'prominence', frequency: 'rare', comment: 'Enacted rules gain prominence' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.0,
+      clusterFormation: 0.8,
+      diversityImpact: 0.7,
+      comment: 'Spreads ideologies through social networks using SIR epidemic model',
+    },
+    parameters: {
+      transmissionRate: {
+        value: 0.15,
+        min: 0.05,
+        max: 0.5,
+        description: 'Beta: infection probability per infected contact',
+      },
+      recoveryRate: {
+        value: 0.03,
+        min: 0.01,
+        max: 0.2,
+        description: 'Gamma: rejection probability per tick',
+      },
+      resistanceWeight: {
+        value: 0.3,
+        min: 0.0,
+        max: 0.8,
+        description: 'Resistance bonus for traditional/conservative NPCs',
+      },
+      traditionWeight: {
+        value: 0.5,
+        min: 0.0,
+        max: 1.0,
+        description: 'Recovery bonus for traditional NPCs',
+      },
+      enactmentThreshold: {
+        value: 0.2,
+        min: 0.1,
+        max: 0.5,
+        description: 'Adoption rate needed for proposed → enacted transition',
+      },
+    },
+    triggers: {
+      graphConditions: ['Proposed rules exist', 'NPC count > 0'],
+      comment: 'Only runs when proposed ideologies are active',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    const BETA = 0.15;  // Transmission rate (increased from 0.1)
-    const GAMMA = 0.03; // Recovery rate (decreased from 0.05)
-    const RESISTANCE_WEIGHT = 0.3;
-    const TRADITION_WEIGHT = 0.5;
-    const ENACTMENT_THRESHOLD = 0.2; // 20% adoption for proposed → enacted (decreased from 30%)
+    const params = beliefContagion.metadata?.parameters || {};
+    const BETA = params.transmissionRate?.value ?? 0.15;
+    const GAMMA = params.recoveryRate?.value ?? 0.03;
+    const RESISTANCE_WEIGHT = params.resistanceWeight?.value ?? 0.3;
+    const TRADITION_WEIGHT = params.traditionWeight?.value ?? 0.5;
+    const ENACTMENT_THRESHOLD = params.enactmentThreshold?.value ?? 0.2;
 
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const relationships: Relationship[] = [];
@@ -135,10 +189,11 @@ export const beliefContagion: SimulationSystem = {
       // Susceptible NPCs exposed to infected carriers may adopt the belief
       susceptible.forEach(npc => {
         // Count infected neighbors (via follower_of, member_of)
-        const followers = getRelated(graph, npc.id, 'follower_of', 'dst'); // NPCs who follow this one
-        const followees = getRelated(graph, npc.id, 'follower_of', 'src'); // NPCs this one follows
-        const factionMembers = getRelated(graph, npc.id, 'member_of', 'src')
-          .flatMap(faction => getRelated(graph, faction.id, 'member_of', 'dst'));
+        // Only relationships >= 0.3 have meaningful influence on belief transmission
+        const followers = getRelated(graph, npc.id, 'follower_of', 'dst', { minStrength: 0.3 }); // NPCs who follow this one
+        const followees = getRelated(graph, npc.id, 'follower_of', 'src', { minStrength: 0.3 }); // NPCs this one follows
+        const factionMembers = getRelated(graph, npc.id, 'member_of', 'src', { minStrength: 0.3 })
+          .flatMap(faction => getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.3 }));
 
         const contacts = [...followers, ...followees, ...factionMembers];
         const infectedContacts = contacts.filter(contact => hasAdoptedBelief(contact, rule.id));

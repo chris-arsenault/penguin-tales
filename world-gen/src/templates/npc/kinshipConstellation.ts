@@ -37,6 +37,80 @@ export const kinshipConstellation: GrowthTemplate = {
   id: 'kinship_constellation',
   name: 'Extended Family Formation',
 
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'npc',
+          subtype: 'various',
+          count: { min: 5, max: 8 },
+          prominence: [
+            { level: 'marginal', probability: 0.75 },
+            { level: 'recognized', probability: 0.25 },
+          ],
+        },
+      ],
+      relationships: [
+        { kind: 'resident_of', category: 'spatial', probability: 7.0, comment: 'All family members reside in location' },
+        { kind: 'member_of', category: 'political', probability: 7.0, comment: 'All family members join faction' },
+        { kind: 'mentor_of', category: 'social', probability: 1.0, comment: 'Elder mentors prodigy' },
+        { kind: 'rival_of', category: 'social', probability: 2.0, comment: 'Internal family rivalries' },
+        { kind: 'lover_of', category: 'social', probability: 0.5, comment: 'Romance within family' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.8,
+      clusterFormation: 0.9,
+      diversityImpact: 0.6,
+      comment: 'Creates tight family clusters with internal diversity via Ising model',
+    },
+    parameters: {
+      familySizeMin: {
+        value: 5,
+        min: 3,
+        max: 6,
+        description: 'Minimum family size',
+      },
+      familySizeMax: {
+        value: 8,
+        min: 5,
+        max: 12,
+        description: 'Maximum family size',
+      },
+      rivalryChance: {
+        value: 0.4,
+        min: 0.0,
+        max: 0.8,
+        description: 'Probability of rivalry between adjacent members with opposite traits',
+      },
+      romanceChance: {
+        value: 0.5,
+        min: 0.0,
+        max: 0.8,
+        description: 'Probability of romance between bridge and provider',
+      },
+      isingTemperature: {
+        value: 1.0,
+        min: 0.5,
+        max: 2.0,
+        description: 'Metropolis algorithm temperature (higher = more randomness)',
+      },
+      isingCouplingStrength: {
+        value: -0.5,
+        min: -1.0,
+        max: 0.0,
+        description: 'Ising coupling J (negative = opposites attract)',
+      },
+      isingExternalField: {
+        value: 0.3,
+        min: 0.0,
+        max: 1.0,
+        description: 'External field h magnitude (faction influence on traits)',
+      },
+    },
+    tags: ['family', 'ising-model', 'cluster-forming'],
+  },
+
   canApply: (graph: Graph) => {
     const factions = findEntities(graph, { kind: 'faction', status: 'active' });
     const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
@@ -79,8 +153,18 @@ export const kinshipConstellation: GrowthTemplate = {
       };
     }
 
+    // Extract parameters from metadata
+    const params = kinshipConstellation.metadata?.parameters || {};
+    const familySizeMin = params.familySizeMin?.value ?? 5;
+    const familySizeMax = params.familySizeMax?.value ?? 8;
+    const rivalryChance = params.rivalryChance?.value ?? 0.4;
+    const romanceChance = params.romanceChance?.value ?? 0.5;
+    const isingTemperature = params.isingTemperature?.value ?? 1.0;
+    const isingCouplingStrength = params.isingCouplingStrength?.value ?? -0.5;
+    const isingExternalField = params.isingExternalField?.value ?? 0.3;
+
     // === STEP 1: Generate Family Structure ===
-    const familySize = 5 + Math.floor(Math.random() * 4); // 5-8 members
+    const familySize = familySizeMin + Math.floor(Math.random() * (familySizeMax - familySizeMin + 1));
     const familyMembers: FamilyMember[] = [];
 
     // Assign roles
@@ -105,9 +189,9 @@ export const kinshipConstellation: GrowthTemplate = {
     });
 
     // Metropolis algorithm to minimize energy (maximize drama)
-    const TEMPERATURE = 1.0;
-    const J = -0.5; // Negative coupling = adjacent members likely to differ
-    const h = faction.tags.includes('traditional') ? 0.3 : -0.3; // External field
+    const TEMPERATURE = isingTemperature;
+    const J = isingCouplingStrength;
+    const h = faction.tags.includes('traditional') ? isingExternalField : -isingExternalField;
 
     for (let iteration = 0; iteration < 50; iteration++) {
       const memberIndex = Math.floor(Math.random() * familyMembers.length);
@@ -204,7 +288,7 @@ export const kinshipConstellation: GrowthTemplate = {
     for (let i = 0; i < familyMembers.length - 1; i++) {
       if (familyMembers[i].trait !== familyMembers[i + 1].trait) {
         // Opposite traits → potential rivalry
-        if (Math.random() < 0.4) { // 40% chance
+        if (Math.random() < rivalryChance) {
           relationships.push({
             kind: 'rival_of',
             src: `will-be-assigned-${i}`,
@@ -227,7 +311,7 @@ export const kinshipConstellation: GrowthTemplate = {
                 (r.src === `will-be-assigned-${providerIndex}` && r.dst === `will-be-assigned-${bridgeIndex}`))
         );
 
-        if (!areRivals && Math.random() < 0.5) {
+        if (!areRivals && Math.random() < romanceChance) {
           relationships.push({
             kind: 'lover_of',
             src: `will-be-assigned-${bridgeIndex}`,

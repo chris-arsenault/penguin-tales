@@ -5,7 +5,32 @@ import { generateName, pickRandom, findEntities, slugifyName } from '../../utils
 export const succession: GrowthTemplate = {
   id: 'succession',
   name: 'Leadership Succession',
-  
+
+  metadata: {
+    produces: {
+      entityKinds: [
+        {
+          kind: 'npc',
+          subtype: 'mayor',
+          count: { min: 1, max: 1 },
+          prominence: [{ level: 'marginal', probability: 1.0 }],
+        },
+      ],
+      relationships: [
+        { kind: 'leader_of', category: 'political', probability: 1.5, comment: 'Leads colony and possibly faction' },
+        { kind: 'resident_of', category: 'spatial', probability: 1.0, comment: 'Lives in governed colony' },
+        { kind: 'member_of', category: 'political', probability: 0.5, comment: 'Joins faction if predecessor led one' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.3,
+      clusterFormation: 0.4,
+      diversityImpact: 0.2,
+      comment: 'Replaces dead/old leaders with new ones, maintaining political structure',
+    },
+    tags: ['succession', 'leadership-change'],
+  },
+
   canApply: (graph: Graph) => {
     const mayors = findEntities(graph, { kind: 'npc', subtype: 'mayor' });
     return mayors.some(m => m.status === 'dead' || graph.tick > 50);

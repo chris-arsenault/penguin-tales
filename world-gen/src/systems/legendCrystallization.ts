@@ -31,9 +31,50 @@ export const legendCrystallization: SimulationSystem = {
   id: 'legend_crystallization',
   name: 'Legend Formation',
 
+  metadata: {
+    produces: {
+      relationships: [
+        { kind: 'commemorates', category: 'cultural', frequency: 'rare', comment: 'Locations/rules commemorate legends' },
+        { kind: 'originated_in', category: 'spatial', frequency: 'rare', comment: 'Memorial rules originated in locations' },
+      ],
+      modifications: [
+        { type: 'status', frequency: 'rare', comment: 'Dead NPCs become fictional legends' },
+        { type: 'prominence', frequency: 'rare', comment: 'Legends gain mythic prominence' },
+      ],
+    },
+    effects: {
+      graphDensity: 0.3,
+      clusterFormation: 0.4,
+      diversityImpact: 0.9,
+      comment: 'Transforms deceased heroes into cultural myths with memorial rules',
+    },
+    parameters: {
+      throttleChance: {
+        value: 0.2,
+        min: 0.05,
+        max: 0.5,
+        description: 'Probability system runs each tick (threshold-based, no need to run constantly)',
+      },
+      crystallizationThreshold: {
+        value: 50,
+        min: 20,
+        max: 150,
+        description: 'Ticks after death before hero crystallizes into legend',
+      },
+    },
+    triggers: {
+      graphConditions: ['Dead renowned/mythic NPCs', 'death_age >= threshold'],
+      comment: 'Only processes high-prominence NPCs who died long ago',
+    },
+  },
+
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    // Throttle: Only check 20% of ticks (threshold-based system doesn't need to run constantly)
-    if (!rollProbability(0.2, modifier)) {
+    const params = legendCrystallization.metadata?.parameters || {};
+    const throttleChance = params.throttleChance?.value ?? 0.2;
+    const CRYSTALLIZATION_THRESHOLD = params.crystallizationThreshold?.value ?? 50;
+
+    // Throttle: Only check throttleChance% of ticks (threshold-based system doesn't need to run constantly)
+    if (!rollProbability(throttleChance, modifier)) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -45,8 +86,6 @@ export const legendCrystallization: SimulationSystem = {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
     const relationships: Relationship[] = [];
     const newEntities: Array<{ id: string; entity: Partial<HardState> }> = [];
-
-    const CRYSTALLIZATION_THRESHOLD = 50; // Ticks since death
 
     // Find dead NPCs with high prominence who have been dead long enough
     const deadNPCs = findEntities(graph, { kind: 'npc', status: 'dead' });
