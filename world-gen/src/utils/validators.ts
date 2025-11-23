@@ -71,46 +71,59 @@ export function validateConnectedEntities(graph: Graph): ValidationResult {
 }
 
 /**
- * Validate that NPCs have required structural relationships
+ * Validate that entities have required structural relationships
+ * Uses domain schema to determine requirements (no hardcoded entity kinds!)
  */
 export function validateNPCStructure(graph: Graph): ValidationResult {
-  const npcs = Array.from(graph.entities.values()).filter(e => e.kind === 'npc');
-  const invalidNPCs: HardState[] = [];
+  const invalidEntities: HardState[] = [];
+  const missingByKindSubtype = new Map<string, Map<string, number>>();
 
-  npcs.forEach(npc => {
-    if (npc.status === 'alive') {
-      // Living NPCs should have a location
-      const hasLocation = npc.links.some(l => l.kind === 'resident_of');
-      if (!hasLocation) {
-        invalidNPCs.push(npc);
-      }
+  // Check all entities against domain schema requirements
+  for (const entity of graph.entities.values()) {
+    if (!graph.config.domain.validateEntityStructure) {
+      // Domain doesn't provide validation - skip
+      continue;
     }
-  });
 
-  const passed = invalidNPCs.length === 0;
+    const validation = graph.config.domain.validateEntityStructure(entity);
+
+    if (!validation.valid) {
+      invalidEntities.push(entity);
+
+      // Track missing relationships by kind:subtype
+      const key = `${entity.kind}:${entity.subtype}`;
+      if (!missingByKindSubtype.has(key)) {
+        missingByKindSubtype.set(key, new Map());
+      }
+      const subtypeMap = missingByKindSubtype.get(key)!;
+
+      validation.missing.forEach(relKind => {
+        subtypeMap.set(relKind, (subtypeMap.get(relKind) || 0) + 1);
+      });
+    }
+  }
+
+  const passed = invalidEntities.length === 0;
 
   let details = passed
-    ? 'All living NPCs have required relationships'
-    : `${invalidNPCs.length} NPCs missing required relationships:\n`;
+    ? 'All entities have required relationships'
+    : `${invalidEntities.length} entities missing required relationships:\n`;
 
   if (!passed) {
-    // Group by subtype
-    const bySubtype = new Map<string, number>();
-    invalidNPCs.forEach(e => {
-      bySubtype.set(e.subtype, (bySubtype.get(e.subtype) || 0) + 1);
-    });
-
-    bySubtype.forEach((count, subtype) => {
-      details += `  - ${subtype}: ${count} (missing resident_of)\n`;
+    // Group by kind:subtype and missing relationships
+    missingByKindSubtype.forEach((relMap, kindSubtype) => {
+      relMap.forEach((count, relKind) => {
+        details += `  - ${kindSubtype}: ${count} (missing ${relKind})\n`;
+      });
     });
   }
 
   return {
-    name: 'NPC Structure',
+    name: 'Entity Structure',  // Renamed from 'NPC Structure'
     passed,
-    failureCount: invalidNPCs.length,
+    failureCount: invalidEntities.length,
     details,
-    failedEntities: invalidNPCs
+    failedEntities: invalidEntities
   };
 }
 

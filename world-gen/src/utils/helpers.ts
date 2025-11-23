@@ -3,36 +3,14 @@ import { HardState, Relationship } from '../types/worldTypes';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Name generation
-const penguinFirstNames = [
-  'Frost', 'Ice', 'Snow', 'Crystal', 'Aurora', 'Storm', 'Tide', 'Wave',
-  'Glacier', 'Floe', 'Drift', 'Chill', 'Blizzard', 'Shimmer', 'Glint'
-];
-
-const penguinLastNames = [
-  'beak', 'wing', 'diver', 'slider', 'walker', 'swimmer', 'fisher',
-  'hunter', 'watcher', 'keeper', 'breaker', 'caller', 'singer'
-];
-
-const titles = {
-  hero: ['Brave', 'Bold', 'Swift', 'Mighty'],
-  mayor: ['Elder', 'Wise', 'High', 'Chief'],
-  merchant: ['Trader', 'Dealer', 'Master', 'Guild'],
-  outlaw: ['Shadow', 'Silent', 'Quick', 'Sly'],
-  leader: ['Lord', 'Commander', 'Captain', 'Chief'],
-  mystic: ['Seer', 'Oracle', 'Prophet', 'Mystic']
-};
+// DEPRECATED: Name generation should use domain schema
+// Kept for backward compatibility - templates still use this
+// TODO: Refactor templates to use graph.config.domain.nameGenerator
+import { penguinDomain } from '../domain/penguinDomain';
 
 export function generateName(type: string = 'default'): string {
-  const first = pickRandom(penguinFirstNames);
-  const last = pickRandom(penguinLastNames);
-  
-  if (type in titles) {
-    const title = pickRandom(titles[type as keyof typeof titles]);
-    return `${title} ${first}${last}`;
-  }
-  
-  return `${first}${last}`;
+  // Use penguin domain for now (backward compat)
+  return penguinDomain.nameGenerator.generate(type);
 }
 
 // ID generation

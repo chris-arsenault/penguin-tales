@@ -201,6 +201,15 @@ export class EvolutionTracker {
       console.log(`  Connectivity: ${latest.bestIndividual.fitnessBreakdown.connectivity.toFixed(4)}`);
       console.log(`  Overall: ${latest.bestIndividual.fitnessBreakdown.overall.toFixed(4)}`);
     }
+
+    // Show violation metrics if available
+    const bestViolations = this.topConfigurations[0]?.individual.violationMetrics;
+    if (bestViolations) {
+      console.log('\n⚠️  VIOLATIONS:');
+      console.log(`  Total: ${bestViolations.totalViolations}`);
+      console.log(`  Rate: ${bestViolations.violationRate.toFixed(2)}/tick`);
+      console.log(`  Score: ${bestViolations.violationScore.toFixed(4)} (higher is better)`);
+    }
   }
 
   /**

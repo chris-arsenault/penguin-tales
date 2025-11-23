@@ -114,6 +114,7 @@ export class WorldGenRunner {
       // Update individual with fitness
       individual.fitness = evaluation.fitness;
       individual.fitnessBreakdown = evaluation.breakdown;
+      individual.violationMetrics = evaluation.violationMetrics;
 
       // Cleanup temp files
       this.cleanupRun(runId);

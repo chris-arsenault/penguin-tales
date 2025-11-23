@@ -25,7 +25,15 @@ export const relationshipReinforcement: SimulationSystem = {
       comment: 'Strengthens relationships through proximity and shared context',
     },
     parameters: {
-      // Reinforcement bonuses
+      // Structural reinforcement (NEW - key parameter for protected relationships)
+      structuralBonus: {
+        value: 0.02,
+        min: 0.0,
+        max: 0.1,
+        description: 'Per-tick reinforcement for structural relationships (member_of, resident_of, etc.) - keeps protected relationships strong',
+      },
+
+      // Reinforcement bonuses (conditional on proximity/faction)
       proximityBonus: {
         value: 0.03,
         min: 0.0,
@@ -62,14 +70,16 @@ export const relationshipReinforcement: SimulationSystem = {
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
     const params = relationshipReinforcement.metadata?.parameters || {};
 
+    const structuralBonus = (params.structuralBonus?.value ?? 0.02) * modifier;
     const proximityBonus = (params.proximityBonus?.value ?? 0.03) * modifier;
     const sharedFactionBonus = (params.sharedFactionBonus?.value ?? 0.02) * modifier;
     const sharedConflictBonus = (params.sharedConflictBonus?.value ?? 0.05) * modifier;
     const reinforcementCap = params.reinforcementCap?.value ?? 1.0;
 
-    // Spatial relationship kinds to exclude (hardcoded - these don't strengthen emotionally)
-    const excludeSpatial = true;
-    const spatialKinds = new Set(['resident_of', 'located_at', 'adjacent_to', 'contains', 'contained_by', 'slumbers_beneath']);
+    // Define relationship categories
+    const narrativeKinds = new Set(['member_of', 'leader_of', 'practitioner_of', 'originated_in', 'founded_by', 'discoverer_of']);
+    const spatialKinds = new Set(['resident_of', 'located_at', 'adjacent_to', 'contains', 'contained_by', 'slumbers_beneath', 'manifests_at']);
+    const structuralKinds = new Set([...narrativeKinds, ...spatialKinds]); // All structural relationships
 
     let modificationsCount = 0;
 
@@ -79,9 +89,6 @@ export const relationshipReinforcement: SimulationSystem = {
       // Skip if already at cap
       if (currentStrength >= reinforcementCap) return;
 
-      // Skip spatial relationships if excluded
-      if (excludeSpatial && spatialKinds.has(rel.kind)) return;
-
       const srcEntity = graph.entities.get(rel.src);
       const dstEntity = graph.entities.get(rel.dst);
 
@@ -89,25 +96,40 @@ export const relationshipReinforcement: SimulationSystem = {
 
       let totalBonus = 0;
 
-      // Proximity bonus: same location
-      const srcLocation = getLocation(graph, rel.src);
-      const dstLocation = getLocation(graph, rel.dst);
-      if (srcLocation && dstLocation && srcLocation.id === dstLocation.id) {
-        totalBonus += proximityBonus;
+      // STRUCTURAL BONUS: Always applies to narrative/spatial relationships
+      // This is the key parameter for keeping protected relationships strong!
+      if (structuralKinds.has(rel.kind)) {
+        totalBonus += structuralBonus;
       }
 
-      // Shared faction bonus
-      const srcFactions = getRelated(graph, rel.src, 'member_of', 'src');
-      const dstFactions = getRelated(graph, rel.dst, 'member_of', 'src');
-      if (srcFactions.some(f => dstFactions.some(df => df.id === f.id))) {
-        totalBonus += sharedFactionBonus;
+      // CONDITIONAL BONUSES: Apply to non-spatial relationships only
+      const isSpatial = spatialKinds.has(rel.kind);
+
+      // Proximity bonus: same location (for social relationships)
+      if (!isSpatial) {
+        const srcLocation = getLocation(graph, rel.src);
+        const dstLocation = getLocation(graph, rel.dst);
+        if (srcLocation && dstLocation && srcLocation.id === dstLocation.id) {
+          totalBonus += proximityBonus;
+        }
+      }
+
+      // Shared faction bonus (for social relationships)
+      if (!isSpatial) {
+        const srcFactions = getRelated(graph, rel.src, 'member_of', 'src');
+        const dstFactions = getRelated(graph, rel.dst, 'member_of', 'src');
+        if (srcFactions.some(f => dstFactions.some(df => df.id === f.id))) {
+          totalBonus += sharedFactionBonus;
+        }
       }
 
       // Shared conflict bonus (both have enemy_of to same target)
-      const srcEnemies = getRelated(graph, rel.src, 'enemy_of', 'src');
-      const dstEnemies = getRelated(graph, rel.dst, 'enemy_of', 'src');
-      if (srcEnemies.some(e => dstEnemies.some(de => de.id === e.id))) {
-        totalBonus += sharedConflictBonus;
+      if (!isSpatial) {
+        const srcEnemies = getRelated(graph, rel.src, 'enemy_of', 'src');
+        const dstEnemies = getRelated(graph, rel.dst, 'enemy_of', 'src');
+        if (srcEnemies.some(e => dstEnemies.some(de => de.id === e.id))) {
+          totalBonus += sharedConflictBonus;
+        }
       }
 
       // Apply bonus

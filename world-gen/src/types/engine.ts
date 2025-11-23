@@ -1,6 +1,7 @@
 import { HardState, Relationship } from './worldTypes';
 import { LoreIndex, LoreRecord } from './lore';
 import { TemplateMetadata, SystemMetadata, DistributionTargets } from './distribution';
+import { DomainSchema } from './domainSchema';
 
 export interface LLMConfig {
   enabled: boolean;
@@ -125,6 +126,9 @@ export interface Pressure {
 
 // Engine configuration
 export interface EngineConfig {
+  // Domain schema (defines entity kinds, relationship kinds, validation rules)
+  domain: DomainSchema;
+
   eras: Era[];
   templates: GrowthTemplate[];
   systems: SimulationSystem[];

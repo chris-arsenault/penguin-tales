@@ -8,7 +8,7 @@ export type Prominence =
 
 export interface HardState {
     id: string;              // stable ID in the graph
-    kind: 'npc' | 'location' | 'faction' | 'rules' | 'abilities';
+    kind: string;            // Domain defines valid values (was: 'npc' | 'location' | 'faction' | 'rules' | 'abilities')
     subtype: string;
     name: string;
     description: string;
@@ -37,20 +37,22 @@ export interface WorldSchema {
     relationships: Record<string, Record<string, string[]>>;
 }
 
-// Utility type for entity creation
-export type EntityKind = HardState['kind'];
-export type NPCSubtype = 'merchant' | 'mayor' | 'hero' | 'outlaw';
-export type LocationSubtype = 'iceberg' | 'colony' | 'igloo' | 'geographic_feature' | 'anomaly';
-export type FactionSubtype = 'political' | 'criminal' | 'cult' | 'company';
-export type RulesSubtype = 'edict' | 'taboo' | 'social' | 'natural';
-export type AbilitiesSubtype = 'magic' | 'faith' | 'technology' | 'physical';
+// DEPRECATED: Domain-specific types moved to domain schema
+// These are kept for backward compatibility but should not be used in new code
+// TODO: Remove after migration complete
+export type EntityKind = string; // was: HardState['kind']
+export type NPCSubtype = string; // was: 'merchant' | 'mayor' | 'hero' | 'outlaw'
+export type LocationSubtype = string; // was: 'iceberg' | 'colony' | 'igloo' | 'geographic_feature' | 'anomaly'
+export type FactionSubtype = string; // was: 'political' | 'criminal' | 'cult' | 'company'
+export type RulesSubtype = string; // was: 'edict' | 'taboo' | 'social' | 'natural'
+export type AbilitiesSubtype = string; // was: 'magic' | 'faith' | 'technology' | 'physical'
 
-// Status types for each entity kind (expanded for new mechanics)
-export type NPCStatus = 'alive' | 'dead' | 'fictional' | 'missing';
-export type FactionStatus = 'active' | 'disbanded' | 'waning';
-export type LocationStatus = 'thriving' | 'waning' | 'abandoned';
-export type RulesStatus = 'active' | 'forgotten' | 'proposed' | 'enacted' | 'repealed';
-export type AbilitiesStatus = 'active' | 'lost';
+// DEPRECATED: Domain-specific status types
+export type NPCStatus = string; // was: 'alive' | 'dead' | 'fictional' | 'missing'
+export type FactionStatus = string; // was: 'active' | 'disbanded' | 'waning'
+export type LocationStatus = string; // was: 'thriving' | 'waning' | 'abandoned'
+export type RulesStatus = string; // was: 'active' | 'forgotten' | 'proposed' | 'enacted' | 'repealed'
+export type AbilitiesStatus = string; // was: 'active' | 'lost'
 
 // Discovery tracking (emergent system)
 export interface DiscoveryState {

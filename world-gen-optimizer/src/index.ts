@@ -12,6 +12,7 @@ import { GeneticAlgorithm } from './geneticAlgorithm';
 import { WorldGenRunner } from './worldGenRunner';
 import { EvolutionTracker } from './tracker';
 import { AdaptiveMutation } from './adaptiveMutation';
+import { GADiagnostics } from './diagnostics';
 import { GAConfig, Population } from './types';
 
 async function main() {
@@ -25,10 +26,10 @@ async function main() {
   const outputDir = path.resolve(__dirname, '../output');
 
   const gaConfig: GAConfig = {
-    populationSize: 30,
+    populationSize: 50,       // Increased for better diversity (was 30)
     maxGenerations: 100,
-    elitismCount: 3,          // 10% elitism
-    mutationRate: 0.1,        // 10% mutation rate
+    elitismCount: 5,          // 10% elitism (5 out of 50)
+    mutationRate: 0.1,        // Base mutation rate (adaptive will adjust)
     tournamentSize: 5,        // Tournament selection size
     parallelExecutions: Math.min(os.cpus().length, 8) // Use CPU cores, max 8
   };
@@ -58,7 +59,7 @@ async function main() {
   const adaptiveMutation = new AdaptiveMutation(configLoader, parameterMetadata, {
     strategy: 'hybrid',              // Use combined strategies
     impactBoostFactor: 3.0,          // 3x mutation for high-impact params
-    initialMutationRate: 0.20,       // Start with 20% mutation
+    initialMutationRate: 0.15,       // Start with 15% mutation (more conservative)
     finalMutationRate: 0.05,         // End with 5% mutation
     annealingSchedule: 'exponential' // Exponential decay
   });
@@ -71,6 +72,7 @@ async function main() {
     gaConfig.parallelExecutions
   );
   const tracker = new EvolutionTracker(outputDir, configLoader, 5);
+  const diagnostics = new GADiagnostics();
 
   console.log('Fitness weights:');
   const weights = fitnessEvaluator.getWeights();
@@ -130,10 +132,17 @@ async function main() {
 
     // Track this generation
     tracker.recordGeneration(population);
+    diagnostics.recordGeneration(population);
+
     tracker.printProgress(generation);
 
     const genTime = ((Date.now() - genStartTime) / 1000).toFixed(1);
     console.log(`\nGeneration completed in ${genTime}s`);
+
+    // Print diagnostics every 5 generations
+    if ((generation + 1) % 5 === 0) {
+      diagnostics.printDiagnostics(generation);
+    }
 
     // Print parameter impact report every 10 generations
     if ((generation + 1) % 10 === 0) {
@@ -144,10 +153,11 @@ async function main() {
     }
 
     // Check for convergence (optional early stopping)
-    if (generation > 10 && stats.diversity < 0.05) {
-      console.log('\n⚠️  Population has converged (low diversity). Stopping early.');
-      break;
-    }
+    // Disabled - let it run full course to see if violations improve
+    // if (generation > 10 && stats.diversity < 0.05) {
+    //   console.log('\n⚠️  Population has converged (low diversity). Stopping early.');
+    //   break;
+    // }
 
     // Evolve to next generation (unless this is the last one)
     if (generation < gaConfig.maxGenerations - 1) {

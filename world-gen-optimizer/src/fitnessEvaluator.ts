@@ -11,16 +11,16 @@ import { WorldGenStats, FitnessWeights, Individual } from './types';
 // Adjust these weights to change optimization priorities
 // All weights should sum to 1.0 for normalized fitness scores
 const DEFAULT_WEIGHTS: FitnessWeights = {
-  entityDistribution: 0.15,      // How balanced entity kinds are
-  prominenceDistribution: 0.15,  // How balanced prominence levels are
-  relationshipDiversity: 0.15,   // How diverse relationship types are
-  connectivity: 0.15,            // How well-connected the graph is
-  overall: 0.30                  // Overall fitness from world-gen
+  entityDistribution: 0.10,      // How balanced entity kinds are
+  prominenceDistribution: 0.10,  // How balanced prominence levels are
+  relationshipDiversity: 0.10,   // How diverse relationship types are
+  connectivity: 0.10,            // How well-connected the graph is
+  overall: 0.20                  // Overall fitness from world-gen
 };
 
 // Violation penalty configuration
-const VIOLATION_PENALTY_WEIGHT = 0.10;  // Weight for violation penalties
-const VIOLATION_RATE_THRESHOLD = 5.0;   // Violations per tick threshold (lower is better)
+const VIOLATION_PENALTY_WEIGHT = 0.40;  // Weight for violation penalties (INCREASED!)
+const VIOLATION_RATE_THRESHOLD = 3.0;   // Violations per tick threshold (STRICTER!)
 // ============================================================================
 
 export class FitnessEvaluator {
@@ -35,9 +35,14 @@ export class FitnessEvaluator {
    * Validate that weights are reasonable
    */
   private validateWeights(): void {
-    const sum = Object.values(this.weights).reduce((a, b) => a + b, 0);
-    if (Math.abs(sum - 1.0) > 0.01) {
-      console.warn(`Warning: Fitness weights sum to ${sum.toFixed(3)}, not 1.0. Results may be unnormalized.`);
+    const componentSum = Object.values(this.weights).reduce((a, b) => a + b, 0);
+    const totalSum = componentSum + VIOLATION_PENALTY_WEIGHT;
+
+    // Weights should sum to 1.0 including violation penalty
+    if (Math.abs(totalSum - 1.0) > 0.01) {
+      console.warn(`Warning: Total fitness weights sum to ${totalSum.toFixed(3)}, not 1.0.`);
+      console.warn(`  Component weights: ${componentSum.toFixed(3)}`);
+      console.warn(`  Violation weight: ${VIOLATION_PENALTY_WEIGHT.toFixed(3)}`);
     }
   }
 
@@ -99,9 +104,13 @@ export class FitnessEvaluator {
   evaluateIndividual(stats: WorldGenStats): {
     fitness: number;
     breakdown: Individual['fitnessBreakdown'];
+    violationMetrics?: Individual['violationMetrics'];
   } {
     const metrics = stats.fitnessMetrics;
     const fitness = this.calculateFitness(stats);
+
+    const violations = stats.performanceStats?.protectedRelationshipViolations;
+    const violationScore = this.calculateViolationPenalty(stats);
 
     return {
       fitness,
@@ -111,7 +120,12 @@ export class FitnessEvaluator {
         relationshipDiversity: metrics.relationshipDiversityFitness,
         connectivity: metrics.connectivityFitness,
         overall: metrics.overallFitness
-      }
+      },
+      violationMetrics: violations ? {
+        totalViolations: violations.totalViolations,
+        violationRate: violations.violationRate,
+        violationScore: violationScore
+      } : undefined
     };
   }
 
@@ -121,6 +135,7 @@ export class FitnessEvaluator {
   evaluateFromFile(statsPath: string): {
     fitness: number;
     breakdown: Individual['fitnessBreakdown'];
+    violationMetrics?: Individual['violationMetrics'];
   } | null {
     const stats = this.loadStats(statsPath);
     if (!stats) {

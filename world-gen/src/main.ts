@@ -27,6 +27,9 @@ import { ImageGenerationService } from './services/imageGenerationService';
 import { validateWorld } from './utils/validators';
 import { applyParameterOverrides } from './utils/parameterOverrides';
 
+// Import domain schema
+import { penguinDomain } from './domain/penguinDomain';
+
 const sanitize = (value?: string | null): string => (value ?? '').trim();
 
 // Parse CLI arguments
@@ -139,6 +142,9 @@ const { templates: configuredTemplates, systems: configuredSystems } = applyPara
 
 // Configuration
 const config: EngineConfig = {
+  // Domain schema (penguin-specific world knowledge)
+  domain: penguinDomain,
+
   eras: penguinEras,
   templates: configuredTemplates,
   systems: configuredSystems,

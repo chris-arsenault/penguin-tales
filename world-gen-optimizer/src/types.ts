@@ -26,6 +26,11 @@ export interface Individual {
     connectivity: number;
     overall: number;
   };
+  violationMetrics?: {
+    totalViolations: number;
+    violationRate: number;
+    violationScore: number;
+  };
   generation: number;     // generation this individual was created in
 }
 

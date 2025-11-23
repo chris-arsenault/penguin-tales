@@ -670,7 +670,8 @@ export class WorldEngine {
    * Calculate dynamic growth target based on remaining entity deficits
    */
   private calculateGrowthTarget(): number {
-    const entityKinds = ['npc', 'faction', 'rules', 'abilities', 'location'];
+    // Get entity kinds from domain schema (not hardcoded)
+    const entityKinds = this.config.domain.entityKinds.map(ek => ek.kind);
     const currentCounts = new Map<string, number>();
 
     // Count current entities by kind
@@ -711,7 +712,8 @@ export class WorldEngine {
    * Calculate entity kind deficits (how underrepresented each kind is)
    */
   private calculateEntityDeficits(): Map<string, number> {
-    const entityKinds = ['npc', 'faction', 'rules', 'abilities', 'location'];
+    // Get entity kinds from domain schema (not hardcoded)
+    const entityKinds = this.config.domain.entityKinds.map(ek => ek.kind);
     const deficits = new Map<string, number>();
 
     // Count current entities by kind
@@ -745,27 +747,27 @@ export class WorldEngine {
 
       // Estimate what entity kind(s) this template creates
       // by looking at template naming convention or ID
-      const templateId = template.id.toLowerCase();
       let deficitWeight = 1.0;
 
-      // Map template IDs to entity kinds (heuristic based on naming)
-      if (templateId.includes('npc') || templateId.includes('family') || templateId.includes('hero') ||
-          templateId.includes('outlaw') || templateId.includes('succession') || templateId.includes('kinship') ||
-          templateId.includes('vanishing') || templateId.includes('merchant')) {
-        deficitWeight = (deficits.get('npc') || 0) + 1;
-      } else if (templateId.includes('faction') || templateId.includes('guild') || templateId.includes('cult') ||
-                 templateId.includes('splinter')) {
-        deficitWeight = (deficits.get('faction') || 0) + 1;
-      } else if (templateId.includes('rule') || templateId.includes('tradition') || templateId.includes('legislation') ||
-                 templateId.includes('festival') || templateId.includes('law')) {
-        deficitWeight = (deficits.get('rules') || 0) + 1;
-      } else if (templateId.includes('abilit') || templateId.includes('tech') || templateId.includes('magic') ||
-                 templateId.includes('innovation')) {
-        deficitWeight = (deficits.get('abilities') || 0) + 1;
-      } else if (templateId.includes('location') || templateId.includes('colony') || templateId.includes('geographic') ||
-                 templateId.includes('krill') || templateId.includes('structure') || templateId.includes('discovery')) {
-        deficitWeight = (deficits.get('location') || 0) + 1;
+      // Use template metadata to determine what entity kinds it produces
+      // No more string matching heuristics!
+      if (template.metadata?.produces?.entityKinds) {
+        // Calculate average deficit across all kinds this template produces
+        let totalDeficit = 0;
+        let kindCount = 0;
+
+        for (const entityKindDef of template.metadata.produces.entityKinds) {
+          const deficit = deficits.get(entityKindDef.kind) || 0;
+          totalDeficit += deficit;
+          kindCount++;
+        }
+
+        if (kindCount > 0) {
+          deficitWeight = (totalDeficit / kindCount) + 1;
+        }
       }
+      // Fallback: if no metadata, use default weight (no deficit bonus)
+      // This encourages templates to have proper metadata
 
       // Normalize deficit weight to be a multiplier (0.5x to 3x)
       // This ensures templates for underrepresented kinds are 2-6x more likely
