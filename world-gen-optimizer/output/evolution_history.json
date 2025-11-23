@@ -1,0 +1,1908 @@
+{
+  "totalGenerations": 100,
+  "startTime": "2025-11-23T09:52:38.107Z",
+  "endTime": "2025-11-23T10:15:47.711Z",
+  "finalBestFitness": 0.5833716783758637,
+  "history": [
+    {
+      "generation": 0,
+      "timestamp": "2025-11-23T09:52:38.107Z",
+      "bestFitness": 0.5852045675205308,
+      "averageFitness": 0.5428270864468162,
+      "worstFitness": 0.4792242112972958,
+      "diversity": 0.07183850510132449,
+      "bestIndividual": {
+        "id": "gen0_ind2",
+        "fitness": 0.5852045675205308,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8442384105960264,
+          "prominenceDistribution": 0.9201324503311259,
+          "relationshipDiversity": 0.7164695426503399,
+          "connectivity": 1,
+          "overall": 0.880591921775101
+        }
+      }
+    },
+    {
+      "generation": 1,
+      "timestamp": "2025-11-23T09:52:52.777Z",
+      "bestFitness": 0.5855087943525134,
+      "averageFitness": 0.5299177578735237,
+      "worstFitness": 0.44469537746039023,
+      "diversity": 0.09799309382698086,
+      "bestIndividual": {
+        "id": "gen1_ind41",
+        "fitness": 0.5855087943525134,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8766666666666667,
+          "prominenceDistribution": 0.8852380952380953,
+          "relationshipDiversity": 0.7626585627952331,
+          "connectivity": 1,
+          "overall": 0.8925793316066657
+        }
+      }
+    },
+    {
+      "generation": 2,
+      "timestamp": "2025-11-23T09:53:06.091Z",
+      "bestFitness": 0.5858668995496287,
+      "averageFitness": 0.5361227942618367,
+      "worstFitness": 0.469067015710393,
+      "diversity": 0.10899473262256587,
+      "bestIndividual": {
+        "id": "gen2_ind14",
+        "fitness": 0.5858668995496287,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787096774193548,
+          "prominenceDistribution": 0.883225806451613,
+          "relationshipDiversity": 0.7434018173607098,
+          "connectivity": 1,
+          "overall": 0.888938427988271
+        }
+      }
+    },
+    {
+      "generation": 3,
+      "timestamp": "2025-11-23T09:53:19.477Z",
+      "bestFitness": 0.5804300235178921,
+      "averageFitness": 0.5409208610954126,
+      "worstFitness": 0.4943044254364241,
+      "diversity": 0.11881133210070279,
+      "bestIndividual": {
+        "id": "gen3_ind35",
+        "fitness": 0.5804300235178921,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8724503311258278,
+          "prominenceDistribution": 0.9333774834437086,
+          "relationshipDiversity": 0.7006843989168071,
+          "connectivity": 1,
+          "overall": 0.8885474758098515
+        }
+      }
+    },
+    {
+      "generation": 4,
+      "timestamp": "2025-11-23T09:53:34.449Z",
+      "bestFitness": 0.5881085648543694,
+      "averageFitness": 0.5456417522362592,
+      "worstFitness": 0.4090988082170789,
+      "diversity": 0.13024711851483003,
+      "bestIndividual": {
+        "id": "gen4_ind37",
+        "fitness": 0.5881085648543694,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8533333333333333,
+          "prominenceDistribution": 0.8653333333333333,
+          "relationshipDiversity": 0.76307835471557,
+          "connectivity": 1,
+          "overall": 0.8816823376097807
+        }
+      }
+    },
+    {
+      "generation": 5,
+      "timestamp": "2025-11-23T09:53:48.503Z",
+      "bestFitness": 0.587815735473883,
+      "averageFitness": 0.5354944498897233,
+      "worstFitness": 0.417136904616622,
+      "diversity": 0.14244240883284442,
+      "bestIndividual": {
+        "id": "gen5_ind8",
+        "fitness": 0.587815735473883,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8569230769230769,
+          "prominenceDistribution": 0.8810256410256411,
+          "relationshipDiversity": 0.7612076105990646,
+          "connectivity": 1,
+          "overall": 0.8855235734018643
+        }
+      }
+    },
+    {
+      "generation": 6,
+      "timestamp": "2025-11-23T09:54:00.103Z",
+      "bestFitness": 0.5773416155542292,
+      "averageFitness": 0.5388576279185114,
+      "worstFitness": 0.44684327614912334,
+      "diversity": 0.1475029160438942,
+      "bestIndividual": {
+        "id": "gen6_ind12",
+        "fitness": 0.5773416155542292,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8629268292682927,
+          "prominenceDistribution": 0.9229268292682927,
+          "relationshipDiversity": 0.6871151674810175,
+          "connectivity": 1,
+          "overall": 0.88088644813035
+        }
+      }
+    },
+    {
+      "generation": 7,
+      "timestamp": "2025-11-23T09:54:14.779Z",
+      "bestFitness": 0.5926361602603099,
+      "averageFitness": 0.539521588590084,
+      "worstFitness": 0.4507407791541186,
+      "diversity": 0.1542452622414347,
+      "bestIndividual": {
+        "id": "gen7_ind23",
+        "fitness": 0.5926361602603099,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8750318471337579,
+          "prominenceDistribution": 0.8826751592356687,
+          "relationshipDiversity": 0.7807350729207784,
+          "connectivity": 1,
+          "overall": 0.8951916005714169
+        }
+      }
+    },
+    {
+      "generation": 8,
+      "timestamp": "2025-11-23T09:54:28.217Z",
+      "bestFitness": 0.5810417391427958,
+      "averageFitness": 0.5315043140958672,
+      "worstFitness": 0.4494086691888868,
+      "diversity": 0.16074381526476186,
+      "bestIndividual": {
+        "id": "gen8_ind18",
+        "fitness": 0.5810417391427958,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8697142857142857,
+          "prominenceDistribution": 0.8954285714285715,
+          "relationshipDiversity": 0.7607570644469986,
+          "connectivity": 1,
+          "overall": 0.8921514128893997
+        }
+      }
+    },
+    {
+      "generation": 9,
+      "timestamp": "2025-11-23T09:54:43.850Z",
+      "bestFitness": 0.5747030984508847,
+      "averageFitness": 0.537972493240777,
+      "worstFitness": 0.43548904097091545,
+      "diversity": 0.17825062213352105,
+      "bestIndividual": {
+        "id": "gen9_ind39",
+        "fitness": 0.5747030984508847,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8671428571428572,
+          "prominenceDistribution": 0.9133333333333333,
+          "relationshipDiversity": 0.7083674166941909,
+          "connectivity": 1,
+          "overall": 0.884483007148362
+        }
+      }
+    },
+    {
+      "generation": 10,
+      "timestamp": "2025-11-23T09:54:59.522Z",
+      "bestFitness": 0.5722393814227319,
+      "averageFitness": 0.5381780318529014,
+      "worstFitness": 0.4604063424215891,
+      "diversity": 0.17960509662119634,
+      "bestIndividual": {
+        "id": "gen10_ind4",
+        "fitness": 0.5722393814227319,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8725925925925926,
+          "prominenceDistribution": 0.9158024691358024,
+          "relationshipDiversity": 0.6794739495617428,
+          "connectivity": 1,
+          "overall": 0.8808330615172868
+        }
+      }
+    },
+    {
+      "generation": 11,
+      "timestamp": "2025-11-23T09:55:14.742Z",
+      "bestFitness": 0.5722409497874622,
+      "averageFitness": 0.5406700875565015,
+      "worstFitness": 0.4859082094616258,
+      "diversity": 0.18593517952887254,
+      "bestIndividual": {
+        "id": "gen11_ind35",
+        "fitness": 0.5722409497874622,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8548344370860927,
+          "prominenceDistribution": 0.8965562913907285,
+          "relationshipDiversity": 0.6611692999278309,
+          "connectivity": 1,
+          "overall": 0.8679954493895397
+        }
+      }
+    },
+    {
+      "generation": 12,
+      "timestamp": "2025-11-23T09:55:28.343Z",
+      "bestFitness": 0.5776719353402076,
+      "averageFitness": 0.5391476006871067,
+      "worstFitness": 0.4346349159751963,
+      "diversity": 0.18842174459781325,
+      "bestIndividual": {
+        "id": "gen12_ind7",
+        "fitness": 0.5776719353402076,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8316339869281045,
+          "prominenceDistribution": 0.8994771241830065,
+          "relationshipDiversity": 0.710838016882415,
+          "connectivity": 1,
+          "overall": 0.8715532242915156
+        }
+      }
+    },
+    {
+      "generation": 13,
+      "timestamp": "2025-11-23T09:55:44.075Z",
+      "bestFitness": 0.582419689064791,
+      "averageFitness": 0.5367747397311914,
+      "worstFitness": 0.4309808401948826,
+      "diversity": 0.17801400046548654,
+      "bestIndividual": {
+        "id": "gen13_ind35",
+        "fitness": 0.582419689064791,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8529032258064516,
+          "prominenceDistribution": 0.8793548387096775,
+          "relationshipDiversity": 0.725025062703089,
+          "connectivity": 1,
+          "overall": 0.8767469480244887
+        }
+      }
+    },
+    {
+      "generation": 14,
+      "timestamp": "2025-11-23T09:55:56.090Z",
+      "bestFitness": 0.5820426624033647,
+      "averageFitness": 0.536158676959498,
+      "worstFitness": 0.42614106523321177,
+      "diversity": 0.1849854450600353,
+      "bestIndividual": {
+        "id": "gen14_ind34",
+        "fitness": 0.5820426624033647,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8777011494252873,
+          "prominenceDistribution": 0.8572413793103448,
+          "relationshipDiversity": 0.7843989304263072,
+          "connectivity": 1,
+          "overall": 0.8916384067749166
+        }
+      }
+    },
+    {
+      "generation": 15,
+      "timestamp": "2025-11-23T09:56:10.116Z",
+      "bestFitness": 0.583900386617457,
+      "averageFitness": 0.541057600771055,
+      "worstFitness": 0.48979454932986644,
+      "diversity": 0.18962272579377382,
+      "bestIndividual": {
+        "id": "gen15_ind4",
+        "fitness": 0.583900386617457,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8642424242424243,
+          "prominenceDistribution": 0.9072727272727272,
+          "relationshipDiversity": 0.7266350489006906,
+          "connectivity": 1,
+          "overall": 0.8860542825074109
+        }
+      }
+    },
+    {
+      "generation": 16,
+      "timestamp": "2025-11-23T09:56:23.941Z",
+      "bestFitness": 0.5799849153517741,
+      "averageFitness": 0.5425860091045859,
+      "worstFitness": 0.436475201490664,
+      "diversity": 0.1951886077126629,
+      "bestIndividual": {
+        "id": "gen16_ind4",
+        "fitness": 0.5799849153517741,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8495364238410597,
+          "prominenceDistribution": 0.8750993377483444,
+          "relationshipDiversity": 0.7253665298503802,
+          "connectivity": 1,
+          "overall": 0.8749541006720629
+        }
+      }
+    },
+    {
+      "generation": 17,
+      "timestamp": "2025-11-23T09:56:39.345Z",
+      "bestFitness": 0.5747597698935544,
+      "averageFitness": 0.5371813907027451,
+      "worstFitness": 0.43579758213122527,
+      "diversity": 0.20098390402825483,
+      "bestIndividual": {
+        "id": "gen17_ind17",
+        "fitness": 0.5747597698935544,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8577777777777778,
+          "prominenceDistribution": 0.892046783625731,
+          "relationshipDiversity": 0.7248805732823677,
+          "connectivity": 1,
+          "overall": 0.880718804714953
+        }
+      }
+    },
+    {
+      "generation": 18,
+      "timestamp": "2025-11-23T09:56:53.420Z",
+      "bestFitness": 0.577145139809916,
+      "averageFitness": 0.5327833305064311,
+      "worstFitness": 0.4314317937870974,
+      "diversity": 0.20256410306021574,
+      "bestIndividual": {
+        "id": "gen18_ind44",
+        "fitness": 0.577145139809916,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8891139240506329,
+          "prominenceDistribution": 0.8918987341772152,
+          "relationshipDiversity": 0.7653297920870641,
+          "connectivity": 0.9,
+          "overall": 0.8681798824680458
+        }
+      }
+    },
+    {
+      "generation": 19,
+      "timestamp": "2025-11-23T09:57:07.609Z",
+      "bestFitness": 0.5749427446807767,
+      "averageFitness": 0.5342389656080857,
+      "worstFitness": 0.40989407282246315,
+      "diversity": 0.1959366817919771,
+      "bestIndividual": {
+        "id": "gen19_ind47",
+        "fitness": 0.5749427446807767,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787878787878788,
+          "prominenceDistribution": 0.8818181818181818,
+          "relationshipDiversity": 0.7213145117649847,
+          "connectivity": 1,
+          "overall": 0.8842629023529969
+        }
+      }
+    },
+    {
+      "generation": 20,
+      "timestamp": "2025-11-23T09:57:20.097Z",
+      "bestFitness": 0.5835802041128968,
+      "averageFitness": 0.5418573853913295,
+      "worstFitness": 0.4557584161457297,
+      "diversity": 0.19742081885325824,
+      "bestIndividual": {
+        "id": "gen20_ind9",
+        "fitness": 0.5835802041128968,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8701234567901235,
+          "prominenceDistribution": 0.9192592592592592,
+          "relationshipDiversity": 0.7223397083500006,
+          "connectivity": 1,
+          "overall": 0.889356830558889
+        }
+      }
+    },
+    {
+      "generation": 21,
+      "timestamp": "2025-11-23T09:57:33.027Z",
+      "bestFitness": 0.5810873754215808,
+      "averageFitness": 0.5430879850807759,
+      "worstFitness": 0.487058684664995,
+      "diversity": 0.19985721278758464,
+      "bestIndividual": {
+        "id": "gen21_ind41",
+        "fitness": 0.5810873754215808,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8596407185628743,
+          "prominenceDistribution": 0.8477844311377245,
+          "relationshipDiversity": 0.7802176312723548,
+          "connectivity": 1,
+          "overall": 0.8834926280508781
+        }
+      }
+    },
+    {
+      "generation": 22,
+      "timestamp": "2025-11-23T09:57:45.170Z",
+      "bestFitness": 0.5818357374546174,
+      "averageFitness": 0.5372726486050379,
+      "worstFitness": 0.46753905339364493,
+      "diversity": 0.2029197883489657,
+      "bestIndividual": {
+        "id": "gen22_ind7",
+        "fitness": 0.5818357374546174,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8812738853503185,
+          "prominenceDistribution": 0.9185987261146497,
+          "relationshipDiversity": 0.7183925372123524,
+          "connectivity": 1,
+          "overall": 0.891780418270496
+        }
+      }
+    },
+    {
+      "generation": 23,
+      "timestamp": "2025-11-23T09:57:56.675Z",
+      "bestFitness": 0.5864185909099456,
+      "averageFitness": 0.5367525999297466,
+      "worstFitness": 0.4353508756446698,
+      "diversity": 0.20547072303831534,
+      "bestIndividual": {
+        "id": "gen23_ind36",
+        "fitness": 0.5864185909099456,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8812738853503185,
+          "prominenceDistribution": 0.9259872611464969,
+          "relationshipDiversity": 0.7054388443976658,
+          "connectivity": 1,
+          "overall": 0.8906673867139281
+        }
+      }
+    },
+    {
+      "generation": 24,
+      "timestamp": "2025-11-23T09:58:10.753Z",
+      "bestFitness": 0.5785925740733618,
+      "averageFitness": 0.5413309230441333,
+      "worstFitness": 0.3907729567506884,
+      "diversity": 0.20079885084621446,
+      "bestIndividual": {
+        "id": "gen24_ind26",
+        "fitness": 0.5785925740733618,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8693167701863354,
+          "prominenceDistribution": 0.886583850931677,
+          "relationshipDiversity": 0.7812280573817733,
+          "connectivity": 0.9,
+          "overall": 0.8643574127185907
+        }
+      }
+    },
+    {
+      "generation": 25,
+      "timestamp": "2025-11-23T09:58:23.419Z",
+      "bestFitness": 0.5894166090238646,
+      "averageFitness": 0.5372008707791349,
+      "worstFitness": 0.4870882406319754,
+      "diversity": 0.20442330627910957,
+      "bestIndividual": {
+        "id": "gen25_ind46",
+        "fitness": 0.5894166090238646,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8825000000000001,
+          "prominenceDistribution": 0.8925,
+          "relationshipDiversity": 0.7766429533048858,
+          "connectivity": 1,
+          "overall": 0.8985785906609771
+        }
+      }
+    },
+    {
+      "generation": 26,
+      "timestamp": "2025-11-23T09:58:38.230Z",
+      "bestFitness": 0.5835062179416434,
+      "averageFitness": 0.5380160406272438,
+      "worstFitness": 0.4349200203687856,
+      "diversity": 0.20181992632836934,
+      "bestIndividual": {
+        "id": "gen26_ind20",
+        "fitness": 0.5835062179416434,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8586666666666667,
+          "prominenceDistribution": 0.8813333333333333,
+          "relationshipDiversity": 0.7681133086819593,
+          "connectivity": 1,
+          "overall": 0.8874893284030585
+        }
+      }
+    },
+    {
+      "generation": 27,
+      "timestamp": "2025-11-23T09:58:53.486Z",
+      "bestFitness": 0.5770218578424687,
+      "averageFitness": 0.5366637362271923,
+      "worstFitness": 0.4766990172782844,
+      "diversity": 0.20185738691397476,
+      "bestIndividual": {
+        "id": "gen27_ind14",
+        "fitness": 0.5770218578424687,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8775609756097561,
+          "prominenceDistribution": 0.891219512195122,
+          "relationshipDiversity": 0.7495018117828556,
+          "connectivity": 1,
+          "overall": 0.8914125574785223
+        }
+      }
+    },
+    {
+      "generation": 28,
+      "timestamp": "2025-11-23T09:59:06.516Z",
+      "bestFitness": 0.5822734934323105,
+      "averageFitness": 0.5376013976812498,
+      "worstFitness": 0.43661510669163506,
+      "diversity": 0.1965055546415426,
+      "bestIndividual": {
+        "id": "gen28_ind31",
+        "fitness": 0.5822734934323105,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8666666666666667,
+          "prominenceDistribution": 0.9213333333333333,
+          "relationshipDiversity": 0.6933905447869317,
+          "connectivity": 1,
+          "overall": 0.8829447756240532
+        }
+      }
+    },
+    {
+      "generation": 29,
+      "timestamp": "2025-11-23T09:59:20.517Z",
+      "bestFitness": 0.5748998672045024,
+      "averageFitness": 0.5356885741332101,
+      "worstFitness": 0.45339815407386036,
+      "diversity": 0.19130029349051475,
+      "bestIndividual": {
+        "id": "gen29_ind25",
+        "fitness": 0.5748998672045024,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8364102564102565,
+          "prominenceDistribution": 0.9143589743589744,
+          "relationshipDiversity": 0.7130329618955434,
+          "connectivity": 1,
+          "overall": 0.8764014641739806
+        }
+      }
+    },
+    {
+      "generation": 30,
+      "timestamp": "2025-11-23T09:59:35.297Z",
+      "bestFitness": 0.5790176761012302,
+      "averageFitness": 0.5383980572165387,
+      "worstFitness": 0.4697398554847607,
+      "diversity": 0.19296454691834505,
+      "bestIndividual": {
+        "id": "gen30_ind34",
+        "fitness": 0.5790176761012302,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8775000000000001,
+          "prominenceDistribution": 0.8775,
+          "relationshipDiversity": 0.8105098315111606,
+          "connectivity": 0.9,
+          "overall": 0.8708519663022322
+        }
+      }
+    },
+    {
+      "generation": 31,
+      "timestamp": "2025-11-23T09:59:47.629Z",
+      "bestFitness": 0.5894053721404059,
+      "averageFitness": 0.5401853618854789,
+      "worstFitness": 0.46174772957572974,
+      "diversity": 0.1951878915317219,
+      "bestIndividual": {
+        "id": "gen31_ind4",
+        "fitness": 0.5894053721404059,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.879240506329114,
+          "prominenceDistribution": 0.8868354430379747,
+          "relationshipDiversity": 0.7314886394379577,
+          "connectivity": 1,
+          "overall": 0.8874369683939207
+        }
+      }
+    },
+    {
+      "generation": 32,
+      "timestamp": "2025-11-23T10:00:03.930Z",
+      "bestFitness": 0.5895781632083841,
+      "averageFitness": 0.538074640353686,
+      "worstFitness": 0.4391674979275087,
+      "diversity": 0.1914504336185735,
+      "bestIndividual": {
+        "id": "gen32_ind16",
+        "fitness": 0.5895781632083841,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8661635220125786,
+          "prominenceDistribution": 0.8657861635220125,
+          "relationshipDiversity": 0.7784753489611277,
+          "connectivity": 1,
+          "overall": 0.8887013591004016
+        }
+      }
+    },
+    {
+      "generation": 33,
+      "timestamp": "2025-11-23T10:00:17.875Z",
+      "bestFitness": 0.5900202848264529,
+      "averageFitness": 0.5451917890821403,
+      "worstFitness": 0.4619863146560577,
+      "diversity": 0.1894662695626668,
+      "bestIndividual": {
+        "id": "gen33_ind29",
+        "fitness": 0.5900202848264529,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8536842105263158,
+          "prominenceDistribution": 0.8742105263157894,
+          "relationshipDiversity": 0.7632295783821046,
+          "connectivity": 1,
+          "overall": 0.8835932840974736
+        }
+      }
+    },
+    {
+      "generation": 34,
+      "timestamp": "2025-11-23T10:00:31.840Z",
+      "bestFitness": 0.5803426027212153,
+      "averageFitness": 0.5385920026892087,
+      "worstFitness": 0.4539039162725255,
+      "diversity": 0.18917947636910024,
+      "bestIndividual": {
+        "id": "gen34_ind6",
+        "fitness": 0.5803426027212153,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8677844311377245,
+          "prominenceDistribution": 0.8597604790419162,
+          "relationshipDiversity": 0.7604229033557696,
+          "connectivity": 1,
+          "overall": 0.8843720058208546
+        }
+      }
+    },
+    {
+      "generation": 35,
+      "timestamp": "2025-11-23T10:00:49.677Z",
+      "bestFitness": 0.5763846203971092,
+      "averageFitness": 0.5393006253991285,
+      "worstFitness": 0.47041119469331527,
+      "diversity": 0.17942206256448515,
+      "bestIndividual": {
+        "id": "gen35_ind35",
+        "fitness": 0.5763846203971092,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8358441558441558,
+          "prominenceDistribution": 0.9633766233766233,
+          "relationshipDiversity": 0.6590878806581068,
+          "connectivity": 1,
+          "overall": 0.8752461475601927
+        }
+      }
+    },
+    {
+      "generation": 36,
+      "timestamp": "2025-11-23T10:01:03.482Z",
+      "bestFitness": 0.5849212854209415,
+      "averageFitness": 0.543728414840746,
+      "worstFitness": 0.4894911883956419,
+      "diversity": 0.17738685855578562,
+      "bestIndividual": {
+        "id": "gen36_ind49",
+        "fitness": 0.5849212854209415,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.872,
+          "prominenceDistribution": 0.908,
+          "relationshipDiversity": 0.7410334989982912,
+          "connectivity": 1,
+          "overall": 0.8914066997996584
+        }
+      }
+    },
+    {
+      "generation": 37,
+      "timestamp": "2025-11-23T10:01:16.134Z",
+      "bestFitness": 0.5805411336638396,
+      "averageFitness": 0.5374212485391228,
+      "worstFitness": 0.4624585121271984,
+      "diversity": 0.1868250708376082,
+      "bestIndividual": {
+        "id": "gen37_ind36",
+        "fitness": 0.5805411336638396,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.862051282051282,
+          "prominenceDistribution": 0.9261538461538462,
+          "relationshipDiversity": 0.6982454905804303,
+          "connectivity": 1,
+          "overall": 0.8834952519622399
+        }
+      }
+    },
+    {
+      "generation": 38,
+      "timestamp": "2025-11-23T10:01:31.354Z",
+      "bestFitness": 0.574380572764324,
+      "averageFitness": 0.5381022893050297,
+      "worstFitness": 0.4829881571578389,
+      "diversity": 0.18961441823870853,
+      "bestIndividual": {
+        "id": "gen38_ind6",
+        "fitness": 0.574380572764324,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8462337662337662,
+          "prominenceDistribution": 0.9036363636363637,
+          "relationshipDiversity": 0.7284726489341737,
+          "connectivity": 0.9,
+          "overall": 0.8502919323842374
+        }
+      }
+    },
+    {
+      "generation": 39,
+      "timestamp": "2025-11-23T10:01:47.101Z",
+      "bestFitness": 0.5753336584660572,
+      "averageFitness": 0.5329695421810033,
+      "worstFitness": 0.4275069206303618,
+      "diversity": 0.1881630777311675,
+      "bestIndividual": {
+        "id": "gen39_ind26",
+        "fitness": 0.5753336584660572,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8346666666666667,
+          "prominenceDistribution": 0.9453333333333334,
+          "relationshipDiversity": 0.6850312336850244,
+          "connectivity": 1,
+          "overall": 0.8764729134036715
+        }
+      }
+    },
+    {
+      "generation": 40,
+      "timestamp": "2025-11-23T10:01:59.875Z",
+      "bestFitness": 0.592712243871443,
+      "averageFitness": 0.5435923714456551,
+      "worstFitness": 0.4761531609367805,
+      "diversity": 0.18908009251546282,
+      "bestIndividual": {
+        "id": "gen40_ind31",
+        "fitness": 0.592712243871443,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8586666666666667,
+          "prominenceDistribution": 0.8893333333333333,
+          "relationshipDiversity": 0.7412472942397038,
+          "connectivity": 1,
+          "overall": 0.8837161255146075
+        }
+      }
+    },
+    {
+      "generation": 41,
+      "timestamp": "2025-11-23T10:02:12.747Z",
+      "bestFitness": 0.580173414928594,
+      "averageFitness": 0.5358078575455874,
+      "worstFitness": 0.44770717776986774,
+      "diversity": 0.18973817018238326,
+      "bestIndividual": {
+        "id": "gen41_ind47",
+        "fitness": 0.580173414928594,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8517948717948718,
+          "prominenceDistribution": 0.898974358974359,
+          "relationshipDiversity": 0.7245391753072808,
+          "connectivity": 1,
+          "overall": 0.8802411683947895
+        }
+      }
+    },
+    {
+      "generation": 42,
+      "timestamp": "2025-11-23T10:02:26.949Z",
+      "bestFitness": 0.5797617189193562,
+      "averageFitness": 0.5396212433841655,
+      "worstFitness": 0.46181822400661027,
+      "diversity": 0.19768116550207332,
+      "bestIndividual": {
+        "id": "gen42_ind25",
+        "fitness": 0.5797617189193562,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8532484076433121,
+          "prominenceDistribution": 0.8954140127388535,
+          "relationshipDiversity": 0.7224982821343237,
+          "connectivity": 1,
+          "overall": 0.8795569812676292
+        }
+      }
+    },
+    {
+      "generation": 43,
+      "timestamp": "2025-11-23T10:02:40.963Z",
+      "bestFitness": 0.5882238880566085,
+      "averageFitness": 0.544023617514442,
+      "worstFitness": 0.480815108706208,
+      "diversity": 0.19963061076941624,
+      "bestIndividual": {
+        "id": "gen43_ind18",
+        "fitness": 0.5882238880566085,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8368627450980393,
+          "prominenceDistribution": 0.8845751633986928,
+          "relationshipDiversity": 0.7428386968432797,
+          "connectivity": 1,
+          "overall": 0.8765415955778062
+        }
+      }
+    },
+    {
+      "generation": 44,
+      "timestamp": "2025-11-23T10:02:56.626Z",
+      "bestFitness": 0.5754291762866167,
+      "averageFitness": 0.5304862727955357,
+      "worstFitness": 0.4015502052341855,
+      "diversity": 0.1981632958396514,
+      "bestIndividual": {
+        "id": "gen44_ind18",
+        "fitness": 0.5754291762866167,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.861578947368421,
+          "prominenceDistribution": 0.8978947368421053,
+          "relationshipDiversity": 0.7473287621391698,
+          "connectivity": 0.9,
+          "overall": 0.8575183840067814
+        }
+      }
+    },
+    {
+      "generation": 45,
+      "timestamp": "2025-11-23T10:03:09.727Z",
+      "bestFitness": 0.5871307459035185,
+      "averageFitness": 0.5430459998726046,
+      "worstFitness": 0.43568234462960354,
+      "diversity": 0.19747621413137126,
+      "bestIndividual": {
+        "id": "gen45_ind34",
+        "fitness": 0.5871307459035185,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8589473684210527,
+          "prominenceDistribution": 0.91,
+          "relationshipDiversity": 0.7307521491626212,
+          "connectivity": 1,
+          "overall": 0.88583464035884
+        }
+      }
+    },
+    {
+      "generation": 46,
+      "timestamp": "2025-11-23T10:03:24.171Z",
+      "bestFitness": 0.5816634516072495,
+      "averageFitness": 0.5369569972060454,
+      "worstFitness": 0.40879057212541536,
+      "diversity": 0.18566340611941082,
+      "bestIndividual": {
+        "id": "gen46_ind7",
+        "fitness": 0.5816634516072495,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8362913907284768,
+          "prominenceDistribution": 0.899205298013245,
+          "relationshipDiversity": 0.7648347561728316,
+          "connectivity": 1,
+          "overall": 0.8836954280557583
+        }
+      }
+    },
+    {
+      "generation": 47,
+      "timestamp": "2025-11-23T10:03:38.072Z",
+      "bestFitness": 0.5851360049134813,
+      "averageFitness": 0.5316475181739502,
+      "worstFitness": 0.44756114982749157,
+      "diversity": 0.18473055873398064,
+      "bestIndividual": {
+        "id": "gen47_ind11",
+        "fitness": 0.5851360049134813,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8742105263157895,
+          "prominenceDistribution": 0.9089473684210526,
+          "relationshipDiversity": 0.7193737298524491,
+          "connectivity": 1,
+          "overall": 0.8879273775494372
+        }
+      }
+    },
+    {
+      "generation": 48,
+      "timestamp": "2025-11-23T10:03:52.945Z",
+      "bestFitness": 0.5882148122931088,
+      "averageFitness": 0.5436166514449386,
+      "worstFitness": 0.496936065305153,
+      "diversity": 0.18491425009244192,
+      "bestIndividual": {
+        "id": "gen48_ind40",
+        "fitness": 0.5882148122931088,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8949693251533742,
+          "prominenceDistribution": 0.8798773006134969,
+          "relationshipDiversity": 0.8140278856820217,
+          "connectivity": 0.9,
+          "overall": 0.877271834805116
+        }
+      }
+    },
+    {
+      "generation": 49,
+      "timestamp": "2025-11-23T10:04:06.360Z",
+      "bestFitness": 0.586731143066437,
+      "averageFitness": 0.5408218010875259,
+      "worstFitness": 0.4672013913651849,
+      "diversity": 0.18280899370597586,
+      "bestIndividual": {
+        "id": "gen49_ind38",
+        "fitness": 0.586731143066437,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8721052631578947,
+          "prominenceDistribution": 0.8926315789473684,
+          "relationshipDiversity": 0.7326027783712836,
+          "connectivity": 1,
+          "overall": 0.8866784504110987
+        }
+      }
+    },
+    {
+      "generation": 50,
+      "timestamp": "2025-11-23T10:04:19.105Z",
+      "bestFitness": 0.5897144103812757,
+      "averageFitness": 0.5384459546070236,
+      "worstFitness": 0.47514613149842666,
+      "diversity": 0.17821429997693178,
+      "bestIndividual": {
+        "id": "gen50_ind45",
+        "fitness": 0.5897144103812757,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8506666666666667,
+          "prominenceDistribution": 0.8226666666666667,
+          "relationshipDiversity": 0.7766534458826049,
+          "connectivity": 1,
+          "overall": 0.8750640225098543
+        }
+      }
+    },
+    {
+      "generation": 51,
+      "timestamp": "2025-11-23T10:04:32.815Z",
+      "bestFitness": 0.5788844435053374,
+      "averageFitness": 0.5381890687112084,
+      "worstFitness": 0.46638772598022527,
+      "diversity": 0.1796370684325303,
+      "bestIndividual": {
+        "id": "gen51_ind8",
+        "fitness": 0.5788844435053374,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8658064516129031,
+          "prominenceDistribution": 0.9283870967741935,
+          "relationshipDiversity": 0.6885519163119328,
+          "connectivity": 1,
+          "overall": 0.8831297381010963
+        }
+      }
+    },
+    {
+      "generation": 52,
+      "timestamp": "2025-11-23T10:04:47.460Z",
+      "bestFitness": 0.5835061617705561,
+      "averageFitness": 0.5298272034619731,
+      "worstFitness": 0.41092084541779816,
+      "diversity": 0.18315572940655833,
+      "bestIndividual": {
+        "id": "gen52_ind24",
+        "fitness": 0.5835061617705561,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787577639751553,
+          "prominenceDistribution": 0.922360248447205,
+          "relationshipDiversity": 0.7220778078316891,
+          "connectivity": 1,
+          "overall": 0.8925149404483255
+        }
+      }
+    },
+    {
+      "generation": 53,
+      "timestamp": "2025-11-23T10:05:01.514Z",
+      "bestFitness": 0.5739735392938268,
+      "averageFitness": 0.5371718275746574,
+      "worstFitness": 0.42656191096122165,
+      "diversity": 0.18686975706321216,
+      "bestIndividual": {
+        "id": "gen53_ind11",
+        "fitness": 0.5739735392938268,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8566871165644172,
+          "prominenceDistribution": 0.9336196319018405,
+          "relationshipDiversity": 0.6816343750498719,
+          "connectivity": 1,
+          "overall": 0.8800569363596678
+        }
+      }
+    },
+    {
+      "generation": 54,
+      "timestamp": "2025-11-23T10:05:14.670Z",
+      "bestFitness": 0.5822137011038777,
+      "averageFitness": 0.5437684549871059,
+      "worstFitness": 0.48489158973287194,
+      "diversity": 0.1866193311058754,
+      "bestIndividual": {
+        "id": "gen54_ind3",
+        "fitness": 0.5822137011038777,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8762732919254659,
+          "prominenceDistribution": 0.9146583850931677,
+          "relationshipDiversity": 0.728004465034413,
+          "connectivity": 1,
+          "overall": 0.8914145576031558
+        }
+      }
+    },
+    {
+      "generation": 55,
+      "timestamp": "2025-11-23T10:05:30.289Z",
+      "bestFitness": 0.5802475858786142,
+      "averageFitness": 0.528557031784835,
+      "worstFitness": 0.43054526107567814,
+      "diversity": 0.18112097049862513,
+      "bestIndividual": {
+        "id": "gen55_ind10",
+        "fitness": 0.5802475858786142,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8627814569536424,
+          "prominenceDistribution": 0.9211920529801324,
+          "relationshipDiversity": 0.6980795746545045,
+          "connectivity": 1,
+          "overall": 0.8826887626130202
+        }
+      }
+    },
+    {
+      "generation": 56,
+      "timestamp": "2025-11-23T10:05:44.497Z",
+      "bestFitness": 0.5856787652131008,
+      "averageFitness": 0.5369100459946733,
+      "worstFitness": 0.4565402330851684,
+      "diversity": 0.1847910167054247,
+      "bestIndividual": {
+        "id": "gen56_ind27",
+        "fitness": 0.5856787652131008,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8627814569536424,
+          "prominenceDistribution": 0.9045033112582781,
+          "relationshipDiversity": 0.7032632079940769,
+          "connectivity": 1,
+          "overall": 0.8803877409365637
+        }
+      }
+    },
+    {
+      "generation": 57,
+      "timestamp": "2025-11-23T10:05:57.764Z",
+      "bestFitness": 0.5825575948733445,
+      "averageFitness": 0.5373473324414051,
+      "worstFitness": 0.464785861620748,
+      "diversity": 0.17593521461919473,
+      "bestIndividual": {
+        "id": "gen57_ind40",
+        "fitness": 0.5825575948733445,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8770731707317073,
+          "prominenceDistribution": 0.891219512195122,
+          "relationshipDiversity": 0.7647270453665224,
+          "connectivity": 1,
+          "overall": 0.894311262731841
+        }
+      }
+    },
+    {
+      "generation": 58,
+      "timestamp": "2025-11-23T10:06:11.731Z",
+      "bestFitness": 0.5757065928443302,
+      "averageFitness": 0.5368571092274106,
+      "worstFitness": 0.4497656777928146,
+      "diversity": 0.17168091098106264,
+      "bestIndividual": {
+        "id": "gen58_ind4",
+        "fitness": 0.5757065928443302,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8436363636363636,
+          "prominenceDistribution": 0.8657142857142857,
+          "relationshipDiversity": 0.737456966212475,
+          "connectivity": 1,
+          "overall": 0.8737251594762612
+        }
+      }
+    },
+    {
+      "generation": 59,
+      "timestamp": "2025-11-23T10:06:24.897Z",
+      "bestFitness": 0.5774791290552671,
+      "averageFitness": 0.5431469133650858,
+      "worstFitness": 0.46825424531325616,
+      "diversity": 0.1682402948486282,
+      "bestIndividual": {
+        "id": "gen59_ind8",
+        "fitness": 0.5774791290552671,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8679518072289156,
+          "prominenceDistribution": 0.9178313253012048,
+          "relationshipDiversity": 0.7279124869410015,
+          "connectivity": 1,
+          "overall": 0.889534304617116
+        }
+      }
+    },
+    {
+      "generation": 60,
+      "timestamp": "2025-11-23T10:06:40.002Z",
+      "bestFitness": 0.5834384629507265,
+      "averageFitness": 0.5372126036474123,
+      "worstFitness": 0.4653421741120262,
+      "diversity": 0.17854026009166174,
+      "bestIndividual": {
+        "id": "gen60_ind35",
+        "fitness": 0.5834384629507265,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8644155844155844,
+          "prominenceDistribution": 0.8776623376623377,
+          "relationshipDiversity": 0.7675190286714428,
+          "connectivity": 1,
+          "overall": 0.8883609485914314
+        }
+      }
+    },
+    {
+      "generation": 61,
+      "timestamp": "2025-11-23T10:06:54.541Z",
+      "bestFitness": 0.5863861163787873,
+      "averageFitness": 0.5378235447866097,
+      "worstFitness": 0.4682450838554647,
+      "diversity": 0.17098363896732133,
+      "bestIndividual": {
+        "id": "gen61_ind33",
+        "fitness": 0.5863861163787873,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.88,
+          "prominenceDistribution": 0.8942857142857142,
+          "relationshipDiversity": 0.7551049726806018,
+          "connectivity": 1,
+          "overall": 0.8938781373932632
+        }
+      }
+    },
+    {
+      "generation": 62,
+      "timestamp": "2025-11-23T10:07:09.086Z",
+      "bestFitness": 0.5823102614795389,
+      "averageFitness": 0.5326042697674347,
+      "worstFitness": 0.4116521841120471,
+      "diversity": 0.1782478949064971,
+      "bestIndividual": {
+        "id": "gen62_ind8",
+        "fitness": 0.5823102614795389,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8613333333333333,
+          "prominenceDistribution": 0.924,
+          "relationshipDiversity": 0.6866762389902571,
+          "connectivity": 1,
+          "overall": 0.8805352477980515
+        }
+      }
+    },
+    {
+      "generation": 63,
+      "timestamp": "2025-11-23T10:07:22.175Z",
+      "bestFitness": 0.5894174463381037,
+      "averageFitness": 0.5467619716139284,
+      "worstFitness": 0.4876723526068933,
+      "diversity": 0.17039896932960674,
+      "bestIndividual": {
+        "id": "gen63_ind0",
+        "fitness": 0.5894174463381037,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8622485207100592,
+          "prominenceDistribution": 0.8938461538461538,
+          "relationshipDiversity": 0.7428859073384705,
+          "connectivity": 1,
+          "overall": 0.8860209684499427
+        }
+      }
+    },
+    {
+      "generation": 64,
+      "timestamp": "2025-11-23T10:07:35.571Z",
+      "bestFitness": 0.5822242429077915,
+      "averageFitness": 0.5341565837288187,
+      "worstFitness": 0.45484033953983694,
+      "diversity": 0.1698871891648514,
+      "bestIndividual": {
+        "id": "gen64_ind37",
+        "fitness": 0.5822242429077915,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8547368421052631,
+          "prominenceDistribution": 0.9031578947368422,
+          "relationshipDiversity": 0.6903665891010863,
+          "connectivity": 1,
+          "overall": 0.8751259493991645
+        }
+      }
+    },
+    {
+      "generation": 65,
+      "timestamp": "2025-11-23T10:07:47.439Z",
+      "bestFitness": 0.5857397078284206,
+      "averageFitness": 0.5329692976201144,
+      "worstFitness": 0.4341910899752567,
+      "diversity": 0.17701456449197195,
+      "bestIndividual": {
+        "id": "gen65_ind19",
+        "fitness": 0.5857397078284206,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.867012987012987,
+          "prominenceDistribution": 0.9114285714285715,
+          "relationshipDiversity": 0.7529786871916319,
+          "connectivity": 1,
+          "overall": 0.8929853478279368
+        }
+      }
+    },
+    {
+      "generation": 66,
+      "timestamp": "2025-11-23T10:08:04.584Z",
+      "bestFitness": 0.5891936187993224,
+      "averageFitness": 0.5333356328678844,
+      "worstFitness": 0.3913488950714314,
+      "diversity": 0.17878791992843857,
+      "bestIndividual": {
+        "id": "gen66_ind43",
+        "fitness": 0.5891936187993224,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8613333333333333,
+          "prominenceDistribution": 0.9293333333333333,
+          "relationshipDiversity": 0.745457072605121,
+          "connectivity": 1,
+          "overall": 0.8933580811876909
+        }
+      }
+    },
+    {
+      "generation": 67,
+      "timestamp": "2025-11-23T10:08:19.390Z",
+      "bestFitness": 0.5842951072471839,
+      "averageFitness": 0.5428106722092186,
+      "worstFitness": 0.48499158716321356,
+      "diversity": 0.17014042436945923,
+      "bestIndividual": {
+        "id": "gen67_ind36",
+        "fitness": 0.5842951072471839,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8871523178807947,
+          "prominenceDistribution": 0.9148344370860927,
+          "relationshipDiversity": 0.7089017686626872,
+          "connectivity": 0.9,
+          "overall": 0.8608929365139945
+        }
+      }
+    },
+    {
+      "generation": 68,
+      "timestamp": "2025-11-23T10:08:33.163Z",
+      "bestFitness": 0.5844645019756014,
+      "averageFitness": 0.5409079136838559,
+      "worstFitness": 0.4717743912205519,
+      "diversity": 0.16172745811019237,
+      "bestIndividual": {
+        "id": "gen68_ind36",
+        "fitness": 0.5844645019756014,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8898701298701298,
+          "prominenceDistribution": 0.9124675324675324,
+          "relationshipDiversity": 0.7214413486046377,
+          "connectivity": 1,
+          "overall": 0.8937428151754729
+        }
+      }
+    },
+    {
+      "generation": 69,
+      "timestamp": "2025-11-23T10:08:47.153Z",
+      "bestFitness": 0.5844699731657701,
+      "averageFitness": 0.5398399918217757,
+      "worstFitness": 0.47317364034039133,
+      "diversity": 0.1654526342198542,
+      "bestIndividual": {
+        "id": "gen69_ind36",
+        "fitness": 0.5844699731657701,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8326315789473684,
+          "prominenceDistribution": 0.8847368421052632,
+          "relationshipDiversity": 0.7550145621086264,
+          "connectivity": 1,
+          "overall": 0.8777397545269885
+        }
+      }
+    },
+    {
+      "generation": 70,
+      "timestamp": "2025-11-23T10:08:59.765Z",
+      "bestFitness": 0.5834269757233236,
+      "averageFitness": 0.5410440804986174,
+      "worstFitness": 0.4695789578964843,
+      "diversity": 0.1688282966804845,
+      "bestIndividual": {
+        "id": "gen70_ind40",
+        "fitness": 0.5834269757233236,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787421383647799,
+          "prominenceDistribution": 0.9032704402515723,
+          "relationshipDiversity": 0.7525071847314985,
+          "connectivity": 1,
+          "overall": 0.8947781665060481
+        }
+      }
+    },
+    {
+      "generation": 71,
+      "timestamp": "2025-11-23T10:09:13.706Z",
+      "bestFitness": 0.587367122412039,
+      "averageFitness": 0.5426641101112403,
+      "worstFitness": 0.44759712350638137,
+      "diversity": 0.17061037372557267,
+      "bestIndividual": {
+        "id": "gen71_ind16",
+        "fitness": 0.587367122412039,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8747368421052631,
+          "prominenceDistribution": 0.9057894736842105,
+          "relationshipDiversity": 0.7286700479618493,
+          "connectivity": 1,
+          "overall": 0.8893129569607909
+        }
+      }
+    },
+    {
+      "generation": 72,
+      "timestamp": "2025-11-23T10:09:26.835Z",
+      "bestFitness": 0.5838914133718296,
+      "averageFitness": 0.5414761258684522,
+      "worstFitness": 0.46725713771373223,
+      "diversity": 0.16788025354539723,
+      "bestIndividual": {
+        "id": "gen72_ind18",
+        "fitness": 0.5838914133718296,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8812422360248447,
+          "prominenceDistribution": 0.9064596273291925,
+          "relationshipDiversity": 0.7284835291589518,
+          "connectivity": 1,
+          "overall": 0.8913613021050824
+        }
+      }
+    },
+    {
+      "generation": 73,
+      "timestamp": "2025-11-23T10:09:40.824Z",
+      "bestFitness": 0.5803411921021243,
+      "averageFitness": 0.5384887945338709,
+      "worstFitness": 0.43860229450557153,
+      "diversity": 0.17534633024121835,
+      "bestIndividual": {
+        "id": "gen73_ind46",
+        "fitness": 0.5803411921021243,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8453333333333333,
+          "prominenceDistribution": 0.9133333333333333,
+          "relationshipDiversity": 0.6811849020173029,
+          "connectivity": 1,
+          "overall": 0.8725036470701273
+        }
+      }
+    },
+    {
+      "generation": 74,
+      "timestamp": "2025-11-23T10:09:53.571Z",
+      "bestFitness": 0.5820905811883061,
+      "averageFitness": 0.5414562751255768,
+      "worstFitness": 0.4590913402178781,
+      "diversity": 0.17680043049043748,
+      "bestIndividual": {
+        "id": "gen74_ind45",
+        "fitness": 0.5820905811883061,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787878787878788,
+          "prominenceDistribution": 0.8866666666666667,
+          "relationshipDiversity": 0.7485537005118325,
+          "connectivity": 1,
+          "overall": 0.8906804370720633
+        }
+      }
+    },
+    {
+      "generation": 75,
+      "timestamp": "2025-11-23T10:10:07.155Z",
+      "bestFitness": 0.5884413303003778,
+      "averageFitness": 0.5296106361548771,
+      "worstFitness": 0.4644325161870842,
+      "diversity": 0.17251843086832774,
+      "bestIndividual": {
+        "id": "gen75_ind45",
+        "fitness": 0.5884413303003778,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8603921568627451,
+          "prominenceDistribution": 0.9418300653594771,
+          "relationshipDiversity": 0.6994302374589318,
+          "connectivity": 1,
+          "overall": 0.8863697076225052
+        }
+      }
+    },
+    {
+      "generation": 76,
+      "timestamp": "2025-11-23T10:10:21.416Z",
+      "bestFitness": 0.5758701867998127,
+      "averageFitness": 0.5243093749215484,
+      "worstFitness": 0.4386485812136318,
+      "diversity": 0.17318150631211565,
+      "bestIndividual": {
+        "id": "gen76_ind35",
+        "fitness": 0.5758701867998127,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8684337349397591,
+          "prominenceDistribution": 0.9014457831325301,
+          "relationshipDiversity": 0.7414804513064733,
+          "connectivity": 1,
+          "overall": 0.8891153673697283
+        }
+      }
+    },
+    {
+      "generation": 77,
+      "timestamp": "2025-11-23T10:10:37.493Z",
+      "bestFitness": 0.590691549586692,
+      "averageFitness": 0.5328099372776759,
+      "worstFitness": 0.45156595137240957,
+      "diversity": 0.16667735819542406,
+      "bestIndividual": {
+        "id": "gen77_ind20",
+        "fitness": 0.590691549586692,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8563157894736841,
+          "prominenceDistribution": 0.8426315789473684,
+          "relationshipDiversity": 0.7762022348122843,
+          "connectivity": 1,
+          "overall": 0.8806614995940358
+        }
+      }
+    },
+    {
+      "generation": 78,
+      "timestamp": "2025-11-23T10:10:51.286Z",
+      "bestFitness": 0.5816094415602894,
+      "averageFitness": 0.5362399570581607,
+      "worstFitness": 0.4563400960449471,
+      "diversity": 0.1632986438817455,
+      "bestIndividual": {
+        "id": "gen78_ind48",
+        "fitness": 0.5816094415602894,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8551633986928104,
+          "prominenceDistribution": 0.9122875816993464,
+          "relationshipDiversity": 0.6849371968660168,
+          "connectivity": 1,
+          "overall": 0.8759939753209158
+        }
+      }
+    },
+    {
+      "generation": 79,
+      "timestamp": "2025-11-23T10:11:04.991Z",
+      "bestFitness": 0.5825095213086259,
+      "averageFitness": 0.5315684058255389,
+      "worstFitness": 0.4472566315464577,
+      "diversity": 0.1610132057215957,
+      "bestIndividual": {
+        "id": "gen79_ind19",
+        "fitness": 0.5825095213086259,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8762264150943396,
+          "prominenceDistribution": 0.9135849056603773,
+          "relationshipDiversity": 0.7247643365517369,
+          "connectivity": 1,
+          "overall": 0.8905377729707247
+        }
+      }
+    },
+    {
+      "generation": 80,
+      "timestamp": "2025-11-23T10:11:18.660Z",
+      "bestFitness": 0.5810612512474862,
+      "averageFitness": 0.5392265307085843,
+      "worstFitness": 0.449864984158441,
+      "diversity": 0.16400235757756343,
+      "bestIndividual": {
+        "id": "gen80_ind48",
+        "fitness": 0.5810612512474862,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8772413793103448,
+          "prominenceDistribution": 0.9262068965517242,
+          "relationshipDiversity": 0.6959398431424003,
+          "connectivity": 1,
+          "overall": 0.8876017617319283
+        }
+      }
+    },
+    {
+      "generation": 81,
+      "timestamp": "2025-11-23T10:11:31.681Z",
+      "bestFitness": 0.5828519388200999,
+      "averageFitness": 0.5360015467857953,
+      "worstFitness": 0.4371092897915301,
+      "diversity": 0.16276758822638918,
+      "bestIndividual": {
+        "id": "gen81_ind44",
+        "fitness": 0.5828519388200999,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8473202614379085,
+          "prominenceDistribution": 0.8890196078431373,
+          "relationshipDiversity": 0.7485065621118422,
+          "connectivity": 1,
+          "overall": 0.8817013124223685
+        }
+      }
+    },
+    {
+      "generation": 82,
+      "timestamp": "2025-11-23T10:11:45.540Z",
+      "bestFitness": 0.5804561103972834,
+      "averageFitness": 0.5439524554844407,
+      "worstFitness": 0.4748179733846631,
+      "diversity": 0.16482021468838584,
+      "bestIndividual": {
+        "id": "gen82_ind0",
+        "fitness": 0.5804561103972834,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8442384105960266,
+          "prominenceDistribution": 0.9042384105960265,
+          "relationshipDiversity": 0.7475033851702164,
+          "connectivity": 1,
+          "overall": 0.8836198823320567
+        }
+      }
+    },
+    {
+      "generation": 83,
+      "timestamp": "2025-11-23T10:12:00.024Z",
+      "bestFitness": 0.5937119201443997,
+      "averageFitness": 0.5342210526346404,
+      "worstFitness": 0.4324742798453374,
+      "diversity": 0.1630184404684278,
+      "bestIndividual": {
+        "id": "gen83_ind35",
+        "fitness": 0.5937119201443997,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8863157894736842,
+          "prominenceDistribution": 0.8847368421052632,
+          "relationshipDiversity": 0.7649467889285075,
+          "connectivity": 1,
+          "overall": 0.8958314630488593
+        }
+      }
+    },
+    {
+      "generation": 84,
+      "timestamp": "2025-11-23T10:12:16.401Z",
+      "bestFitness": 0.6014830573141886,
+      "averageFitness": 0.5420862086028364,
+      "worstFitness": 0.3931617363693573,
+      "diversity": 0.16423785834354945,
+      "bestIndividual": {
+        "id": "gen84_ind35",
+        "fitness": 0.6014830573141886,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8851948051948052,
+          "prominenceDistribution": 0.8179220779220779,
+          "relationshipDiversity": 0.8215227497219048,
+          "connectivity": 1,
+          "overall": 0.893447407087238
+        }
+      }
+    },
+    {
+      "generation": 85,
+      "timestamp": "2025-11-23T10:12:28.945Z",
+      "bestFitness": 0.5788032817160558,
+      "averageFitness": 0.534969342607266,
+      "worstFitness": 0.45931412195754034,
+      "diversity": 0.15993095466027699,
+      "bestIndividual": {
+        "id": "gen85_ind25",
+        "fitness": 0.5788032817160558,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8400000000000001,
+          "prominenceDistribution": 0.9293333333333333,
+          "relationshipDiversity": 0.7034490967202449,
+          "connectivity": 1,
+          "overall": 0.8785564860107156
+        }
+      }
+    },
+    {
+      "generation": 86,
+      "timestamp": "2025-11-23T10:12:41.691Z",
+      "bestFitness": 0.5830988931087138,
+      "averageFitness": 0.5466713654901847,
+      "worstFitness": 0.47657342953119486,
+      "diversity": 0.15653931777976232,
+      "bestIndividual": {
+        "id": "gen86_ind27",
+        "fitness": 0.5830988931087138,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8684337349397591,
+          "prominenceDistribution": 0.9342168674698795,
+          "relationshipDiversity": 0.7010362423765611,
+          "connectivity": 1,
+          "overall": 0.8875807424512159
+        }
+      }
+    },
+    {
+      "generation": 87,
+      "timestamp": "2025-11-23T10:12:55.399Z",
+      "bestFitness": 0.5863973144193623,
+      "averageFitness": 0.5400866972606304,
+      "worstFitness": 0.47269655699402596,
+      "diversity": 0.16133369300970182,
+      "bestIndividual": {
+        "id": "gen87_ind46",
+        "fitness": 0.5863973144193623,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8551633986928104,
+          "prominenceDistribution": 0.8942483660130719,
+          "relationshipDiversity": 0.7467782264116315,
+          "connectivity": 1,
+          "overall": 0.8847543380927838
+        }
+      }
+    },
+    {
+      "generation": 88,
+      "timestamp": "2025-11-23T10:13:09.776Z",
+      "bestFitness": 0.5807085119334632,
+      "averageFitness": 0.5400735673346418,
+      "worstFitness": 0.4608289362556005,
+      "diversity": 0.15805493328945203,
+      "bestIndividual": {
+        "id": "gen88_ind47",
+        "fitness": 0.5807085119334632,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.847741935483871,
+          "prominenceDistribution": 0.9193548387096774,
+          "relationshipDiversity": 0.7181884523438148,
+          "connectivity": 1,
+          "overall": 0.8818312388558598
+        }
+      }
+    },
+    {
+      "generation": 89,
+      "timestamp": "2025-11-23T10:13:24.491Z",
+      "bestFitness": 0.5789108243116368,
+      "averageFitness": 0.5389809846376208,
+      "worstFitness": 0.4687653854361984,
+      "diversity": 0.14909238042642167,
+      "bestIndividual": {
+        "id": "gen89_ind26",
+        "fitness": 0.5789108243116368,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8666666666666667,
+          "prominenceDistribution": 0.9096969696969697,
+          "relationshipDiversity": 0.7276229700004679,
+          "connectivity": 1,
+          "overall": 0.8874639879394877
+        }
+      }
+    },
+    {
+      "generation": 90,
+      "timestamp": "2025-11-23T10:13:41.225Z",
+      "bestFitness": 0.5823648856875603,
+      "averageFitness": 0.5412244980262053,
+      "worstFitness": 0.46117566697372714,
+      "diversity": 0.1547404400032473,
+      "bestIndividual": {
+        "id": "gen90_ind15",
+        "fitness": 0.5823648856875603,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8640490797546012,
+          "prominenceDistribution": 0.9336196319018405,
+          "relationshipDiversity": 0.7250102674295783,
+          "connectivity": 1,
+          "overall": 0.8909407037926642
+        }
+      }
+    },
+    {
+      "generation": 91,
+      "timestamp": "2025-11-23T10:13:56.749Z",
+      "bestFitness": 0.5771536548275851,
+      "averageFitness": 0.5331910524261257,
+      "worstFitness": 0.45919672393538,
+      "diversity": 0.15906896404861895,
+      "bestIndividual": {
+        "id": "gen91_ind11",
+        "fitness": 0.5771536548275851,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8589473684210527,
+          "prominenceDistribution": 0.9378947368421052,
+          "relationshipDiversity": 0.6787811780894393,
+          "connectivity": 1,
+          "overall": 0.8810193935126247
+        }
+      }
+    },
+    {
+      "generation": 92,
+      "timestamp": "2025-11-23T10:14:09.748Z",
+      "bestFitness": 0.5817261484631557,
+      "averageFitness": 0.5357239771598732,
+      "worstFitness": 0.4474482617293829,
+      "diversity": 0.15809014804217777,
+      "bestIndividual": {
+        "id": "gen92_ind34",
+        "fitness": 0.5817261484631557,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8787878787878788,
+          "prominenceDistribution": 0.8903030303030303,
+          "relationshipDiversity": 0.7708326760151795,
+          "connectivity": 1,
+          "overall": 0.8958635049000057
+        }
+      }
+    },
+    {
+      "generation": 93,
+      "timestamp": "2025-11-23T10:14:25.204Z",
+      "bestFitness": 0.5802966332615983,
+      "averageFitness": 0.5387854305590115,
+      "worstFitness": 0.4763746282630135,
+      "diversity": 0.15284974801341028,
+      "bestIndividual": {
+        "id": "gen93_ind33",
+        "fitness": 0.5802966332615983,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8514285714285714,
+          "prominenceDistribution": 0.8932467532467533,
+          "relationshipDiversity": 0.7628526524034224,
+          "connectivity": 1,
+          "overall": 0.8866484525586065
+        }
+      }
+    },
+    {
+      "generation": 94,
+      "timestamp": "2025-11-23T10:14:37.532Z",
+      "bestFitness": 0.5715745416342568,
+      "averageFitness": 0.5372223646041491,
+      "worstFitness": 0.45557387916355907,
+      "diversity": 0.15219213957101577,
+      "bestIndividual": {
+        "id": "gen94_ind8",
+        "fitness": 0.5715745416342568,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8781818181818182,
+          "prominenceDistribution": 0.8915151515151515,
+          "relationshipDiversity": 0.713843821817128,
+          "connectivity": 0.9,
+          "overall": 0.8545263401210014
+        }
+      }
+    },
+    {
+      "generation": 95,
+      "timestamp": "2025-11-23T10:14:50.902Z",
+      "bestFitness": 0.5898599219865293,
+      "averageFitness": 0.5352389377122327,
+      "worstFitness": 0.4313635728051568,
+      "diversity": 0.15592605689695455,
+      "bestIndividual": {
+        "id": "gen95_ind34",
+        "fitness": 0.5898599219865293,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8618181818181818,
+          "prominenceDistribution": 0.9266666666666666,
+          "relationshipDiversity": 0.7070744622285433,
+          "connectivity": 1,
+          "overall": 0.8852936803244966
+        }
+      }
+    },
+    {
+      "generation": 96,
+      "timestamp": "2025-11-23T10:15:05.121Z",
+      "bestFitness": 0.586428810614309,
+      "averageFitness": 0.5395065729621319,
+      "worstFitness": 0.45774630282077605,
+      "diversity": 0.1634070587520708,
+      "bestIndividual": {
+        "id": "gen96_ind13",
+        "fitness": 0.586428810614309,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8548344370860927,
+          "prominenceDistribution": 0.9283443708609271,
+          "relationshipDiversity": 0.697569455613897,
+          "connectivity": 1,
+          "overall": 0.8816330964207928
+        }
+      }
+    },
+    {
+      "generation": 97,
+      "timestamp": "2025-11-23T10:15:18.677Z",
+      "bestFitness": 0.5887017385049262,
+      "averageFitness": 0.5436136315295608,
+      "worstFitness": 0.451986203448496,
+      "diversity": 0.16653751968296052,
+      "bestIndividual": {
+        "id": "gen97_ind26",
+        "fitness": 0.5887017385049262,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8878106508875739,
+          "prominenceDistribution": 0.8938461538461538,
+          "relationshipDiversity": 0.7631582330067836,
+          "connectivity": 1,
+          "overall": 0.8977440726368597
+        }
+      }
+    },
+    {
+      "generation": 98,
+      "timestamp": "2025-11-23T10:15:33.816Z",
+      "bestFitness": 0.5803283382082752,
+      "averageFitness": 0.5348766823073838,
+      "worstFitness": 0.4258301927614941,
+      "diversity": 0.15906492025541769,
+      "bestIndividual": {
+        "id": "gen98_ind4",
+        "fitness": 0.5803283382082752,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8748051948051948,
+          "prominenceDistribution": 0.9425974025974025,
+          "relationshipDiversity": 0.7149207875868224,
+          "connectivity": 1,
+          "overall": 0.8939451964784035
+        }
+      }
+    },
+    {
+      "generation": 99,
+      "timestamp": "2025-11-23T10:15:47.711Z",
+      "bestFitness": 0.5833716783758637,
+      "averageFitness": 0.5392799834116557,
+      "worstFitness": 0.45562697661746215,
+      "diversity": 0.15892945801878897,
+      "bestIndividual": {
+        "id": "gen99_ind28",
+        "fitness": 0.5833716783758637,
+        "fitnessBreakdown": {
+          "entityDistribution": 0.8724050632911392,
+          "prominenceDistribution": 0.8513924050632912,
+          "relationshipDiversity": 0.7937288007869844,
+          "connectivity": 1,
+          "overall": 0.8907457601573969
+        }
+      }
+    }
+  ]
+}

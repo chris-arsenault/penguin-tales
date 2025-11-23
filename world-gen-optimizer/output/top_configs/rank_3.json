@@ -1,0 +1,487 @@
+{
+  "rank": 3,
+  "fitness": 0.592712243871443,
+  "fitnessBreakdown": {
+    "entityDistribution": 0.8586666666666667,
+    "prominenceDistribution": 0.8893333333333333,
+    "relationshipDiversity": 0.7412472942397038,
+    "connectivity": 1,
+    "overall": 0.8837161255146075
+  },
+  "discoveredInGeneration": 40,
+  "timestamp": "2025-11-23T10:01:59.875Z",
+  "configuration": {
+    "$schema": "Template and System Parameter Overrides",
+    "version": "1.0.0",
+    "description": "Centralized configuration for all tunable parameters in templates and systems. Override metadata values here to tune behavior without code changes.",
+    "templates": {
+      "cultFormation": {
+        "metadata": {
+          "parameters": {
+            "numCultists": {
+              "value": 1,
+              "comment": "Number of cultists created when forming a cult"
+            }
+          }
+        }
+      },
+      "factionSplinter": {
+        "metadata": {
+          "parameters": {
+            "leaderHeroChance": {
+              "value": 0.5085343897583535,
+              "comment": "Chance that splinter faction leader becomes a hero"
+            }
+          }
+        }
+      },
+      "familyExpansion": {
+        "metadata": {
+          "parameters": {
+            "numChildrenMin": {
+              "value": 1
+            },
+            "numChildrenMax": {
+              "value": 12
+            },
+            "inheritSubtypeChance": {
+              "value": 0.4273319413357222,
+              "comment": "Chance children inherit parent's subtype"
+            },
+            "joinParentFactionChance": {
+              "value": 0.3696677844251812,
+              "comment": "Chance children join parent's faction"
+            }
+          }
+        }
+      },
+      "kinshipConstellation": {
+        "metadata": {
+          "parameters": {
+            "familySizeMin": {
+              "value": 5
+            },
+            "familySizeMax": {
+              "value": 2
+            },
+            "rivalryChance": {
+              "value": 0.3578902493497643,
+              "comment": "Chance of rivalry forming"
+            },
+            "romanceChance": {
+              "value": 0.21139414496124004,
+              "comment": "Chance of romance forming"
+            },
+            "isingTemperature": {
+              "value": 2.7166487406016486,
+              "comment": "Ising model temperature parameter"
+            },
+            "isingCouplingStrength": {
+              "value": 0.05008053691659858,
+              "comment": "Ising model coupling strength"
+            },
+            "isingExternalField": {
+              "value": 0,
+              "comment": "Ising model external field"
+            }
+          }
+        }
+      },
+      "mysteriousVanishing": {
+        "metadata": {
+          "parameters": {
+            "activationChance": {
+              "value": 0.7880472733520089
+            },
+            "mythicProximityMultiplier": {
+              "value": 138
+            },
+            "renownedProximityMultiplier": {
+              "value": 2.913987510867601
+            },
+            "maxSearchers": {
+              "value": 0
+            }
+          }
+        }
+      },
+      "outlawRecruitment": {
+        "metadata": {
+          "parameters": {
+            "numOutlawsMin": {
+              "value": 8
+            },
+            "numOutlawsMax": {
+              "value": 3
+            }
+          }
+        }
+      },
+      "anomalyManifestation": {
+        "metadata": {
+          "parameters": {
+            "activationChance": {
+              "value": 0.11001199638591588
+            }
+          }
+        }
+      },
+      "geographicExploration": {
+        "metadata": {
+          "parameters": {
+            "baseChance": {
+              "value": 0.3780580277856569
+            }
+          }
+        }
+      },
+      "krillBloomMigration": {
+        "metadata": {
+          "parameters": {
+            "activationChance": {
+              "value": 0.15764741751921996
+            },
+            "bloomCountMin": {
+              "value": 1
+            },
+            "bloomCountMax": {
+              "value": 6
+            },
+            "techDiscoveryChance": {
+              "value": 0.5165764410719266
+            }
+          }
+        }
+      },
+      "techInnovation": {
+        "metadata": {
+          "parameters": {
+            "maxPractitioners": {
+              "value": 10
+            }
+          }
+        }
+      },
+      "greatFestival": {
+        "metadata": {
+          "parameters": {
+            "stableActivationChance": {
+              "value": 0.5178009821887418
+            }
+          }
+        }
+      },
+      "ideologyEmergence": {
+        "metadata": {
+          "parameters": {
+            "unstableActivationChance": {
+              "value": 0.4070668288923737
+            }
+          }
+        }
+      }
+    },
+    "systems": {
+      "relationship_formation": {
+        "metadata": {
+          "parameters": {
+            "throttleChance": {
+              "value": 0.3976335332514397,
+              "comment": "Probability of throttling (not running) this system each tick"
+            },
+            "friendshipBaseChance": {
+              "value": 0.17987276860183782,
+              "comment": "Base chance of friendship forming"
+            },
+            "romanceBaseChance": {
+              "value": 0,
+              "comment": "Base chance of romance forming"
+            },
+            "mentorshipBaseChance": {
+              "value": 0.2532606477145789,
+              "comment": "Base chance of mentorship forming"
+            },
+            "sameColonyMultiplier": {
+              "value": 106,
+              "comment": "Multiplier for same colony proximity"
+            },
+            "sameFactionMultiplier": {
+              "value": 2.1019503819320917,
+              "comment": "Multiplier for same faction"
+            },
+            "friendshipCooldown": {
+              "value": 101,
+              "comment": "Ticks before same pair can form friendship again"
+            },
+            "romanceCooldown": {
+              "value": 57,
+              "comment": "Ticks before same pair can form romance again"
+            },
+            "mentorshipCooldown": {
+              "value": 71,
+              "comment": "Ticks before same pair can form mentorship again"
+            }
+          }
+        }
+      },
+      "alliance_formation": {
+        "metadata": {
+          "parameters": {
+            "allianceBaseChance": {
+              "value": 0.043693953114967335,
+              "comment": "Base chance of alliance forming between factions"
+            }
+          },
+          "effects": {
+            "graphDensity": 0.5575778123578049,
+            "comment": "How much this system increases graph density"
+          }
+        }
+      },
+      "belief_contagion": {
+        "metadata": {
+          "parameters": {
+            "transmissionRate": {
+              "value": 0,
+              "comment": "SIR model transmission rate"
+            },
+            "recoveryRate": {
+              "value": 0.2735823486050081,
+              "comment": "SIR model recovery rate"
+            },
+            "resistanceWeight": {
+              "value": 0.39630447158079846,
+              "comment": "Weight for resistance to belief adoption"
+            },
+            "traditionWeight": {
+              "value": 0.4152038118861078,
+              "comment": "Weight for traditional belief retention"
+            },
+            "enactmentThreshold": {
+              "value": 0.4482092621475776,
+              "comment": "Threshold for rule enactment"
+            }
+          }
+        }
+      },
+      "conflict_contagion": {
+        "metadata": {
+          "parameters": {
+            "baseSpreadChance": {
+              "value": 0.2612618310375149,
+              "comment": "Base chance conflict spreads"
+            },
+            "allyMultiplier": {
+              "value": 97,
+              "comment": "Multiplier for spreading to allies"
+            },
+            "locationMultiplier": {
+              "value": 1.4916652400087762,
+              "comment": "Multiplier for same location"
+            }
+          }
+        }
+      },
+      "cultural_drift": {
+        "metadata": {
+          "parameters": {
+            "ruleRepealChance": {
+              "value": 0.04130230018631823,
+              "comment": "Chance forgotten rules get repealed"
+            },
+            "factionWaningChance": {
+              "value": 0.03752402725977927,
+              "comment": "Chance marginal factions start waning"
+            }
+          }
+        }
+      },
+      "legend_crystallization": {
+        "metadata": {
+          "parameters": {
+            "throttleChance": {
+              "value": 0.6155682269449261,
+              "comment": "High throttle - rare events"
+            },
+            "crystallizationThreshold": {
+              "value": 21,
+              "comment": "Number of references needed for crystallization"
+            }
+          }
+        }
+      },
+      "prominence_evolution": {
+        "metadata": {
+          "parameters": {
+            "npcGainChance": {
+              "value": 0.11372003015906812,
+              "comment": "Chance NPCs gain prominence"
+            },
+            "npcDecayChance": {
+              "value": 0.4958229459688362,
+              "comment": "Chance NPCs lose prominence"
+            },
+            "locationGainChance": {
+              "value": 0.5324303006116439,
+              "comment": "Chance locations gain prominence"
+            },
+            "locationDecayChance": {
+              "value": 0,
+              "comment": "Chance locations lose prominence"
+            },
+            "abilityGainChance": {
+              "value": 0,
+              "comment": "Chance abilities gain prominence"
+            },
+            "abilityDecayChance": {
+              "value": 0.3442075559414904,
+              "comment": "Chance abilities lose prominence"
+            },
+            "ruleGainChance": {
+              "value": 0.20862424894220427,
+              "comment": "Chance rules gain prominence"
+            },
+            "ruleDecayChance": {
+              "value": 0.4819938858790514,
+              "comment": "Chance rules lose prominence"
+            }
+          }
+        }
+      },
+      "succession_vacuum": {
+        "metadata": {
+          "parameters": {
+            "throttleChance": {
+              "value": 0.707770020761949
+            },
+            "rivalryCooldown": {
+              "value": 38
+            },
+            "rivalryChance": {
+              "value": 0.2533207601977533
+            },
+            "escalationChance": {
+              "value": 0.43644782970371626
+            },
+            "conflictChance": {
+              "value": 0.4411804433456526
+            },
+            "repealChance": {
+              "value": 0.1696261696411394
+            }
+          }
+        }
+      },
+      "thermal_cascade": {
+        "metadata": {
+          "parameters": {
+            "frequency": {
+              "value": 0.1095977007272556,
+              "comment": "How often cascade events occur"
+            },
+            "alpha": {
+              "value": 0.988682757396145,
+              "comment": "Discrete Laplacian alpha parameter"
+            },
+            "threshold": {
+              "value": 0.4418340651840188,
+              "comment": "Threshold for cascade triggering"
+            },
+            "migrationCooldown": {
+              "value": 94
+            },
+            "recoveryChance": {
+              "value": 0.0968052747592564
+            },
+            "migrationChance": {
+              "value": 0.8332314184376486
+            },
+            "discoveryChance": {
+              "value": 0.4841388087867361
+            }
+          }
+        }
+      },
+      "relationship_decay": {
+        "metadata": {
+          "parameters": {
+            "narrativeDecayRate": {
+              "value": 0.30498771857421797,
+              "comment": "Decay rate for narrative relationships (member_of, leader_of)"
+            },
+            "socialDecayRate": {
+              "value": 0.2272178596882441,
+              "comment": "Decay rate for social relationships (follower_of, friend_of)"
+            },
+            "spatialDecayRate": {
+              "value": 0.17963556872469955,
+              "comment": "Decay rate for spatial relationships (resident_of, adjacent_to)"
+            },
+            "conflictDecayRate": {
+              "value": 0,
+              "comment": "Decay rate for conflict relationships - very slow (hatred persists)"
+            },
+            "proximityReduction": {
+              "value": 0.46515831721183504,
+              "comment": "Decay reduction when entities in same location (0.5 = 50% slower)"
+            },
+            "sharedFactionReduction": {
+              "value": 0,
+              "comment": "Decay reduction when entities share faction membership"
+            },
+            "decayFloor": {
+              "value": 0.1,
+              "comment": "Minimum strength (relationships won't decay below this)"
+            }
+          }
+        }
+      },
+      "relationship_reinforcement": {
+        "metadata": {
+          "parameters": {
+            "structuralBonus": {
+              "value": 0,
+              "comment": "Per-tick reinforcement for structural relationships (member_of, resident_of, etc.) - keeps protected relationships strong"
+            },
+            "proximityBonus": {
+              "value": 0.5749249642819916,
+              "comment": "Strength increase per tick if entities in same location"
+            },
+            "sharedFactionBonus": {
+              "value": 0.2778400869867253,
+              "comment": "Strength increase per tick if entities share faction"
+            },
+            "sharedConflictBonus": {
+              "value": 0,
+              "comment": "Strength increase if both have same enemy (fighting together)"
+            },
+            "reinforcementCap": {
+              "value": 10,
+              "comment": "Maximum strength from reinforcement"
+            }
+          },
+          "comment": "Structural relationships (narrative/spatial) get base reinforcement; social relationships get conditional bonuses"
+        }
+      },
+      "relationship_culling": {
+        "metadata": {
+          "parameters": {
+            "cullThreshold": {
+              "value": 0.10731324767276569,
+              "comment": "Remove relationships below this strength"
+            },
+            "cullFrequency": {
+              "value": 59,
+              "comment": "Check for culling every N ticks"
+            },
+            "gracePeriod": {
+              "value": 47,
+              "comment": "Don't cull relationships younger than this many ticks"
+            }
+          },
+          "comment": "Protected kinds (never culled): member_of, leader_of, resident_of, practitioner_of, originated_in"
+        }
+      }
+    }
+  }
+}
