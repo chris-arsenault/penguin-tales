@@ -27,13 +27,17 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
       randomize: true,  // Add jitter to break out of local minima
       fit: true,
       idealEdgeLength: 100,
-      // Edge strength influences spring length: stronger edges pull nodes closer
+      // Non-linear edge strength → spring length mapping for dramatic clustering
       edgeLength: (edge: any) => {
         const strength = edge.data('strength') ?? 0.5;
-        // Map strength 0-1 to edge length 200-50
-        // Stronger edges (1.0) = shorter length (50) = tighter clustering
-        // Weaker edges (0.0) = longer length (200) = looser connections
-        return 200 - (strength * 150);
+        // Non-linear scaling: emphasizes extremes away from 0.5
+        // strength 1.0 → 25px (extremely tight clustering)
+        // strength 0.7 → 70px (moderate clustering)
+        // strength 0.5 → 130px (neutral)
+        // strength 0.3 → 230px (loose)
+        // strength 0.0 → 400px (very loose, almost disconnected)
+        const invStrength = 1 - strength;
+        return 25 + Math.pow(invStrength, 1.8) * 375;
       },
       nodeRepulsion: 100000,
       gravity: 0.25,
@@ -101,17 +105,18 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
         },
         {
           // Edge strength visualization: strength values (0-1) control visual prominence
-          // - Width: 1-5px (stronger = thicker)
-          // - Color: light gray to dark gray (stronger = darker)
-          // - Opacity: 0.4-1.0 (stronger = more visible)
+          // MORE DRAMATIC: wider range for better visual distinction
+          // - Width: 0.5-7px (stronger = much thicker)
+          // - Color: very light gray to black (stronger = much darker)
+          // - Opacity: 0.2-1.0 (stronger = fully opaque, weak = nearly invisible)
           selector: 'edge',
           style: {
-            'width': 'mapData(strength, 0, 1, 1, 5)',
-            'line-color': 'mapData(strength, 0, 1, #888, #222)',
-            'target-arrow-color': 'mapData(strength, 0, 1, #888, #222)',
+            'width': 'mapData(strength, 0, 1, 0.5, 7)',
+            'line-color': 'mapData(strength, 0, 1, #aaa, #000)',
+            'target-arrow-color': 'mapData(strength, 0, 1, #aaa, #000)',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            'opacity': 'mapData(strength, 0, 1, 0.4, 1)',
+            'opacity': 'mapData(strength, 0, 1, 0.2, 1)',
             'label': 'data(label)',
             'font-size': '8px',
             'color': '#999',
@@ -134,7 +139,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
         idealEdgeLength: 100,
         edgeLength: (edge: any) => {
           const strength = edge.data('strength') ?? 0.5;
-          return 200 - (strength * 150);
+          const invStrength = 1 - strength;
+          return 25 + Math.pow(invStrength, 1.8) * 375;
         },
         nodeRepulsion: 100000,
         gravity: 0.25,
@@ -218,7 +224,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect }: GraphV
         idealEdgeLength: 100,
         edgeLength: (edge: any) => {
           const strength = edge.data('strength') ?? 0.5;
-          return 200 - (strength * 150);
+          const invStrength = 1 - strength;
+          return 25 + Math.pow(invStrength, 1.8) * 375;
         },
         nodeRepulsion: 100000,
         gravity: 0.25,

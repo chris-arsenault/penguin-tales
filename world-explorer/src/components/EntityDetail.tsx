@@ -225,6 +225,7 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
                       {rels.map((rel, i) => {
                         const target = getRelatedEntity(rel.dst);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
+                        const strength = rel.strength ?? 0.5;
                         return target ? (
                           <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
                             <button
@@ -232,7 +233,7 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
                               className="accordion-row-button"
                             >
                               <div className="accordion-row-name">{target.name}</div>
-                              <div className="accordion-row-kind">({target.kind})</div>
+                              <div className="accordion-row-kind">({target.kind}) <span style={{ color: '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span></div>
                             </button>
                             {relLore && (
                               <button
@@ -281,6 +282,7 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
                       {rels.map((rel, i) => {
                         const source = getRelatedEntity(rel.src);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
+                        const strength = rel.strength ?? 0.5;
                         return source ? (
                           <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
                             <button
@@ -288,7 +290,7 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
                               className="accordion-row-button"
                             >
                               <div className="accordion-row-name">{source.name}</div>
-                              <div className="accordion-row-kind">({source.kind})</div>
+                              <div className="accordion-row-kind">({source.kind}) <span style={{ color: '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span></div>
                             </button>
                             {relLore && (
                               <button
