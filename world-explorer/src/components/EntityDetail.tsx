@@ -142,16 +142,17 @@ export default function EntityDetail({ entityId, worldData, loreData, onRelatedC
         </div>
       </div>
 
-      {/* Description */}
-      <div className="detail-card">
-        <div className="section-header">Description</div>
-        <p className="text-sm text-blue-100 leading-relaxed break-words detail-card-content">
-          {entity.description}
-        </p>
-      </div>
-
-      {/* Lore */}
-      {descriptionLore && <LoreSection lore={descriptionLore} />}
+      {/* Description or Lore */}
+      {descriptionLore ? (
+        <LoreSection lore={descriptionLore} />
+      ) : (
+        <div className="detail-card">
+          <div className="section-header">Description</div>
+          <p className="text-sm text-blue-100 leading-relaxed break-words detail-card-content">
+            {entity.description}
+          </p>
+        </div>
+      )}
 
       {/* Chain Link */}
       {chainLinkLore && <ChainLinkSection lore={chainLinkLore} />}
