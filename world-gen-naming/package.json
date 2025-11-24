@@ -1,0 +1,35 @@
+{
+  "name": "world-gen-naming",
+  "version": "0.1.0",
+  "description": "Domain-aware procedural name generation system",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "namegen": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "procedural-generation",
+    "name-generation",
+    "worldbuilding"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "seedrandom": "^3.0.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/seedrandom": "^3.0.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
