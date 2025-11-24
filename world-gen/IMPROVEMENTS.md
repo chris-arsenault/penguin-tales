@@ -110,3 +110,27 @@ npm run build && npm start
 Extensive groundwork laid for systematic improvement. Primary blocker (type drift) addressable in 4-6 hours. Once resolved, regression check → refactoring can proceed confidently.
 
 **Next Priority**: Fix types → Regression check → Pass A (extract abstractions)
+
+## 2025-11-24 05:02-05:15 MST - Test Fixes & Regression Validation
+
+### Test Failures Fixed (21 total)
+1. **loreValidator.test.ts** (12 failures)
+   - Fixed malformed HardState objects with duplicate properties
+   - Corrected subtype overrides that were breaking validation logic
+   
+2. **dynamicWeightCalculator.test.ts** (9 failures)
+   - Fixed threshold boundary tests (0.2 → 0.22 to exceed threshold)
+   - Fixed floating point precision issues with `.toBeCloseTo()`
+   - Corrected boost factor test data to actually reach caps
+
+### Regression Check ✅ PASSED
+- All 5 eras reached sequentially
+- Zero zero-entity epochs
+- 222 entities generated
+- Valid JSON output
+
+### Known Issues
+- 122 TypeScript compilation errors in test files
+- Tests pass with Vitest but `tsc` fails
+- Primarily missing mock properties and type mismatches
+

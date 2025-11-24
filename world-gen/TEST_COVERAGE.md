@@ -224,3 +224,17 @@ The world-gen codebase now has **262 tests** covering core utilities and engine 
 - Index files (re-exports) don't require direct tests
 - LLM integration services should have mocked tests only
 - Image generation should be tested with mock clients
+
+## Recent Progress
+
+### Session: 2025-11-24 05:02-05:15 MST (Current)
+**Tests Fixed**: 21 (12 loreValidator + 9 dynamicWeightCalculator)
+**All Tests Passing**: ✅ Yes (493/493)
+**Build Status**: ❌ TypeScript compilation fails (122 errors)
+**Regression Check**: ✅ Passed (all 5 eras, 222 entities, no zero-entity epochs)
+
+**Files Modified**:
+- `src/__tests__/services/loreValidator.test.ts` - Fixed malformed HardState objects
+- `src/__tests__/services/dynamicWeightCalculator.test.ts` - Fixed threshold boundary tests
+
+**Coverage**: Unchanged at ~25-30% (no new tests added, only fixes)

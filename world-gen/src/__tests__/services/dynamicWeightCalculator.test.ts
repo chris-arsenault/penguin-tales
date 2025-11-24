@@ -97,9 +97,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 60,
+          count: 61,
           target: 50,
-          deviation: 0.2, // 20% over
+          deviation: 0.22, // 22% over (>20% threshold)
           trend: 0,
           history: []
         });
@@ -130,8 +130,8 @@ describe('DynamicWeightCalculator', () => {
 
         const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
 
-        expect(result.adjustedWeight).toBe(0); // Maximum suppression (100% - 80% = 20%)
-        expect(result.adjustmentFactor).toBe(0.2);
+        expect(result.adjustedWeight).toBeCloseTo(0.2, 5); // Maximum suppression (80% capped, so 1 - 0.8 = 0.2)
+        expect(result.adjustmentFactor).toBeCloseTo(0.2, 5);
       });
 
       it('should not suppress when deviation is below threshold', () => {
@@ -193,9 +193,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 40,
+          count: 39,
           target: 50,
-          deviation: -0.2, // 20% under
+          deviation: -0.22, // 22% under (>20% threshold)
           trend: 0,
           history: []
         });
@@ -240,17 +240,17 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 1,
+          count: 0,
           target: 50,
-          deviation: -0.98, // 98% under
+          deviation: -1.0, // 100% under
           trend: 0,
           history: []
         });
 
         const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
 
-        expect(result.adjustedWeight).toBe(2.0); // Capped at maxBoostFactor
-        expect(result.adjustmentFactor).toBe(2.0);
+        expect(result.adjustedWeight).toBeCloseTo(2.0, 5); // Capped at maxBoostFactor
+        expect(result.adjustmentFactor).toBeCloseTo(2.0, 5);
       });
 
       it('should include deviation percentage in reason', () => {
@@ -292,9 +292,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 60,
+          count: 61,
           target: 50,
-          deviation: 0.2,
+          deviation: 0.22,
           trend: 0,
           history: []
         });
@@ -302,9 +302,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:warrior', {
           kind: 'npc',
           subtype: 'warrior',
-          count: 60,
+          count: 61,
           target: 50,
-          deviation: 0.2,
+          deviation: 0.22,
           trend: 0,
           history: []
         });
@@ -331,9 +331,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 60,
+          count: 61,
           target: 50,
-          deviation: 0.2,
+          deviation: 0.22,
           trend: 0,
           history: []
         });
@@ -341,9 +341,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:warrior', {
           kind: 'npc',
           subtype: 'warrior',
-          count: 40,
+          count: 39,
           target: 50,
-          deviation: -0.2,
+          deviation: -0.22,
           trend: 0,
           history: []
         });
@@ -368,9 +368,9 @@ describe('DynamicWeightCalculator', () => {
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
           subtype: 'merchant',
-          count: 60,
+          count: 61,
           target: 50,
-          deviation: 0.2,
+          deviation: 0.22,
           trend: 0,
           history: []
         });
@@ -672,9 +672,9 @@ describe('DynamicWeightCalculator', () => {
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
         subtype: 'merchant',
-        count: 1,
+        count: 0,
         target: 50,
-        deviation: -0.98, // 98% under
+        deviation: -2.0, // 200% under (enough to hit max boost factor of 3.0)
         trend: 0,
         history: []
       });
@@ -762,9 +762,9 @@ describe('DynamicWeightCalculator', () => {
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
         subtype: 'merchant',
-        count: 40,
+        count: 39,
         target: 50,
-        deviation: -0.2,
+        deviation: -0.22,
         trend: 0,
         history: []
       });

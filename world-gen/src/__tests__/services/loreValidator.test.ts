@@ -338,8 +338,12 @@ describe('LoreValidator', () => {
           name: 'The Place',
           description: 'A place',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+          status: 'active',
+          prominence: 'marginal' as const,
+          createdAt: 0,
+          updatedAt: 0
+        } as HardState;
 
         const result = validator.validateLocation(location);
 
@@ -424,8 +428,12 @@ describe('LoreValidator', () => {
           name: 'The Place',
           description: 'A strange place',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+          status: 'active',
+          prominence: 'marginal' as const,
+          createdAt: 0,
+          updatedAt: 0
+        } as HardState;
 
         const result = validator.validateLocation(location);
 
@@ -530,8 +538,12 @@ describe('LoreValidator', () => {
           name: 'Plain Name',
           description: 'Generic description',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+          status: 'active',
+          prominence: 'marginal' as const,
+          createdAt: 0,
+          updatedAt: 0
+        } as HardState;
 
         const result = validator.validateLocation(location);
 
