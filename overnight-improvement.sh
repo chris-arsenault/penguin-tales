@@ -9,7 +9,7 @@ while true; do
 
   # Set up logging
   LOG_FILE="improvement-$(date +%Y%m%d-%H%M%S).log"
-
+  echo < architecture-improvements.md
   # Run Claude Code with maximum iterations and logging
   claude --print --max-turns 1000 --dangerously-skip-permissions --verbose < architecture-improvements.md
 
