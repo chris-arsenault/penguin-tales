@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, archiveRelationship, addRelationshipWithDistance } from '../../../../utils/helpers';
@@ -16,6 +16,36 @@ function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
 export const factionSplinter: GrowthTemplate = {
   id: 'faction_splinter',
   name: 'Faction Schism',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'cultural_tension', threshold: 40 },
+        { name: 'conflict', threshold: 30 }
+      ],
+      entityCounts: [
+        { kind: 'faction', min: 1 }  // Need existing faction to split from
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } }  // Leader of splinter
+      ],
+      relationships: [
+        { kind: 'split_from', operation: 'create', count: { min: 1, max: 1 } },  // Lineage
+        { kind: 'leader_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'member_of', operation: 'create', count: { min: 2, max: 5 } },
+        { kind: 'enemy_of', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'rival_of', operation: 'create', count: { min: 0, max: 2 } }
+      ],
+      pressures: [
+        { name: 'conflict', delta: 3 },  // Splits create conflict
+        { name: 'cultural_tension', delta: 2 }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

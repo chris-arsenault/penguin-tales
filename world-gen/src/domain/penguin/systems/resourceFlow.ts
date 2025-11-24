@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -15,6 +15,24 @@ import {
 export const resourceFlow: SimulationSystem = {
   id: 'resource_flow',
   name: 'Economic Dynamics',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'modify' },
+        { kind: 'faction', operation: 'modify' }
+      ],
+      pressures: [
+        { name: 'resource_scarcity' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

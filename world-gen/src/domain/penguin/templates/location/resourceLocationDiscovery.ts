@@ -6,7 +6,7 @@
  * appropriate resource sites.
  */
 
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName } from '../../../../utils/helpers';
@@ -20,6 +20,32 @@ import {
 export const resourceLocationDiscovery: GrowthTemplate = {
   id: 'resource_location_discovery',
   name: 'Resource Location Discovery',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'resource_scarcity', threshold: 0 }  // Any scarcity triggers consideration
+      ],
+      entityCounts: [
+        { kind: 'npc', min: 1 },      // Need explorers
+        { kind: 'location', min: 1 }  // Need locations to be adjacent to
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'explorer_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 2 } }
+      ],
+      pressures: [
+        { name: 'resource_scarcity', delta: -5 }  // Discovery reduces scarcity
+      ]
+    }
+  },
 
   metadata: {
     produces: {

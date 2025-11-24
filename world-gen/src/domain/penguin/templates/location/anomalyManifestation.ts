@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
@@ -12,6 +12,27 @@ import { pickRandom } from '../../../../utils/helpers';
 export const anomalyManifestation: GrowthTemplate = {
   id: 'anomaly_manifestation',
   name: 'Anomaly Appears',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'magical_instability', threshold: 30 }
+      ],
+      entityCounts: [
+        { kind: 'location', min: 1 }  // Needs locations to be adjacent to
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'adjacent_to', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'discovered_by', operation: 'create', count: { min: 0, max: 1 } }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

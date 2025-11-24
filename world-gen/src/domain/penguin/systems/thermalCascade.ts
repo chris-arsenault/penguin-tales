@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState, Relationship } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -55,6 +55,31 @@ function setTemperature(location: HardState, temp: number): void {
 export const thermalCascade: SimulationSystem = {
   id: 'thermal_cascade',
   name: 'Thermal Dynamics',
+
+  contract: {
+    purpose: ComponentPurpose.TAG_PROPAGATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 2 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'modify' }
+      ],
+      relationships: [
+        { kind: 'resident_of', operation: 'create' },
+        { kind: 'manifests_at', operation: 'create' }
+      ],
+      pressures: [
+        { name: 'conflict' },
+        { name: 'stability' }
+      ],
+      tags: [
+        { operation: 'propagate', pattern: 'temp:*' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

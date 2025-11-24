@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
@@ -12,6 +12,24 @@ import { pickRandom } from '../../../../utils/helpers';
 export const techInnovation: GrowthTemplate = {
   id: 'tech_innovation',
   name: 'Technology Development',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 1 }  // Need company factions to innovate
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'abilities', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'wields', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'practitioner_of', operation: 'create', count: { min: 1, max: 3 } }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

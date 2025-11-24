@@ -17,6 +17,27 @@ import {
   initialState as penguinInitialState
 } from './domain/penguin';
 
+// Import entity registries
+import {
+  entityRegistries,
+  npcRegistry,
+  heroRegistry,
+  mayorRegistry,
+  orcaRegistry,
+  factionRegistry,
+  cultRegistry,
+  companyRegistry,
+  criminalRegistry,
+  politicalRegistry,
+  abilitiesRegistry,
+  magicRegistry,
+  technologyRegistry,
+  rulesRegistry,
+  locationRegistry,
+  colonyRegistry,
+  anomalyRegistry
+} from './config/entityRegistries';
+
 // Import framework systems
 import { relationshipCulling } from './systems/relationshipCulling';
 
@@ -139,6 +160,7 @@ const config: EngineConfig = {
   templates: configuredTemplates,
   systems: configuredSystems,
   pressures: pressures,
+  entityRegistries: entityRegistries,  // Framework formalization: entity operator registry
   llmConfig,
   enrichmentConfig,
 

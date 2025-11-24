@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateId } from '../../../../utils/helpers';
@@ -15,6 +15,25 @@ import { generateId } from '../../../../utils/helpers';
 export const techBreakthrough: GrowthTemplate = {
   id: 'tech_breakthrough',
   name: 'Technological Breakthrough',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 1 }  // Need factions that control locations
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'abilities', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'practitioner_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'originated_in', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'derived_from', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+      ]
+    }
+  },
 
   metadata: {
     produces: {

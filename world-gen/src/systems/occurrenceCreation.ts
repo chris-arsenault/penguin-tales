@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
 import { initializeCatalyst } from '../utils/catalystHelpers';
 import { generateId } from '../utils/helpers';
@@ -19,6 +19,41 @@ import { generateId } from '../utils/helpers';
 export const occurrenceCreation: SimulationSystem = {
   id: 'occurrence_creation',
   name: 'Major Event Occurrences',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,  // Creates occurrence entities (event records) as side effect
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 2 }
+      ]
+    },
+    affects: {
+      entities: [
+        {
+          kind: 'occurrence',
+          operation: 'create',
+          count: { min: 0, max: 4 }
+        }
+      ],
+      relationships: [
+        {
+          kind: 'participant_in',
+          operation: 'create',
+          count: { min: 0, max: 10 }
+        },
+        {
+          kind: 'epicenter_of',
+          operation: 'create',
+          count: { min: 0, max: 4 }
+        },
+        {
+          kind: 'triggered_by',
+          operation: 'create',
+          count: { min: 0, max: 4 }
+        }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

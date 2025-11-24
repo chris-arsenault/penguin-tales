@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, pickMultiple } from '../../../../utils/helpers';
@@ -6,6 +6,34 @@ import { pickRandom, pickMultiple } from '../../../../utils/helpers';
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
   name: 'Orca Raiders Arrive',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'external_threat', threshold: 0 }  // Can trigger anytime (creates threat)
+      ],
+      era: ['invasion']
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }
+      ],
+      relationships: [
+        { kind: 'enemy_of', operation: 'create', count: { min: 1, max: 4 } },
+        { kind: 'practitioner_of', operation: 'create', count: { min: 0, max: 2 } },
+        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }  // Lineage (orca to orca)
+      ],
+      pressures: [
+        { name: 'external_threat', delta: 10 },  // Orcas massively increase threat
+        { name: 'conflict', delta: 5 }
+      ],
+      tags: [
+        { operation: 'add', pattern: 'external' },
+        { operation: 'add', pattern: 'invader' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

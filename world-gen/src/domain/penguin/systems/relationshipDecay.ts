@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { modifyRelationshipStrength, getLocation, getRelated } from '../../../utils/helpers';
 
 /**
@@ -11,6 +11,32 @@ import { modifyRelationshipStrength, getLocation, getRelated } from '../../../ut
 export const relationshipDecay: SimulationSystem = {
   id: 'relationship_decay',
   name: 'Relationship Entropy',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }
+      ]
+    },
+    affects: {
+      relationships: [
+        { kind: 'member_of', operation: 'delete' },
+        { kind: 'leader_of', operation: 'delete' },
+        { kind: 'practitioner_of', operation: 'delete' },
+        { kind: 'originated_in', operation: 'delete' },
+        { kind: 'founded_by', operation: 'delete' },
+        { kind: 'resident_of', operation: 'delete' },
+        { kind: 'located_at', operation: 'delete' },
+        { kind: 'adjacent_to', operation: 'delete' },
+        { kind: 'enemy_of', operation: 'delete' },
+        { kind: 'at_war_with', operation: 'delete' },
+        { kind: 'follower_of', operation: 'delete' },
+        { kind: 'friend_of', operation: 'delete' },
+        { kind: 'rival_of', operation: 'delete' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, slugifyName } from '../../../../utils/helpers';
@@ -22,6 +22,32 @@ import { pickRandom, slugifyName } from '../../../../utils/helpers';
 export const ideologyEmergence: GrowthTemplate = {
   id: 'ideology_emergence',
   name: 'Ideological Movement',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'cultural_tension', threshold: 30 }
+      ],
+      entityCounts: [
+        { kind: 'npc', min: 10 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'rules', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'champion_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'originated_in', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'believer_of', operation: 'create', count: { min: 3, max: 8 } },
+        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      pressures: [
+        { name: 'cultural_tension', delta: 3 }  // New ideologies increase tension
+      ]
+    }
+  },
 
   metadata: {
     produces: {

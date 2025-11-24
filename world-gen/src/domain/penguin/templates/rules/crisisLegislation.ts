@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, slugifyName } from '../../../../utils/helpers';
@@ -12,6 +12,29 @@ import { pickRandom, slugifyName } from '../../../../utils/helpers';
 export const crisisLegislation: GrowthTemplate = {
   id: 'crisis_legislation',
   name: 'Crisis Law',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'conflict', threshold: 40 },
+        { name: 'resource_scarcity', threshold: 40 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'rules', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'applies_in', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'supersedes', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      pressures: [
+        { name: 'cultural_tension', delta: 2 }  // New laws create tension
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
 import {
   getAgentsByCategory,
@@ -24,6 +24,41 @@ import {
 export const universalCatalyst: SimulationSystem = {
   id: 'universal_catalyst',
   name: 'Agent Actions',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }
+      ]
+    },
+    affects: {
+      relationships: [
+        {
+          kind: 'various',
+          operation: 'create',
+          count: { min: 0, max: 50 }
+        }
+      ],
+      entities: [
+        {
+          kind: 'npc',
+          operation: 'modify',
+          count: { min: 0, max: 20 }
+        },
+        {
+          kind: 'faction',
+          operation: 'modify',
+          count: { min: 0, max: 10 }
+        },
+        {
+          kind: 'occurrence',
+          operation: 'modify',
+          count: { min: 0, max: 5 }
+        }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { Relationship } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -16,6 +16,23 @@ import {
 export const allianceFormation: SimulationSystem = {
   id: 'alliance_formation',
   name: 'Strategic Alliances',
+
+  contract: {
+    purpose: ComponentPurpose.RELATIONSHIP_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 3 }
+      ]
+    },
+    affects: {
+      relationships: [
+        { kind: 'allied_with', operation: 'create', count: { min: 0, max: 10 } }
+      ],
+      pressures: [
+        { name: 'stability', delta: 5 }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

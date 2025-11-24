@@ -5,7 +5,7 @@
  * Detects broken loops and suggests corrections.
  */
 
-import { Graph } from '../types/engine';
+import { Graph, EngineConfig } from '../types/engine';
 import { PopulationMetrics } from './populationTracker';
 
 export interface FeedbackLoop {
@@ -38,10 +38,12 @@ export interface ValidationResult {
 export class FeedbackAnalyzer {
   private loops: Map<string, FeedbackLoop>;
   private validationHistory: Map<string, ValidationResult[]>;
+  private config?: EngineConfig;
 
-  constructor(loops: FeedbackLoop[]) {
+  constructor(loops: FeedbackLoop[], config?: EngineConfig) {
     this.loops = new Map(loops.map(loop => [loop.id, loop]));
     this.validationHistory = new Map();
+    this.config = config;
   }
 
   /**
@@ -216,6 +218,141 @@ export class FeedbackAnalyzer {
     const loop = this.loops.get(id);
     if (loop) {
       loop.strength = newStrength;
+    }
+  }
+
+  /**
+   * ENFORCEMENT 4: Generate detailed diagnostics for broken feedback loops
+   * Checks component contracts to identify why loops are not functioning
+   */
+  generateDetailedDiagnostics(brokenLoop: ValidationResult): string[] {
+    const diagnostics: string[] = [];
+
+    if (!this.config) {
+      return [`No config available for contract analysis`];
+    }
+
+    const loop = brokenLoop.loop;
+
+    // Parse mechanism to find involved components
+    const components = loop.mechanism.map(m => {
+      // Extract component ID from mechanism description
+      // e.g., "template.hero_emergence creates heroes" -> "hero_emergence"
+      const match = m.match(/template\.(\w+)|system\.(\w+)|pressure\.(\w+)/);
+      return match ? match[1] || match[2] || match[3] : null;
+    }).filter(Boolean) as string[];
+
+    diagnostics.push(`Feedback Loop: ${loop.id}`);
+    diagnostics.push(`Expected: ${loop.source} → ${loop.target} (${loop.type} feedback)`);
+    diagnostics.push(`Problem: ${brokenLoop.reason}`);
+    diagnostics.push(`Recommendation: ${brokenLoop.recommendation}`);
+    diagnostics.push(``);
+
+    // Check templates involved
+    const templates = this.config.templates.filter(t => components.includes(t.id));
+    if (templates.length > 0) {
+      diagnostics.push(`Involved Templates:`);
+      templates.forEach(t => {
+        if (t.contract) {
+          const affects = t.contract.affects;
+
+          // Check if template affects the expected entities/pressures
+          diagnostics.push(`  • ${t.id}`);
+
+          if (affects.entities) {
+            diagnostics.push(`      Creates: ${affects.entities.map(e => e.kind).join(', ')}`);
+          }
+
+          if (affects.pressures) {
+            diagnostics.push(`      Affects pressures: ${affects.pressures.map(p => `${p.name} (${p.delta || 'formula'})`).join(', ')}`);
+          }
+
+          // Check if direction matches expectation
+          if (loop.type === 'negative' && affects.pressures) {
+            const pressureAffect = affects.pressures.find(p => loop.target.includes(p.name));
+            if (pressureAffect && pressureAffect.delta && pressureAffect.delta > 0) {
+              diagnostics.push(`      ⚠️  WARNING: Template increases '${pressureAffect.name}' but loop expects negative feedback!`);
+            }
+          }
+        } else {
+          diagnostics.push(`  • ${t.id} (no contract - cannot diagnose)`);
+        }
+      });
+      diagnostics.push(``);
+    }
+
+    // Check systems involved
+    const systems = this.config.systems.filter(s => components.includes(s.id));
+    if (systems.length > 0) {
+      diagnostics.push(`Involved Systems:`);
+      systems.forEach(s => {
+        if (s.contract) {
+          const affects = s.contract.affects;
+
+          diagnostics.push(`  • ${s.id}`);
+
+          if (affects.entities) {
+            diagnostics.push(`      Modifies: ${affects.entities.map(e => `${e.kind} (${e.operation})`).join(', ')}`);
+          }
+
+          if (affects.relationships) {
+            diagnostics.push(`      ${affects.relationships.map(r => `${r.operation}s ${r.kind}`).join(', ')}`);
+          }
+        } else {
+          diagnostics.push(`  • ${s.id} (no contract - cannot diagnose)`);
+        }
+      });
+      diagnostics.push(``);
+    }
+
+    // Suggest fixes
+    diagnostics.push(`Suggested Fixes:`);
+    if (brokenLoop.reason?.includes('Wrong direction')) {
+      diagnostics.push(`  1. Check if components actually implement the mechanism described`);
+      diagnostics.push(`  2. Verify contract.affects declarations match actual behavior`);
+      diagnostics.push(`  3. Consider inverting the feedback loop type (${loop.type} → ${loop.type === 'negative' ? 'positive' : 'negative'})`);
+    } else if (brokenLoop.reason?.includes('Too weak')) {
+      diagnostics.push(`  1. Increase loop.strength parameter from ${loop.strength} to ${(loop.strength * 1.5).toFixed(2)}`);
+      diagnostics.push(`  2. Verify all components in mechanism chain are active`);
+      diagnostics.push(`  3. Check if delay parameter (${loop.delay} ticks) is too long`);
+    }
+
+    return diagnostics;
+  }
+
+  /**
+   * Print detailed diagnostics for all broken loops
+   */
+  printDetailedDiagnostics(results: ValidationResult[]): void {
+    const brokenLoops = this.getBrokenLoops(results);
+
+    if (brokenLoops.length === 0) {
+      console.log('  ✓ All feedback loops functioning correctly');
+      return;
+    }
+
+    console.log(`\n  Broken loops requiring attention:`);
+    brokenLoops.forEach((broken, index) => {
+      const diagnostics = this.generateDetailedDiagnostics(broken);
+
+      console.log(`\n  ${index + 1}. ${broken.loop.id}`);
+      console.log(`     ${broken.reason}`);
+      console.log(`     → ${broken.recommendation}`);
+
+      // Only show full diagnostics for first 3 broken loops (to avoid spam)
+      if (index < 3 && this.config) {
+        console.log(`\n     Detailed Analysis:`);
+        diagnostics.forEach(line => {
+          if (line.trim().length > 0) {
+            console.log(`     ${line}`);
+          }
+        });
+      }
+    });
+
+    if (brokenLoops.length > 3) {
+      console.log(`\n     ... and ${brokenLoops.length - 3} more broken loops`);
+      console.log(`     Use printDetailedDiagnostics() for full analysis`);
     }
   }
 }

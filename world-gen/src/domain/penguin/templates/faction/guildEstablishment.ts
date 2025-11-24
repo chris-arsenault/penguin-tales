@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
@@ -12,6 +12,28 @@ import { generateName, pickRandom, findEntities, slugifyName } from '../../../..
 export const guildEstablishment: GrowthTemplate = {
   id: 'guild_establishment',
   name: 'Guild Formation',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 2 },      // Needs merchants (checked in canApply)
+        { kind: 'location', min: 1 }  // Needs colonies (checked in canApply)
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }  // May create new merchants if saturated
+      ],
+      relationships: [
+        { kind: 'controls', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'member_of', operation: 'create', count: { min: 2, max: 3 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 2, max: 3 } }
+      ],
+      pressures: []
+    }
+  },
 
   metadata: {
     produces: {

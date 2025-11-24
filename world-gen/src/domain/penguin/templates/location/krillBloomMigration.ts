@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName, pickMultiple } from '../../../../utils/helpers';
@@ -58,6 +58,35 @@ function graphDistance(graphView: TemplateGraphView, from: string, to: string): 
 export const krillBloomMigration: GrowthTemplate = {
   id: 'krill_bloom_migration',
   name: 'Krill Bloom Discovery',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'resource_scarcity', threshold: 60 }
+      ],
+      entityCounts: [
+        { kind: 'location', min: 2 },  // Need colonies
+        { kind: 'faction', min: 1 }    // Need factions for merchants
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 2, max: 4 } },
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }
+      ],
+      relationships: [
+        { kind: 'adjacent_to', operation: 'create', count: { min: 4, max: 8 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'member_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'explorer_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'discoverer_of', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      pressures: [
+        { name: 'resource_scarcity', delta: -10 }  // Blooms reduce scarcity
+      ]
+    }
+  },
 
   metadata: {
     produces: {

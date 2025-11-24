@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
@@ -12,6 +12,24 @@ import { pickRandom } from '../../../../utils/helpers';
 export const orcaCombatTechnique: GrowthTemplate = {
   id: 'orca_combat_technique',
   name: 'Orca Combat Technique',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }  // Requires orcas (checked in canApply)
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'abilities', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'practitioner_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, pickMultiple, slugifyName } from '../../../../utils/helpers';
@@ -22,6 +22,32 @@ import { pickRandom, pickMultiple, slugifyName } from '../../../../utils/helpers
 export const greatFestival: GrowthTemplate = {
   id: 'great_festival',
   name: 'Great Festival',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'conflict', threshold: 60 }
+      ],
+      entityCounts: [
+        { kind: 'faction', min: 2 },
+        { kind: 'location', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'rules', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'originated_in', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'celebrated_by', operation: 'create', count: { min: 2, max: 4 } },
+        { kind: 'allied_with', operation: 'create', count: { min: 1, max: 6 } }
+      ],
+      pressures: [
+        { name: 'conflict', delta: -10 }  // Festivals reduce conflict
+      ]
+    }
+  },
 
   metadata: {
     produces: {

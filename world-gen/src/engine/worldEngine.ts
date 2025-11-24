@@ -28,6 +28,8 @@ import { MetaEntityFormation } from '../services/metaEntityFormation';
 import { magicSchoolFormation, legalCodeFormation, combatTechniqueFormation } from '../domain/penguin/config/metaEntityConfigs';
 import { feedbackLoops } from '../config/feedbackLoops';
 import { SimulationStatistics, ValidationStats } from '../types/statistics';
+import { FrameworkValidator } from './frameworkValidator';
+import { ContractEnforcer } from './contractEnforcer';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -302,6 +304,7 @@ export class WorldEngine {
   private populationTracker: PopulationTracker;  // Population metrics for homeostatic control
   private dynamicWeightCalculator: DynamicWeightCalculator;  // Dynamic template weight adjustment
   private feedbackAnalyzer: FeedbackAnalyzer;  // Feedback loop validation
+  private contractEnforcer: ContractEnforcer;  // Active contract enforcement
   private pendingEnrichments: Promise<void>[] = [];
   private pendingNameEnrichments: Promise<void>[] = [];
   private entityEnrichmentsUsed = 0;
@@ -357,6 +360,33 @@ export class WorldEngine {
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
 
+    // Framework Validation
+    console.log('='.repeat(80));
+    console.log('FRAMEWORK VALIDATION');
+    console.log('='.repeat(80));
+    const validator = new FrameworkValidator(config);
+    const validationResult = validator.validate();
+
+    // Display errors
+    if (validationResult.errors.length > 0) {
+      console.error('\n❌ VALIDATION ERRORS:');
+      validationResult.errors.forEach(error => console.error(`  - ${error}`));
+      throw new Error(`Framework validation failed with ${validationResult.errors.length} error(s)`);
+    } else {
+      console.log('✓ No validation errors');
+    }
+
+    // Display warnings
+    if (validationResult.warnings.length > 0) {
+      console.warn('\n⚠️  VALIDATION WARNINGS:');
+      validationResult.warnings.forEach(warning => console.warn(`  - ${warning}`));
+    } else {
+      console.log('✓ No validation warnings');
+    }
+
+    console.log('='.repeat(80));
+    console.log();
+
     // Initialize warning log file
     this.warningLogPath = path.join(process.cwd(), 'output', 'warnings.log');
     try {
@@ -382,9 +412,17 @@ export class WorldEngine {
     // Initialize homeostatic control system
     this.populationTracker = new PopulationTracker(config.distributionTargets || {} as any);
     this.dynamicWeightCalculator = new DynamicWeightCalculator();
-    this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops);
+    this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops, config);  // Pass config for contract analysis
     console.log('✓ Homeostatic feedback control enabled');
     console.log(`  - Tracking ${feedbackLoops.length} feedback loops`);
+
+    // Initialize contract enforcement system
+    this.contractEnforcer = new ContractEnforcer(config);
+    console.log('✓ Contract enforcement enabled');
+    console.log('  - Template filtering by enabledBy conditions');
+    console.log('  - Automatic lineage relationship creation');
+    console.log('  - Entity saturation control');
+    console.log('  - Contract affects validation');
 
     // Initialize target selector (prevents super-hub formation)
     this.targetSelector = new TargetSelector();
@@ -705,12 +743,8 @@ export class WorldEngine {
 
     if (brokenLoops.length > 0) {
       console.warn(`\n⚠️  ${brokenLoops.length} feedback loops not functioning correctly:`);
-      brokenLoops.forEach(result => {
-        console.warn(`  - ${result.loop.id}: ${result.reason}`);
-        if (result.recommendation) {
-          console.warn(`    → ${result.recommendation}`);
-        }
-      });
+      // Use enhanced diagnostics that check component contracts
+      this.feedbackAnalyzer.printDetailedDiagnostics(results);
     } else {
       console.log(`\n✓ All ${results.length} feedback loops functioning correctly`);
     }
@@ -758,19 +792,8 @@ export class WorldEngine {
     console.log(`  ✓ Working correctly: ${workingLoops.length} (${((workingLoops.length / results.length) * 100).toFixed(0)}%)`);
     console.log(`  ⚠️  Not functioning: ${brokenLoops.length} (${((brokenLoops.length / results.length) * 100).toFixed(0)}%)`);
 
-    if (brokenLoops.length > 0) {
-      console.log(`\n  Broken loops requiring attention:`);
-      brokenLoops.slice(0, 5).forEach(result => {
-        console.log(`    • ${result.loop.id}`);
-        console.log(`      ${result.reason}`);
-        if (result.recommendation) {
-          console.log(`      → ${result.recommendation}`);
-        }
-      });
-      if (brokenLoops.length > 5) {
-        console.log(`    ... and ${brokenLoops.length - 5} more`);
-      }
-    }
+    // Use enhanced diagnostics that check component contracts
+    this.feedbackAnalyzer.printDetailedDiagnostics(results);
 
     // 2. Population Metrics
     console.log(`\n📈 POPULATION METRICS`);
@@ -846,20 +869,9 @@ export class WorldEngine {
         unusedTemplates.forEach(t => {
           // Test canApply to diagnose why it didn't run
           const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector);
-          const canApply = t.canApply(diagnosticView);
-          const targets = t.findTargets ? t.findTargets(diagnosticView) : [];
 
           console.log(`    • ${t.id.padEnd(35)}`);
-          console.log(`      canApply: ${canApply ? '✓' : '✗'}  |  targets: ${targets.length}`);
-
-          // If it can't apply now, provide hints
-          if (!canApply) {
-            console.log(`      → Check canApply() constraints (pressures, prerequisites, saturation)`);
-          } else if (targets.length === 0) {
-            console.log(`      → No valid targets found (check findTargets() logic)`);
-          } else {
-            console.log(`      → Could apply but wasn't selected (check era weights)`);
-          }
+          console.log(`      ${this.contractEnforcer.getDiagnostic(t, this.graph, diagnosticView)}`);
         });
       }
     }
@@ -906,6 +918,15 @@ export class WorldEngine {
 
       // Re-filter applicable templates each iteration (graph state changes)
       const applicableTemplates = this.config.templates.filter(t => {
+        // ENFORCEMENT 1: Contract-based filtering (enabledBy conditions)
+        const contractCheck = this.contractEnforcer.checkContractEnabledBy(t, this.graph, graphView);
+        if (!contractCheck.allowed) return false;
+
+        // ENFORCEMENT 3: Registry-based saturation control
+        const saturationCheck = this.contractEnforcer.checkSaturation(t, this.graph);
+        if (saturationCheck.saturated) return false;
+
+        // Original canApply check (template-specific logic)
         if (!t.canApply(graphView)) return false;
 
         // DIVERSITY PRESSURE: Hard cap on template runs
@@ -972,6 +993,31 @@ export class WorldEngine {
           }
         });
 
+        // ENFORCEMENT 2: Automatic lineage enforcement
+        // Add lineage relationships for newly created entities
+        const lineageRelationships = this.contractEnforcer.enforceLineage(
+          this.graph,
+          graphView,
+          clusterEntities
+        );
+
+        // ENFORCEMENT 5: Contract affects validation
+        // Validate that template effects match contract declarations
+        const warnings = this.contractEnforcer.validateAffects(
+          template,
+          result.entities.length,
+          result.relationships.length + lineageRelationships.length,
+          new Map() // TODO: Track pressure changes
+        );
+
+        if (warnings.length > 0) {
+          console.warn(`  ⚠️  Template ${template.id} contract violations:`);
+          warnings.forEach(w => console.warn(`      ${w}`));
+        }
+
+        // Merge lineage relationships into history
+        const allRelationships = [...result.relationships, ...lineageRelationships] as Relationship[];
+
         // Record history
         this.graph.history.push({
           tick: this.graph.tick,
@@ -979,7 +1025,7 @@ export class WorldEngine {
           type: 'growth',
           description: result.description,
           entitiesCreated: newIds,
-          relationshipsCreated: result.relationships as Relationship[],
+          relationshipsCreated: allRelationships,
           entitiesModified: []
         });
 

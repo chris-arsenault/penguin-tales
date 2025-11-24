@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -23,6 +23,24 @@ import {
 export const prominenceEvolution: SimulationSystem = {
   id: 'prominence_evolution',
   name: 'Fame and Obscurity',
+
+  contract: {
+    purpose: ComponentPurpose.PROMINENCE_EVOLUTION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'modify' },
+        { kind: 'faction', operation: 'modify' },
+        { kind: 'location', operation: 'modify' },
+        { kind: 'abilities', operation: 'modify' },
+        { kind: 'rules', operation: 'modify' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

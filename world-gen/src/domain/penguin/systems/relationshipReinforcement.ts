@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { getLocation, getRelated, modifyRelationshipStrength } from '../../../utils/helpers';
 
 /**
@@ -10,6 +10,28 @@ import { getLocation, getRelated, modifyRelationshipStrength } from '../../../ut
 export const relationshipReinforcement: SimulationSystem = {
   id: 'relationship_reinforcement',
   name: 'Relationship Bonding',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 2 }
+      ]
+    },
+    affects: {
+      relationships: [
+        { kind: 'member_of', operation: 'create' },
+        { kind: 'leader_of', operation: 'create' },
+        { kind: 'practitioner_of', operation: 'create' },
+        { kind: 'resident_of', operation: 'create' },
+        { kind: 'located_at', operation: 'create' },
+        { kind: 'follower_of', operation: 'create' },
+        { kind: 'friend_of', operation: 'create' },
+        { kind: 'rival_of', operation: 'create' },
+        { kind: 'enemy_of', operation: 'create' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

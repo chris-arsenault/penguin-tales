@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
@@ -12,6 +12,29 @@ import { pickRandom } from '../../../../utils/helpers';
 export const magicDiscovery: GrowthTemplate = {
   id: 'magic_discovery',
   name: 'Magical Discovery',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 1 },  // Need anomalies for manifestation
+        { kind: 'npc', min: 1 }        // Need heroes to discover
+      ],
+      pressures: [
+        { name: 'magical_instability', threshold: 70 }  // Suppressed at high instability
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'abilities', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'discoverer_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'manifests_at', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+      ]
+    }
+  },
 
   metadata: {
     produces: {

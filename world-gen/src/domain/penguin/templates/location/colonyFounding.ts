@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
@@ -12,6 +12,24 @@ import { pickRandom } from '../../../../utils/helpers';
 export const colonyFounding: GrowthTemplate = {
   id: 'colony_founding',
   name: 'Colony Foundation',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 1 },  // Requires iceberg
+        { kind: 'npc', min: 20 }       // Population threshold
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'contained_by', operation: 'create', count: { min: 1, max: 1 } }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

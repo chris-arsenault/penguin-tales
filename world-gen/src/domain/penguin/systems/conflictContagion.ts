@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState, Relationship } from '../../../types/worldTypes';
 import {
   getRelated,
@@ -18,6 +18,24 @@ import {
 export const conflictContagion: SimulationSystem = {
   id: 'conflict_contagion',
   name: 'Conflict Spread',
+
+  contract: {
+    purpose: ComponentPurpose.RELATIONSHIP_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 3 },
+        { kind: 'faction', min: 2 }
+      ]
+    },
+    affects: {
+      relationships: [
+        { kind: 'enemy_of', operation: 'create', count: { min: 0, max: 20 } }
+      ],
+      pressures: [
+        { name: 'conflict', formula: 'relationships.length * 2 (up to 10)' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

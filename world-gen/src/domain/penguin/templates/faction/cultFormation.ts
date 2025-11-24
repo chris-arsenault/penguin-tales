@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities } from '../../../../utils/helpers';
@@ -12,6 +12,37 @@ import { generateName, pickRandom, findEntities } from '../../../../utils/helper
 export const cultFormation: GrowthTemplate = {
   id: 'cult_formation',
   name: 'Cult Awakening',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 1 }  // Needs anomalies OR general locations (checked in canApply)
+      ],
+      custom: (graphView) => {
+        // Requires anomalies OR magic (checked in canApply)
+        const anomalyCount = graphView.getEntityCount('location', 'anomaly');
+        const magicCount = graphView.getEntityCount('abilities', 'magic');
+        return (anomalyCount > 0 || magicCount > 0);
+      }
+    },
+    affects: {
+      entities: [
+        { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } },  // Prophet
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }   // May create new cultists if saturated
+      ],
+      relationships: [
+        { kind: 'occupies', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'leader_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 4 } },  // Prophet + cultists
+        { kind: 'member_of', operation: 'create', count: { min: 1, max: 3 } },
+        { kind: 'seeks', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'practitioner_of', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      pressures: []
+    }
+  },
 
   metadata: {
     produces: {

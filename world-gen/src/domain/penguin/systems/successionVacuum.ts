@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState, Relationship } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -40,6 +40,29 @@ import {
 export const successionVacuum: SimulationSystem = {
   id: 'succession_vacuum',
   name: 'Leadership Crisis',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'faction', operation: 'modify' },
+        { kind: 'rules', operation: 'modify' }
+      ],
+      relationships: [
+        { kind: 'rival_of', operation: 'create', count: { min: 0, max: 3 } },
+        { kind: 'enemy_of', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      pressures: [
+        { name: 'stability', delta: -15 },
+        { name: 'conflict', delta: 10 }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

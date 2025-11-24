@@ -6,7 +6,7 @@
  * appropriate mystical phenomena.
  */
 
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, generateName } from '../../../../utils/helpers';
@@ -20,6 +20,33 @@ import {
 export const mysticalLocationDiscovery: GrowthTemplate = {
   id: 'mystical_location_discovery',
   name: 'Mystical Location Discovery',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'magical_instability', threshold: 0 }  // Any instability triggers consideration
+      ],
+      entityCounts: [
+        { kind: 'npc', min: 1 },       // Need magic users/explorers
+        { kind: 'location', min: 1 },  // Need locations to be adjacent to
+        { kind: 'abilities', min: 1 }  // Need magic system to exist
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'explorer_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 2 } }
+      ],
+      pressures: [
+        { name: 'magical_instability', delta: 2 }  // Discovery amplifies instability
+      ]
+    }
+  },
 
   metadata: {
     produces: {

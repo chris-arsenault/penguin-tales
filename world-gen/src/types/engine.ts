@@ -87,6 +87,7 @@ export interface GrowthTemplate {
   name: string;
   requiredEra?: string[];  // optional era restrictions
   metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
+  contract?: ComponentContract;  // Optional: will become required after migration
 
   // Check if template can be applied
   // Uses TemplateGraphView for safe, restricted graph access
@@ -112,6 +113,7 @@ export interface SimulationSystem {
   id: string;
   name: string;
   metadata?: SystemMetadata;  // Statistical metadata for distribution tuning
+  contract?: ComponentContract;  // Optional: will become required after migration
 
   // Run one tick of this system
   apply: (graph: Graph, modifier: number) => SystemResult;
@@ -127,6 +129,134 @@ export interface SystemResult {
   description: string;
 }
 
+// Component Purpose Taxonomy
+// Defines the formal purpose of each framework component
+export enum ComponentPurpose {
+  // Creation purposes
+  ENTITY_CREATION = 'Creates entities based on prerequisites',
+  RELATIONSHIP_CREATION = 'Creates relationships based on graph patterns',
+
+  // Modification purposes
+  TAG_PROPAGATION = 'Spreads tags through relationship networks',
+  STATE_MODIFICATION = 'Changes entity states based on context',
+  PROMINENCE_EVOLUTION = 'Adjusts entity prominence over time',
+
+  // Signal purposes
+  PRESSURE_ACCUMULATION = 'Measures graph state to produce pressure signal',
+
+  // Control purposes
+  CONSTRAINT_ENFORCEMENT = 'Enforces population/density limits',
+  PHASE_TRANSITION = 'Changes era based on conditions',
+  BEHAVIORAL_MODIFIER = 'Modifies template weights or system frequencies'
+}
+
+// Component Contract
+// Bidirectional declaration of inputs (what enables component) and outputs (what component affects)
+export interface ComponentContract {
+  purpose: ComponentPurpose;
+
+  // INPUT CONTRACT: What enables this component
+  enabledBy?: {
+    pressures?: Array<{ name: string; threshold: number }>;
+    entityCounts?: Array<{ kind: string; subtype?: string; min: number; max?: number }>;
+    era?: string[];
+    custom?: (graphView: import('../services/templateGraphView').TemplateGraphView) => boolean;
+  };
+
+  // OUTPUT CONTRACT: What this component affects
+  affects: {
+    entities?: Array<{
+      kind: string;
+      subtype?: string;
+      operation: 'create' | 'modify' | 'delete';
+      count?: { min: number; max: number };
+    }>;
+    relationships?: Array<{
+      kind: string;
+      operation: 'create' | 'delete';
+      count?: { min: number; max: number };
+    }>;
+    pressures?: Array<{
+      name: string;
+      delta?: number;
+      formula?: string;
+    }>;
+    tags?: Array<{
+      operation: 'add' | 'remove' | 'propagate';
+      pattern: string;
+    }>;
+  };
+}
+
+// Pressure Contract
+// Extended contract for pressures including sources, sinks, and equilibrium model
+export interface PressureContract extends Omit<ComponentContract, 'affects'> {
+  purpose: ComponentPurpose.PRESSURE_ACCUMULATION;
+
+  // What creates this pressure
+  sources: Array<{
+    component: string;  // e.g., 'template.faction_splinter'
+    delta?: number;     // Fixed amount
+    formula?: string;   // Dynamic calculation
+  }>;
+
+  // What reduces this pressure
+  sinks: Array<{
+    component: string;  // e.g., 'system.peace_treaty'
+    delta?: number;     // Fixed amount
+    formula?: string;   // Dynamic calculation (e.g., 'value * 0.05')
+  }>;
+
+  // Override affects to be an array for pressures
+  affects?: Array<{
+    component: string;
+    effect: 'enabler' | 'amplifier' | 'suppressor';
+    threshold?: number;
+    factor?: number;
+  }>;
+
+  // Expected equilibrium behavior
+  equilibrium: {
+    expectedRange: [number, number];  // [min, max] under normal operation
+    restingPoint: number;             // Where pressure settles with no stimuli
+    oscillationPeriod?: number;       // Ticks for one cycle (if oscillating)
+  };
+}
+
+// Entity Operator Registry
+// Declares all operators (creators, modifiers, lineage) for an entity kind
+// Can be at kind-level (e.g., 'npc') or subtype-level (e.g., 'npc:hero')
+export interface EntityOperatorRegistry {
+  kind: string;      // e.g., 'npc', 'faction', 'abilities'
+  subtype?: string;  // Optional: e.g., 'hero', 'cult', 'orca' (for subtype-specific registries)
+
+  // Templates that create this entity
+  creators: Array<{
+    templateId: string;
+    primary: boolean;        // Is this a primary creator or incidental?
+    targetCount?: number;    // Expected entities created per activation
+  }>;
+
+  // Systems that modify this entity
+  modifiers: Array<{
+    systemId: string;
+    operation: 'state_change' | 'tag_modification' | 'prominence_change';
+  }>;
+
+  // Lineage function (called after any creator)
+  lineage: {
+    relationshipKind: string;  // e.g., 'derived_from', 'related_to'
+    findAncestor: (graphView: import('../services/templateGraphView').TemplateGraphView, newEntity: HardState) => HardState | undefined;
+    distanceRange: { min: number; max: number };
+  };
+
+  // Expected distribution
+  expectedDistribution: {
+    targetCount: number;
+    prominenceDistribution: Record<string, number>;  // e.g., { marginal: 0.6, recognized: 0.3, renowned: 0.1 }
+  };
+}
+
 // Pressure definition
 export interface Pressure {
   id: string;
@@ -134,6 +264,7 @@ export interface Pressure {
   value: number;  // 0-100
   growth: (graph: Graph) => number;  // delta per tick
   decay: number;  // natural decay per tick
+  contract?: PressureContract;  // Optional: will become required after migration
 }
 
 // Engine configuration
@@ -145,6 +276,7 @@ export interface EngineConfig {
   templates: GrowthTemplate[];
   systems: SimulationSystem[];
   pressures: Pressure[];
+  entityRegistries?: EntityOperatorRegistry[];  // Optional: will become required after migration
 
   // Configuration
   epochLength: number;  // ticks per epoch

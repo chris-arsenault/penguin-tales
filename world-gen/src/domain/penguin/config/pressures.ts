@@ -1,4 +1,4 @@
-import { Pressure } from '../../../types/engine';
+import { Pressure, ComponentPurpose } from '../../../types/engine';
 import { findEntities, getRelated } from '../../../utils/helpers';
 
 export const pressures: Pressure[] = [
@@ -7,6 +7,24 @@ export const pressures: Pressure[] = [
     name: 'Resource Scarcity',
     value: 20,
     decay: 18,  // TUNED: Increased from 12 to 18 (still at 88 vs target 30)
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'template.colony_founding', formula: 'colonies.length * 0.3' },
+        { component: 'formula.resource_ratio', formula: '(1 - avgAvailability) * 8' }
+      ],
+      sinks: [
+        { component: 'template.resource_location_discovery', formula: 'geographicFeatures.length * 0.4' },
+        { component: 'time', formula: 'value * 18' }
+      ],
+      affects: [
+        // Resource scarcity doesn't directly enable templates, but influences exploration
+      ],
+      equilibrium: {
+        expectedRange: [25, 40],
+        restingPoint: 30
+      }
+    },
     growth: (graph) => {
       // Calculate resource strain as a RATIO, not absolute count
       const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
@@ -63,6 +81,27 @@ export const pressures: Pressure[] = [
     name: 'Conflict Tension',
     value: 15,
     decay: 2,  // TUNED: Decreased from 3 to 2 (still at 21 vs target 40)
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'template.faction_splinter', formula: 'hostileRatio * 10' },
+        { component: 'relationship.enemy_of', formula: 'count' },
+        { component: 'relationship.rival_of', formula: 'count' },
+        { component: 'relationship.at_war_with', formula: 'count * 2' }
+      ],
+      sinks: [
+        { component: 'template.hero_emergence', formula: 'heroes.length * 0.2' },
+        { component: 'time', formula: 'value * 2' }
+      ],
+      affects: [
+        { component: 'template.crisis_legislation', effect: 'enabler', threshold: 40 },
+        { component: 'template.faction_splinter', effect: 'amplifier', factor: 1.5 }
+      ],
+      equilibrium: {
+        expectedRange: [30, 50],
+        restingPoint: 40
+      }
+    },
     growth: (graph) => {
       // Measure conflict as RATIO of hostile vs friendly relationships
       const hostileRelations = graph.relationships.filter(r =>
@@ -99,6 +138,26 @@ export const pressures: Pressure[] = [
     name: 'Magical Instability',
     value: 10,
     decay: 8,  // TUNED: Set to 8 as middle ground (was 6→too high, 10→too low)
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'template.anomaly_manifestation', formula: 'anomalyDensity * 2.5' },
+        { component: 'template.magic_discovery', formula: 'magicAbilities.length * 0.5' },
+        { component: 'formula.magic_dominance', formula: 'magicRatio * 5' }
+      ],
+      sinks: [
+        { component: 'template.tech_innovation', formula: 'techAbilities.length * stabilization' },
+        { component: 'time', formula: 'value * 8' }
+      ],
+      affects: [
+        { component: 'template.magic_discovery', effect: 'enabler', threshold: 30 },
+        { component: 'template.anomaly_manifestation', effect: 'amplifier', factor: 1.3 }
+      ],
+      equilibrium: {
+        expectedRange: [20, 45],
+        restingPoint: 30
+      }
+    },
     growth: (graph) => {
       // Measure magic saturation as RATIO, not absolute count
       const anomalies = findEntities(graph, { kind: 'location', subtype: 'anomaly' });
@@ -130,6 +189,27 @@ export const pressures: Pressure[] = [
     name: 'Cultural Divergence',
     value: 5,
     decay: 15,  // TUNED: Increased from 10 to 15 (still at 90 vs target 35)
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'template.faction_splinter', formula: 'fragmentationRatio * 8' },
+        { component: 'template.colony_founding', formula: 'isolationRatio * 4' },
+        { component: 'formula.faction_pressure', formula: 'politicalFactions.length * 0.4' }
+      ],
+      sinks: [
+        { component: 'relationship.allied_with', formula: 'alliances.length * 0.3' },
+        { component: 'template.ideology_emergence', formula: 'socialRules.length * 0.2' },
+        { component: 'time', formula: 'value * 15' }
+      ],
+      affects: [
+        { component: 'template.ideology_emergence', effect: 'enabler', threshold: 50 },
+        { component: 'template.faction_splinter', effect: 'amplifier', factor: 1.2 }
+      ],
+      equilibrium: {
+        expectedRange: [30, 50],
+        restingPoint: 35
+      }
+    },
     growth: (graph) => {
       // Measure cultural fragmentation as RATIO
       const allFactions = findEntities(graph, { kind: 'faction' });
@@ -176,6 +256,26 @@ export const pressures: Pressure[] = [
     name: 'Political Stability',
     value: 50,
     decay: 3,
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'relationship.allied_with', formula: 'cooperationRatio * 7' },
+        { component: 'relationship.leader_of', formula: 'leadershipRelations.length * 0.3' },
+        { component: 'formula.leadership_ratio', formula: 'leadershipRatio * 3' }
+      ],
+      sinks: [
+        { component: 'template.succession', formula: 'successionPenalty' },
+        { component: 'relationship.at_war_with', formula: 'conflicts.length' },
+        { component: 'time', formula: 'value * 3' }
+      ],
+      affects: [
+        { component: 'template.ideology_emergence', effect: 'enabler', threshold: 40 }  // Low stability enables reform
+      ],
+      equilibrium: {
+        expectedRange: [40, 60],
+        restingPoint: 50
+      }
+    },
     growth: (graph) => {
       // Measure stability indicators as ratios
       const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
@@ -215,6 +315,26 @@ export const pressures: Pressure[] = [
     name: 'External Danger',
     value: 0,
     decay: 6,  // TUNED: Increased from 4 to 6 (still at 30 vs target 15)
+    contract: {
+      purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
+      sources: [
+        { component: 'template.orca_raider_arrival', formula: 'orcas.length * 0.8' },
+        { component: 'tag.external', formula: 'externalTags.length * 10' },
+        { component: 'tag.invader', formula: 'count * 10' }
+      ],
+      sinks: [
+        { component: 'time', formula: 'value * 6' }
+        // TODO: Add defensive systems/templates that reduce external threat
+      ],
+      affects: [
+        { component: 'template.orca_combat_technique', effect: 'enabler', threshold: 20 },
+        { component: 'template.hero_emergence', effect: 'amplifier', factor: 1.5 }
+      ],
+      equilibrium: {
+        expectedRange: [10, 25],
+        restingPoint: 15
+      }
+    },
     growth: (graph) => {
       // Increases during invasion era or when entities marked as external appear
       const externalTags = Array.from(graph.entities.values())

@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { HardState } from '../types/worldTypes';
 
 /**
@@ -20,6 +20,26 @@ import { HardState } from '../types/worldTypes';
 export const eraTransition: SimulationSystem = {
   id: 'era_transition',
   name: 'Era Progression',
+
+  contract: {
+    purpose: ComponentPurpose.PHASE_TRANSITION,
+    affects: {
+      entities: [
+        {
+          kind: 'era',
+          operation: 'modify',
+          count: { min: 2, max: 2 }
+        }
+      ],
+      relationships: [
+        {
+          kind: 'active_during',
+          operation: 'create',
+          count: { min: 0, max: 10 }
+        }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 
@@ -14,6 +14,22 @@ import { HardState, Relationship } from '../../../../types/worldTypes';
 export const tradeRouteEstablishment: GrowthTemplate = {
   id: 'trade_route_establishment',
   name: 'Trade Route Establishment',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 2 }  // Need at least 2 factions to trade
+      ]
+    },
+    affects: {
+      entities: [],  // No new entities created
+      relationships: [
+        { kind: 'trades_with', operation: 'create', count: { min: 2, max: 2 } }  // Bidirectional
+      ],
+      pressures: []
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState } from '../../../../types/worldTypes';
 
@@ -14,6 +14,23 @@ import { HardState } from '../../../../types/worldTypes';
 export const territorialExpansion: GrowthTemplate = {
   id: 'territorial_expansion',
   name: 'Territorial Expansion',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 1 },
+        { kind: 'location', min: 2 }  // Need at least 2 locations for expansion
+      ]
+    },
+    affects: {
+      entities: [],  // No new entities created
+      relationships: [
+        { kind: 'controls', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      pressures: []
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
@@ -6,6 +6,29 @@ import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
   name: 'Hero Rises',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      pressures: [
+        { name: 'conflict', threshold: 30 },
+        { name: 'external_threat', threshold: 20 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'practitioner_of', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+      ],
+      pressures: [
+        { name: 'conflict', delta: -2 }  // Heroes reduce conflict
+      ]
+    }
+  },
 
   metadata: {
     produces: {

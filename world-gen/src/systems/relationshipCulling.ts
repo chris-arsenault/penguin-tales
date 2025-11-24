@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { Relationship } from '../types/worldTypes';
 
 /**
@@ -10,6 +10,19 @@ import { Relationship } from '../types/worldTypes';
 export const relationshipCulling: SimulationSystem = {
   id: 'relationship_culling',
   name: 'Relationship Pruning',
+
+  contract: {
+    purpose: ComponentPurpose.CONSTRAINT_ENFORCEMENT,
+    affects: {
+      relationships: [
+        {
+          kind: 'any',
+          operation: 'delete',
+          count: { min: 0, max: 100 }
+        }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateId } from '../../../../utils/helpers';
@@ -15,6 +15,24 @@ import { generateId } from '../../../../utils/helpers';
 export const magicalSiteDiscovery: GrowthTemplate = {
   id: 'magical_site_discovery',
   name: 'Magical Site Discovery',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'abilities', min: 1 }  // Need magical abilities with practitioners
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'manifests_at', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

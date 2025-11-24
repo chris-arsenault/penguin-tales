@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -16,6 +16,31 @@ import {
 export const culturalDrift: SimulationSystem = {
   id: 'cultural_drift',
   name: 'Cultural Evolution',
+
+  contract: {
+    purpose: ComponentPurpose.TAG_PROPAGATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'location', min: 2 }
+      ]
+    },
+    affects: {
+      tags: [
+        { operation: 'add', pattern: 'unified' },
+        { operation: 'add', pattern: 'trading' },
+        { operation: 'add', pattern: 'peaceful' },
+        { operation: 'add', pattern: 'isolated' },
+        { operation: 'add', pattern: 'unique' },
+        { operation: 'add', pattern: 'divergent' }
+      ],
+      entities: [
+        { kind: 'location', operation: 'modify' }
+      ],
+      pressures: [
+        { name: 'cultural_tension', formula: 'divergentColonies.length > 1 ? 10 : 0' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

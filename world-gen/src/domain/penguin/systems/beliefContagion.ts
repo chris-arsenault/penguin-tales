@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState, Relationship } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -75,6 +75,30 @@ function isImmune(npc: HardState, ruleId: string): boolean {
 export const beliefContagion: SimulationSystem = {
   id: 'belief_contagion',
   name: 'Ideological Spread',
+
+  contract: {
+    purpose: ComponentPurpose.TAG_PROPAGATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'rules', min: 1 },
+        { kind: 'npc', min: 1 }
+      ]
+    },
+    affects: {
+      tags: [
+        { operation: 'add', pattern: 'belief:*' },
+        { operation: 'add', pattern: 'immune:*' },
+        { operation: 'remove', pattern: 'belief:*' }
+      ],
+      entities: [
+        { kind: 'rules', operation: 'modify' }
+      ],
+      pressures: [
+        { name: 'cultural_tension', delta: -10 },
+        { name: 'stability', delta: 5 }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

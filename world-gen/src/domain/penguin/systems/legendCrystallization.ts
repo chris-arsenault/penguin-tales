@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../types/engine';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../types/engine';
 import { HardState, Relationship } from '../../../types/worldTypes';
 import {
   findEntities,
@@ -30,6 +30,26 @@ import {
 export const legendCrystallization: SimulationSystem = {
   id: 'legend_crystallization',
   name: 'Legend Formation',
+
+  contract: {
+    purpose: ComponentPurpose.STATE_MODIFICATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'modify' },
+        { kind: 'location', operation: 'modify' },
+        { kind: 'rules', operation: 'create', count: { min: 0, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'commemorates', operation: 'create' },
+        { kind: 'originated_in', operation: 'create' }
+      ]
+    }
+  },
 
   metadata: {
     produces: {

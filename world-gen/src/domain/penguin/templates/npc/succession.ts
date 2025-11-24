@@ -1,4 +1,4 @@
-import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, slugifyName, archiveRelationship } from '../../../../utils/helpers';
@@ -6,6 +6,29 @@ import { generateName, pickRandom, slugifyName, archiveRelationship } from '../.
 export const succession: GrowthTemplate = {
   id: 'succession',
   name: 'Leadership Succession',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'npc', min: 1 }  // Requires existing NPCs
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } }
+      ],
+      relationships: [
+        { kind: 'leader_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'member_of', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+      ],
+      pressures: [
+        { name: 'stability', delta: -1 }  // Succession creates brief instability
+      ]
+    }
+  },
 
   metadata: {
     produces: {
