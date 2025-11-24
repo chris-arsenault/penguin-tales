@@ -8,6 +8,22 @@
 - Framework code: `src/engine/`, `src/systems/`, `src/types/`, `src/utils/`, `src/services/`
 - Domain code: `src/domain/penguin/` (penguin-specific templates, systems, config, data)
 
+---
+
+## ⚠️ Quick Reference: Regression Check Commands
+
+**Run after every 2-3 refactoring passes:**
+```bash
+cd world-gen
+npm run build && npm start
+# Check all 5 eras reached: cat ./output/generated_world.json | jq '.hardState | map(select(.kind == "era")) | .[].name'
+# Check zero-entity epochs: cat ./output/generated_world.json | jq '.history | map(select(.description | contains("Growth: +0"))) | length'
+```
+
+Must pass: ✅ No crashes ✅ All 5 eras ✅ All epochs generate entities
+
+---
+
 You are an expert software architect and test engineer tasked with comprehensively improving the world-gen codebase. Work methodically through multiple passes, continuing until you've addressed all areas. DO NOT stop early - this is an overnight task and thoroughness is more important than speed.
 
 ## Phase 1: Discovery and Planning (First 30 minutes)
@@ -86,6 +102,57 @@ describe('functionToTest', () => {
 ## Phase 3: Refactoring Iterations (Repeat 5+ times)
 
 Perform multiple refactoring passes. In each pass, run tests after changes to ensure nothing breaks.
+
+### ⚠️ CRITICAL: Regression Check (Run After Every 2-3 Passes)
+
+After every 2-3 refactoring passes, run a full regression check to ensure the world generation process still works:
+
+```bash
+cd world-gen
+npm run build
+npm start  # Run world generation WITHOUT LLM integration
+```
+
+**Regression Check Criteria** (must ALL pass):
+1. ✅ **World generation completes** without crashes or errors
+2. ✅ **All 5 eras are reached**: Check output logs show transitions through:
+   - The Great Thaw (expansion)
+   - The Faction Wars (conflict)
+   - The Clever Ice Age (innovation)
+   - The Orca Incursion (invasion)
+   - The Frozen Peace (reconstruction)
+3. ✅ **All epochs generate entities**: Every epoch should show `Growth: +X entities` where X > 0
+   - Perfect distribution is NOT required
+   - Some epochs can have fewer entities than others
+   - Zero-entity epochs = REGRESSION FAILURE
+4. ✅ **Output files are generated**: `./output/generated_world.json` and `./output/graph_viz.json` exist
+5. ✅ **Output is valid JSON**: Files parse without errors
+
+**Validation Commands**:
+```bash
+# Check era progression (should show all 5 eras)
+cat ./output/generated_world.json | jq '.hardState | map(select(.kind == "era")) | .[].name'
+
+# Count entities (should be >100)
+cat ./output/generated_world.json | jq '.hardState | length'
+
+# Check for zero-entity epochs (should be empty or near-empty)
+cat ./output/generated_world.json | jq '.history | map(select(.description | contains("Growth: +0"))) | length'
+```
+
+**If Regression Check FAILS**:
+1. STOP further refactoring immediately
+2. Review changes since last successful regression check
+3. Use git to identify breaking changes: `git diff HEAD~5`
+4. Fix the regression before continuing
+5. Document what broke and how you fixed it in `PROGRESS.log`
+
+**Frequency**: Run regression check:
+- After completing Pass A, B, C, or D
+- Before moving to Phase 4
+- After any changes to core engine files (`worldEngine.ts`, `contractEnforcer.ts`)
+- After modifying template/system registration code
+- If you're unsure whether a change might break things
 
 ### Pass A: Extract Abstractions
 
@@ -172,6 +239,12 @@ worldEngine.ts (800 lines) →
 - Fail fast with descriptive error messages
 - Add context to re-thrown errors
 
+---
+
+**🔄 After completing Pass D, run the Regression Check before proceeding to Phase 4!**
+
+---
+
 ## Phase 4: Architecture Improvements
 
 ### Existing Architecture (Preserve)
@@ -215,7 +288,19 @@ The codebase already has good separation:
 
 ## Phase 5: Validation and Documentation
 
-1. **Run Full Test Suite**:
+1. **Run Final Regression Check**:
+   ```bash
+   cd world-gen
+   npm run build
+   npm start
+   ```
+   - ✅ Verify world generation completes successfully
+   - ✅ Confirm all 5 eras are reached
+   - ✅ Confirm all epochs generate entities (no zero-entity epochs)
+   - ✅ Validate output files exist and contain valid JSON
+   - **THIS MUST PASS before proceeding to documentation**
+
+2. **Run Full Test Suite**:
    ```bash
    cd world-gen
    npm test
@@ -224,7 +309,7 @@ The codebase already has good separation:
    - Fix any broken tests
    - Ensure coverage >70%
 
-2. **Update Documentation**:
+3. **Update Documentation**:
    - Update `world-gen/CLAUDE.md` with:
      - New test running instructions
      - Any architectural changes
@@ -232,7 +317,7 @@ The codebase already has good separation:
    - Update `world-gen/README.md` (create if missing)
    - Generate `IMPROVEMENTS.md` listing all changes
 
-3. **Code Quality**:
+4. **Code Quality**:
    ```bash
    npm run lint
    npm run build
@@ -241,10 +326,10 @@ The codebase already has good separation:
    - Ensure TypeScript compilation succeeds
    - Clean up unused imports
 
-4. **Verification**:
-   - Run a full world generation: `npm start`
-   - Verify output is valid
-   - Check performance hasn't regressed
+5. **Performance Check**:
+   - Compare generation time to baseline (should be similar or faster)
+   - Check entity/relationship counts are in expected ranges
+   - Verify memory usage hasn't increased significantly
 
 ## Phase 6: Advanced Improvements (If Time Permits)
 
@@ -319,7 +404,11 @@ By completion, the world-gen codebase should have:
 - ✅ IMPROVEMENTS.md summarizing all changes
 - ✅ Updated CLAUDE.md with new information
 - ✅ All tests passing (`npm test`)
-- ✅ Successful world generation (`npm start`)
+- ✅ **Regression check passing**:
+  - World generation completes without errors
+  - All 5 eras reached (expansion → conflict → innovation → invasion → reconstruction)
+  - All epochs generate entities (no zero-entity epochs)
+  - Output files generated and valid
 
 ## Reference Files
 

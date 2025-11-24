@@ -1,11 +1,31 @@
-=== Image Generation Log - 2025-11-24T09:25:29.773Z ===
+=== Image Generation Log - 2025-11-24T10:34:52.549Z ===
 
 
-Generating images for 65 mythic entities...
+Generating images for 68 mythic entities...
+
+=== Generating Image for Aurora Berg ===Entity: location:icebergPrompt: Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations. Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.
+
+Aurora Berg: Towering multi-tiered iceberg hosting rival super-penguin colonies. Aurora Stack commands sunlit terraces; Nightfall Shelf shadows its far side. The Glow-Fissure pulses beneath, warping currents. Krill Shoals drift nearby, fueling ancient tensions over fishing rights and artifact control. A massive floating ice mountain, home to penguin colonies.
+
+Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration. Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.
+
+IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.
+✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-vRNcwz0X2jXjbyyoWScfhzlh.png?st=2025-11-24T09%3A40%3A27Z&se=2025-11-24T11%3A40%3A27Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=67205dde-9780-4119-bbff-6343b48e42b6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-24T10%3A12%3A04Z&ske=2025-11-25T10%3A12%3A04Z&sks=b&skv=2024-08-04&sig=%2BVZPOVz6vTyk6cV9MSc57gVe4/VAXZTjS6XKenKfxko%3D
+✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_aurora_berg_1763980826554.png
 
 === Generating Image for Aurora Stack ===Entity: location:colonyPrompt: Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations. Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.
 
-Aurora Stack: A vertical colony carved into the sunlit face of Aurora Berg, known for orderly terraces and bright trade banners. A bustling penguin settlement carved into ice, with architectural details.
+Aurora Stack: Sunlit colony of orderly terraces and bright trade banners. Aurora Stack values commerce, tradition, and recorded history. Adjacent to Krill Shoals and rival Nightfall Shelf, it serves as stronghold of The Icebound Exchange, the berg's mercantile heart. A bustling penguin settlement carved into ice, with architectural details.
+
+Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration. Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.
+
+IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.
+✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-hNfAFtZ2eZNhleo3oqUYvOE6.png?st=2025-11-24T09%3A40%3A45Z&se=2025-11-24T11%3A40%3A45Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=67205dde-9780-4119-bbff-6343b48e42b6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-24T10%3A40%3A45Z&ske=2025-11-25T10%3A40%3A45Z&sks=b&skv=2024-08-04&sig=iIwDcM5G/QsATcr3ngh6j2GrvcGtzgDlZLuIrs0PbqE%3D
+✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_aurora_stack_1763980845680.png
+
+=== Generating Image for Nightfall Shelf ===Entity: location:colonyPrompt: Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations. Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.
+
+Nightfall Shelf: Shadow-side ledge lit by bioluminescent ice glyphs. Home to The Midnight Claws, valuing independence, innovation, and ancestral memory. Connected to The Glow-Fissure's mysteries, it thrives on rope bridges and whispered deals, embodying the berg's hidden traditions. A bustling penguin settlement carved into ice, with architectural details.
 
 Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration. Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.
 
