@@ -84,6 +84,32 @@ The engine alternates between two phases:
 
 This achieves 80% of full simulation depth with 20% of the complexity.
 
+📖 **See**: `docs/adr/001-hybrid-template-simulation-model.md` for detailed rationale
+
+### 🛠️ Builder Utilities (NEW)
+
+The framework provides reusable utilities to reduce boilerplate:
+
+**RelationshipBuilder** (`src/utils/relationshipBuilder.ts`):
+```typescript
+const relationships = buildRelationships()
+  .add('member_of', npc.id, faction.id)
+  .addManyFrom('allied_with', faction1.id, [faction2.id, faction3.id])
+  .addBidirectional('trades_with', colony1.id, colony2.id)
+  .build();
+```
+
+**EntityClusterBuilder** (`src/utils/entityClusterBuilder.ts`):
+```typescript
+const cluster = buildCluster()
+  .addEntity({ kind: 'faction', name: 'Traders Guild' })
+  .addEntity({ kind: 'npc', name: 'Bob' })
+  .relate(1, 0, 'member_of')  // Bob joins guild
+  .buildWithDescription('Guild established');
+```
+
+📖 **See**: `AUTONOMOUS_SESSION_2025-11-24.md` for usage examples
+
 ### 🐧 Five Eras of Penguin History
 
 1. **The Great Thaw** (Expansion) - Exploration and colony founding
