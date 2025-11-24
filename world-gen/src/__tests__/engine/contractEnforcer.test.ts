@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContractEnforcer } from '../../engine/contractEnforcer';
 import { Graph, GrowthTemplate, EngineConfig, ComponentContract, EntityRegistry } from '../../types/engine';

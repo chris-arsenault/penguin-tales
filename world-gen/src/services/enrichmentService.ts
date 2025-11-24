@@ -5,31 +5,7 @@ import { DomainLoreProvider } from '../types/domainLore';
 import { LLMClient } from './llmClient';
 import { LoreValidator } from './loreValidator';
 import { NameLogger } from './nameLogger';
-import { generateName, upsertNameTag } from '../utils/helpers';
-
-function parseJsonSafe<T = any>(raw: string): T | null {
-  if (!raw) return null;
-  let cleaned = raw.trim();
-  cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    return null;
-  }
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    result.push(items.slice(i, i + size));
-  }
-  return result;
-}
-
-let loreRecordCounter = 0;
-function nextLoreId(prefix: string): string {
-  return `${prefix}_${Date.now()}_${loreRecordCounter++}`;
-}
+import { generateName, upsertNameTag, parseJsonSafe, chunk, generateLoreId } from '../utils/helpers';
 
 export class EnrichmentService {
   private llm: LLMClient;
@@ -335,7 +311,7 @@ export class EnrichmentService {
 
         const validation = this.validator.validateEntity(entity, entry.description);
         const record: LoreRecord = {
-          id: nextLoreId('desc'),
+          id: generateLoreId('desc'),
           type: 'description',
           targetId: entity.id,
           text: `${entity.name}: ${entry.description || ''}`.trim(),
@@ -383,7 +359,7 @@ export class EnrichmentService {
     }
 
     const record: LoreRecord = {
-      id: nextLoreId('era'),
+      id: generateLoreId('era'),
       type: 'era_narrative',
       text: `${parsed.eventName}: ${parsed.description}`,
       metadata: { from: params.fromEra, to: params.toEra, tick: params.tick },
@@ -438,7 +414,7 @@ export class EnrichmentService {
       if (parsed) {
         const text = `${parsed.incident} | Stakes: ${parsed.stakes} | Perception: ${parsed.publicPerception}`;
         const record: LoreRecord = {
-          id: nextLoreId('relationship'),
+          id: generateLoreId('relationship'),
           type: 'relationship_backstory',
           targetId: rel.dst,
           relationship: rel,
@@ -485,7 +461,7 @@ export class EnrichmentService {
       ability.description = parsed.description || ability.description;
       const validation = this.validator.validateEntity(ability, parsed.description);
       const record: LoreRecord = {
-        id: nextLoreId('ability'),
+        id: generateLoreId('ability'),
         type: 'tech_magic',
         targetId: ability.id,
         text: `${parsed.name}: ${parsed.description}`,
@@ -551,7 +527,7 @@ export class EnrichmentService {
     }
 
     const record: LoreRecord = {
-      id: nextLoreId('discovery'),
+      id: generateLoreId('discovery'),
       type: 'discovery_event',
       targetId: params.location.id,
       text: `${params.explorer.name} discovered ${params.location.name}: ${parsed.narrative}`,
@@ -599,7 +575,7 @@ export class EnrichmentService {
     }
 
     const record: LoreRecord = {
-      id: nextLoreId('chain'),
+      id: generateLoreId('chain'),
       type: 'chain_link',
       targetId: params.sourceLocation.id,
       text: `${parsed.connection} | Clue: ${parsed.clue}`,
@@ -670,7 +646,7 @@ export class EnrichmentService {
     occurrence.description = parsed.description || occurrence.description;
 
     const record: LoreRecord = {
-      id: nextLoreId('occurrence'),
+      id: generateLoreId('occurrence'),
       type: 'description',
       targetId: occurrence.id,
       text: `${parsed.name}: ${parsed.description}`,
@@ -736,7 +712,7 @@ export class EnrichmentService {
     era.description = parsed.description || era.description;
 
     const record: LoreRecord = {
-      id: nextLoreId('era'),
+      id: generateLoreId('era'),
       type: 'description',
       targetId: era.id,
       text: `${era.name}: ${parsed.description}`,
@@ -784,7 +760,7 @@ export class EnrichmentService {
     }
 
     const record: LoreRecord = {
-      id: nextLoreId('change'),
+      id: generateLoreId('change'),
       type: 'entity_change',
       targetId: entity.id,
       text: parsed.narrative,

@@ -13,7 +13,9 @@ describe('DynamicWeightCalculator', () => {
 
     mockTemplate = {
       id: 'test_template',
+      name: 'Test Template',
       canApply: () => true,
+      findTargets: () => [],
       expand: () => ({ entities: [], relationships: [], description: '' })
     };
 
@@ -413,7 +415,9 @@ describe('DynamicWeightCalculator', () => {
       const templates: GrowthTemplate[] = [
         {
           id: 'template1',
+          name: 'Template 1',
           canApply: () => true,
+          findTargets: () => [],
           expand: () => ({ entities: [], relationships: [], description: '' }),
           metadata: {
             produces: {
@@ -423,7 +427,9 @@ describe('DynamicWeightCalculator', () => {
         },
         {
           id: 'template2',
+          name: 'Template 2',
           canApply: () => true,
+          findTargets: () => [],
           expand: () => ({ entities: [], relationships: [], description: '' }),
           metadata: {
             produces: {
@@ -449,7 +455,9 @@ describe('DynamicWeightCalculator', () => {
       const templates: GrowthTemplate[] = [
         {
           id: 'template1',
+          name: 'Template 1',
           canApply: () => true,
+          findTargets: () => [],
           expand: () => ({ entities: [], relationships: [], description: '' })
         }
       ];

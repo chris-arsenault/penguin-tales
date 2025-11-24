@@ -43,11 +43,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: 'A penguin',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -59,11 +60,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice-Walker',
           description: 'A penguin',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -75,11 +77,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Singlename',
           description: 'A penguin',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -91,11 +94,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: '',
           description: 'A penguin',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -108,11 +112,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker the-Great',
           description: 'A penguin',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -125,11 +130,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: 'A penguin from the ice berg',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A penguin from the ice berg');
 
@@ -141,11 +147,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: 'A character',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A character');
 
@@ -157,11 +164,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Singlename',
           description: 'Generic description',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -172,11 +180,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Aurora Watcher',
           description: 'Watches the aurora',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Watches the aurora lights');
 
@@ -187,11 +196,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'location1',
           kind: 'location',
+          subtype: "test",
           name: 'The Fissure',
           description: 'A glowing fissure',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A glowing fissure in the ice');
 
@@ -202,11 +212,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'location1',
           kind: 'location',
+          subtype: "test",
           name: 'Krill Grounds',
           description: 'Rich fishing',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Rich krill fishing grounds');
 
@@ -217,11 +228,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: 'From ICE BERG',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'From the ICE BERG');
 
@@ -234,11 +246,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'ability1',
           kind: 'abilities',
+          subtype: "test",
           name: 'Frost Magic',
           description: 'Ice magic power',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A powerful magic ability from the frost');
 
@@ -249,11 +262,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'ability1',
           kind: 'abilities',
+          subtype: "test",
           name: 'Harpoon Mastery',
           description: 'Expert with harpoons',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Master of the harpoon on the ice');
 
@@ -264,11 +278,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'ability1',
           kind: 'abilities',
+          subtype: "test",
           name: 'Generic Ability',
           description: 'A generic skill',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A generic skill');
 
@@ -280,11 +295,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: 'A character',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A character with no magic or tech');
 
@@ -298,11 +314,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'ability1',
           kind: 'abilities',
+          subtype: "test",
           name: 'Singlename',
           description: 'Generic',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Generic description');
 
@@ -321,9 +338,13 @@ describe('LoreValidator', () => {
           subtype: 'geographic_feature',
           name: 'Crystal Ridge',
           description: 'A high ridge on the ice berg',
+          status: 'active',
+          prominence: 'marginal' as const,
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+          createdAt: 0,
+          updatedAt: 0
+        };
 
         const result = validator.validateLocation(location);
 
@@ -339,7 +360,7 @@ describe('LoreValidator', () => {
           description: 'A place',
           tags: [],
           links: [],
-          status: 'active',
+        status: 'active',
           prominence: 'marginal' as const,
           createdAt: 0,
           updatedAt: 0
@@ -358,12 +379,16 @@ describe('LoreValidator', () => {
           const location: HardState = {
             id: 'loc1',
             kind: 'location',
-            subtype: 'geographic_feature',
+          subtype: 'geographic_feature',
             name: `Crystal ${term}`,
             description: 'A feature on the ice berg',
             tags: [],
-            links: []
-          ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+            links: [],
+        status: "active",
+            prominence: "marginal" as const,
+            createdAt: 0,
+            updatedAt: 0
+          };
 
           const result = validator.validateLocation(location);
           expect(result.valid).toBe(true);
@@ -378,8 +403,8 @@ describe('LoreValidator', () => {
           name: 'Crystal RIDGE',
           description: 'A ridge on the ice',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -394,8 +419,8 @@ describe('LoreValidator', () => {
           name: 'The Settlement',
           description: 'A colony',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -412,8 +437,8 @@ describe('LoreValidator', () => {
           name: 'Glow Cavern',
           description: 'A glowing place',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -429,7 +454,7 @@ describe('LoreValidator', () => {
           description: 'A strange place',
           tags: [],
           links: [],
-          status: 'active',
+        status: 'active',
           prominence: 'marginal' as const,
           createdAt: 0,
           updatedAt: 0
@@ -448,12 +473,16 @@ describe('LoreValidator', () => {
           const location: HardState = {
             id: 'loc1',
             kind: 'location',
-            subtype: 'anomaly',
+          subtype: 'anomaly',
             name: `${term} Cave`,
             description: 'An anomaly in the ice',
             tags: [],
-            links: []
-          ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+            links: [],
+        status: "active",
+            prominence: "marginal" as const,
+            createdAt: 0,
+            updatedAt: 0
+          };
 
           const result = validator.validateLocation(location);
           expect(result.valid).toBe(true);
@@ -468,8 +497,8 @@ describe('LoreValidator', () => {
           name: 'The Settlement',
           description: 'A colony',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -486,8 +515,8 @@ describe('LoreValidator', () => {
           name: 'Ice Colony',
           description: 'A colony on the ice berg near the aurora',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -502,8 +531,8 @@ describe('LoreValidator', () => {
           name: 'The Settlement',
           description: 'A generic place where people live',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -519,8 +548,8 @@ describe('LoreValidator', () => {
           name: 'The Settlement',
           description: '',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -539,7 +568,7 @@ describe('LoreValidator', () => {
           description: 'Generic description',
           tags: [],
           links: [],
-          status: 'active',
+        status: 'active',
           prominence: 'marginal' as const,
           createdAt: 0,
           updatedAt: 0
@@ -561,8 +590,8 @@ describe('LoreValidator', () => {
           name: 'Ice Colony',
           description: 'A colony on the ice',
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const discoveryContext = { discoveredBy: 'explorer1', tick: 100 };
 
@@ -578,11 +607,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: undefined as any,
         description: 'A penguin',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateEntity(entity);
@@ -593,11 +623,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: 'Ice Walker',
         description: null as any,
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateEntity(entity);
@@ -608,12 +639,12 @@ describe('LoreValidator', () => {
       const location: HardState = {
         id: 'loc1',
         kind: 'location',
-        subtype: undefined as any,
+          subtype: undefined as any,
         name: 'Ice Place',
         description: 'A place',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateLocation(location);
@@ -624,11 +655,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: 'Ice Walker',
         description: 'A penguin',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, '');
 
@@ -640,11 +672,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: 'Ice Walker',
         description: 'A penguin',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, '   ');
 
@@ -656,11 +689,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: longName,
         description: 'A penguin with ice magic',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'A penguin with ice magic');
 
@@ -671,11 +705,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: 'Ice@Walker #1',
         description: 'A penguin',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity);
 
@@ -687,11 +722,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: '❄️ Ice Walker 🐧',
         description: 'A penguin from the ice',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'A penguin from the ice');
 
@@ -707,11 +743,12 @@ describe('LoreValidator', () => {
         const entity: HardState = {
           id: 'npc1',
           kind: 'npc',
+          subtype: "test",
           name: 'Ice Walker',
           description: `Contains ${cue}`,
           tags: [],
-          links: []
-        ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+          links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, `Contains ${cue}`);
         expect(result.valid).toBe(true);
@@ -722,11 +759,12 @@ describe('LoreValidator', () => {
       const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
+          subtype: "test",
         name: 'Ice Walker',
         description: 'From iceberg',
         tags: [],
-        links: []
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+        links: [],
+        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'From the iceberg');
 
@@ -734,7 +772,7 @@ describe('LoreValidator', () => {
     });
 
     it('should not detect partial matches', () => {
-      const entity = {
+      const entity: HardState = {
         id: 'npc1',
         kind: 'npc',
         name: 'Ice Walker',
@@ -746,7 +784,7 @@ describe('LoreValidator', () => {
         prominence: 'marginal' as const,
         createdAt: 0,
         updatedAt: 0
-      ,subtype:"test",status:"active",prominence:"marginal"as const,createdAt:0,updatedAt:0}as HardState;
+      };
 
       const result = validator.validateEntity(entity, 'A nice person'); // 'ice' in 'nice'
 

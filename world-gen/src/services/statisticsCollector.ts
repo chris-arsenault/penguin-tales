@@ -11,6 +11,14 @@ import {
   FitnessMetrics
 } from '../types/statistics';
 import { getProminenceValue } from '../utils/helpers';
+import {
+  calculateEntityKindCounts,
+  calculateRatios,
+  calculateProminenceDistribution,
+  calculateRelationshipDistribution,
+  calculateConnectivityMetrics,
+  calculateSubtypeDistribution
+} from '../utils/distributionCalculations';
 
 /**
  * Statistics Collector
@@ -142,61 +150,22 @@ export class StatisticsCollector {
     const entities = Array.from(graph.entities.values());
     const totalEntities = entities.length;
 
-    // Entity kind ratios
-    const entityKindCounts: Record<string, number> = {};
-    entities.forEach(e => {
-      entityKindCounts[e.kind] = (entityKindCounts[e.kind] || 0) + 1;
-    });
-    const entityKindRatios: Record<string, number> = {};
-    Object.keys(entityKindCounts).forEach(kind => {
-      entityKindRatios[kind] = entityKindCounts[kind] / totalEntities;
-    });
+    // Entity kind distribution
+    const entityKindCounts = calculateEntityKindCounts(entities);
+    const entityKindRatios = calculateRatios(entityKindCounts, totalEntities);
 
-    // Prominence ratios
-    const prominenceCounts: Record<string, number> = {
-      forgotten: 0,
-      marginal: 0,
-      recognized: 0,
-      renowned: 0,
-      mythic: 0
-    };
-    entities.forEach(e => {
-      prominenceCounts[e.prominence]++;
-    });
-    const prominenceRatios: Record<string, number> = {};
-    Object.keys(prominenceCounts).forEach(level => {
-      prominenceRatios[level] = prominenceCounts[level] / totalEntities;
-    });
+    // Prominence distribution
+    const { counts: prominenceCounts, ratios: prominenceRatios } = calculateProminenceDistribution(entities);
 
-    // Relationship type ratios
-    const totalRelationships = graph.relationships.length;
-    const relationshipTypeCounts: Record<string, number> = {};
-    graph.relationships.forEach(r => {
-      relationshipTypeCounts[r.kind] = (relationshipTypeCounts[r.kind] || 0) + 1;
-    });
-    const relationshipTypeRatios: Record<string, number> = {};
-    Object.keys(relationshipTypeCounts).forEach(type => {
-      relationshipTypeRatios[type] = relationshipTypeCounts[type] / totalRelationships;
-    });
+    // Relationship distribution
+    const {
+      counts: relationshipTypeCounts,
+      ratios: relationshipTypeRatios,
+      diversity: relationshipDiversity
+    } = calculateRelationshipDistribution(graph);
 
-    // Relationship diversity (Shannon entropy)
-    let relationshipDiversity = 0;
-    Object.values(relationshipTypeRatios).forEach(ratio => {
-      if (ratio > 0) {
-        relationshipDiversity -= ratio * Math.log2(ratio);
-      }
-    });
-
-    // Graph connectivity metrics
-    const connectionCounts = new Map<string, number>();
-    graph.relationships.forEach(r => {
-      connectionCounts.set(r.src, (connectionCounts.get(r.src) || 0) + 1);
-      connectionCounts.set(r.dst, (connectionCounts.get(r.dst) || 0) + 1);
-    });
-
-    const isolatedNodes = Array.from(graph.entities.keys()).filter(id =>
-      !connectionCounts.has(id)
-    ).length;
+    // Connectivity metrics
+    const { isolatedNodes } = calculateConnectivityMetrics(graph);
 
     // Calculate clusters (simplified: connected components)
     const visited = new Set<string>();
@@ -231,7 +200,8 @@ export class StatisticsCollector {
       ? clusterSizes.reduce((a, b) => a + b, 0) / clusterSizes.length
       : 0;
 
-    const avgDegree = (totalRelationships * 2) / totalEntities;
+    const totalRelationships = graph.relationships.length;
+    const avgDegree = totalEntities > 0 ? (totalRelationships * 2) / totalEntities : 0;
 
     // Calculate deviations (if distribution targets exist)
     let entityKindDeviation = 0;

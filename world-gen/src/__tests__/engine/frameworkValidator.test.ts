@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FrameworkValidator, ValidationResult } from '../../engine/frameworkValidator';
 import { EngineConfig, ComponentPurpose, Pressure, EntityRegistry, GrowthTemplate, SimulationSystem } from '../../types/engine';

@@ -8,6 +8,12 @@
 import { HardState, Relationship } from '../types/worldTypes';
 import { Graph } from '../types/engine';
 import { getProminenceValue } from '../utils/helpers';
+import {
+  countRelationships,
+  findRelationship,
+  getRelatedEntity,
+  getRelationshipIdSet
+} from '../utils/graphQueries';
 
 /**
  * Entity snapshot for change detection
@@ -54,60 +60,40 @@ export function captureEntitySnapshot(entity: HardState, graph: Graph): EntitySn
 
   // Location-specific tracking
   if (entity.kind === 'location') {
-    snapshot.residentCount = graph.relationships.filter(r =>
-      r.kind === 'resident_of' && r.dst === entity.id
-    ).length;
+    snapshot.residentCount = countRelationships(graph, entity.id, 'resident_of', 'dst');
 
-    const controller = graph.relationships.find(r =>
-      (r.kind === 'stronghold_of' || r.kind === 'controls') && r.dst === entity.id
-    );
+    const controller = findRelationship(graph, entity.id, 'stronghold_of', 'dst') ||
+                      findRelationship(graph, entity.id, 'controls', 'dst');
     snapshot.controllerId = controller?.src;
   }
 
   // Faction-specific tracking
   if (entity.kind === 'faction') {
-    const leader = graph.relationships.find(r =>
-      r.kind === 'leader_of' && r.dst === entity.id
-    );
+    const leader = findRelationship(graph, entity.id, 'leader_of', 'dst');
     snapshot.leaderId = leader?.src;
 
-    snapshot.territoryCount = graph.relationships.filter(r =>
-      (r.kind === 'stronghold_of' || r.kind === 'controls') && r.src === entity.id
-    ).length;
+    snapshot.territoryCount =
+      countRelationships(graph, entity.id, 'stronghold_of', 'src') +
+      countRelationships(graph, entity.id, 'controls', 'src');
 
-    snapshot.allyIds = new Set(
-      graph.relationships
-        .filter(r => r.kind === 'allied_with' && r.src === entity.id)
-        .map(r => r.dst)
-    );
-
-    snapshot.enemyIds = new Set(
-      graph.relationships
-        .filter(r => r.kind === 'at_war_with' && r.src === entity.id)
-        .map(r => r.dst)
-    );
+    snapshot.allyIds = getRelationshipIdSet(graph, entity.id, ['allied_with'], 'src');
+    snapshot.enemyIds = getRelationshipIdSet(graph, entity.id, ['at_war_with'], 'src');
   }
 
   // Rule-specific tracking
   if (entity.kind === 'rules') {
-    snapshot.enforcerIds = new Set(
-      graph.relationships
-        .filter(r => (r.kind === 'weaponized_by' || r.kind === 'kept_secret_by') && r.dst === entity.id)
-        .map(r => r.src)
+    snapshot.enforcerIds = getRelationshipIdSet(
+      graph,
+      entity.id,
+      ['weaponized_by', 'kept_secret_by'],
+      'dst'
     );
   }
 
   // Ability-specific tracking
   if (entity.kind === 'abilities') {
-    snapshot.practitionerCount = graph.relationships.filter(r =>
-      r.kind === 'practitioner_of' && r.dst === entity.id
-    ).length;
-
-    snapshot.locationIds = new Set(
-      graph.relationships
-        .filter(r => r.kind === 'manifests_at' && r.src === entity.id)
-        .map(r => r.dst)
-    );
+    snapshot.practitionerCount = countRelationships(graph, entity.id, 'practitioner_of', 'dst');
+    snapshot.locationIds = getRelationshipIdSet(graph, entity.id, ['manifests_at'], 'src');
   }
 
   // NPC-specific tracking
@@ -120,6 +106,56 @@ export function captureEntitySnapshot(entity: HardState, graph: Graph): EntitySn
   }
 
   return snapshot;
+}
+
+/**
+ * Helper: Detect relationship set changes
+ */
+function detectSetChanges(
+  current: Set<string>,
+  previous: Set<string>,
+  graph: Graph,
+  addMessage: (name: string) => string
+): string[] {
+  const changes: string[] = [];
+  const added = Array.from(current).filter(id => !previous.has(id));
+  added.forEach(id => {
+    const entity = graph.entities.get(id);
+    if (entity) changes.push(addMessage(entity.name));
+  });
+  return changes;
+}
+
+/**
+ * Helper: Detect count-based changes
+ */
+function detectCountChange(
+  current: number,
+  previous: number,
+  threshold: number,
+  label: string,
+  suffix: string = ''
+): string | null {
+  const delta = current - previous;
+  if (Math.abs(delta) >= threshold) {
+    const sign = delta > 0 ? '+' : '';
+    return `${label}: ${sign}${delta}${suffix}`;
+  }
+  return null;
+}
+
+/**
+ * Helper: Detect state changes (status/prominence)
+ */
+function detectStateChange(
+  fieldName: string,
+  current: string,
+  previous: string
+): string | null {
+  if (current !== previous) {
+    return `${fieldName}: ${previous} → ${current}`;
+  }
+  return null;
 }
 
 /**
@@ -136,10 +172,14 @@ export function detectLocationChanges(
   const currentResidents = graph.relationships.filter(r =>
     r.kind === 'resident_of' && r.dst === location.id
   );
-  const residentDelta = currentResidents.length - (snapshot.residentCount || 0);
-  if (Math.abs(residentDelta) >= 3) {
-    changes.push(`population: ${residentDelta > 0 ? '+' : ''}${residentDelta} residents`);
-  }
+  const change = detectCountChange(
+    currentResidents.length,
+    snapshot.residentCount || 0,
+    3,
+    'population',
+    ' residents'
+  );
+  if (change) changes.push(change);
 
   // Control changes (track as dst of stronghold_of or controls)
   const currentController = graph.relationships.find(r =>
@@ -151,15 +191,12 @@ export function detectLocationChanges(
     changes.push(`control: now controlled by ${controller?.name || 'none'}`);
   }
 
-  // Prominence changes
-  if (location.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${location.prominence}`);
-  }
+  // Prominence and status changes
+  const prominenceChange = detectStateChange('prominence', location.prominence, snapshot.prominence);
+  if (prominenceChange) changes.push(prominenceChange);
 
-  // Status changes
-  if (location.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${location.status}`);
-  }
+  const statusChange = detectStateChange('status', location.status, snapshot.status);
+  if (statusChange) changes.push(statusChange);
 
   return changes;
 }
@@ -201,12 +238,12 @@ export function detectFactionChanges(
       .filter(r => r.kind === 'allied_with' && r.src === faction.id)
       .map(r => r.dst)
   );
-  const previousAllies = snapshot.allyIds || new Set();
-  const newAllies = Array.from(currentAllies).filter(id => !previousAllies.has(id));
-  newAllies.forEach(allyId => {
-    const ally = graph.entities.get(allyId);
-    if (ally) changes.push(`alliance: allied with ${ally.name}`);
-  });
+  changes.push(...detectSetChanges(
+    currentAllies,
+    snapshot.allyIds || new Set(),
+    graph,
+    (name) => `alliance: allied with ${name}`
+  ));
 
   // War changes (track as src of at_war_with)
   const currentEnemies = new Set(
@@ -214,20 +251,19 @@ export function detectFactionChanges(
       .filter(r => r.kind === 'at_war_with' && r.src === faction.id)
       .map(r => r.dst)
   );
-  const previousEnemies = snapshot.enemyIds || new Set();
-  const newWars = Array.from(currentEnemies).filter(id => !previousEnemies.has(id));
-  newWars.forEach(enemyId => {
-    const enemy = graph.entities.get(enemyId);
-    if (enemy) changes.push(`war: declared war on ${enemy.name}`);
-  });
+  changes.push(...detectSetChanges(
+    currentEnemies,
+    snapshot.enemyIds || new Set(),
+    graph,
+    (name) => `war: declared war on ${name}`
+  ));
 
-  // Status/prominence changes
-  if (faction.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${faction.status}`);
-  }
-  if (faction.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${faction.prominence}`);
-  }
+  // Status and prominence changes
+  const statusChange = detectStateChange('status', faction.status, snapshot.status);
+  if (statusChange) changes.push(statusChange);
+
+  const prominenceChange = detectStateChange('prominence', faction.prominence, snapshot.prominence);
+  if (prominenceChange) changes.push(prominenceChange);
 
   return changes;
 }
@@ -247,9 +283,8 @@ export function detectRuleChanges(
   if (prominenceValue < 2) return changes; // Skip if not 'recognized' or higher
 
   // Status changes (proposed → enacted → repealed → forgotten)
-  if (rule.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${rule.status}`);
-  }
+  const statusChange = detectStateChange('status', rule.status, snapshot.status);
+  if (statusChange) changes.push(statusChange);
 
   // Enforcement by factions (track as dst of weaponized_by or kept_secret_by)
   const currentEnforcers = new Set(
@@ -257,17 +292,16 @@ export function detectRuleChanges(
       .filter(r => (r.kind === 'weaponized_by' || r.kind === 'kept_secret_by') && r.dst === rule.id)
       .map(r => r.src)
   );
-  const previousEnforcers = snapshot.enforcerIds || new Set();
-  const newEnforcers = Array.from(currentEnforcers).filter(id => !previousEnforcers.has(id));
-  newEnforcers.forEach(enforcerId => {
-    const faction = graph.entities.get(enforcerId);
-    if (faction) changes.push(`enforcement: ${faction.name} began enforcing this`);
-  });
+  changes.push(...detectSetChanges(
+    currentEnforcers,
+    snapshot.enforcerIds || new Set(),
+    graph,
+    (name) => `enforcement: ${name} began enforcing this`
+  ));
 
   // Prominence changes
-  if (rule.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${rule.prominence}`);
-  }
+  const prominenceChange = detectStateChange('prominence', rule.prominence, snapshot.prominence);
+  if (prominenceChange) changes.push(prominenceChange);
 
   return changes;
 }
@@ -286,10 +320,13 @@ export function detectAbilityChanges(
   const currentPractitioners = graph.relationships.filter(r =>
     r.kind === 'practitioner_of' && r.dst === ability.id
   );
-  const practitionerDelta = currentPractitioners.length - (snapshot.practitionerCount || 0);
-  if (Math.abs(practitionerDelta) >= 3) {
-    changes.push(`practitioners: ${practitionerDelta > 0 ? '+' : ''}${practitionerDelta}`);
-  }
+  const change = detectCountChange(
+    currentPractitioners.length,
+    snapshot.practitionerCount || 0,
+    3,
+    'practitioners'
+  );
+  if (change) changes.push(change);
 
   // Spread to new locations (track as src of manifests_at)
   const currentLocations = new Set(
@@ -297,17 +334,18 @@ export function detectAbilityChanges(
       .filter(r => r.kind === 'manifests_at' && r.src === ability.id)
       .map(r => r.dst)
   );
-  const previousLocations = snapshot.locationIds || new Set();
-  const newLocations = Array.from(currentLocations).filter(id => !previousLocations.has(id));
-  newLocations.forEach(locId => {
-    const location = graph.entities.get(locId);
-    if (location) changes.push(`spread: now manifests at ${location.name}`);
-  });
+  changes.push(...detectSetChanges(
+    currentLocations,
+    snapshot.locationIds || new Set(),
+    graph,
+    (name) => `spread: now manifests at ${name}`
+  ));
 
   // Prominence changes (only if notable)
   const prominenceValue = getProminenceValue(ability.prominence);
   if (ability.prominence !== snapshot.prominence && prominenceValue >= 2) {
-    changes.push(`prominence: ${snapshot.prominence} → ${ability.prominence}`);
+    const prominenceChange = detectStateChange('prominence', ability.prominence, snapshot.prominence);
+    if (prominenceChange) changes.push(prominenceChange);
   }
 
   return changes;
@@ -333,17 +371,16 @@ export function detectNPCChanges(
       .filter(l => l.kind === 'leader_of')
       .map(l => l.dst)
   );
-  const previousLeaderships = snapshot.leadershipIds || new Set();
-  const newLeaderships = Array.from(currentLeaderships).filter(id => !previousLeaderships.has(id));
-  newLeaderships.forEach(factionId => {
-    const faction = graph.entities.get(factionId);
-    if (faction) changes.push(`leadership: became leader of ${faction.name}`);
-  });
+  changes.push(...detectSetChanges(
+    currentLeaderships,
+    snapshot.leadershipIds || new Set(),
+    graph,
+    (name) => `leadership: became leader of ${name}`
+  ));
 
   // Prominence changes
-  if (npc.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${npc.prominence}`);
-  }
+  const prominenceChange = detectStateChange('prominence', npc.prominence, snapshot.prominence);
+  if (prominenceChange) changes.push(prominenceChange);
 
   return changes;
 }
