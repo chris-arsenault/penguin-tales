@@ -3,6 +3,7 @@ import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
 import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
+import { EntityClusterBuilder } from '../../../../utils/entityClusterBuilder';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -116,27 +117,17 @@ export const heroEmergence: GrowthTemplate = {
     heroEntity.id = 'temp'; // Temporary ID for initialization
     initializeCatalystSmart(heroEntity);
 
-    const abilities = graphView.findEntities({ kind: 'abilities' });
-    const relationships: Relationship[] = [];
+    // Use EntityClusterBuilder for cleaner relationship creation
+    const cluster = new EntityClusterBuilder()
+      .addEntity(hero)
+      .relateToExisting(0, colony.id, 'resident_of');
 
+    // Add ability practice relationship if abilities exist
+    const abilities = graphView.findEntities({ kind: 'abilities' });
     if (abilities.length > 0) {
-      relationships.push({
-        kind: 'practitioner_of',
-        src: 'will-be-assigned-0',
-        dst: pickRandom(abilities).id
-      });
+      cluster.relateToExisting(0, pickRandom(abilities).id, 'practitioner_of');
     }
 
-    relationships.push({
-      kind: 'resident_of',
-      src: 'will-be-assigned-0',
-      dst: colony.id
-    });
-
-    return {
-      entities: [hero],
-      relationships,
-      description: `A new hero emerges in ${colony.name}`
-    };
+    return cluster.buildWithDescription(`A new hero emerges in ${colony.name}`);
   }
 };
