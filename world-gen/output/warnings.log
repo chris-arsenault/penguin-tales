@@ -1,27 +1,27 @@
 World Generation Warnings Log
-Started: 2025-11-24T06:06:51.820Z
+Started: 2025-11-24T06:29:02.741Z
 ================================================================================
 
-[2025-11-24T06:06:51.878Z] [Tick 15]
+[2025-11-24T06:29:02.807Z] [Tick 15]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 10
    Warning threshold: 10
-   Target: Frost-Light Grotto
+   Target: The Glowing Depths
    Tick: 15
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T06:06:51.881Z] [Tick 15]
+[2025-11-24T06:29:02.809Z] [Tick 15]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 11
    Warning threshold: 10
-   Target: Ethereal Shelf
+   Target: Frost-Light Grotto
    Tick: 15
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added

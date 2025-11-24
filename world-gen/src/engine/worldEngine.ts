@@ -893,6 +893,20 @@ export class WorldEngine {
       console.log(`  ❌ System needs ATTENTION - significant deviations detected`);
     }
 
+    // 8. Tag Health Report
+    console.log('');
+    const tagHealthReport = this.contractEnforcer.getTagAnalyzer().analyzeGraph(this.graph);
+    const tagHealthSummary = this.contractEnforcer.getTagAnalyzer().getSummary(tagHealthReport);
+    console.log(tagHealthSummary);
+
+    // Print detailed issues if there are any significant problems
+    if (tagHealthReport.issues.orphanTags.length > 10 ||
+        tagHealthReport.issues.overusedTags.length > 0 ||
+        tagHealthReport.issues.conflicts.length > 0) {
+      const detailedIssues = this.contractEnforcer.getTagAnalyzer().getDetailedIssues(tagHealthReport);
+      console.log(detailedIssues);
+    }
+
     console.log('='.repeat(80));
   }
 
@@ -958,6 +972,25 @@ export class WorldEngine {
         // Execute template with restricted graph view
         const result = template.expand(graphView, target);
 
+        // ENFORCEMENT: Check tag saturation before creating entities
+        // Collect all tags that would be added
+        const allTagsToAdd = result.entities.flatMap(e => e.tags || []);
+        const tagSaturationCheck = this.contractEnforcer.checkTagSaturation(this.graph, allTagsToAdd);
+
+        if (tagSaturationCheck.saturated) {
+          console.warn(`  ⚠️  Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
+          // Don't skip template, but log the warning for analysis
+        }
+
+        // ENFORCEMENT: Check for orphan tags (warn only)
+        const orphanCheck = this.contractEnforcer.checkTagOrphans(allTagsToAdd);
+        if (orphanCheck.hasOrphans && orphanCheck.orphanTags.length > 0) {
+          // Only warn if there are multiple orphan tags (single legendary tags are expected)
+          if (orphanCheck.orphanTags.length >= 3) {
+            console.warn(`  ℹ️  Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
+          }
+        }
+
         // Record template application
         this.statisticsCollector.recordTemplateApplication(template.id);
 
@@ -1001,7 +1034,29 @@ export class WorldEngine {
           clusterEntities
         );
 
-        // ENFORCEMENT 5: Contract affects validation
+        // ENFORCEMENT: Tag coverage validation
+        // Check that entities have appropriate tag count (3-5 tags)
+        for (const entity of clusterEntities) {
+          const coverageCheck = this.contractEnforcer.enforceTagCoverage(entity, this.graph);
+          if (coverageCheck.needsAdjustment) {
+            // Log for debugging but don't fail - templates should handle this
+            // console.warn(`  ℹ️  ${coverageCheck.suggestion}`);
+          }
+        }
+
+        // ENFORCEMENT: Tag taxonomy validation
+        // Check for conflicting tags on newly created entities
+        for (const entity of clusterEntities) {
+          const taxonomyCheck = this.contractEnforcer.validateTagTaxonomy(entity);
+          if (!taxonomyCheck.valid) {
+            console.warn(`  ⚠️  Entity ${entity.name} has conflicting tags:`);
+            taxonomyCheck.conflicts.forEach(c => {
+              console.warn(`      "${c.tag1}" vs "${c.tag2}": ${c.reason}`);
+            });
+          }
+        }
+
+        // ENFORCEMENT 4: Contract affects validation
         // Validate that template effects match contract declarations
         const warnings = this.contractEnforcer.validateAffects(
           template,

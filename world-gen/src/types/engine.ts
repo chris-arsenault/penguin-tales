@@ -327,3 +327,58 @@ export interface Cluster {
   score: number;              // Similarity score
   matchedCriteria: string[];  // Which criteria contributed to clustering
 }
+
+// Tag Taxonomy System
+export interface TagMetadata {
+  tag: string;                          // The tag itself
+  category: 'status' | 'trait' | 'affiliation' | 'behavior' | 'theme' | 'location';
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
+  description: string;
+  usageCount: number;                   // How many times this tag appears in tag-analysis.json
+  templates: string[];                  // Which templates can apply this tag
+  entityKinds: string[];                // Which entity kinds can have this tag
+
+  // Governance rules
+  minUsage?: number;                    // Minimum occurrences before tag is considered healthy
+  maxUsage?: number;                    // Maximum occurrences (soft cap, for warnings)
+
+  // Relationships with other tags
+  relatedTags?: string[];               // Tags that commonly appear together
+  conflictingTags?: string[];           // Tags that shouldn't coexist on same entity
+  consolidateInto?: string;             // If set, this tag should be merged into another tag
+}
+
+export interface TagHealthReport {
+  // Coverage metrics
+  coverage: {
+    totalEntities: number;
+    entitiesWithTags: number;
+    entitiesWithOptimalTags: number;    // 3-5 tags
+    coveragePercentage: number;
+    optimalCoveragePercentage: number;
+  };
+
+  // Diversity metrics
+  diversity: {
+    uniqueTags: number;
+    shannonIndex: number;               // Entropy measure of tag distribution
+    evenness: number;                   // How evenly distributed tags are (0-1)
+  };
+
+  // Quality issues
+  issues: {
+    orphanTags: Array<{ tag: string; count: number }>;           // Used 1-2 times
+    overusedTags: Array<{ tag: string; count: number; max: number }>;
+    conflicts: Array<{ entityId: string; tags: string[]; conflict: string }>;
+    consolidationOpportunities: Array<{ from: string; to: string; count: number }>;
+  };
+
+  // Entity-level issues
+  entityIssues: {
+    undertagged: string[];              // Entities with < 3 tags
+    overtagged: string[];               // Entities with > 5 tags (shouldn't happen due to constraint)
+  };
+
+  // Recommendations
+  recommendations: string[];
+}

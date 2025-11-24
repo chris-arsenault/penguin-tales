@@ -2,6 +2,8 @@ import { Graph, GrowthTemplate, EngineConfig, ComponentContract } from '../types
 import { TemplateGraphView } from '../services/templateGraphView';
 import { HardState, Relationship } from '../types/worldTypes';
 import { findEntities, addRelationship } from '../utils/helpers';
+import { TagHealthAnalyzer } from '../services/tagHealthAnalyzer';
+import { getTagMetadata } from '../config/tagRegistry';
 
 /**
  * ContractEnforcer
@@ -11,9 +13,14 @@ import { findEntities, addRelationship } from '../utils/helpers';
  * 2. Automatically add lineage relationships
  * 3. Prevent saturation of entity kinds
  * 4. Validate template results match contract declarations
+ * 5. Enforce tag constraints (saturation, coverage, taxonomy)
  */
 export class ContractEnforcer {
-  constructor(private config: EngineConfig) {}
+  private tagAnalyzer: TagHealthAnalyzer;
+
+  constructor(private config: EngineConfig) {
+    this.tagAnalyzer = new TagHealthAnalyzer();
+  }
 
   /**
    * ENFORCEMENT 1: Contract-Based Template Filtering
@@ -278,6 +285,134 @@ export class ContractEnforcer {
   }
 
   /**
+   * ENFORCEMENT 5: Check Tag Saturation
+   *
+   * Before template runs, check if it would add overused tags.
+   * Uses tag registry to determine expected counts per tag.
+   */
+  public checkTagSaturation(
+    graph: Graph,
+    tagsToAdd: string[]
+  ): { saturated: boolean; oversaturatedTags: string[]; reason?: string } {
+    // Count current tag usage
+    const tagCounts = new Map<string, number>();
+    for (const entity of graph.entities.values()) {
+      for (const tag of entity.tags) {
+        // Handle dynamic location tags
+        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
+        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+      }
+    }
+
+    // Check which tags would exceed maxUsage
+    const oversaturatedTags: string[] = [];
+
+    for (const tag of tagsToAdd) {
+      const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
+      const def = getTagMetadata(normalizedTag);
+      if (!def || !def.maxUsage) continue;  // Unregistered tags can't be saturated
+
+      const currentCount = tagCounts.get(normalizedTag) || 0;
+      const newCount = currentCount + 1;
+
+      if (newCount > def.maxUsage) {
+        oversaturatedTags.push(tag);
+      }
+    }
+
+    if (oversaturatedTags.length > 0) {
+      return {
+        saturated: true,
+        oversaturatedTags,
+        reason: `Tags would be oversaturated: ${oversaturatedTags.join(', ')}`
+      };
+    }
+
+    return { saturated: false, oversaturatedTags: [] };
+  }
+
+  /**
+   * ENFORCEMENT 6: Check Tag Orphans
+   *
+   * Warn if template creates single-use tags not in registry.
+   * Legendary tags (single-use by design) are expected and don't trigger warnings.
+   */
+  public checkTagOrphans(tagsToAdd: string[]): { hasOrphans: boolean; orphanTags: string[] } {
+    const orphanTags: string[] = [];
+
+    for (const tag of tagsToAdd) {
+      const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
+      const def = getTagMetadata(normalizedTag);
+
+      if (!def) {
+        orphanTags.push(tag);
+      }
+    }
+
+    return {
+      hasOrphans: orphanTags.length > 0,
+      orphanTags
+    };
+  }
+
+  /**
+   * ENFORCEMENT 7: Enforce Tag Coverage
+   *
+   * After entity creation, ensure it has 3-5 tags.
+   * Returns suggested tags to add or remove.
+   */
+  public enforceTagCoverage(
+    entity: HardState,
+    graph: Graph
+  ): { needsAdjustment: boolean; suggestion: string; tagsToAdd?: string[]; tagsToRemove?: string[] } {
+    const currentCount = entity.tags.length;
+
+    // Check if coverage is acceptable (3-5 tags)
+    if (currentCount >= 3 && currentCount <= 5) {
+      return { needsAdjustment: false, suggestion: 'Tag coverage is adequate' };
+    }
+
+    // Too few tags - suggest additions
+    if (currentCount < 3) {
+      const needed = 3 - currentCount;
+      return {
+        needsAdjustment: true,
+        suggestion: `Entity ${entity.name} has only ${currentCount} tags, needs ${needed} more`,
+        tagsToAdd: []  // Template should handle this
+      };
+    }
+
+    // Too many tags - suggest removals
+    if (currentCount > 5) {
+      const excess = currentCount - 5;
+      return {
+        needsAdjustment: true,
+        suggestion: `Entity ${entity.name} has ${currentCount} tags, should remove ${excess}`,
+        tagsToRemove: entity.tags.slice(5)  // Remove excess tags
+      };
+    }
+
+    return { needsAdjustment: false, suggestion: 'Tag coverage is adequate' };
+  }
+
+  /**
+   * ENFORCEMENT 8: Validate Tag Taxonomy
+   *
+   * Check for conflicting tags on entities (e.g., peaceful + warlike).
+   * Returns conflicts if found.
+   */
+  public validateTagTaxonomy(
+    entity: HardState
+  ): { valid: boolean; conflicts: Array<{ tag1: string; tag2: string; reason: string }> } {
+    const conflicts = this.tagAnalyzer.validateTagTaxonomy(entity);
+
+    return {
+      valid: conflicts.length === 0,
+      conflicts
+    };
+  }
+
+  /**
    * Get diagnostic info for why a template cannot run
    */
   public getDiagnostic(
@@ -312,5 +447,12 @@ export class ContractEnforcer {
     parts.push(`Targets: ${targets.length}`);
 
     return parts.join(' | ');
+  }
+
+  /**
+   * Get tag health analyzer instance for external use
+   */
+  public getTagAnalyzer(): TagHealthAnalyzer {
+    return this.tagAnalyzer;
   }
 }
