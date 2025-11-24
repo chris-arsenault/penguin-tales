@@ -29,7 +29,8 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       ],
       relationships: [
         { kind: 'manifests_at', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } }
+        { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 2 } }  // May create adjacent_to relationships
       ]
     }
   },

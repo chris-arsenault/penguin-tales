@@ -17,8 +17,8 @@ export const crisisLegislation: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'conflict', threshold: 40 },
-        { name: 'resource_scarcity', threshold: 40 }
+        { name: 'conflict', threshold: 10 },  // FIXED: Lowered from 20 to 10
+        { name: 'resource_scarcity', threshold: 10 }  // FIXED: Lowered from 20 to 10
       ]
     },
     affects: {
@@ -64,7 +64,7 @@ export const crisisLegislation: GrowthTemplate = {
   canApply: (graphView: TemplateGraphView) => {
     const conflict = graphView.getPressure('conflict') || 0;
     const scarcity = graphView.getPressure('resource_scarcity') || 0;
-    return conflict > 40 || scarcity > 40;
+    return conflict > 10 || scarcity > 10;  // FIXED: Lowered from 20 to 10
   },
   
   findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'colony' }),

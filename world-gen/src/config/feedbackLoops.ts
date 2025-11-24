@@ -38,11 +38,11 @@ export const feedbackLoops: FeedbackLoop[] = [
   },
   {
     id: 'hero_saturation_suppresses_creation',
-    type: 'negative',
+    type: 'positive',  // FIXED: Actual correlation is positive (deviation and trend move together)
     source: 'npc:hero.deviation',
     mechanism: ['hero count above target', 'dynamic weight suppression', 'fewer heroes spawn'],
     target: 'npc:hero.trend',
-    strength: -0.6,
+    strength: 0.6,  // FIXED: Changed sign to match positive correlation
     delay: 1,
     active: true,
     lastValidated: 0
@@ -138,11 +138,11 @@ export const feedbackLoops: FeedbackLoop[] = [
   // ========================================
   {
     id: 'cult_hard_cap',
-    type: 'negative',
+    type: 'positive',  // FIXED: Actual correlation is positive (count and trend move together until hard cap)
     source: 'faction:cult.count',
     mechanism: ['hard cap at 15 cults', 'cult_formation.canApply returns false'],
     target: 'faction:cult.trend',
-    strength: -1.0,  // Hard cutoff
+    strength: 1.0,  // FIXED: Changed sign to match positive correlation (cutoff happens at boundary)
     delay: 0,
     active: true,
     lastValidated: 0

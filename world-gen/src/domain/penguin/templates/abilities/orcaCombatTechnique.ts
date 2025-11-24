@@ -25,7 +25,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
         { kind: 'abilities', operation: 'create', count: { min: 1, max: 1 } }
       ],
       relationships: [
-        { kind: 'practitioner_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'practitioner_of', operation: 'create', count: { min: 1, max: 3 } },  // FIXED: 1-3 orcas practice the technique (main orca + up to 2 others with 60% chance)
         { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
       ]
     }

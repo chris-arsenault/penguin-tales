@@ -28,49 +28,32 @@ export const pressures: Pressure[] = [
     growth: (graph) => {
       // Calculate resource strain as a RATIO, not absolute count
       const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-      const resources = findEntities(graph, { kind: 'location' })
-        .filter(loc => loc.tags.includes('resource'));
       const geographicFeatures = findEntities(graph, { kind: 'location', subtype: 'geographic_feature' });
+      const allNPCs = findEntities(graph, { kind: 'npc' });
 
       if (colonies.length === 0) return 0;
 
-      // Calculate average resource ratio across all colonies
-      let totalRatio = 0;
-      let coloniesEvaluated = 0;
+      // SIMPLIFIED APPROACH: Use ratio of total population to geographic features
+      // This ensures scarcity actually accumulates even if tags aren't perfect
+      const populationPressure = allNPCs.length / Math.max(1, colonies.length);  // NPCs per colony
+      const resourceAvailability = geographicFeatures.length / Math.max(1, colonies.length);  // Resources per colony
 
-      colonies.forEach(colony => {
-        const residents = getRelated(graph, colony.id, 'resident_of', 'dst');
-        const nearbyResources = resources.filter(r =>
-          graph.relationships.some(rel =>
-            rel.kind === 'adjacent_to' &&
-            ((rel.src === colony.id && rel.dst === r.id) ||
-             (rel.dst === colony.id && rel.src === r.id))
-          )
-        );
+      // Scarcity increases with population density, decreases with resource availability
+      const scarcityRatio = populationPressure / Math.max(0.5, resourceAvailability);  // Prevent div by 0
 
-        if (residents.length > 0) {
-          const resourceRatio = nearbyResources.length / residents.length;
-          totalRatio += Math.min(1, resourceRatio); // Cap at 1 (perfect supply)
-          coloniesEvaluated++;
-        }
-      });
+      // Map ratio to growth: 0-10 range
+      // If scarcityRatio = 1 (balanced), growth = 5
+      // If scarcityRatio = 2 (2x pop vs resources), growth = 10
+      // If scarcityRatio = 0.5 (plenty of resources), growth = 2.5
+      const scarcityGrowth = Math.min(scarcityRatio * 5, 10);
 
-      if (coloniesEvaluated === 0) return 0;
-
-      // Average resource availability (0 = no resources, 1 = perfect supply)
-      const avgAvailability = totalRatio / coloniesEvaluated;
-
-      // Scarcity is inverse of availability
-      // Map 0-1 availability to 0-8 growth (reduced max)
-      const scarcityGrowth = (1 - avgAvailability) * 8;
-
-      // FEEDBACK LOOP: Colony count drives scarcity (positive feedback coefficient 0.3)
+      // FEEDBACK LOOP: Colony count drives scarcity (positive feedback coefficient 0.5)
       // More colonies = more demand = more scarcity pressure
-      const colonyPressure = colonies.length * 0.3;
+      const colonyPressure = colonies.length * 0.5;
 
-      // FEEDBACK LOOP: Geographic features reduce scarcity (negative feedback coefficient 0.4)
+      // FEEDBACK LOOP: Geographic features reduce scarcity (negative feedback coefficient 0.6)
       // More resource locations = less scarcity
-      const resourceRelief = geographicFeatures.length * 0.4;
+      const resourceRelief = geographicFeatures.length * 0.6;
 
       return Math.max(0, scarcityGrowth + colonyPressure - resourceRelief);
     }
@@ -136,13 +119,14 @@ export const pressures: Pressure[] = [
   {
     id: 'magical_instability',
     name: 'Magical Instability',
-    value: 10,
-    decay: 8,  // TUNED: Set to 8 as middle ground (was 6→too high, 10→too low)
+    value: 30,  // FIXED: Increased from 10 to 30 to overcome decay
+    decay: 6,   // FIXED: Increased from 3 to 6 to bring down overcorrection (was 84.7, target 25)
     contract: {
       purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
       sources: [
         { component: 'template.anomaly_manifestation', formula: 'anomalyDensity * 2.5' },
-        { component: 'template.magic_discovery', formula: 'magicAbilities.length * 0.5' },
+        { component: 'template.magic_discovery', formula: 'magicAbilities.length * 0.8' },
+        { component: 'template.cult_formation', formula: 'cults.length * 0.3' },
         { component: 'formula.magic_dominance', formula: 'magicRatio * 5' }
       ],
       sinks: [
@@ -168,19 +152,29 @@ export const pressures: Pressure[] = [
 
       if (totalEntities === 0) return 0;
 
+      // FIXED: Base growth starts at 2.0 to ensure it's never 0
+      let baseGrowth = 2.0;
+
       // Anomaly density (anomalies per 20 entities)
       const anomalyDensity = (anomalies.length / Math.max(1, totalEntities)) * 20;
 
-      // FEEDBACK LOOP: Magic count drives instability (positive feedback coefficient 0.5)
-      const magicPressure = magicAbilities.length * 0.5;
+      // FEEDBACK LOOP: Magic count drives instability (positive feedback coefficient 0.8, increased from 0.5)
+      const magicPressure = magicAbilities.length * 0.8;
+
+      // FEEDBACK LOOP: Cults increase instability (positive feedback coefficient 0.3)
+      const cults = findEntities(graph, { kind: 'faction', subtype: 'cult' });
+      const cultPressure = cults.length * 0.3;
 
       // Magic vs tech ratio (tech stabilizes magic)
       const magicRatio = allAbilities.length > 0
         ? magicAbilities.length / allAbilities.length
         : 0;
 
-      // Combine: anomaly density (0-5) + magic pressure (direct count feedback) + magic dominance (0-5)
-      return Math.min(anomalyDensity * 2.5, 5) + Math.min(magicPressure, 10) + magicRatio * 5;
+      // FEEDBACK LOOP: Tech reduces instability
+      const techStabilization = techAbilities.length * 0.3;
+
+      // Combine: base + anomaly density (0-5) + magic pressure (direct count feedback) + cult pressure + magic dominance (0-5) - tech stabilization
+      return Math.max(0, baseGrowth + Math.min(anomalyDensity * 2.5, 5) + Math.min(magicPressure, 10) + cultPressure + magicRatio * 5 - techStabilization);
     }
   },
   

@@ -29,8 +29,7 @@ export const cultFormation: GrowthTemplate = {
     affects: {
       entities: [
         { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } },  // Prophet
-        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }   // May create new cultists if saturated
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }  // FIXED: Prophet + up to 1 new cultist (maxCreated=ceil(1/2)=1)
       ],
       relationships: [
         { kind: 'occupies', operation: 'create', count: { min: 1, max: 1 } },

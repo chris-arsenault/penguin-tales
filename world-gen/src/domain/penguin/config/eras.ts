@@ -10,15 +10,15 @@ export const penguinEras: Era[] = [
       'colony_founding': 2.0,
       'geographic_discovery': 1.5,
       'structure_building': 1.2,
-      'resource_location_discovery': 1.2,
-      'geographic_exploration': 1.5,
+      'resource_location_discovery': 2.5,  // FIXED: Increased from 1.2 to 2.5 (high exploration)
+      'geographic_exploration': 2.5,       // FIXED: Increased from 1.5 to 2.5 (high exploration)
       'krill_bloom_migration': 2.0,
 
       // NPC templates (REDUCED - NPCs as catalysts, not protagonists)
       // REMOVED: family_expansion (NPC bloat)
       // REMOVED: kinship_constellation (NPC bloat)
       // REMOVED: mysterious_vanishing (low value)
-      'hero_emergence': 0.3,         // Reduced from 1.0 to 0.3
+      'hero_emergence': 1.0,         // FIXED: Increased from 0.3 to 1.0 (was suppressed)
       'merchant_arrival': 0.5,       // Reduced from 1.5
       'orca_raider_arrival': 0,      // No orcas during expansion
 
@@ -28,7 +28,7 @@ export const penguinEras: Era[] = [
 
       // Rules templates
       'cultural_tradition': 2.0,  // Boost rules generation
-      'crisis_legislation': 0,   // no crises yet
+      'crisis_legislation': 1.0,   // FIXED: Increased from 0 to 1.0 (even expansion has minor crises)
       'great_festival': 0.5,     // NEW: Rare festivals in expansion
       'ideology_emergence': 0.5,  // NEW: Few ideological debates in unified expansion
 
@@ -70,7 +70,7 @@ export const penguinEras: Era[] = [
       // REMOVED: outlaw_recruitment (NPC bloat - created 39 outlaws!)
       // REMOVED: kinship_constellation (NPC bloat)
       // REMOVED: mysterious_vanishing (low value)
-      'hero_emergence': 0.5,         // Reduced from 2.0 - heroes emerge from conflict
+      'hero_emergence': 1.5,         // FIXED: Increased from 0.5 to 1.5 - heroes emerge from conflict
       'orca_raider_arrival': 0,      // No orcas during faction wars
 
       // Faction templates
@@ -172,7 +172,7 @@ export const penguinEras: Era[] = [
       // NPC templates (REDUCED)
       // REMOVED: kinship_constellation (NPC bloat)
       // REMOVED: mysterious_vanishing (low value)
-      'hero_emergence': 0.8,         // Reduced from 3.0 - crisis creates heroes
+      'hero_emergence': 2.0,         // FIXED: Increased from 0.8 to 2.0 - crisis creates heroes
       'war_leader': 0.5,             // Reduced from 2.0
       'orca_raider_arrival': 2.0,    // Reduced from 4.0 (half) - ORCA INVASION
 

@@ -21,7 +21,7 @@ export const magicDiscovery: GrowthTemplate = {
         { kind: 'npc', min: 1 }        // Need heroes to discover
       ],
       pressures: [
-        { name: 'magical_instability', threshold: 70 }  // Suppressed at high instability
+        { name: 'magical_instability', threshold: 10 }  // FIXED: Lowered from 15 to 10
       ]
     },
     affects: {
@@ -30,7 +30,7 @@ export const magicDiscovery: GrowthTemplate = {
       ],
       relationships: [
         { kind: 'discoverer_of', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'manifests_at', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'manifests_at', operation: 'create', count: { min: 0, max: 1 } },  // FIXED: 0-1 (anomaly may not exist at high instability)
         { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
       ]
     }
@@ -62,15 +62,24 @@ export const magicDiscovery: GrowthTemplate = {
   },
 
   canApply: (graphView: TemplateGraphView) => {
-    // Prerequisite: anomalies must exist
+    // Prerequisite: anomalies must exist (but loosen this - let magic be discovered elsewhere)
     const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
-    if (anomalies.length === 0) {
-      return false;
+    // FIXED: Allow discovery even without anomalies if instability is high enough
+
+    // Enabled at moderate magical instability (10+)
+    // FIXED: Lowered threshold from 15 to 10
+    const magicalInstability = graphView.getPressure('magical_instability') || 0;
+    if (magicalInstability < 10) {
+      return false; // Need at least 10 instability to discover magic
+    }
+
+    // FIXED: Removed anomaly requirement when instability is very high (desperate measures)
+    if (anomalies.length === 0 && magicalInstability < 30) {
+      return false; // Need anomalies for low-instability discovery
     }
 
     // BIDIRECTIONAL PRESSURE THRESHOLD: High magical instability suppresses magic discovery
     // (Too much magical energy makes new discoveries dangerous/unstable)
-    const magicalInstability = graphView.getPressure('magical_instability') || 0;
     if (magicalInstability > 70) {
       return Math.random() < 0.4; // Only 40% chance when instability is very high
     }
@@ -105,6 +114,14 @@ export const magicDiscovery: GrowthTemplate = {
     const hero = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'hero' }));
     const anomaly = pickRandom(graphView.findEntities({ kind: 'location', subtype: 'anomaly' }));
 
+    if (!hero) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot discover magic - no heroes exist'
+      };
+    }
+
     // Find existing magic to establish lineage
     const existingMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' })
       .filter(m => m.status !== 'lost');
@@ -129,9 +146,13 @@ export const magicDiscovery: GrowthTemplate = {
 
     const magicName = `${pickRandom(['Frost', 'Ice', 'Glow'])} ${pickRandom(['Ward', 'Sight', 'Bond'])}`;
     const relationships: Relationship[] = [
-      { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' },
-      { kind: 'manifests_at', src: 'will-be-assigned-0', dst: anomaly.id }
+      { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' }
     ];
+
+    // Only add manifests_at if anomaly exists
+    if (anomaly) {
+      relationships.push({ kind: 'manifests_at', src: 'will-be-assigned-0', dst: anomaly.id });
+    }
 
     // Add lineage relationship with higher distance (0.5-0.9) - magic is diverse
     if (relatedMagic) {
@@ -145,6 +166,8 @@ export const magicDiscovery: GrowthTemplate = {
     }
 
     const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
+    const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
+
     return {
       entities: [{
         kind: 'abilities',
@@ -156,7 +179,7 @@ export const magicDiscovery: GrowthTemplate = {
         tags: ['magic', 'mystical']
       }],
       relationships,
-      description: `${hero.name} discovers ${magicName} at ${anomaly.name}${lineageDesc}`
+      description: `${hero.name} discovers ${magicName}${locationDesc}${lineageDesc}`
     };
   }
 };

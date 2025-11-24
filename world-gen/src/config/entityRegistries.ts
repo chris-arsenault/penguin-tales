@@ -560,8 +560,7 @@ export const locationRegistry: EntityOperatorRegistry = {
     { templateId: 'colony_founding', primary: true, targetCount: 1 },
     { templateId: 'anomaly_manifestation', primary: true, targetCount: 1 },
     { templateId: 'resource_location_discovery', primary: true, targetCount: 1 },
-    { templateId: 'strategic_location_discovery', primary: true, targetCount: 1 },
-    { templateId: 'mystical_location_discovery', primary: true, targetCount: 1 },
+    { templateId: 'emergent_location_discovery', primary: true, targetCount: 1 },
     { templateId: 'geographic_exploration', primary: true, targetCount: 1 },
     { templateId: 'krill_bloom_migration', primary: true, targetCount: 1 }
   ],
@@ -682,7 +681,7 @@ export const anomalyRegistry: EntityOperatorRegistry = {
   },
 
   expectedDistribution: {
-    targetCount: 8,
+    targetCount: 15,
     prominenceDistribution: {
       'marginal': 0.4,
       'recognized': 0.3,

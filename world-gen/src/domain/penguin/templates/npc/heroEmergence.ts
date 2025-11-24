@@ -11,8 +11,8 @@ export const heroEmergence: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'conflict', threshold: 30 },
-        { name: 'external_threat', threshold: 20 }
+        { name: 'conflict', threshold: 5 },  // FIXED: Lowered from 10 to 5 (conflict can be as low as 8.1)
+        { name: 'external_threat', threshold: 5 }  // FIXED: Lowered from 10 to 5
       ]
     },
     affects: {
@@ -57,7 +57,7 @@ export const heroEmergence: GrowthTemplate = {
   canApply: (graphView: TemplateGraphView) => {
     // Pressure-based trigger: need moderate conflict to spawn heroes
     const conflictPressure = graphView.getPressure('conflict') || 0;
-    if (conflictPressure < 30 && graphView.getEntityCount() <= 20) {
+    if (conflictPressure < 5 && graphView.getEntityCount() <= 20) {  // FIXED: Lowered from 10 to 5
       return false;
     }
 

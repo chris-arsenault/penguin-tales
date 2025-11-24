@@ -72,8 +72,8 @@ export const krillBloomMigration: GrowthTemplate = {
     },
     affects: {
       entities: [
-        { kind: 'location', operation: 'create', count: { min: 2, max: 4 } },
-        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }
+        { kind: 'location', operation: 'create', count: { min: 0, max: 4 } },  // FIXED: 0-4 (may use existing geographic features)
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }  // Can create 0-2 merchants
       ],
       relationships: [
         { kind: 'adjacent_to', operation: 'create', count: { min: 4, max: 8 } },

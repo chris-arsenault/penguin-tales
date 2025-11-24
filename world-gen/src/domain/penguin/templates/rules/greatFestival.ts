@@ -27,7 +27,7 @@ export const greatFestival: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'conflict', threshold: 60 }
+        { name: 'conflict', threshold: 10 }  // FIXED: Lowered from 25 to 10
       ],
       entityCounts: [
         { kind: 'faction', min: 2 },
@@ -95,12 +95,8 @@ export const greatFestival: GrowthTemplate = {
     const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     // Requires at least 2 factions and 1 colony
-    // FIXED: Remove dead zone - allow festivals at any conflict level with scaled probability
-    const hasConflict = conflict > 60;  // Lowered from 80
-    const moderateConflict = conflict >= 15 && conflict <= 60 && Math.random() < stableActivationChance * 2;
-    const stableRandom = conflict < 15 && Math.random() < stableActivationChance;
-
-    return (hasConflict || moderateConflict || stableRandom) && factions.length >= 2 && colonies.length >= 1;
+    // FIXED: Simplified logic - just check pressure and entity counts
+    return factions.length >= 2 && colonies.length >= 1;
   },
 
   findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'colony' }),

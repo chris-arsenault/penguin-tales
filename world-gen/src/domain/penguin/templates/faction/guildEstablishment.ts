@@ -24,12 +24,12 @@ export const guildEstablishment: GrowthTemplate = {
     affects: {
       entities: [
         { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }  // May create new merchants if saturated
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }  // FIXED: May create up to 2 new merchants (maxCreated=2)
       ],
       relationships: [
         { kind: 'controls', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'member_of', operation: 'create', count: { min: 2, max: 3 } },
-        { kind: 'resident_of', operation: 'create', count: { min: 2, max: 3 } }
+        { kind: 'member_of', operation: 'create', count: { min: 0, max: 5 } },  // 0-5 merchants (can use existing)
+        { kind: 'resident_of', operation: 'create', count: { min: 0, max: 5 } }  // 0-5 resident_of relationships
       ],
       pressures: []
     }

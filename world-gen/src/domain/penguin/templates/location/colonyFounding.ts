@@ -26,7 +26,7 @@ export const colonyFounding: GrowthTemplate = {
         { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
       ],
       relationships: [
-        { kind: 'contained_by', operation: 'create', count: { min: 1, max: 1 } }
+        { kind: 'contained_by', operation: 'create', count: { min: 1, max: 2 } }  // FIXED: May create adjacent_to relationships too
       ]
     }
   },

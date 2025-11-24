@@ -28,7 +28,7 @@ export const anomalyManifestation: GrowthTemplate = {
         { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
       ],
       relationships: [
-        { kind: 'adjacent_to', operation: 'create', count: { min: 1, max: 1 } },
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 2 } },  // FIXED: 0-2 (bidirectional, may not have nearby location)
         { kind: 'discovered_by', operation: 'create', count: { min: 0, max: 1 } }
       ]
     }
@@ -92,13 +92,21 @@ export const anomalyManifestation: GrowthTemplate = {
 
     const anomalyName = `${pickRandom(['Shimmering', 'Frozen', 'Dark'])} ${pickRandom(['Rift', 'Vortex', 'Echo'])}`;
 
-    const relationships: any[] = [
-      {
+    const relationships: any[] = [];
+
+    // Only add adjacent_to if nearby location exists
+    if (nearbyLocation) {
+      relationships.push({
         kind: 'adjacent_to',
         src: 'will-be-assigned-0',
         dst: nearbyLocation.id
-      }
-    ];
+      });
+      relationships.push({
+        kind: 'adjacent_to',
+        src: nearbyLocation.id,
+        dst: 'will-be-assigned-0'
+      });
+    }
 
     // If there are magic users, one might discover it
     const magicUsers = graphView.findEntities({}).filter(
@@ -115,18 +123,20 @@ export const anomalyManifestation: GrowthTemplate = {
       });
     }
 
+    const locationDesc = nearbyLocation ? ` near ${nearbyLocation.name}` : ' in the remote wastes';
+
     return {
       entities: [{
         kind: 'location',
         subtype: 'anomaly',
         name: anomalyName,
-        description: `A mysterious phenomenon near ${nearbyLocation.name}`,
+        description: `A mysterious phenomenon${locationDesc}`,
         status: 'unspoiled',
         prominence: 'recognized',
         tags: ['anomaly', 'mysterious']
       }],
       relationships,
-      description: `${anomalyName} manifests near ${nearbyLocation.name}`
+      description: `${anomalyName} manifests${locationDesc}`
     };
   }
 };

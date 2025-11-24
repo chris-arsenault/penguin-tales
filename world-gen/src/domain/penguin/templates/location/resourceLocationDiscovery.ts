@@ -39,7 +39,7 @@ export const resourceLocationDiscovery: GrowthTemplate = {
       relationships: [
         { kind: 'explorer_of', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 2 } }
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 4 } }  // FIXED: Bidirectional (0-2 pairs = 0-4 relationships)
       ],
       pressures: [
         { name: 'resource_scarcity', delta: -5 }  // Discovery reduces scarcity

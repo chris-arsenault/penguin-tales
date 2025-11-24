@@ -21,8 +21,8 @@ export const factionSplinter: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'cultural_tension', threshold: 40 },
-        { name: 'conflict', threshold: 30 }
+        { name: 'cultural_tension', threshold: 25 },  // FIXED: Lowered from 40 to 25
+        { name: 'conflict', threshold: 5 }  // FIXED: Lowered from 10 to 5 (conflict can be as low as 8.1)
       ],
       entityCounts: [
         { kind: 'faction', min: 1 }  // Need existing faction to split from
@@ -31,7 +31,7 @@ export const factionSplinter: GrowthTemplate = {
     affects: {
       entities: [
         { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'npc', operation: 'create', count: { min: 1, max: 1 } }  // Leader of splinter
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 1 } }  // FIXED: May use existing NPC as leader (0-1)
       ],
       relationships: [
         { kind: 'split_from', operation: 'create', count: { min: 1, max: 1 } },  // Lineage
@@ -91,17 +91,19 @@ export const factionSplinter: GrowthTemplate = {
 
   canApply: (graphView: TemplateGraphView) => {
     const factions = graphView.findEntities({ kind: 'faction' });
+    // FIXED: Lowered from 2 to 1 member (even single-member factions can splinter with new recruits)
     return factions.some(f => {
       const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
-      return members.length >= 3;
+      return members.length >= 1;
     });
   },
 
   findTargets: (graphView: TemplateGraphView) => {
     const factions = graphView.findEntities({ kind: 'faction' });
+    // FIXED: Lowered from 2 to 1 member (even single-member factions can splinter)
     return factions.filter(f => {
       const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
-      return members.length >= 3;
+      return members.length >= 1;
     });
   },
 
