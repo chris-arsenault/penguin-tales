@@ -3,6 +3,7 @@ import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
 import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
+import { buildRelationships } from '../../../../utils/relationshipBuilder';
 
 /**
  * Guild Establishment Template
@@ -146,39 +147,28 @@ export const guildEstablishment: GrowthTemplate = {
     merchantsToRecruit = result.existing;
     newMerchants = result.created;
 
-    const relationships: Relationship[] = [
-      { kind: 'controls', src: 'will-be-assigned-0', dst: colony.id }
-    ];
+    // Build relationships using fluent API
+    const relationshipBuilder = buildRelationships();
+
+    // Guild controls colony
+    relationshipBuilder.add('controls', 'will-be-assigned-0', colony.id);
 
     // Add relationships for existing merchants
-    merchantsToRecruit.forEach(merchant => {
-      relationships.push({
-        kind: 'member_of',
-        src: merchant.id,
-        dst: 'will-be-assigned-0'
-      });
-      relationships.push({
-        kind: 'resident_of',
-        src: merchant.id,
-        dst: colony.id
-      });
-    });
+    const existingMerchantIds = merchantsToRecruit.map(m => m.id);
+    relationshipBuilder
+      .addManyTo('member_of', existingMerchantIds, 'will-be-assigned-0')
+      .addManyTo('resident_of', existingMerchantIds, colony.id);
 
     // Add relationships for newly created merchants
     // Base index: 0=guild, 1+ =new merchants
     newMerchants.forEach((newMerchant, index) => {
       const merchantPlaceholderId = `will-be-assigned-${1 + index}`;
-      relationships.push({
-        kind: 'member_of',
-        src: merchantPlaceholderId,
-        dst: 'will-be-assigned-0'
-      });
-      relationships.push({
-        kind: 'resident_of',
-        src: merchantPlaceholderId,
-        dst: colony.id
-      });
+      relationshipBuilder
+        .add('member_of', merchantPlaceholderId, 'will-be-assigned-0')
+        .add('resident_of', merchantPlaceholderId, colony.id);
     });
+
+    const relationships = relationshipBuilder.build();
 
     const totalMerchants = merchantsToRecruit.length + newMerchants.length;
     const creationNote = newMerchants.length > 0
