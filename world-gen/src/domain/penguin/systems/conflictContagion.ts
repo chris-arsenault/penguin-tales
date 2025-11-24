@@ -8,6 +8,7 @@ import {
   recordRelationshipFormation,
   areRelationshipsCompatible
 } from '../../../utils/helpers';
+import { extractParams } from '../../../utils/parameterExtractor';
 
 /**
  * Conflict Contagion System
@@ -77,10 +78,15 @@ export const conflictContagion: SimulationSystem = {
   },
 
   apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
-    const params = conflictContagion.metadata?.parameters || {};
-    const throttleChance = params.throttleChance?.value ?? 0.2;
-    const spreadChance = params.spreadChance?.value ?? 0.15;
-    const COOLDOWN = params.cooldown?.value ?? 8;
+    // Extract parameters using utility (cleaner than manual extraction)
+    const { throttleChance, spreadChance, cooldown: COOLDOWN } = extractParams(
+      conflictContagion.metadata,
+      {
+        throttleChance: 0.2,
+        spreadChance: 0.15,
+        cooldown: 8
+      }
+    );
 
     // Throttle: Only run throttleChance% of ticks to reduce conflict spam
     if (!rollProbability(throttleChance, modifier)) {
