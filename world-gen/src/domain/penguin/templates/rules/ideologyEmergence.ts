@@ -108,7 +108,7 @@ export const ideologyEmergence: GrowthTemplate = {
     const charismatic = npcs.filter(npc =>
       npc.subtype === 'hero' ||
       npc.tags.includes('charismatic') ||
-      npc.tags.includes('mystic')
+      npc.tags.includes('mystical')
     );
 
     return charismatic.length > 0 ? charismatic : npcs;
@@ -276,7 +276,7 @@ export const ideologyEmergence: GrowthTemplate = {
         description: `A ${ideologyTheme} ideology championed by ${champion.name}. This belief is spreading through whispered conversations and passionate debates${lineageDesc}.`,
         status: 'proposed', // Key: starts as proposed, will become enacted if adopted widely
         prominence: 'marginal', // Will grow with adoption
-        tags: [ideologyTheme, 'ideology', `name:${slugifyName(champion.name)}`].slice(0, 10)
+        tags: [ideologyTheme, 'ideology', 'cultural']
       }],
       relationships,
       description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`

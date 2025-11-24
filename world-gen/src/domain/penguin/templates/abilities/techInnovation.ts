@@ -130,7 +130,7 @@ export const techInnovation: GrowthTemplate = {
         description: `Innovation developed by ${faction.name}`,
         status: 'discovered',
         prominence: 'marginal',
-        tags: ['tech', 'innovation']
+        tags: ['technology', 'innovation']
       }],
       relationships,
       description: `${faction.name} develops new technology`

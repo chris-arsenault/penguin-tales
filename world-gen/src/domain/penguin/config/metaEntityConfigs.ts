@@ -105,6 +105,8 @@ export const magicSchoolFormation: MetaEntityConfig = {
  *
  * Clusters rules into unified legal codes to create coherent legal systems.
  * Example: 15 scattered laws → 2-3 unified codes
+ *
+ * Also creates a faction:political to govern the legal code when formed.
  */
 export const legalCodeFormation: MetaEntityConfig = {
   sourceKind: 'rules',
@@ -124,7 +126,8 @@ export const legalCodeFormation: MetaEntityConfig = {
     markOriginalsHistorical: true,   // Individual laws become historical when unified into code
     transferRelationships: true,      // Transfer enacted_by, etc. to legal code
     redirectFutureRelationships: true, // Future enforcement targets the code
-    preserveOriginalLinks: true       // Keep part_of links for lore
+    preserveOriginalLinks: true,      // Keep part_of links for lore
+    createGovernanceFaction: true     // NEW: Create faction:political to govern the code
   },
 
   factory: (cluster: HardState[], graph: Graph): Partial<HardState> => {

@@ -54,6 +54,9 @@ export interface Graph {
     averageGrowthRate: number;       // Average relationships added per tick
   };
 
+  // Subtype metrics tracking (for feedback loop validation)
+  subtypeMetrics?: Map<string, number>;  // 'kind:subtype' → count
+
   // Protected relationship violation tracking (for genetic algorithm fitness)
   protectedRelationshipViolations?: Array<{
     tick: number;
@@ -316,6 +319,7 @@ export interface MetaEntityConfig {
     transferRelationships: boolean;          // Transfer relationships to meta-entity
     redirectFutureRelationships: boolean;    // Future relationships go to meta-entity
     preserveOriginalLinks: boolean;          // Keep part_of links to originals
+    createGovernanceFaction?: boolean;       // Create faction:political to govern (for legal codes)
   };
 
   // Factory function to create meta-entity from cluster

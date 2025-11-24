@@ -74,10 +74,10 @@ export const occurrenceCreation: SimulationSystem = {
     },
     parameters: {
       warThreshold: {
-        value: 2,
+        value: 1,
         min: 1,
         max: 5,
-        description: 'Minimum at_war_with relationships to trigger war occurrence'
+        description: 'Minimum at_war_with relationships to trigger war occurrence (lowered from 2 to 1 to make wars more frequent)'
       },
       disasterThreshold: {
         value: 2,
@@ -241,8 +241,9 @@ function checkForWar(
 
   // Check if war occurrence already exists for this cluster
   // Use faction tags to detect recent war participation (more reliable than relationships)
+  // Reduced cooldown from 50 to 20 ticks to allow wars to happen more frequently
   const factionsInRecentWar = largestCluster.factions.some(f =>
-    f.tags?.some(tag => tag.startsWith('war:') && parseInt(tag.split(':')[1]) > graph.tick - 50)
+    f.tags?.some(tag => tag.startsWith('war:') && parseInt(tag.split(':')[1]) > graph.tick - 20)
   );
 
   if (factionsInRecentWar) return null; // Factions recently involved in war

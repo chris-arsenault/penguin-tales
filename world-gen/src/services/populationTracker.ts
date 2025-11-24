@@ -8,6 +8,7 @@
 import { Graph } from '../types/engine';
 import { HardState } from '../types/worldTypes';
 import { DistributionTargets } from '../types/distribution';
+import { DomainSchema } from '../types/domainSchema';
 
 export interface EntityMetric {
   kind: string;
@@ -48,15 +49,41 @@ export class PopulationTracker {
   private metrics: PopulationMetrics;
   private distributionTargets: DistributionTargets;
   private historyWindow: number = 10; // Ticks to keep in history
+  private domainSchema: DomainSchema;
 
-  constructor(distributionTargets: DistributionTargets) {
+  constructor(distributionTargets: DistributionTargets, domainSchema: DomainSchema) {
     this.distributionTargets = distributionTargets;
+    this.domainSchema = domainSchema;
     this.metrics = {
       tick: 0,
       entities: new Map(),
       relationships: new Map(),
       pressures: new Map()
     };
+
+    // Initialize all known subtypes with zero counts
+    this.initializeSubtypeMetrics();
+  }
+
+  /**
+   * Initialize metrics for all known subtypes from domain schema
+   * This ensures feedback loops can find metrics even for zero-count subtypes
+   */
+  private initializeSubtypeMetrics(): void {
+    this.domainSchema.entityKinds.forEach(kindDef => {
+      kindDef.subtypes.forEach(subtype => {
+        const key = `${kindDef.kind}:${subtype}`;
+        this.metrics.entities.set(key, {
+          kind: kindDef.kind,
+          subtype,
+          count: 0,
+          target: this.getEntityTarget(kindDef.kind, subtype),
+          deviation: -1, // All start below target
+          trend: 0,
+          history: []
+        });
+      });
+    });
   }
 
   /**
@@ -70,18 +97,27 @@ export class PopulationTracker {
   }
 
   private updateEntityMetrics(graph: Graph): void {
-    // Group entities by kind:subtype
+    // Use graph.subtypeMetrics if available (populated by statisticsCollector)
+    // Otherwise count from graph.entities
     const entityCounts = new Map<string, number>();
 
-    Array.from(graph.entities.values()).forEach(entity => {
-      const key = `${entity.kind}:${entity.subtype}`;
-      entityCounts.set(key, (entityCounts.get(key) || 0) + 1);
-    });
+    if (graph.subtypeMetrics && graph.subtypeMetrics.size > 0) {
+      // Use pre-computed subtype metrics
+      graph.subtypeMetrics.forEach((count, key) => {
+        entityCounts.set(key, count);
+      });
+    } else {
+      // Fallback: count entities manually
+      Array.from(graph.entities.values()).forEach(entity => {
+        const key = `${entity.kind}:${entity.subtype}`;
+        entityCounts.set(key, (entityCounts.get(key) || 0) + 1);
+      });
+    }
 
-    // Update metrics for each entity type
-    entityCounts.forEach((count, key) => {
+    // Update ALL metrics (including zero-count subtypes from initialization)
+    this.metrics.entities.forEach((existing, key) => {
       const [kind, subtype] = key.split(':');
-      const existing = this.metrics.entities.get(key);
+      const count = entityCounts.get(key) || 0;
 
       // Get target from distribution targets
       const target = this.getEntityTarget(kind, subtype);
@@ -90,12 +126,13 @@ export class PopulationTracker {
       const deviation = target > 0 ? (count - target) / target : 0;
 
       // Update history and calculate trend
-      const history = existing?.history || [];
+      const history = [...existing.history];
       history.push(count);
       if (history.length > this.historyWindow) history.shift();
 
       const trend = this.calculateTrend(history);
 
+      // Update existing entry
       this.metrics.entities.set(key, {
         kind,
         subtype,
@@ -103,35 +140,28 @@ export class PopulationTracker {
         target,
         deviation,
         trend,
-        history: [...history]
+        history
       });
     });
 
-    // Add zero counts for entity types in targets but not in graph
-    const targetsWithEntities = this.distributionTargets as any;
-    if (targetsWithEntities.entities) {
-      Object.entries(targetsWithEntities.entities).forEach(([kind, subtypes]) => {
-        Object.entries(subtypes as any).forEach(([subtype, config]: [string, any]) => {
-          const key = `${kind}:${subtype}`;
-          if (!entityCounts.has(key) && config.target > 0) {
-            const existing = this.metrics.entities.get(key);
-            const history = existing?.history || [];
-            history.push(0);
-            if (history.length > this.historyWindow) history.shift();
+    // Add any NEW subtypes discovered at runtime (not in schema)
+    entityCounts.forEach((count, key) => {
+      if (!this.metrics.entities.has(key)) {
+        const [kind, subtype] = key.split(':');
+        const target = this.getEntityTarget(kind, subtype);
+        const deviation = target > 0 ? (count - target) / target : 0;
 
-            this.metrics.entities.set(key, {
-              kind,
-              subtype,
-              count: 0,
-              target: config.target,
-              deviation: -1,
-              trend: this.calculateTrend(history),
-              history: [...history]
-            });
-          }
+        this.metrics.entities.set(key, {
+          kind,
+          subtype,
+          count,
+          target,
+          deviation,
+          trend: 0,
+          history: [count]
         });
-      });
-    }
+      }
+    });
   }
 
   private updateRelationshipMetrics(graph: Graph): void {

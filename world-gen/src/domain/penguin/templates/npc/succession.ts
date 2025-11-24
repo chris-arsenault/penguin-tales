@@ -102,7 +102,7 @@ export const succession: GrowthTemplate = {
       description: `Successor to ${oldLeader.name} in ${colony.name}`,
       status: 'alive',
       prominence: 'marginal', // New leaders start marginal, must earn respect
-      tags: ['successor', `name:${slugifyName(colony.name)}`]
+      tags: ['successor']
     };
 
     const relationships: Relationship[] = [

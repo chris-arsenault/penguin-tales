@@ -50,6 +50,15 @@ export class StatisticsCollector {
       entitiesBySubtype[subtypeKey] = (entitiesBySubtype[subtypeKey] || 0) + 1;
     }
 
+    // Store subtype counts for feedback loop tracking
+    // This ensures metrics like "npc:orca.count" are available
+    if (!graph.subtypeMetrics) {
+      graph.subtypeMetrics = new Map();
+    }
+    Object.entries(entitiesBySubtype).forEach(([key, count]) => {
+      graph.subtypeMetrics!.set(key, count);
+    });
+
     // Count relationships by type
     const relationshipsByType: Record<string, number> = {};
     for (const rel of graph.relationships) {

@@ -214,7 +214,7 @@ export const mysteriousVanishing: GrowthTemplate = {
         description: `A strange glow lingers where ${victim.name} was last seen. The ice here seems different, colder, almost aware.`,
         status: 'thriving',
         prominence: 'recognized',
-        tags: ['mystery', 'vanishing', `name:${slugifyName(victim.name)}`].slice(0, 10)
+        tags: ['mystery', 'vanishing', 'anomaly']
       });
 
       anomalyId = 'will-be-assigned-0';

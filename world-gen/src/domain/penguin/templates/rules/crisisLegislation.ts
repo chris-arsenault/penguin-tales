@@ -141,7 +141,7 @@ export const crisisLegislation: GrowthTemplate = {
         description: `Emergency measure enacted in ${colony.name}${lineageDesc}`,
         status: 'enacted',
         prominence: 'recognized',
-        tags: ['crisis', `name:${slugifyName(colony.name)}`]
+        tags: ['crisis', 'emergency']
       }],
       relationships,
       description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`

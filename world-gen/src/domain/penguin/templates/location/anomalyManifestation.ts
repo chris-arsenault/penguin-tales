@@ -133,7 +133,7 @@ export const anomalyManifestation: GrowthTemplate = {
         description: `A mysterious phenomenon${locationDesc}`,
         status: 'unspoiled',
         prominence: 'recognized',
-        tags: ['anomaly', 'mysterious']
+        tags: ['anomaly', 'mystical']
       }],
       relationships,
       description: `${anomalyName} manifests${locationDesc}`

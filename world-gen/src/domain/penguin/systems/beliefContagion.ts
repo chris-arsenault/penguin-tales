@@ -33,42 +33,41 @@ import {
  * - Transitions rule status: proposed → enacted (when adoption threshold met)
  */
 
-// Infection state tracking (stored in NPC tags)
-function getBeliefsAdopted(npc: HardState): Set<string> {
-  const beliefs = new Set<string>();
-  npc.tags.forEach(tag => {
-    if (tag.startsWith('belief:')) {
-      beliefs.add(tag.split(':')[1]);
-    }
+// Infection state tracking (stored in relationships only - no tags)
+// Check if NPC has believer_of relationship to rule
+function hasAdoptedBelief(graph: Graph, npcId: string, ruleId: string): boolean {
+  return graph.relationships.some(r =>
+    r.kind === 'believer_of' && r.src === npcId && r.dst === ruleId
+  );
+}
+
+function adoptBelief(relationships: Relationship[], npcId: string, ruleId: string): void {
+  // Add believer_of relationship (will be added to graph by system)
+  relationships.push({
+    kind: 'believer_of',
+    src: npcId,
+    dst: ruleId
   });
-  return beliefs;
 }
 
-function hasAdoptedBelief(npc: HardState, ruleId: string): boolean {
-  return npc.tags.some(tag => tag === `belief:${ruleId}`);
-}
-
-function adoptBelief(npc: HardState, ruleId: string): void {
-  if (!hasAdoptedBelief(npc, ruleId)) {
-    npc.tags.push(`belief:${ruleId}`);
-    // Ensure tags stay <= 10
-    if (npc.tags.length > 10) {
-      npc.tags = npc.tags.slice(-10);
-    }
+function rejectBelief(relationships: Relationship[], modifications: Array<{ id: string; changes: Partial<HardState> }>, npcId: string, ruleId: string): void {
+  // Remove believer_of relationship if it exists (archive it)
+  // Mark for removal by adding to a removal list that the engine will process
+  const existingRelIndex = relationships.findIndex(r =>
+    r.kind === 'believer_of' && r.src === npcId && r.dst === ruleId
+  );
+  if (existingRelIndex >= 0) {
+    relationships.splice(existingRelIndex, 1);
   }
 }
 
-function rejectBelief(npc: HardState, ruleId: string): void {
-  // Add immunity tag
-  if (!npc.tags.some(tag => tag === `immune:${ruleId}`)) {
-    npc.tags.push(`immune:${ruleId}`);
-    if (npc.tags.length > 10) {
-      npc.tags = npc.tags.slice(-10);
-    }
-  }
-}
+function isImmune(graph: Graph, npcId: string, ruleId: string): boolean {
+  // Check if NPC previously rejected this ideology
+  // Use archived relationships to track immunity
+  const npc = graph.entities.get(npcId);
+  if (!npc) return false;
 
-function isImmune(npc: HardState, ruleId: string): boolean {
+  // Check for immune:* tag (legacy immunity tracking)
   return npc.tags.some(tag => tag === `immune:${ruleId}`);
 }
 
@@ -86,9 +85,11 @@ export const beliefContagion: SimulationSystem = {
     },
     affects: {
       tags: [
-        { operation: 'add', pattern: 'belief:*' },
-        { operation: 'add', pattern: 'immune:*' },
-        { operation: 'remove', pattern: 'belief:*' }
+        { operation: 'add', pattern: 'immune:*' }
+      ],
+      relationships: [
+        { kind: 'believer_of', operation: 'create', count: { min: 0, max: 999 } },
+        { kind: 'believer_of', operation: 'delete', count: { min: 0, max: 999 } }
       ],
       entities: [
         { kind: 'rules', operation: 'modify' }
@@ -186,23 +187,12 @@ export const beliefContagion: SimulationSystem = {
 
       // Categorize NPCs by infection state
       npcs.forEach(npc => {
-        // Check both tags AND believer_of relationships for initial carriers
-        const hasBeliefTag = hasAdoptedBelief(npc, rule.id);
-        const hasBelieverRelationship = graph.relationships.some(r =>
-          r.kind === 'believer_of' && r.src === npc.id && r.dst === rule.id
-        );
+        // Check believer_of relationships only (no tags)
+        const hasBelieverRelationship = hasAdoptedBelief(graph, npc.id, rule.id);
 
-        if (hasBeliefTag || hasBelieverRelationship) {
-          // Add belief tag if they have relationship but not tag yet
-          if (hasBelieverRelationship && !hasBeliefTag) {
-            adoptBelief(npc, rule.id);
-            modifications.push({
-              id: npc.id,
-              changes: { tags: npc.tags }
-            });
-          }
+        if (hasBelieverRelationship) {
           carriers.push(npc);
-        } else if (isImmune(npc, rule.id)) {
+        } else if (isImmune(graph, npc.id, rule.id)) {
           recovered.push(npc);
         } else {
           susceptible.push(npc);
@@ -220,7 +210,7 @@ export const beliefContagion: SimulationSystem = {
           .flatMap(faction => getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.3 }));
 
         const contacts = [...followers, ...followees, ...factionMembers];
-        const infectedContacts = contacts.filter(contact => hasAdoptedBelief(contact, rule.id));
+        const infectedContacts = contacts.filter(contact => hasAdoptedBelief(graph, contact.id, rule.id));
 
         if (infectedContacts.length === 0) return; // No exposure
 
@@ -238,11 +228,7 @@ export const beliefContagion: SimulationSystem = {
         const infectionProb = Math.min(0.95, baseProb * modifier);
 
         if (rollProbability(infectionProb, modifier)) {
-          adoptBelief(npc, rule.id);
-          modifications.push({
-            id: npc.id,
-            changes: { tags: npc.tags }
-          });
+          adoptBelief(relationships, npc.id, rule.id);
         }
       });
 
@@ -259,19 +245,26 @@ export const beliefContagion: SimulationSystem = {
         const recoveryProb = Math.min(0.95, baseProb * modifier);
 
         if (rollProbability(recoveryProb, modifier)) {
-          // Remove belief and add immunity
-          npc.tags = npc.tags.filter(tag => tag !== `belief:${rule.id}`);
-          rejectBelief(npc, rule.id);
-          modifications.push({
-            id: npc.id,
-            changes: { tags: npc.tags }
-          });
+          // Remove believer_of relationship and add immunity tag
+          rejectBelief(relationships, modifications, npc.id, rule.id);
+
+          // Add immune tag to track rejection
+          if (!npc.tags.some(tag => tag === `immune:${rule.id}`)) {
+            npc.tags.push(`immune:${rule.id}`);
+            if (npc.tags.length > 10) {
+              npc.tags = npc.tags.slice(-10);
+            }
+            modifications.push({
+              id: npc.id,
+              changes: { tags: npc.tags }
+            });
+          }
         }
       });
 
       // === ENACTMENT CHECK ===
       // If enough NPCs have adopted the belief, transition proposed → enacted
-      const currentCarriers = npcs.filter(npc => hasAdoptedBelief(npc, rule.id));
+      const currentCarriers = npcs.filter(npc => hasAdoptedBelief(graph, npc.id, rule.id));
       const adoptionRate = currentCarriers.length / npcs.length;
 
       if (adoptionRate >= ENACTMENT_THRESHOLD && rule.status === 'proposed') {

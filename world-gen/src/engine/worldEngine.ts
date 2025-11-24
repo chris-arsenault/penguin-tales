@@ -410,7 +410,10 @@ export class WorldEngine {
     }
 
     // Initialize homeostatic control system
-    this.populationTracker = new PopulationTracker(config.distributionTargets || {} as any);
+    this.populationTracker = new PopulationTracker(
+      config.distributionTargets || {} as any,
+      config.domain
+    );
     this.dynamicWeightCalculator = new DynamicWeightCalculator();
     this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops, config);  // Pass config for contract analysis
     console.log('✓ Homeostatic feedback control enabled');

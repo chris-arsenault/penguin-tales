@@ -198,7 +198,7 @@ export const greatFestival: GrowthTemplate = {
         description: `A great festival celebrating ${festivalType === 'harvest' ? 'abundance and prosperity' : festivalType === 'memorial' ? 'shared history and fallen heroes' : festivalType === 'treaty' ? 'peace and unity between factions' : 'the aurora and celestial wonders'}, held in ${colony.name}`,
         status: 'enacted',
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
-        tags: ['festival', festivalType, `name:${slugifyName(colony.name)}`].slice(0, 10)
+        tags: ['festival', festivalType, 'cultural']
       }],
       relationships,
       description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`

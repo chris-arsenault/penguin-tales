@@ -151,7 +151,7 @@ export const cultFormation: GrowthTemplate = {
       description: `The enigmatic prophet of ${cult.name}`,
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
-      tags: ['prophet', 'mystic']
+      tags: ['prophet', 'mystical']
     };
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)

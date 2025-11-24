@@ -124,6 +124,11 @@ export class MetaEntityFormation {
       });
     }
 
+    // Create governance faction if this is a legal code formation
+    if (config.transformation.createGovernanceFaction && metaEntity.kind === 'rules') {
+      this.createGovernanceFaction(graph, metaEntity, cluster);
+    }
+
     // Mark originals as historical AFTER transferring (so we can find active relationships)
     if (config.transformation.markOriginalsHistorical) {
       cluster.forEach(entity => {
@@ -144,6 +149,83 @@ export class MetaEntityFormation {
     }
 
     return metaEntity;
+  }
+
+  /**
+   * Create a political faction to govern a legal code
+   */
+  private createGovernanceFaction(graph: Graph, legalCode: HardState, originalRules: HardState[]): void {
+    // Check if a governance faction already exists for this location
+    const codeLocations = graph.relationships
+      .filter(r => r.kind === 'applies_in' && r.src === legalCode.id)
+      .map(r => graph.entities.get(r.dst))
+      .filter(Boolean) as HardState[];
+
+    // If no location, don't create faction
+    if (codeLocations.length === 0) return;
+
+    const primaryLocation = codeLocations[0];
+
+    // Check if a political faction already governs this location
+    const existingGoverningFaction = Array.from(graph.entities.values()).find(e =>
+      e.kind === 'faction' &&
+      e.subtype === 'political' &&
+      graph.relationships.some(r =>
+        r.kind === 'controls' &&
+        r.src === e.id &&
+        r.dst === primaryLocation.id
+      )
+    );
+
+    // Don't create duplicate governance factions
+    if (existingGoverningFaction) {
+      // Just link the existing faction to the legal code
+      addRelationship(graph, 'weaponized_by', existingGoverningFaction.id, legalCode.id);
+      return;
+    }
+
+    // Generate faction name based on legal code
+    const factionName = legalCode.name.includes('Code')
+      ? legalCode.name.replace('Code', 'Council')
+      : `Council of ${primaryLocation.name}`;
+
+    // Create political faction
+    const factionId = generateId('faction');
+    const faction: HardState = {
+      id: factionId,
+      kind: 'faction',
+      subtype: 'political',
+      name: factionName,
+      description: `A legislative body formed to administer ${legalCode.name}. Emerged from the consolidation of ${originalRules.length} laws.`,
+      status: 'active',
+      prominence: legalCode.prominence, // Match prominence of the legal code
+      tags: ['governance', 'legislative', 'political'],
+      links: [],
+      createdAt: graph.tick,
+      updatedAt: graph.tick
+    };
+
+    graph.entities.set(factionId, faction);
+
+    // Link faction to legal code
+    addRelationship(graph, 'weaponized_by', factionId, legalCode.id);
+
+    // Link faction to location
+    addRelationship(graph, 'controls', factionId, primaryLocation.id);
+
+    // Record in history
+    graph.history.push({
+      tick: graph.tick,
+      era: graph.currentEra.id,
+      type: 'special',
+      description: `${factionName} formed to govern ${legalCode.name}`,
+      entitiesCreated: [factionId],
+      relationshipsCreated: [
+        { kind: 'weaponized_by', src: factionId, dst: legalCode.id },
+        { kind: 'controls', src: factionId, dst: primaryLocation.id }
+      ],
+      entitiesModified: []
+    });
   }
 
   /**

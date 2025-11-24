@@ -7,7 +7,7 @@
       "description": "A towering, many-tiered iceberg whose shelves host rival super-penguin colonies.",
       "status": "unspoiled",
       "prominence": "recognized",
-      "tags": ["iceberg", "aurora", "penguin"],
+      "tags": ["icy", "landmark", "multilevel"],
       "links": [
         { "kind": "contains", "src": "Aurora Berg", "dst": "Aurora Stack", "strength": 0.2 },
         { "kind": "contains", "src": "Aurora Berg", "dst": "Nightfall Shelf", "strength": 0.2 },
@@ -24,7 +24,7 @@
       "description": "A vertical colony carved into the sunlit face of Aurora Berg, known for orderly terraces and bright trade banners.",
       "status": "thriving",
       "prominence": "recognized",
-      "tags": ["colony", "trade", "order"],
+      "tags": ["colony", "trade", "organized"],
       "links": [
         { "kind": "contained_by", "src": "Aurora Stack", "dst": "Aurora Berg", "strength": 0.2 },
         { "kind": "adjacent_to", "src": "Aurora Stack", "dst": "Nightfall Shelf", "strength": 0.2 },
@@ -40,7 +40,7 @@
       "description": "A shadowed ledge on the far side of Aurora Berg, lit by bioluminescent ice glyphs and whispered deals.",
       "status": "thriving",
       "prominence": "recognized",
-      "tags": ["colony", "criminal", "shadow"],
+      "tags": ["colony", "criminal", "secretive"],
       "links": [
         { "kind": "contained_by", "src": "Nightfall Shelf", "dst": "Aurora Berg", "strength": 0.2 },
         { "kind": "adjacent_to", "src": "Nightfall Shelf", "dst": "Aurora Stack", "strength": 0.2 },
@@ -56,7 +56,7 @@
       "description": "Dense drifting clouds of krill that pass regularly beneath Aurora Stack, the lifeblood of its fisheries.",
       "status": "unspoiled",
       "prominence": "marginal",
-      "tags": ["krill", "fish", "resource"],
+      "tags": ["krill", "food", "resource"],
       "links": [
         { "kind": "adjacent_to", "src": "Krill Shoals", "dst": "Aurora Stack", "strength": 0.2 }
       ]
@@ -69,7 +69,7 @@
       "description": "A deep crack in the ice under Nightfall Shelf that pulses with otherworldly light and warps the currents.",
       "status": "unspoiled",
       "prominence": "recognized",
-      "tags": ["fissure", "anomaly", "magic"],
+      "tags": ["anomaly", "mystical", "glowing"],
       "links": [
         { "kind": "adjacent_to", "src": "The Glow-Fissure", "dst": "Nightfall Shelf", "strength": 0.2 }
       ]
@@ -82,7 +82,7 @@
       "description": "A knife-edge crest of ice where the high winds carve strange patterns and carry news between colonies.",
       "status": "unspoiled",
       "prominence": "marginal",
-      "tags": ["ridge", "wind", "vantage"],
+      "tags": ["strategic", "windy", "vantage"],
       "links": [
         { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Aurora Stack", "strength": 0.2 },
         { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Nightfall Shelf", "strength": 0.2 }
@@ -96,7 +96,7 @@
       "description": "A merchant guild that monopolizes trade through Aurora Stack, issuing carved-ice credit chits and regulating fish prices.",
       "status": "in_power",
       "prominence": "recognized",
-      "tags": ["merchant", "trade", "company"],
+      "tags": ["merchant", "trade", "organized"],
       "links": [
         { "kind": "controls", "src": "The Icebound Exchange", "dst": "Aurora Stack", "strength": 0.7 },
         { "kind": "weaponized_by", "src": "The Icebound Exchange", "dst": "Harmonic Harpoon Arrays", "strength": 0.5 }
@@ -110,7 +110,7 @@
       "description": "A clandestine syndicate ruling Nightfall Shelf from the shadows, smuggling forbidden tech and siphoning magic from the Glow-Fissure.",
       "status": "illegal",
       "prominence": "recognized",
-      "tags": ["criminal", "smuggling", "syndicate"],
+      "tags": ["criminal", "secretive", "organized"],
       "links": [
         { "kind": "controls", "src": "The Midnight Claws", "dst": "Nightfall Shelf", "strength": 0.7 },
         { "kind": "weaponized_by", "src": "The Midnight Claws", "dst": "Harmonic Harpoon Arrays", "strength": 0.5 },
@@ -125,7 +125,7 @@
       "description": "The meticulous mayor of Aurora Stack, famed for balancing ledgers as easily as she balances on sheer ice walls.",
       "status": "alive",
       "prominence": "recognized",
-      "tags": ["mayor", "aurora_stack", "bureaucrat"],
+      "tags": ["leader", "organized", "trade"],
       "links": [
         { "kind": "leader_of", "src": "High-Beak Auditor Selka", "dst": "Aurora Stack", "strength": 1.0 },
         { "kind": "leader_of", "src": "High-Beak Auditor Selka", "dst": "The Icebound Exchange", "strength": 1.0 },
@@ -141,7 +141,7 @@
       "description": "A daring super-penguin hero of Aurora Stack, whose experimental fishing gun techniques doubled the colony’s catch.",
       "status": "alive",
       "prominence": "renowned",
-      "tags": ["hero", "aurora_stack", "fisher"],
+      "tags": ["brave", "explorer", "fishing"],
       "links": [
         { "kind": "member_of", "src": "Tide-Splitter Rukan", "dst": "The Icebound Exchange", "strength": 1.0 },
         { "kind": "resident_of", "src": "Tide-Splitter Rukan", "dst": "Aurora Stack", "strength": 0.3 },
@@ -156,7 +156,7 @@
       "description": "The unofficial mayor of Nightfall Shelf, a veiled negotiator who settles disputes before anyone admits they exist.",
       "status": "alive",
       "prominence": "recognized",
-      "tags": ["mayor", "nightfall_shelf", "broker"],
+      "tags": ["leader", "secretive", "charismatic"],
       "links": [
         { "kind": "leader_of", "src": "Shadow-Broker Nyla", "dst": "Nightfall Shelf", "strength": 1.0 },
         { "kind": "leader_of", "src": "Shadow-Broker Nyla", "dst": "The Midnight Claws", "strength": 1.0 },
@@ -171,7 +171,7 @@
       "description": "A reckless hero of Nightfall Shelf who walks the very lip of the Glow-Fissure to draw power from its light.",
       "status": "alive",
       "prominence": "renowned",
-      "tags": ["hero", "nightfall_shelf", "fissure"],
+      "tags": ["brave", "mystical", "explorer"],
       "links": [
         { "kind": "member_of", "src": "Fissure-Walker Draen", "dst": "The Midnight Claws", "strength": 1.0 },
         { "kind": "resident_of", "src": "Fissure-Walker Draen", "dst": "Nightfall Shelf", "strength": 0.3 },
@@ -186,7 +186,7 @@
       "description": "A school of ice-magic where glowing sigils are etched with claws chilled in the light of the Glow-Fissure.",
       "status": "discovered",
       "prominence": "recognized",
-      "tags": ["magic", "runes", "fissure"],
+      "tags": ["magic", "mystical", "glowing"],
       "links": [
         { "kind": "manifests_at", "src": "Fissure-Drawn Runes", "dst": "The Glow-Fissure", "strength": 0.6 },
         { "kind": "slumbers_beneath", "src": "Fissure-Drawn Runes", "dst": "Aurora Berg", "strength": 0.3 }
@@ -200,66 +200,11 @@
       "description": "Advanced fishing guns that fire sonic-locked harpoons, letting penguins reel in entire shoals with minimal effort.",
       "status": "discovered",
       "prominence": "recognized",
-      "tags": ["technology", "fishing", "weapon"],
+      "tags": ["technology", "fishing", "offensive"],
       "links": [
         { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Krill Shoals", "strength": 0.6 },
         { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Aurora Stack", "strength": 0.6 }
       ]
-    },
-
-    {
-      "kind": "era",
-      "subtype": "expansion",
-      "name": "The Great Thaw",
-      "description": "A period of exploration and colony founding as the ice recedes",
-      "status": "current",
-      "prominence": "mythic",
-      "tags": ["era", "expansion", "settlement"],
-      "links": []
-    },
-
-    {
-      "kind": "era",
-      "subtype": "conflict",
-      "name": "The Faction Wars",
-      "description": "Resource scarcity leads to inter-colony conflicts",
-      "status": "future",
-      "prominence": "marginal",
-      "tags": ["era", "conflict", "war"],
-      "links": []
-    },
-
-    {
-      "kind": "era",
-      "subtype": "innovation",
-      "name": "The Clever Ice Age",
-      "description": "Technology and magic flourish as penguins seek solutions",
-      "status": "future",
-      "prominence": "marginal",
-      "tags": ["era", "innovation", "technology"],
-      "links": []
-    },
-
-    {
-      "kind": "era",
-      "subtype": "invasion",
-      "name": "The Orca Incursion",
-      "description": "External threats unite the colonies against common enemies",
-      "status": "future",
-      "prominence": "marginal",
-      "tags": ["era", "invasion", "orca"],
-      "links": []
-    },
-
-    {
-      "kind": "era",
-      "subtype": "reconstruction",
-      "name": "The Frozen Peace",
-      "description": "Rebuilding and consolidation after the wars",
-      "status": "future",
-      "prominence": "marginal",
-      "tags": ["era", "reconstruction", "peace"],
-      "links": []
     }
   ]
 }

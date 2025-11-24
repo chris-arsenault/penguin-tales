@@ -99,7 +99,7 @@ export const guildEstablishment: GrowthTemplate = {
       description: `A merchant guild controlling trade in ${colony.name}`,
       status: 'state_sanctioned',
       prominence: 'recognized',
-      tags: ['trade', 'guild', `name:${slugifyName(colony.name)}`]
+      tags: ['trade', 'guild', 'organized']
     };
     
     // Use targetSelector to intelligently select merchants (prevents super-hubs)

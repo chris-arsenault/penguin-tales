@@ -36,6 +36,21 @@ export class DistributionTracker {
       entityKindRatios[kind] = entityKindCounts[kind] / totalEntities;
     });
 
+    // Entity subtype distribution (for feedback loop tracking)
+    const entitySubtypeCounts: Record<string, number> = {};
+    entities.forEach((e) => {
+      const subtypeKey = `${e.kind}:${e.subtype}`;
+      entitySubtypeCounts[subtypeKey] = (entitySubtypeCounts[subtypeKey] || 0) + 1;
+    });
+
+    // Store subtype metrics in graph for feedback analyzer access
+    if (!graph.subtypeMetrics) {
+      graph.subtypeMetrics = new Map();
+    }
+    Object.entries(entitySubtypeCounts).forEach(([key, count]) => {
+      graph.subtypeMetrics!.set(key, count);
+    });
+
     // Prominence distribution
     const prominenceCounts: Record<Prominence, number> = {
       forgotten: 0,

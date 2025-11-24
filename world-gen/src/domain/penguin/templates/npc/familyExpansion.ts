@@ -138,7 +138,7 @@ export const familyExpansion: GrowthTemplate = {
         description: `Child of ${target.name}, raised in ${colony.name}`,
         status: 'alive',
         prominence: 'marginal',
-        tags: ['second_generation', `name:${slugifyName(colony.name)}`]
+        tags: ['second_generation']
       });
 
       // Create relationships for each child
