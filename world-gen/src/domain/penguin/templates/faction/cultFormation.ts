@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 /**
  * Cult Formation Template
@@ -144,6 +145,11 @@ export const cultFormation: GrowthTemplate = {
       tags: ['mystical', 'secretive', 'cult']
     };
 
+    // Initialize catalyst for cult
+    const cultEntity = cult as HardState;
+    cultEntity.id = 'temp';
+    initializeCatalystSmart(cultEntity);
+
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
@@ -153,6 +159,11 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal', // Prophets start marginal
       tags: ['prophet', 'mystical']
     };
+
+    // Initialize catalyst for prophet
+    const prophetEntity = prophet as HardState;
+    prophetEntity.id = 'temp';
+    initializeCatalystSmart(prophetEntity);
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)
     let cultists: HardState[] = [];

@@ -12,6 +12,7 @@ import {
   getProminenceValue,
   upsertNameTag
 } from '../utils/helpers';
+import { initializeCatalystSmart } from '../utils/catalystHelpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../domain/penguin/config/eras';
 import { EnrichmentService } from '../services/enrichmentService';
 import { ImageGenerationService } from '../services/imageGenerationService';
@@ -311,6 +312,10 @@ export class WorldEngine {
   private relationshipEnrichmentsUsed = 0;
   private eraNarrativesUsed = 0;
 
+  // Entity enrichment batching queue
+  private entityEnrichmentQueue: HardState[] = [];
+  private readonly ENRICHMENT_BATCH_SIZE = 15;  // Batch size for accumulating entities
+
   // Engine-level safeguards
   private systemMetrics: Map<string, { relationshipsCreated: number; lastThrottleCheck: number }> = new Map();
   private lastRelationshipCount: number = 0;
@@ -318,7 +323,11 @@ export class WorldEngine {
 
   // Template diversity tracking
   private templateRunCounts: Map<string, number> = new Map();
-  private maxRunsPerTemplate: number = 12;  // Hard cap per template
+  // DIVERSITY PRESSURE: Track template usage frequency to enforce variety
+  // Hard cap per template (scaled by config.scaleFactor)
+  private maxRunsPerTemplate: number;
+  // Growth target bounds (min, max) - scaled by config.scaleFactor
+  private growthBounds: { min: number; max: number };
 
   // Target selection service (prevents super-hub formation)
   private targetSelector: TargetSelector;
@@ -359,6 +368,17 @@ export class WorldEngine {
     this.imageGenerationService = imageGenerationService;
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
+
+    // Initialize scaled values
+    const scale = config.scaleFactor || 1.0;
+    // Scale maxRunsPerTemplate more aggressively (1.5 exponent) to handle
+    // cases where only a subset of templates are applicable in early epochs
+    // INCREASED: From 12 to 20 to prevent template starvation in later epochs
+    this.maxRunsPerTemplate = Math.ceil(20 * Math.pow(scale, 1.5));
+    this.growthBounds = {
+      min: Math.ceil(3 * scale),
+      max: Math.ceil(25 * scale)
+    };
 
     // Framework Validation
     console.log('='.repeat(80));
@@ -469,15 +489,20 @@ export class WorldEngine {
       }
     };
     
-    // Load initial entities
+    // Load initial entities and initialize catalysts
     initialState.forEach(entity => {
       const id = entity.id || generateId(entity.kind);
-      this.graph.entities.set(id, {
+      const loadedEntity: HardState = {
         ...entity,
         id,
         createdAt: 0,
         updatedAt: 0
-      });
+      };
+
+      // Initialize catalyst properties for prominent entities
+      initializeCatalystSmart(loadedEntity);
+
+      this.graph.entities.set(id, loadedEntity);
     });
     
     // Extract relationships from entity links
@@ -492,7 +517,8 @@ export class WorldEngine {
             kind: link.kind,
             src: srcEntity.id,
             dst: dstEntity.id,
-            strength: link.strength
+            strength: link.strength,
+            distance: link.distance  // Preserve lineage distance from seed data
           });
         }
       });
@@ -594,6 +620,9 @@ export class WorldEngine {
       // File doesn't exist or is empty - no warnings
     }
 
+    // Final flush of any remaining queued entities
+    this.flushEntityEnrichmentQueue(true);
+
     return this.graph;
   }
   
@@ -605,7 +634,8 @@ export class WorldEngine {
     const hitTickLimit = this.graph.tick >= this.config.maxTicks;
 
     // PRIORITY 3: Excessive growth safety valve (only if WAY over target AND all eras done)
-    const safetyLimit = this.config.targetEntitiesPerKind * 10; // 10x target = ~300 entities
+    const scale = this.config.scaleFactor || 1.0;
+    const safetyLimit = this.config.targetEntitiesPerKind * 10 * scale; // 10x target (scaled)
     const excessiveGrowth = this.graph.entities.size >= safetyLimit;
 
     // Stop only if:
@@ -925,7 +955,8 @@ export class WorldEngine {
 
     // Sample templates ONE AT A TIME until target reached
     let attempts = 0;
-    const maxAttempts = targets * 10;  // Safety limit
+    const scale = this.config.scaleFactor || 1.0;
+    const maxAttempts = Math.ceil(targets * 10 * scale);  // Safety limit (scaled)
 
     while (entitiesCreated < targets && attempts < maxAttempts) {
       attempts++;
@@ -960,14 +991,29 @@ export class WorldEngine {
 
       // Sample ONE template with weighted probability
       const template = this.sampleSingleTemplate(era, applicableTemplates, metrics);
-      if (!template) continue;
+      if (!template) {
+        if (attempts < 5 || attempts % 50 === 0) {
+          console.warn(`  [Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
+        }
+        continue;
+      }
 
       // Check if template can apply
-      if (!template.canApply(graphView)) continue;
+      if (!template.canApply(graphView)) {
+        if (attempts < 5 || attempts % 50 === 0) {
+          console.warn(`  [Attempt ${attempts}] Template ${template.id} canApply returned false`);
+        }
+        continue;
+      }
 
       // Find targets
       const templateTargets = template.findTargets(graphView);
-      if (templateTargets.length === 0) continue;
+      if (templateTargets.length === 0) {
+        if (attempts < 5 || attempts % 50 === 0) {
+          console.warn(`  [Attempt ${attempts}] Template ${template.id} found no targets`);
+        }
+        continue;
+      }
 
       // Apply template to random target
       const target = pickRandom(templateTargets);
@@ -996,10 +1042,6 @@ export class WorldEngine {
 
         // Record template application
         this.statisticsCollector.recordTemplateApplication(template.id);
-
-        // DIVERSITY TRACKING: Increment run count for this template
-        const currentCount = this.templateRunCounts.get(template.id) || 0;
-        this.templateRunCounts.set(template.id, currentCount + 1);
 
         // Add entities to graph
         const newIds: string[] = [];
@@ -1089,6 +1131,12 @@ export class WorldEngine {
 
         entitiesCreated += result.entities.length;
 
+        // DIVERSITY TRACKING: Only count successful template runs (where entities were created)
+        if (result.entities.length > 0) {
+          const currentCount = this.templateRunCounts.get(template.id) || 0;
+          this.templateRunCounts.set(template.id, currentCount + 1);
+        }
+
         // Queue enrichment for this template's cluster immediately
         // Filter out eras - they get enriched separately and shouldn't go through entity enrichment
         const enrichableEntities = clusterEntities.filter(e => e.kind !== 'era');
@@ -1103,6 +1151,9 @@ export class WorldEngine {
     }
 
     console.log(`  Growth: +${entitiesCreated} entities (target: ${targets})`);
+
+    // Flush any remaining entities in the enrichment queue
+    this.flushEntityEnrichmentQueue(true);
   }
 
   /**
@@ -1245,8 +1296,8 @@ export class WorldEngine {
     const variance = 0.3;
     const target = Math.floor(baseTarget * (1 - variance + Math.random() * variance * 2));
 
-    // Cap at reasonable bounds (3-25 entities per epoch)
-    return Math.max(3, Math.min(25, target));
+    // Cap at reasonable bounds (scaled by config.scaleFactor)
+    return Math.max(this.growthBounds.min, Math.min(this.growthBounds.max, target));
   }
 
   /**
@@ -1730,18 +1781,10 @@ export class WorldEngine {
   private queueEntityEnrichment(entities: HardState[]): void {
     if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
 
-    const limit = this.config.enrichmentConfig?.maxEntityEnrichments;
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      const remaining = (limit ?? 0) - this.entityEnrichmentsUsed;
-      if (remaining <= 0) return;
-      entities = entities.slice(0, remaining);
-    }
-    // Consume budget up front so failures don't re-attempt
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      this.entityEnrichmentsUsed += entities.length;
-    }
+    // Add entities to the batching queue
+    this.entityEnrichmentQueue.push(...entities);
 
-    // Track analytics for initial enrichments
+    // Track analytics for all queued entities
     entities.forEach(entity => {
       switch (entity.kind) {
         case 'location':
@@ -1768,26 +1811,52 @@ export class WorldEngine {
       }
     });
 
+    // Flush queue if it reaches batch size threshold
+    if (this.entityEnrichmentQueue.length >= this.ENRICHMENT_BATCH_SIZE) {
+      this.flushEntityEnrichmentQueue();
+    }
+  }
+
+  private flushEntityEnrichmentQueue(force: boolean = false): void {
+    if (!this.enrichmentService?.isEnabled()) return;
+    if (this.entityEnrichmentQueue.length === 0) return;
+
+    // Only flush if we have enough entities, unless forced
+    if (!force && this.entityEnrichmentQueue.length < this.ENRICHMENT_BATCH_SIZE) return;
+
+    // Take all queued entities
+    const entitiesToEnrich = [...this.entityEnrichmentQueue];
+    this.entityEnrichmentQueue = [];
+
+    // Apply partial mode limits
+    const limit = this.config.enrichmentConfig?.maxEntityEnrichments;
+    if (this.config.enrichmentConfig?.mode === 'partial') {
+      const remaining = (limit ?? 0) - this.entityEnrichmentsUsed;
+      if (remaining <= 0) return;
+      entitiesToEnrich.splice(remaining); // Truncate to remaining budget
+      this.entityEnrichmentsUsed += entitiesToEnrich.length;
+    }
+
     // CRITICAL: Wait for all previous name enrichments to complete before enriching new entities
     // This ensures that lore references use final entity names, not placeholder names
     const enrichmentPromise = this.waitForNameEnrichmentsSnapshot().then(async () => {
       // Build context AFTER name enrichments complete, so snapshot has final names
       const context = this.buildEnrichmentContext();
-      const records = await this.enrichmentService!.enrichEntities(entities, context);
+      const records = await this.enrichmentService!.enrichEntities(entitiesToEnrich, context);
       this.graph.loreRecords.push(...records);
-      
+
       // Abilities get an extra pass to keep tech/magic in bounds
       const abilityRecords = await Promise.all(
-        entities
+        entitiesToEnrich
           .filter(e => e.kind === 'abilities')
           .map(e => this.enrichmentService!.enrichAbility(e, context))
       );
-      
+
       abilityRecords
         .filter((r): r is LoreRecord => Boolean(r))
         .forEach(r => this.graph.loreRecords.push(r));
     }).catch(error => console.warn('Enrichment failed:', error));
-    
+
     const tracked = enrichmentPromise.then(() => undefined);
     this.pendingEnrichments.push(tracked);
     this.pendingNameEnrichments.push(tracked);

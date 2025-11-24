@@ -4,11 +4,14 @@ import type { WorldState } from '../types/world.ts';
 import { getKindColor } from '../utils/dataTransform.ts';
 import * as THREE from 'three';
 
+export type EdgeMetric = 'strength' | 'distance' | 'none';
+
 interface GraphView3DProps {
   data: WorldState;
   selectedNodeId?: string;
   onNodeSelect: (nodeId: string | undefined) => void;
   showCatalyzedBy?: boolean;
+  edgeMetric?: EdgeMetric;
 }
 
 interface GraphNode {
@@ -25,10 +28,11 @@ interface GraphLink {
   target: string;
   kind: string;
   strength: number;
+  distance?: number;
   catalyzed?: boolean;
 }
 
-export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false }: GraphView3DProps) {
+export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false, edgeMetric = 'strength' }: GraphView3DProps) {
   const fgRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -84,12 +88,31 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
         target: rel.dst,
         kind: rel.kind,
         strength: rel.strength ?? 0.5,
+        distance: rel.distance,
         catalyzed: showCatalyzedBy && !!catalyzedBy
       };
     });
 
     graphData.current = { nodes, links };
   }, [data, showCatalyzedBy]);
+
+  // Calculate link distance based on selected metric
+  const linkDistance = useCallback((link: any) => {
+    if (edgeMetric === 'none') {
+      return 100; // Equal distance for all links
+    } else if (edgeMetric === 'distance') {
+      // Lower distance = more similar = shorter spring (pull closer together)
+      // distance is 0-1, so we scale it: 0 -> 30px, 1 -> 200px
+      const dist = link.distance ?? 0.5;
+      return 30 + dist * 170;
+    } else {
+      // strength metric (default)
+      // Higher strength = shorter spring (pull closer together)
+      // strength is 0-1, so we invert it: 1 -> 30px, 0 -> 200px
+      const strength = link.strength ?? 0.5;
+      return 30 + (1 - strength) * 170;
+    }
+  }, [edgeMetric]);
 
   // Handle node click
   const handleNodeClick = useCallback((node: any) => {
@@ -101,8 +124,11 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
     onNodeSelect(undefined);
   }, [onNodeSelect]);
 
-  // Custom node appearance
+  // Custom node appearance with text label
   const nodeThreeObject = useCallback((node: any) => {
+    const group = new THREE.Group();
+
+    // Node sphere
     const geometry = new THREE.SphereGeometry(node.val * 2, 16, 16);
     const material = new THREE.MeshLambertMaterial({
       color: node.color,
@@ -110,6 +136,7 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
       opacity: node.id === selectedNodeId ? 1 : 0.9
     });
     const mesh = new THREE.Mesh(geometry, material);
+    group.add(mesh);
 
     // Add glow for selected node
     if (node.id === selectedNodeId) {
@@ -120,10 +147,38 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
         opacity: 0.3
       });
       const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-      mesh.add(glow);
+      group.add(glow);
     }
 
-    return mesh;
+    // Create text sprite
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) {
+      canvas.width = 256;
+      canvas.height = 64;
+
+      context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.font = 'Bold 20px Arial';
+      context.fillStyle = 'white';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(node.name, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9
+      });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(20, 5, 1);
+      sprite.position.set(0, node.val * 2 + 5, 0); // Position above the node
+      group.add(sprite);
+    }
+
+    return group;
   }, [selectedNodeId]);
 
   // Custom link appearance
@@ -144,31 +199,41 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
     return link.catalyzed ? 0.9 : link.strength * 0.6;
   }, []);
 
-  // Auto-rotate camera gently
+  // Set initial camera position (once)
+  useEffect(() => {
+    if (fgRef.current) {
+      const camera = fgRef.current.camera();
+      camera.position.set(0, 0, 500);
+    }
+  }, []);
+
+  // Configure d3 forces when metric changes
   useEffect(() => {
     if (fgRef.current) {
       const fg = fgRef.current;
 
-      // Set initial camera position
-      const camera = fg.camera();
-      camera.position.set(0, 0, 400);
+      // Configure the d3 link force to use our distance function
+      const linkForce = fg.d3Force('link');
+      if (linkForce) {
+        linkForce
+          .distance((link: any) => {
+            if (edgeMetric === 'none') {
+              return 100;
+            } else if (edgeMetric === 'distance') {
+              const dist = link.distance ?? 0.5;
+              return 30 + dist * 170;
+            } else {
+              const strength = link.strength ?? 0.5;
+              return 30 + (1 - strength) * 170;
+            }
+          })
+          .strength(2.0); // Higher strength so distances have stronger effect
 
-      // Optional: gentle auto-rotation
-      let angle = 0;
-      const rotationSpeed = 0.001;
-      const animate = () => {
-        angle += rotationSpeed;
-        // Gentle orbit
-        // Uncomment if you want auto-rotation:
-        // camera.position.x = 400 * Math.sin(angle);
-        // camera.position.z = 400 * Math.cos(angle);
-        // camera.lookAt(0, 0, 0);
-      };
-      const interval = setInterval(animate, 50);
-
-      return () => clearInterval(interval);
+        // Restart the simulation to apply new forces
+        fg.d3ReheatSimulation();
+      }
     }
-  }, []);
+  }, [edgeMetric]);
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -189,23 +254,19 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
         linkColor={linkColor}
         linkWidth={linkWidth}
         linkOpacity={linkOpacity}
+        linkDistance={linkDistance}
         linkDirectionalArrowLength={3}
         linkDirectionalArrowRelPos={1}
         enableNodeDrag={true}
         enableNavigationControls={true}
         showNavInfo={false}
         backgroundColor="#0a1929"
-        d3VelocityDecay={0.6}
-        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.4}
+        d3AlphaDecay={0.015}
         d3AlphaMin={0.001}
-        warmupTicks={100}
-        cooldownTicks={0}
-        cooldownTime={15000}
-        onEngineStop={() => {
-          if (fgRef.current) {
-            fgRef.current.pauseAnimation();
-          }
-        }}
+        warmupTicks={200}
+        cooldownTicks={Infinity}
+        cooldownTime={20000}
       />
 
       {/* Legend */}

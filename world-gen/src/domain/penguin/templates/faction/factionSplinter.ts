@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, archiveRelationship, addRelationshipWithDistance } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -143,6 +144,11 @@ export const factionSplinter: GrowthTemplate = {
       tags: ['splinter', ...parentFaction.tags.slice(0, 2)]
     };
 
+    // Initialize catalyst - factions start marginal but will gain prominence and become actors
+    const splinterEntity = splinter as HardState;
+    splinterEntity.id = 'temp'; // Temporary ID for initialization
+    initializeCatalystSmart(splinterEntity);
+
     // Use targetSelector to find NPCs from the parent faction to lead the splinter
     let leader: Partial<HardState> | undefined = undefined;
     let leaderEntity: HardState | undefined = undefined;
@@ -167,6 +173,11 @@ export const factionSplinter: GrowthTemplate = {
         prominence: 'recognized',
         tags: ['rebel', 'charismatic']
       };
+
+      // Initialize catalyst for new leader (recognized prominence = can act)
+      const leaderEntityTemp = leader as HardState;
+      leaderEntityTemp.id = 'temp'; // Temporary ID for initialization
+      initializeCatalystSmart(leaderEntityTemp);
     }
 
     // Find parent faction's location

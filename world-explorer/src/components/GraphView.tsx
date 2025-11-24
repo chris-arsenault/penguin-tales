@@ -237,11 +237,14 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
     if (elementsToAdd.length > 0) {
       cy.add(elementsToAdd);
 
-      // Run layout only on new nodes, don't fit viewport
+      // If we're adding many nodes or have few existing nodes, do a full randomized layout
+      const currentNodeCount = cy.nodes().length;
+      const shouldFullLayout = elementsToAdd.filter(e => !('source' in e.data)).length > currentNodeCount * 0.3;
+
       const layout = cy.layout({
         name: 'cose-bilkent',
-        randomize: false,
-        fit: false,
+        randomize: shouldFullLayout,
+        fit: shouldFullLayout,
         idealEdgeLength: 100,
         edgeLength: (edge: any) => {
           const strength = edge.data('strength') ?? 0.5;
@@ -250,11 +253,12 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
         },
         nodeRepulsion: 100000,
         gravity: 0.25,
-        numIter: 1000,
+        numIter: shouldFullLayout ? 2500 : 1000,
         tile: true,
         tilingPaddingVertical: 10,
         tilingPaddingHorizontal: 10,
-        animate: false
+        animate: shouldFullLayout ? true : false,
+        animationDuration: shouldFullLayout ? 1000 : 0
       } as any);
 
       layout.run();

@@ -1,76 +1,12 @@
-=== Image Generation Log - 2025-11-23T14:28:25.537Z ===
+=== Image Generation Log - 2025-11-24T09:25:29.773Z ===
 
 
-Generating images for 9 mythic entities...
+Generating images for 65 mythic entities...
 
-=== Generating Image for Aurora Stack ===Entity: location:colonyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
+=== Generating Image for Aurora Stack ===Entity: location:colonyPrompt: Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations. Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.
 
 Aurora Stack: A vertical colony carved into the sunlit face of Aurora Berg, known for orderly terraces and bright trade banners. A bustling penguin settlement carved into ice, with architectural details.
 
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-N9o2uIRCKEDlG6ylju1c5zWZ.png?st=2025-11-23T13%3A29%3A23Z&se=2025-11-23T15%3A29%3A23Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=475fd488-6c59-44a5-9aa9-31c4db451bea&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A29%3A23Z&ske=2025-11-24T14%3A29%3A23Z&sks=b&skv=2024-08-04&sig=DZ2dGe4lfSX4Xv/agnAz7gevUPieU//poKsvQnYWpRA%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_aurora_stack_1763908164279.png
+Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration. Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.
 
-=== Generating Image for Nightfall Shelf ===Entity: location:colonyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
-
-Nightfall Shelf: A shadowed ledge on the far side of Aurora Berg, lit by bioluminescent ice glyphs and whispered deals. A bustling penguin settlement carved into ice, with architectural details.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-vxMhWMIP8VLhio6yyogztYLq.png?st=2025-11-23T13%3A29%3A39Z&se=2025-11-23T15%3A29%3A39Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=e12db1aa-1007-44fd-8388-3a70fd6a4956&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T08%3A04%3A26Z&ske=2025-11-24T08%3A04%3A26Z&sks=b&skv=2024-08-04&sig=eAhRWGlP2jrNtReTKtkrlW4VER%2BzYpOTQ5dZ20lTnHg%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_nightfall_shelf_1763908178771.png
-
-=== Generating Image for The Glow-Fissure ===Entity: location:anomalyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
-
-The Glow-Fissure: A deep crack in the ice under Nightfall Shelf that pulses with otherworldly light and warps the currents. A mysterious, otherworldly location with strange phenomena.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-dciSykbAjg5Vpm8pJRRfDuWw.png?st=2025-11-23T13%3A29%3A57Z&se=2025-11-23T15%3A29%3A57Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=7aed557a-269d-4dda-ab8b-c66e34024151&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A29%3A57Z&ske=2025-11-24T14%3A29%3A57Z&sks=b&skv=2024-08-04&sig=ocbN3dvnyYKzmv3DB3Tloa%2BC02UuLdGyay6C5nYoD58%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_the_glow_fissure_1763908198183.png
-
-=== Generating Image for The Icebound Exchange ===Entity: faction:companyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This represents a penguin organization or group, shown through its members and symbols.
-
-The Icebound Exchange: A merchant guild that monopolizes trade through Aurora Stack, issuing carved-ice credit chits and regulating fish prices. A merchant organization, shown through trade symbols and prosperity.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Group composition or symbolic representation.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-FXmGDssTLdY1ENvwKNqx8iva.png?st=2025-11-23T13%3A30%3A14Z&se=2025-11-23T15%3A30%3A14Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=7aed557a-269d-4dda-ab8b-c66e34024151&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-22T16%3A44%3A26Z&ske=2025-11-23T16%3A44%3A26Z&sks=b&skv=2024-08-04&sig=10F9p9edYZeR%2BBho3pxyNvmZYg%2BsB2/oig2GCNlp/C8%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/faction_the_icebound_exchange_1763908214009.png
-
-=== Generating Image for Fissure-Drawn Runes ===Entity: abilities:magicPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This represents a magical or technological ability used by penguins, shown through its manifestation or effects.
-
-Fissure-Drawn Runes: Ancient ice-magic where glowing sigils are etched with frost-chilled claws in Glow-Fissure light. Awakened during The Great Thaw, these runes channel deep earth-memory but demand ice fever's price. Magical energy manifesting as glowing ice or mystical light.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Abstract magical/technological effects, ethereal and dynamic.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-HZL6HrEPnl9p41TelsTSkbTH.png?st=2025-11-23T13%3A30%3A32Z&se=2025-11-23T15%3A30%3A32Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=7aed557a-269d-4dda-ab8b-c66e34024151&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A30%3A32Z&ske=2025-11-24T14%3A30%3A32Z&sks=b&skv=2024-08-04&sig=SkLanaWxXI/kbPSmzVLCEPHN4tTImnPvOZNWZ1K8bMo%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/abilities_fissure_drawn_runes_1763908232147.png
-
-=== Generating Image for The Great Thaw ===Entity: era:expansionPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. 
-
-The Great Thaw: Current era of ice recession and colony expansion. Penguins explore new territories, discover Glow-Fissure, and face resource scarcity. Magic and technology flourish amid uncertainty and opportunity.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples).
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-fZvMFSUR8BqVj4Zd0TyCa0Jn.png?st=2025-11-23T13%3A30%3A50Z&se=2025-11-23T15%3A30%3A50Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=1726b4ce-fee1-450b-8b92-1731ad8745f6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A30%3A50Z&ske=2025-11-24T14%3A30%3A50Z&sks=b&skv=2024-08-04&sig=x/v%2BHq4qoBkNfdrYDTKunseWxaEP6Ax9n%2BChDJnsNXg%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/era_the_great_thaw_1763908250774.png
-
-=== Generating Image for Crescent Ledge ===Entity: location:colonyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
-
-Crescent Ledge: Fledgling settlement on Aurora Berg's northern face. Established during The Great Thaw to expand trade routes. Sparse population, experimental ice-coin storage. Struggles with isolation and melting foundations. A bustling penguin settlement carved into ice, with architectural details.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-eUvCVp88gwWBAqyAX6KhnaYp.png?st=2025-11-23T13%3A31%3A17Z&se=2025-11-23T15%3A31%3A17Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=1726b4ce-fee1-450b-8b92-1731ad8745f6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A31%3A17Z&ske=2025-11-24T14%3A31%3A17Z&sks=b&skv=2024-08-04&sig=%2BSbM4NU/raXNL5Xez/h8p5dY1mNZo3WqVr7pa5BhsvY%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_crescent_ledge_1763908276929.png
-
-=== Generating Image for Crescent Ledge ===Entity: location:colonyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
-
-Crescent Ledge: Fledgling outpost on Aurora Berg's southern face. Established during The Great Thaw to expand trade routes. Struggles with isolation and melting ice, yet Aurora Stack merchants see opportunity in its position between established colonies. A bustling penguin settlement carved into ice, with architectural details.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-MHxJSxwEUtSvYobJOtEqoKFn.png?st=2025-11-23T13%3A31%3A34Z&se=2025-11-23T15%3A31%3A34Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=7aed557a-269d-4dda-ab8b-c66e34024151&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A31%3A34Z&ske=2025-11-24T14%3A31%3A34Z&sks=b&skv=2024-08-04&sig=4pT79CxeezWEoRYsszfwY/nd%2BDkDOd4em/1mF8rryoM%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_crescent_ledge_1763908294773.png
-
-=== Generating Image for Crescent Ledge ===Entity: location:colonyPrompt: A frozen Antarctic world of super-intelligent penguins living on massive icebergs. This is a location on or near the massive iceberg Aurora Berg, in a frozen Antarctic seascape.
-
-Crescent Ledge: Fledgling settlement on Aurora Berg's eastern face. Established during The Great Thaw to ease population pressure. Relies on Aurora Stack trade routes; tensions simmer over fissure access and krill territory claims. A bustling penguin settlement carved into ice, with architectural details.
-
-Style: Digital illustration, dramatic lighting, Antarctic color palette (blues, whites, teals, purples). Wide establishing shot, atmospheric, sense of scale.
-✓ Image generated: https://oaidalleapiprodscus.blob.core.windows.net/private/org-Zgr8i5iBTabhj2Hq1bklwbWN/user-TeaXVWX53sHCB2Knf4hDhCmh/img-NyFYIYAKYRhGw2kcE9R0iqWA.png?st=2025-11-23T13%3A31%3A50Z&se=2025-11-23T15%3A31%3A50Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=67205dde-9780-4119-bbff-6343b48e42b6&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-11-23T14%3A14%3A23Z&ske=2025-11-24T14%3A14%3A23Z&sks=b&skv=2024-08-04&sig=A6TALV36bXNDy3WKFlpAIKPRXAr%2BNPruWP4VVyeZKT8%3D
-✓ Saved to: /home/tsonu/src/penguin-history/world-gen/output/images/location_crescent_ledge_1763908310290.png
+IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.

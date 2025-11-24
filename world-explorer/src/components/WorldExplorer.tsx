@@ -16,11 +16,14 @@ interface WorldExplorerProps {
   imageData: ImageMetadata | null;
 }
 
+export type EdgeMetric = 'strength' | 'distance' | 'none';
+
 export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
   const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
-  const [is3DView, setIs3DView] = useState(false);
+  const [is3DView, setIs3DView] = useState(true);
+  const [edgeMetric, setEdgeMetric] = useState<EdgeMetric>('strength');
   const recalculateLayoutRef = useRef<(() => void) | null>(null);
   const [filters, setFilters] = useState<Filters>({
     kinds: ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'] as EntityKind[],
@@ -75,7 +78,9 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
             </div>
             <HeaderMenu
               is3DView={is3DView}
+              edgeMetric={edgeMetric}
               onToggle3D={() => setIs3DView(!is3DView)}
+              onEdgeMetricChange={setEdgeMetric}
               onRecalculateLayout={() => recalculateLayoutRef.current?.()}
               onToggleStats={() => setIsStatsPanelOpen(!isStatsPanelOpen)}
             />
@@ -96,11 +101,12 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
         <main className="world-graph-container">
           {is3DView ? (
             <GraphView3D
-              key="3d-view"
+              key={`3d-view-${edgeMetric}`}
               data={filteredData}
               selectedNodeId={selectedEntityId}
               onNodeSelect={setSelectedEntityId}
               showCatalyzedBy={filters.showCatalyzedBy}
+              edgeMetric={edgeMetric}
             />
           ) : (
             <GraphView

@@ -7,6 +7,7 @@ export interface Relationship {
   src: string;
   dst: string;
   strength?: number;
+  distance?: number;
   status?: 'active' | 'historical';
   archivedAt?: number;
 }

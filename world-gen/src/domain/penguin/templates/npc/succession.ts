@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, slugifyName, archiveRelationship } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -104,6 +105,11 @@ export const succession: GrowthTemplate = {
       prominence: 'marginal', // New leaders start marginal, must earn respect
       tags: ['successor']
     };
+
+    // Initialize catalyst - mayors start marginal but will gain prominence and become actors
+    const leaderEntity = newLeader as HardState;
+    leaderEntity.id = 'temp'; // Temporary ID for initialization
+    initializeCatalystSmart(leaderEntity);
 
     const relationships: Relationship[] = [
       {

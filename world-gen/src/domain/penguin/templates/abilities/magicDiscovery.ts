@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 /**
  * Magic Discovery Template
@@ -168,16 +169,23 @@ export const magicDiscovery: GrowthTemplate = {
     const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
     const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
 
+    const magicAbility: Partial<HardState> = {
+      kind: 'abilities',
+      subtype: 'magic',
+      name: magicName,
+      description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
+      status: 'emergent',
+      prominence: 'recognized',
+      tags: ['magic', 'mystical']
+    };
+
+    // Initialize catalyst - magic abilities with recognized prominence can act
+    const magicEntity = magicAbility as HardState;
+    magicEntity.id = 'temp';
+    initializeCatalystSmart(magicEntity);
+
     return {
-      entities: [{
-        kind: 'abilities',
-        subtype: 'magic',
-        name: magicName,
-        description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
-        status: 'emergent',
-        prominence: 'recognized',
-        tags: ['magic', 'mystical']
-      }],
+      entities: [magicAbility],
       relationships,
       description: `${hero.name} discovers ${magicName}${locationDesc}${lineageDesc}`
     };

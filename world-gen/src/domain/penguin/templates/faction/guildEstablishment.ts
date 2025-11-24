@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, findEntities, slugifyName } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 /**
  * Guild Establishment Template
@@ -101,7 +102,12 @@ export const guildEstablishment: GrowthTemplate = {
       prominence: 'recognized',
       tags: ['trade', 'guild', 'organized']
     };
-    
+
+    // Initialize catalyst - guilds with recognized prominence can act
+    const guildEntity = guild as HardState;
+    guildEntity.id = 'temp'; // Temporary ID for initialization
+    initializeCatalystSmart(guildEntity);
+
     // Use targetSelector to intelligently select merchants (prevents super-hubs)
     let merchantsToRecruit: HardState[] = [];
     let newMerchants: Array<Partial<HardState>> = [];

@@ -11,6 +11,7 @@
 import { SimulationSystem } from '../../../types/engine';
 
 // Import framework systems (NEW)
+import { eraSpawner } from '../../../systems/eraSpawner';
 import { universalCatalyst } from '../../../systems/universalCatalyst';
 import { occurrenceCreation } from '../../../systems/occurrenceCreation';
 import { eraTransition } from '../../../systems/eraTransition';
@@ -49,18 +50,20 @@ import { relationshipReinforcement } from './relationshipReinforcement';
  * Order matters - systems execute in this sequence each tick.
  *
  * EXECUTION ORDER:
- * 1. Era transition (check if world state triggers new era)
- * 2. Agent actions (catalyst system - NPCs/factions/abilities act)
- * 3. Relationship dynamics (decay, reinforcement, formation)
- * 4. Domain systems (conflicts, resources, culture, prominence)
- * 5. Occurrence creation (wars, disasters emerge from accumulated state)
+ * 1. Era spawning (create era entities if they don't exist)
+ * 2. Era transition (check if world state triggers new era)
+ * 3. Agent actions (catalyst system - NPCs/factions/abilities act)
+ * 4. Relationship dynamics (decay, reinforcement, formation)
+ * 5. Domain systems (conflicts, resources, culture, prominence)
+ * 6. Occurrence creation (wars, disasters emerge from accumulated state)
  *
  * NOTE: relationshipCulling is NOT included here as it's framework-level.
  * It will be added by the engine configuration automatically.
  */
 export const allSystems: SimulationSystem[] = [
   // Phase 1: Era & Agent Actions
-  eraTransition,               // Check for era transitions first
+  eraSpawner,                  // Create era entities at initialization (runs once)
+  eraTransition,               // Check for era transitions
   universalCatalyst,           // Agents take actions (seize control, declare war, etc.)
 
   // Phase 2: Relationship Dynamics

@@ -291,6 +291,9 @@ export interface EngineConfig {
     maxPerSimulationTick: number;  // Hard cap on relationships per simulation tick
     maxPerGrowthPhase: number;     // Hard cap on relationships per growth phase
   };
+
+  // Scaling configuration
+  scaleFactor?: number;  // Master scale multiplier for world size (default: 1.0)
   llmConfig?: LLMConfig;
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;

@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateId } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 /**
  * Tech Breakthrough Template
@@ -192,6 +193,11 @@ export const techBreakthrough: GrowthTemplate = {
       tags: ['technology', 'innovation', target.subtype],
       links: []
     };
+
+    // Initialize catalyst - technology abilities with recognized prominence can act
+    const techEntity = newTech as HardState;
+    techEntity.id = 'temp';
+    initializeCatalystSmart(techEntity);
 
     // Create relationships
     const relationships: Relationship[] = [

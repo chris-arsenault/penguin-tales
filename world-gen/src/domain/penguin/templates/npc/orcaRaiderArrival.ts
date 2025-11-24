@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { pickRandom, pickMultiple } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
@@ -131,6 +132,11 @@ export const orcaRaiderArrival: GrowthTemplate = {
         prominence,
         tags: ['orca', 'raider', 'external-threat', 'predator']
       };
+
+      // Initialize catalyst - orcas with recognized+ prominence can act
+      const orcaEntity = orca as HardState;
+      orcaEntity.id = 'temp'; // Temporary ID for initialization
+      initializeCatalystSmart(orcaEntity);
 
       orcas.push(orca);
     }

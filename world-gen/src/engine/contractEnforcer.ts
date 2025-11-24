@@ -168,6 +168,8 @@ export class ContractEnforcer {
     }
 
     const entityKinds = template.metadata.produces.entityKinds;
+    const saturatedKinds: string[] = [];
+    const unsaturatedKinds: string[] = [];
 
     for (const kindInfo of entityKinds) {
       // Try to find subtype-specific registry first, fall back to kind registry
@@ -181,7 +183,12 @@ export class ContractEnforcer {
         );
       }
 
-      if (!registry) continue;
+      if (!registry) {
+        // No registry = can't check saturation, assume OK
+        const label = kindInfo.subtype ? `${kindInfo.kind}:${kindInfo.subtype}` : kindInfo.kind;
+        unsaturatedKinds.push(label);
+        continue;
+      }
 
       // Count entities matching the criteria (subtype if specified, otherwise just kind)
       const criteria: any = { kind: kindInfo.kind };
@@ -192,16 +199,26 @@ export class ContractEnforcer {
       const currentCount = findEntities(graph, criteria).length;
       const targetCount = registry.expectedDistribution.targetCount;
 
-      // Allow 50% overshoot before hard blocking
-      const saturationThreshold = targetCount * 1.5;
+      // Allow 100% overshoot before hard blocking (increased from 50% to reduce starvation)
+      const saturationThreshold = targetCount * 2.0;
+
+      const label = kindInfo.subtype ? `${kindInfo.kind}:${kindInfo.subtype}` : kindInfo.kind;
 
       if (currentCount >= saturationThreshold) {
-        const label = kindInfo.subtype ? `${kindInfo.kind}:${kindInfo.subtype}` : kindInfo.kind;
-        return {
-          saturated: true,
-          reason: `${label} saturated: ${currentCount}/${targetCount} (threshold: ${saturationThreshold})`
-        };
+        saturatedKinds.push(`${label} (${currentCount}/${targetCount})`);
+      } else {
+        unsaturatedKinds.push(label);
       }
+    }
+
+    // CRITICAL FIX: Only block if ALL kinds are saturated
+    // This allows templates that create mixed kinds (e.g., abilities + rules) to still run
+    // if at least one kind is under capacity
+    if (saturatedKinds.length > 0 && unsaturatedKinds.length === 0) {
+      return {
+        saturated: true,
+        reason: `All entity kinds saturated: ${saturatedKinds.join(', ')}`
+      };
     }
 
     return { saturated: false };

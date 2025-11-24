@@ -79,6 +79,12 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
   const outgoingRels = relationships.filter(r => r.src === entityId);
   const incomingRels = relationships.filter(r => r.dst === entityId);
 
+  // Debug: Check if distance is present
+  const relsWithDistance = relationships.filter(r => r.distance !== undefined);
+  if (relsWithDistance.length > 0) {
+    console.log(`Entity ${entityId} has ${relsWithDistance.length} relationships with distance:`, relsWithDistance[0]);
+  }
+
   const getRelatedEntity = (relId: string) => getEntityById(worldData, relId);
 
   // Group relationships by kind
@@ -246,6 +252,7 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                         const target = getRelatedEntity(rel.dst);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         const strength = rel.strength ?? 0.5;
+                        const distance = rel.distance;
                         const isHistorical = rel.status === 'historical';
                         return target ? (
                           <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'} ${isHistorical ? 'historical' : ''}`}>
@@ -259,7 +266,9 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                                 {target.name}
                               </div>
                               <div className="accordion-row-kind">
-                                ({target.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span>
+                                ({target.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>
+                                  [S:{strength.toFixed(2)}{distance !== undefined ? ` D:${distance.toFixed(2)}` : ''}]
+                                </span>
                                 {isHistorical && rel.archivedAt && (
                                   <span style={{ color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
                                     archived @{rel.archivedAt}
@@ -315,6 +324,7 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                         const source = getRelatedEntity(rel.src);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         const strength = rel.strength ?? 0.5;
+                        const distance = rel.distance;
                         const isHistorical = rel.status === 'historical';
                         return source ? (
                           <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'} ${isHistorical ? 'historical' : ''}`}>
@@ -328,7 +338,9 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                                 {source.name}
                               </div>
                               <div className="accordion-row-kind">
-                                ({source.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span>
+                                ({source.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>
+                                  [S:{strength.toFixed(2)}{distance !== undefined ? ` D:${distance.toFixed(2)}` : ''}]
+                                </span>
                                 {isHistorical && rel.archivedAt && (
                                   <span style={{ color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
                                     archived @{rel.archivedAt}

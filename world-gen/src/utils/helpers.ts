@@ -278,6 +278,49 @@ const RELATIONSHIP_STRENGTHS: Record<string, number> = {
   'default': 0.5
 };
 
+// ===========================
+// LINEAGE RELATIONSHIP IDENTIFICATION
+// ===========================
+
+// Lineage relationships that REQUIRE cognitive/ideological/spatial distance
+const LINEAGE_RELATIONSHIPS = new Set([
+  'derived_from',      // Cognitive distance (abilities/rules)
+  'related_to',        // Cognitive distance (same-kind similarity)
+  'split_from',        // Ideological distance (factions)
+  'supersedes',        // Legal distance (rules)
+  'inspired_by',       // Influence distance (NPCs/abilities)
+  'part_of',           // Subsumption distance (meta-entities)
+  'adjacent_to',       // Spatial distance (locations)
+  'contains',          // Spatial distance (locations)
+  'contained_by'       // Spatial distance (locations)
+]);
+
+/**
+ * Check if a relationship kind requires distance (is a lineage relationship)
+ */
+export function isLineageRelationship(kind: string): boolean {
+  return LINEAGE_RELATIONSHIPS.has(kind);
+}
+
+/**
+ * Get expected distance range for a lineage relationship kind
+ * Returns undefined for non-lineage relationships
+ */
+export function getExpectedDistanceRange(kind: string): { min: number; max: number } | undefined {
+  const ranges: Record<string, { min: number; max: number }> = {
+    'derived_from': { min: 0.05, max: 0.6 },    // Incremental improvement to revolutionary
+    'related_to': { min: 0.3, max: 0.7 },       // Moderate similarity
+    'split_from': { min: 0.15, max: 0.8 },      // Minor disagreement to radical split
+    'supersedes': { min: 0.1, max: 0.5 },       // Amendment to revolutionary
+    'inspired_by': { min: 0.3, max: 0.6 },      // Moderate influence
+    'part_of': { min: 0.0, max: 0.3 },          // Close subsumption
+    'adjacent_to': { min: 0.0, max: 0.5 },      // Close proximity to distant
+    'contains': { min: 0.0, max: 0.3 },         // Direct containment is close
+    'contained_by': { min: 0.0, max: 0.3 }      // Direct containment is close
+  };
+  return ranges[kind];
+}
+
 // Relationship categories (immutable vs mutable)
 const RELATIONSHIP_CATEGORIES: Record<string, string> = {
   // Immutable (lineage and facts - set at creation, never change)
@@ -379,6 +422,20 @@ export function addRelationship(
   // Auto-assign category based on relationship kind
   const category = RELATIONSHIP_CATEGORIES[kind] ?? RELATIONSHIP_CATEGORIES.default;
 
+  // LINEAGE ENFORCEMENT: Auto-assign distance for lineage relationships if missing
+  let finalDistance = distance;
+  if (finalDistance === undefined && isLineageRelationship(kind)) {
+    const range = getExpectedDistanceRange(kind);
+    if (range) {
+      finalDistance = range.min + Math.random() * (range.max - range.min);
+
+      // Log warning for debugging (only occasionally to avoid spam)
+      if (Math.random() < 0.05) {  // 5% sample rate
+        console.warn(`⚠️  Auto-adding distance to ${kind} relationship (${srcId} → ${dstId}): ${finalDistance.toFixed(3)}`);
+      }
+    }
+  }
+
   // Check relationship warning thresholds (per-kind, non-blocking)
   const srcEntity = graph.entities.get(srcId);
   if (srcEntity) {
@@ -412,13 +469,13 @@ export function addRelationship(
   }
 
   // Add relationship (always, no hard limit) with strength, distance, and category
-  graph.relationships.push({ kind, src: srcId, dst: dstId, strength, distance, category });
+  graph.relationships.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
 
   // Update entity links
   const dstEntity = graph.entities.get(dstId);
 
   if (srcEntity) {
-    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength, distance, category });
+    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
     srcEntity.updatedAt = graph.tick;
   }
 

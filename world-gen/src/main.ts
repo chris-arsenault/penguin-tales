@@ -51,6 +51,62 @@ import { applyParameterOverrides } from './utils/parameterOverrides';
 
 const sanitize = (value?: string | null): string => (value ?? '').trim();
 
+// ============================================================================
+// SCALING CONFIGURATION
+// ============================================================================
+// Master scale factor for world size. Affects all entity caps, tick limits,
+// and relationship budgets proportionally. Default: 1.0 (baseline ~150 entities)
+const SCALE_FACTOR = parseFloat(sanitize(process.env.SCALE_FACTOR)) || 1.0;
+console.log(`📏 Scale Factor: ${SCALE_FACTOR}x`);
+
+// Scale distribution targets (deep clone and scale all numeric "target" fields)
+function scaleDistributionTargets(targets: any, scale: number): any {
+  if (typeof targets !== 'object' || targets === null) return targets;
+  if (Array.isArray(targets)) return targets.map(item => scaleDistributionTargets(item, scale));
+
+  const scaled: any = {};
+  for (const [key, value] of Object.entries(targets)) {
+    if (key === 'target' && typeof value === 'number') {
+      scaled[key] = Math.ceil(value * scale);
+    } else if (typeof value === 'object') {
+      scaled[key] = scaleDistributionTargets(value, scale);
+    } else {
+      scaled[key] = value;
+    }
+  }
+  return scaled;
+}
+
+const scaledDistributionTargets = scaleDistributionTargets(distributionTargetsData, SCALE_FACTOR);
+
+// Scale entity registries (shallow clone that preserves functions)
+function scaleEntityRegistries(registries: any[], scale: number): any[] {
+  return registries.map(registry => {
+    // Shallow clone the registry, preserving functions
+    const scaled = { ...registry };
+
+    // Scale creators targetCount (create new array to avoid mutating original)
+    if (registry.creators) {
+      scaled.creators = registry.creators.map((creator: any) => ({
+        ...creator,
+        targetCount: creator.targetCount ? Math.ceil(creator.targetCount * scale) : creator.targetCount
+      }));
+    }
+
+    // Scale expectedDistribution.targetCount (create new object to avoid mutating original)
+    if (registry.expectedDistribution?.targetCount) {
+      scaled.expectedDistribution = {
+        ...registry.expectedDistribution,
+        targetCount: Math.ceil(registry.expectedDistribution.targetCount * scale)
+      };
+    }
+
+    return scaled;
+  });
+}
+
+const scaledEntityRegistries = scaleEntityRegistries(entityRegistries, SCALE_FACTOR);
+
 // Parse CLI arguments
 function parseArgs(): { runId?: string; configPath?: string } {
   const args = process.argv.slice(2);
@@ -160,25 +216,28 @@ const config: EngineConfig = {
   templates: configuredTemplates,
   systems: configuredSystems,
   pressures: pressures,
-  entityRegistries: entityRegistries,  // Framework formalization: entity operator registry
+  entityRegistries: scaledEntityRegistries,  // Framework formalization: entity operator registry (scaled)
   llmConfig,
   enrichmentConfig,
 
-  // Statistical distribution targets (enables mid-run tuning)
-  distributionTargets: distributionTargetsData as DistributionTargets,
+  // Statistical distribution targets (enables mid-run tuning, scaled by SCALE_FACTOR)
+  distributionTargets: scaledDistributionTargets as DistributionTargets,
 
-  // Tuning parameters
-  epochLength: 20,                    // ticks per epoch
-  simulationTicksPerGrowth: 15,       // simulation ticks between growth phases (increased to reduce NPC spam)
-  targetEntitiesPerKind: 30,          // target ~150 total entities (5 kinds)
-  maxTicks: 500,                      // maximum simulation ticks
+  // Tuning parameters (scaled by SCALE_FACTOR)
+  epochLength: Math.ceil(20 * SCALE_FACTOR),                    // ticks per epoch
+  simulationTicksPerGrowth: Math.ceil(15 * SCALE_FACTOR),       // simulation ticks between growth phases
+  targetEntitiesPerKind: Math.ceil(30 * SCALE_FACTOR),          // target entities per kind (~150 total at 1x)
+  maxTicks: Math.ceil(500 * SCALE_FACTOR),                      // maximum simulation ticks
   maxRelationshipsPerType: 3,         // DEPRECATED: now using per-kind warning thresholds in helpers.ts
 
-  // Engine-level safeguards
+  // Engine-level safeguards (scaled by SCALE_FACTOR)
   relationshipBudget: {
-    maxPerSimulationTick: 50,         // Hard cap: prevent exponential growth during simulation
-    maxPerGrowthPhase: 150            // Hard cap: prevent template spam during growth
-  }
+    maxPerSimulationTick: Math.ceil(50 * SCALE_FACTOR),         // Hard cap: prevent exponential growth during simulation
+    maxPerGrowthPhase: Math.ceil(150 * SCALE_FACTOR)            // Hard cap: prevent template spam during growth
+  },
+
+  // Pass scale factor to engine for internal calculations
+  scaleFactor: SCALE_FACTOR
 };
 
 // Main execution
@@ -244,7 +303,45 @@ async function generateWorld() {
     .forEach(([type, count]) => {
       console.log(`  ${type}: ${count}`);
     });
-  
+
+  // Catalyst statistics
+  console.log('\n=== CATALYST ACTIONS ===');
+  const entitiesWithCatalyst = worldState.hardState.filter((e: HardState) => e.catalyst?.canAct);
+  const catalystActions = worldState.history.filter((e: any) =>
+    e.description &&
+    e.type === 'simulation' &&
+    e.relationshipsCreated.length > 0 &&
+    (e.description.includes('seized control') ||
+     e.description.includes('established trade') ||
+     e.description.includes('declared war') ||
+     e.description.includes('forged alliance') ||
+     e.description.includes('raided') ||
+     e.description.includes('corrupted') ||
+     e.description.includes('manifested') ||
+     e.description.includes('spread to') ||
+     e.description.includes('converted'))
+  );
+  console.log(`  Active agents: ${entitiesWithCatalyst.length}`);
+  console.log(`  Agent actions: ${catalystActions.length}`);
+  const actionsByAgent = new Map<string, number>();
+  catalystActions.forEach((action: any) => {
+    // Extract agent name (handle "The X" case)
+    const words = action.description.split(' ');
+    const agentName = words[0] === 'The' && words.length > 1
+      ? `${words[0]} ${words[1]}`
+      : words[0];
+    actionsByAgent.set(agentName, (actionsByAgent.get(agentName) || 0) + 1);
+  });
+  const topAgents = Array.from(actionsByAgent.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  if (topAgents.length > 0) {
+    console.log('  Top agents by actions:');
+    topAgents.forEach(([agent, count]) => {
+      console.log(`    ${agent}: ${count} actions`);
+    });
+  }
+
   // Relationship breakdown
   const relationshipBreakdown: Record<string, number> = {};
   worldState.relationships.forEach((rel: any) => {
@@ -262,9 +359,9 @@ async function generateWorld() {
   // Sample history events
   console.log('\n=== SAMPLE HISTORY EVENTS ===');
   const sampleEvents = worldState.history
-    .filter((e: any) => e.description && e.entitiesCreated.length > 0)
+    .filter((e: any) => e.description && (e.entitiesCreated.length > 0 || e.relationshipsCreated.length > 0))
     .slice(-10);
-    
+
   sampleEvents.forEach((event: any) => {
     console.log(`  [Tick ${event.tick}] ${event.description}`);
   });

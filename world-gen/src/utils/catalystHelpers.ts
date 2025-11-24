@@ -248,6 +248,103 @@ export function initializeCatalyst(
 }
 
 /**
+ * Smart catalyst initialization based on entity type and prominence
+ * Automatically determines action domains and influence based on entity properties
+ * @param entity - The entity to initialize
+ */
+export function initializeCatalystSmart(entity: HardState): void {
+  // Only prominent entities can act
+  if (!['recognized', 'renowned', 'mythic'].includes(entity.prominence)) {
+    return;
+  }
+
+  // Determine which action domains this entity can use
+  const actionDomains = getActionDomainsForEntity(entity);
+  if (actionDomains.length === 0) {
+    return;
+  }
+
+  entity.catalyst = {
+    canAct: true,
+    actionDomains,
+    influence: prominenceToInfluence(entity.prominence),
+    catalyzedEvents: []
+  };
+}
+
+/**
+ * Get action domains for an entity based on its kind and subtype
+ * @param entity - The entity to check
+ * @returns Array of action domain IDs
+ */
+function getActionDomainsForEntity(entity: HardState): string[] {
+  const domains: string[] = [];
+
+  switch (entity.kind) {
+    case 'npc':
+      if (entity.subtype === 'hero') {
+        domains.push('political', 'military', 'cultural');
+      } else if (entity.subtype === 'mayor') {
+        domains.push('political', 'economic');
+      } else if (entity.subtype === 'orca') {
+        domains.push('military');
+      } else if (entity.subtype === 'outlaw') {
+        domains.push('military', 'economic');
+      } else {
+        // Other NPC types get economic domain
+        domains.push('economic');
+      }
+      break;
+
+    case 'faction':
+      domains.push('political', 'economic', 'cultural');
+      if (entity.subtype === 'criminal') {
+        domains.push('military');
+      }
+      break;
+
+    case 'abilities':
+      if (entity.subtype === 'magic') {
+        domains.push('magical');
+      } else if (entity.subtype === 'technology') {
+        domains.push('technological');
+      }
+      break;
+
+    case 'occurrence':
+      if (entity.subtype === 'war') {
+        domains.push('conflict_escalation', 'military');
+      } else if (entity.subtype === 'magical_disaster') {
+        domains.push('disaster_spread');
+      }
+      break;
+
+    case 'location':
+      // Anomalies can cause environmental effects
+      if (entity.subtype === 'anomaly') {
+        domains.push('environmental', 'magical');
+      }
+      break;
+  }
+
+  return domains;
+}
+
+/**
+ * Convert prominence level to influence score
+ * @param prominence - Prominence level
+ * @returns Influence score (0-1)
+ */
+function prominenceToInfluence(prominence: string): number {
+  switch (prominence) {
+    case 'mythic': return 0.9;
+    case 'renowned': return 0.7;
+    case 'recognized': return 0.5;
+    default: return 0.3;
+  }
+}
+
+/**
  * Update entity influence based on action outcome
  * @param entity - The entity whose influence to update
  * @param success - Whether the action succeeded

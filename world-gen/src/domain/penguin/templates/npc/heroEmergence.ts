@@ -2,6 +2,7 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ty
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
 import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
+import { initializeCatalystSmart } from '../../../../utils/catalystHelpers';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -108,6 +109,12 @@ export const heroEmergence: GrowthTemplate = {
       prominence: 'marginal', // Heroes start marginal, must earn prominence
       tags: ['brave', 'emergent']
     };
+
+    // Initialize catalyst - heroes start marginal but will gain prominence and become actors
+    // Note: marginal heroes won't act yet, but system is ready when they become recognized
+    const heroEntity = hero as HardState;
+    heroEntity.id = 'temp'; // Temporary ID for initialization
+    initializeCatalystSmart(heroEntity);
 
     const abilities = graphView.findEntities({ kind: 'abilities' });
     const relationships: Relationship[] = [];
