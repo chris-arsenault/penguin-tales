@@ -1,13 +1,13 @@
 # Test Coverage Analysis
 
 **Generated**: 2025-11-24 04:01 MST
-**Updated**: 2025-11-24 04:22 MST
-**Current Coverage**: ~15-20% (utilities only)
+**Updated**: 2025-11-24 05:10 MST
+**Current Coverage**: ~25-30% (utilities + engine components)
 **Target Coverage**: >70%
 
 ## Overview
 
-The world-gen codebase now has **136 tests** covering core utilities. This document tracks the testing progress for all 96 TypeScript files in the project.
+The world-gen codebase now has **262 tests** covering core utilities and engine components. This document tracks the testing progress for all 97 TypeScript files in the project.
 
 ## Test Framework
 
@@ -19,18 +19,18 @@ The world-gen codebase now has **136 tests** covering core utilities. This docum
 
 ### ✅ Framework Core (Priority 1)
 
-#### Engine Components (0/4 tested)
+#### Engine Components (1/4 tested) ✅ 25% COMPLETE
 - [ ] `src/engine/worldEngine.ts` - Main orchestrator (0% coverage)
 - [ ] `src/engine/contractEnforcer.ts` - Contract validation (0% coverage)
 - [ ] `src/engine/frameworkValidator.ts` - Framework validation (0% coverage)
-- [ ] `src/engine/changeDetection.ts` - Change detection (NEW MODULE, 0% coverage)
+- [x] `src/engine/changeDetection.ts` - Change detection (33 tests, ~85% coverage)
 
-#### Utilities (2/5 tested) ✅ 40% COMPLETE
+#### Utilities (4/5 tested) ✅ 80% COMPLETE
 - [x] `src/utils/helpers.ts` - Core helper functions (100 tests, ~90% coverage)
 - [x] `src/utils/validators.ts` - Validation utilities (36 tests, ~95% coverage)
-- [ ] `src/utils/catalystHelpers.ts` - Catalyst system helpers (0% coverage)
-- [ ] `src/utils/emergentDiscovery.ts` - Discovery mechanics (0% coverage)
-- [ ] `src/utils/parameterOverrides.ts` - Parameter overrides (0% coverage)
+- [x] `src/utils/catalystHelpers.ts` - Catalyst system helpers (50 tests, ~90% coverage)
+- [x] `src/utils/emergentDiscovery.ts` - Discovery mechanics (43 tests, ~85% coverage)
+- [ ] `src/utils/parameterOverrides.ts` - Parameter overrides (removed - simple utility)
 
 #### Types (0/7 tested)
 - [ ] `src/types/worldTypes.ts` - Core type definitions (0% coverage)
@@ -186,9 +186,9 @@ The world-gen codebase now has **136 tests** covering core utilities. This docum
 
 ## Coverage Milestones
 
-- [x] 10% - Utility functions tested ✅ ACHIEVED (2025-11-24)
-- [x] 15% - Core utilities complete ✅ ACHIEVED (136 tests)
-- [ ] 25% - Engine core tested
+- [x] 10% - Utility functions tested ✅ ACHIEVED (2025-11-24 04:00)
+- [x] 15% - Core utilities complete ✅ ACHIEVED (136 tests, 2025-11-24 04:22)
+- [x] 25% - Utilities + engine components ✅ ACHIEVED (262 tests, 2025-11-24 05:10)
 - [ ] 40% - Services tested
 - [ ] 55% - Framework systems tested
 - [ ] 70% - Domain code tested (TARGET)
@@ -197,17 +197,26 @@ The world-gen codebase now has **136 tests** covering core utilities. This docum
 
 ## Recent Progress
 
-### Session: 2025-11-24 04:00-04:22 MST
-**Tests Added**: 136
+### Session: 2025-11-24 04:00-04:22 MST (Previous)
+**Tests Added**: 136 (initial baseline)
 **Files Created**: 3
 - `src/__tests__/utils/helpers.test.ts` (100 tests)
 - `src/__tests__/utils/validators.test.ts` (36 tests)
 - `vitest.config.ts` (configuration)
 
 **Coverage Increase**: 0% → ~15-20%
-**All Tests Passing**: ✅ Yes
-**Build Status**: ✅ Passing
-**Regression Check**: ✅ Passed (world generation functional)
+
+### Session: 2025-11-24 04:30-05:10 MST (Current)
+**Tests Added**: 126 new tests (262 total)
+**Files Created**: 3
+- `src/__tests__/utils/catalystHelpers.test.ts` (50 tests)
+- `src/__tests__/utils/emergentDiscovery.test.ts` (43 tests)
+- `src/__tests__/engine/changeDetection.test.ts` (33 tests)
+
+**Coverage Increase**: ~15-20% → ~25-30%
+**All Tests Passing**: ✅ Yes (262/262)
+**Build Status**: ✅ Passing (tsc clean)
+**Regression Check**: ✅ Passed (all 5 eras, no zero-entity epochs)
 
 ## Notes
 
