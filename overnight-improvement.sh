@@ -11,7 +11,7 @@ while true; do
   LOG_FILE="improvement-$(date +%Y%m%d-%H%M%S).log"
 
   # Run Claude Code with maximum iterations and logging
-  claude --max-turns 1000 --dangerously-skip-permissions < architecture-improvements.md
+  claude --print --max-turns 1000 --dangerously-skip-permissions < architecture-improvements.md
 
   # Commit all changes
   git add -A
