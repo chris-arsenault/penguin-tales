@@ -1,0 +1,29 @@
+{
+  "id": "tech_industrial",
+  "appliesTo": {
+    "kind": ["faction", "location"],
+    "subKind": ["corporation", "tech", "industrial"],
+    "tags": ["tech", "industrial", "corporate", "modern"]
+  },
+  "phonology": {
+    "consonants": ["t", "k", "s", "x", "n", "r", "p", "v", "z"],
+    "vowels": ["a", "e", "i", "o"],
+    "syllableTemplates": ["CVC", "CVCC", "CV"],
+    "lengthRange": [1, 2],
+    "forbiddenClusters": ["xx", "zz"]
+  },
+  "morphology": {
+    "prefixes": ["Proto", "Hex", "Tri", "Neuro", "Syn", "Cyber", "Tech"],
+    "suffixes": ["sys", "core", "ware", "net", "tek", "tron", "dyne"],
+    "structure": ["root", "prefix-root", "root-suffix", "prefix-root-suffix"],
+    "structureWeights": [0.1, 0.3, 0.4, 0.2]
+  },
+  "style": {
+    "apostropheRate": 0.0,
+    "hyphenRate": 0.3,
+    "capitalization": "mixed",
+    "preferredEndings": ["sys", "core", "tek", "tron"],
+    "preferredEndingBoost": 2.0,
+    "rhythmBias": "staccato"
+  }
+}

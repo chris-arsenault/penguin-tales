@@ -1,0 +1,26 @@
+{
+  "id": "goauld_short",
+  "appliesTo": {
+    "kind": ["npc", "faction"],
+    "subKind": ["alien", "goauld"],
+    "tags": ["alien", "short", "sharp"]
+  },
+  "phonology": {
+    "consonants": ["t", "k", "d", "q", "r", "s", "n"],
+    "vowels": ["a", "e", "i", "o"],
+    "syllableTemplates": ["CV", "CVC"],
+    "lengthRange": [1, 2],
+    "favoredClusters": ["k", "q", "r"]
+  },
+  "morphology": {
+    "structure": ["root", "root-suffix"],
+    "suffixes": ["ra", "no", "k"],
+    "structureWeights": [0.7, 0.3]
+  },
+  "style": {
+    "apostropheRate": 0.4,
+    "hyphenRate": 0.0,
+    "capitalization": "title",
+    "rhythmBias": "staccato"
+  }
+}

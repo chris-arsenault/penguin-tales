@@ -1,0 +1,152 @@
+{
+  "domains": [
+    {
+      "id": "elf_high",
+      "appliesTo": {
+        "kind": ["npc", "location"],
+        "subKind": ["elf", "elven"],
+        "tags": ["elf", "high", "ancient", "forest"]
+      },
+      "phonology": {
+        "consonants": ["l", "r", "th", "f", "n", "m", "v", "s", "h"],
+        "vowels": ["a", "e", "i", "o", "u", "ae", "ea", "ie", "ai", "oi"],
+        "syllableTemplates": ["CV", "CVV", "CVC", "VC"],
+        "lengthRange": [2, 4],
+        "favoredClusters": ["th", "ae", "ie"],
+        "favoredClusterBoost": 2.0
+      },
+      "morphology": {
+        "prefixes": ["Ael", "Ith", "Vor", "Lae", "Eli"],
+        "suffixes": ["riel", "ion", "aen", "iel", "ar", "eth"],
+        "structure": [
+          "root",
+          "root-suffix",
+          "prefix-root",
+          "prefix-root-suffix"
+        ],
+        "structureWeights": [0.3, 0.4, 0.2, 0.1]
+      },
+      "style": {
+        "apostropheRate": 0.05,
+        "hyphenRate": 0.0,
+        "capitalization": "title",
+        "preferredEndings": ["iel", "ion", "riel"],
+        "preferredEndingBoost": 2.0,
+        "rhythmBias": "flowing"
+      }
+    },
+    {
+      "id": "dwarf_mountain",
+      "appliesTo": {
+        "kind": ["npc", "location"],
+        "subKind": ["dwarf", "dwarven"],
+        "tags": ["dwarf", "mountain", "forge", "stone"]
+      },
+      "phonology": {
+        "consonants": [
+          "d",
+          "t",
+          "k",
+          "g",
+          "r",
+          "n",
+          "m",
+          "b",
+          "th",
+          "gr",
+          "kr",
+          "br",
+          "dr"
+        ],
+        "vowels": ["a", "o", "u", "i"],
+        "syllableTemplates": ["CVC", "CVCC", "CV", "VC"],
+        "lengthRange": [1, 3],
+        "favoredClusters": ["gr", "kr", "br", "dr", "rn", "rk"],
+        "forbiddenClusters": ["ii", "uu"],
+        "favoredClusterBoost": 2.5
+      },
+      "morphology": {
+        "prefixes": ["Dum", "Thor", "Brok", "Grim", "Dor"],
+        "suffixes": ["in", "ur", "rim", "rik", "dun", "ok"],
+        "structure": ["root", "root-suffix", "prefix-root-suffix"],
+        "structureWeights": [0.2, 0.5, 0.3]
+      },
+      "style": {
+        "apostropheRate": 0.0,
+        "hyphenRate": 0.0,
+        "capitalization": "title",
+        "preferredEndings": ["in", "ur", "im", "ok"],
+        "preferredEndingBoost": 1.5,
+        "rhythmBias": "harsh"
+      }
+    },
+    {
+      "id": "tech_industrial",
+      "appliesTo": {
+        "kind": ["faction", "location"],
+        "subKind": ["corporation", "tech", "industrial"],
+        "tags": ["tech", "industrial", "corporate", "modern"]
+      },
+      "phonology": {
+        "consonants": ["t", "k", "s", "x", "n", "r", "p", "v", "z"],
+        "vowels": ["a", "e", "i", "o"],
+        "syllableTemplates": ["CVC", "CVCC", "CV"],
+        "lengthRange": [1, 2],
+        "forbiddenClusters": ["xx", "zz"]
+      },
+      "morphology": {
+        "prefixes": [
+          "Proto",
+          "Hex",
+          "Tri",
+          "Neuro",
+          "Syn",
+          "Cyber",
+          "Tech"
+        ],
+        "suffixes": ["sys", "core", "ware", "net", "tek", "tron", "dyne"],
+        "structure": [
+          "root",
+          "prefix-root",
+          "root-suffix",
+          "prefix-root-suffix"
+        ],
+        "structureWeights": [0.1, 0.3, 0.4, 0.2]
+      },
+      "style": {
+        "apostropheRate": 0.0,
+        "hyphenRate": 0.3,
+        "capitalization": "mixed",
+        "preferredEndings": ["sys", "core", "tek", "tron"],
+        "preferredEndingBoost": 2.0,
+        "rhythmBias": "staccato"
+      }
+    },
+    {
+      "id": "goauld_short",
+      "appliesTo": {
+        "kind": ["npc", "faction"],
+        "subKind": ["alien", "goauld"],
+        "tags": ["alien", "short", "sharp"]
+      },
+      "phonology": {
+        "consonants": ["t", "k", "d", "q", "r", "s", "n"],
+        "vowels": ["a", "e", "i", "o"],
+        "syllableTemplates": ["CV", "CVC"],
+        "lengthRange": [1, 2],
+        "favoredClusters": ["k", "q", "r"]
+      },
+      "morphology": {
+        "structure": ["root", "root-suffix"],
+        "suffixes": ["ra", "no", "k"],
+        "structureWeights": [0.7, 0.3]
+      },
+      "style": {
+        "apostropheRate": 0.4,
+        "hyphenRate": 0.0,
+        "capitalization": "title",
+        "rhythmBias": "staccato"
+      }
+    }
+  ]
+}
