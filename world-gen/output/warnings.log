@@ -1,1316 +1,1364 @@
 World Generation Warnings Log
-Started: 2025-11-24T10:34:52.552Z
+Started: 2025-11-24T11:20:12.608Z
 ================================================================================
 
-[2025-11-24T10:34:52.638Z] [Tick 15]
+[2025-11-24T11:20:12.710Z] [Tick 19]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 10
    Warning threshold: 10
-   Target: The Glowing Depths
-   Tick: 15
+   Target: Shimmering Echo
+   Tick: 19
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.642Z] [Tick 15]
+[2025-11-24T11:20:12.714Z] [Tick 20]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 11
    Warning threshold: 10
-   Target: Chillwing Ethereal Cavern
-   Tick: 15
+   Target: Krill Shoals
+   Tick: 20
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.670Z] [Tick 23]
+[2025-11-24T11:20:12.729Z] [Tick 24]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 12
    Warning threshold: 10
-   Target: Frozen Echo
-   Tick: 23
+   Target: Tidewalker Mystical Shrine
+   Tick: 24
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.676Z] [Tick 25]
+[2025-11-24T11:20:12.740Z] [Tick 27]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 13
    Warning threshold: 10
-   Target: Krill Shoals
-   Tick: 25
+   Target: Frozen Rift
+   Tick: 27
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.743Z] [Tick 30]
+[2025-11-24T11:20:12.744Z] [Tick 28]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 14
    Warning threshold: 10
-   Target: Glacierwatcher Virgin Valley
-   Tick: 30
+   Target: Icewatcher Ethereal Cavern
+   Tick: 28
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.778Z] [Tick 36]
+[2025-11-24T11:20:12.760Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 15
    Warning threshold: 10
-   Target: Frostkeeper Ley Nexus
-   Tick: 36
+   Target: The Glowing Depths
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.783Z] [Tick 37]
+[2025-11-24T11:20:12.761Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 16
    Warning threshold: 10
-   Target: Blizzardcaller Mystical Shrine
-   Tick: 37
+   Target: The Shimmering Chasm
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.789Z] [Tick 38]
+[2025-11-24T11:20:12.762Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 17
    Warning threshold: 10
-   Target: Snowbeak Mystical Shrine
-   Tick: 38
+   Target: Spectral Basin
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.795Z] [Tick 39]
+[2025-11-24T11:20:12.766Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 18
    Warning threshold: 10
-   Target: Frozen Echo
-   Tick: 39
+   Target: The Frozen Aurora
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.816Z] [Tick 42]
+[2025-11-24T11:20:12.779Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 19
    Warning threshold: 10
-   Target: Frozen Rift
-   Tick: 42
+   Target: Glinthunter Mystical Shrine
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.854Z] [Tick 45]
+[2025-11-24T11:20:12.793Z] [Tick 32]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 20
    Warning threshold: 10
-   Target: The Shimmering Chasm
-   Tick: 45
+   Target: Dark Vortex
+   Tick: 32
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.917Z] [Tick 46]
+[2025-11-24T11:20:12.805Z] [Tick 34]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 21
    Warning threshold: 10
-   Target: Shimmering Echo
-   Tick: 46
+   Target: Shimmerfisher Mystical Shrine
+   Tick: 34
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.928Z] [Tick 47]
+[2025-11-24T11:20:12.823Z] [Tick 37]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 22
    Warning threshold: 10
-   Target: Wavefisher Mystical Shrine
-   Tick: 47
+   Target: Glacierkeeper Magical Convergence
+   Tick: 37
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.937Z] [Tick 48]
+[2025-11-24T11:20:12.848Z] [Tick 41]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 23
    Warning threshold: 10
-   Target: Frozen Vortex
-   Tick: 48
+   Target: Glacierdiver Ley Nexus
+   Tick: 41
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.946Z] [Tick 49]
+[2025-11-24T11:20:12.858Z] [Tick 43]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 24
    Warning threshold: 10
-   Target: Aurora Stack
-   Tick: 49
+   Target: Shimmering Vortex
+   Tick: 43
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.956Z] [Tick 50]
+[2025-11-24T11:20:13.001Z] [Tick 50]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 25
    Warning threshold: 10
-   Target: Icefisher Ley Nexus
+   Target: Frozen Vortex
    Tick: 50
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.989Z] [Tick 54]
+[2025-11-24T11:20:13.014Z] [Tick 51]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 26
    Warning threshold: 10
-   Target: Nightfall Shelf
-   Tick: 54
+   Target: Shimmering Echo
+   Tick: 51
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:52.997Z] [Tick 55]
+[2025-11-24T11:20:13.024Z] [Tick 52]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 27
    Warning threshold: 10
-   Target: Dark Rift
-   Tick: 55
+   Target: Tidehunter Ethereal Cavern
+   Tick: 52
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.012Z] [Tick 57]
+[2025-11-24T11:20:13.043Z] [Tick 54]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 28
    Warning threshold: 10
-   Target: Stormswimmer Magical Convergence
-   Tick: 57
+   Target: Shimmering Echo
+   Tick: 54
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.020Z] [Tick 58]
+[2025-11-24T11:20:13.053Z] [Tick 55]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 29
    Warning threshold: 10
-   Target: Shimmering Rift
-   Tick: 58
+   Target: Aurora Berg
+   Tick: 55
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.104Z] [Tick 60]
+[2025-11-24T11:20:13.074Z] [Tick 57]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 30
    Warning threshold: 10
-   Target: Ethereal Shelf
-   Tick: 60
+   Target: Icebreaker Magical Convergence
+   Tick: 57
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.152Z] [Tick 62]
+[2025-11-24T11:20:13.144Z] [Tick 60]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 31
    Warning threshold: 10
-   Target: Shimmering Echo
-   Tick: 62
+   Target: Frost-Light Grotto
+   Tick: 60
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.177Z] [Tick 64]
+[2025-11-24T11:20:13.158Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.158Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.159Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.160Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.160Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.161Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.161Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Ecclesiastical Council of 4 Laws (faction_1076)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.298Z] [Tick 68]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 32
    Warning threshold: 10
-   Target: Shimmering Echo
-   Tick: 64
+   Target: Dark Rift
+   Tick: 68
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.217Z] [Tick 67]
+[2025-11-24T11:20:13.328Z] [Tick 70]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 33
    Warning threshold: 10
-   Target: Crystalfisher Ley Nexus
-   Tick: 67
+   Target: Snowfisher Fertile Shelf
+   Tick: 70
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.448Z] [Tick 75]
+[2025-11-24T11:20:13.343Z] [Tick 71]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 34
    Warning threshold: 10
-   Target: Frost-Light Grotto
-   Tick: 75
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 71
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.468Z] [Tick 75]
+[2025-11-24T11:20:13.359Z] [Tick 72]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 35
    Warning threshold: 10
-   Target: Glacierslider Krill Grounds
+   Target: Stormsinger Magical Convergence
+   Tick: 72
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.414Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Shimmering Echo
    Tick: 75
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.495Z] [Tick 76]
+[2025-11-24T11:20:13.417Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Tidehunter Ethereal Cavern
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.421Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierdiver Ley Nexus
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.423Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierdiver Ley Nexus
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.563Z] [Tick 77]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 36
    Warning threshold: 10
-   Target: Dark Echo
-   Tick: 76
+   Target: Snowwatcher Krill Grounds
+   Tick: 77
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.518Z] [Tick 77]
+[2025-11-24T11:20:13.603Z] [Tick 79]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 37
    Warning threshold: 10
-   Target: Wavehunter Krill Grounds
-   Tick: 77
+   Target: Stormsinger Krill Grounds
+   Tick: 79
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.561Z] [Tick 79]
+[2025-11-24T11:20:13.675Z] [Tick 83]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Shadow-Broker Nyla (Shadow-Broker Nyla)
+   Kind: npc
+   Relationship Type: controls
+   Current count: 5
+   Warning threshold: 5
+   Target: Windward Ridge
+   Tick: 83
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.675Z] [Tick 83]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 38
    Warning threshold: 10
-   Target: Tidewatcher Krill Grounds
-   Tick: 79
-   Era: The Faction Wars
+   Target: Shimmerhunter Krill Grounds
+   Tick: 83
+   Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:53.605Z] [Tick 81]
+[2025-11-24T11:20:13.772Z] [Tick 89]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 39
    Warning threshold: 10
-   Target: Crystalkeeper Krill Grounds
-   Tick: 81
+   Target: Chillwatcher Krill Grounds
+   Tick: 89
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:54.005Z] [Tick 91]
+[2025-11-24T11:20:13.814Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierkeeper Magical Convergence
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:13.871Z] [Tick 91]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 40
    Warning threshold: 10
-   Target: North Haven
+   Target: East Roost
    Tick: 91
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:54.042Z] [Tick 92]
+[2025-11-24T11:20:13.892Z] [Tick 92]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 41
    Warning threshold: 10
-   Target: West Haven
+   Target: Icewing Ley Nexus
    Tick: 92
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:54.112Z] [Tick 94]
+[2025-11-24T11:20:13.913Z] [Tick 93]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 42
    Warning threshold: 10
-   Target: South Roost
-   Tick: 94
+   Target: Chilldiver Krill Grounds
+   Tick: 93
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:54.710Z] [Tick 105]
+[2025-11-24T11:20:13.934Z] [Tick 94]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 43
    Warning threshold: 10
-   Target: Glacierbeak Krill Grounds
-   Tick: 105
+   Target: Glacierkeeper Krill Grounds
+   Tick: 94
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:55.569Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.575Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.580Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.581Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.589Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: Fissure-Walker Draen (Fissure-Walker Draen)
-   Kind: npc
-   Relationship Type: believer_of
-   Current count: 5
-   Warning threshold: 5
-   Target: The Natural Order
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.590Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.600Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Glacierbeak Ley Nexus
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.608Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Frozen Vortex
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.615Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Stormdiver Thermal Vent
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.621Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Chillwing Ethereal Cavern
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.629Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1044)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Icefisher Ley Nexus
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.631Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1044)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.635Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Dark Echo
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.660Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.661Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.662Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.663Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.664Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.665Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.666Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1044)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.667Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.669Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.671Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.673Z] [Tick 120]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 120
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:55.758Z] [Tick 121]
+[2025-11-24T11:20:14.019Z] [Tick 98]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 44
    Warning threshold: 10
-   Target: Stormdiver Thermal Vent
-   Tick: 121
-   Era: The Orca Incursion
+   Target: East Haven
+   Tick: 98
+   Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:55.804Z] [Tick 122]
+[2025-11-24T11:20:14.064Z] [Tick 100]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 45
    Warning threshold: 10
-   Target: Crystalbreaker Ice Quarry
-   Tick: 122
-   Era: The Orca Incursion
+   Target: Frostsinger Krill Grounds
+   Tick: 100
+   Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:56.041Z] [Tick 127] ⚠️  AGGRESSIVE SYSTEM: universal_catalyst has created 502 relationships
-[2025-11-24T10:34:56.041Z] [Tick 127]    Consider adding throttling or reducing probabilities
-[2025-11-24T10:34:56.418Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.419Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Dark Rift
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.421Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Blizzardcaller Mystical Shrine
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.424Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Dark Rift
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.438Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Blizzardcaller Mystical Shrine
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.441Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.443Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.449Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Frozen Vortex
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.469Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Snowbeak Mystical Shrine
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.485Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.486Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.487Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Aurora Stack
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.489Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.491Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1044)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.492Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.493Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.494Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.495Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Krill Shoals
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.498Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.499Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: The Glow-Fissure
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.500Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.501Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.503Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.504Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Frozen Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.508Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Aurora Stack
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.509Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.510Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.512Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Dark Rift
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.513Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.514Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Floewalker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.516Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Krill Shoals
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.530Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: South Roost Traders (faction_1137)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Frozen Vortex
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.532Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: South Roost Traders (faction_1137)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Crystalfisher Ley Nexus
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.533Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: South Roost Traders (faction_1137)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Chillwing Ethereal Cavern
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.534Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: South Roost Traders (faction_1137)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Crystalbreaker Ice Quarry
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.640Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Governmental Council of 4 Laws (faction_1067)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.642Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1020)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.643Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: South Roost Traders (faction_1137)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.645Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction_1037)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.646Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.648Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction_1057)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.649Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.651Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Nightfall Shelf Traders (faction_1129)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.652Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1044)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.653Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Traditional Council of 4 Laws (faction_1128)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.654Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Aurora Stack Exchange (faction_1131)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.656Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Covenant of the Ice (faction_1002)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Glaciersinger Krill Fields
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-24T10:34:56.791Z] [Tick 136]
+[2025-11-24T11:20:14.103Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 46
    Warning threshold: 10
-   Target: Floewalker Ice Quarry
-   Tick: 136
+   Target: North Haven
+   Tick: 102
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.108Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Wavefisher Krill Fields
+   Tick: 120
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:56.937Z] [Tick 138]
+[2025-11-24T11:20:15.114Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Glinthunter Mystical Shrine
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.128Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Icewing Ley Nexus
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.136Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Icewing Ley Nexus
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.146Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Krill Shoals
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.151Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Aurora Stack Merchants (faction_1125)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Stormsinger Magical Convergence
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.158Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Aurora Stack Merchants (faction_1125)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Wavefisher Krill Fields
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.161Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Shimmerfisher Mystical Shrine
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.164Z] [Tick 120]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Glinthunter Mystical Shrine
+   Tick: 120
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.171Z] [Tick 120]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 47
    Warning threshold: 10
-   Target: Glaciersinger Krill Fields
-   Tick: 138
+   Target: Wavefisher Krill Fields
+   Tick: 120
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-24T10:34:57.658Z] [Tick 148] ⚠️  AGGRESSIVE SYSTEM: universal_catalyst has created 632 relationships
-[2025-11-24T10:34:57.659Z] [Tick 148]    Consider adding throttling or reducing probabilities
+[2025-11-24T11:20:15.373Z] [Tick 124]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 48
+   Warning threshold: 10
+   Target: Glintfisher Ice Quarry
+   Tick: 124
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.554Z] [Tick 128] ⚠️  AGGRESSIVE SYSTEM: universal_catalyst has created 502 relationships
+[2025-11-24T11:20:15.554Z] [Tick 128]    Consider adding throttling or reducing probabilities
+[2025-11-24T11:20:15.815Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Aurora Stack Merchants (faction_1125)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Aurora Stack
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.821Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierkeeper Magical Convergence
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.824Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierkeeper Magical Convergence
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.826Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Aurora Stack Merchants (faction_1125)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.828Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Crystalsinger Ley Nexus
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.830Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Ice (faction_1047)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.836Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.843Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.844Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Floeswimmer Ethereal Cavern
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.846Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.849Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.851Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Nightfall Shelf Traders (faction_1134)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Nightfall Shelf
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.852Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Ice (faction_1047)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.853Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.854Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Aurora Stack
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.856Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Tidewalker Mystical Shrine
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.857Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Aurora Stack Merchants (faction_1125)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.858Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Nightfall Shelf
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.860Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.862Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Ice (faction_1047)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.863Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1021)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Glacierkeeper Magical Convergence
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.864Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Crystalsinger Ley Nexus
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.865Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1041)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.866Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Ice (faction_1047)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Stormsinger Magical Convergence
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.867Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.868Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.869Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.870Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Depths (faction_1081)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: The Glow-Fissure
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.871Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Nightfall Shelf Traders (faction_1134)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.873Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.875Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Nightfall Shelf Traders (faction_1134)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Shimmering Vortex
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.876Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Order of the Ice (faction_1004)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Snowwalker Ley Nexus
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.877Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.878Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Nightfall Shelf Traders (faction_1134)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.879Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1021)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.882Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Divine Council of 4 Laws (faction_1078)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Nightfall Shelf
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.883Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.884Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Ice (faction_1047)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Wavefisher Krill Fields
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.889Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1021)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.891Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1021)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.894Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Ecclesiastical Council of 4 Laws (faction_1076)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Nightfall Shelf
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.895Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1021)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Glacierdiver Ley Nexus
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.897Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Ecclesiastical Council of 4 Laws (faction_1076)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.898Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Ecclesiastical Council of 4 Laws (faction_1076)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.899Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Ecclesiastical Council of 4 Laws (faction_1076)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Tidehunter Ethereal Cavern
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.922Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.923Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Shimmerfisher Mystical Shrine
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.925Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Glintfisher Ice Quarry
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.926Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Tidehunter Ethereal Cavern
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.927Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Shimmering Vortex
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:15.928Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Covenant of the Fissure (faction_1014)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:16.187Z] [Tick 136]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 49
+   Warning threshold: 10
+   Target: Crystalkeeper Fishing Grounds
+   Tick: 136
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-24T11:20:17.249Z] [Tick 149] ⚠️  AGGRESSIVE SYSTEM: universal_catalyst has created 606 relationships
+[2025-11-24T11:20:17.250Z] [Tick 149]    Consider adding throttling or reducing probabilities

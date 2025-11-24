@@ -9,9 +9,9 @@ while true; do
 
   # Set up logging
   LOG_FILE="improvement-$(date +%Y%m%d-%H%M%S).log"
-
+  B="$(cat architecture-improvements.md)"
   # Run Claude Code with maximum iterations and logging
-   claude --print "$(cat architecture-improvements.md)" --max-turns 1000 --dangerously-skip-permissions --verbose |
+   claude  --max-turns 1000 --dangerously-skip-permissions --verbose --print "$B"
 
   # Commit all changes
   git add -A
