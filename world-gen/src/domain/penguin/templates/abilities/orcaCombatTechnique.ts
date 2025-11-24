@@ -27,7 +27,8 @@ export const orcaCombatTechnique: GrowthTemplate = {
         },
       ],
       relationships: [
-        { kind: 'practitioner_of', category: 'cultural', probability: 1.0, comment: 'Orcas practice technique' },
+        { kind: 'practitioner_of', category: 'institutional', probability: 1.0, comment: 'Orcas practice technique' },
+        { kind: 'related_to', category: 'immutable_fact', probability: 0.5, comment: 'Related to existing combat technique' },
       ],
     },
     effects: {
@@ -81,6 +82,29 @@ export const orcaCombatTechnique: GrowthTemplate = {
       'Thermal Shock'
     ];
 
+    // Find existing combat techniques to establish lineage
+    const existingCombat = graphView.findEntities({ kind: 'abilities', subtype: 'combat' })
+      .filter(c => c.status === 'active');
+
+    // Find related combat technique (prefer orca techniques)
+    let relatedTechnique: HardState | undefined;
+    if (existingCombat.length > 0) {
+      // Prefer combat techniques from other orcas
+      const orcaCombat = existingCombat.filter(combat =>
+        graphView.getAllRelationships().some(r =>
+          r.kind === 'practitioner_of' && r.dst === combat.id &&
+          graphView.getEntity(r.src)?.subtype === 'orca'
+        )
+      );
+
+      if (orcaCombat.length > 0) {
+        relatedTechnique = pickRandom(orcaCombat);
+      } else if (Math.random() < 0.3) {
+        // 30% chance to relate to any combat technique (penguins adapt to orca tactics)
+        relatedTechnique = pickRandom(existingCombat);
+      }
+    }
+
     const techniqueName = pickRandom(techniqueNames);
     const prominence = Math.random() < 0.4 ? 'renowned' : 'recognized';
 
@@ -115,10 +139,33 @@ export const orcaCombatTechnique: GrowthTemplate = {
       });
     }
 
+    // Add lineage relationship to related technique
+    // Orca → Orca: 0.2-0.4 (pack coordination evolution)
+    // Orca → Penguin: 0.6-0.8 (very different approaches)
+    if (relatedTechnique) {
+      const isOrcaTechnique = graphView.getAllRelationships().some(r =>
+        r.kind === 'practitioner_of' && r.dst === relatedTechnique!.id &&
+        graphView.getEntity(r.src)?.subtype === 'orca'
+      );
+
+      const distanceRange = isOrcaTechnique
+        ? { min: 0.2, max: 0.4 }  // Pack coordination, similar tactics
+        : { min: 0.6, max: 0.8 };  // Very different from penguin combat
+
+      relationships.push({
+        kind: 'related_to',
+        src: 'will-be-assigned-0',
+        dst: relatedTechnique.id,
+        distance: distanceRange.min + Math.random() * (distanceRange.max - distanceRange.min),
+        strength: 0.5
+      });
+    }
+
+    const lineageDesc = relatedTechnique ? ` (related to ${relatedTechnique.name})` : '';
     return {
       entities: [technique],
       relationships,
-      description: `Orcas demonstrate the fearsome technique: ${techniqueName}`
+      description: `Orcas demonstrate the fearsome technique: ${techniqueName}${lineageDesc}`
     };
   }
 };

@@ -59,6 +59,9 @@ export interface Graph {
     tick: number;
     violations: Array<{ kind: string; strength: number }>;
   }>;
+
+  // Meta-entity formation service
+  metaEntityFormation?: import('../services/metaEntityFormation').MetaEntityFormation;
 }
 
 // History tracking
@@ -157,4 +160,38 @@ export interface EngineConfig {
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
+}
+
+// Meta-Entity Formation System
+export interface MetaEntityConfig {
+  sourceKind: string;       // Entity kind to cluster (e.g., 'abilities', 'rules')
+  metaKind: string;         // Meta-entity kind to create (e.g., 'school', 'legal_code')
+  trigger: 'epoch_end';     // When to run meta-entity formation
+
+  clustering: {
+    minSize: number;        // Minimum entities in cluster to form meta-entity
+    maxSize?: number;       // Optional maximum size
+    criteria: Array<{
+      type: 'shared_practitioner' | 'shared_location' | 'same_creator' | 'same_location' | 'shared_tags' | 'temporal_proximity';
+      weight: number;       // Contribution to similarity score
+      threshold?: number;   // Optional threshold for this criterion
+    }>;
+    minimumScore: number;   // Minimum similarity score to form cluster
+  };
+
+  transformation: {
+    markOriginalsHistorical: boolean;       // Archive original entities' relationships
+    transferRelationships: boolean;          // Transfer relationships to meta-entity
+    redirectFutureRelationships: boolean;    // Future relationships go to meta-entity
+    preserveOriginalLinks: boolean;          // Keep part_of links to originals
+  };
+
+  // Factory function to create meta-entity from cluster
+  factory: (cluster: HardState[], graph: Graph) => Partial<HardState>;
+}
+
+export interface Cluster {
+  entities: HardState[];      // Entities in this cluster
+  score: number;              // Similarity score
+  matchedCriteria: string[];  // Which criteria contributed to clustering
 }

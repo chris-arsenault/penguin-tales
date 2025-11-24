@@ -246,14 +246,26 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                         const target = getRelatedEntity(rel.dst);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         const strength = rel.strength ?? 0.5;
+                        const isHistorical = rel.status === 'historical';
                         return target ? (
-                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
+                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'} ${isHistorical ? 'historical' : ''}`}>
                             <button
                               onClick={() => onRelatedClick(target.id)}
                               className="accordion-row-button"
+                              style={isHistorical ? { opacity: 0.6 } : undefined}
                             >
-                              <div className="accordion-row-name">{target.name}</div>
-                              <div className="accordion-row-kind">({target.kind}) <span style={{ color: '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span></div>
+                              <div className="accordion-row-name">
+                                {isHistorical && <span style={{ color: '#9ca3af', marginRight: '0.5rem' }}>📜</span>}
+                                {target.name}
+                              </div>
+                              <div className="accordion-row-kind">
+                                ({target.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span>
+                                {isHistorical && rel.archivedAt && (
+                                  <span style={{ color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                                    archived @{rel.archivedAt}
+                                  </span>
+                                )}
+                              </div>
                             </button>
                             {relLore && (
                               <button
@@ -303,14 +315,26 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
                         const source = getRelatedEntity(rel.src);
                         const relLore = findRelationshipLore(rel.src, rel.dst, rel.kind);
                         const strength = rel.strength ?? 0.5;
+                        const isHistorical = rel.status === 'historical';
                         return source ? (
-                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'}`}>
+                          <div key={i} className={`accordion-row ${i % 2 === 0 ? 'even' : 'odd'} ${isHistorical ? 'historical' : ''}`}>
                             <button
                               onClick={() => onRelatedClick(source.id)}
                               className="accordion-row-button"
+                              style={isHistorical ? { opacity: 0.6 } : undefined}
                             >
-                              <div className="accordion-row-name">{source.name}</div>
-                              <div className="accordion-row-kind">({source.kind}) <span style={{ color: '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span></div>
+                              <div className="accordion-row-name">
+                                {isHistorical && <span style={{ color: '#9ca3af', marginRight: '0.5rem' }}>📜</span>}
+                                {source.name}
+                              </div>
+                              <div className="accordion-row-kind">
+                                ({source.kind}) <span style={{ color: isHistorical ? '#9ca3af' : '#93c5fd', fontWeight: 'bold' }}>[{strength.toFixed(1)}]</span>
+                                {isHistorical && rel.archivedAt && (
+                                  <span style={{ color: '#9ca3af', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                                    archived @{rel.archivedAt}
+                                  </span>
+                                )}
+                              </div>
                             </button>
                             {relLore && (
                               <button

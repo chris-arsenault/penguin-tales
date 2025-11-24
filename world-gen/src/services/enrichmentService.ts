@@ -201,15 +201,32 @@ export class EnrichmentService {
         // (entity relationships might change during simulation after enrichment is queued)
         const snapshotEntity = context.graphSnapshot.entities.get(e.id);
         const relationships: Record<string, string[]> = {};
+        const historicalRelationships: Record<string, string[]> = {};
 
         if (snapshotEntity) {
+          // Current relationships
           snapshotEntity.links.forEach(link => {
+            if (link.status === 'historical') return;  // Skip historical here
             const target = context.graphSnapshot.entities.get(link.dst);
             if (target) {
               if (!relationships[link.kind]) relationships[link.kind] = [];
               relationships[link.kind].push(target.name);
             }
           });
+
+          // Historical relationships (for meta-entities and enriched lore)
+          if (context.graphSnapshot.historicalRelationships) {
+            context.graphSnapshot.historicalRelationships
+              .filter(r => r.src === e.id || r.dst === e.id)
+              .forEach(link => {
+                const targetId = link.src === e.id ? link.dst : link.src;
+                const target = context.graphSnapshot.entities.get(targetId);
+                if (target) {
+                  if (!historicalRelationships[link.kind]) historicalRelationships[link.kind] = [];
+                  historicalRelationships[link.kind].push(target.name);
+                }
+              });
+          }
         }
 
         // Add catalyst information (Phase 3)
@@ -221,6 +238,18 @@ export class EnrichmentService {
           catalystInfo.eventsTriggered = e.catalyst.catalyzedEvents?.length || 0;
         }
 
+        // Detect meta-entities
+        const isMetaEntity = e.tags?.includes('meta-entity');
+        const clusterInfo: any = {};
+        if (isMetaEntity) {
+          // Find part_of relationships (components of this meta-entity)
+          const components = Array.from(context.graphSnapshot.entities.values())
+            .filter(ent => ent.links.some(l => l.kind === 'part_of' && l.dst === e.id));
+          clusterInfo.isMetaEntity = true;
+          clusterInfo.componentCount = components.length;
+          clusterInfo.componentNames = components.map(c => c.name).slice(0, 5);  // First 5
+        }
+
         return {
           id: e.id,
           kind: e.kind,
@@ -228,7 +257,9 @@ export class EnrichmentService {
           prominence: e.prominence,
           name: e.name, // Use the final name we just generated
           relationships: relationships,
+          historicalRelationships: Object.keys(historicalRelationships).length > 0 ? historicalRelationships : undefined,
           catalyst: catalystInfo,
+          metaEntity: isMetaEntity ? clusterInfo : undefined,
           placeholders: {
             description: e.description
           }
@@ -253,6 +284,17 @@ export class EnrichmentService {
         `If an NPC has "resident_of": ["Colony X"], mention Colony X in their description.`,
         `If they have "member_of": ["Faction Y"], reference the Faction Y faction.`,
         `Descriptions must be consistent with actual relationships shown above.`,
+        ``,
+        `HISTORICAL CONTEXT: Some entities have "historicalRelationships" - past connections that ended.`,
+        `Use historical relationships to add depth (e.g., "once practiced by...", "formerly taught to...").`,
+        `Historical relationships show an entity's legacy and evolution over time.`,
+        ``,
+        `META-ENTITIES: If entity.metaEntity exists, this is a UNIFIED TRADITION formed from clustering.`,
+        `Meta-entities represent schools of thought, unified codes, or synthesized practices.`,
+        `If metaEntity.componentCount exists, mention it emerged from X individual practices/rules.`,
+        `If metaEntity.componentNames exists, reference some by name (e.g., "unifying Fireball, Ice Lance...").`,
+        `Meta-entities should feel like living traditions with shared practitioners, not abstract concepts.`,
+        `Their descriptions should emphasize the synthesis and shared practice across multiple practitioners.`,
         ``,
         `CATALYST AWARENESS: Some entities have agency and trigger events.`,
         `If entity.catalyst.eventsTriggered > 5, describe them as influential/impactful.`,

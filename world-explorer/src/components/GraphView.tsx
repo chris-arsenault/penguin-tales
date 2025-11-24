@@ -13,9 +13,10 @@ interface GraphViewProps {
   selectedNodeId?: string;
   onNodeSelect: (nodeId: string | undefined) => void;
   showCatalyzedBy?: boolean;
+  onRecalculateLayoutRef?: (handler: () => void) => void;
 }
 
-export default function GraphView({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false }: GraphViewProps) {
+export default function GraphView({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false, onRecalculateLayoutRef }: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
@@ -52,6 +53,13 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
 
     layout.run();
   };
+
+  // Expose recalculate layout handler
+  useEffect(() => {
+    if (onRecalculateLayoutRef) {
+      onRecalculateLayoutRef(handleRecalculateLayout);
+    }
+  }, [onRecalculateLayoutRef]);
 
   // Initialize graph once
   useEffect(() => {
@@ -365,23 +373,6 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
         </div>
       </div>
 
-      {/* Recalculate Layout Button */}
-      <button
-        onClick={handleRecalculateLayout}
-        className="px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-2xl border border-blue-500/50 transition-all hover:scale-105"
-        style={{
-          position: 'absolute',
-          top: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)',
-          zIndex: 1000
-        }}
-        title="Recalculate graph layout"
-      >
-        <span style={{ fontSize: '16px', marginRight: '8px' }}>♻️</span>
-        Recalculate Layout
-      </button>
     </div>
   );
 }

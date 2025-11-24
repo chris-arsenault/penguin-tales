@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { pickRandom, pickMultiple, slugifyName } from '../../../../utils/helpers';
+import { pickRandom, pickMultiple, slugifyName, archiveRelationship } from '../../../../utils/helpers';
 
 /**
  * Mysterious Vanishing Template
@@ -238,7 +238,19 @@ export const mysteriousVanishing: GrowthTemplate = {
       dst: anomalyId
     });
 
-    // === STEP 5: Create searching_for Relationships ===
+    // === STEP 5: Archive All Relationships (Temporal Tracking) ===
+    // Archive all relationships of the vanishing NPC
+    // This marks them as historical rather than deleting them
+    const graph = graphView.getInternalGraph();
+    const victimRelationships = graph.relationships.filter(r =>
+      (r.src === victim.id || r.dst === victim.id) && r.status !== 'historical'
+    );
+
+    victimRelationships.forEach(rel => {
+      archiveRelationship(graph, rel.src, rel.dst, rel.kind);
+    });
+
+    // === STEP 6: Create searching_for Relationships ===
     // Find loved ones (followers, lovers, family)
     const lovers = graphView.getRelatedEntities(victim.id, 'lover_of', 'dst');
     const followers = graphView.getRelatedEntities(victim.id, 'follower_of', 'dst');
@@ -260,19 +272,10 @@ export const mysteriousVanishing: GrowthTemplate = {
       });
     });
 
-    // === STEP 6: Relationship Removal Plan ===
-    // Note: We document which relationships should be removed, but actual removal
-    // happens in the engine after applying the template
-    // Preserve: member_of, resident_of (structural)
-    // Remove: most social relationships (lover_of, follower_of, rival_of, enemy_of)
-    // Transform: mentor_of → searching_for (handled above)
-
-    const removalNote = `Most social relationships with ${victim.name} fade as they disappear into mystery. Only structural ties and search efforts remain.`;
-
     return {
       entities,
       relationships,
-      description: `${victim.name} mysteriously vanishes near ${victimLocation.name}. ${searchers.length} individuals begin a desperate search. ${removalNote}`
+      description: `${victim.name} mysteriously vanishes near ${victimLocation.name}. ${searchers.length} individuals begin a desperate search. All relationships archived as historical.`
     };
   }
 };

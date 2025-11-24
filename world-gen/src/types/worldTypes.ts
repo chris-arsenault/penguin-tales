@@ -49,9 +49,14 @@ export interface Relationship {
     src: string;    // HardState.id
     dst: string;    // HardState.id
     strength?: number;  // 0.0 (weak/spatial) to 1.0 (strong/narrative) - optional for backward compat
+    distance?: number;  // Cognitive similarity distance (lower = more similar, 0-1 normalized)
     catalyzedBy?: string;  // ID of agent that caused this relationship
     category?: string;     // Domain-defined relationship category (e.g., 'political', 'immutable_fact')
     createdAt?: number;    // Tick when relationship was created
+
+    // Temporal tracking (for day 0 coherence)
+    status?: 'active' | 'historical';  // Defaults to 'active'
+    archivedAt?: number;  // Tick when relationship was archived (became historical)
 }
 
 // Schema types

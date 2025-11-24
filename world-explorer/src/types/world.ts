@@ -7,6 +7,8 @@ export interface Relationship {
   src: string;
   dst: string;
   strength?: number;
+  status?: 'active' | 'historical';
+  archivedAt?: number;
 }
 
 export interface HardState {
@@ -106,6 +108,7 @@ export interface Filters {
   relationshipTypes: string[];
   minStrength: number;
   showCatalyzedBy: boolean;
+  showHistoricalRelationships: boolean;
 }
 
 export type GraphMode = 'full' | 'radial' | 'temporal' | 'faction' | 'conflict' | 'economic';

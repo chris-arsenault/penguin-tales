@@ -218,6 +218,41 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     mutability: 'immutable',
     protected: true
   },
+  {
+    kind: 'derived_from',
+    description: 'Ability/rule derived from another (lineage with cognitive distance)',
+    srcKinds: ['abilities', 'rules'],
+    dstKinds: ['abilities', 'rules'],
+    mutability: 'immutable',
+    protected: true,
+    structural: true
+  },
+  {
+    kind: 'related_to',
+    description: 'Generic same-kind similarity relationship (lineage with cognitive distance)',
+    srcKinds: ['abilities', 'rules', 'faction'],
+    dstKinds: ['abilities', 'rules', 'faction'],
+    mutability: 'immutable',
+    protected: true,
+    structural: true
+  },
+  {
+    kind: 'inspired_by',
+    description: 'Entity inspired by another of same kind (influence with cognitive distance)',
+    srcKinds: ['npc', 'abilities'],
+    dstKinds: ['npc', 'abilities'],
+    mutability: 'immutable',
+    protected: true
+  },
+  {
+    kind: 'part_of',
+    description: 'Entity is part of a meta-entity (subsumption)',
+    srcKinds: ['abilities', 'rules'],
+    dstKinds: ['abilities', 'rules'],
+    mutability: 'immutable',
+    protected: true,
+    structural: true
+  },
 
   // SOCIAL RELATIONSHIPS (Mutable - naturally change over time)
   // REMOVED: lover_of (social drama, 219 instances - 20% of relationships)
@@ -246,6 +281,14 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     mutability: 'mutable',
     protected: false
   },
+  {
+    kind: 'family_of',
+    description: 'NPCs are family members',
+    srcKinds: ['npc'],
+    dstKinds: ['npc'],
+    mutability: 'immutable',
+    protected: true
+  },
 
   // POLITICAL RELATIONSHIPS (Mutable)
   {
@@ -263,6 +306,15 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['faction'],
     mutability: 'mutable',
     protected: false
+  },
+  {
+    kind: 'split_from',
+    description: 'Faction split from parent (lineage with ideological distance)',
+    srcKinds: ['faction'],
+    dstKinds: ['faction'],
+    mutability: 'immutable',
+    protected: true,
+    structural: true
   },
   {
     kind: 'stronghold_of',
@@ -289,6 +341,15 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['location'],
     mutability: 'immutable',
     protected: true
+  },
+  {
+    kind: 'supersedes',
+    description: 'Rule replaces/supersedes another (lineage with legal distance)',
+    srcKinds: ['rules'],
+    dstKinds: ['rules'],
+    mutability: 'immutable',
+    protected: true,
+    structural: true
   },
   {
     kind: 'champion_of',

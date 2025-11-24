@@ -40,7 +40,7 @@
       "label": "Windward Ridge",
       "group": "location",
       "subtype": "geographic_feature",
-      "prominence": "renowned"
+      "prominence": "marginal"
     },
     {
       "id": "The Icebound Exchange",
@@ -68,7 +68,7 @@
       "label": "Tide-Splitter Rukan",
       "group": "npc",
       "subtype": "hero",
-      "prominence": "recognized"
+      "prominence": "renowned"
     },
     {
       "id": "Shadow-Broker Nyla",
@@ -82,7 +82,7 @@
       "label": "Fissure-Walker Draen",
       "group": "npc",
       "subtype": "hero",
-      "prominence": "renowned"
+      "prominence": "recognized"
     },
     {
       "id": "Fissure-Drawn Runes",
@@ -134,312 +134,312 @@
       "prominence": "forgotten"
     },
     {
-      "id": "location_1000",
-      "label": "The Glowing Depths",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "renowned"
-    },
-    {
-      "id": "abilities_1001",
-      "label": "Ice Ward",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1002",
-      "label": "Glow Bond",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1003",
-      "label": "Frost-Hardened Tools",
+      "id": "abilities_1000",
+      "label": "Enhanced Ice Tech",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "location_1004",
+      "id": "abilities_1001",
+      "label": "Enhanced Ice Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1002",
       "label": "Ethereal Shelf",
       "group": "location",
       "subtype": "anomaly",
-      "prominence": "recognized"
+      "prominence": "mythic"
     },
     {
-      "id": "location_1005",
+      "id": "location_1003",
       "label": "East Perch",
       "group": "location",
       "subtype": "colony",
       "prominence": "mythic"
     },
     {
-      "id": "abilities_1006",
-      "label": "Improved Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1007",
-      "label": "Covenant of the Depths",
+      "id": "faction_1004",
+      "label": "Order of the Depths",
       "group": "faction",
       "subtype": "cult",
       "prominence": "recognized"
     },
     {
-      "id": "npc_1008",
-      "label": "Mystic Wavebeak",
+      "id": "npc_1005",
+      "label": "Mystic Glintsinger",
       "group": "npc",
       "subtype": "hero",
       "prominence": "marginal"
     },
     {
-      "id": "location_1009",
-      "label": "North Haven",
+      "id": "location_1006",
+      "label": "East Roost",
       "group": "location",
       "subtype": "colony",
       "prominence": "mythic"
     },
     {
-      "id": "faction_1010",
-      "label": "Order of the Ice",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1011",
-      "label": "Seer Icesinger",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1012",
-      "label": "West Perch",
-      "group": "location",
-      "subtype": "colony",
-      "prominence": "mythic"
-    },
-    {
-      "id": "faction_1013",
-      "label": "Covenant of the Fissure",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1014",
-      "label": "Seer Wavediver",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1015",
-      "label": "Order of the Ice",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1016",
-      "label": "Prophet Shimmerwatcher",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1017",
-      "label": "Enhanced Fishing Tech",
+      "id": "abilities_1007",
+      "label": "Echo-Location Nets",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "occurrence_1018",
-      "label": "The Wealth Era",
-      "group": "occurrence",
-      "subtype": "economic_boom",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1019",
-      "label": "Improved Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1020",
-      "label": "Frost-Hardened Tools",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1021",
-      "label": "Mystic Ice Cavern",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "recognized"
-    },
-    {
-      "id": "abilities_1022",
-      "label": "Thermal Preservation Arrays",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "recognized"
-    },
-    {
-      "id": "npc_1023",
-      "label": "Bold Waveslider",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1024",
-      "label": "Enhanced Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1025",
-      "label": "Dark Rift",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1026",
-      "label": "Frost Ward",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1027",
+      "id": "abilities_1008",
       "label": "Sonic Fish Herding",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1028",
-      "label": "Brave Frosthunter",
-      "group": "npc",
-      "subtype": "hero",
+      "id": "abilities_1009",
+      "label": "Improved Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1029",
-      "label": "Bold Stormdiver",
-      "group": "npc",
-      "subtype": "hero",
+      "id": "abilities_1010",
+      "label": "Glacial Navigation System",
+      "group": "abilities",
+      "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1030",
-      "label": "The Old Ways Revival",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
+      "id": "abilities_1011",
+      "label": "Ice Ward",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
     },
     {
-      "id": "faction_1031",
-      "label": "Covenant of the Ice",
+      "id": "faction_1012",
+      "label": "Circle of the Ice",
       "group": "faction",
       "subtype": "cult",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1032",
-      "label": "Prophet Driftkeeper",
+      "id": "npc_1013",
+      "label": "Oracle Blizzardslider",
       "group": "npc",
       "subtype": "hero",
       "prominence": "recognized"
     },
     {
-      "id": "abilities_1033",
-      "label": "Ice-Melt Refinement",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1034",
-      "label": "Ice-Melt Refinement",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1035",
-      "label": "Ethereal Shelf",
+      "id": "location_1014",
+      "label": "South Haven",
       "group": "location",
-      "subtype": "anomaly",
+      "subtype": "colony",
+      "prominence": "mythic"
+    },
+    {
+      "id": "abilities_1015",
+      "label": "Sonic Fish Herding",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1016",
+      "label": "Enhanced Fishing Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1017",
+      "label": "Order of the Fissure",
+      "group": "faction",
+      "subtype": "cult",
       "prominence": "recognized"
     },
     {
-      "id": "faction_1036",
+      "id": "npc_1018",
+      "label": "Seer Frosthunter",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "occurrence_1019",
+      "label": "The Wealth Era",
+      "group": "occurrence",
+      "subtype": "economic_boom",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "location_1020",
+      "label": "The Whispering Ice",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "renowned"
+    },
+    {
+      "id": "npc_1021",
+      "label": "Mighty Icebeak",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1022",
+      "label": "Frost Sight",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1023",
+      "label": "The Frozen Aurora",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "mythic"
+    },
+    {
+      "id": "location_1024",
+      "label": "The Frozen Aurora",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "renowned"
+    },
+    {
+      "id": "faction_1025",
       "label": "Order of the Fissure",
       "group": "faction",
       "subtype": "cult",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1037",
-      "label": "Oracle Aurorawatcher",
+      "id": "npc_1026",
+      "label": "Seer Frostcaller",
       "group": "npc",
       "subtype": "hero",
       "prominence": "marginal"
     },
     {
-      "id": "location_1038",
-      "label": "Spectral Basin",
-      "group": "location",
-      "subtype": "anomaly",
+      "id": "faction_1027",
+      "label": "Covenant of the Fissure",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1028",
+      "label": "Oracle Driftwing",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1029",
+      "label": "Brave Aurorakeeper",
+      "group": "npc",
+      "subtype": "hero",
       "prominence": "recognized"
     },
     {
-      "id": "npc_1039",
-      "label": "Bold Crystalbeak",
+      "id": "npc_1030",
+      "label": "Mighty Icewatcher",
       "group": "npc",
       "subtype": "hero",
-      "prominence": "marginal"
+      "prominence": "recognized"
     },
     {
-      "id": "rules_1040",
-      "label": "The New Thinkers",
+      "id": "rules_1031",
+      "label": "The Old Ways Revival",
       "group": "rules",
       "subtype": "social",
       "prominence": "marginal"
     },
     {
-      "id": "location_1041",
-      "label": "Mystic Ice Cavern",
-      "group": "location",
-      "subtype": "anomaly",
+      "id": "abilities_1032",
+      "label": "Frost Sight",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "abilities_1033",
+      "label": "Echo-Location Nets",
+      "group": "abilities",
+      "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1042",
+      "id": "rules_1034",
       "label": "The Equal Ice Movement",
       "group": "rules",
       "subtype": "social",
       "prominence": "marginal"
     },
     {
-      "id": "location_1043",
-      "label": "The Glowing Depths",
+      "id": "location_1035",
+      "label": "Frost-Light Grotto",
       "group": "location",
       "subtype": "anomaly",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1036",
+      "label": "Mighty Shimmerdiver",
+      "group": "npc",
+      "subtype": "hero",
       "prominence": "marginal"
+    },
+    {
+      "id": "rules_1037",
+      "label": "The Old Ways Revival",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1038",
+      "label": "Order of the Ice",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1039",
+      "label": "Prophet Tidewatcher",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1040",
+      "label": "Advanced Ice Drilling",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1041",
+      "label": "The Natural Order",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1042",
+      "label": "Swift Blizzardwing",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1043",
+      "label": "Mystic Ice Cavern",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "renowned"
     },
     {
       "id": "rules_1044",
@@ -449,186 +449,186 @@
       "prominence": "marginal"
     },
     {
-      "id": "faction_1045",
-      "label": "Order of the Fissure",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1046",
-      "label": "Seer Glacierhunter",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1047",
-      "label": "The Old Ways Revival",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1048",
-      "label": "Mighty Snowdiver",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1049",
-      "label": "The New Thinkers",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1050",
-      "label": "The Old Ways Revival",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1051",
-      "label": "Mighty Shimmerswimmer",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1052",
-      "label": "Dark Echo",
+      "id": "location_1045",
+      "label": "Shimmering Echo",
       "group": "location",
       "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
-      "id": "abilities_1053",
-      "label": "Glacial Navigation System",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1054",
-      "label": "Ice-Melt Refinement",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1055",
-      "label": "Covenant of the Ice",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1056",
-      "label": "Oracle Chillsinger",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1057",
-      "label": "Ice Sight",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1058",
-      "label": "Glow Sight",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1059",
-      "label": "Frozen Echo",
+      "id": "location_1046",
+      "label": "The Shimmering Chasm",
       "group": "location",
       "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
-      "id": "faction_1060",
-      "label": "Covenant of the Depths",
+      "id": "faction_1047",
+      "label": "Covenant of the Fissure",
       "group": "faction",
       "subtype": "cult",
       "prominence": "recognized"
     },
     {
-      "id": "npc_1061",
-      "label": "Seer Frostbeak",
+      "id": "npc_1048",
+      "label": "Prophet Stormswimmer",
       "group": "npc",
       "subtype": "hero",
       "prominence": "marginal"
     },
     {
-      "id": "faction_1062",
-      "label": "Order of the Depths",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1063",
-      "label": "Mystic Blizzardsinger",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1064",
-      "label": "Glow Sight",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1065",
-      "label": "Dark Echo",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1066",
-      "label": "Glow Ward",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1067",
-      "label": "Frost-Light Grotto",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1068",
-      "label": "Mystic Ice Cavern",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1069",
+      "id": "abilities_1049",
       "label": "Frost-Hardened Tools",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1070",
-      "label": "The Old Ways Revival",
+      "id": "abilities_1050",
+      "label": "Advanced Ice Drilling",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1051",
+      "label": "Mighty Shimmerwing",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1052",
+      "label": "Mighty Snowcaller",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1053",
+      "label": "Ethereal Shelf",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1054",
+      "label": "The Glowing Depths",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1055",
+      "label": "Order of the Depths",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1056",
+      "label": "Mystic Snowsinger",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1057",
+      "label": "Tideslider Virgin Ledge",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "recognized"
+    },
+    {
+      "id": "faction_1058",
+      "label": "Covenant of the Fissure",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1059",
+      "label": "Oracle Tidebeak",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1060",
+      "label": "The Equal Ice Movement",
       "group": "rules",
       "subtype": "social",
       "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1061",
+      "label": "Crystalline Storage Vaults",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1062",
+      "label": "The New Thinkers",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1063",
+      "label": "Glow Sight",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "faction_1064",
+      "label": "Covenant of the Ice",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1065",
+      "label": "Seer Wavefisher",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1066",
+      "label": "The Natural Order",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1067",
+      "label": "Shimmering Vortex",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "rules_1068",
+      "label": "The Equal Ice Movement",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1069",
+      "label": "Ice-Melt Refinement",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1070",
+      "label": "Ice Sight",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
     },
     {
       "id": "location_1071",
@@ -639,654 +639,654 @@
     },
     {
       "id": "abilities_1072",
-      "label": "Ice-Melt Refinement",
+      "label": "Sonic Fish Herding",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1073",
+      "id": "npc_1073",
+      "label": "Chief Wavehunter",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1074",
+      "label": "Wise Iceswimmer",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1075",
+      "label": "Elder Floeswimmer",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1076",
+      "label": "High Aurorawalker",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1077",
+      "label": "Glacial Navigation System",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1078",
+      "label": "The Equal Ice Movement",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "recognized"
+    },
+    {
+      "id": "abilities_1079",
+      "label": "Ice Bond",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "npc_1080",
+      "label": "Chief Crystalsinger",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1081",
       "label": "The Natural Order",
       "group": "rules",
       "subtype": "social",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1074",
-      "label": "Bold Tidesinger",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1075",
-      "label": "Ice Ward",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1076",
-      "label": "Ice-Melt Refinement",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1077",
-      "label": "Spectral Basin",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "npc_1078",
-      "label": "Mighty Floecaller",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1079",
-      "label": "Covenant of the Fissure",
-      "group": "faction",
-      "subtype": "cult",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1080",
-      "label": "Oracle Tidekeeper",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1081",
-      "label": "Advanced Ice Drilling",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
       "id": "location_1082",
-      "label": "Dark Vortex",
+      "label": "Mystic Ice Cavern",
       "group": "location",
       "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "faction_1083",
-      "label": "Order of the Depths",
-      "group": "faction",
-      "subtype": "cult",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1084",
-      "label": "Prophet Floeslider",
-      "group": "npc",
-      "subtype": "hero",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1085",
-      "label": "Wise Aurorawatcher",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1086",
-      "label": "Wise Crystalbreaker",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1087",
-      "label": "High Icehunter",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1088",
-      "label": "Elder Icecaller",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1089",
-      "label": "The Equal Ice Movement",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1090",
-      "label": "Glow Sight",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "npc_1091",
+      "id": "npc_1083",
       "label": "Elder Frostwing",
       "group": "npc",
       "subtype": "mayor",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1092",
-      "label": "Wise Wavesinger",
+      "id": "npc_1084",
+      "label": "Chief Drifthunter",
       "group": "npc",
       "subtype": "mayor",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1093",
-      "label": "The New Thinkers",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1094",
-      "label": "High Drifthunter",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1095",
-      "label": "High Floesinger",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1096",
-      "label": "Frost Sight",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "npc_1097",
-      "label": "Swift Shimmerkeeper",
+      "id": "npc_1085",
+      "label": "Brave Wavewing",
       "group": "npc",
       "subtype": "hero",
-      "prominence": "marginal"
+      "prominence": "recognized"
     },
     {
-      "id": "rules_1098",
+      "id": "rules_1086",
       "label": "The Old Ways Revival",
       "group": "rules",
       "subtype": "social",
       "prominence": "marginal"
     },
     {
-      "id": "abilities_1099",
-      "label": "Frost Ward",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "npc_1100",
-      "label": "Chief Glintcaller",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1101",
-      "label": "Frost Bond",
-      "group": "abilities",
-      "subtype": "magic",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "npc_1102",
-      "label": "Elder Aurorawalker",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1103",
-      "label": "Spectral Basin",
+      "id": "location_1087",
+      "label": "Dark Vortex",
       "group": "location",
       "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1104",
-      "label": "High Aurorabreaker",
-      "group": "npc",
-      "subtype": "mayor",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1105",
-      "label": "Shimmering Echo",
-      "group": "location",
-      "subtype": "anomaly",
+      "id": "abilities_1088",
+      "label": "Glow Ward",
+      "group": "abilities",
+      "subtype": "magic",
       "prominence": "forgotten"
     },
     {
-      "id": "npc_1106",
-      "label": "High Icekeeper",
+      "id": "npc_1089",
+      "label": "High Icewing",
       "group": "npc",
       "subtype": "mayor",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1107",
-      "label": "West Perch Protection taboo",
+      "id": "faction_1090",
+      "label": "Circle of the Depths",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1091",
+      "label": "Mystic Chillbeak",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1092",
+      "label": "Aurora Peak Celebration",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1093",
+      "label": "Chief Shimmerswimmer",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1094",
+      "label": "High Floebeak",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1095",
+      "label": "Chief Crystalkeeper",
+      "group": "npc",
+      "subtype": "mayor",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1096",
+      "label": "Ice Bond",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "rules_1097",
+      "label": "Nightfall Shelf Defense taboo",
       "group": "rules",
       "subtype": "taboo",
       "prominence": "recognized"
     },
     {
-      "id": "rules_1108",
-      "label": "North Haven Rationing taboo",
+      "id": "rules_1098",
+      "label": "Aurora Stack Protection taboo",
       "group": "rules",
       "subtype": "taboo",
       "prominence": "recognized"
     },
     {
-      "id": "rules_1109",
-      "label": "Aurora Stack Rationing taboo",
-      "group": "rules",
-      "subtype": "taboo",
-      "prominence": "recognized"
-    },
-    {
-      "id": "location_1110",
+      "id": "location_1099",
       "label": "Glacierkeeper Krill Grounds",
       "group": "location",
       "subtype": "geographic_feature",
       "prominence": "marginal"
     },
     {
+      "id": "npc_1100",
+      "label": "Wavewalker",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1101",
+      "label": "Driftwing",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1102",
+      "label": "Aurora Stack Rationing edict",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1103",
+      "label": "Driftcaller",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1104",
+      "label": "Aurorawing",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1105",
+      "label": "Aurora Stack Exchange",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "faction_1106",
+      "label": "South Haven Traders",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "rules_1107",
+      "label": "East Roost Protection edict",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "recognized"
+    },
+    {
+      "id": "faction_1108",
+      "label": "Nightfall Shelf Merchants",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "faction_1109",
+      "label": "East Roost Merchants",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "rules_1110",
+      "label": "Nightfall Shelf Defense edict",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "recognized"
+    },
+    {
       "id": "npc_1111",
-      "label": "Frostswimmer",
+      "label": "Elder Chillkeeper",
       "group": "npc",
-      "subtype": "merchant",
+      "subtype": "mayor",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1112",
-      "label": "Driftbreaker",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1113",
-      "label": "Aurora Stack Merchants",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "mythic"
-    },
-    {
-      "id": "rules_1114",
-      "label": "Aurora Stack Defense social",
+      "id": "rules_1112",
+      "label": "East Roost Defense edict",
       "group": "rules",
-      "subtype": "social",
+      "subtype": "edict",
       "prominence": "recognized"
     },
     {
-      "id": "location_1115",
-      "label": "Aurorabreaker Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1116",
-      "label": "Snowkeeper",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1117",
-      "label": "Glacierwalker",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1118",
-      "label": "North Haven Exchange",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
-    },
-    {
-      "id": "abilities_1119",
-      "label": "Advanced Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1120",
-      "label": "East Perch Rationing social",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "recognized"
-    },
-    {
-      "id": "location_1121",
-      "label": "Auroracaller Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "recognized"
-    },
-    {
-      "id": "npc_1122",
-      "label": "Driftwatcher",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1123",
-      "label": "Glacierwalker",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "faction_1124",
-      "label": "West Perch Traders",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
-    },
-    {
-      "id": "faction_1125",
-      "label": "East Perch Traders",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
-    },
-    {
-      "id": "faction_1126",
-      "label": "Nightfall Shelf Exchange",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
-    },
-    {
-      "id": "abilities_1127",
-      "label": "Improved Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1128",
-      "label": "Enhanced Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1129",
-      "label": "Chillsinger Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1130",
-      "label": "Glintdiver",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1131",
-      "label": "Shimmerwing",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1132",
-      "label": "Aurorahunter Sealed Junction",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "rules_1133",
-      "label": "North Haven Defense social",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "recognized"
-    },
-    {
-      "id": "location_1134",
-      "label": "Dark Rift",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "abilities_1135",
-      "label": "Improved Ice Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1136",
-      "label": "Frozen Echo",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1137",
-      "label": "Glintdiver Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "recognized"
-    },
-    {
-      "id": "npc_1138",
-      "label": "Icecaller",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1139",
-      "label": "Glinthunter",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1140",
-      "label": "Improved Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1141",
-      "label": "Shimmering Echo",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1142",
-      "label": "Snowcaller Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1143",
-      "label": "Glacierdiver",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1144",
-      "label": "Icecaller",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1145",
-      "label": "Advanced Fishing Tech",
-      "group": "abilities",
-      "subtype": "technology",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1146",
-      "label": "Shimmering Rift",
-      "group": "location",
-      "subtype": "anomaly",
-      "prominence": "forgotten"
-    },
-    {
-      "id": "location_1147",
-      "label": "Snowhunter Deep Kelp Shelf",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "location_1148",
-      "label": "Chillfisher Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1149",
-      "label": "Driftbreaker",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1150",
-      "label": "Glacierswimmer",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "rules_1151",
-      "label": "East Perch Defense taboo",
-      "group": "rules",
-      "subtype": "taboo",
-      "prominence": "recognized"
-    },
-    {
-      "id": "location_1152",
-      "label": "Stormbreaker Krill Grounds",
-      "group": "location",
-      "subtype": "geographic_feature",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1153",
-      "label": "Tidesinger",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1154",
-      "label": "Driftsinger",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1155",
-      "label": "Swift Aurorawatcher",
+      "id": "npc_1113",
+      "label": "Swift Tidewalker",
       "group": "npc",
       "subtype": "hero",
       "prominence": "marginal"
     },
     {
-      "id": "abilities_1156",
+      "id": "abilities_1114",
+      "label": "Advanced Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1115",
+      "label": "Common Code of 6 Laws",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "mythic"
+    },
+    {
+      "id": "abilities_1116",
       "label": "Enhanced Ice Tech",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "abilities_1157",
-      "label": "Advanced Fishing Tech",
+      "id": "rules_1117",
+      "label": "Nightfall Shelf Defense social",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1118",
+      "label": "Mighty Frostdiver",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1119",
+      "label": "Stormbreaker",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1120",
+      "label": "Shimmerkeeper",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1121",
+      "label": "Glaciercaller Krill Grounds",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1122",
+      "label": "Driftbeak",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1123",
+      "label": "Floewing",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1124",
+      "label": "Chillbreaker Krill Grounds",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1125",
+      "label": "Stormswimmer",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1126",
+      "label": "Glintslider",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1127",
+      "label": "Blizzardwatcher Krill Grounds",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1128",
+      "label": "Glacierwalker",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1129",
+      "label": "Blizzardfisher",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1130",
+      "label": "East Perch Traders",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "abilities_1131",
+      "label": "Improved Ice Tech",
       "group": "abilities",
       "subtype": "technology",
       "prominence": "marginal"
     },
     {
-      "id": "location_1158",
-      "label": "Frozen Echo",
+      "id": "location_1132",
+      "label": "Frostwatcher Krill Grounds",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1133",
+      "label": "Glintsinger",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1134",
+      "label": "Frostswimmer",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1135",
+      "label": "East Perch Defense taboo",
+      "group": "rules",
+      "subtype": "taboo",
+      "prominence": "recognized"
+    },
+    {
+      "id": "rules_1136",
+      "label": "South Haven Defense taboo",
+      "group": "rules",
+      "subtype": "taboo",
+      "prominence": "recognized"
+    },
+    {
+      "id": "rules_1137",
+      "label": "East Roost Defense edict",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "recognized"
+    },
+    {
+      "id": "location_1138",
+      "label": "Mystic Ice Cavern",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1139",
+      "label": "Chillhunter",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1140",
+      "label": "Aurorahunter",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1141",
+      "label": "Advanced Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1142",
+      "label": "Improved Fishing Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1143",
+      "label": "Enhanced Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1144",
+      "label": "East Roost Defense social",
+      "group": "rules",
+      "subtype": "social",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1145",
+      "label": "Swift Crystalwatcher",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "rules_1146",
+      "label": "South Haven Rationing edict",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "recognized"
+    },
+    {
+      "id": "abilities_1147",
+      "label": "Improved Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1148",
+      "label": "Blizzardswimmer",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1149",
+      "label": "Aurorasinger",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1150",
+      "label": "Dark Vortex",
       "group": "location",
       "subtype": "anomaly",
       "prominence": "forgotten"
     },
     {
-      "id": "npc_1159",
-      "label": "Driftswimmer",
+      "id": "location_1151",
+      "label": "Aurorawing Deep Krill Pool",
+      "group": "location",
+      "subtype": "geographic_feature",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1152",
+      "label": "Advanced Navigation Tech",
+      "group": "abilities",
+      "subtype": "technology",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1153",
+      "label": "Brave Aurorawatcher",
+      "group": "npc",
+      "subtype": "hero",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1154",
+      "label": "Shimmerkeeper",
       "group": "npc",
       "subtype": "merchant",
       "prominence": "marginal"
+    },
+    {
+      "id": "npc_1155",
+      "label": "Driftdiver",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1156",
+      "label": "Dark Vortex",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
+    },
+    {
+      "id": "abilities_1157",
+      "label": "Frost Bond",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "abilities_1158",
+      "label": "Ice Bond",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "rules_1159",
+      "label": "Statutory Code of 7 Laws",
+      "group": "rules",
+      "subtype": "edict",
+      "prominence": "mythic"
     },
     {
       "id": "npc_1160",
-      "label": "Glintbeak",
-      "group": "npc",
-      "subtype": "merchant",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1161",
-      "label": "Razortooth",
+      "label": "Deepdive",
       "group": "npc",
       "subtype": "orca",
-      "prominence": "marginal"
+      "prominence": "recognized"
     },
     {
-      "id": "abilities_1162",
-      "label": "Sonic Stun",
+      "id": "abilities_1161",
+      "label": "Tail Slam",
       "group": "abilities",
       "subtype": "combat",
       "prominence": "recognized"
     },
     {
-      "id": "abilities_1163",
-      "label": "Crushing Dive",
+      "id": "abilities_1162",
+      "label": "Echolocation Strike",
       "group": "abilities",
       "subtype": "combat",
       "prominence": "renowned"
     },
     {
-      "id": "npc_1164",
-      "label": "Razortooth",
+      "id": "npc_1163",
+      "label": "Frostbite",
       "group": "npc",
       "subtype": "orca",
       "prominence": "recognized"
+    },
+    {
+      "id": "npc_1164",
+      "label": "Tidehunter",
+      "group": "npc",
+      "subtype": "orca",
+      "prominence": "marginal"
     },
     {
       "id": "npc_1165",
@@ -1297,150 +1297,150 @@
     },
     {
       "id": "npc_1166",
-      "label": "Blackfin",
+      "label": "Deepdive",
       "group": "npc",
       "subtype": "orca",
       "prominence": "marginal"
     },
     {
       "id": "abilities_1167",
-      "label": "Pack Coordination",
+      "label": "Crushing Dive",
       "group": "abilities",
       "subtype": "combat",
-      "prominence": "marginal"
+      "prominence": "recognized"
     },
     {
       "id": "abilities_1168",
-      "label": "Crushing Dive",
+      "label": "Sonic Stun",
       "group": "abilities",
       "subtype": "combat",
       "prominence": "recognized"
     },
     {
       "id": "abilities_1169",
-      "label": "Crushing Dive",
+      "label": "Ice Breaker Rush",
       "group": "abilities",
       "subtype": "combat",
-      "prominence": "recognized"
+      "prominence": "renowned"
     },
     {
       "id": "faction_1170",
-      "label": "North Haven Merchants",
+      "label": "East Roost Merchants",
       "group": "faction",
       "subtype": "company",
       "prominence": "recognized"
     },
     {
-      "id": "faction_1171",
-      "label": "Aurora Stack Merchants",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
+      "id": "npc_1171",
+      "label": "Icebane",
+      "group": "npc",
+      "subtype": "orca",
+      "prominence": "marginal"
     },
     {
       "id": "npc_1172",
-      "label": "Razortooth",
-      "group": "npc",
-      "subtype": "orca",
-      "prominence": "marginal"
-    },
-    {
-      "id": "npc_1173",
-      "label": "Coldwater",
-      "group": "npc",
-      "subtype": "orca",
-      "prominence": "marginal"
-    },
-    {
-      "id": "abilities_1174",
-      "label": "Tail Slam",
-      "group": "abilities",
-      "subtype": "combat",
-      "prominence": "recognized"
-    },
-    {
-      "id": "npc_1175",
       "label": "Tidehunter",
       "group": "npc",
       "subtype": "orca",
       "prominence": "marginal"
     },
     {
-      "id": "abilities_1176",
-      "label": "Tail Slam",
+      "id": "abilities_1173",
+      "label": "Crushing Dive",
       "group": "abilities",
       "subtype": "combat",
       "prominence": "recognized"
     },
     {
-      "id": "abilities_1177",
-      "label": "Sonic Stun",
+      "id": "abilities_1174",
+      "label": "Deep Ambush",
       "group": "abilities",
       "subtype": "combat",
-      "prominence": "marginal"
+      "prominence": "recognized"
     },
     {
-      "id": "npc_1178",
-      "label": "Frostbite",
+      "id": "abilities_1175",
+      "label": "Thermal Shock",
+      "group": "abilities",
+      "subtype": "combat",
+      "prominence": "recognized"
+    },
+    {
+      "id": "npc_1176",
+      "label": "Deepdive",
       "group": "npc",
       "subtype": "orca",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1179",
-      "label": "East Perch Defense edict",
-      "group": "rules",
-      "subtype": "edict",
+      "id": "npc_1177",
+      "label": "Riptide",
+      "group": "npc",
+      "subtype": "orca",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1178",
+      "label": "South Haven Traders",
+      "group": "faction",
+      "subtype": "company",
+      "prominence": "recognized"
+    },
+    {
+      "id": "faction_1179",
+      "label": "Nightfall Shelf Exchange",
+      "group": "faction",
+      "subtype": "company",
       "prominence": "recognized"
     },
     {
       "id": "abilities_1180",
-      "label": "Ice Breaker Rush",
+      "label": "Echolocation Strike",
       "group": "abilities",
       "subtype": "combat",
       "prominence": "recognized"
     },
     {
-      "id": "rules_1181",
-      "label": "Nightfall Shelf Protection social",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "recognized"
+      "id": "abilities_1181",
+      "label": "Crushing Dive",
+      "group": "abilities",
+      "subtype": "combat",
+      "prominence": "marginal"
     },
     {
-      "id": "npc_1182",
-      "label": "Swift Floewing",
+      "id": "abilities_1182",
+      "label": "Frost Ward",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
+    },
+    {
+      "id": "faction_1183",
+      "label": "Covenant of the Fissure",
+      "group": "faction",
+      "subtype": "cult",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1184",
+      "label": "Seer Crystalhunter",
       "group": "npc",
       "subtype": "hero",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1183",
-      "label": "Wavebreaker",
-      "group": "npc",
-      "subtype": "merchant",
+      "id": "location_1185",
+      "label": "Shimmering Echo",
+      "group": "location",
+      "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
-      "id": "npc_1184",
-      "label": "Crystalwing",
-      "group": "npc",
-      "subtype": "merchant",
+      "id": "location_1186",
+      "label": "Shimmering Vortex",
+      "group": "location",
+      "subtype": "anomaly",
       "prominence": "marginal"
-    },
-    {
-      "id": "rules_1185",
-      "label": "Aurora Stack Defense taboo",
-      "group": "rules",
-      "subtype": "taboo",
-      "prominence": "recognized"
-    },
-    {
-      "id": "faction_1186",
-      "label": "East Perch Merchants",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
     },
     {
       "id": "location_1187",
@@ -1450,67 +1450,81 @@
       "prominence": "marginal"
     },
     {
-      "id": "faction_1188",
-      "label": "Nightfall Shelf Traders",
-      "group": "faction",
-      "subtype": "company",
-      "prominence": "recognized"
+      "id": "abilities_1188",
+      "label": "Glow Bond",
+      "group": "abilities",
+      "subtype": "magic",
+      "prominence": "forgotten"
     },
     {
       "id": "location_1189",
-      "label": "Frostwalker Krill Grounds",
+      "label": "Shimmering Vortex",
       "group": "location",
-      "subtype": "geographic_feature",
+      "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
       "id": "npc_1190",
-      "label": "Glintfisher",
+      "label": "Driftsinger",
       "group": "npc",
       "subtype": "merchant",
       "prominence": "marginal"
     },
     {
       "id": "npc_1191",
-      "label": "Blizzardsinger",
+      "label": "Crystalsinger",
       "group": "npc",
       "subtype": "merchant",
       "prominence": "marginal"
     },
     {
-      "id": "rules_1192",
-      "label": "East Perch Defense taboo",
-      "group": "rules",
-      "subtype": "taboo",
-      "prominence": "recognized"
-    },
-    {
-      "id": "npc_1193",
-      "label": "Swift Wavebreaker",
-      "group": "npc",
-      "subtype": "hero",
+      "id": "location_1192",
+      "label": "Dark Vortex",
+      "group": "location",
+      "subtype": "anomaly",
       "prominence": "marginal"
     },
     {
-      "id": "faction_1194",
-      "label": "West Perch Traders",
+      "id": "faction_1193",
+      "label": "East Perch Traders",
       "group": "faction",
       "subtype": "company",
       "prominence": "recognized"
     },
     {
-      "id": "rules_1195",
-      "label": "North Haven Protection taboo",
-      "group": "rules",
-      "subtype": "taboo",
+      "id": "location_1194",
+      "label": "Dark Vortex",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
+    },
+    {
+      "id": "faction_1195",
+      "label": "Aurora Stack Exchange",
+      "group": "faction",
+      "subtype": "company",
       "prominence": "recognized"
     },
     {
-      "id": "rules_1196",
-      "label": "Founders Festival",
-      "group": "rules",
-      "subtype": "social",
-      "prominence": "recognized"
+      "id": "npc_1196",
+      "label": "Aurorawing",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "npc_1197",
+      "label": "Floecaller",
+      "group": "npc",
+      "subtype": "merchant",
+      "prominence": "marginal"
+    },
+    {
+      "id": "location_1198",
+      "label": "Dark Echo",
+      "group": "location",
+      "subtype": "anomaly",
+      "prominence": "marginal"
     }
   ],
   "edges": [
@@ -1592,16 +1606,6 @@
     {
       "from": "High-Beak Auditor Selka",
       "to": "Aurora Stack",
-      "label": "leader_of"
-    },
-    {
-      "from": "High-Beak Auditor Selka",
-      "to": "The Icebound Exchange",
-      "label": "leader_of"
-    },
-    {
-      "from": "High-Beak Auditor Selka",
-      "to": "Aurora Stack",
       "label": "resident_of"
     },
     {
@@ -1618,16 +1622,6 @@
       "from": "Tide-Splitter Rukan",
       "to": "Harmonic Harpoon Arrays",
       "label": "practitioner_of"
-    },
-    {
-      "from": "Shadow-Broker Nyla",
-      "to": "Nightfall Shelf",
-      "label": "leader_of"
-    },
-    {
-      "from": "Shadow-Broker Nyla",
-      "to": "The Midnight Claws",
-      "label": "leader_of"
     },
     {
       "from": "Shadow-Broker Nyla",
@@ -1670,514 +1664,569 @@
       "label": "manifests_at"
     },
     {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1000",
-      "label": "manifests_at"
+      "from": "The Icebound Exchange",
+      "to": "abilities_1000",
+      "label": "wields"
     },
     {
-      "from": "Fissure-Walker Draen",
+      "from": "Tide-Splitter Rukan",
+      "to": "abilities_1000",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "The Icebound Exchange",
       "to": "abilities_1001",
-      "label": "discoverer_of"
+      "label": "wields"
     },
     {
-      "from": "abilities_1001",
+      "from": "Tide-Splitter Rukan",
+      "to": "abilities_1001",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "Fissure-Drawn Runes",
+      "to": "location_1002",
+      "label": "manifests_at"
+    },
+    {
+      "from": "location_1003",
+      "to": "Aurora Berg",
+      "label": "contained_by"
+    },
+    {
+      "from": "npc_1005",
+      "to": "faction_1004",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1005",
       "to": "The Glow-Fissure",
-      "label": "manifests_at"
+      "label": "resident_of"
     },
     {
-      "from": "Fissure-Walker Draen",
-      "to": "abilities_1002",
-      "label": "discoverer_of"
+      "from": "High-Beak Auditor Selka",
+      "to": "faction_1004",
+      "label": "member_of"
     },
     {
-      "from": "abilities_1002",
-      "to": "location_1000",
-      "label": "manifests_at"
+      "from": "High-Beak Auditor Selka",
+      "to": "The Glow-Fissure",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1005",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "location_1006",
+      "to": "Aurora Berg",
+      "label": "contained_by"
     },
     {
       "from": "The Midnight Claws",
-      "to": "abilities_1003",
+      "to": "abilities_1007",
       "label": "practitioner_of"
     },
     {
-      "from": "abilities_1003",
+      "from": "abilities_1007",
       "to": "Nightfall Shelf",
       "label": "originated_in"
     },
     {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1004",
-      "label": "manifests_at"
-    },
-    {
-      "from": "location_1005",
-      "to": "Aurora Berg",
-      "label": "contained_by"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1006",
-      "label": "wields"
-    },
-    {
-      "from": "Tide-Splitter Rukan",
-      "to": "abilities_1006",
+      "from": "The Midnight Claws",
+      "to": "abilities_1008",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1008",
-      "to": "faction_1007",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1008",
-      "to": "The Glow-Fissure",
-      "label": "resident_of"
-    },
-    {
-      "from": "High-Beak Auditor Selka",
-      "to": "faction_1007",
-      "label": "member_of"
-    },
-    {
-      "from": "High-Beak Auditor Selka",
-      "to": "The Glow-Fissure",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1008",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "location_1009",
-      "to": "Aurora Berg",
-      "label": "contained_by"
-    },
-    {
-      "from": "npc_1011",
-      "to": "faction_1010",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1011",
-      "to": "location_1000",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1008",
-      "to": "faction_1010",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1008",
-      "to": "location_1000",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1011",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "location_1012",
-      "to": "Aurora Berg",
-      "label": "contained_by"
-    },
-    {
-      "from": "npc_1014",
-      "to": "faction_1013",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1014",
-      "to": "The Glow-Fissure",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1011",
-      "to": "faction_1013",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1011",
-      "to": "The Glow-Fissure",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1014",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1016",
-      "to": "faction_1015",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1016",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1014",
-      "to": "faction_1015",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1014",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1016",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1017",
-      "label": "wields"
-    },
-    {
-      "from": "Tide-Splitter Rukan",
-      "to": "abilities_1017",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1019",
-      "label": "wields"
-    },
-    {
-      "from": "Tide-Splitter Rukan",
-      "to": "abilities_1019",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1020",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "abilities_1020",
+      "from": "abilities_1008",
       "to": "Aurora Stack",
       "label": "originated_in"
     },
     {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1021",
-      "label": "manifests_at"
+      "from": "abilities_1008",
+      "to": "abilities_1007",
+      "label": "derived_from"
     },
     {
       "from": "The Icebound Exchange",
-      "to": "abilities_1022",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "abilities_1022",
-      "to": "Aurora Stack",
-      "label": "originated_in"
-    },
-    {
-      "from": "npc_1023",
-      "to": "abilities_1022",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1023",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1024",
+      "to": "abilities_1009",
       "label": "wields"
     },
     {
       "from": "Tide-Splitter Rukan",
-      "to": "abilities_1024",
+      "to": "abilities_1009",
       "label": "practitioner_of"
     },
     {
-      "from": "location_1025",
-      "to": "Aurora Stack",
-      "label": "adjacent_to"
+      "from": "The Icebound Exchange",
+      "to": "abilities_1010",
+      "label": "practitioner_of"
     },
     {
-      "from": "npc_1016",
-      "to": "abilities_1026",
+      "from": "abilities_1010",
+      "to": "Nightfall Shelf",
+      "label": "originated_in"
+    },
+    {
+      "from": "abilities_1010",
+      "to": "abilities_1008",
+      "label": "derived_from"
+    },
+    {
+      "from": "Fissure-Walker Draen",
+      "to": "abilities_1011",
       "label": "discoverer_of"
     },
     {
-      "from": "abilities_1026",
-      "to": "location_1004",
+      "from": "abilities_1011",
+      "to": "location_1002",
       "label": "manifests_at"
     },
     {
-      "from": "faction_1013",
-      "to": "abilities_1027",
-      "label": "practitioner_of"
+      "from": "abilities_1011",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
     },
     {
-      "from": "abilities_1027",
-      "to": "Aurora Stack",
-      "label": "originated_in"
+      "from": "npc_1013",
+      "to": "faction_1012",
+      "label": "leader_of"
     },
     {
-      "from": "npc_1028",
-      "to": "Harmonic Harpoon Arrays",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1028",
-      "to": "location_1009",
+      "from": "npc_1013",
+      "to": "location_1002",
       "label": "resident_of"
     },
     {
-      "from": "npc_1029",
-      "to": "abilities_1006",
+      "from": "npc_1005",
+      "to": "faction_1012",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1005",
+      "to": "location_1002",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1013",
+      "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1029",
-      "to": "location_1009",
+      "from": "location_1014",
+      "to": "Aurora Berg",
+      "label": "contained_by"
+    },
+    {
+      "from": "The Midnight Claws",
+      "to": "abilities_1015",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1015",
+      "to": "The Glow-Fissure",
+      "label": "originated_in"
+    },
+    {
+      "from": "abilities_1015",
+      "to": "abilities_1007",
+      "label": "derived_from"
+    },
+    {
+      "from": "The Icebound Exchange",
+      "to": "abilities_1016",
+      "label": "wields"
+    },
+    {
+      "from": "Tide-Splitter Rukan",
+      "to": "abilities_1016",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1018",
+      "to": "faction_1017",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1018",
+      "to": "location_1002",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1013",
+      "to": "faction_1017",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1018",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "Fissure-Drawn Runes",
+      "to": "location_1020",
+      "label": "manifests_at"
+    },
+    {
+      "from": "npc_1021",
+      "to": "abilities_1007",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1021",
+      "to": "Aurora Stack",
       "label": "resident_of"
     },
     {
       "from": "Fissure-Walker Draen",
-      "to": "rules_1030",
-      "label": "champion_of"
+      "to": "abilities_1022",
+      "label": "discoverer_of"
     },
     {
-      "from": "rules_1030",
-      "to": "Nightfall Shelf",
-      "label": "originated_in"
+      "from": "abilities_1022",
+      "to": "location_1020",
+      "label": "manifests_at"
     },
     {
-      "from": "npc_1032",
-      "to": "faction_1031",
+      "from": "abilities_1022",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
+    },
+    {
+      "from": "Fissure-Drawn Runes",
+      "to": "location_1023",
+      "label": "manifests_at"
+    },
+    {
+      "from": "Fissure-Drawn Runes",
+      "to": "location_1024",
+      "label": "manifests_at"
+    },
+    {
+      "from": "npc_1026",
+      "to": "faction_1025",
       "label": "leader_of"
     },
     {
-      "from": "npc_1032",
-      "to": "Nightfall Shelf",
+      "from": "npc_1026",
+      "to": "location_1002",
       "label": "resident_of"
     },
     {
-      "from": "npc_1016",
-      "to": "faction_1031",
+      "from": "npc_1018",
+      "to": "faction_1025",
       "label": "member_of"
     },
     {
-      "from": "npc_1032",
+      "from": "npc_1026",
       "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
     },
     {
-      "from": "faction_1013",
+      "from": "npc_1028",
+      "to": "faction_1027",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1028",
+      "to": "location_1024",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1021",
+      "to": "faction_1027",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1021",
+      "to": "location_1024",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1028",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "abilities_1008",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "abilities_1022",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "location_1014",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1028",
+      "to": "rules_1031",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1031",
+      "to": "location_1024",
+      "label": "originated_in"
+    },
+    {
+      "from": "npc_1018",
+      "to": "abilities_1032",
+      "label": "discoverer_of"
+    },
+    {
+      "from": "abilities_1032",
+      "to": "The Glow-Fissure",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1032",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
+    },
+    {
+      "from": "The Icebound Exchange",
       "to": "abilities_1033",
       "label": "practitioner_of"
     },
     {
       "from": "abilities_1033",
-      "to": "Aurora Stack",
-      "label": "originated_in"
-    },
-    {
-      "from": "The Midnight Claws",
-      "to": "abilities_1034",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "abilities_1034",
-      "to": "Krill Shoals",
-      "label": "originated_in"
-    },
-    {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1035",
-      "label": "manifests_at"
-    },
-    {
-      "from": "npc_1037",
-      "to": "faction_1036",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1037",
-      "to": "location_1035",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1023",
-      "to": "faction_1036",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1023",
-      "to": "location_1035",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1037",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1038",
-      "label": "manifests_at"
-    },
-    {
-      "from": "npc_1039",
-      "to": "abilities_1019",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1039",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1032",
-      "to": "rules_1040",
-      "label": "champion_of"
-    },
-    {
-      "from": "rules_1040",
       "to": "Nightfall Shelf",
       "label": "originated_in"
     },
     {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1041",
-      "label": "manifests_at"
+      "from": "abilities_1033",
+      "to": "abilities_1010",
+      "label": "derived_from"
     },
     {
-      "from": "npc_1028",
-      "to": "rules_1042",
+      "from": "npc_1013",
+      "to": "rules_1034",
       "label": "champion_of"
     },
     {
-      "from": "rules_1042",
-      "to": "location_1009",
+      "from": "rules_1034",
+      "to": "location_1002",
       "label": "originated_in"
     },
     {
-      "from": "Fissure-Drawn Runes",
+      "from": "abilities_1022",
+      "to": "location_1035",
+      "label": "manifests_at"
+    },
+    {
+      "from": "npc_1036",
+      "to": "abilities_1033",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1036",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1013",
+      "to": "rules_1037",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1037",
+      "to": "location_1002",
+      "label": "originated_in"
+    },
+    {
+      "from": "rules_1037",
+      "to": "rules_1031",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1039",
+      "to": "faction_1038",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1039",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1026",
+      "to": "faction_1038",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1026",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1039",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "The Midnight Claws",
+      "to": "abilities_1040",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1040",
+      "to": "The Glow-Fissure",
+      "label": "originated_in"
+    },
+    {
+      "from": "abilities_1040",
+      "to": "abilities_1008",
+      "label": "derived_from"
+    },
+    {
+      "from": "npc_1028",
+      "to": "rules_1041",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1041",
+      "to": "location_1024",
+      "label": "originated_in"
+    },
+    {
+      "from": "rules_1041",
+      "to": "rules_1031",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1042",
+      "to": "abilities_1007",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1042",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "abilities_1022",
       "to": "location_1043",
       "label": "manifests_at"
     },
     {
-      "from": "npc_1016",
+      "from": "npc_1028",
       "to": "rules_1044",
       "label": "champion_of"
     },
     {
       "from": "rules_1044",
-      "to": "Nightfall Shelf",
+      "to": "location_1024",
       "label": "originated_in"
     },
     {
-      "from": "npc_1046",
-      "to": "faction_1045",
-      "label": "leader_of"
+      "from": "rules_1044",
+      "to": "rules_1031",
+      "label": "related_to"
     },
     {
-      "from": "npc_1046",
-      "to": "location_1035",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1028",
-      "to": "faction_1045",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1028",
-      "to": "location_1035",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1046",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "Fissure-Walker Draen",
-      "to": "rules_1047",
-      "label": "champion_of"
-    },
-    {
-      "from": "rules_1047",
-      "to": "Nightfall Shelf",
-      "label": "originated_in"
-    },
-    {
-      "from": "npc_1048",
-      "to": "abilities_1026",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1048",
-      "to": "location_1009",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1011",
-      "to": "rules_1049",
-      "label": "champion_of"
-    },
-    {
-      "from": "rules_1049",
-      "to": "location_1000",
-      "label": "originated_in"
-    },
-    {
-      "from": "npc_1032",
-      "to": "rules_1050",
-      "label": "champion_of"
-    },
-    {
-      "from": "rules_1050",
-      "to": "Nightfall Shelf",
-      "label": "originated_in"
-    },
-    {
-      "from": "npc_1051",
-      "to": "abilities_1026",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1051",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "location_1052",
-      "to": "Windward Ridge",
+      "from": "location_1045",
+      "to": "location_1023",
       "label": "adjacent_to"
     },
     {
-      "from": "faction_1031",
-      "to": "abilities_1053",
+      "from": "Fissure-Drawn Runes",
+      "to": "location_1046",
+      "label": "manifests_at"
+    },
+    {
+      "from": "npc_1048",
+      "to": "faction_1047",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1048",
+      "to": "location_1043",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "faction_1047",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "location_1043",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1048",
+      "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
     },
     {
-      "from": "abilities_1053",
-      "to": "location_1038",
-      "label": "originated_in"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1054",
+      "from": "faction_1025",
+      "to": "abilities_1049",
       "label": "practitioner_of"
     },
     {
-      "from": "abilities_1054",
-      "to": "Nightfall Shelf",
+      "from": "abilities_1049",
+      "to": "location_1014",
       "label": "originated_in"
+    },
+    {
+      "from": "abilities_1049",
+      "to": "abilities_1010",
+      "label": "derived_from"
+    },
+    {
+      "from": "faction_1025",
+      "to": "abilities_1050",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1050",
+      "to": "location_1014",
+      "label": "originated_in"
+    },
+    {
+      "from": "abilities_1050",
+      "to": "abilities_1049",
+      "label": "derived_from"
+    },
+    {
+      "from": "npc_1051",
+      "to": "abilities_1032",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1051",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1052",
+      "to": "abilities_1010",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1052",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "abilities_1022",
+      "to": "location_1053",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1032",
+      "to": "location_1054",
+      "label": "manifests_at"
     },
     {
       "from": "npc_1056",
@@ -2186,288 +2235,218 @@
     },
     {
       "from": "npc_1056",
-      "to": "location_1038",
+      "to": "location_1023",
       "label": "resident_of"
     },
     {
-      "from": "npc_1029",
+      "from": "npc_1030",
       "to": "faction_1055",
       "label": "member_of"
     },
     {
-      "from": "npc_1029",
-      "to": "location_1038",
+      "from": "npc_1030",
+      "to": "location_1023",
       "label": "resident_of"
     },
     {
       "from": "npc_1056",
       "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
+    },
+    {
+      "from": "location_1057",
+      "to": "Nightfall Shelf",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "Nightfall Shelf",
+      "to": "location_1057",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1059",
+      "to": "faction_1058",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1059",
+      "to": "location_1002",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1036",
+      "to": "faction_1058",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1036",
+      "to": "location_1002",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1059",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1021",
+      "to": "rules_1060",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1060",
+      "to": "Aurora Stack",
+      "label": "originated_in"
+    },
+    {
+      "from": "rules_1060",
+      "to": "rules_1031",
+      "label": "related_to"
+    },
+    {
+      "from": "faction_1027",
+      "to": "abilities_1061",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1061",
+      "to": "location_1002",
+      "label": "originated_in"
+    },
+    {
+      "from": "abilities_1061",
+      "to": "abilities_1050",
+      "label": "derived_from"
     },
     {
       "from": "npc_1039",
-      "to": "abilities_1057",
+      "to": "rules_1062",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1062",
+      "to": "Nightfall Shelf",
+      "label": "originated_in"
+    },
+    {
+      "from": "npc_1013",
+      "to": "abilities_1063",
       "label": "discoverer_of"
     },
     {
-      "from": "abilities_1057",
-      "to": "location_1041",
+      "from": "abilities_1063",
+      "to": "location_1046",
       "label": "manifests_at"
     },
     {
-      "from": "npc_1029",
-      "to": "abilities_1058",
-      "label": "discoverer_of"
+      "from": "abilities_1063",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
     },
     {
-      "from": "abilities_1058",
-      "to": "location_1041",
-      "label": "manifests_at"
-    },
-    {
-      "from": "location_1059",
-      "to": "Aurora Berg",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1061",
-      "to": "faction_1060",
+      "from": "npc_1065",
+      "to": "faction_1064",
       "label": "leader_of"
     },
     {
-      "from": "npc_1061",
-      "to": "location_1025",
+      "from": "npc_1065",
+      "to": "location_1023",
       "label": "resident_of"
     },
     {
-      "from": "npc_1032",
-      "to": "faction_1060",
+      "from": "npc_1039",
+      "to": "faction_1064",
       "label": "member_of"
     },
     {
-      "from": "npc_1032",
-      "to": "location_1025",
+      "from": "npc_1039",
+      "to": "location_1023",
       "label": "resident_of"
     },
     {
-      "from": "npc_1061",
+      "from": "npc_1065",
       "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1063",
-      "to": "faction_1062",
-      "label": "leader_of"
+      "from": "npc_1056",
+      "to": "rules_1066",
+      "label": "champion_of"
     },
     {
-      "from": "npc_1063",
-      "to": "Windward Ridge",
-      "label": "resident_of"
+      "from": "rules_1066",
+      "to": "location_1023",
+      "label": "originated_in"
     },
     {
-      "from": "npc_1037",
-      "to": "faction_1062",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1037",
-      "to": "Windward Ridge",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1063",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "Tide-Splitter Rukan",
-      "to": "abilities_1064",
-      "label": "discoverer_of"
-    },
-    {
-      "from": "abilities_1064",
-      "to": "location_1021",
-      "label": "manifests_at"
-    },
-    {
-      "from": "location_1065",
-      "to": "location_1009",
+      "from": "location_1067",
+      "to": "location_1020",
       "label": "adjacent_to"
     },
     {
-      "from": "npc_1014",
-      "to": "abilities_1066",
-      "label": "discoverer_of"
+      "from": "npc_1056",
+      "to": "rules_1068",
+      "label": "champion_of"
     },
     {
-      "from": "abilities_1066",
-      "to": "location_1052",
-      "label": "manifests_at"
+      "from": "rules_1068",
+      "to": "location_1023",
+      "label": "originated_in"
     },
     {
-      "from": "abilities_1026",
-      "to": "location_1067",
-      "label": "manifests_at"
+      "from": "rules_1068",
+      "to": "rules_1044",
+      "label": "related_to"
     },
     {
-      "from": "abilities_1026",
-      "to": "location_1068",
-      "label": "manifests_at"
-    },
-    {
-      "from": "faction_1007",
+      "from": "faction_1025",
       "to": "abilities_1069",
       "label": "practitioner_of"
     },
     {
       "from": "abilities_1069",
-      "to": "Aurora Stack",
+      "to": "location_1014",
       "label": "originated_in"
     },
     {
-      "from": "npc_1032",
-      "to": "rules_1070",
-      "label": "champion_of"
+      "from": "abilities_1069",
+      "to": "abilities_1049",
+      "label": "derived_from"
     },
     {
-      "from": "rules_1070",
-      "to": "Nightfall Shelf",
-      "label": "originated_in"
+      "from": "npc_1021",
+      "to": "abilities_1070",
+      "label": "discoverer_of"
     },
     {
-      "from": "abilities_1026",
+      "from": "abilities_1070",
+      "to": "location_1024",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1070",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
+    },
+    {
+      "from": "Fissure-Drawn Runes",
       "to": "location_1071",
       "label": "manifests_at"
     },
     {
-      "from": "faction_1031",
+      "from": "faction_1038",
       "to": "abilities_1072",
       "label": "practitioner_of"
     },
     {
       "from": "abilities_1072",
-      "to": "location_1038",
+      "to": "location_1020",
       "label": "originated_in"
     },
     {
-      "from": "Tide-Splitter Rukan",
-      "to": "rules_1073",
-      "label": "champion_of"
-    },
-    {
-      "from": "rules_1073",
-      "to": "Aurora Stack",
-      "label": "originated_in"
-    },
-    {
-      "from": "npc_1074",
-      "to": "abilities_1027",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1074",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1008",
-      "to": "abilities_1075",
-      "label": "discoverer_of"
-    },
-    {
-      "from": "abilities_1075",
-      "to": "location_1059",
-      "label": "manifests_at"
-    },
-    {
-      "from": "The Icebound Exchange",
-      "to": "abilities_1076",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "abilities_1076",
-      "to": "Krill Shoals",
-      "label": "originated_in"
-    },
-    {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1077",
-      "label": "manifests_at"
-    },
-    {
-      "from": "npc_1078",
-      "to": "abilities_1003",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1078",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1080",
-      "to": "faction_1079",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1080",
-      "to": "Windward Ridge",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1039",
-      "to": "faction_1079",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1039",
-      "to": "Windward Ridge",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1080",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "faction_1045",
-      "to": "abilities_1081",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "abilities_1081",
-      "to": "location_1021",
-      "label": "originated_in"
-    },
-    {
-      "from": "location_1082",
-      "to": "location_1009",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1084",
-      "to": "faction_1083",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1084",
-      "to": "location_1004",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1046",
-      "to": "faction_1083",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1046",
-      "to": "location_1004",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1084",
-      "to": "Fissure-Drawn Runes",
-      "label": "practitioner_of"
+      "from": "abilities_1072",
+      "to": "abilities_1007",
+      "label": "derived_from"
     },
     {
       "from": "Aurora Berg",
@@ -2520,173 +2499,318 @@
       "label": "active_during"
     },
     {
-      "from": "npc_1085",
+      "from": "npc_1073",
       "to": "Nightfall Shelf",
       "label": "leader_of"
     },
     {
-      "from": "npc_1085",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1085",
-      "to": "The Midnight Claws",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1085",
-      "to": "The Midnight Claws",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1086",
-      "to": "Nightfall Shelf",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1086",
+      "from": "npc_1073",
       "to": "Nightfall Shelf",
       "label": "resident_of"
     },
     {
-      "from": "npc_1086",
+      "from": "npc_1073",
       "to": "The Midnight Claws",
       "label": "leader_of"
     },
     {
-      "from": "npc_1086",
+      "from": "npc_1073",
       "to": "The Midnight Claws",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1087",
-      "to": "Nightfall Shelf",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1087",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1087",
-      "to": "The Midnight Claws",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1087",
-      "to": "The Midnight Claws",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1088",
-      "to": "Aurora Stack",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1088",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1088",
-      "to": "The Icebound Exchange",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1088",
-      "to": "The Icebound Exchange",
       "label": "member_of"
     },
     {
       "from": "npc_1074",
-      "to": "rules_1089",
-      "label": "champion_of"
+      "to": "Nightfall Shelf",
+      "label": "leader_of"
     },
     {
-      "from": "rules_1089",
-      "to": "location_1005",
+      "from": "npc_1074",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1074",
+      "to": "The Midnight Claws",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1074",
+      "to": "The Midnight Claws",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1075",
+      "to": "Aurora Stack",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1075",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1075",
+      "to": "The Icebound Exchange",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1075",
+      "to": "The Icebound Exchange",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1076",
+      "to": "Nightfall Shelf",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1076",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1076",
+      "to": "The Midnight Claws",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1076",
+      "to": "The Midnight Claws",
+      "label": "member_of"
+    },
+    {
+      "from": "The Midnight Claws",
+      "to": "abilities_1077",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1077",
+      "to": "Krill Shoals",
       "label": "originated_in"
     },
     {
-      "from": "npc_1080",
-      "to": "abilities_1090",
+      "from": "abilities_1077",
+      "to": "abilities_1008",
+      "label": "derived_from"
+    },
+    {
+      "from": "npc_1005",
+      "to": "abilities_1079",
       "label": "discoverer_of"
     },
     {
-      "from": "abilities_1090",
-      "to": "location_1068",
+      "from": "abilities_1079",
+      "to": "location_1043",
       "label": "manifests_at"
     },
     {
-      "from": "npc_1091",
+      "from": "abilities_1079",
+      "to": "abilities_1022",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1080",
       "to": "Nightfall Shelf",
       "label": "leader_of"
     },
     {
-      "from": "npc_1091",
+      "from": "npc_1080",
       "to": "Nightfall Shelf",
       "label": "resident_of"
     },
     {
-      "from": "npc_1091",
+      "from": "npc_1080",
       "to": "The Midnight Claws",
       "label": "leader_of"
     },
     {
-      "from": "npc_1091",
+      "from": "npc_1080",
       "to": "The Midnight Claws",
       "label": "member_of"
     },
     {
-      "from": "npc_1092",
-      "to": "Aurora Stack",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1092",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1092",
-      "to": "The Icebound Exchange",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1092",
-      "to": "The Icebound Exchange",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1029",
-      "to": "rules_1093",
+      "from": "npc_1039",
+      "to": "rules_1081",
       "label": "champion_of"
     },
     {
-      "from": "rules_1093",
-      "to": "location_1009",
+      "from": "rules_1081",
+      "to": "Nightfall Shelf",
       "label": "originated_in"
     },
     {
-      "from": "npc_1094",
+      "from": "abilities_1022",
+      "to": "location_1082",
+      "label": "manifests_at"
+    },
+    {
+      "from": "npc_1083",
+      "to": "Aurora Stack",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1083",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1083",
+      "to": "The Icebound Exchange",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1083",
+      "to": "The Icebound Exchange",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1084",
+      "to": "Aurora Stack",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1084",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1084",
+      "to": "The Icebound Exchange",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1084",
+      "to": "The Icebound Exchange",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "location_1014",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1056",
+      "to": "rules_1086",
+      "label": "champion_of"
+    },
+    {
+      "from": "rules_1086",
+      "to": "location_1023",
+      "label": "originated_in"
+    },
+    {
+      "from": "rules_1086",
+      "to": "rules_1034",
+      "label": "related_to"
+    },
+    {
+      "from": "location_1087",
+      "to": "location_1035",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1085",
+      "to": "abilities_1088",
+      "label": "discoverer_of"
+    },
+    {
+      "from": "abilities_1088",
+      "to": "location_1020",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1088",
+      "to": "abilities_1022",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1089",
+      "to": "Aurora Stack",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1089",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1089",
+      "to": "The Icebound Exchange",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1089",
+      "to": "The Icebound Exchange",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1091",
+      "to": "faction_1090",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1091",
+      "to": "location_1045",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1042",
+      "to": "faction_1090",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1042",
+      "to": "location_1045",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1091",
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1093",
       "to": "Nightfall Shelf",
       "label": "leader_of"
     },
     {
-      "from": "npc_1094",
+      "from": "npc_1093",
       "to": "Nightfall Shelf",
       "label": "resident_of"
     },
     {
-      "from": "npc_1094",
+      "from": "npc_1093",
       "to": "The Midnight Claws",
       "label": "leader_of"
     },
     {
-      "from": "npc_1094",
+      "from": "npc_1093",
       "to": "The Midnight Claws",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1094",
+      "to": "Aurora Stack",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1094",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1094",
+      "to": "The Icebound Exchange",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1094",
+      "to": "The Icebound Exchange",
       "label": "member_of"
     },
     {
@@ -2710,913 +2834,973 @@
       "label": "member_of"
     },
     {
-      "from": "npc_1016",
+      "from": "npc_1042",
       "to": "abilities_1096",
       "label": "discoverer_of"
     },
     {
       "from": "abilities_1096",
-      "to": "location_1067",
+      "to": "location_1020",
       "label": "manifests_at"
     },
     {
-      "from": "npc_1097",
-      "to": "abilities_1026",
+      "from": "abilities_1096",
+      "to": "Fissure-Drawn Runes",
+      "label": "related_to"
+    },
+    {
+      "from": "location_1099",
+      "to": "Nightfall Shelf",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1099",
+      "to": "Aurora Stack",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1100",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1100",
+      "to": "faction_1012",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "faction_1090",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "faction_1017",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1104",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1104",
+      "to": "faction_1025",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1100",
+      "to": "faction_1105",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "faction_1105",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "faction_1105",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1104",
+      "to": "faction_1106",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1104",
+      "to": "location_1014",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1051",
+      "to": "faction_1106",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1051",
+      "to": "location_1014",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1052",
+      "to": "faction_1106",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1052",
+      "to": "location_1014",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1029",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1036",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1036",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1042",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1042",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1048",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1048",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1111",
+      "to": "Nightfall Shelf",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1111",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1111",
+      "to": "The Midnight Claws",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1111",
+      "to": "The Midnight Claws",
+      "label": "member_of"
+    },
+    {
+      "from": "rules_1112",
+      "to": "location_1006",
+      "label": "applies_in"
+    },
+    {
+      "from": "npc_1113",
+      "to": "Fissure-Drawn Runes",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1097",
-      "to": "location_1009",
+      "from": "npc_1113",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
-      "from": "npc_1008",
-      "to": "rules_1098",
+      "from": "faction_1108",
+      "to": "abilities_1114",
+      "label": "wields"
+    },
+    {
+      "from": "npc_1029",
+      "to": "abilities_1114",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "abilities_1114",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "abilities_1114",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "faction_1105",
+      "to": "The Faction Wars",
+      "label": "active_during"
+    },
+    {
+      "from": "faction_1106",
+      "to": "The Faction Wars",
+      "label": "active_during"
+    },
+    {
+      "from": "faction_1108",
+      "to": "The Faction Wars",
+      "label": "active_during"
+    },
+    {
+      "from": "faction_1109",
+      "to": "The Faction Wars",
+      "label": "active_during"
+    },
+    {
+      "from": "Fissure-Walker Draen",
+      "to": "rules_1115",
       "label": "champion_of"
     },
     {
-      "from": "rules_1098",
-      "to": "The Glow-Fissure",
+      "from": "rules_1115",
+      "to": "Nightfall Shelf",
       "label": "originated_in"
     },
     {
-      "from": "npc_1056",
-      "to": "abilities_1099",
-      "label": "discoverer_of"
+      "from": "rules_1115",
+      "to": "location_1003",
+      "label": "originated_in"
     },
     {
-      "from": "abilities_1099",
-      "to": "location_1068",
-      "label": "manifests_at"
+      "from": "rules_1115",
+      "to": "faction_1090",
+      "label": "celebrated_by"
     },
     {
-      "from": "npc_1100",
-      "to": "Aurora Stack",
-      "label": "leader_of"
+      "from": "rules_1115",
+      "to": "faction_1017",
+      "label": "celebrated_by"
     },
     {
-      "from": "npc_1100",
-      "to": "Aurora Stack",
-      "label": "resident_of"
+      "from": "rules_1115",
+      "to": "faction_1012",
+      "label": "celebrated_by"
     },
     {
-      "from": "npc_1100",
-      "to": "The Icebound Exchange",
-      "label": "leader_of"
+      "from": "rules_1115",
+      "to": "faction_1025",
+      "label": "celebrated_by"
     },
     {
-      "from": "npc_1100",
-      "to": "The Icebound Exchange",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1074",
-      "to": "abilities_1101",
-      "label": "discoverer_of"
-    },
-    {
-      "from": "abilities_1101",
-      "to": "location_1004",
-      "label": "manifests_at"
-    },
-    {
-      "from": "npc_1102",
+      "from": "rules_1115",
       "to": "Nightfall Shelf",
-      "label": "leader_of"
+      "label": "applies_in"
     },
     {
-      "from": "npc_1102",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1102",
-      "to": "The Midnight Claws",
-      "label": "leader_of"
-    },
-    {
-      "from": "npc_1102",
-      "to": "The Midnight Claws",
-      "label": "member_of"
-    },
-    {
-      "from": "Fissure-Drawn Runes",
-      "to": "location_1103",
-      "label": "manifests_at"
-    },
-    {
-      "from": "npc_1104",
+      "from": "rules_1115",
       "to": "Aurora Stack",
-      "label": "leader_of"
+      "label": "applies_in"
     },
     {
-      "from": "npc_1104",
-      "to": "Aurora Stack",
-      "label": "resident_of"
+      "from": "rules_1115",
+      "to": "location_1006",
+      "label": "applies_in"
     },
     {
-      "from": "npc_1104",
-      "to": "The Icebound Exchange",
-      "label": "leader_of"
+      "from": "rules_1112",
+      "to": "rules_1115",
+      "label": "supersedes"
     },
     {
-      "from": "npc_1104",
-      "to": "The Icebound Exchange",
-      "label": "member_of"
+      "from": "rules_1115",
+      "to": "The Faction Wars",
+      "label": "active_during"
     },
     {
-      "from": "location_1105",
-      "to": "location_1000",
-      "label": "adjacent_to"
+      "from": "rules_1078",
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
-      "from": "npc_1106",
-      "to": "Nightfall Shelf",
-      "label": "leader_of"
+      "from": "rules_1092",
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
-      "from": "npc_1106",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
+      "from": "rules_1097",
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
-      "from": "npc_1106",
-      "to": "The Midnight Claws",
-      "label": "leader_of"
+      "from": "rules_1098",
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
-      "from": "npc_1106",
-      "to": "The Midnight Claws",
-      "label": "member_of"
+      "from": "rules_1102",
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
       "from": "rules_1107",
-      "to": "location_1012",
-      "label": "applies_in"
+      "to": "rules_1115",
+      "label": "part_of"
     },
     {
-      "from": "rules_1108",
-      "to": "location_1009",
-      "label": "applies_in"
+      "from": "faction_1105",
+      "to": "abilities_1116",
+      "label": "wields"
     },
     {
-      "from": "rules_1109",
+      "from": "npc_1100",
+      "to": "abilities_1116",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "abilities_1116",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "abilities_1116",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1118",
+      "to": "abilities_1049",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1118",
       "to": "Aurora Stack",
-      "label": "applies_in"
+      "label": "resident_of"
     },
     {
-      "from": "location_1110",
+      "from": "npc_1119",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1119",
+      "to": "faction_1064",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1120",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1120",
+      "to": "faction_1064",
+      "label": "member_of"
+    },
+    {
+      "from": "location_1121",
       "to": "Aurora Stack",
       "label": "adjacent_to"
     },
     {
-      "from": "location_1110",
+      "from": "location_1121",
       "to": "Nightfall Shelf",
       "label": "adjacent_to"
     },
     {
-      "from": "npc_1111",
+      "from": "npc_1122",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1122",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1123",
       "to": "Nightfall Shelf",
       "label": "resident_of"
     },
     {
-      "from": "npc_1111",
+      "from": "npc_1123",
+      "to": "faction_1004",
+      "label": "member_of"
+    },
+    {
+      "from": "location_1124",
+      "to": "Aurora Stack",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1124",
+      "to": "location_1003",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1125",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1125",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1126",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1126",
+      "to": "faction_1004",
+      "label": "member_of"
+    },
+    {
+      "from": "location_1127",
+      "to": "location_1006",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1127",
+      "to": "location_1014",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1128",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1128",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1129",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1129",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1129",
+      "to": "abilities_1061",
+      "label": "discoverer_of"
+    },
+    {
+      "from": "npc_1119",
+      "to": "faction_1130",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1119",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1120",
+      "to": "faction_1130",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1120",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1122",
+      "to": "faction_1130",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1122",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "faction_1105",
+      "to": "abilities_1131",
+      "label": "wields"
+    },
+    {
+      "from": "npc_1100",
+      "to": "abilities_1131",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1101",
+      "to": "abilities_1131",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1103",
+      "to": "abilities_1131",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "location_1132",
+      "to": "Aurora Stack",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1132",
+      "to": "Nightfall Shelf",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "npc_1133",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1133",
+      "to": "faction_1109",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1134",
+      "to": "Aurora Stack",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1134",
       "to": "faction_1055",
       "label": "member_of"
     },
     {
-      "from": "npc_1112",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1112",
-      "to": "faction_1062",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1111",
-      "to": "faction_1113",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1111",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1112",
-      "to": "faction_1113",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1048",
-      "to": "faction_1113",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1048",
-      "to": "Aurora Stack",
-      "label": "resident_of"
-    },
-    {
-      "from": "rules_1114",
-      "to": "Aurora Stack",
-      "label": "applies_in"
-    },
-    {
-      "from": "location_1115",
-      "to": "Aurora Stack",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1115",
-      "to": "location_1009",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1116",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1116",
-      "to": "faction_1031",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "location_1009",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "faction_1010",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "abilities_1019",
+      "from": "npc_1134",
+      "to": "Harmonic Harpoon Arrays",
       "label": "discoverer_of"
     },
     {
-      "from": "npc_1116",
-      "to": "faction_1118",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1116",
-      "to": "location_1009",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "faction_1118",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1051",
-      "to": "faction_1118",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1051",
-      "to": "location_1009",
-      "label": "resident_of"
-    },
-    {
-      "from": "faction_1113",
-      "to": "abilities_1119",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1048",
-      "to": "abilities_1119",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1111",
-      "to": "abilities_1119",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1112",
-      "to": "abilities_1119",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "rules_1120",
-      "to": "location_1005",
-      "label": "applies_in"
-    },
-    {
-      "from": "rules_1107",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1108",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1109",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "faction_1113",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1114",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "faction_1118",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1120",
-      "to": "The Faction Wars",
-      "label": "active_during"
-    },
-    {
-      "from": "location_1121",
-      "to": "Aurora Stack",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1121",
-      "to": "Nightfall Shelf",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1122",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1122",
-      "to": "faction_1031",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1123",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1123",
-      "to": "faction_1036",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1122",
-      "to": "faction_1124",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1123",
-      "to": "faction_1124",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1123",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1074",
-      "to": "faction_1124",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1074",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1078",
-      "to": "faction_1125",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1078",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1097",
-      "to": "faction_1125",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1097",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1023",
-      "to": "faction_1125",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1028",
-      "to": "faction_1126",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1028",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1039",
-      "to": "faction_1126",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1039",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1056",
-      "to": "faction_1126",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1056",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "faction_1118",
-      "to": "abilities_1127",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1051",
-      "to": "abilities_1127",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1116",
-      "to": "abilities_1127",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "abilities_1127",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "faction_1124",
-      "to": "abilities_1128",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1074",
-      "to": "abilities_1128",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1122",
-      "to": "abilities_1128",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1123",
-      "to": "abilities_1128",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "location_1129",
-      "to": "location_1005",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1129",
-      "to": "Nightfall Shelf",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1130",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1130",
-      "to": "faction_1007",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1131",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1131",
-      "to": "faction_1126",
-      "label": "member_of"
-    },
-    {
-      "from": "rules_1133",
-      "to": "location_1009",
-      "label": "applies_in"
-    },
-    {
-      "from": "location_1134",
-      "to": "The Glow-Fissure",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "faction_1125",
-      "to": "abilities_1135",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1023",
-      "to": "abilities_1135",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1078",
-      "to": "abilities_1135",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1097",
-      "to": "abilities_1135",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "location_1136",
-      "to": "location_1021",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1137",
-      "to": "location_1012",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1137",
-      "to": "location_1009",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1138",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1138",
-      "to": "faction_1124",
-      "label": "member_of"
+      "from": "abilities_1032",
+      "to": "location_1138",
+      "label": "manifests_at"
     },
     {
       "from": "npc_1139",
-      "to": "location_1005",
+      "to": "location_1006",
       "label": "resident_of"
     },
     {
       "from": "npc_1139",
-      "to": "faction_1062",
+      "to": "faction_1106",
       "label": "member_of"
     },
     {
-      "from": "npc_1139",
-      "to": "abilities_1135",
-      "label": "discoverer_of"
+      "from": "npc_1140",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
     },
     {
-      "from": "faction_1113",
-      "to": "abilities_1140",
+      "from": "npc_1140",
+      "to": "faction_1064",
+      "label": "member_of"
+    },
+    {
+      "from": "faction_1105",
+      "to": "abilities_1141",
       "label": "wields"
     },
     {
-      "from": "npc_1048",
-      "to": "abilities_1140",
+      "from": "npc_1100",
+      "to": "abilities_1141",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1111",
-      "to": "abilities_1140",
+      "from": "npc_1101",
+      "to": "abilities_1141",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1112",
-      "to": "abilities_1140",
+      "from": "npc_1103",
+      "to": "abilities_1141",
       "label": "practitioner_of"
     },
     {
-      "from": "location_1141",
-      "to": "location_1137",
-      "label": "adjacent_to"
+      "from": "faction_1108",
+      "to": "abilities_1142",
+      "label": "wields"
     },
     {
-      "from": "location_1142",
-      "to": "location_1005",
-      "label": "adjacent_to"
+      "from": "npc_1029",
+      "to": "abilities_1142",
+      "label": "practitioner_of"
     },
     {
-      "from": "location_1142",
-      "to": "location_1012",
-      "label": "adjacent_to"
+      "from": "npc_1030",
+      "to": "abilities_1142",
+      "label": "practitioner_of"
     },
     {
-      "from": "npc_1143",
-      "to": "location_1012",
-      "label": "resident_of"
+      "from": "npc_1085",
+      "to": "abilities_1142",
+      "label": "practitioner_of"
     },
     {
-      "from": "npc_1143",
-      "to": "faction_1125",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1144",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1144",
-      "to": "faction_1124",
-      "label": "member_of"
-    },
-    {
-      "from": "faction_1118",
-      "to": "abilities_1145",
+      "from": "faction_1106",
+      "to": "abilities_1143",
       "label": "wields"
     },
     {
       "from": "npc_1051",
-      "to": "abilities_1145",
+      "to": "abilities_1143",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1116",
-      "to": "abilities_1145",
+      "from": "npc_1052",
+      "to": "abilities_1143",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1117",
-      "to": "abilities_1145",
+      "from": "npc_1104",
+      "to": "abilities_1143",
       "label": "practitioner_of"
     },
     {
-      "from": "location_1146",
-      "to": "Aurora Berg",
-      "label": "adjacent_to"
+      "from": "npc_1145",
+      "to": "abilities_1070",
+      "label": "practitioner_of"
     },
     {
-      "from": "location_1147",
+      "from": "npc_1145",
       "to": "Aurora Stack",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1147",
-      "to": "Nightfall Shelf",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1148",
-      "to": "Aurora Stack",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1148",
-      "to": "Nightfall Shelf",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1149",
-      "to": "location_1005",
       "label": "resident_of"
     },
     {
-      "from": "npc_1149",
+      "from": "faction_1108",
+      "to": "abilities_1147",
+      "label": "wields"
+    },
+    {
+      "from": "npc_1029",
+      "to": "abilities_1147",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "abilities_1147",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "abilities_1147",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1148",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1148",
       "to": "The Icebound Exchange",
       "label": "member_of"
     },
     {
-      "from": "npc_1150",
-      "to": "location_1009",
+      "from": "npc_1149",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
-      "from": "npc_1150",
-      "to": "The Icebound Exchange",
+      "from": "npc_1149",
+      "to": "faction_1004",
       "label": "member_of"
     },
     {
-      "from": "rules_1151",
-      "to": "location_1005",
-      "label": "applies_in"
+      "from": "location_1150",
+      "to": "location_1035",
+      "label": "adjacent_to"
     },
     {
-      "from": "location_1152",
+      "from": "location_1151",
+      "to": "Krill Shoals",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "Krill Shoals",
+      "to": "location_1151",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "faction_1108",
+      "to": "abilities_1152",
+      "label": "wields"
+    },
+    {
+      "from": "npc_1029",
+      "to": "abilities_1152",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1030",
+      "to": "abilities_1152",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1085",
+      "to": "abilities_1152",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1153",
+      "to": "abilities_1011",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1153",
       "to": "Aurora Stack",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "location_1152",
-      "to": "location_1012",
-      "label": "adjacent_to"
-    },
-    {
-      "from": "npc_1153",
-      "to": "location_1005",
       "label": "resident_of"
-    },
-    {
-      "from": "npc_1153",
-      "to": "faction_1079",
-      "label": "member_of"
     },
     {
       "from": "npc_1154",
+      "to": "location_1006",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1154",
+      "to": "faction_1108",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1155",
       "to": "Nightfall Shelf",
       "label": "resident_of"
     },
     {
-      "from": "npc_1154",
-      "to": "The Midnight Claws",
+      "from": "npc_1155",
+      "to": "faction_1017",
       "label": "member_of"
     },
     {
       "from": "npc_1155",
-      "to": "abilities_1127",
-      "label": "practitioner_of"
+      "to": "abilities_1069",
+      "label": "discoverer_of"
     },
     {
-      "from": "npc_1155",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "faction_1113",
-      "to": "abilities_1156",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1048",
-      "to": "abilities_1156",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1111",
-      "to": "abilities_1156",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1112",
-      "to": "abilities_1156",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "faction_1118",
-      "to": "abilities_1157",
-      "label": "wields"
-    },
-    {
-      "from": "npc_1051",
-      "to": "abilities_1157",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1116",
-      "to": "abilities_1157",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1117",
-      "to": "abilities_1157",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "location_1158",
-      "to": "location_1012",
+      "from": "location_1156",
+      "to": "location_1071",
       "label": "adjacent_to"
     },
     {
-      "from": "npc_1159",
-      "to": "location_1009",
-      "label": "resident_of"
+      "from": "npc_1113",
+      "to": "abilities_1157",
+      "label": "discoverer_of"
     },
     {
-      "from": "npc_1159",
-      "to": "faction_1124",
-      "label": "member_of"
+      "from": "abilities_1157",
+      "to": "location_1053",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1157",
+      "to": "abilities_1022",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1039",
+      "to": "abilities_1158",
+      "label": "discoverer_of"
+    },
+    {
+      "from": "abilities_1158",
+      "to": "location_1024",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1158",
+      "to": "abilities_1070",
+      "label": "related_to"
+    },
+    {
+      "from": "rules_1115",
+      "to": "The Clever Ice Age",
+      "label": "active_during"
+    },
+    {
+      "from": "faction_1130",
+      "to": "The Clever Ice Age",
+      "label": "active_during"
+    },
+    {
+      "from": "rules_1159",
+      "to": "Nightfall Shelf",
+      "label": "applies_in"
+    },
+    {
+      "from": "rules_1159",
+      "to": "rules_1115",
+      "label": "related_to"
+    },
+    {
+      "from": "rules_1159",
+      "to": "rules_1097",
+      "label": "related_to"
+    },
+    {
+      "from": "rules_1159",
+      "to": "location_1003",
+      "label": "applies_in"
+    },
+    {
+      "from": "rules_1159",
+      "to": "location_1014",
+      "label": "applies_in"
+    },
+    {
+      "from": "rules_1159",
+      "to": "location_1006",
+      "label": "applies_in"
+    },
+    {
+      "from": "rules_1159",
+      "to": "rules_1107",
+      "label": "related_to"
+    },
+    {
+      "from": "rules_1159",
+      "to": "rules_1115",
+      "label": "supersedes"
+    },
+    {
+      "from": "rules_1159",
+      "to": "The Clever Ice Age",
+      "label": "active_during"
+    },
+    {
+      "from": "rules_1110",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1117",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1135",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1136",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1137",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1144",
+      "to": "rules_1159",
+      "label": "part_of"
+    },
+    {
+      "from": "rules_1146",
+      "to": "rules_1159",
+      "label": "part_of"
     },
     {
       "from": "npc_1160",
-      "to": "location_1012",
-      "label": "resident_of"
+      "to": "npc_1021",
+      "label": "enemy_of"
     },
     {
       "from": "npc_1160",
-      "to": "faction_1015",
-      "label": "member_of"
-    },
-    {
-      "from": "location_1121",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "faction_1124",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "faction_1125",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "faction_1126",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1133",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "location_1137",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1151",
-      "to": "The Clever Ice Age",
-      "label": "active_during"
-    },
-    {
-      "from": "npc_1161",
-      "to": "npc_1074",
+      "to": "The Icebound Exchange",
       "label": "enemy_of"
     },
     {
-      "from": "npc_1161",
-      "to": "faction_1124",
-      "label": "enemy_of"
+      "from": "npc_1160",
+      "to": "abilities_1161",
+      "label": "practitioner_of"
     },
     {
-      "from": "npc_1161",
+      "from": "npc_1160",
       "to": "abilities_1162",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1161",
-      "to": "abilities_1163",
-      "label": "practitioner_of"
+      "from": "abilities_1162",
+      "to": "abilities_1161",
+      "label": "related_to"
     },
     {
-      "from": "npc_1164",
-      "to": "npc_1084",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1165",
-      "to": "npc_1016",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1165",
-      "to": "faction_1118",
+      "from": "npc_1163",
+      "to": "npc_1065",
       "label": "enemy_of"
     },
     {
       "from": "npc_1164",
+      "to": "npc_1095",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1163",
       "to": "abilities_1162",
       "label": "practitioner_of"
     },
     {
       "from": "npc_1165",
-      "to": "abilities_1162",
+      "to": "npc_1111",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1166",
+      "to": "npc_1113",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1165",
+      "to": "faction_1090",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1166",
+      "to": "abilities_1161",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1166",
-      "to": "npc_1011",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1166",
-      "to": "faction_1124",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1166",
-      "to": "abilities_1163",
+      "from": "npc_1163",
+      "to": "abilities_1167",
       "label": "practitioner_of"
     },
     {
@@ -3625,9 +3809,9 @@
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1165",
-      "to": "abilities_1168",
-      "label": "practitioner_of"
+      "from": "abilities_1167",
+      "to": "abilities_1161",
+      "label": "related_to"
     },
     {
       "from": "npc_1164",
@@ -3636,8 +3820,13 @@
     },
     {
       "from": "npc_1166",
-      "to": "abilities_1169",
+      "to": "abilities_1168",
       "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1168",
+      "to": "abilities_1162",
+      "label": "related_to"
     },
     {
       "from": "npc_1165",
@@ -3645,368 +3834,388 @@
       "label": "practitioner_of"
     },
     {
+      "from": "npc_1163",
+      "to": "abilities_1169",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1169",
+      "to": "abilities_1167",
+      "label": "related_to"
+    },
+    {
       "from": "faction_1170",
-      "to": "location_1009",
+      "to": "location_1006",
       "label": "controls"
     },
     {
-      "from": "npc_1130",
+      "from": "npc_1123",
       "to": "faction_1170",
       "label": "member_of"
     },
     {
-      "from": "npc_1130",
-      "to": "location_1009",
+      "from": "npc_1123",
+      "to": "location_1006",
       "label": "resident_of"
     },
     {
-      "from": "npc_1131",
+      "from": "npc_1125",
       "to": "faction_1170",
       "label": "member_of"
     },
     {
-      "from": "npc_1131",
-      "to": "location_1009",
+      "from": "npc_1125",
+      "to": "location_1006",
       "label": "resident_of"
     },
     {
-      "from": "npc_1138",
+      "from": "npc_1126",
       "to": "faction_1170",
       "label": "member_of"
     },
     {
-      "from": "npc_1138",
-      "to": "location_1009",
+      "from": "npc_1126",
+      "to": "location_1006",
       "label": "resident_of"
     },
     {
-      "from": "faction_1171",
-      "to": "Aurora Stack",
+      "from": "npc_1171",
+      "to": "npc_1036",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1171",
+      "to": "faction_1106",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1171",
+      "to": "abilities_1169",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1172",
+      "to": "npc_1095",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1172",
+      "to": "abilities_1169",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1172",
+      "to": "abilities_1173",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1163",
+      "to": "abilities_1173",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1173",
+      "to": "abilities_1167",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1171",
+      "to": "abilities_1174",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1160",
+      "to": "abilities_1174",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1174",
+      "to": "abilities_1161",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1165",
+      "to": "abilities_1175",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1164",
+      "to": "abilities_1175",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1175",
+      "to": "abilities_1173",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1176",
+      "to": "npc_1085",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1177",
+      "to": "npc_1026",
+      "label": "enemy_of"
+    },
+    {
+      "from": "npc_1176",
+      "to": "abilities_1162",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "npc_1177",
+      "to": "abilities_1162",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "faction_1178",
+      "to": "location_1014",
       "label": "controls"
     },
     {
-      "from": "npc_1139",
-      "to": "faction_1171",
+      "from": "npc_1128",
+      "to": "faction_1178",
       "label": "member_of"
     },
     {
-      "from": "npc_1139",
-      "to": "Aurora Stack",
+      "from": "npc_1128",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
-      "from": "npc_1143",
-      "to": "faction_1171",
+      "from": "npc_1129",
+      "to": "faction_1178",
       "label": "member_of"
     },
     {
-      "from": "npc_1143",
-      "to": "Aurora Stack",
+      "from": "npc_1129",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
-      "from": "npc_1144",
-      "to": "faction_1171",
+      "from": "npc_1133",
+      "to": "faction_1178",
       "label": "member_of"
     },
     {
-      "from": "npc_1144",
-      "to": "Aurora Stack",
+      "from": "npc_1133",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
-      "from": "npc_1172",
-      "to": "npc_1032",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1173",
-      "to": "npc_1008",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1173",
-      "to": "faction_1015",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1172",
-      "to": "abilities_1163",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1173",
-      "to": "abilities_1163",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1173",
-      "to": "abilities_1174",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1175",
-      "to": "Fissure-Walker Draen",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1175",
-      "to": "abilities_1174",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1175",
-      "to": "abilities_1176",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1166",
-      "to": "abilities_1176",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1172",
-      "to": "abilities_1177",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1178",
-      "to": "npc_1029",
-      "label": "enemy_of"
-    },
-    {
-      "from": "npc_1178",
-      "to": "abilities_1174",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "rules_1179",
-      "to": "location_1005",
-      "label": "applies_in"
-    },
-    {
-      "from": "npc_1178",
-      "to": "abilities_1180",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "npc_1166",
-      "to": "abilities_1180",
-      "label": "practitioner_of"
-    },
-    {
-      "from": "rules_1181",
+      "from": "faction_1179",
       "to": "Nightfall Shelf",
-      "label": "applies_in"
+      "label": "controls"
     },
     {
-      "from": "npc_1182",
-      "to": "abilities_1157",
+      "from": "npc_1134",
+      "to": "faction_1179",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1134",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1139",
+      "to": "faction_1179",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1139",
+      "to": "Nightfall Shelf",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1140",
+      "to": "faction_1179",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1176",
+      "to": "abilities_1180",
       "label": "practitioner_of"
     },
     {
-      "from": "npc_1182",
-      "to": "location_1012",
-      "label": "resident_of"
+      "from": "npc_1172",
+      "to": "abilities_1180",
+      "label": "practitioner_of"
     },
     {
-      "from": "npc_1183",
-      "to": "location_1009",
-      "label": "resident_of"
+      "from": "abilities_1180",
+      "to": "abilities_1173",
+      "label": "related_to"
     },
     {
-      "from": "npc_1183",
-      "to": "faction_1013",
-      "label": "member_of"
+      "from": "npc_1177",
+      "to": "abilities_1181",
+      "label": "practitioner_of"
+    },
+    {
+      "from": "abilities_1181",
+      "to": "abilities_1168",
+      "label": "related_to"
+    },
+    {
+      "from": "npc_1118",
+      "to": "abilities_1182",
+      "label": "discoverer_of"
+    },
+    {
+      "from": "abilities_1182",
+      "to": "location_1035",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1182",
+      "to": "abilities_1022",
+      "label": "related_to"
     },
     {
       "from": "npc_1184",
-      "to": "location_1012",
+      "to": "faction_1183",
+      "label": "leader_of"
+    },
+    {
+      "from": "npc_1184",
+      "to": "The Glow-Fissure",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1059",
+      "to": "faction_1183",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1059",
+      "to": "The Glow-Fissure",
       "label": "resident_of"
     },
     {
       "from": "npc_1184",
-      "to": "faction_1055",
-      "label": "member_of"
+      "to": "Fissure-Drawn Runes",
+      "label": "practitioner_of"
     },
     {
-      "from": "rules_1185",
-      "to": "Aurora Stack",
-      "label": "applies_in"
-    },
-    {
-      "from": "faction_1124",
-      "to": "npc_1161",
-      "label": "enemy_of"
-    },
-    {
-      "from": "faction_1013",
-      "to": "npc_1166",
+      "from": "faction_1058",
+      "to": "npc_1171",
       "label": "enemy_of"
     },
     {
       "from": "The Midnight Claws",
-      "to": "npc_1175",
+      "to": "npc_1172",
       "label": "enemy_of"
     },
     {
-      "from": "location_1000",
-      "to": "location_1071",
+      "from": "faction_1038",
+      "to": "npc_1177",
+      "label": "enemy_of"
+    },
+    {
+      "from": "faction_1109",
+      "to": "npc_1171",
+      "label": "enemy_of"
+    },
+    {
+      "from": "faction_1108",
+      "to": "npc_1176",
+      "label": "enemy_of"
+    },
+    {
+      "from": "location_1002",
+      "to": "location_1124",
       "label": "trades_with"
     },
     {
-      "from": "location_1071",
-      "to": "location_1000",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1148",
-      "to": "Aurora Stack",
-      "label": "trades_with"
-    },
-    {
-      "from": "Aurora Stack",
-      "to": "location_1148",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1000",
-      "to": "location_1137",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1137",
-      "to": "location_1000",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1137",
-      "to": "Aurora Stack",
-      "label": "trades_with"
-    },
-    {
-      "from": "Aurora Stack",
-      "to": "location_1137",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1152",
-      "to": "location_1142",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1142",
-      "to": "location_1152",
-      "label": "trades_with"
-    },
-    {
-      "from": "Aurora Stack",
-      "to": "location_1035",
+      "from": "location_1124",
+      "to": "location_1002",
       "label": "trades_with"
     },
     {
       "from": "location_1035",
-      "to": "Aurora Stack",
+      "to": "location_1138",
       "label": "trades_with"
     },
     {
-      "from": "location_1071",
-      "to": "location_1121",
+      "from": "location_1138",
+      "to": "location_1035",
       "label": "trades_with"
     },
     {
-      "from": "location_1121",
-      "to": "location_1071",
-      "label": "trades_with"
+      "from": "faction_1027",
+      "to": "npc_1160",
+      "label": "enemy_of"
     },
     {
-      "from": "faction_1031",
+      "from": "The Midnight Claws",
       "to": "npc_1165",
       "label": "enemy_of"
     },
     {
-      "from": "faction_1186",
-      "to": "location_1005",
-      "label": "controls"
-    },
-    {
-      "from": "npc_1149",
-      "to": "faction_1186",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1150",
-      "to": "faction_1186",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1150",
-      "to": "location_1005",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1153",
-      "to": "faction_1186",
-      "label": "member_of"
-    },
-    {
-      "from": "location_1187",
-      "to": "The Glow-Fissure",
+      "from": "location_1185",
+      "to": "location_1087",
       "label": "adjacent_to"
     },
     {
-      "from": "location_1187",
-      "to": "npc_1008",
+      "from": "location_1185",
+      "to": "npc_1184",
       "label": "discovered_by"
     },
     {
-      "from": "faction_1188",
-      "to": "Nightfall Shelf",
-      "label": "controls"
+      "from": "location_1186",
+      "to": "location_1156",
+      "label": "adjacent_to"
     },
     {
-      "from": "npc_1154",
-      "to": "faction_1188",
-      "label": "member_of"
+      "from": "location_1186",
+      "to": "npc_1163",
+      "label": "discovered_by"
     },
     {
-      "from": "npc_1159",
-      "to": "faction_1188",
-      "label": "member_of"
+      "from": "location_1187",
+      "to": "Windward Ridge",
+      "label": "adjacent_to"
     },
     {
-      "from": "npc_1159",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
+      "from": "location_1187",
+      "to": "npc_1176",
+      "label": "discovered_by"
     },
     {
-      "from": "npc_1160",
-      "to": "faction_1188",
-      "label": "member_of"
+      "from": "npc_1028",
+      "to": "abilities_1188",
+      "label": "discoverer_of"
     },
     {
-      "from": "npc_1160",
-      "to": "Nightfall Shelf",
-      "label": "resident_of"
+      "from": "abilities_1188",
+      "to": "location_1054",
+      "label": "manifests_at"
+    },
+    {
+      "from": "abilities_1188",
+      "to": "abilities_1032",
+      "label": "related_to"
     },
     {
       "from": "location_1189",
-      "to": "Aurora Stack",
+      "to": "location_1156",
       "label": "adjacent_to"
     },
     {
       "from": "location_1189",
-      "to": "Nightfall Shelf",
-      "label": "adjacent_to"
+      "to": "npc_1091",
+      "label": "discovered_by"
     },
     {
       "from": "npc_1190",
-      "to": "location_1005",
+      "to": "location_1014",
       "label": "resident_of"
     },
     {
       "from": "npc_1190",
-      "to": "faction_1083",
+      "to": "faction_1047",
       "label": "member_of"
     },
     {
@@ -4016,158 +4225,198 @@
     },
     {
       "from": "npc_1191",
-      "to": "location_1005",
+      "to": "location_1003",
       "label": "resident_of"
     },
     {
       "from": "npc_1191",
-      "to": "faction_1055",
+      "to": "faction_1017",
       "label": "member_of"
     },
     {
       "from": "npc_1191",
-      "to": "location_1147",
+      "to": "location_1057",
       "label": "explorer_of"
     },
     {
-      "from": "rules_1192",
-      "to": "location_1005",
-      "label": "applies_in"
+      "from": "location_1192",
+      "to": "Nightfall Shelf",
+      "label": "adjacent_to"
     },
     {
-      "from": "npc_1193",
-      "to": "abilities_1003",
-      "label": "practitioner_of"
+      "from": "location_1192",
+      "to": "npc_1026",
+      "label": "discovered_by"
     },
     {
-      "from": "npc_1193",
+      "from": "faction_1193",
+      "to": "location_1003",
+      "label": "controls"
+    },
+    {
+      "from": "npc_1148",
+      "to": "faction_1193",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1149",
+      "to": "faction_1193",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1149",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "npc_1154",
+      "to": "faction_1193",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1154",
+      "to": "location_1003",
+      "label": "resident_of"
+    },
+    {
+      "from": "location_1194",
+      "to": "location_1099",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1194",
+      "to": "npc_1177",
+      "label": "discovered_by"
+    },
+    {
+      "from": "faction_1195",
+      "to": "Aurora Stack",
+      "label": "controls"
+    },
+    {
+      "from": "npc_1155",
+      "to": "faction_1195",
+      "label": "member_of"
+    },
+    {
+      "from": "npc_1155",
       "to": "Aurora Stack",
       "label": "resident_of"
     },
     {
-      "from": "faction_1194",
-      "to": "location_1012",
-      "label": "controls"
-    },
-    {
-      "from": "npc_1183",
-      "to": "faction_1194",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1183",
-      "to": "location_1012",
-      "label": "resident_of"
-    },
-    {
-      "from": "npc_1184",
-      "to": "faction_1194",
+      "from": "npc_1190",
+      "to": "faction_1195",
       "label": "member_of"
     },
     {
       "from": "npc_1190",
-      "to": "faction_1194",
-      "label": "member_of"
-    },
-    {
-      "from": "npc_1190",
-      "to": "location_1012",
+      "to": "Aurora Stack",
       "label": "resident_of"
     },
     {
-      "from": "rules_1195",
-      "to": "location_1009",
-      "label": "applies_in"
+      "from": "npc_1191",
+      "to": "faction_1195",
+      "label": "member_of"
     },
     {
-      "from": "rules_1196",
-      "to": "location_1012",
-      "label": "originated_in"
+      "from": "npc_1191",
+      "to": "Aurora Stack",
+      "label": "resident_of"
     },
     {
-      "from": "rules_1196",
-      "to": "faction_1079",
-      "label": "celebrated_by"
+      "from": "npc_1196",
+      "to": "Aurora Stack",
+      "label": "resident_of"
     },
     {
-      "from": "rules_1196",
-      "to": "faction_1013",
-      "label": "celebrated_by"
+      "from": "npc_1196",
+      "to": "The Icebound Exchange",
+      "label": "member_of"
     },
     {
-      "from": "rules_1196",
-      "to": "faction_1186",
-      "label": "celebrated_by"
+      "from": "npc_1196",
+      "to": "Windward Ridge",
+      "label": "explorer_of"
     },
     {
-      "from": "rules_1196",
-      "to": "faction_1045",
-      "label": "celebrated_by"
+      "from": "npc_1197",
+      "to": "location_1003",
+      "label": "resident_of"
     },
     {
-      "from": "faction_1079",
-      "to": "faction_1013",
-      "label": "allied_with"
+      "from": "npc_1197",
+      "to": "faction_1109",
+      "label": "member_of"
     },
     {
-      "from": "faction_1079",
-      "to": "faction_1186",
-      "label": "allied_with"
+      "from": "npc_1197",
+      "to": "location_1057",
+      "label": "explorer_of"
     },
     {
-      "from": "faction_1079",
-      "to": "faction_1045",
-      "label": "allied_with"
-    },
-    {
-      "from": "faction_1013",
-      "to": "faction_1186",
-      "label": "allied_with"
-    },
-    {
-      "from": "faction_1013",
-      "to": "faction_1045",
-      "label": "allied_with"
-    },
-    {
-      "from": "faction_1186",
-      "to": "faction_1045",
-      "label": "allied_with"
-    },
-    {
-      "from": "faction_1055",
-      "to": "npc_1178",
-      "label": "enemy_of"
-    },
-    {
-      "from": "location_1103",
-      "to": "location_1129",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1129",
-      "to": "location_1103",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1038",
+      "from": "location_1198",
       "to": "location_1035",
+      "label": "adjacent_to"
+    },
+    {
+      "from": "location_1198",
+      "to": "npc_1164",
+      "label": "discovered_by"
+    },
+    {
+      "from": "location_1024",
+      "to": "location_1046",
       "label": "trades_with"
     },
     {
-      "from": "location_1035",
-      "to": "location_1038",
+      "from": "location_1046",
+      "to": "location_1024",
       "label": "trades_with"
     },
     {
-      "from": "location_1142",
-      "to": "location_1148",
+      "from": "location_1099",
+      "to": "location_1082",
       "label": "trades_with"
     },
     {
-      "from": "location_1148",
-      "to": "location_1142",
+      "from": "location_1082",
+      "to": "location_1099",
       "label": "trades_with"
+    },
+    {
+      "from": "location_1043",
+      "to": "location_1046",
+      "label": "trades_with"
+    },
+    {
+      "from": "location_1046",
+      "to": "location_1043",
+      "label": "trades_with"
+    },
+    {
+      "from": "location_1002",
+      "to": "location_1020",
+      "label": "trades_with"
+    },
+    {
+      "from": "location_1020",
+      "to": "location_1002",
+      "label": "trades_with"
+    },
+    {
+      "from": "rules_1159",
+      "to": "The Orca Incursion",
+      "label": "active_during"
+    },
+    {
+      "from": "npc_1160",
+      "to": "The Orca Incursion",
+      "label": "active_during"
+    },
+    {
+      "from": "abilities_1161",
+      "to": "The Orca Incursion",
+      "label": "active_during"
     },
     {
       "from": "abilities_1162",
@@ -4175,12 +4424,12 @@
       "label": "active_during"
     },
     {
-      "from": "abilities_1163",
+      "from": "npc_1163",
       "to": "The Orca Incursion",
       "label": "active_during"
     },
     {
-      "from": "npc_1164",
+      "from": "abilities_1167",
       "to": "The Orca Incursion",
       "label": "active_during"
     },
@@ -4200,73 +4449,38 @@
       "label": "active_during"
     },
     {
-      "from": "faction_1171",
+      "from": "abilities_1173",
       "to": "The Orca Incursion",
       "label": "active_during"
     },
     {
-      "from": "abilities_1174",
-      "to": "The Orca Incursion",
-      "label": "active_during"
-    },
-    {
-      "from": "abilities_1176",
-      "to": "The Orca Incursion",
-      "label": "active_during"
-    },
-    {
-      "from": "rules_1179",
-      "to": "The Orca Incursion",
-      "label": "active_during"
-    },
-    {
-      "from": "location_1021",
-      "to": "location_1000",
+      "from": "location_1024",
+      "to": "location_1002",
       "label": "trades_with"
     },
     {
-      "from": "location_1000",
-      "to": "location_1021",
+      "from": "location_1002",
+      "to": "location_1024",
       "label": "trades_with"
     },
     {
-      "from": "location_1067",
-      "to": "location_1038",
+      "from": "location_1099",
+      "to": "location_1132",
       "label": "trades_with"
     },
     {
-      "from": "location_1038",
-      "to": "location_1067",
+      "from": "location_1132",
+      "to": "location_1099",
       "label": "trades_with"
     },
     {
-      "from": "location_1189",
-      "to": "location_1121",
+      "from": "location_1024",
+      "to": "location_1124",
       "label": "trades_with"
     },
     {
-      "from": "location_1121",
-      "to": "location_1189",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1142",
-      "to": "location_1043",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1043",
-      "to": "location_1142",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1115",
-      "to": "location_1021",
-      "label": "trades_with"
-    },
-    {
-      "from": "location_1021",
-      "to": "location_1115",
+      "from": "location_1124",
+      "to": "location_1024",
       "label": "trades_with"
     },
     {
@@ -4290,32 +4504,32 @@
       "label": "active_during"
     },
     {
-      "from": "location_1005",
+      "from": "location_1002",
       "to": "The Frozen Peace",
       "label": "active_during"
     },
     {
-      "from": "location_1009",
+      "from": "location_1003",
       "to": "The Frozen Peace",
       "label": "active_during"
     },
     {
-      "from": "location_1012",
+      "from": "location_1006",
       "to": "The Frozen Peace",
       "label": "active_during"
     },
     {
-      "from": "faction_1113",
+      "from": "location_1014",
       "to": "The Frozen Peace",
       "label": "active_during"
     },
     {
-      "from": "The Glow-Fissure",
+      "from": "location_1023",
       "to": "The Frozen Peace",
       "label": "active_during"
     },
     {
-      "from": "Windward Ridge",
+      "from": "rules_1115",
       "to": "The Frozen Peace",
       "label": "active_during"
     }

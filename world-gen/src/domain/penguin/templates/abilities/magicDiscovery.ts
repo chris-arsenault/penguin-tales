@@ -24,8 +24,9 @@ export const magicDiscovery: GrowthTemplate = {
         },
       ],
       relationships: [
-        { kind: 'discoverer_of', category: 'cultural', probability: 1.0, comment: 'Hero discovers magic' },
-        { kind: 'manifests_at', category: 'spatial', probability: 1.0, comment: 'Magic manifests at anomaly' },
+        { kind: 'discoverer_of', category: 'immutable_fact', probability: 1.0, comment: 'Hero discovers magic' },
+        { kind: 'manifests_at', category: 'immutable_fact', probability: 1.0, comment: 'Magic manifests at anomaly' },
+        { kind: 'related_to', category: 'immutable_fact', probability: 0.7, comment: 'Related to existing magic' },
       ],
     },
     effects: {
@@ -80,22 +81,59 @@ export const magicDiscovery: GrowthTemplate = {
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const hero = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'hero' }));
     const anomaly = pickRandom(graphView.findEntities({ kind: 'location', subtype: 'anomaly' }));
-    
+
+    // Find existing magic to establish lineage
+    const existingMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' })
+      .filter(m => m.status !== 'lost');
+
+    // Find magic at same anomaly or any magic
+    let relatedMagic: HardState | undefined;
+    if (existingMagic.length > 0) {
+      // Prefer magic from same anomaly
+      const sameLocationMagic = existingMagic.filter(magic =>
+        graphView.getAllRelationships().some(r =>
+          r.kind === 'manifests_at' && r.src === magic.id && r.dst === anomaly.id
+        )
+      );
+
+      if (sameLocationMagic.length > 0) {
+        relatedMagic = pickRandom(sameLocationMagic);
+      } else {
+        // Otherwise, link to any existing magic (distinct traditions)
+        relatedMagic = pickRandom(existingMagic);
+      }
+    }
+
+    const magicName = `${pickRandom(['Frost', 'Ice', 'Glow'])} ${pickRandom(['Ward', 'Sight', 'Bond'])}`;
+    const relationships: Relationship[] = [
+      { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' },
+      { kind: 'manifests_at', src: 'will-be-assigned-0', dst: anomaly.id }
+    ];
+
+    // Add lineage relationship with higher distance (0.5-0.9) - magic is diverse
+    if (relatedMagic) {
+      relationships.push({
+        kind: 'related_to',
+        src: 'will-be-assigned-0',
+        dst: relatedMagic.id,
+        distance: 0.5 + Math.random() * 0.4,  // Distinct magical tradition
+        strength: 0.5
+      });
+    }
+
+    const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
     return {
       entities: [{
         kind: 'abilities',
         subtype: 'magic',
-        name: `${pickRandom(['Frost', 'Ice', 'Glow'])} ${pickRandom(['Ward', 'Sight', 'Bond'])}`,
-        description: `Mystical ability discovered by ${hero.name}`,
+        name: magicName,
+        description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
         status: 'emergent',
         prominence: 'recognized',
         tags: ['magic', 'mystical']
       }],
-      relationships: [
-        { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' },
-        { kind: 'manifests_at', src: 'will-be-assigned-0', dst: anomaly.id }
-      ],
-      description: `${hero.name} discovers magical ability`
+      relationships,
+      description: `${hero.name} discovers ${magicName} at ${anomaly.name}${lineageDesc}`
     };
   }
 };

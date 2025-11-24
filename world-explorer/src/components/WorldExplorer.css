@@ -59,6 +59,9 @@
 }
 
 .world-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   text-align: right;
   flex-shrink: 0;
 }

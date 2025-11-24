@@ -24,6 +24,8 @@ import { DynamicWeightCalculator } from '../services/dynamicWeightCalculator';
 import { FeedbackAnalyzer } from '../services/feedbackAnalyzer';
 import { TargetSelector } from '../services/targetSelector';
 import { TemplateGraphView } from '../services/templateGraphView';
+import { MetaEntityFormation } from '../services/metaEntityFormation';
+import { magicSchoolFormation, legalCodeFormation, combatTechniqueFormation } from '../domain/penguin/config/metaEntityConfigs';
 import { feedbackLoops } from '../config/feedbackLoops';
 import { SimulationStatistics, ValidationStats } from '../types/statistics';
 import * as fs from 'fs';
@@ -331,6 +333,17 @@ export class WorldEngine {
     occurrenceEnrichments: 0,
     eraEnrichments: 0
   };
+
+  // Meta-entity formation tracking
+  private metaEntitiesFormed: Array<{
+    tick: number;
+    epoch: number;
+    metaEntityId: string;
+    metaEntityName: string;
+    sourceKind: string;
+    clusterSize: number;
+    clusterIds: string[];
+  }> = [];
   
   constructor(
     config: EngineConfig,
@@ -376,7 +389,17 @@ export class WorldEngine {
     // Initialize target selector (prevents super-hub formation)
     this.targetSelector = new TargetSelector();
     console.log('✓ Intelligent target selection enabled (anti-super-hub)');
-    
+
+    // Initialize meta-entity formation service
+    const metaEntityFormation = new MetaEntityFormation();
+    metaEntityFormation.registerConfig(magicSchoolFormation);
+    metaEntityFormation.registerConfig(legalCodeFormation);
+    metaEntityFormation.registerConfig(combatTechniqueFormation);
+    console.log('✓ Meta-entity formation system initialized');
+    console.log('  - Registered magic school formation');
+    console.log('  - Registered legal code formation');
+    console.log('  - Registered combat technique formation');
+
     // Initialize graph from initial state
     this.graph = {
       entities: new Map(),
@@ -389,6 +412,7 @@ export class WorldEngine {
       relationshipCooldowns: new Map(),
       loreRecords: [],
       loreIndex: config.loreIndex,
+      metaEntityFormation: metaEntityFormation,
 
       // Discovery tracking (emergent system)
       discoveryState: {
@@ -637,6 +661,9 @@ export class WorldEngine {
     if (era.specialRules) {
       era.specialRules(this.graph);
     }
+
+    // Check for meta-entity formation (epoch-end trigger)
+    this.checkMetaEntityFormation();
 
     // Update pressures
     this.updatePressures(era);
@@ -930,7 +957,7 @@ export class WorldEngine {
           }
         });
 
-        // Add relationships (resolve placeholder IDs)
+        // Add relationships (resolve placeholder IDs and preserve distance/strength)
         result.relationships.forEach(rel => {
           const srcId = rel.src.startsWith('will-be-assigned-')
             ? newIds[parseInt(rel.src.split('-')[3])]
@@ -940,7 +967,8 @@ export class WorldEngine {
             : rel.dst;
 
           if (srcId && dstId) {
-            addRelationship(this.graph, rel.kind, srcId, dstId);
+            // Pass through strength and distance from template relationships
+            addRelationship(this.graph, rel.kind, srcId, dstId, rel.strength, rel.distance);
           }
         });
 
@@ -971,6 +999,57 @@ export class WorldEngine {
     }
 
     console.log(`  Growth: +${entitiesCreated} entities (target: ${targets})`);
+  }
+
+  /**
+   * Check for meta-entity formation at epoch end
+   * Clusters similar entities (abilities, rules) into unified meta-entities
+   */
+  private checkMetaEntityFormation(): void {
+    if (!this.graph.metaEntityFormation) return;
+
+    const graphView = new TemplateGraphView(this.graph, this.targetSelector);
+    const configs = Array.from(this.graph.metaEntityFormation.getConfigs().values());
+
+    let formed = 0;
+    for (const config of configs) {
+      const clusters = this.graph.metaEntityFormation.detectClusters(graphView, config.sourceKind);
+
+      for (const cluster of clusters) {
+        if (cluster.score >= config.clustering.minimumScore && cluster.entities.length >= config.clustering.minSize) {
+          const meta = this.graph.metaEntityFormation.formMetaEntity(this.graph, cluster.entities, config);
+          formed++;
+
+          // Track meta-entity formation for visibility
+          this.metaEntitiesFormed.push({
+            tick: this.graph.tick,
+            epoch: this.currentEpoch,
+            metaEntityId: meta.id,
+            metaEntityName: meta.name,
+            sourceKind: config.sourceKind,
+            clusterSize: cluster.entities.length,
+            clusterIds: cluster.entities.map(e => e.id)
+          });
+
+          // Log to history
+          this.graph.history.push({
+            tick: this.graph.tick,
+            era: this.graph.currentEra.id,
+            type: 'special',
+            description: `${meta.name} emerged from ${cluster.entities.length} ${config.sourceKind}`,
+            entitiesCreated: [meta.id],
+            relationshipsCreated: [],
+            entitiesModified: cluster.entities.map(e => e.id)
+          });
+
+          console.log(`  ✨ Formed: ${meta.name} (${config.sourceKind}, ${cluster.entities.length} entities clustered)`);
+        }
+      }
+    }
+
+    if (formed > 0) {
+      console.log(`  ✨ Total meta-entities formed this epoch: ${formed}`);
+    }
   }
 
   /**
@@ -2022,13 +2101,18 @@ export class WorldEngine {
   }
 
   private buildEnrichmentContext() {
+    // Separate active and historical relationships for lore generation
+    const activeRelationships = this.graph.relationships.filter(r => r.status !== 'historical');
+    const historicalRelationships = this.graph.relationships.filter(r => r.status === 'historical');
+
     return {
       graphSnapshot: {
         tick: this.graph.tick,
         era: this.graph.currentEra.name,
         pressures: Object.fromEntries(this.graph.pressures),
         entities: this.graph.entities,
-        relationships: this.graph.relationships
+        relationships: activeRelationships,  // Current state
+        historicalRelationships: historicalRelationships  // Past state for context
       },
       relatedHistory: this.graph.history.slice(-5).map(h => h.description)
     };
@@ -2113,22 +2197,38 @@ export class WorldEngine {
     const entities = Array.from(this.graph.entities.values());
     const totalEnrichmentTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
 
+    // Filter historical relationships for day 0 coherence
+    // Exported state represents the current moment, not accumulated history
+    const activeRelationships = this.graph.relationships.filter(r => r.status !== 'historical');
+    const historicalRelationships = this.graph.relationships.filter(r => r.status === 'historical');
+
+    // Extract meta-entities for visibility
+    const metaEntities = entities.filter(e => e.tags?.includes('meta-entity'));
+
     const exportData: any = {
       metadata: {
         tick: this.graph.tick,
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
         entityCount: entities.length,
-        relationshipCount: this.graph.relationships.length,
+        relationshipCount: activeRelationships.length,
+        historicalRelationshipCount: historicalRelationships.length,
         historyEventCount: this.graph.history.length,
+        metaEntityCount: metaEntities.length,
         enrichmentTriggers: {
           total: totalEnrichmentTriggers,
           byKind: this.enrichmentAnalytics,
           comment: 'Counts detected enrichment triggers (tracks even when enrichment disabled)'
+        },
+        metaEntityFormation: {
+          totalFormed: this.metaEntitiesFormed.length,
+          formations: this.metaEntitiesFormed,
+          comment: 'Meta-entities are abilities/rules that emerged from clustering, marked with meta-entity tag'
         }
       },
       hardState: entities,
-      relationships: this.graph.relationships,
+      relationships: activeRelationships,  // Only active relationships for day 0 game state
+      historicalRelationships: historicalRelationships,  // Historical relationships for lore generation
       pressures: Object.fromEntries(this.graph.pressures),
       history: this.graph.history,  // Export ALL events, not just last 50
       loreRecords: this.graph.loreRecords

@@ -27,8 +27,9 @@ export const techBreakthrough: GrowthTemplate = {
         }
       ],
       relationships: [
-        { kind: 'practitioner_of', category: 'structural', probability: 1.0, comment: 'Faction adopts new tech' },
-        { kind: 'originated_in', category: 'immutable_fact', probability: 1.0, comment: 'Tech originated at location' }
+        { kind: 'practitioner_of', category: 'institutional', probability: 1.0, comment: 'Faction adopts new tech' },
+        { kind: 'originated_in', category: 'immutable_fact', probability: 1.0, comment: 'Tech originated at location' },
+        { kind: 'derived_from', category: 'immutable_fact', probability: 0.8, comment: 'Tech lineage from existing tech' }
       ]
     },
     effects: {
@@ -112,6 +113,28 @@ export const techBreakthrough: GrowthTemplate = {
 
     const originLocation = controlledLocations[Math.floor(Math.random() * controlledLocations.length)];
 
+    // Find existing technologies to establish lineage
+    const existingTech = graphView.findEntities({ kind: 'abilities', subtype: 'technology' })
+      .filter(t => t.status === 'active');
+
+    // Find most related tech (same faction's tech, or any tech at same location)
+    let parentTech: HardState | undefined;
+    if (existingTech.length > 0) {
+      // Prefer tech from same faction
+      const factionTech = existingTech.filter(tech =>
+        graphView.getAllRelationships().some(r =>
+          r.kind === 'practitioner_of' && r.src === target.id && r.dst === tech.id
+        )
+      );
+
+      if (factionTech.length > 0) {
+        parentTech = factionTech[Math.floor(Math.random() * factionTech.length)];
+      } else {
+        // Otherwise, link to any existing tech
+        parentTech = existingTech[Math.floor(Math.random() * existingTech.length)];
+      }
+    }
+
     // Find catalyst (leader if exists, otherwise faction)
     const leaders = graphView.getRelatedEntities( target.id, 'leader_of', 'dst');
     const catalyst = leaders.length > 0 ? leaders[0] : target;
@@ -178,10 +201,22 @@ export const techBreakthrough: GrowthTemplate = {
       });
     }
 
+    // Add lineage relationship to parent tech with incremental distance (0.1-0.3)
+    if (parentTech) {
+      relationships.push({
+        kind: 'derived_from',
+        src: techId,
+        dst: parentTech.id,
+        distance: 0.1 + Math.random() * 0.2,  // Incremental innovation
+        strength: 0.6
+      });
+    }
+
+    const lineageDesc = parentTech ? ` building on ${parentTech.name}` : '';
     return {
       entities: [newTech],
       relationships,
-      description: `${catalyst.name} develops ${techName} for ${target.name} at ${originLocation.name}`
+      description: `${catalyst.name} develops ${techName} for ${target.name} at ${originLocation.name}${lineageDesc}`
     };
   }
 };

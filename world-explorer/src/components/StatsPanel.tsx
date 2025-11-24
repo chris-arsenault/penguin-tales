@@ -15,15 +15,6 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
 
   return (
     <>
-      {/* Toggle Button */}
-      <button
-        onClick={onToggle}
-        className="stats-toggle"
-        title={isOpen ? "Hide stats panel" : "Show stats panel"}
-      >
-        📊
-      </button>
-
       {/* Stats Panel */}
       {isOpen && (
         <div className="stats-panel">

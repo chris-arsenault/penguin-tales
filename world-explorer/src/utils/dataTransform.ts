@@ -130,6 +130,11 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
       return filters.relationshipTypes.includes(rel.kind);
     }
 
+    // Filter historical relationships unless explicitly shown
+    if (!filters.showHistoricalRelationships && rel.status === 'historical') {
+      return false;
+    }
+
     // Empty array means show all
     return true;
   });

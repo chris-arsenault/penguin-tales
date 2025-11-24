@@ -24,7 +24,9 @@ export const crisisLegislation: GrowthTemplate = {
         },
       ],
       relationships: [
-        { kind: 'applies_in', category: 'political', probability: 1.0, comment: 'Law applies in colony' },
+        { kind: 'applies_in', category: 'immutable_fact', probability: 1.0, comment: 'Law applies in colony' },
+        { kind: 'supersedes', category: 'immutable_fact', probability: 0.4, comment: 'Supersedes existing law' },
+        { kind: 'related_to', category: 'immutable_fact', probability: 0.6, comment: 'Related to existing rule' },
       ],
     },
     effects: {
@@ -47,21 +49,79 @@ export const crisisLegislation: GrowthTemplate = {
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'colony' }));
     const ruleType = pickRandom(['edict', 'taboo', 'social']);
-    
+
+    // Find existing rules in same location to establish lineage
+    const existingRules = graphView.findEntities({ kind: 'rules' })
+      .filter(r => r.status !== 'repealed')
+      .filter(rule =>
+        graphView.getAllRelationships().some(rel =>
+          rel.kind === 'applies_in' && rel.src === rule.id && rel.dst === colony.id
+        )
+      );
+
+    // Find most related rule (same subtype preferred)
+    let relatedRule: HardState | undefined;
+    let isSuperseding = false;
+
+    if (existingRules.length > 0) {
+      // Prefer same subtype
+      const sameSubtype = existingRules.filter(r => r.subtype === ruleType);
+
+      if (sameSubtype.length > 0 && Math.random() < 0.4) {
+        // 40% chance to supersede existing rule of same type
+        relatedRule = pickRandom(sameSubtype);
+        isSuperseding = true;
+      } else if (existingRules.length > 0) {
+        // Otherwise, create related rule
+        relatedRule = pickRandom(existingRules);
+        isSuperseding = false;
+      }
+    }
+
+    const ruleName = `${colony.name} ${pickRandom(['Protection', 'Rationing', 'Defense'])} ${ruleType}`;
+    const relationships: Relationship[] = [
+      { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }
+    ];
+
+    // Add lineage relationship
+    if (relatedRule) {
+      if (isSuperseding) {
+        // Supersedes: close distance (0.1-0.2) - amendment/replacement
+        relationships.push({
+          kind: 'supersedes',
+          src: 'will-be-assigned-0',
+          dst: relatedRule.id,
+          distance: 0.1 + Math.random() * 0.1,
+          strength: 0.7
+        });
+      } else {
+        // Related: moderate distance (0.3-0.5) - new but related law
+        relationships.push({
+          kind: 'related_to',
+          src: 'will-be-assigned-0',
+          dst: relatedRule.id,
+          distance: 0.3 + Math.random() * 0.2,
+          strength: 0.5
+        });
+      }
+    }
+
+    const lineageDesc = relatedRule
+      ? (isSuperseding ? ` (superseding ${relatedRule.name})` : ` (related to ${relatedRule.name})`)
+      : '';
+
     return {
       entities: [{
         kind: 'rules',
         subtype: ruleType,
-        name: `${colony.name} ${pickRandom(['Protection', 'Rationing', 'Defense'])} ${ruleType}`,
-        description: `Emergency measure enacted in ${colony.name}`,
+        name: ruleName,
+        description: `Emergency measure enacted in ${colony.name}${lineageDesc}`,
         status: 'enacted',
         prominence: 'recognized',
         tags: ['crisis', `name:${slugifyName(colony.name)}`]
       }],
-      relationships: [
-        { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }
-      ],
-      description: `New ${ruleType} enacted in ${colony.name}`
+      relationships,
+      description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`
     };
   }
 };

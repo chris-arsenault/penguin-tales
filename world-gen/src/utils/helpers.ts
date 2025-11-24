@@ -267,8 +267,59 @@ const RELATIONSHIP_STRENGTHS: Record<string, number> = {
   'contains': 0.2,            // Structural containment
   'contained_by': 0.2,        // Structural containment
 
+  // Lineage relationships (immutable - set at creation)
+  'derived_from': 0.6,        // Ability/rule derived from another
+  'related_to': 0.5,          // Generic same-kind similarity
+  'split_from': 0.8,          // Faction lineage (important)
+  'supersedes': 0.7,          // Rule replacement
+  'inspired_by': 0.5,         // Influence relationship
+
   // Default for unknown types
   'default': 0.5
+};
+
+// Relationship categories (immutable vs mutable)
+const RELATIONSHIP_CATEGORIES: Record<string, string> = {
+  // Immutable (lineage and facts - set at creation, never change)
+  'derived_from': 'immutable_fact',
+  'related_to': 'immutable_fact',
+  'split_from': 'immutable_fact',
+  'supersedes': 'immutable_fact',
+  'inspired_by': 'immutable_fact',
+  'adjacent_to': 'immutable_fact',
+  'contained_by': 'immutable_fact',
+  'part_of': 'immutable_fact',
+  'founded_by': 'immutable_fact',
+  'created_by': 'immutable_fact',
+  'discovered_by': 'immutable_fact',
+
+  // Mutable - Political (can change strength, can be archived)
+  'trades_with': 'political',
+  'at_war_with': 'political',
+  'ally_of': 'political',
+  'allied_with': 'political',
+  'enemy_of': 'political',
+  'controls': 'political',
+  'stronghold_of': 'political',
+
+  // Mutable - Social (can change strength, can be archived)
+  'friend_of': 'social',
+  'rival_of': 'social',
+  'lover_of': 'social',
+  'mentor_of': 'social',
+  'family_of': 'social',
+  'follower_of': 'social',
+
+  // Mutable - Institutional (can change strength, can be archived)
+  'member_of': 'institutional',
+  'leader_of': 'institutional',
+  'practitioner_of': 'institutional',
+  'adherent_of': 'institutional',
+  'weaponized_by': 'institutional',
+  'kept_secret_by': 'institutional',
+
+  // Default category if not specified
+  'default': 'social'
 };
 
 // Per-kind relationship warning thresholds
@@ -299,19 +350,34 @@ const RELATIONSHIP_WARNING_THRESHOLDS: Record<string, Record<string, number>> = 
   }
 };
 
+/**
+ * Add a relationship between two entities.
+ *
+ * @param graph - The world graph
+ * @param kind - Relationship type
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param strengthOverride - Optional strength override (0.0-1.0). If not provided, auto-assigned based on kind.
+ * @param distance - Optional cognitive similarity distance (0.0 = identical, 1.0 = maximally different)
+ */
 export function addRelationship(
   graph: Graph,
   kind: string,
   srcId: string,
-  dstId: string
+  dstId: string,
+  strengthOverride?: number,
+  distance?: number
 ): void {
   // Check if relationship already exists
   if (hasRelationship(graph, srcId, dstId, kind)) {
     return;
   }
 
-  // Auto-assign strength based on relationship kind
-  const strength = RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default;
+  // Auto-assign strength based on relationship kind, or use override
+  const strength = strengthOverride ?? (RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default);
+
+  // Auto-assign category based on relationship kind
+  const category = RELATIONSHIP_CATEGORIES[kind] ?? RELATIONSHIP_CATEGORIES.default;
 
   // Check relationship warning thresholds (per-kind, non-blocking)
   const srcEntity = graph.entities.get(srcId);
@@ -345,14 +411,14 @@ export function addRelationship(
     }
   }
 
-  // Add relationship (always, no hard limit) with strength
-  graph.relationships.push({ kind, src: srcId, dst: dstId, strength });
+  // Add relationship (always, no hard limit) with strength, distance, and category
+  graph.relationships.push({ kind, src: srcId, dst: dstId, strength, distance, category });
 
   // Update entity links
   const dstEntity = graph.entities.get(dstId);
 
   if (srcEntity) {
-    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength });
+    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength, distance, category });
     srcEntity.updatedAt = graph.tick;
   }
 
@@ -369,6 +435,97 @@ export function updateEntity(
   const entity = graph.entities.get(entityId);
   if (entity) {
     Object.assign(entity, changes, { updatedAt: graph.tick });
+  }
+}
+
+/**
+ * Add a relationship with a bounded random distance.
+ * Used for lineage-based connectivity where entities link to existing same-kind entities.
+ *
+ * @param graph - The world graph
+ * @param kind - Relationship type
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param distanceRange - Min/max range for random distance selection
+ * @param strengthOverride - Optional strength override (0.0-1.0)
+ *
+ * @example
+ * // Incremental tech improvement (0.1-0.3 distance)
+ * addRelationshipWithDistance(graph, 'derived_from', newTechId, oldTechId, { min: 0.1, max: 0.3 })
+ *
+ * @example
+ * // Major faction split (0.6-0.8 distance)
+ * addRelationshipWithDistance(graph, 'split_from', splinterId, parentId, { min: 0.6, max: 0.8 })
+ */
+export function addRelationshipWithDistance(
+  graph: Graph,
+  kind: string,
+  srcId: string,
+  dstId: string,
+  distanceRange: { min: number; max: number },
+  strengthOverride?: number
+): void {
+  // Validate range
+  if (distanceRange.min < 0 || distanceRange.max > 1 || distanceRange.min > distanceRange.max) {
+    console.warn(`Invalid distance range: [${distanceRange.min}, ${distanceRange.max}]. Using [0, 1].`);
+    distanceRange = { min: 0, max: 1 };
+  }
+
+  // Calculate random distance within range
+  const distance = distanceRange.min + Math.random() * (distanceRange.max - distanceRange.min);
+
+  // Delegate to addRelationship with calculated distance
+  addRelationship(graph, kind, srcId, dstId, strengthOverride, distance);
+}
+
+/**
+ * Archive a relationship by marking it as historical.
+ * Used for temporal tracking to maintain day 0 coherence.
+ *
+ * @param graph - The world graph
+ * @param src - Source entity ID
+ * @param dst - Destination entity ID
+ * @param kind - Relationship kind to archive
+ */
+export function archiveRelationship(
+  graph: Graph,
+  src: string,
+  dst: string,
+  kind: string
+): void {
+  // Find matching active relationship in graph
+  const rel = graph.relationships.find(r =>
+    r.src === src &&
+    r.dst === dst &&
+    r.kind === kind &&
+    r.status !== 'historical'
+  );
+
+  if (rel) {
+    rel.status = 'historical';
+    rel.archivedAt = graph.tick;
+  }
+
+  // Update entity links for source entity
+  const srcEntity = graph.entities.get(src);
+  if (srcEntity) {
+    const link = srcEntity.links.find(l =>
+      l.src === src &&
+      l.dst === dst &&
+      l.kind === kind &&
+      l.status !== 'historical'
+    );
+    if (link) {
+      link.status = 'historical';
+      link.archivedAt = graph.tick;
+    }
+    srcEntity.updatedAt = graph.tick;
+  }
+
+  // Update destination entity's updatedAt
+  const dstEntity = graph.entities.get(dst);
+  if (dstEntity) {
+    dstEntity.updatedAt = graph.tick;
   }
 }
 

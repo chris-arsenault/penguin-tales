@@ -263,6 +263,21 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
         </div>
       </div>
 
+      {/* Historical Relationships */}
+      <div className="filter-section">
+        <label className="filter-checkbox-label historical-checkbox">
+          <input
+            type="checkbox"
+            checked={filters.showHistoricalRelationships}
+            onChange={(e) => onChange({ ...filters, showHistoricalRelationships: e.target.checked })}
+          />
+          <span>Show Historical Relationships</span>
+        </label>
+        <div className="filter-help-text">
+          Shows archived relationships that are no longer active but remain in the historical record
+        </div>
+      </div>
+
       {/* Reset Button */}
       <button
         onClick={() => onChange({
@@ -273,7 +288,8 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
           searchQuery: '',
           relationshipTypes: [],
           minStrength: 0.0,
-          showCatalyzedBy: false
+          showCatalyzedBy: false,
+          showHistoricalRelationships: false
         })}
         className="reset-button"
       >

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
 import GraphView from './GraphView.tsx';
+import GraphView3D from './GraphView3D.tsx';
 import FilterPanel from './FilterPanel.tsx';
 import EntityDetail from './EntityDetail.tsx';
 import TimelineControl from './TimelineControl.tsx';
 import StatsPanel from './StatsPanel.tsx';
+import HeaderMenu from './HeaderMenu.tsx';
 import './WorldExplorer.css';
 
 interface WorldExplorerProps {
@@ -18,6 +20,8 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
   const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
+  const [is3DView, setIs3DView] = useState(false);
+  const recalculateLayoutRef = useRef<(() => void) | null>(null);
   const [filters, setFilters] = useState<Filters>({
     kinds: ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'] as EntityKind[],
     minProminence: 'forgotten',
@@ -26,7 +30,8 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
     searchQuery: '',
     relationshipTypes: [],
     minStrength: 0.0,
-    showCatalyzedBy: false
+    showCatalyzedBy: false,
+    showHistoricalRelationships: false
   });
 
   // Apply temporal filter first, then regular filters
@@ -68,6 +73,12 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 <div className="world-header-stat-value">{worldData.metadata.enrichmentTriggers.total}</div>
               </div>
             </div>
+            <HeaderMenu
+              is3DView={is3DView}
+              onToggle3D={() => setIs3DView(!is3DView)}
+              onRecalculateLayout={() => recalculateLayoutRef.current?.()}
+              onToggleStats={() => setIsStatsPanelOpen(!isStatsPanelOpen)}
+            />
           </div>
         </div>
       </header>
@@ -83,12 +94,24 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
 
         {/* Graph View */}
         <main className="world-graph-container">
-          <GraphView
-            data={filteredData}
-            selectedNodeId={selectedEntityId}
-            onNodeSelect={setSelectedEntityId}
-            showCatalyzedBy={filters.showCatalyzedBy}
-          />
+          {is3DView ? (
+            <GraphView3D
+              key="3d-view"
+              data={filteredData}
+              selectedNodeId={selectedEntityId}
+              onNodeSelect={setSelectedEntityId}
+              showCatalyzedBy={filters.showCatalyzedBy}
+            />
+          ) : (
+            <GraphView
+              key="2d-view"
+              data={filteredData}
+              selectedNodeId={selectedEntityId}
+              onNodeSelect={setSelectedEntityId}
+              showCatalyzedBy={filters.showCatalyzedBy}
+              onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
+            />
+          )}
         </main>
 
         {/* Entity Detail Panel */}

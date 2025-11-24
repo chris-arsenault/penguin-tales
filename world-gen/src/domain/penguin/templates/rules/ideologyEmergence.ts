@@ -34,9 +34,10 @@ export const ideologyEmergence: GrowthTemplate = {
         },
       ],
       relationships: [
-        { kind: 'champion_of', category: 'cultural', probability: 1.0, comment: 'Champion promotes ideology' },
-        { kind: 'originated_in', category: 'spatial', probability: 0.8, comment: 'Ideology originated in location' },
-        { kind: 'believer_of', category: 'cultural', probability: 7.0, comment: '3-8 initial believers' },
+        { kind: 'champion_of', category: 'social', probability: 1.0, comment: 'Champion promotes ideology' },
+        { kind: 'originated_in', category: 'immutable_fact', probability: 0.8, comment: 'Ideology originated in location' },
+        { kind: 'believer_of', category: 'social', probability: 7.0, comment: '3-8 initial believers' },
+        { kind: 'related_to', category: 'immutable_fact', probability: 0.5, comment: 'Related to existing ideology' },
       ],
     },
     effects: {
@@ -198,18 +199,61 @@ export const ideologyEmergence: GrowthTemplate = {
       });
     }
 
+    // Find existing ideologies/rules to establish lineage
+    const existingIdeologies = graphView.findEntities({ kind: 'rules' })
+      .filter(r => r.status !== 'repealed' && r.tags?.includes('ideology'));
+
+    const existingRules = graphView.findEntities({ kind: 'rules' })
+      .filter(r => r.status !== 'repealed' && !r.tags?.includes('ideology'));
+
+    // New ideologies can be:
+    // - Derived from existing ideologies (reform movements)
+    // - Reactions to existing rules (counter-movements)
+    let relatedRule: HardState | undefined;
+    if (existingIdeologies.length > 0 && Math.random() < 0.5) {
+      // 50% chance to derive from existing ideology
+      relatedRule = pickRandom(existingIdeologies);
+      relationships.push({
+        kind: 'related_to',
+        src: 'will-be-assigned-0',
+        dst: relatedRule.id,
+        distance: 0.4 + Math.random() * 0.3,  // Moderate distance (0.4-0.7) - reform/counter-movement
+        strength: 0.5
+      });
+    } else if (existingRules.length > 0 && championLocation) {
+      // Otherwise, might be reaction to existing rule in same location
+      const localRules = existingRules.filter(rule =>
+        graphView.getAllRelationships().some(r =>
+          r.kind === 'applies_in' && r.src === rule.id && r.dst === championLocation.dst
+        )
+      );
+
+      if (localRules.length > 0) {
+        relatedRule = pickRandom(localRules);
+        relationships.push({
+          kind: 'related_to',
+          src: 'will-be-assigned-0',
+          dst: relatedRule.id,
+          distance: 0.6 + Math.random() * 0.3,  // Higher distance (0.6-0.9) - revolutionary new idea
+          strength: 0.4
+        });
+      }
+    }
+
+    const lineageDesc = relatedRule ? ` (related to ${relatedRule.name})` : '';
+
     return {
       entities: [{
         kind: 'rules',
         subtype: ideologyType,
         name: ideologyName,
-        description: `A ${ideologyTheme} ideology championed by ${champion.name}. This belief is spreading through whispered conversations and passionate debates.`,
+        description: `A ${ideologyTheme} ideology championed by ${champion.name}. This belief is spreading through whispered conversations and passionate debates${lineageDesc}.`,
         status: 'proposed', // Key: starts as proposed, will become enacted if adopted widely
         prominence: 'marginal', // Will grow with adoption
         tags: [ideologyTheme, 'ideology', `name:${slugifyName(champion.name)}`].slice(0, 10)
       }],
       relationships,
-      description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}`
+      description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`
     };
   }
 };

@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom } from '../../../../utils/helpers';
+import { generateName, pickRandom, archiveRelationship, addRelationshipWithDistance } from '../../../../utils/helpers';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -34,9 +34,9 @@ export const factionSplinter: GrowthTemplate = {
         },
       ],
       relationships: [
-        { kind: 'splinter_of', category: 'political', probability: 1.0, comment: 'Splinter linked to parent' },
-        { kind: 'leader_of', category: 'political', probability: 1.0, comment: 'Leader leads splinter' },
-        { kind: 'member_of', category: 'political', probability: 1.0, comment: 'Leader joins splinter' },
+        { kind: 'split_from', category: 'immutable_fact', probability: 1.0, comment: 'Splinter lineage with ideological distance' },
+        { kind: 'leader_of', category: 'institutional', probability: 1.0, comment: 'Leader leads splinter' },
+        { kind: 'member_of', category: 'institutional', probability: 1.0, comment: 'Leader joins splinter' },
         { kind: 'resident_of', category: 'spatial', probability: 1.0, comment: 'Leader resides at location' },
         { kind: 'at_war_with', category: 'political', probability: 1.0, comment: 'Splinter wars with parent' },
         { kind: 'occupies', category: 'spatial', probability: 1.0, comment: 'Splinter occupies location' },
@@ -92,6 +92,14 @@ export const factionSplinter: GrowthTemplate = {
     }
 
     const splinterType = determineSplinterType(parentFaction.subtype as FactionSubtype);
+
+    // Determine ideological distance based on type change
+    // Same type = minor disagreement (0.15-0.35)
+    // Different type = major ideological shift (0.6-0.8)
+    const isRadicalSplit = splinterType !== parentFaction.subtype;
+    const ideologicalDistance = isRadicalSplit
+      ? { min: 0.6, max: 0.8 }  // Revolutionary change
+      : { min: 0.15, max: 0.35 };  // Incremental difference
 
     const splinter: Partial<HardState> = {
       kind: 'faction',
@@ -151,15 +159,27 @@ export const factionSplinter: GrowthTemplate = {
       };
     }
 
+    // Create base relationships (distance will be added by engine using addRelationshipWithDistance)
+    // We can't call addRelationshipWithDistance here because we don't have the graph yet
+    // Instead, we store the distance range in a custom field that the engine will use
     const relationships: Relationship[] = [
-      { kind: 'splinter_of', src: 'will-be-assigned-0', dst: parentFaction.id },
+      {
+        kind: 'split_from',
+        src: 'will-be-assigned-0',
+        dst: parentFaction.id,
+        // Store distance range as metadata - will be set by engine
+        distance: ideologicalDistance.min + Math.random() * (ideologicalDistance.max - ideologicalDistance.min)
+      },
       { kind: 'at_war_with', src: 'will-be-assigned-0', dst: parentFaction.id },
       { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id }
     ];
 
     // Add leader relationships (either existing or new)
     if (leaderEntity) {
-      // Use existing NPC as leader
+      // Use existing NPC as leader - archive their old faction membership (full defection)
+      const graph = graphView.getInternalGraph();
+      archiveRelationship(graph, leaderEntity.id, parentFaction.id, 'member_of');
+
       relationships.push(
         { kind: 'leader_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },
         { kind: 'member_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },

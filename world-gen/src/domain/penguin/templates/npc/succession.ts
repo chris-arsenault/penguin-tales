@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '../../../../types/engine';
 import { TemplateGraphView } from '../../../../services/templateGraphView';
 import { HardState, Relationship } from '../../../../types/worldTypes';
-import { generateName, pickRandom, slugifyName } from '../../../../utils/helpers';
+import { generateName, pickRandom, slugifyName, archiveRelationship } from '../../../../utils/helpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -68,6 +68,10 @@ export const succession: GrowthTemplate = {
 
     const colony = leadsColonies[0];
 
+    // Archive old leader_of relationship to colony (temporal tracking)
+    const graph = graphView.getInternalGraph();
+    archiveRelationship(graph, oldLeader.id, colony.id, 'leader_of');
+
     const newLeader: Partial<HardState> = {
       kind: 'npc',
       subtype: 'mayor',
@@ -97,6 +101,9 @@ export const succession: GrowthTemplate = {
 
     if (leadsFactions.length > 0) {
       const faction = leadsFactions[0];
+      // Archive old leader_of relationship to faction (temporal tracking)
+      archiveRelationship(graph, oldLeader.id, faction.id, 'leader_of');
+
       relationships.push({
         kind: 'leader_of',
         src: 'will-be-assigned-0',
