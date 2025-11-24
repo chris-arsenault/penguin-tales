@@ -1,14 +1,16 @@
 # Test Coverage Analysis
 
-**Last Updated**: 2025-11-24 07:22 MST
-**Current Coverage**: 40.85% (statements), 34.84% (branches), 40.17% (functions), 41.49% (lines)
+**Last Updated**: 2025-11-24 15:45 MST
+**Current Coverage**: 46.28% (statements), 38.73% (branches), 45.33% (functions), 47.12% (lines)
 **Target Coverage**: >70%
-**Tests Passing**: 1246 tests across 35 test files
+**Tests Passing**: 1427 tests across 40 test files
 **Source Files**: 102 TypeScript files
 
 ## Overview
 
-The world-gen codebase has **1246 passing tests** across **35 test files**. Current coverage is 40.85%, with significant gaps in domain-specific code, templates, and some services. This document tracks testing progress and identifies areas needing attention.
+The world-gen codebase has **1427 passing tests** across **40 test files**. Current coverage is 46.28%, with significant gaps in domain-specific code and templates. This document tracks testing progress and identifies areas needing attention.
+
+**Recent Update (2025-11-24 15:45)**: Added comprehensive tests for `metaEntityFormation.ts` service (14 tests, 100% coverage).
 
 ## Test Framework
 
@@ -80,7 +82,7 @@ The world-gen codebase has **1246 passing tests** across **35 test files**. Curr
 | `loreValidator.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
 | `enrichmentService.ts` | ❌ Not tested | 0% | - | LLM integration (low priority) |
 | `imageGenerationService.ts` | ❌ Not tested | 0% | - | Image gen (low priority) |
-| `metaEntityFormation.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `metaEntityFormation.ts` | ✅ Tested | ~100% | `__tests__/services/metaEntityFormation.test.ts` | **ADDED (14 tests)** |
 | `feedbackAnalyzer.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
 | `llmClient.ts` | ❌ Not tested | 0% | - | LLM client (low priority) |
 | `nameLogger.ts` | ❌ Not tested | 0% | - | Simple logger (low priority) |
