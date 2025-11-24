@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { outlawRecruitment } from '../../../../../domain/penguin/templates/npc/outlawRecruitment';
 import { TemplateGraphView } from '../../../../../services/templateGraphView';
+import { TargetSelector } from '../../../../../services/targetSelector';
 import { Graph, Era } from '../../../../../types/engine';
 import { HardState } from '../../../../../types/worldTypes';
 
@@ -9,6 +10,7 @@ describe('outlawRecruitment template', () => {
   let mockGraph: Graph;
   let mockGraphView: TemplateGraphView;
   let mockEra: Era;
+  let targetSelector: TargetSelector;
 
   beforeEach(() => {
     mockEra = {
@@ -33,7 +35,9 @@ describe('outlawRecruitment template', () => {
       }
     };
 
-    mockGraphView = new TemplateGraphView(mockGraph);
+    // Create a TargetSelector instance
+    targetSelector = new TargetSelector({} as any);
+    mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
   });
 
   describe('contract and metadata', () => {
@@ -88,7 +92,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', merchantFaction);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(false);
     });
@@ -108,7 +112,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', criminalFaction);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(true);
     });
@@ -144,7 +148,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', faction1);
       mockGraph.entities.set('fac-2', faction2);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(true);
     });
@@ -202,7 +206,7 @@ describe('outlawRecruitment template', () => {
       mockGraph.entities.set('fac-1', faction1);
       mockGraph.entities.set('fac-2', faction2);
       mockGraph.entities.set('fac-3', merchantFaction);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       const targets = outlawRecruitment.findTargets!(mockGraphView);
       expect(targets).toHaveLength(2);
@@ -235,7 +239,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', criminalFaction);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       const result = outlawRecruitment.expand(mockGraphView, criminalFaction);
       expect(result.entities).toEqual([]);
@@ -244,6 +248,12 @@ describe('outlawRecruitment template', () => {
     });
 
     it('should use faction-controlled location if available', () => {
+      const controlsRel = {
+        kind: 'controls',
+        src: 'fac-1',
+        dst: 'loc-1'
+      };
+
       const criminalFaction: HardState = {
         id: 'fac-1',
         kind: 'faction',
@@ -253,7 +263,7 @@ describe('outlawRecruitment template', () => {
         status: 'active',
         prominence: 'marginal',
         tags: [],
-        links: [],
+        links: [controlsRel],
         createdAt: 0,
         updatedAt: 0
       };
@@ -267,19 +277,15 @@ describe('outlawRecruitment template', () => {
         status: 'active',
         prominence: 'marginal',
         tags: [],
-        links: [],
+        links: [controlsRel],
         createdAt: 0,
         updatedAt: 0
       };
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', stronghold);
-      mockGraph.relationships.push({
-        kind: 'controls',
-        src: 'fac-1',
-        dst: 'loc-1'
-      });
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraph.relationships.push(controlsRel);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       // Mock selectTargets to return created entities
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -335,7 +341,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       // Mock selectTargets to return created entities
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -404,7 +410,7 @@ describe('outlawRecruitment template', () => {
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
       mockGraph.entities.set('npc-1', existingNpc);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       // Mock selectTargets to return existing NPCs
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -457,7 +463,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       // Mock selectTargets to return new outlaws
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -539,7 +545,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
 
       // Mock selectTargets
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({

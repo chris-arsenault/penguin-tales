@@ -8,7 +8,7 @@ import {
   calculateSubtypeDistribution
 } from '../../utils/distributionCalculations';
 import { Graph } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { HardState, Relationship, Prominence } from '../../types/worldTypes';
 
 describe('distributionCalculations', () => {
   const createEntity = (id: string, kind: string, subtype: string, prominence: string): HardState => ({
@@ -304,6 +304,46 @@ describe('distributionCalculations', () => {
 
       expect(distribution.diversity).toBe(0);
     });
+
+    it('should handle diversity with very small ratios', () => {
+      const mockGraph: Graph = {
+        entities: new Map(),
+        relationships: [
+          { kind: 'type1', src: 'e1', dst: 'e2' },
+          { kind: 'type1', src: 'e2', dst: 'e3' },
+          { kind: 'type1', src: 'e3', dst: 'e4' },
+          { kind: 'type1', src: 'e4', dst: 'e5' },
+          { kind: 'type1', src: 'e5', dst: 'e6' },
+          { kind: 'type1', src: 'e6', dst: 'e7' },
+          { kind: 'type1', src: 'e7', dst: 'e8' },
+          { kind: 'type1', src: 'e8', dst: 'e9' },
+          { kind: 'type1', src: 'e9', dst: 'e10' },
+          { kind: 'type2', src: 'e10', dst: 'e1' } // 10% vs 90%
+        ],
+        tick: 0,
+        currentEra: {} as any,
+        pressures: new Map(),
+        history: [],
+        config: {} as any,
+        relationshipCooldowns: new Map(),
+        loreRecords: [],
+        discoveryState: {
+          currentThreshold: 1,
+          lastDiscoveryTick: 0,
+          discoveriesThisEpoch: 0
+        },
+        growthMetrics: {
+          relationshipsPerTick: [],
+          averageGrowthRate: 0
+        }
+      };
+
+      const distribution = calculateRelationshipDistribution(mockGraph);
+
+      // Should be low diversity due to skewed distribution
+      expect(distribution.diversity).toBeGreaterThan(0);
+      expect(distribution.diversity).toBeLessThan(1);
+    });
   });
 
   describe('calculateConnectivityMetrics', () => {
@@ -529,6 +569,163 @@ describe('distributionCalculations', () => {
       expect(totalFromKinds).toBe(entities.length);
       expect(totalFromSubtypes).toBe(entities.length);
       expect(totalFromProminence).toBe(entities.length);
+    });
+  });
+
+  describe('Edge cases and mathematical properties', () => {
+    it('calculateRatios should handle negative total gracefully', () => {
+      const counts = { a: 5, b: 10 };
+      const ratios = calculateRatios(counts, -1);
+
+      // Should treat negative total as 0 (no division)
+      expect(ratios.a).toBe(0);
+      expect(ratios.b).toBe(0);
+    });
+
+    it('calculateRatios should preserve order of keys', () => {
+      const counts = { zebra: 1, apple: 2, mango: 3 };
+      const ratios = calculateRatios(counts, 6);
+
+      expect(Object.keys(ratios)).toEqual(['zebra', 'apple', 'mango']);
+    });
+
+    it('calculateConnectivityMetrics should count bidirectional connections correctly', () => {
+      const mockGraph: Graph = {
+        entities: new Map([
+          ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
+          ['e2', createEntity('e2', 'npc', 'hero', 'renowned')]
+        ]),
+        relationships: [
+          { kind: 'allied_with', src: 'e1', dst: 'e2' },
+          { kind: 'allied_with', src: 'e2', dst: 'e1' } // Bidirectional
+        ],
+        tick: 0,
+        currentEra: {} as any,
+        pressures: new Map(),
+        history: [],
+        config: {} as any,
+        relationshipCooldowns: new Map(),
+        loreRecords: [],
+        discoveryState: {
+          currentThreshold: 1,
+          lastDiscoveryTick: 0,
+          discoveriesThisEpoch: 0
+        },
+        growthMetrics: {
+          relationshipsPerTick: [],
+          averageGrowthRate: 0
+        }
+      };
+
+      const metrics = calculateConnectivityMetrics(mockGraph);
+
+      // Each entity should have 2 connections (one outgoing, one incoming)
+      expect(metrics.avgConnections).toBe(2);
+      expect(metrics.maxConnections).toBe(2);
+      expect(metrics.minConnections).toBe(2);
+      expect(metrics.isolatedNodes).toBe(0);
+    });
+
+    it('calculateConnectivityMetrics should handle self-loops', () => {
+      const mockGraph: Graph = {
+        entities: new Map([
+          ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
+          ['e2', createEntity('e2', 'npc', 'hero', 'renowned')]
+        ]),
+        relationships: [
+          { kind: 'self_reference', src: 'e1', dst: 'e1' } // Self-loop
+        ],
+        tick: 0,
+        currentEra: {} as any,
+        pressures: new Map(),
+        history: [],
+        config: {} as any,
+        relationshipCooldowns: new Map(),
+        loreRecords: [],
+        discoveryState: {
+          currentThreshold: 1,
+          lastDiscoveryTick: 0,
+          discoveriesThisEpoch: 0
+        },
+        growthMetrics: {
+          relationshipsPerTick: [],
+          averageGrowthRate: 0
+        }
+      };
+
+      const metrics = calculateConnectivityMetrics(mockGraph);
+
+      // e1 has self-loop (counts as 2 connections: src and dst)
+      // e2 has no connections
+      expect(metrics.isolatedNodes).toBe(1); // e2
+      expect(metrics.maxConnections).toBe(2); // e1
+      expect(metrics.minConnections).toBe(2); // Only e1 in connection map
+    });
+
+    it('calculateRelationshipDistribution should handle large uniform distribution', () => {
+      const relationships: Relationship[] = [];
+      for (let i = 0; i < 100; i++) {
+        relationships.push({
+          kind: `type_${i}`,
+          src: `e${i}`,
+          dst: `e${(i + 1) % 100}`
+        });
+      }
+
+      const mockGraph: Graph = {
+        entities: new Map(),
+        relationships,
+        tick: 0,
+        currentEra: {} as any,
+        pressures: new Map(),
+        history: [],
+        config: {} as any,
+        relationshipCooldowns: new Map(),
+        loreRecords: [],
+        discoveryState: {
+          currentThreshold: 1,
+          lastDiscoveryTick: 0,
+          discoveriesThisEpoch: 0
+        },
+        growthMetrics: {
+          relationshipsPerTick: [],
+          averageGrowthRate: 0
+        }
+      };
+
+      const distribution = calculateRelationshipDistribution(mockGraph);
+
+      // Perfect uniform distribution: entropy = log2(100) ≈ 6.64
+      expect(distribution.diversity).toBeGreaterThan(6.5);
+      expect(distribution.diversity).toBeLessThan(6.7);
+      expect(Object.keys(distribution.counts).length).toBe(100);
+    });
+
+    it('calculateEntityKindCounts should handle very long kind names', () => {
+      const longKind = 'a'.repeat(1000);
+      const entities = [
+        createEntity('e1', longKind, 'subtype', 'recognized')
+      ];
+
+      const counts = calculateEntityKindCounts(entities);
+
+      expect(counts[longKind]).toBe(1);
+    });
+
+    it('calculateProminenceDistribution ratios should sum to 1 with many entities', () => {
+      const entities: HardState[] = [];
+      const prominenceLevels: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+
+      // Create 100 entities with random prominence
+      for (let i = 0; i < 100; i++) {
+        const prominence = prominenceLevels[i % prominenceLevels.length];
+        entities.push(createEntity(`e${i}`, 'npc', 'merchant', prominence));
+      }
+
+      const distribution = calculateProminenceDistribution(entities);
+      const sum = Object.values(distribution.ratios).reduce((s, r) => s + r, 0);
+
+      expect(sum).toBeCloseTo(1.0);
     });
   });
 });

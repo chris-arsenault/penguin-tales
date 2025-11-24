@@ -1,322 +1,346 @@
 # Test Coverage Analysis
 
-**Generated**: 2025-11-24 04:01 MST
-**Updated**: 2025-11-24 05:10 MST
-**Current Coverage**: ~25-30% (utilities + engine components)
+**Last Updated**: 2025-11-24 07:22 MST
+**Current Coverage**: 40.85% (statements), 34.84% (branches), 40.17% (functions), 41.49% (lines)
 **Target Coverage**: >70%
+**Tests Passing**: 1246 tests across 35 test files
+**Source Files**: 102 TypeScript files
 
 ## Overview
 
-The world-gen codebase now has **262 tests** covering core utilities and engine components. This document tracks the testing progress for all 97 TypeScript files in the project.
+The world-gen codebase has **1246 passing tests** across **35 test files**. Current coverage is 40.85%, with significant gaps in domain-specific code, templates, and some services. This document tracks testing progress and identifies areas needing attention.
 
 ## Test Framework
 
-- **Framework**: Vitest (to be installed)
+- **Framework**: Vitest v4.0.13
 - **Test Location**: `src/__tests__/` (mirroring source structure)
-- **Configuration**: vitest.config.ts (to be created)
+- **Configuration**: `vitest.config.ts`
+- **Command**: `npm test` (run all tests), `npm run test:coverage` (with coverage)
 
-## Coverage by Module
+## Coverage Summary by Category
 
-### ✅ Framework Core (Priority 1)
+| Category | Files | Tested | Coverage | Priority |
+|----------|-------|--------|----------|----------|
+| Engine | 5 | 4 | ~70% | P1 - Critical |
+| Utilities | 8 | 5 | ~80% | P1 - Critical |
+| Framework Systems | 5 | 5 | ~75% | P2 - High |
+| Services | 17 | 3 | ~20% | P3 - Medium |
+| Config | 3 | 0 | 0% | P4 - Low |
+| Domain Systems | 13 | 0 | 0% | P5 - Low |
+| Domain Templates | 28 | 1 | ~5% | P5 - Low |
 
-#### Engine Components (1/4 tested) ✅ 25% COMPLETE
-- [ ] `src/engine/worldEngine.ts` - Main orchestrator (0% coverage)
-- [ ] `src/engine/contractEnforcer.ts` - Contract validation (0% coverage)
-- [ ] `src/engine/frameworkValidator.ts` - Framework validation (0% coverage)
-- [x] `src/engine/changeDetection.ts` - Change detection (33 tests, ~85% coverage)
+## Detailed Coverage by Module
 
-#### Utilities (4/5 tested) ✅ 80% COMPLETE
-- [x] `src/utils/helpers.ts` - Core helper functions (100 tests, ~90% coverage)
-- [x] `src/utils/validators.ts` - Validation utilities (36 tests, ~95% coverage)
-- [x] `src/utils/catalystHelpers.ts` - Catalyst system helpers (50 tests, ~90% coverage)
-- [x] `src/utils/emergentDiscovery.ts` - Discovery mechanics (43 tests, ~85% coverage)
-- [ ] `src/utils/parameterOverrides.ts` - Parameter overrides (removed - simple utility)
+### ✅ Engine Components (4/5 tested) - Priority 1
 
-#### Types (0/7 tested)
-- [ ] `src/types/worldTypes.ts` - Core type definitions (0% coverage)
-- [ ] `src/types/engine.ts` - Engine interfaces (0% coverage)
-- [ ] `src/types/domainSchema.ts` - Domain schema types (0% coverage)
-- [ ] `src/types/domainLore.ts` - Lore types (0% coverage)
-- [ ] `src/types/lore.ts` - Lore interfaces (0% coverage)
-- [ ] `src/types/statistics.ts` - Statistics types (0% coverage)
-- [ ] `src/types/distribution.ts` - Distribution types (0% coverage)
+| File | Status | Coverage | Test File | Notes |
+|------|--------|----------|-----------|-------|
+| `worldEngine.ts` | ✅ Tested | ~70% | `__tests__/engine/worldEngine.test.ts` | 44 tests, core orchestration |
+| `contractEnforcer.ts` | ✅ Tested | ~75% | `__tests__/engine/contractEnforcer.test.ts` | Contract validation |
+| `frameworkValidator.ts` | ✅ Tested | ~80% | `__tests__/engine/frameworkValidator.test.ts` | Framework validation |
+| `changeDetection.ts` | ✅ Tested | ~85% | `__tests__/engine/changeDetection.test.ts` | Change detection |
+| `validationOrchestrator.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
 
-### ✅ Framework Systems (Priority 2)
+### ✅ Utilities (5/8 tested) - Priority 1
 
-#### Core Systems (0/5 tested)
-- [ ] `src/systems/eraSpawner.ts` - Era entity spawning (0% coverage)
-- [ ] `src/systems/eraTransition.ts` - Era progression (0% coverage)
-- [ ] `src/systems/occurrenceCreation.ts` - Occurrence generation (0% coverage)
-- [ ] `src/systems/relationshipCulling.ts` - Relationship management (0% coverage)
-- [ ] `src/systems/universalCatalyst.ts` - Catalyst system (0% coverage)
+| File | Status | Coverage | Test File | Notes |
+|------|--------|----------|-----------|-------|
+| `helpers.ts` | ✅ Tested | ~90% | (integrated in many tests) | Core helper functions |
+| `validators.ts` | ✅ Tested | ~95% | (integrated in many tests) | Validation utilities |
+| `catalystHelpers.ts` | ✅ Tested | ~90% | (integrated in many tests) | Catalyst system |
+| `emergentDiscovery.ts` | ✅ Tested | ~85% | (integrated in many tests) | Discovery mechanics |
+| `graphQueries.ts` | ✅ Tested | ~80% | (integrated in many tests) | Graph query functions |
+| `relationshipBuilder.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `entityClusterBuilder.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `distributionCalculations.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
 
-### ✅ Services (Priority 3)
+### ✅ Framework Systems (5/5 tested) - Priority 2
 
-#### Support Services (0/15 tested)
-- [ ] `src/services/dynamicWeightCalculator.ts` - Weight calculation (0% coverage)
-- [ ] `src/services/populationTracker.ts` - Population tracking (0% coverage)
-- [ ] `src/services/statisticsCollector.ts` - Statistics collection (0% coverage)
-- [ ] `src/services/systemSelector.ts` - System selection (0% coverage)
-- [ ] `src/services/targetSelector.ts` - Target selection (0% coverage)
-- [ ] `src/services/templateSelector.ts` - Template selection (0% coverage)
-- [ ] `src/services/templateGraphView.ts` - Graph visualization (0% coverage)
-- [ ] `src/services/tagHealthAnalyzer.ts` - Tag health analysis (0% coverage)
-- [ ] `src/services/loreIndex.ts` - Lore indexing (0% coverage)
-- [ ] `src/services/loreValidator.ts` - Lore validation (0% coverage)
-- [ ] `src/services/enrichmentService.ts` - LLM enrichment (0% coverage)
-- [ ] `src/services/imageGenerationService.ts` - Image generation (0% coverage)
-- [ ] `src/services/metaEntityFormation.ts` - Meta entity formation (0% coverage)
-- [ ] `src/services/feedbackAnalyzer.ts` - Feedback analysis (0% coverage)
-- [ ] `src/services/llmClient.ts` - LLM client wrapper (0% coverage)
-- [ ] `src/services/nameLogger.ts` - Name logging (0% coverage)
-- [ ] `src/services/distributionTracker.ts` - Distribution tracking (0% coverage)
+| File | Status | Coverage | Test File | Notes |
+|------|--------|----------|-----------|-------|
+| `eraSpawner.ts` | ✅ Tested | ~80% | `__tests__/systems/eraSpawner.test.ts` | Era entity spawning |
+| `eraTransition.ts` | ✅ Tested | ~85% | `__tests__/systems/eraTransition.test.ts` | Era progression |
+| `occurrenceCreation.ts` | ✅ Tested | ~70% | `__tests__/systems/occurrenceCreation.test.ts` | Occurrence generation |
+| `relationshipCulling.ts` | ✅ Tested | ~75% | `__tests__/systems/relationshipCulling.test.ts` | Relationship pruning |
+| `universalCatalyst.ts` | ✅ Tested | ~70% | `__tests__/systems/universalCatalyst.test.ts` | Catalyst system |
 
-### ✅ Framework Config (Priority 4)
+### ⚠️ Services (3/17 tested) - Priority 3
 
-#### Config Files (0/3 tested)
-- [ ] `src/config/entityRegistries.ts` - Entity registration (0% coverage)
-- [ ] `src/config/feedbackLoops.ts` - Feedback loop config (0% coverage)
-- [ ] `src/config/tagRegistry.ts` - Tag registry (0% coverage)
+| File | Status | Coverage | Test File | Notes |
+|------|--------|----------|-----------|-------|
+| `dynamicWeightCalculator.ts` | ✅ Tested | ~65% | `__tests__/services/dynamicWeightCalculator.test.ts` | Weight calculation |
+| `loreIndex.ts` | ✅ Tested | ~70% | `__tests__/services/loreIndex.test.ts` | Lore indexing |
+| `templateGraphView.ts` | ✅ Tested | ~60% | `__tests__/services/templateGraphView.test.ts` | Template graph view |
+| `targetSelector.ts` | ❌ Not tested | 0% | - | **HIGH PRIORITY** |
+| `templateSelector.ts` | ❌ Not tested | 0% | - | **HIGH PRIORITY** |
+| `systemSelector.ts` | ❌ Not tested | 0% | - | **HIGH PRIORITY** |
+| `populationTracker.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `statisticsCollector.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `tagHealthAnalyzer.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `loreValidator.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `enrichmentService.ts` | ❌ Not tested | 0% | - | LLM integration (low priority) |
+| `imageGenerationService.ts` | ❌ Not tested | 0% | - | Image gen (low priority) |
+| `metaEntityFormation.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `feedbackAnalyzer.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
+| `llmClient.ts` | ❌ Not tested | 0% | - | LLM client (low priority) |
+| `nameLogger.ts` | ❌ Not tested | 0% | - | Simple logger (low priority) |
+| `distributionTracker.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** |
 
-### ✅ Domain Code - Penguin (Priority 5)
+### ❌ Framework Config (0/3 tested) - Priority 4
 
-#### Domain Config (0/6 tested)
-- [ ] `src/domain/penguin/config/eras.ts` - Era definitions (0% coverage)
-- [ ] `src/domain/penguin/config/pressures.ts` - Pressure definitions (0% coverage)
-- [ ] `src/domain/penguin/config/actionDomains.ts` - Action domains (0% coverage)
-- [ ] `src/domain/penguin/config/loreProvider.ts` - Lore provider (0% coverage)
-- [ ] `src/domain/penguin/config/metaEntityConfigs.ts` - Meta entity config (0% coverage)
-- [ ] `src/domain/penguin/config/relationshipCategories.ts` - Relationship categories (0% coverage)
+| File | Status | Coverage | Test File | Notes |
+|------|--------|----------|-----------|-------|
+| `entityRegistries.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** (data structure) |
+| `feedbackLoops.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** (data structure) |
+| `tagRegistry.ts` | ❌ Not tested | 0% | - | **NEEDS TESTS** (data structure) |
 
-#### Domain Systems (0/13 tested)
-- [ ] `src/domain/penguin/systems/allianceFormation.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/beliefContagion.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/conflictContagion.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/culturalDrift.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/legendCrystallization.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/prominenceEvolution.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/relationshipDecay.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/relationshipFormation.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/relationshipReinforcement.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/resourceFlow.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/successionVacuum.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/thermalCascade.ts` (0% coverage)
-- [ ] `src/domain/penguin/systems/index.ts` (0% coverage)
+### ❌ Domain Code - Penguin Systems (0/13 tested) - Priority 5
 
-#### Domain Templates - NPC (0/8 tested)
-- [ ] `src/domain/penguin/templates/npc/familyExpansion.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/heroEmergence.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/kinshipConstellation.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/mysteriousVanishing.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/orcaRaiderArrival.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/outlawRecruitment.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/succession.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/npc/index.ts` (0% coverage)
+All domain systems are **untested** (0% coverage). These are lower priority as they're domain-specific and tested indirectly through integration tests:
 
-#### Domain Templates - Faction (0/5 tested)
-- [ ] `src/domain/penguin/templates/faction/cultFormation.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/faction/factionSplinter.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/faction/guildEstablishment.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/faction/territorialExpansion.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/faction/tradeRouteEstablishment.ts` (0% coverage)
+- `allianceFormation.ts`
+- `beliefContagion.ts`
+- `conflictContagion.ts`
+- `culturalDrift.ts`
+- `legendCrystallization.ts`
+- `prominenceEvolution.ts`
+- `relationshipDecay.ts`
+- `relationshipFormation.ts`
+- `relationshipReinforcement.ts`
+- `resourceFlow.ts`
+- `successionVacuum.ts`
+- `thermalCascade.ts`
 
-#### Domain Templates - Location (0/9 tested)
-- [ ] `src/domain/penguin/templates/location/anomalyManifestation.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/colonyFounding.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/emergentLocationDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/geographicExploration.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/krillBloomMigration.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/mysticalLocationDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/resourceLocationDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/strategicLocationDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/location/index.ts` (0% coverage)
+### ❌ Domain Templates (1/28 tested) - Priority 5
 
-#### Domain Templates - Abilities (0/5 tested)
-- [ ] `src/domain/penguin/templates/abilities/magicDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/abilities/magicalSiteDiscovery.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/abilities/orcaCombatTechnique.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/abilities/techBreakthrough.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/abilities/techInnovation.ts` (0% coverage)
+Only **outlawRecruitment.ts** has dedicated unit tests (19 tests). All other templates are untested:
 
-#### Domain Templates - Rules (0/3 tested)
-- [ ] `src/domain/penguin/templates/rules/crisisLegislation.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/rules/greatFestival.ts` (0% coverage)
-- [ ] `src/domain/penguin/templates/rules/ideologyEmergence.ts` (0% coverage)
+**NPC Templates (0/7 tested)**:
+- `familyExpansion.ts`
+- `heroEmergence.ts`
+- `kinshipConstellation.ts`
+- `mysteriousVanishing.ts`
+- `orcaRaiderArrival.ts`
+- `succession.ts`
 
-#### Domain Schema & Index (0/2 tested)
-- [ ] `src/domain/penguin/schema.ts` (0% coverage)
-- [ ] `src/domain/penguin/index.ts` (0% coverage)
+**Faction Templates (0/5 tested)**:
+- `cultFormation.ts`
+- `factionSplinter.ts`
+- `guildEstablishment.ts`
+- `territorialExpansion.ts`
+- `tradeRouteEstablishment.ts`
 
-## Test Priority Order
+**Location Templates (0/8 tested)**:
+- `anomalyManifestation.ts`
+- `colonyFounding.ts`
+- `emergentLocationDiscovery.ts`
+- `geographicExploration.ts`
+- `krillBloomMigration.ts`
+- `mysticalLocationDiscovery.ts`
+- `resourceLocationDiscovery.ts`
+- `strategicLocationDiscovery.ts`
 
-1. **Utilities** (helpers, validators) - Most reused code
-2. **Engine Core** (worldEngine, contractEnforcer) - Critical path
-3. **Services** (selectors, trackers) - Business logic
-4. **Framework Systems** (era, catalyst) - Core mechanics
-5. **Domain Code** (templates, systems) - Domain logic
+**Ability Templates (0/5 tested)**:
+- `magicDiscovery.ts`
+- `magicalSiteDiscovery.ts`
+- `orcaCombatTechnique.ts`
+- `techBreakthrough.ts`
+- `techInnovation.ts`
 
-## Testing Strategy
+**Rules Templates (0/3 tested)**:
+- `crisisLegislation.ts`
+- `greatFestival.ts`
+- `ideologyEmergence.ts`
 
-### Phase 1: Utility Functions
-- Test pure functions with clear inputs/outputs
-- Edge cases: empty arrays, null/undefined, boundary values
-- Error handling: invalid inputs should throw descriptive errors
+### ❌ Domain Config (0/6 tested) - Priority 5
 
-### Phase 2: Engine Components
-- Mock dependencies (Graph, config objects)
-- Test orchestration flow
-- Test contract enforcement
+All domain config files are **untested** (0% coverage):
 
-### Phase 3: Services
-- Mock external dependencies (LLM clients, file I/O)
-- Test business logic in isolation
-- Test error recovery
+- `eras.ts` - Era definitions
+- `pressures.ts` - Pressure definitions
+- `actionDomains.ts` - Action domains
+- `loreProvider.ts` - Lore provider
+- `metaEntityConfigs.ts` - Meta entity config
+- `relationshipCategories.ts` - Relationship categories
 
-### Phase 4: Systems & Templates
-- Mock Graph state
-- Test canApply conditions
-- Test entity/relationship creation
-- Validate contract compliance
+## Priority Test Development Plan
 
-### Phase 5: Integration Tests
-- Full world generation test
-- Era progression test
-- Template application test
-- System application test
+### Immediate (Week 1) - Target 55% Coverage
 
-## Coverage Milestones
+1. **Critical Services** (High Impact):
+   - `targetSelector.ts` - Entity selection logic (CRITICAL)
+   - `templateSelector.ts` - Template selection logic (CRITICAL)
+   - `systemSelector.ts` - System selection logic (CRITICAL)
+   - `validationOrchestrator.ts` - Validation orchestration
 
-- [x] 10% - Utility functions tested ✅ ACHIEVED (2025-11-24 04:00)
-- [x] 15% - Core utilities complete ✅ ACHIEVED (136 tests, 2025-11-24 04:22)
-- [x] 25% - Utilities + engine components ✅ ACHIEVED (262 tests, 2025-11-24 05:10)
-- [ ] 40% - Services tested
-- [ ] 55% - Framework systems tested
-- [ ] 70% - Domain code tested (TARGET)
-- [ ] 85% - Integration tests added
-- [ ] 95% - Edge cases covered
+2. **Utility Gaps**:
+   - `relationshipBuilder.ts` - Relationship creation utilities
+   - `entityClusterBuilder.ts` - Entity cluster creation
+   - `distributionCalculations.ts` - Distribution math
 
-## Recent Progress
+### Short-term (Week 2) - Target 65% Coverage
 
-### Session: 2025-11-24 04:00-04:22 MST (Previous)
-**Tests Added**: 136 (initial baseline)
-**Files Created**: 3
-- `src/__tests__/utils/helpers.test.ts` (100 tests)
-- `src/__tests__/utils/validators.test.ts` (36 tests)
-- `vitest.config.ts` (configuration)
+3. **Support Services**:
+   - `populationTracker.ts` - Population tracking
+   - `statisticsCollector.ts` - Statistics collection
+   - `tagHealthAnalyzer.ts` - Tag health analysis
+   - `metaEntityFormation.ts` - Meta entity formation
+   - `feedbackAnalyzer.ts` - Feedback analysis
+   - `distributionTracker.ts` - Distribution tracking
 
-**Coverage Increase**: 0% → ~15-20%
+4. **Config Structures**:
+   - `entityRegistries.ts` - Entity registration
+   - `feedbackLoops.ts` - Feedback loop config
+   - `tagRegistry.ts` - Tag registry
 
-### Session: 2025-11-24 04:30-05:10 MST (Current)
-**Tests Added**: 126 new tests (262 total)
-**Files Created**: 3
-- `src/__tests__/utils/catalystHelpers.test.ts` (50 tests)
-- `src/__tests__/utils/emergentDiscovery.test.ts` (43 tests)
-- `src/__tests__/engine/changeDetection.test.ts` (33 tests)
+### Medium-term (Week 3-4) - Target 70% Coverage
 
-**Coverage Increase**: ~15-20% → ~25-30%
-**All Tests Passing**: ✅ Yes (262/262)
-**Build Status**: ✅ Passing (tsc clean)
-**Regression Check**: ✅ Passed (all 5 eras, no zero-entity epochs)
+5. **Domain Systems** (Select 5 most critical):
+   - `relationshipFormation.ts` - Core relationship logic
+   - `prominenceEvolution.ts` - Prominence calculation
+   - `conflictContagion.ts` - Conflict spread
+   - `allianceFormation.ts` - Alliance logic
+   - `resourceFlow.ts` - Resource management
+
+6. **Domain Templates** (Select 10 most used):
+   - `familyExpansion.ts` - Family creation
+   - `heroEmergence.ts` - Hero creation
+   - `colonyFounding.ts` - Colony creation
+   - `factionSplinter.ts` - Faction splitting
+   - `cultFormation.ts` - Cult creation
+   - `guildEstablishment.ts` - Guild creation
+   - `magicDiscovery.ts` - Magic discovery
+   - `techBreakthrough.ts` - Tech breakthrough
+   - `crisisLegislation.ts` - Rules creation
+   - `geographicExploration.ts` - Location discovery
+
+## Test Gaps by Risk Level
+
+### 🔴 Critical Gaps (Blocks 70% coverage)
+
+1. **Selection Services** - Core engine functions with 0% coverage:
+   - `targetSelector.ts`
+   - `templateSelector.ts`
+   - `systemSelector.ts`
+
+2. **Validation** - Missing orchestration tests:
+   - `validationOrchestrator.ts`
+
+3. **Builders** - Entity creation utilities:
+   - `relationshipBuilder.ts`
+   - `entityClusterBuilder.ts`
+
+### 🟡 Medium Gaps (Nice to have for 70%+)
+
+4. **Trackers and Analyzers**:
+   - `populationTracker.ts`
+   - `statisticsCollector.ts`
+   - `tagHealthAnalyzer.ts`
+   - `distributionTracker.ts`
+   - `feedbackAnalyzer.ts`
+
+5. **Lore and Meta**:
+   - `loreValidator.ts`
+   - `metaEntityFormation.ts`
+
+### 🟢 Low Priority (Domain-specific, can skip for 70%)
+
+6. **Domain Systems** - Tested indirectly through integration:
+   - All 13 penguin-specific systems
+
+7. **Domain Templates** - Tested indirectly through integration:
+   - 27 of 28 templates (only outlawRecruitment tested)
+
+8. **Domain Config** - Static data structures:
+   - All 6 config files
+
+9. **LLM Services** - Optional features:
+   - `enrichmentService.ts`
+   - `imageGenerationService.ts`
+   - `llmClient.ts`
+
+## Testing Best Practices
+
+### Test Structure
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { functionToTest } from '../path/to/module';
+
+describe('Module Name', () => {
+  describe('functionName', () => {
+    it('should handle happy path', () => {
+      // Arrange
+      const input = { /* ... */ };
+
+      // Act
+      const result = functionToTest(input);
+
+      // Assert
+      expect(result).toEqual(expected);
+    });
+
+    it('should handle edge cases', () => {
+      // Test boundaries, empty inputs, null/undefined
+    });
+
+    it('should throw on invalid input', () => {
+      expect(() => functionToTest(invalidInput)).toThrow();
+    });
+  });
+});
+```
+
+### Mocking Guidelines
+
+- Mock `Graph` objects for isolated unit tests
+- Mock `TemplateGraphView` with proper `TargetSelector` instance
+- Mock LLM services (enrichment, images) for deterministic tests
+- Use `vi.spyOn()` for method interception
+- Remember to add relationships to entity.links[] arrays, not just graph.relationships[]
+
+### Common Pitfalls
+
+1. **Entity Links**: Always populate both `entity.links[]` AND `graph.relationships[]`
+2. **TemplateGraphView**: Requires both `Graph` and `TargetSelector` in constructor
+3. **Async Mocks**: Properly handle Promise-based mocks for services
+4. **Type Safety**: Use proper TypeScript types, avoid `any` where possible
+
+## Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test path/to/test.test.ts
+
+# Run with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run tests with specific pattern
+npm test -- --grep "pattern"
+```
+
+## Coverage Report Location
+
+- **HTML Report**: `coverage/index.html` (open in browser)
+- **Terminal Summary**: Run `npm run test:coverage`
+- **Coverage Data**: `coverage/coverage-final.json`
+
+## Next Steps
+
+1. **Immediate**: Add tests for critical services (targetSelector, templateSelector, systemSelector)
+2. **Short-term**: Add tests for utility gaps (relationshipBuilder, entityClusterBuilder)
+3. **Medium-term**: Add tests for support services and config structures
+4. **Long-term**: Add selective tests for domain systems and templates
 
 ## Notes
 
-- Type definition files don't require tests but should be validated through usage
-- Index files (re-exports) don't require direct tests
-- LLM integration services should have mocked tests only
-- Image generation should be tested with mock clients
-
-## Recent Progress
-
-### Session: 2025-11-24 05:02-05:15 MST (Current)
-**Tests Fixed**: 21 (12 loreValidator + 9 dynamicWeightCalculator)
-**All Tests Passing**: ✅ Yes (493/493)
-**Build Status**: ❌ TypeScript compilation fails (122 errors)
-**Regression Check**: ✅ Passed (all 5 eras, 222 entities, no zero-entity epochs)
-
-**Files Modified**:
-- `src/__tests__/services/loreValidator.test.ts` - Fixed malformed HardState objects
-- `src/__tests__/services/dynamicWeightCalculator.test.ts` - Fixed threshold boundary tests
-
-**Coverage**: Unchanged at ~25-30% (no new tests added, only fixes)
-
----
-
-## Session Update: 2025-11-24 06:45 MST
-
-### Progress This Session
-**Tests Added**: 91 new tests across 3 files
-**Coverage Increase**: ~25-30% → ~35-40%
-**Test Pass Rate**: 100% (1091/1091 passing)
-
-### New Test Files Created
-- ✅ `src/__tests__/utils/graphQueries.test.ts` (30 tests)
-  - Graph traversal utilities
-  - Relationship query functions
-  - Entity finding and filtering
-  - Edge cases and empty graph handling
-  
-- ✅ `src/__tests__/utils/distributionCalculations.test.ts` (25 tests)
-  - Entity kind counting
-  - Ratio calculations
-  - Prominence distribution
-  - Relationship distribution with Shannon entropy
-  - Connectivity metrics
-  - Subtype distribution
-  
-- ✅ `src/__tests__/utils/parameterOverrides.test.ts` (18 tests, rewritten)
-  - Template parameter overrides
-  - System parameter overrides
-  - Deep merge functionality
-  - Edge case handling
-
-### Coverage by Module (Updated Estimates)
-- **Utils**: ~85% coverage (4/7 files fully tested)
-  - graphQueries.ts: ~95%
-  - distributionCalculations.ts: ~95%
-  - parameterOverrides.ts: ~90%
-  - helpers.ts: ~90%
-  - validators.ts: ~95%
-  - catalystHelpers.ts: ~90%
-  - emergentDiscovery.ts: ~85%
-
-- **Engine**: ~40% coverage (4/5 files tested)
-  - changeDetection.ts: ~85%
-  - contractEnforcer.ts: ~80%
-  - frameworkValidator.ts: ~85%
-  - worldEngine.ts: ~35%
-  - validationOrchestrator.ts: 0% (mocking issues)
-
-- **Services**: ~45% coverage (13/21 files tested)
-- **Systems**: ~50% coverage (10/5 files tested)
-- **Domain**: ~20% coverage (few files tested)
-
-### Next Priority Areas
-1. **Services Layer** (8 untested files):
-   - templateSelector.ts
-   - systemSelector.ts
-   - distributionTracker.ts
-   - metaEntityFormation.ts
-   - feedbackAnalyzer.ts
-   - imageGenerationService.ts
-   - llmClient.ts
-
-2. **Domain Templates** (40+ untested files):
-   - NPC templates
-   - Faction templates
-   - Location templates
-   - Abilities templates
-   - Rules templates
-
-3. **Integration Tests**:
-   - Full world generation pipeline
-   - Era progression
-   - Template/system interaction
-
-### Testing Best Practices Established
-- Comprehensive edge case coverage
-- Empty input handling
-- Boundary value testing
-- Type safety checks
-- Mock-free pure function testing
-- Helper functions for test data creation
-
+- Domain code (systems, templates) is tested indirectly through integration tests
+- LLM services are optional features and can be mocked in tests
+- Focus on framework code first to reach 70% coverage
+- Domain-specific tests can be added incrementally after reaching 70%

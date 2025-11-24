@@ -189,12 +189,22 @@ describe('TargetSelector', () => {
     });
 
     it('should prefer same location as reference entity', () => {
+      // Create a new entity in a different location to test location preference
+      const loc2 = createEntity('loc2', 'location', 'outpost');
+      graph.entities.set('loc2', loc2);
+
+      const npc5 = createEntity('npc5', 'npc', 'merchant', { tags: ['trader'], prominence: 'marginal' });
+      npc5.links = [{ kind: 'resident_of', src: 'npc5', dst: 'loc2' }];
+      graph.entities.set('npc5', npc5);
+
       const bias: SelectionBias = {
-        prefer: { sameLocationAs: 'npc1' }
+        prefer: { sameLocationAs: 'npc1' } // npc1 is in loc1
       };
-      const result = selector.selectTargets(graph, 'npc', 2, bias);
-      // All NPCs are in loc1, so should work but prioritize by location
-      expect(result.existing.length).toBeGreaterThan(0);
+      const result = selector.selectTargets(graph, 'npc', 1, bias);
+
+      // Should prefer NPCs in loc1 over npc5 in loc2
+      expect(result.existing.length).toBe(1);
+      expect(result.existing[0].id).not.toBe('npc5');
     });
 
     it('should combine multiple preference criteria', () => {
