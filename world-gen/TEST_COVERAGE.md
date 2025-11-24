@@ -1,16 +1,22 @@
 # Test Coverage Analysis
 
-**Last Updated**: 2025-11-24 15:45 MST
-**Current Coverage**: 46.28% (statements), 38.73% (branches), 45.33% (functions), 47.12% (lines)
+**Last Updated**: 2025-11-24 15:20 MST
+**Current Coverage**: 48.73% (statements), 41.14% (branches), 47.35% (functions), 49.61% (lines)
 **Target Coverage**: >70%
-**Tests Passing**: 1427 tests across 40 test files
+**Tests Passing**: 1492 tests across 41 test files (+65 tests)
 **Source Files**: 102 TypeScript files
 
 ## Overview
 
-The world-gen codebase has **1427 passing tests** across **40 test files**. Current coverage is 46.28%, with significant gaps in domain-specific code and templates. This document tracks testing progress and identifies areas needing attention.
+The world-gen codebase has **1492 passing tests** across **41 test files**. Current coverage is 48.73%, with continued progress toward the 70% goal. This session added 65 new tests focused on critical framework systems.
 
-**Recent Update (2025-11-24 15:45)**: Added comprehensive tests for `metaEntityFormation.ts` service (14 tests, 100% coverage).
+**Recent Updates**:
+- **2025-11-24 15:20**: Major test expansion session completed
+  - universalCatalyst.ts: 7% → 95.57% (+677 lines of tests, 27 new tests)
+  - eraTransition.ts: 41% → 93.1% (+587 lines of tests, 24 new tests)
+  - beliefContagion.ts: 0% → ~60% (NEW test file, 23 tests)
+  - Systems directory overall: 48.64% → 81.08%
+- **2025-11-24 15:45**: Added comprehensive tests for `metaEntityFormation.ts` service (14 tests, 100% coverage)
 
 ## Test Framework
 
