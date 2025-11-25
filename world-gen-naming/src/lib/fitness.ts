@@ -151,10 +151,29 @@ export async function computeFitness(
 ): Promise<EvaluationResult> {
   await loadValidationMetrics();
 
+  // Apply defaults for validation settings
+  const requiredNames = settings.requiredNames ?? 500;
+  const sampleFactor = settings.sampleFactor ?? 20;
+  const maxSampleSize = settings.maxSampleSize ?? 20_000;
+  const minNN_p5 = settings.minNN_p5 ?? 0.3;
+  const minShapeNN_p5 = settings.minShapeNN_p5 ?? 0.2;
+  const minCentroidDistance = settings.minCentroidDistance ?? 0.2;
+
+  // Merge defaults into settings for downstream use
+  const mergedSettings: ValidationSettings = {
+    ...settings,
+    requiredNames,
+    sampleFactor,
+    maxSampleSize,
+    minNN_p5,
+    minShapeNN_p5,
+    minCentroidDistance,
+  };
+
   // Calculate sample size
   const sampleSize = Math.min(
-    settings.maxSampleSize,
-    settings.requiredNames * settings.sampleFactor
+    maxSampleSize,
+    requiredNames * sampleFactor
   );
 
   // Compute validation metrics (they generate names internally)
@@ -177,12 +196,12 @@ export async function computeFitness(
       sampleSize: Math.floor(sampleSize / allDomains.length), // Split samples across domains
       seed: `fitness-${iteration}-separation`,
     });
-    separationScore = normalizeSeparationScore(separationReport, settings);
+    separationScore = normalizeSeparationScore(separationReport, mergedSettings);
   }
 
   // Normalize individual metrics to 0-1
-  const capacityScore = normalizeCapacityScore(capacityReport, settings);
-  const diffusenessScore = normalizeDiffusenessScore(diffusenessReport, settings);
+  const capacityScore = normalizeCapacityScore(capacityReport, mergedSettings);
+  const diffusenessScore = normalizeDiffusenessScore(diffusenessReport, mergedSettings);
 
   // Compute pronounceability and length scores if weighted
   let pronounceabilityScore = 1.0;

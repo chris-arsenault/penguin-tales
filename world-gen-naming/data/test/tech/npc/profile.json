@@ -6,7 +6,7 @@
     {
       "id": "tech_npc_templated",
       "type": "templated",
-      "weight": 0,
+      "weight": 0.5,
       "templateIds": [
         "tech_npc_hacker_002"
       ]
@@ -14,13 +14,13 @@
     {
       "id": "tech_npc_grammar",
       "type": "grammar",
-      "weight": 1,
+      "weight": 0.3,
       "grammarId": "tech_names"
     },
     {
       "id": "tech_npc_phonotactic",
       "type": "phonotactic",
-      "weight": 0,
+      "weight": 0.2,
       "domainId": "tech_domain"
     }
   ]

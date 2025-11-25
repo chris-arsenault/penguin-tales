@@ -12,7 +12,7 @@ import {
   perturbParameters,
   parameterDistance,
 } from "../parameter-encoder.js";
-import { computeFitnessLight } from "../fitness.js";
+import { computeFitness, computeFitnessLight } from "../fitness.js";
 import type { NamingDomain } from "../../types/domain.js";
 import type {
   OptimizationSettings,
@@ -26,6 +26,7 @@ import { DEFAULT_BOUNDS } from "../../types/optimization.js";
 
 /**
  * Run hill-climbing optimization
+ * @param siblingDomains - Other domains to compare against for separation metric
  */
 export async function hillclimb(
   initialDomain: NamingDomain,
@@ -33,9 +34,13 @@ export async function hillclimb(
   fitnessWeights: FitnessWeights,
   optimizationSettings: OptimizationSettings,
   bounds: ParameterBounds = DEFAULT_BOUNDS,
-  seed: string = "hillclimb"
+  seed: string = "hillclimb",
+  siblingDomains: NamingDomain[] = []
 ): Promise<OptimizationResult> {
   const rng = createRNG(seed);
+
+  // Use full fitness (with separation) if we have sibling domains, otherwise lightweight
+  const useSeparation = siblingDomains.length > 0 && fitnessWeights.separation > 0;
 
   // Apply defaults
   const iterations = optimizationSettings.iterations ?? 100;
@@ -55,13 +60,9 @@ export async function hillclimb(
 
   // Evaluate initial fitness
   console.log("Evaluating initial configuration...");
-  let currentEval = await computeFitnessLight(
-    currentDomain,
-    currentTheta,
-    validationSettings,
-    fitnessWeights,
-    0
-  );
+  let currentEval = useSeparation
+    ? await computeFitness(currentDomain, currentTheta, validationSettings, fitnessWeights, siblingDomains, 0)
+    : await computeFitnessLight(currentDomain, currentTheta, validationSettings, fitnessWeights, 0);
 
   const initialFitness = currentEval.fitness;
   let bestEval = currentEval;
@@ -88,13 +89,9 @@ export async function hillclimb(
     const proposedDomain = decodeParameters(proposedTheta, initialDomain, bounds);
 
     // Evaluate proposed config
-    const proposedEval = await computeFitnessLight(
-      proposedDomain,
-      proposedTheta,
-      validationSettings,
-      fitnessWeights,
-      i
-    );
+    const proposedEval = useSeparation
+      ? await computeFitness(proposedDomain, proposedTheta, validationSettings, fitnessWeights, siblingDomains, i)
+      : await computeFitnessLight(proposedDomain, proposedTheta, validationSettings, fitnessWeights, i);
 
     evaluations.push(proposedEval);
 

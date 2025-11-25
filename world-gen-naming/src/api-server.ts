@@ -804,20 +804,32 @@ app.post("/api/save", async (req, res) => {
 /**
  * POST /api/optimize/domain
  * Optimize a single domain configuration
+ * Accepts optional siblingDomains for cross-domain separation metric
  */
 app.post("/api/optimize/domain", async (req, res) => {
   try {
-    const { domain, validationSettings, fitnessWeights, optimizationSettings } = req.body;
+    const { domain, siblingDomains, validationSettings, fitnessWeights, optimizationSettings } = req.body;
 
     if (!domain) {
       return res.status(400).json({ error: "Domain configuration required" });
+    }
+
+    // Filter out the target domain from siblings if accidentally included
+    const otherDomains = (siblingDomains || []).filter((d: NamingDomain) => d.id !== domain.id);
+
+    console.log(`Optimizing domain: ${domain.id}`);
+    if (otherDomains.length > 0) {
+      console.log(`With ${otherDomains.length} sibling domains for separation: ${otherDomains.map((d: NamingDomain) => d.id).join(', ')}`);
     }
 
     const result = await optimizeDomain(
       domain,
       validationSettings,
       fitnessWeights,
-      optimizationSettings
+      optimizationSettings,
+      undefined, // bounds
+      undefined, // seed
+      otherDomains // sibling domains for separation
     );
 
     res.json({
@@ -1166,6 +1178,42 @@ app.put("/api/v2/cultures/:metaDomain/:cultureId", (req, res) => {
 });
 
 /**
+ * PUT /api/v2/cultures/:metaDomain/:cultureId/domains
+ * Update culture-level domains
+ */
+app.put("/api/v2/cultures/:metaDomain/:cultureId/domains", (req, res) => {
+  try {
+    const { metaDomain, cultureId } = req.params;
+    const { domains } = req.body;
+
+    if (!domains || !Array.isArray(domains)) {
+      return res.status(400).json({ error: "Domains array required" });
+    }
+
+    // Load culture, update domains, save
+    const culture = loadCulture(metaDomain, cultureId);
+    if (!culture) {
+      return res.status(404).json({
+        error: `Culture '${cultureId}' not found in meta-domain '${metaDomain}'`
+      });
+    }
+
+    culture.domains = domains;
+    saveCulture(metaDomain, culture);
+
+    console.log(`📝 SAVED: ${domains.length} domains for culture "${cultureId}"`);
+    domains.forEach((d: any) => {
+      console.log(`  • ${d.id}`);
+    });
+
+    res.json({ success: true, domains });
+  } catch (error) {
+    console.error("Culture domains update error:", error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+/**
  * DELETE /api/v2/cultures/:metaDomain/:cultureId
  * Delete culture
  */
@@ -1220,13 +1268,14 @@ app.put("/api/v2/entity-config/:metaDomain/:cultureId/:entityKind", (req, res) =
 app.post("/api/v2/auto-profile/:metaDomain/:cultureId/:entityKind", (req, res) => {
   try {
     const { metaDomain, cultureId, entityKind } = req.params;
-    const { config } = req.body;
+    const { config, cultureDomains } = req.body;
 
     if (!config) {
       return res.status(400).json({ error: "Entity config required" });
     }
 
-    const profile = autoGenerateProfile(cultureId, entityKind, config);
+    // Pass culture-level domains for phonotactic strategy
+    const profile = autoGenerateProfile(cultureId, entityKind, config, cultureDomains || []);
 
     // Save the profile back to the entity config
     config.profile = profile;

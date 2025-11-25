@@ -8,15 +8,16 @@
  */
 
 import { z } from "zod";
-import type { AppliesTo } from "./domain.js";
+import type { AppliesTo, Prominence } from "./domain.js";
 
 /**
  * Slot configuration for template filling
  * Phase 4A: phonotactic only
  * Phase 4B: + lexemeList
  * Phase 4C: + grammar, entityName, subGenerator
+ * Phase 4D: + context (for named entity propagation)
  */
-export type SlotKind = "phonotactic" | "lexemeList" | "grammar" | "entityName" | "subGenerator";
+export type SlotKind = "phonotactic" | "lexemeList" | "grammar" | "entityName" | "subGenerator" | "context";
 
 export const SlotConfigSchema = z.discriminatedUnion("kind", [
   // Phase 4A: Generate from phonotactic domain
@@ -49,6 +50,13 @@ export const SlotConfigSchema = z.discriminatedUnion("kind", [
     profileId: z.string().describe("Which profile to call"),
     strategyId: z.string().optional().describe("Specific strategy, or weighted random"),
   }),
+
+  // Phase 4D: Use context value (for named entity propagation)
+  z.object({
+    kind: z.literal("context"),
+    key: z.string().describe("Key to look up in relatedEntities context, e.g., 'owner', 'parent', 'founder'"),
+    fallback: z.string().optional().describe("Fallback value if key not found in context"),
+  }),
 ]);
 
 export type SlotConfig = z.infer<typeof SlotConfigSchema>;
@@ -62,12 +70,29 @@ export type SlotConfig = z.infer<typeof SlotConfigSchema>;
 export type StrategyKind = "phonotactic" | "templated" | "derivedFromEntity" | "compound";
 
 /**
+ * Strategy conditions for conditional activation
+ * Strategies with conditions are only used when entity matches
+ */
+export interface StrategyConditions {
+  /** Strategy only used if entity has ANY of these tags (or ALL if requireAllTags) */
+  tags?: string[];
+  /** If true, require ALL tags instead of ANY */
+  requireAllTags?: boolean;
+  /** Strategy only used if entity has one of these prominence levels */
+  prominence?: Prominence[];
+  /** Strategy only used if entity subtype matches */
+  subtype?: string[];
+}
+
+/**
  * Base strategy interface
  */
 export interface NamingStrategyBase {
   id: string;
   kind: StrategyKind;
   weight: number;
+  /** Optional conditions for conditional strategy activation */
+  conditions?: StrategyConditions;
 }
 
 /**

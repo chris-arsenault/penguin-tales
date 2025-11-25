@@ -20,8 +20,22 @@ import type {
   LexemeList,
   GrammarRule,
   TransformConfig,
+  StrategyConditions,
 } from "../types/profile.js";
 import type { EntityLookup, Entity } from "../types/integration.js";
+import type { Prominence } from "../types/domain.js";
+
+/**
+ * Entity attributes for conditional strategy selection
+ */
+export interface EntityAttributes {
+  /** Entity tags for condition matching */
+  tags?: string[];
+  /** Entity prominence level */
+  prominence?: Prominence;
+  /** Entity subtype for condition matching */
+  subtype?: string;
+}
 
 /**
  * Context for strategy execution
@@ -33,6 +47,14 @@ export interface ExecutionContext {
   grammarRules: GrammarRule[];
   seed?: string;
   entityLookup?: EntityLookup; // For derivedFromEntity strategies
+
+  /** Entity attributes for conditional strategy selection */
+  entityAttributes?: EntityAttributes;
+
+  /** Related entity names for named entity propagation
+   * e.g., { owner: "Duke Zixtrex", parent: "King Gorban", founder: "Lady Elmara" }
+   */
+  relatedEntities?: Record<string, string>;
 }
 
 /**
@@ -60,31 +82,107 @@ export function resolveProfile(
 }
 
 /**
+ * Check if a strategy's conditions match the entity attributes
+ * Returns true if the strategy should be considered for selection
+ */
+function matchesConditions(
+  conditions: StrategyConditions | undefined,
+  attributes: EntityAttributes | undefined
+): boolean {
+  // No conditions means always matches
+  if (!conditions) {
+    return true;
+  }
+
+  // Check tag conditions
+  if (conditions.tags && conditions.tags.length > 0) {
+    const entityTags = attributes?.tags || [];
+
+    if (conditions.requireAllTags) {
+      // ALL specified tags must be present
+      const hasAll = conditions.tags.every((tag) => entityTags.includes(tag));
+      if (!hasAll) return false;
+    } else {
+      // ANY specified tag must be present
+      const hasAny = conditions.tags.some((tag) => entityTags.includes(tag));
+      if (!hasAny) return false;
+    }
+  }
+
+  // Check prominence conditions
+  if (conditions.prominence && conditions.prominence.length > 0) {
+    const entityProminence = attributes?.prominence;
+    if (!entityProminence || !conditions.prominence.includes(entityProminence)) {
+      return false;
+    }
+  }
+
+  // Check subtype conditions
+  if (conditions.subtype && conditions.subtype.length > 0) {
+    const entitySubtype = attributes?.subtype;
+    if (!entitySubtype || !conditions.subtype.includes(entitySubtype)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Select a strategy from a profile using weighted random selection
+ * Filters strategies by conditions before selection
  */
 export function selectStrategy(
   profile: NamingProfile,
-  seed?: string
+  seed?: string,
+  entityAttributes?: EntityAttributes
 ): NamingStrategy | null {
   if (profile.strategies.length === 0) {
     return null;
   }
 
-  if (profile.strategies.length === 1) {
-    return profile.strategies[0];
+  // Filter strategies by conditions
+  const eligibleStrategies = profile.strategies.filter((s) =>
+    matchesConditions(s.conditions, entityAttributes)
+  );
+
+  if (eligibleStrategies.length === 0) {
+    // No eligible strategies - fall back to unconditional strategies
+    const unconditionalStrategies = profile.strategies.filter(
+      (s) => !s.conditions
+    );
+    if (unconditionalStrategies.length === 0) {
+      return null;
+    }
+    // Use unconditional strategies
+    return selectFromStrategies(unconditionalStrategies, seed);
+  }
+
+  return selectFromStrategies(eligibleStrategies, seed);
+}
+
+/**
+ * Weighted random selection from a list of strategies
+ */
+function selectFromStrategies(
+  strategies: NamingStrategy[],
+  seed?: string
+): NamingStrategy {
+  if (strategies.length === 1) {
+    return strategies[0];
   }
 
   const rng = createRNG(seed);
-  const totalWeight = profile.strategies.reduce((sum, s) => sum + s.weight, 0);
+  const totalWeight = strategies.reduce((sum, s) => sum + s.weight, 0);
 
   if (totalWeight === 0) {
     // All weights are zero, pick first
-    return profile.strategies[0];
+    return strategies[0];
   }
 
   let roll = rng() * totalWeight;
 
-  for (const strategy of profile.strategies) {
+  for (const strategy of strategies) {
     roll -= strategy.weight;
     if (roll <= 0) {
       return strategy;
@@ -92,18 +190,19 @@ export function selectStrategy(
   }
 
   // Fallback (shouldn't happen)
-  return profile.strategies[profile.strategies.length - 1];
+  return strategies[strategies.length - 1];
 }
 
 /**
  * Generate a name from a profile
  * Phase 4A: phonotactic strategy only
+ * Phase 4D: + conditional strategy selection based on entity attributes
  */
 export function generateFromProfile(
   profile: NamingProfile,
   context: ExecutionContext
 ): string {
-  const strategy = selectStrategy(profile, context.seed);
+  const strategy = selectStrategy(profile, context.seed, context.entityAttributes);
 
   if (!strategy) {
     throw new Error(`No strategies available for profile ${profile.id}`);
@@ -208,6 +307,7 @@ function executeTemplatedStrategy(
  * Phase 4A: phonotactic
  * Phase 4B: + lexemeList
  * Phase 4C: + grammar, entityName, subGenerator
+ * Phase 4D: + context (named entity propagation)
  */
 function fillSlot(slotConfig: SlotConfig, context: ExecutionContext): string {
   switch (slotConfig.kind) {
@@ -284,6 +384,25 @@ function fillSlot(slotConfig: SlotConfig, context: ExecutionContext): string {
 
       // Otherwise, weighted random selection
       return generateFromProfile(profile, context);
+    }
+
+    case "context": {
+      // Phase 4D: Look up related entity name from context
+      const key = slotConfig.key;
+      const value = context.relatedEntities?.[key];
+
+      if (value !== undefined) {
+        return value;
+      }
+
+      // Use fallback if provided
+      if (slotConfig.fallback !== undefined) {
+        return slotConfig.fallback;
+      }
+
+      throw new Error(
+        `Context key '${key}' not found in relatedEntities and no fallback provided`
+      );
     }
 
     default:
