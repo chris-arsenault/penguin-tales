@@ -616,25 +616,13 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
     style: false
   });
 
-  // Optimizer state
-  const [showOptimizer, setShowOptimizer] = useState(false);
-  const [optimizing, setOptimizing] = useState(false);
-  const [optimizerResult, setOptimizerResult] = useState(null);
-  const [optimizerSettings, setOptimizerSettings] = useState({
-    algorithm: 'hillclimb',
-    iterations: 50,
-    fitnessWeights: { capacity: 0.2, diffuseness: 0.2, separation: 0.2, pronounceability: 0.3, length: 0.1, style: 0.0 },
-    validationSettings: { requiredNames: 500, sampleFactor: 10 }
-  });
-
   // Culture-level domains (new structure)
   const cultureDomains = cultureConfig?.domains || [];
 
-  // Collect ALL domains from ALL cultures for cross-domain separation
+  // Collect ALL domains from ALL cultures for "copy from other cultures" feature
   const allDomains = [];
   if (allCultures) {
     Object.entries(allCultures).forEach(([cultId, cultConfig]) => {
-      // Domains are now at culture level, not entity level
       if (cultConfig?.domains) {
         cultConfig.domains.forEach((domain) => {
           allDomains.push({
@@ -765,269 +753,22 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
     setEditing(true);
   };
 
-  // Optimize a single domain (requires index in cultureDomains array)
-  const handleOptimizeDomain = async (domain, domainIndex) => {
-    if (!domain) return;
-
-    setOptimizing(true);
-    setOptimizerResult(null);
-
-    // Collect ALL sibling domains from ALL cultures for cross-domain separation
-    const siblingDomains = allDomains.filter(d => d.id !== domain.id);
-
-    try {
-      const response = await fetch(`${API_URL}/api/optimize/domain`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          domain,
-          siblingDomains, // For cross-domain separation metric
-          validationSettings: optimizerSettings.validationSettings,
-          fitnessWeights: optimizerSettings.fitnessWeights,
-          optimizationSettings: {
-            algorithm: optimizerSettings.algorithm,
-            iterations: optimizerSettings.iterations
-          }
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Optimization failed');
-      }
-
-      setOptimizerResult(data.result);
-
-      // Update the domain in culture-level domains array
-      if (data.result?.optimizedConfig) {
-        const newDomains = [...cultureDomains];
-        newDomains[domainIndex] = data.result.optimizedConfig;
-
-        // Save updated domains
-        const saveResponse = await fetch(
-          `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultureId}/domains`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domains: newDomains })
-          }
-        );
-
-        if (saveResponse.ok) {
-          console.log(`✅ Saved optimized domain '${domain.id}'`);
-          // Refresh to show updated domain
-          window.location.reload();
-        }
-      }
-    } catch (error) {
-      console.error('Optimization error:', error);
-      setOptimizerResult({ error: error.message });
-    } finally {
-      setOptimizing(false);
-    }
-  };
-
-  const handleOptimizeAll = async () => {
-    if (allDomains.length === 0) return;
-
-    setOptimizing(true);
-    setOptimizerResult(null);
-
-    try {
-      // Optimize each domain sequentially, using all others as siblings
-      const results = [];
-      for (const domain of allDomains) {
-        const siblingDomains = allDomains.filter(d => d.id !== domain.id);
-
-        const response = await fetch(`${API_URL}/api/optimize/domain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            domain,
-            siblingDomains,
-            validationSettings: optimizerSettings.validationSettings,
-            fitnessWeights: optimizerSettings.fitnessWeights,
-            optimizationSettings: {
-              algorithm: optimizerSettings.algorithm,
-              iterations: optimizerSettings.iterations
-            }
-          })
-        });
-
-        const data = await response.json();
-        if (response.ok && data.result?.optimizedConfig) {
-          results.push({
-            domainId: domain.id,
-            sourceCulture: domain.sourceCulture,
-            initialFitness: data.result.initialFitness,
-            finalFitness: data.result.finalFitness,
-            improvement: data.result.improvement,
-            optimizedConfig: data.result.optimizedConfig
-          });
-        }
-      }
-
-      // Show batch results
-      setOptimizerResult({ batchResults: results });
-
-      // Save optimized configs for each culture
-      const resultsByCulture = {};
-      for (const result of results) {
-        if (!resultsByCulture[result.sourceCulture]) {
-          resultsByCulture[result.sourceCulture] = [];
-        }
-        resultsByCulture[result.sourceCulture].push(result);
-      }
-
-      // Update each culture's domains
-      for (const [cultId, cultResults] of Object.entries(resultsByCulture)) {
-        // Get current domains for this culture
-        const cultConfig = allCultures?.[cultId];
-        if (!cultConfig?.domains) continue;
-
-        // Replace optimized domains
-        const updatedDomains = cultConfig.domains.map(domain => {
-          const optimized = cultResults.find(r => r.domainId === domain.id);
-          return optimized ? optimized.optimizedConfig : domain;
-        });
-
-        // Save via API
-        try {
-          await fetch(
-            `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultId}/domains`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ domains: updatedDomains })
-            }
-          );
-          console.log(`Saved optimized domains for culture: ${cultId}`);
-        } catch (saveError) {
-          console.error(`Failed to save domains for culture ${cultId}:`, saveError);
-        }
-      }
-
-      console.log('Batch optimization complete and saved:', results);
-
-    } catch (error) {
-      console.error('Batch optimization error:', error);
-      setOptimizerResult({ error: error.message });
-    } finally {
-      setOptimizing(false);
-    }
-  };
-
   // View mode - show list of culture-level domains
   if (!editing && cultureDomains.length > 0) {
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>Phonological Domains ({cultureDomains.length})</h3>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="secondary" onClick={() => setShowOptimizer(!showOptimizer)} style={{ background: showOptimizer ? 'rgba(147, 51, 234, 0.3)' : undefined }}>
-              {showOptimizer ? 'Hide Optimizer' : '⚡ Optimize'}
-            </button>
-            <button className="primary" onClick={handleCreateNew}>
-              + Add Domain
-            </button>
-          </div>
+          <button className="primary" onClick={handleCreateNew}>
+            + Add Domain
+          </button>
         </div>
 
         <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
           Domains define the sound patterns for <strong>{cultureId}</strong> names.
           Reference them in grammars using <code>domain:domain_id</code>.
+          Use the <strong>Optimizer</strong> tab to tune domain parameters.
         </p>
-
-        {showOptimizer && (
-          <div style={{ background: 'rgba(147, 51, 234, 0.1)', border: '1px solid rgba(147, 51, 234, 0.3)', borderRadius: '6px', padding: '1rem', marginBottom: '1rem' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0' }}>⚡ Domain Optimizer</h4>
-            <p style={{ fontSize: '0.8rem', color: 'var(--arctic-frost)', marginBottom: '0.75rem' }}>
-              Tune weights to maximize diversity and pronounceability.
-              {allDomains.length > 1 && (
-                <span style={{ marginLeft: '0.5rem', color: 'var(--gold-accent)' }}>
-                  ({allDomains.length - 1} sibling domain{allDomains.length > 2 ? 's' : ''} across all cultures for separation)
-                </span>
-              )}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Algorithm</label>
-                <select value={optimizerSettings.algorithm} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, algorithm: e.target.value })} style={{ fontSize: '0.8rem' }}>
-                  <option value="hillclimb">Hill Climbing</option>
-                  <option value="sim_anneal">Simulated Annealing</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Iterations</label>
-                <input type="number" value={optimizerSettings.iterations} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, iterations: parseInt(e.target.value) || 50 })} min="10" max="500" style={{ fontSize: '0.8rem' }} />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Sample Size</label>
-                <input type="number" value={optimizerSettings.validationSettings.requiredNames} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, validationSettings: { ...optimizerSettings.validationSettings, requiredNames: parseInt(e.target.value) || 500 } })} min="100" max="5000" style={{ fontSize: '0.8rem' }} />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Capacity</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.capacity} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, capacity: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Entropy / collision rate" />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Diffuseness</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.diffuseness} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, diffuseness: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Intra-domain variation" />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Separation</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.separation} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, separation: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} disabled={allDomains.length <= 1} title={allDomains.length <= 1 ? 'No sibling domains to compare' : 'Inter-domain distinctiveness'} />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Pronounce</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.pronounceability} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, pronounceability: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Phonetic naturalness" />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Length</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.length} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, length: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Target length adherence" />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button className="secondary" onClick={handleOptimizeAll} disabled={optimizing} style={{ fontSize: '0.8rem' }}>
-                {optimizing ? 'Optimizing...' : `Optimize All (${allDomains.length} domains)`}
-              </button>
-              <span style={{ fontSize: '0.7rem', color: 'var(--arctic-frost)' }}>
-                Or use ⚡ button on individual domains below
-              </span>
-              {optimizing && <span style={{ fontSize: '0.8rem' }}>~30-60 seconds per domain</span>}
-            </div>
-            {optimizerResult && !optimizerResult.error && !optimizerResult.batchResults && (
-              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '4px' }}>
-                <strong style={{ color: 'rgb(134, 239, 172)', fontSize: '0.85rem' }}>✓ Complete</strong>
-                <span style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>
-                  {optimizerResult.initialFitness?.toFixed(3)} → {optimizerResult.finalFitness?.toFixed(3)}
-                  <span style={{ color: 'var(--gold-accent)', marginLeft: '0.5rem' }}>+{((optimizerResult.improvement || 0) * 100).toFixed(1)}%</span>
-                </span>
-              </div>
-            )}
-            {optimizerResult?.batchResults && (
-              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '4px' }}>
-                <strong style={{ color: 'rgb(134, 239, 172)', fontSize: '0.85rem' }}>✓ Batch Complete ({optimizerResult.batchResults.length} domains)</strong>
-                <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                  {optimizerResult.batchResults.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: i < optimizerResult.batchResults.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                      <span>{r.sourceCulture}/{r.domainId}</span>
-                      <span>
-                        {r.initialFitness?.toFixed(3)} → {r.finalFitness?.toFixed(3)}
-                        <span style={{ color: 'var(--gold-accent)', marginLeft: '0.5rem' }}>+{((r.improvement || 0) * 100).toFixed(1)}%</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {optimizerResult?.error && (
-              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '4px', color: 'rgb(252, 165, 165)', fontSize: '0.8rem' }}>
-                Error: {optimizerResult.error}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Domain List */}
         <div style={{ display: 'grid', gap: '1rem' }}>
@@ -1049,9 +790,6 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => handleOptimizeDomain(domain, index)} disabled={optimizing}>
-                    ⚡
-                  </button>
                   <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => handleCopyDomain(domain)}>
                     📋
                   </button>

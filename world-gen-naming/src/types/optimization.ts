@@ -44,13 +44,13 @@ export type FitnessWeights = z.infer<typeof FitnessWeightsSchema>;
 /**
  * Available optimization algorithms
  */
-export type OptimizationAlgorithm = "hillclimb" | "sim_anneal" | "cma-es" | "ga" | "bayes";
+export type OptimizationAlgorithm = "hillclimb" | "sim_anneal" | "cma-es" | "ga" | "bayes" | "cluster";
 
 /**
  * Settings for the optimization process
  */
 export const OptimizationSettingsSchema = z.object({
-  algorithm: z.enum(["hillclimb", "sim_anneal", "cma-es", "ga", "bayes"]).optional(),
+  algorithm: z.enum(["hillclimb", "sim_anneal", "cma-es", "ga", "bayes", "cluster"]).optional(),
   iterations: z.number().int().positive().optional(),
   populationSize: z.number().int().positive().optional(),
 

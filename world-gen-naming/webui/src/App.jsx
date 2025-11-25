@@ -4,6 +4,7 @@ import MetaDomainManager from './components/MetaDomainManager';
 import SchemaLoader from './components/SchemaLoader';
 import CultureSidebar from './components/CultureSidebar';
 import EntityWorkspace from './components/EntityWorkspace';
+import OptimizerWorkshop from './components/OptimizerWorkshop';
 
 const API_URL = 'http://localhost:3001';
 
@@ -107,9 +108,9 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>World-Gen Naming Configuration Builder</h1>
+        <h1>Name Forge</h1>
         <p className="subtitle">
-          Build domain configurations and generate lexemes/templates for name generation
+          Craft distinctive names for your worlds
         </p>
       </header>
 
@@ -132,6 +133,12 @@ function App() {
               onClick={() => setActiveTab('workshop')}
             >
               Workshop
+            </button>
+            <button
+              className={activeTab === 'optimizer' ? 'active' : ''}
+              onClick={() => setActiveTab('optimizer')}
+            >
+              Optimizer
             </button>
           </nav>
 
@@ -226,6 +233,13 @@ function App() {
                 </div>
               )}
 
+              {activeTab === 'optimizer' && (
+                <OptimizerWorkshop
+                  metaDomain={currentMetaDomain}
+                  cultures={cultures}
+                />
+              )}
+
             </>
           )}
         </main>
@@ -260,7 +274,19 @@ function App() {
             </div>
 
             <div className="guide-step">
-              <h3>3. Test Names</h3>
+              <h3>3. Optimizer</h3>
+              <p>Use the Optimizer tab to tune domain parameters:</p>
+              <ul>
+                <li><strong>Hill Climbing:</strong> Fast local optimization</li>
+                <li><strong>Simulated Annealing:</strong> Escape local optima</li>
+                <li><strong>Genetic Algorithm:</strong> Evolve phoneme combinations</li>
+                <li><strong>Bayesian (TPE):</strong> Efficient discrete search</li>
+                <li><strong>Cluster Discovery:</strong> Find effective patterns</li>
+              </ul>
+            </div>
+
+            <div className="guide-step">
+              <h3>4. Test Names</h3>
               <p>In the Profile tab, use "Generate Test Names" to preview generated names and verify your configuration works correctly.</p>
             </div>
 
