@@ -1,4 +1,28 @@
 {
+  "cultures": [
+    {
+      "id": "world",
+      "name": "World",
+      "description": "Transcendent entities that belong to no single culture (eras, occurrences, world-spanning events)"
+    },
+    {
+      "id": "aurora-stack",
+      "name": "Aurora Stack",
+      "description": "The orderly, trade-focused penguins of Aurora Stack colony on the sunlit face of Aurora Berg",
+      "homeland": "Aurora Stack"
+    },
+    {
+      "id": "nightshelf",
+      "name": "Nightfall Shelf",
+      "description": "The secretive, shadow-dwelling penguins of Nightfall Shelf on the dark side of Aurora Berg",
+      "homeland": "Nightfall Shelf"
+    },
+    {
+      "id": "orca",
+      "name": "Orca Raiders",
+      "description": "The fearsome orca raiders who threaten penguin civilization from the deep waters"
+    }
+  ],
   "hardState": [{
     "kind": "npc",
     "subtype": [
@@ -46,7 +70,7 @@
       ]
     },
     {
-      "kind": "rules",  //in-universe rules, not game rules
+      "kind": "rules",
       "subtype": [
         "edict",
         "taboo",
@@ -85,7 +109,7 @@
         "follower_of"
       ],
       "location": [
-        "leader_of",      // e.g. mayor of a colony
+        "leader_of",
         "resident_of",
         "explorer_of",
         "attacking",
