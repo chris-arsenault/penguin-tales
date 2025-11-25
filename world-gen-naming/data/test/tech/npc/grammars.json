@@ -1,0 +1,24 @@
+{
+  "grammars": [
+    {
+      "id": "tech_names",
+      "start": "name",
+      "rules": {
+        "name": [
+          [
+            "domain:tech_domain",
+            "slot:tech_nouns"
+          ]
+        ]
+      },
+      "appliesTo": {
+        "cultures": [
+          "tech"
+        ],
+        "entityKinds": [
+          "npc"
+        ]
+      }
+    }
+  ]
+}

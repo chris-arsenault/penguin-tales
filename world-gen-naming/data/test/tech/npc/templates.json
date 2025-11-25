@@ -1,0 +1,20 @@
+{
+  "templates": [
+    {
+      "id": "tech_npc_hacker_002",
+      "template": "{{tech_verbs}}-{{tech_nouns}}",
+      "slots": {
+        "tech_verbs": {
+          "kind": "lexemeList",
+          "description": "Action or capability used as prefix (e.g., Crash, Hack, Splice, Void)"
+        },
+        "tech_nouns": {
+          "kind": "lexemeList",
+          "description": "Core technology or system component (e.g., Master, Mind, Prophet, Sage)"
+        }
+      },
+      "source": "llm",
+      "specId": "tech_npc_templates"
+    }
+  ]
+}

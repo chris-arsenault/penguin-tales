@@ -1,0 +1,27 @@
+{
+  "profiles": [
+    {
+      "id": "tech:npc",
+      "cultureId": "tech",
+      "type": "npc",
+      "strategies": [
+        {
+          "id": "tech_npc_hacker_002",
+          "kind": "templated",
+          "weight": 1,
+          "template": "{{tech_verbs}}-{{tech_nouns}}",
+          "slots": {
+            "tech_verbs": {
+              "kind": "lexemeList",
+              "listId": "tech_tech_verbs"
+            },
+            "tech_nouns": {
+              "kind": "lexemeList",
+              "listId": "tech_tech_nouns"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -49,6 +49,44 @@
       "source": "llm",
       "filtered": 0,
       "tokensUsed": 549
+    },
+    "royalty_names": {
+      "id": "royalty_names",
+      "description": "Titles and Honorifcist",
+      "entries": [
+        "cheesemaster",
+        "funguslord",
+        "weebherder"
+      ],
+      "source": "manual",
+      "appliesTo": {
+        "cultures": [
+          "dwarf",
+          "elf"
+        ],
+        "entityKinds": [
+          "npc"
+        ]
+      }
+    },
+    "prepositions": {
+      "id": "prepositions",
+      "description": "as/in/of",
+      "entries": [
+        "as",
+        "in",
+        "of",
+        "until"
+      ],
+      "source": "manual",
+      "appliesTo": {
+        "cultures": [
+          "*"
+        ],
+        "entityKinds": [
+          "*"
+        ]
+      }
     }
   }
 }

@@ -23,6 +23,71 @@
       "description": "The fearsome orca raiders who threaten penguin civilization from the deep waters"
     }
   ],
+
+  "tags": {
+    "role": {
+      "description": "Entity roles and archetypes",
+      "appliesTo": ["npc"],
+      "values": ["leader", "explorer", "prophet", "cultist", "raider", "predator", "recruit", "successor", "rebel", "guild-founder"]
+    },
+    "trait": {
+      "description": "Character traits and qualities",
+      "appliesTo": ["npc"],
+      "values": ["brave", "charismatic", "talented", "rebellious"]
+    },
+    "geographic": {
+      "description": "Physical location characteristics",
+      "appliesTo": ["location"],
+      "values": ["landmark", "vantage", "frontier", "icy", "windy", "multilevel", "thermal", "unstable"]
+    },
+    "resource": {
+      "description": "Resource-related tags",
+      "values": ["resource", "krill", "bloom", "food", "fishing", "valuable", "economic", "trade"]
+    },
+    "mystical": {
+      "description": "Magic and supernatural elements",
+      "values": ["mystical", "magical", "magic", "anomaly", "glowing"]
+    },
+    "conflict": {
+      "description": "Combat and conflict tags",
+      "values": ["combat", "offensive", "defensive", "strategic", "external-threat", "invasion", "conflict"]
+    },
+    "organizational": {
+      "description": "Organization type and structure",
+      "appliesTo": ["faction"],
+      "values": ["guild", "governance", "legislative"]
+    },
+    "alignment": {
+      "description": "Moral/legal alignment (factions, locations, NPCs)",
+      "values": ["political", "criminal", "cult", "secretive", "organized"]
+    },
+    "cultural": {
+      "description": "Cultural and social events",
+      "values": ["cultural", "festival", "memorial", "ideology", "unity", "cultural-shift"]
+    },
+    "technology": {
+      "description": "Technology and innovation",
+      "values": ["technology", "technological", "innovation", "discovery"]
+    },
+    "lineage": {
+      "description": "Family and generational relationships",
+      "appliesTo": ["npc", "faction"],
+      "values": ["family", "generational", "second_generation", "splinter", "successor", "new"]
+    },
+    "location_type": {
+      "description": "Location subtypes and features",
+      "appliesTo": ["location"],
+      "values": ["colony", "strategic"]
+    },
+    "system": {
+      "description": "Internal system/meta tags for generation logic (any entity)",
+      "values": ["meta-entity", "emergent", "world-level", "cluster-forming", "cluster", "ability-creation", "era-driven", "pressure-driven", "crisis-driven", "scarcity-driven", "conflict-driven", "magic-driven", "anomaly-driven", "belief-driven", "rare-event", "status-changing", "colony-centric", "colony-based", "colony-formation", "faction-expansion", "faction-diversity", "adaptive", "exploration", "expansion", "territorial"]
+    },
+    "event": {
+      "description": "Event and process types (any entity)",
+      "values": ["crisis", "emergency", "legislation", "succession", "vanishing", "mystery", "leadership-change"]
+    }
+  },
   "hardState": [{
     "kind": "npc",
     "subtype": [

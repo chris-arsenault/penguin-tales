@@ -1,0 +1,27 @@
+{
+  "id": "tech:npc",
+  "cultureId": "tech",
+  "entityType": "npc",
+  "strategies": [
+    {
+      "id": "tech_npc_templated",
+      "type": "templated",
+      "weight": 0,
+      "templateIds": [
+        "tech_npc_hacker_002"
+      ]
+    },
+    {
+      "id": "tech_npc_grammar",
+      "type": "grammar",
+      "weight": 1,
+      "grammarId": "tech_names"
+    },
+    {
+      "id": "tech_npc_phonotactic",
+      "type": "phonotactic",
+      "weight": 0,
+      "domainId": "tech_domain"
+    }
+  ]
+}
