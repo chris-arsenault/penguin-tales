@@ -61,22 +61,22 @@ export async function hillclimb(
   // Evaluate initial fitness
   console.log("Evaluating initial configuration...");
   let currentEval = useSeparation
-    ? await computeFitness(currentDomain, currentTheta, validationSettings, fitnessWeights, siblingDomains, 0)
-    : await computeFitnessLight(currentDomain, currentTheta, validationSettings, fitnessWeights, 0);
+    ? await computeFitness(currentDomain, currentTheta, validationSettings, fitnessWeights, siblingDomains, 0, verbose)
+    : await computeFitnessLight(currentDomain, currentTheta, validationSettings, fitnessWeights, 0, verbose);
 
   const initialFitness = currentEval.fitness;
+
+  // Always log initial fitness (regardless of verbose)
+  console.log(`Initial fitness: ${initialFitness.toFixed(4)}`);
+  console.log(
+    `  Capacity: ${currentEval.scores.capacity.toFixed(3)}, ` +
+    `Diffuseness: ${currentEval.scores.diffuseness.toFixed(3)}, ` +
+    `Separation: ${currentEval.scores.separation.toFixed(3)}`
+  );
+  console.log(`Starting ${iterations} iterations (each takes ~${useSeparation ? '60-90' : '5-10'}s)...`);
   let bestEval = currentEval;
   const evaluations: EvaluationResult[] = [currentEval];
   const convergenceHistory: number[] = [currentEval.fitness];
-
-  if (verbose) {
-    console.log(`Initial fitness: ${initialFitness.toFixed(4)}`);
-    console.log(
-      `  Capacity: ${currentEval.scores.capacity.toFixed(3)}, ` +
-        `Diffuseness: ${currentEval.scores.diffuseness.toFixed(3)}, ` +
-        `Separation: ${currentEval.scores.separation.toFixed(3)}`
-    );
-  }
 
   // Track convergence
   let noImprovementCount = 0;
@@ -84,14 +84,21 @@ export async function hillclimb(
 
   // Hill-climbing loop
   for (let i = 1; i <= iterations; i++) {
+    const iterStart = Date.now();
+    // Always show progress for long-running optimization
+    console.log(`\n[${i}/${iterations}] Evaluating...`);
+
     // Propose perturbation
     const proposedTheta = perturbParameters(currentTheta, stepSizes, rng);
     const proposedDomain = decodeParameters(proposedTheta, initialDomain, bounds);
 
     // Evaluate proposed config
     const proposedEval = useSeparation
-      ? await computeFitness(proposedDomain, proposedTheta, validationSettings, fitnessWeights, siblingDomains, i)
-      : await computeFitnessLight(proposedDomain, proposedTheta, validationSettings, fitnessWeights, i);
+      ? await computeFitness(proposedDomain, proposedTheta, validationSettings, fitnessWeights, siblingDomains, i, verbose)
+      : await computeFitnessLight(proposedDomain, proposedTheta, validationSettings, fitnessWeights, i, verbose);
+
+    const iterElapsed = ((Date.now() - iterStart) / 1000).toFixed(1);
+    console.log(`[${i}/${iterations}] Fitness: ${proposedEval.fitness.toFixed(4)} (${iterElapsed}s)`);
 
     evaluations.push(proposedEval);
 
@@ -103,13 +110,9 @@ export async function hillclimb(
 
       if (proposedEval.fitness > bestEval.fitness) {
         bestEval = proposedEval;
-
-        if (verbose) {
-          console.log(
-            `[${i}/${iterations}] New best: ${bestEval.fitness.toFixed(4)} ` +
-              `(+${((bestEval.fitness - initialFitness) * 100).toFixed(1)}%)`
-          );
-        }
+        console.log(
+          `  -> New best! ${bestEval.fitness.toFixed(4)} (+${((bestEval.fitness - initialFitness) * 100).toFixed(1)}%)`
+        );
       }
     }
 
@@ -120,43 +123,32 @@ export async function hillclimb(
     if (improvement < convergenceThreshold) {
       noImprovementCount++;
       if (noImprovementCount >= convergenceWindow) {
-        if (verbose) {
-          console.log(
-            `Converged after ${i} iterations (no significant improvement for ${noImprovementCount} iterations)`
-          );
-        }
+        console.log(
+          `\nConverged after ${i} iterations (no improvement for ${noImprovementCount} iterations)`
+        );
         break;
       }
     } else {
       noImprovementCount = 0;
       lastBestFitness = bestEval.fitness;
     }
-
-    // Progress logging
-    if (verbose && i % 10 === 0) {
-      console.log(
-        `[${i}/${iterations}] Current best: ${bestEval.fitness.toFixed(4)}`
-      );
-    }
   }
 
   const finalFitness = bestEval.fitness;
-  const improvement = finalFitness - initialFitness;
+  const finalImprovement = finalFitness - initialFitness;
 
-  if (verbose) {
-    console.log("\nOptimization complete!");
-    console.log(`Initial fitness: ${initialFitness.toFixed(4)}`);
-    console.log(`Final fitness: ${finalFitness.toFixed(4)}`);
-    console.log(`Improvement: +${(improvement * 100).toFixed(1)}%`);
-    console.log(`Total evaluations: ${evaluations.length}`);
-  }
+  console.log("\n=== Optimization complete ===");
+  console.log(`Initial fitness: ${initialFitness.toFixed(4)}`);
+  console.log(`Final fitness: ${finalFitness.toFixed(4)}`);
+  console.log(`Improvement: +${(finalImprovement * 100).toFixed(1)}%`);
+  console.log(`Total evaluations: ${evaluations.length}`);
 
   return {
     initialConfig: initialDomain,
     optimizedConfig: bestEval.config,
     initialFitness,
     finalFitness,
-    improvement,
+    improvement: finalImprovement,
     iterations: evaluations.length,
     evaluations,
     convergenceHistory,

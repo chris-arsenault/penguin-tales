@@ -76,7 +76,7 @@ describe("Profile Executor - Phase 4A", () => {
   describe("selectStrategy", () => {
     it("should select single strategy", () => {
       const result = selectStrategy(testProfile);
-      expect(result).toBe(testProfile.strategies[0]);
+      expect(result).toBe(testProfile.strategies![0]);
     });
 
     it("should select strategy by weight", () => {
@@ -117,7 +117,7 @@ describe("Profile Executor - Phase 4A", () => {
       };
 
       const result = selectStrategy(zeroWeightProfile);
-      expect(result).toBe(zeroWeightProfile.strategies[0]);
+      expect(result).toBe(zeroWeightProfile.strategies![0]);
     });
 
     it("should return null for empty strategies", () => {

@@ -20,7 +20,8 @@ import type {
   LexemeList,
   GrammarRule,
   TransformConfig,
-  StrategyConditions,
+  GroupConditions,
+  StrategyGroup,
 } from "../types/profile.js";
 import type { EntityLookup, Entity } from "../types/integration.js";
 import type { Prominence } from "../types/domain.js";
@@ -82,14 +83,14 @@ export function resolveProfile(
 }
 
 /**
- * Check if a strategy's conditions match the entity attributes
- * Returns true if the strategy should be considered for selection
+ * Check if group conditions match the entity attributes
+ * Returns true if the group should be considered for selection
  */
 function matchesConditions(
-  conditions: StrategyConditions | undefined,
+  conditions: GroupConditions | null | undefined,
   attributes: EntityAttributes | undefined
 ): boolean {
-  // No conditions means always matches
+  // No conditions (null or undefined) means always matches
   if (!conditions) {
     return true;
   }
@@ -129,36 +130,112 @@ function matchesConditions(
 }
 
 /**
- * Select a strategy from a profile using weighted random selection
- * Filters strategies by conditions before selection
+ * Convert legacy flat strategies to strategy groups
+ * Groups strategies by their conditions, with conditional strategies at higher priority
+ */
+export function migrateToStrategyGroups(strategies: NamingStrategy[]): StrategyGroup[] {
+  // Separate conditional and unconditional strategies
+  const conditionalStrategies = strategies.filter((s) => s.conditions);
+  const unconditionalStrategies = strategies.filter((s) => !s.conditions);
+
+  const groups: StrategyGroup[] = [];
+
+  // Create a group for each unique condition set
+  // For simplicity, each conditional strategy gets its own high-priority group
+  conditionalStrategies.forEach((strategy, idx) => {
+    // Create clean copy without conditions property
+    const { conditions, ...strategyWithoutConditions } = strategy;
+    groups.push({
+      name: `Conditional ${idx + 1}`,
+      priority: 100 - idx, // Higher priority for earlier strategies
+      conditions: conditions || null,
+      strategies: [strategyWithoutConditions as NamingStrategy],
+    });
+  });
+
+  // Add default group for unconditional strategies
+  // These don't have conditions, so we can use them directly
+  if (unconditionalStrategies.length > 0) {
+    groups.push({
+      name: "Default",
+      priority: 0,
+      conditions: null,
+      strategies: unconditionalStrategies,
+    });
+  }
+
+  return groups;
+}
+
+/**
+ * Get effective strategy groups from a profile
+ * Handles both new strategyGroups and legacy strategies format
+ */
+export function getEffectiveGroups(profile: NamingProfile): StrategyGroup[] {
+  // Prefer new strategyGroups format
+  if (profile.strategyGroups && profile.strategyGroups.length > 0) {
+    return profile.strategyGroups;
+  }
+
+  // Fall back to legacy strategies format
+  if (profile.strategies && profile.strategies.length > 0) {
+    return migrateToStrategyGroups(profile.strategies);
+  }
+
+  return [];
+}
+
+/**
+ * Select the highest priority matching group
+ * Returns null if no groups match
+ */
+function selectMatchingGroup(
+  groups: StrategyGroup[],
+  entityAttributes?: EntityAttributes
+): StrategyGroup | null {
+  // Filter to groups that match conditions
+  const matchingGroups = groups.filter((g) =>
+    matchesConditions(g.conditions, entityAttributes)
+  );
+
+  if (matchingGroups.length === 0) {
+    return null;
+  }
+
+  // Sort by priority (highest first) and return the first
+  matchingGroups.sort((a, b) => b.priority - a.priority);
+  return matchingGroups[0];
+}
+
+/**
+ * Select a strategy from a profile using priority-based group selection
+ *
+ * Algorithm:
+ * 1. Get effective strategy groups (handles legacy format)
+ * 2. Filter groups by conditions matching entity attributes
+ * 3. Select the highest priority matching group
+ * 4. Use weighted random selection within that group's strategies
  */
 export function selectStrategy(
   profile: NamingProfile,
   seed?: string,
   entityAttributes?: EntityAttributes
 ): NamingStrategy | null {
-  if (profile.strategies.length === 0) {
+  const groups = getEffectiveGroups(profile);
+
+  if (groups.length === 0) {
     return null;
   }
 
-  // Filter strategies by conditions
-  const eligibleStrategies = profile.strategies.filter((s) =>
-    matchesConditions(s.conditions, entityAttributes)
-  );
+  // Select the highest priority matching group
+  const selectedGroup = selectMatchingGroup(groups, entityAttributes);
 
-  if (eligibleStrategies.length === 0) {
-    // No eligible strategies - fall back to unconditional strategies
-    const unconditionalStrategies = profile.strategies.filter(
-      (s) => !s.conditions
-    );
-    if (unconditionalStrategies.length === 0) {
-      return null;
-    }
-    // Use unconditional strategies
-    return selectFromStrategies(unconditionalStrategies, seed);
+  if (!selectedGroup || selectedGroup.strategies.length === 0) {
+    return null;
   }
 
-  return selectFromStrategies(eligibleStrategies, seed);
+  // Weighted random selection within the group
+  return selectFromStrategies(selectedGroup.strategies, seed);
 }
 
 /**
@@ -371,9 +448,17 @@ function fillSlot(slotConfig: SlotConfig, context: ExecutionContext): string {
 
       // If specific strategy requested, use it
       if (slotConfig.strategyId) {
-        const strategy = profile.strategies.find(
-          (s) => s.id === slotConfig.strategyId
-        );
+        // Search in both strategyGroups and legacy strategies
+        let strategy: NamingStrategy | undefined;
+        if (profile.strategyGroups) {
+          for (const group of profile.strategyGroups) {
+            strategy = group.strategies.find((s) => s.id === slotConfig.strategyId);
+            if (strategy) break;
+          }
+        }
+        if (!strategy && profile.strategies) {
+          strategy = profile.strategies.find((s) => s.id === slotConfig.strategyId);
+        }
         if (!strategy) {
           throw new Error(
             `Strategy ${slotConfig.strategyId} not found in profile ${slotConfig.profileId}`

@@ -12,7 +12,7 @@ import { createLLMClient } from "./builder/llm-client.js";
 import { generateLexemeList } from "./builder/lexeme-generator.js";
 import { generateTemplates } from "./builder/template-generator.js";
 import { writeLexemeResult, writeTemplateResult } from "./builder/file-writer.js";
-import { optimizeDomain, optimizeBatch } from "./lib/optimizer.js";
+import { optimizeDomain } from "./lib/optimizer.js";
 import { generateFromProfile, type ExecutionContext } from "./lib/profile-executor.js";
 import type { NamingProfile, LexemeList, GrammarRule } from "./types/profile.js";
 import type { NamingDomain } from "./types/domain.js";
@@ -25,7 +25,6 @@ import type {
   TemplateSpec,
   LLMConfig,
 } from "./types/builder-spec.js";
-import { validateLexemeSlotSpec, validateTemplateSpec } from "./builder/spec-loader.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -618,38 +617,6 @@ function generateFallbackName(lexemeLists: LexemeList[], index: number): string 
 }
 
 /**
- * POST /api/validate/lexeme-spec
- * Validate a lexeme slot spec
- */
-app.post("/api/validate/lexeme-spec", (req, res) => {
-  try {
-    const spec = validateLexemeSlotSpec(req.body);
-    res.json({ valid: true, spec });
-  } catch (error) {
-    res.status(400).json({
-      valid: false,
-      error: (error as Error).message,
-    });
-  }
-});
-
-/**
- * POST /api/validate/template-spec
- * Validate a template spec
- */
-app.post("/api/validate/template-spec", (req, res) => {
-  try {
-    const spec = validateTemplateSpec(req.body);
-    res.json({ valid: true, spec });
-  } catch (error) {
-    res.status(400).json({
-      valid: false,
-      error: (error as Error).message,
-    });
-  }
-});
-
-/**
  * GET /api/meta-domains
  * List all available meta-domains
  */
@@ -779,29 +746,6 @@ app.get("/api/meta-domains/:name", (req, res) => {
 });
 
 /**
- * POST /api/save
- * Save generated content to file system
- */
-app.post("/api/save", async (req, res) => {
-  try {
-    const { metaDomain, type, data } = req.body;
-
-    if (!metaDomain || !type || !data) {
-      return res.status(400).json({
-        error: "Missing required fields: metaDomain, type, data"
-      });
-    }
-
-    // For now, just acknowledge - actual saving happens in generation endpoints
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({
-      error: (error as Error).message,
-    });
-  }
-});
-
-/**
  * POST /api/optimize/domain
  * Optimize a single domain configuration
  * Accepts optional siblingDomains for cross-domain separation metric
@@ -838,37 +782,6 @@ app.post("/api/optimize/domain", async (req, res) => {
     });
   } catch (error) {
     console.error("Domain optimization error:", error);
-    res.status(500).json({
-      error: (error as Error).message,
-    });
-  }
-});
-
-/**
- * POST /api/optimize/batch
- * Optimize multiple domains
- */
-app.post("/api/optimize/batch", async (req, res) => {
-  try {
-    const { domains, validationSettings, fitnessWeights, optimizationSettings } = req.body;
-
-    if (!domains || !Array.isArray(domains) || domains.length === 0) {
-      return res.status(400).json({ error: "Domains array required" });
-    }
-
-    const results = await optimizeBatch(
-      domains,
-      validationSettings,
-      fitnessWeights,
-      optimizationSettings
-    );
-
-    res.json({
-      success: true,
-      results
-    });
-  } catch (error) {
-    console.error("Batch optimization error:", error);
     res.status(500).json({
       error: (error as Error).message,
     });

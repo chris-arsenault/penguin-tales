@@ -2,12 +2,50 @@ import { useState } from 'react';
 
 const API_URL = 'http://localhost:3001';
 
+/**
+ * Migrate legacy flat strategies to strategy groups
+ */
+function migrateToGroups(strategies) {
+  if (!strategies || strategies.length === 0) return [];
+
+  // All strategies go into a single "Default" group
+  return [{
+    name: 'Default',
+    priority: 0,
+    conditions: null,
+    strategies: strategies.map(s => {
+      const { conditions, ...rest } = s;
+      return rest;
+    })
+  }];
+}
+
+/**
+ * Get effective groups from a profile (handles legacy format)
+ */
+function getEffectiveGroups(profile) {
+  if (profile.strategyGroups && profile.strategyGroups.length > 0) {
+    return profile.strategyGroups;
+  }
+  if (profile.strategies && profile.strategies.length > 0) {
+    return migrateToGroups(profile.strategies);
+  }
+  return [];
+}
+
 function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, grammars, generatedContent }) {
   const [editingProfile, setEditingProfile] = useState(null);
   const [formData, setFormData] = useState({
     id: '',
     cultureId: '',
     type: 'npc',
+    strategyGroups: []
+  });
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    priority: 0,
+    conditions: null,
     strategies: []
   });
   const [editingStrategy, setEditingStrategy] = useState(null);
@@ -29,7 +67,7 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
       id: `${metaDomain}:npc`,
       cultureId: metaDomain,
       type: 'npc',
-      strategies: []
+      strategyGroups: []
     });
   };
 
@@ -66,10 +104,66 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
     saveToDisk(newProfiles);
   };
 
+  // Group handling functions
+  const handleAddGroup = () => {
+    setEditingGroup('new');
+    setGroupForm({
+      name: `Group ${formData.strategyGroups.length + 1}`,
+      priority: formData.strategyGroups.length === 0 ? 0 : 10,
+      conditions: null,
+      strategies: []
+    });
+  };
+
+  const handleSaveGroup = () => {
+    const group = { ...groupForm };
+
+    // Clean up empty conditions
+    if (group.conditions) {
+      const { tags, prominence, subtype } = group.conditions;
+      const hasConditions =
+        (tags && tags.length > 0) ||
+        (prominence && prominence.length > 0) ||
+        (subtype && subtype.length > 0);
+      if (!hasConditions) {
+        group.conditions = null;
+      }
+    }
+
+    const newGroups = editingGroup === 'new'
+      ? [...formData.strategyGroups, group]
+      : formData.strategyGroups.map((g, idx) =>
+          (typeof editingGroup === 'number' && idx === editingGroup) ? group : g
+        );
+
+    setFormData({ ...formData, strategyGroups: newGroups });
+    setEditingGroup(null);
+  };
+
+  const handleDeleteGroup = (idx) => {
+    setFormData({
+      ...formData,
+      strategyGroups: formData.strategyGroups.filter((_, i) => i !== idx)
+    });
+  };
+
+  const handleEditGroup = (idx) => {
+    const group = formData.strategyGroups[idx];
+    setEditingGroup(idx);
+    setGroupForm({
+      name: group.name || `Group ${idx + 1}`,
+      priority: group.priority || 0,
+      conditions: group.conditions || null,
+      strategies: group.strategies || []
+    });
+  };
+
+  // Strategy handling functions (work within current group)
   const handleAddStrategy = () => {
+    const totalStrategies = groupForm.strategies.length;
     setEditingStrategy('new');
     setStrategyForm({
-      id: `${formData.cultureId}_strategy_${formData.strategies.length + 1}`,
+      id: `${formData.cultureId}_strategy_${totalStrategies + 1}`,
       kind: 'templated',
       weight: 1.0,
       templateIds: [],
@@ -110,17 +204,17 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
     }
 
     const newStrategies = editingStrategy === 'new'
-      ? [...formData.strategies, strategy]
-      : formData.strategies.map(s => s.id === strategy.id ? strategy : s);
+      ? [...groupForm.strategies, strategy]
+      : groupForm.strategies.map(s => s.id === strategy.id ? strategy : s);
 
-    setFormData({ ...formData, strategies: newStrategies });
+    setGroupForm({ ...groupForm, strategies: newStrategies });
     setEditingStrategy(null);
   };
 
   const handleDeleteStrategy = (id) => {
-    setFormData({
-      ...formData,
-      strategies: formData.strategies.filter(s => s.id !== id)
+    setGroupForm({
+      ...groupForm,
+      strategies: groupForm.strategies.filter(s => s.id !== id)
     });
   };
 
@@ -206,11 +300,113 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
             </select>
           </div>
 
-          <h4 style={{ marginTop: '1.5rem' }}>Strategies ({formData.strategies.length})</h4>
+          <h4 style={{ marginTop: '1.5rem' }}>Strategy Groups ({formData.strategyGroups.length})</h4>
+          <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+            Groups are evaluated by priority (highest first). The first group whose conditions match is used.
+          </p>
 
-          {editingStrategy ? (
-            <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
-              <h5>Strategy Editor</h5>
+          {editingGroup !== null ? (
+            <div style={{ background: '#1a2a3a', padding: '1rem', borderRadius: '4px', marginBottom: '1rem', border: '1px solid #3b5068' }}>
+              <h5 style={{ marginBottom: '1rem' }}>Group Editor</h5>
+
+              <div className="form-group">
+                <label>Group Name</label>
+                <input
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                  placeholder="e.g., Noble Names, Common Names"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Priority (higher = checked first)</label>
+                <input
+                  type="number"
+                  value={groupForm.priority}
+                  onChange={(e) => setGroupForm({...groupForm, priority: parseInt(e.target.value) || 0})}
+                />
+                <small className="text-muted">Default: 0. Groups with higher priority are checked first.</small>
+              </div>
+
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0d1b2a', borderRadius: '4px' }}>
+                <strong>Conditions</strong>
+                <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  Optional. If set, this group only applies when the entity matches these conditions.
+                </p>
+
+                <div className="form-group">
+                  <label>Required Tags (comma-separated)</label>
+                  <input
+                    value={groupForm.conditions?.tags?.join(', ') || ''}
+                    onChange={(e) => {
+                      const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                      setGroupForm({
+                        ...groupForm,
+                        conditions: {
+                          ...groupForm.conditions,
+                          tags: tags.length > 0 ? tags : undefined
+                        }
+                      });
+                    }}
+                    placeholder="e.g., noble, royal"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Prominence Levels</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'].map(level => (
+                      <label key={level} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={groupForm.conditions?.prominence?.includes(level) || false}
+                          onChange={(e) => {
+                            const current = groupForm.conditions?.prominence || [];
+                            const newProminence = e.target.checked
+                              ? [...current, level]
+                              : current.filter(p => p !== level);
+                            setGroupForm({
+                              ...groupForm,
+                              conditions: {
+                                ...groupForm.conditions,
+                                prominence: newProminence.length > 0 ? newProminence : undefined
+                              }
+                            });
+                          }}
+                        />
+                        {level}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Subtypes (comma-separated)</label>
+                  <input
+                    value={groupForm.conditions?.subtype?.join(', ') || ''}
+                    onChange={(e) => {
+                      const subtypes = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                      setGroupForm({
+                        ...groupForm,
+                        conditions: {
+                          ...groupForm.conditions,
+                          subtype: subtypes.length > 0 ? subtypes : undefined
+                        }
+                      });
+                    }}
+                    placeholder="e.g., warrior, mage"
+                  />
+                </div>
+              </div>
+
+              <h5 style={{ marginTop: '1.5rem' }}>Strategies in Group ({groupForm.strategies.length})</h5>
+              <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                Strategies are selected by weighted random within this group.
+              </p>
+
+              {editingStrategy ? (
+                <div style={{ background: '#0d1b2a', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
+                  <h6>Strategy Editor</h6>
 
               <div className="form-group">
                 <label>Strategy ID</label>
@@ -420,32 +616,95 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
                 <button className="primary" onClick={handleSaveStrategy}>Save Strategy</button>
                 <button className="secondary" onClick={() => setEditingStrategy(null)}>Cancel</button>
               </div>
+                </div>
+              ) : (
+                <>
+                  <button className="secondary" onClick={handleAddStrategy} style={{ marginBottom: '0.5rem' }}>
+                    + Add Strategy
+                  </button>
+
+                  {groupForm.strategies.length > 0 && (
+                    <div>
+                      {groupForm.strategies.map((strategy, idx) => (
+                        <div key={strategy.id} style={{
+                          padding: '0.75rem',
+                          background: '#0d1b2a',
+                          border: '1px solid #2a3f5f',
+                          borderRadius: '4px',
+                          marginBottom: '0.5rem'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong>{strategy.id}</strong>
+                              <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                                ({strategy.kind}, weight: {strategy.weight})
+                              </span>
+                              {strategy.kind === 'templated' && strategy.template && (
+                                <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
+                                  {strategy.template}
+                                </p>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                className="secondary"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                                onClick={() => { setEditingStrategy(strategy.id); setStrategyForm({...strategy, slots: strategy.slots || {}}); }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="danger"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                                onClick={() => handleDeleteStrategy(strategy.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #2a3f5f' }}>
+                <button className="primary" onClick={handleSaveGroup}>Save Group</button>
+                <button className="secondary" onClick={() => setEditingGroup(null)}>Cancel</button>
+              </div>
             </div>
           ) : (
             <>
-              <button className="secondary" onClick={handleAddStrategy} style={{ marginBottom: '0.5rem' }}>
-                + Add Strategy
+              <button className="secondary" onClick={handleAddGroup} style={{ marginBottom: '0.5rem' }}>
+                + Add Strategy Group
               </button>
 
-              {formData.strategies.length > 0 && (
+              {formData.strategyGroups.length > 0 && (
                 <div>
-                  {formData.strategies.map((strategy, idx) => (
-                    <div key={strategy.id} style={{
+                  {formData.strategyGroups.map((group, idx) => (
+                    <div key={idx} style={{
                       padding: '0.75rem',
-                      background: 'white',
-                      border: '1px solid #e0e0e0',
+                      background: '#1a2a3a',
+                      border: '1px solid #3b5068',
                       borderRadius: '4px',
                       marginBottom: '0.5rem'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <strong>{strategy.id}</strong>
+                          <strong>{group.name || `Group ${idx + 1}`}</strong>
                           <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                            ({strategy.kind}, weight: {strategy.weight})
+                            (priority: {group.priority}, strategies: {group.strategies.length})
                           </span>
-                          {strategy.kind === 'templated' && strategy.template && (
-                            <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
-                              {strategy.template}
+                          {group.conditions && (
+                            <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem' }}>
+                              Conditions: {
+                                [
+                                  group.conditions.tags?.length && `tags: ${group.conditions.tags.join(', ')}`,
+                                  group.conditions.prominence?.length && `prominence: ${group.conditions.prominence.join(', ')}`,
+                                  group.conditions.subtype?.length && `subtype: ${group.conditions.subtype.join(', ')}`
+                                ].filter(Boolean).join(' | ') || 'none'
+                              }
                             </p>
                           )}
                         </div>
@@ -453,14 +712,14 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
                           <button
                             className="secondary"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
-                            onClick={() => { setEditingStrategy(strategy.id); setStrategyForm(strategy); }}
+                            onClick={() => handleEditGroup(idx)}
                           >
                             Edit
                           </button>
                           <button
                             className="danger"
                             style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
-                            onClick={() => handleDeleteStrategy(strategy.id)}
+                            onClick={() => handleDeleteGroup(idx)}
                           >
                             Delete
                           </button>
@@ -473,7 +732,7 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
             </>
           )}
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #3b5068' }}>
             <button className="primary" onClick={handleSaveProfile}>Save Profile</button>
             <button className="secondary" onClick={() => setEditingProfile(null)}>Cancel</button>
           </div>
@@ -483,24 +742,36 @@ function ProfileEditor({ metaDomain, profiles, onProfilesChange, domains, gramma
           {profiles.length === 0 ? (
             <p className="text-muted">No profiles yet. Click "+ New Profile" to create one.</p>
           ) : (
-            profiles.map(profile => (
-              <div key={profile.id} className="list-item">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <strong>{profile.id}</strong>
-                    <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
-                      Type: {profile.type} | Strategies: {profile.strategies.length}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="secondary" onClick={() => { setEditingProfile(profile.id); setFormData(profile); }}>
-                      Edit
-                    </button>
-                    <button className="danger" onClick={() => handleDeleteProfile(profile.id)}>Delete</button>
+            profiles.map(profile => {
+              const groups = getEffectiveGroups(profile);
+              const totalStrategies = groups.reduce((sum, g) => sum + g.strategies.length, 0);
+              return (
+                <div key={profile.id} className="list-item">
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong>{profile.id}</strong>
+                      <p className="text-muted" style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>
+                        Type: {profile.type} | Groups: {groups.length} | Total Strategies: {totalStrategies}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="secondary" onClick={() => {
+                        setEditingProfile(profile.id);
+                        // Convert legacy profiles to use strategyGroups
+                        setFormData({
+                          ...profile,
+                          strategyGroups: getEffectiveGroups(profile),
+                          strategies: undefined  // Clear legacy field
+                        });
+                      }}>
+                        Edit
+                      </button>
+                      <button className="danger" onClick={() => handleDeleteProfile(profile.id)}>Delete</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

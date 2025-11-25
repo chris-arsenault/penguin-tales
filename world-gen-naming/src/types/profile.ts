@@ -70,18 +70,39 @@ export type SlotConfig = z.infer<typeof SlotConfigSchema>;
 export type StrategyKind = "phonotactic" | "templated" | "derivedFromEntity" | "compound";
 
 /**
- * Strategy conditions for conditional activation
- * Strategies with conditions are only used when entity matches
+ * Group conditions for conditional activation
+ * Groups with conditions are only used when entity matches
  */
-export interface StrategyConditions {
-  /** Strategy only used if entity has ANY of these tags (or ALL if requireAllTags) */
+export interface GroupConditions {
+  /** Group only used if entity has ANY of these tags (or ALL if requireAllTags) */
   tags?: string[];
   /** If true, require ALL tags instead of ANY */
   requireAllTags?: boolean;
-  /** Strategy only used if entity has one of these prominence levels */
+  /** Group only used if entity has one of these prominence levels */
   prominence?: Prominence[];
-  /** Strategy only used if entity subtype matches */
+  /** Group only used if entity subtype matches */
   subtype?: string[];
+}
+
+/** @deprecated Use GroupConditions instead - kept for backward compatibility */
+export type StrategyConditions = GroupConditions;
+
+/**
+ * Strategy Group - contains strategies with shared conditions
+ * Selection algorithm:
+ * 1. Find all groups whose conditions match the entity
+ * 2. Select the group with highest priority
+ * 3. Use weighted random selection within that group's strategies
+ */
+export interface StrategyGroup {
+  /** Optional name for display purposes */
+  name?: string;
+  /** Higher priority groups are checked first (default: 0) */
+  priority: number;
+  /** Conditions that must match for this group to be considered (null = always matches) */
+  conditions: GroupConditions | null;
+  /** Strategies in this group with relative weights */
+  strategies: NamingStrategy[];
 }
 
 /**
@@ -91,8 +112,8 @@ export interface NamingStrategyBase {
   id: string;
   kind: StrategyKind;
   weight: number;
-  /** Optional conditions for conditional strategy activation */
-  conditions?: StrategyConditions;
+  /** @deprecated Conditions should be on StrategyGroup, not individual strategies */
+  conditions?: GroupConditions;
 }
 
 /**
@@ -147,14 +168,38 @@ export type NamingStrategy =
 /**
  * Naming Profile
  * Defines how to generate names for a specific culture + entity type
+ *
+ * Uses strategyGroups for priority-based conditional selection:
+ * - Groups are ordered by priority (highest first)
+ * - First matching group's strategies are used
+ * - Within a group, weighted random selection
  */
 export interface NamingProfile {
   id: string; // e.g., "dwarf_mountain:person", "elf_high:battle"
   cultureId: string; // Culture/domain identifier
   type: string; // Entity type: "person", "battle", "spell", "location", etc.
   appliesTo?: AppliesTo; // Optional matching criteria (kind, subKind, tags)
-  strategies: NamingStrategy[];
+
+  /** Strategy groups with priority-based selection (preferred) */
+  strategyGroups?: StrategyGroup[];
+
+  /** @deprecated Use strategyGroups instead - kept for backward compatibility */
+  strategies?: NamingStrategy[];
 }
+
+export const GroupConditionsSchema = z.object({
+  tags: z.array(z.string()).optional(),
+  requireAllTags: z.boolean().optional(),
+  prominence: z.array(z.string()).optional(),
+  subtype: z.array(z.string()).optional(),
+});
+
+export const StrategyGroupSchema = z.object({
+  name: z.string().optional(),
+  priority: z.number().default(0),
+  conditions: GroupConditionsSchema.nullable(),
+  strategies: z.array(z.any()), // Will refine with discriminated union later
+});
 
 export const NamingProfileSchema = z.object({
   id: z.string(),
@@ -167,7 +212,8 @@ export const NamingProfileSchema = z.object({
       tags: z.array(z.string()).optional(),
     })
     .optional(),
-  strategies: z.array(z.any()), // Will refine with discriminated union later
+  strategyGroups: z.array(StrategyGroupSchema).optional(),
+  strategies: z.array(z.any()).optional(), // Legacy - deprecated
 });
 
 /**
