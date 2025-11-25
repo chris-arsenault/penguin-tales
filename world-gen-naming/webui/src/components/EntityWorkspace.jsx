@@ -2,6 +2,278 @@ import { useState, useEffect, useRef } from 'react';
 
 const API_URL = 'http://localhost:3001';
 
+// ============================================
+// Accordion Component - Collapsible sections
+// ============================================
+function Accordion({ title, badge, badgeColor, defaultOpen = false, children, headerRight }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div style={{
+      borderRadius: '6px',
+      overflow: 'hidden',
+      marginBottom: '0.5rem'
+    }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.75rem 1rem',
+          background: 'rgba(30, 58, 95, 0.4)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: isOpen ? '6px 6px 0 0' : '6px',
+          cursor: 'pointer',
+          color: 'var(--text-color)',
+          textAlign: 'left',
+          fontSize: '0.95rem',
+          fontWeight: 500
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{
+            display: 'inline-block',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+            fontSize: '0.75rem'
+          }}>▶</span>
+          <span>{title}</span>
+          {badge && (
+            <span style={{
+              background: badgeColor || 'rgba(212, 175, 55, 0.3)',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '10px',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              color: 'var(--gold-accent)'
+            }}>{badge}</span>
+          )}
+        </div>
+        {headerRight}
+      </button>
+      {isOpen && (
+        <div style={{
+          padding: '1rem',
+          background: 'rgba(20, 45, 75, 0.3)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderTop: 'none',
+          borderRadius: '0 0 6px 6px'
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// Modal Component - Generic modal wrapper
+// ============================================
+function Modal({ isOpen, onClose, title, children, width = '500px' }) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#1a2a3a',
+          border: '1px solid #3b5068',
+          borderRadius: '8px',
+          width,
+          maxWidth: '90vw',
+          maxHeight: '85vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1rem 1.25rem',
+          borderBottom: '1px solid #3b5068',
+          background: '#1e3a5f'
+        }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{title}</h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-color)',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              lineHeight: 1
+            }}
+          >×</button>
+        </div>
+        <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, background: '#1a2a3a' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// ConditionsModal - Edit strategy conditions
+// ============================================
+function ConditionsModal({ isOpen, onClose, conditions, onChange }) {
+  const [localConditions, setLocalConditions] = useState(conditions || {});
+
+  useEffect(() => {
+    setLocalConditions(conditions || {});
+  }, [conditions, isOpen]);
+
+  const handleSave = () => {
+    // Clean up empty values
+    const cleaned = {};
+    if (localConditions.tags?.length > 0) cleaned.tags = localConditions.tags;
+    if (localConditions.requireAllTags) cleaned.requireAllTags = true;
+    if (localConditions.prominence?.length > 0) cleaned.prominence = localConditions.prominence;
+    if (localConditions.subtype?.length > 0) cleaned.subtype = localConditions.subtype;
+
+    onChange(Object.keys(cleaned).length > 0 ? cleaned : undefined);
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Strategy Conditions" width="480px">
+      <p className="text-muted" style={{ marginTop: 0, fontSize: '0.9rem' }}>
+        Define when this strategy should be used. Leave empty for unconditional use.
+      </p>
+
+      {/* Tags */}
+      <div className="form-group">
+        <label>Entity Tags</label>
+        <input
+          value={(localConditions.tags || []).join(', ')}
+          onChange={(e) => {
+            const tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+            setLocalConditions({ ...localConditions, tags: tags.length > 0 ? tags : undefined });
+          }}
+          placeholder="e.g., royal, noble, legendary"
+        />
+        <small className="text-muted">Comma-separated list of tags to match</small>
+        <div style={{ marginTop: '0.5rem' }}>
+          <label style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={localConditions.requireAllTags || false}
+              onChange={(e) => setLocalConditions({
+                ...localConditions,
+                requireAllTags: e.target.checked || undefined
+              })}
+            />
+            Require ALL tags (default: match any tag)
+          </label>
+        </div>
+      </div>
+
+      {/* Prominence */}
+      <div className="form-group">
+        <label>Prominence Levels</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+          {['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'].map(level => {
+            const isSelected = (localConditions.prominence || []).includes(level);
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => {
+                  const current = localConditions.prominence || [];
+                  const updated = isSelected
+                    ? current.filter(l => l !== level)
+                    : [...current, level];
+                  setLocalConditions({
+                    ...localConditions,
+                    prominence: updated.length > 0 ? updated : undefined
+                  });
+                }}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.85rem',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: isSelected ? 'var(--gold-accent)' : 'var(--border-color)',
+                  background: isSelected ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+                  color: isSelected ? 'var(--gold-accent)' : 'var(--text-color)',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize'
+                }}
+              >
+                {level}
+              </button>
+            );
+          })}
+        </div>
+        <small className="text-muted" style={{ marginTop: '0.5rem', display: 'block' }}>
+          Only use this strategy for entities with selected prominence levels
+        </small>
+      </div>
+
+      {/* Subtype */}
+      <div className="form-group">
+        <label>Entity Subtypes</label>
+        <input
+          value={(localConditions.subtype || []).join(', ')}
+          onChange={(e) => {
+            const subtypes = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+            setLocalConditions({ ...localConditions, subtype: subtypes.length > 0 ? subtypes : undefined });
+          }}
+          placeholder="e.g., merchant, artisan, warrior"
+        />
+        <small className="text-muted">Comma-separated list of subtypes to match</small>
+      </div>
+
+      {/* Summary */}
+      {(localConditions.tags?.length > 0 || localConditions.prominence?.length > 0 || localConditions.subtype?.length > 0) && (
+        <div style={{
+          background: 'rgba(212, 175, 55, 0.1)',
+          border: '1px solid rgba(212, 175, 55, 0.3)',
+          borderRadius: '6px',
+          padding: '0.75rem',
+          marginTop: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          <strong style={{ color: 'var(--gold-accent)' }}>Preview:</strong> This strategy will be used when entity has{' '}
+          {[
+            localConditions.tags?.length > 0 && `${localConditions.requireAllTags ? 'ALL' : 'any'} tags: ${localConditions.tags.join(', ')}`,
+            localConditions.prominence?.length > 0 && `prominence: ${localConditions.prominence.join(' or ')}`,
+            localConditions.subtype?.length > 0 && `subtype: ${localConditions.subtype.join(' or ')}`
+          ].filter(Boolean).join(' AND ')}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+        <button className="secondary" onClick={onClose}>Cancel</button>
+        <button className="primary" onClick={handleSave}>Save Conditions</button>
+      </div>
+    </Modal>
+  );
+}
+
 function EntityWorkspace({
   metaDomain,
   worldSchema,
@@ -351,7 +623,7 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
   const [optimizerSettings, setOptimizerSettings] = useState({
     algorithm: 'hillclimb',
     iterations: 50,
-    fitnessWeights: { capacity: 0.4, diffuseness: 0.3, separation: 0.3 },
+    fitnessWeights: { capacity: 0.2, diffuseness: 0.2, separation: 0.2, pronounceability: 0.3, length: 0.1, style: 0.0 },
     validationSettings: { requiredNames: 500, sampleFactor: 10 }
   });
 
@@ -599,9 +871,44 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
       // Show batch results
       setOptimizerResult({ batchResults: results });
 
-      // Note: Updating all cultures would require parent callback
-      // For now, just show results - user can manually update each
-      console.log('Batch optimization complete:', results);
+      // Save optimized configs for each culture
+      const resultsByCulture = {};
+      for (const result of results) {
+        if (!resultsByCulture[result.sourceCulture]) {
+          resultsByCulture[result.sourceCulture] = [];
+        }
+        resultsByCulture[result.sourceCulture].push(result);
+      }
+
+      // Update each culture's domains
+      for (const [cultId, cultResults] of Object.entries(resultsByCulture)) {
+        // Get current domains for this culture
+        const cultConfig = allCultures?.[cultId];
+        if (!cultConfig?.domains) continue;
+
+        // Replace optimized domains
+        const updatedDomains = cultConfig.domains.map(domain => {
+          const optimized = cultResults.find(r => r.domainId === domain.id);
+          return optimized ? optimized.optimizedConfig : domain;
+        });
+
+        // Save via API
+        try {
+          await fetch(
+            `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultId}/domains`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ domains: updatedDomains })
+            }
+          );
+          console.log(`Saved optimized domains for culture: ${cultId}`);
+        } catch (saveError) {
+          console.error(`Failed to save domains for culture ${cultId}:`, saveError);
+        }
+      }
+
+      console.log('Batch optimization complete and saved:', results);
 
     } catch (error) {
       console.error('Batch optimization error:', error);
@@ -660,8 +967,24 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
                 <input type="number" value={optimizerSettings.validationSettings.requiredNames} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, validationSettings: { ...optimizerSettings.validationSettings, requiredNames: parseInt(e.target.value) || 500 } })} min="100" max="5000" style={{ fontSize: '0.8rem' }} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '0.7rem' }}>Separation Weight</label>
-                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.separation} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, separation: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} disabled={allDomains.length <= 1} title={allDomains.length <= 1 ? 'No sibling domains to compare' : 'Weight for cross-domain distinctiveness'} />
+                <label style={{ fontSize: '0.7rem' }}>Capacity</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.capacity} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, capacity: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Entropy / collision rate" />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Diffuseness</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.diffuseness} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, diffuseness: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Intra-domain variation" />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Separation</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.separation} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, separation: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} disabled={allDomains.length <= 1} title={allDomains.length <= 1 ? 'No sibling domains to compare' : 'Inter-domain distinctiveness'} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Pronounce</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.pronounceability} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, pronounceability: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Phonetic naturalness" />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Length</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.length} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, length: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} title="Target length adherence" />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -3831,6 +4154,9 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
   const [testLoading, setTestLoading] = useState(false);
   const [testError, setTestError] = useState(null);
   const [strategyUsage, setStrategyUsage] = useState(null);
+  // Modal state for conditions editing
+  const [conditionsModalOpen, setConditionsModalOpen] = useState(false);
+  const [editingConditionsIdx, setEditingConditionsIdx] = useState(null);
 
   const profile = entityConfig?.profile;
 
@@ -4196,172 +4522,105 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
                 </div>
               )}
 
-              {/* Conditions Section */}
+              {/* Conditions Section - Compact with Modal */}
               <div style={{
                 marginTop: '0.75rem',
                 paddingTop: '0.75rem',
-                borderTop: '1px solid rgba(255,255,255,0.1)'
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                flexWrap: 'wrap'
               }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '0.5rem'
-                }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
-                    Conditions
-                    <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
-                      (optional - when to use this strategy)
-                    </span>
-                  </label>
-                  {!strategy.conditions && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                      onClick={() => {
-                        const strategies = [...editedProfile.strategies];
-                        strategies[idx] = { ...strategies[idx], conditions: {} };
-                        setEditedProfile({ ...editedProfile, strategies });
-                      }}
-                    >
-                      + Add Conditions
-                    </button>
-                  )}
-                  {strategy.conditions && (
-                    <button
-                      type="button"
-                      className="danger"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                      onClick={() => {
-                        const strategies = [...editedProfile.strategies];
-                        const { conditions, ...rest } = strategies[idx];
-                        strategies[idx] = rest;
-                        setEditedProfile({ ...editedProfile, strategies });
-                      }}
-                    >
-                      Remove Conditions
-                    </button>
-                  )}
-                </div>
-
-                {strategy.conditions && (
-                  <div style={{
-                    background: 'rgba(0,0,0,0.2)',
-                    borderRadius: '4px',
-                    padding: '0.75rem',
-                    display: 'grid',
-                    gap: '0.75rem'
-                  }}>
-                    {/* Tags */}
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>
-                        Tags
-                        <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
-                          (comma-separated, e.g., "royal, noble")
+                <span style={{ fontSize: '0.8rem', color: 'var(--arctic-frost)' }}>Conditions:</span>
+                {!strategy.conditions ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                    onClick={() => {
+                      setEditingConditionsIdx(idx);
+                      setConditionsModalOpen(true);
+                    }}
+                  >
+                    + Add Conditions
+                  </button>
+                ) : (
+                  <>
+                    {/* Show compact summary of conditions */}
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', flex: 1 }}>
+                      {strategy.conditions.tags?.length > 0 && (
+                        <span style={{
+                          background: 'rgba(59, 130, 246, 0.3)',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.requireAllTags ? 'ALL' : 'any'}: {strategy.conditions.tags.join(', ')}
                         </span>
-                      </label>
-                      <input
-                        value={(strategy.conditions.tags || []).join(', ')}
-                        onChange={(e) => {
-                          const tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+                      )}
+                      {strategy.conditions.prominence?.length > 0 && (
+                        <span style={{
+                          background: 'rgba(147, 51, 234, 0.3)',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.prominence.join(', ')}
+                        </span>
+                      )}
+                      {strategy.conditions.subtype?.length > 0 && (
+                        <span style={{
+                          background: 'rgba(34, 197, 94, 0.3)',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.subtype.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button
+                        type="button"
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '0.2rem 0.4rem',
+                          background: 'transparent',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          color: 'var(--text-color)'
+                        }}
+                        onClick={() => {
+                          setEditingConditionsIdx(idx);
+                          setConditionsModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '0.2rem 0.4rem',
+                          background: 'transparent',
+                          border: '1px solid rgba(239, 68, 68, 0.5)',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          color: 'rgba(239, 68, 68, 0.8)'
+                        }}
+                        onClick={() => {
                           const strategies = [...editedProfile.strategies];
-                          strategies[idx] = {
-                            ...strategies[idx],
-                            conditions: { ...strategies[idx].conditions, tags: tags.length > 0 ? tags : undefined }
-                          };
+                          const { conditions, ...rest } = strategies[idx];
+                          strategies[idx] = rest;
                           setEditedProfile({ ...editedProfile, strategies });
                         }}
-                        placeholder="e.g., royal, noble, legendary"
-                        style={{ fontSize: '0.875rem' }}
-                      />
-                      <div style={{ marginTop: '0.25rem' }}>
-                        <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <input
-                            type="checkbox"
-                            checked={strategy.conditions.requireAllTags || false}
-                            onChange={(e) => {
-                              const strategies = [...editedProfile.strategies];
-                              strategies[idx] = {
-                                ...strategies[idx],
-                                conditions: { ...strategies[idx].conditions, requireAllTags: e.target.checked || undefined }
-                              };
-                              setEditedProfile({ ...editedProfile, strategies });
-                            }}
-                          />
-                          Require ALL tags (default: any tag matches)
-                        </label>
-                      </div>
+                      >
+                        ×
+                      </button>
                     </div>
-
-                    {/* Prominence */}
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>Prominence Levels</label>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        {['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'].map(level => {
-                          const isSelected = (strategy.conditions.prominence || []).includes(level);
-                          return (
-                            <button
-                              key={level}
-                              type="button"
-                              onClick={() => {
-                                const strategies = [...editedProfile.strategies];
-                                const currentLevels = strategies[idx].conditions.prominence || [];
-                                const newLevels = isSelected
-                                  ? currentLevels.filter(l => l !== level)
-                                  : [...currentLevels, level];
-                                strategies[idx] = {
-                                  ...strategies[idx],
-                                  conditions: {
-                                    ...strategies[idx].conditions,
-                                    prominence: newLevels.length > 0 ? newLevels : undefined
-                                  }
-                                };
-                                setEditedProfile({ ...editedProfile, strategies });
-                              }}
-                              style={{
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.75rem',
-                                borderRadius: '4px',
-                                border: '1px solid',
-                                borderColor: isSelected ? 'var(--gold-accent)' : 'var(--border-color)',
-                                background: isSelected ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
-                                color: isSelected ? 'var(--gold-accent)' : 'var(--text-color)',
-                                cursor: 'pointer',
-                                textTransform: 'capitalize'
-                              }}
-                            >
-                              {level}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Subtype */}
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.8rem' }}>
-                        Subtypes
-                        <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
-                          (comma-separated, e.g., "merchant, artisan")
-                        </span>
-                      </label>
-                      <input
-                        value={(strategy.conditions.subtype || []).join(', ')}
-                        onChange={(e) => {
-                          const subtypes = e.target.value.split(',').map(t => t.trim()).filter(t => t);
-                          const strategies = [...editedProfile.strategies];
-                          strategies[idx] = {
-                            ...strategies[idx],
-                            conditions: { ...strategies[idx].conditions, subtype: subtypes.length > 0 ? subtypes : undefined }
-                          };
-                          setEditedProfile({ ...editedProfile, strategies });
-                        }}
-                        placeholder="e.g., merchant, artisan, warrior"
-                        style={{ fontSize: '0.875rem' }}
-                      />
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -4400,155 +4659,174 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
         </div>
       )}
 
-      {/* View mode */}
+      {/* View mode - 2 column layout */}
       {!editing && profile && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h4>Current Profile: <code>{profile.id}</code></h4>
+        <div style={{
+          marginTop: '1.5rem',
+          display: 'grid',
+          gridTemplateColumns: '1fr 300px',
+          gap: '1.5rem',
+          alignItems: 'start'
+        }}>
+          {/* Left column - Profile strategies */}
+          <div>
+            <h4 style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+              Strategies
+              <code style={{ marginLeft: '0.5rem', fontSize: '0.75rem', fontWeight: 'normal' }}>{profile.id}</code>
+            </h4>
 
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {profile.strategies?.map((strategy, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: getStrategyColor(strategy.type),
-                  border: `1px solid ${getStrategyBorder(strategy.type)}`,
-                  borderRadius: '6px',
-                  padding: '1rem'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ textTransform: 'capitalize' }}>{strategy.type}</strong>
-                  <span style={{
-                    background: 'rgba(0,0,0,0.3)',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '4px',
-                    color: 'var(--gold-accent)',
-                    fontWeight: 'bold'
-                  }}>
-                    {(strategy.weight * 100).toFixed(0)}%
-                  </span>
-                </div>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              {profile.strategies?.map((strategy, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: getStrategyColor(strategy.type),
+                    border: `1px solid ${getStrategyBorder(strategy.type)}`,
+                    borderRadius: '6px',
+                    padding: '0.75rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <strong style={{ textTransform: 'capitalize', fontSize: '0.9rem' }}>{strategy.type}</strong>
+                      <span style={{
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '4px',
+                        color: 'var(--gold-accent)',
+                        fontWeight: 'bold',
+                        fontSize: '0.8rem'
+                      }}>
+                        {(strategy.weight * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)' }}>
+                      {strategy.type === 'phonotactic' && strategy.domainId && <code>{strategy.domainId}</code>}
+                      {strategy.type === 'grammar' && strategy.grammarId && <code>{strategy.grammarId}</code>}
+                      {strategy.type === 'templated' && `${strategy.templateIds?.length || 0} templates`}
+                    </span>
+                  </div>
 
-                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--arctic-frost)' }}>
-                  {strategy.type === 'phonotactic' && strategy.domainId && (
-                    <span>Domain: <code>{strategy.domainId}</code></span>
-                  )}
-                  {strategy.type === 'grammar' && strategy.grammarId && (
-                    <span>Grammar: <code>{strategy.grammarId}</code></span>
-                  )}
-                  {strategy.type === 'templated' && (
-                    <span>Templates: {strategy.templateIds?.length || 0} selected</span>
-                  )}
-                </div>
-
-                {/* Show conditions if present */}
-                {strategy.conditions && (
-                  <div style={{
-                    marginTop: '0.5rem',
-                    padding: '0.5rem',
-                    background: 'rgba(212, 175, 55, 0.1)',
-                    border: '1px solid rgba(212, 175, 55, 0.3)',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem'
-                  }}>
-                    <strong style={{ color: 'var(--gold-accent)' }}>Conditions:</strong>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  {/* Compact conditions display */}
+                  {strategy.conditions && (
+                    <div style={{
+                      marginTop: '0.4rem',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.25rem'
+                    }}>
                       {strategy.conditions.tags?.length > 0 && (
-                        <span style={{ background: 'rgba(59, 130, 246, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
-                          Tags: {strategy.conditions.tags.join(', ')}
-                          {strategy.conditions.requireAllTags && ' (ALL)'}
+                        <span style={{
+                          background: 'rgba(59, 130, 246, 0.3)',
+                          padding: '0.1rem 0.35rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.requireAllTags ? 'ALL' : 'any'}: {strategy.conditions.tags.join(', ')}
                         </span>
                       )}
                       {strategy.conditions.prominence?.length > 0 && (
-                        <span style={{ background: 'rgba(147, 51, 234, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
-                          Prominence: {strategy.conditions.prominence.join(', ')}
+                        <span style={{
+                          background: 'rgba(147, 51, 234, 0.3)',
+                          padding: '0.1rem 0.35rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.prominence.join(', ')}
                         </span>
                       )}
                       {strategy.conditions.subtype?.length > 0 && (
-                        <span style={{ background: 'rgba(34, 197, 94, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
-                          Subtype: {strategy.conditions.subtype.join(', ')}
+                        <span style={{
+                          background: 'rgba(34, 197, 94, 0.3)',
+                          padding: '0.1rem 0.35rem',
+                          borderRadius: '3px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {strategy.conditions.subtype.join(', ')}
                         </span>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Test Names Section */}
-      {!editing && profile && (
-        <div style={{
-          marginTop: '2rem',
-          borderTop: '1px solid var(--border-color)',
-          paddingTop: '1.5rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h4 style={{ margin: 0 }}>Test Name Generation</h4>
-            <button
-              className="primary"
-              onClick={() => handleTestNames(10)}
-              disabled={testLoading}
-            >
-              {testLoading ? 'Generating...' : '🎲 Generate 10 Test Names'}
-            </button>
-          </div>
-
-          {testError && (
-            <div className="error" style={{ marginBottom: '1rem' }}>
-              <strong>Error:</strong> {testError}
-            </div>
-          )}
-
-          {strategyUsage && (
-            <div style={{
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '6px',
-              padding: '0.75rem',
-              marginBottom: '1rem',
-              fontSize: '0.875rem'
-            }}>
-              <strong>Strategy Usage:</strong>{' '}
-              {Object.entries(strategyUsage)
-                .filter(([, count]) => count > 0)
-                .map(([strategy, count]) => `${strategy}: ${count}`)
-                .join(', ')}
-            </div>
-          )}
-
-          {testNames.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: '0.5rem'
-            }}>
-              {testNames.map((name, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: 'rgba(30, 58, 95, 0.4)',
-                    padding: '0.75rem',
-                    borderRadius: '4px',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    fontFamily: 'monospace',
-                    fontSize: '0.95rem',
-                    color: 'var(--gold-accent)'
-                  }}
-                >
-                  {name}
+                  )}
                 </div>
               ))}
             </div>
-          )}
+          </div>
 
-          {testNames.length === 0 && !testLoading && !testError && (
-            <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-              Click the button above to test your naming profile by generating sample names.
-            </p>
-          )}
+          {/* Right column - Test Panel */}
+          <div style={{
+            background: 'rgba(30, 58, 95, 0.3)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '8px',
+            padding: '1rem',
+            position: 'sticky',
+            top: '1rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Test Names</h4>
+              <button
+                className="primary"
+                onClick={() => handleTestNames(10)}
+                disabled={testLoading}
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              >
+                {testLoading ? '...' : 'Generate'}
+              </button>
+            </div>
+
+            {testError && (
+              <div className="error" style={{ marginBottom: '0.75rem', fontSize: '0.8rem', padding: '0.5rem' }}>
+                {testError}
+              </div>
+            )}
+
+            {strategyUsage && (
+              <div style={{
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+                padding: '0.5rem',
+                marginBottom: '0.75rem',
+                fontSize: '0.75rem'
+              }}>
+                {Object.entries(strategyUsage)
+                  .filter(([, count]) => count > 0)
+                  .map(([strategy, count]) => (
+                    <span key={strategy} style={{
+                      display: 'inline-block',
+                      marginRight: '0.5rem',
+                      color: strategy === 'phonotactic' ? 'rgba(96, 165, 250, 1)' :
+                             strategy === 'grammar' ? 'rgba(167, 139, 250, 1)' :
+                             'rgba(74, 222, 128, 1)'
+                    }}>
+                      {strategy}: {count}
+                    </span>
+                  ))}
+              </div>
+            )}
+
+            {testNames.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '400px', overflowY: 'auto' }}>
+                {testNames.map((name, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: 'rgba(20, 45, 75, 0.5)',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '0.9rem',
+                      color: 'var(--gold-accent)'
+                    }}
+                  >
+                    {name}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted" style={{ fontSize: '0.8rem', margin: 0 }}>
+                Click Generate to test your profile
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -4557,6 +4835,30 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
         <div className="info" style={{ marginTop: '1.5rem' }}>
           No profile configured yet. Click "Auto-Generate Profile" above to create one automatically.
         </div>
+      )}
+
+      {/* Conditions Modal */}
+      {editing && editedProfile && (
+        <ConditionsModal
+          isOpen={conditionsModalOpen}
+          onClose={() => {
+            setConditionsModalOpen(false);
+            setEditingConditionsIdx(null);
+          }}
+          conditions={editingConditionsIdx !== null ? editedProfile.strategies[editingConditionsIdx]?.conditions : undefined}
+          onChange={(newConditions) => {
+            if (editingConditionsIdx !== null) {
+              const strategies = [...editedProfile.strategies];
+              if (newConditions) {
+                strategies[editingConditionsIdx] = { ...strategies[editingConditionsIdx], conditions: newConditions };
+              } else {
+                const { conditions, ...rest } = strategies[editingConditionsIdx];
+                strategies[editingConditionsIdx] = rest;
+              }
+              setEditedProfile({ ...editedProfile, strategies });
+            }
+          }}
+        />
       )}
     </div>
   );

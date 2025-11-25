@@ -1,0 +1,13 @@
+{
+  "id": "world:npc",
+  "cultureId": "world",
+  "entityType": "npc",
+  "strategies": [
+    {
+      "id": "world_npc_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "world_domain"
+    }
+  ]
+}
