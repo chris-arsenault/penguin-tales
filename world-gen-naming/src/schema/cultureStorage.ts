@@ -133,6 +133,14 @@ export function loadCulture(
   // Initialize culture with empty configs
   const culture = createEmptyCulture(cultureId, schema);
 
+  // Load culture-level domains
+  const domainsPath = join(culturePath, 'domains.json');
+  if (existsSync(domainsPath)) {
+    const domainsData = JSON.parse(readFileSync(domainsPath, 'utf-8'));
+    culture.domains = domainsData.domains || [];
+    console.log(`  📂 Loaded ${culture.domains.length} domains for culture '${cultureId}'`);
+  }
+
   // Load entity configs
   const entityDirs = readdirSync(culturePath, { withFileTypes: true });
 
@@ -170,19 +178,12 @@ export function loadEntityConfig(
     grammars: [],
     templates: [],
     completionStatus: {
-      domain: false,
       lexemes: 0,
       templates: false,
+      grammars: false,
       profile: false,
     },
   };
-
-  // Load domain
-  const domainPath = join(entityPath, 'domain.json');
-  if (existsSync(domainPath)) {
-    config.domain = JSON.parse(readFileSync(domainPath, 'utf-8'));
-    config.completionStatus.domain = true;
-  }
 
   // Load lexemes
   const lexemesPath = join(entityPath, 'lexemes.json');
@@ -207,6 +208,7 @@ export function loadEntityConfig(
   if (existsSync(grammarsPath)) {
     const grammarData = JSON.parse(readFileSync(grammarsPath, 'utf-8'));
     config.grammars = grammarData.grammars || [];
+    config.completionStatus.grammars = config.grammars.length > 0;
     console.log(`  📂 Loaded grammars from ${grammarsPath}: ${config.grammars.length} grammars`);
   }
 
@@ -247,6 +249,16 @@ export function saveCulture(metaDomain: string, culture: CultureConfig): void {
   const culturePath = getCulturePath(metaDomain, culture.id);
   ensureDir(culturePath);
 
+  // Save culture-level domains
+  if (culture.domains && culture.domains.length > 0) {
+    const domainsPath = join(culturePath, 'domains.json');
+    writeFileSync(
+      domainsPath,
+      JSON.stringify({ domains: culture.domains }, null, 2)
+    );
+    console.log(`  📂 Saved ${culture.domains.length} domains to ${domainsPath}`);
+  }
+
   // Save each entity config
   for (const entityKind in culture.entityConfigs) {
     saveEntityConfig(metaDomain, culture.id, culture.entityConfigs[entityKind]);
@@ -265,12 +277,6 @@ export function saveEntityConfig(
 ): void {
   const entityPath = getEntityPath(metaDomain, cultureId, config.kind);
   ensureDir(entityPath);
-
-  // Save domain
-  if (config.domain) {
-    const domainPath = join(entityPath, 'domain.json');
-    writeFileSync(domainPath, JSON.stringify(config.domain, null, 2));
-  }
 
   // Save lexemes
   if (config.lexemeLists && Object.keys(config.lexemeLists).length > 0) {
@@ -479,9 +485,9 @@ export function migrateOldStructure(metaDomain: string): void {
         grammars: [],
         templates: [],
         completionStatus: {
-          domain: false,
           lexemes: 0,
           templates: false,
+          grammars: false,
           profile: false,
         },
       };
@@ -491,12 +497,11 @@ export function migrateOldStructure(metaDomain: string): void {
     culture.entityConfigs[entityKind].completionStatus.profile = true;
   }
 
-  // Process domains (match by ID pattern or just put in default)
+  // Process domains - add to culture-level domains array
   for (const domain of domains) {
-    // Try to extract culture from domain ID (e.g., "elven_npc_domain" -> culture: "elven", entity: "npc")
+    // Try to extract culture from domain ID (e.g., "elven_npc_domain" -> culture: "elven")
     const parts = domain.id.split('_');
     const cultureId = parts.length > 1 ? parts[0] : 'default';
-    const entityKind = parts.length > 2 ? parts[1] : 'npc';
 
     if (!cultureMap.has(cultureId)) {
       cultureMap.set(cultureId, createEmptyCulture(cultureId, worldSchema));
@@ -504,23 +509,10 @@ export function migrateOldStructure(metaDomain: string): void {
 
     const culture = cultureMap.get(cultureId)!;
 
-    if (!culture.entityConfigs[entityKind]) {
-      culture.entityConfigs[entityKind] = {
-        kind: entityKind,
-        lexemeLists: {},
-        grammars: [],
-        templates: [],
-        completionStatus: {
-          domain: false,
-          lexemes: 0,
-          templates: false,
-          profile: false,
-        },
-      };
+    // Add domain to culture-level domains array (avoid duplicates)
+    if (!culture.domains.find((d: any) => d.id === domain.id)) {
+      culture.domains.push(domain);
     }
-
-    culture.entityConfigs[entityKind].domain = domain;
-    culture.entityConfigs[entityKind].completionStatus.domain = true;
   }
 
   // Process grammars and lexemes similarly
@@ -542,15 +534,16 @@ export function migrateOldStructure(metaDomain: string): void {
         grammars: [],
         templates: [],
         completionStatus: {
-          domain: false,
           lexemes: 0,
           templates: false,
+          grammars: false,
           profile: false,
         },
       };
     }
 
     culture.entityConfigs[entityKind].grammars.push(grammar);
+    culture.entityConfigs[entityKind].completionStatus.grammars = true;
   }
 
   for (const lexeme of lexemes) {
@@ -571,9 +564,9 @@ export function migrateOldStructure(metaDomain: string): void {
         grammars: [],
         templates: [],
         completionStatus: {
-          domain: false,
           lexemes: 0,
           templates: false,
+          grammars: false,
           profile: false,
         },
       };

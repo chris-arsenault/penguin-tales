@@ -36,7 +36,6 @@ export interface WorldSchema {
  */
 export interface EntityConfig {
   kind: string;  // npc, location, faction, rules, abilities
-  domain?: any;  // PhonoDomain
   lexemeLists: {
     adjectives?: any;
     nouns?: any;
@@ -48,9 +47,9 @@ export interface EntityConfig {
   templates: any[];
   profile?: any;
   completionStatus: {
-    domain: boolean;
     lexemes: number;  // count of lexeme lists
     templates: boolean;
+    grammars: boolean;
     profile: boolean;
   };
 }
@@ -59,6 +58,7 @@ export interface CultureConfig {
   id: string;
   name: string;
   description?: string;
+  domains: any[];  // Array of phonological domains for this culture
   entityConfigs: {
     [entityKind: string]: EntityConfig;
   };
@@ -166,9 +166,9 @@ export function createEmptyCulture(
       grammars: [],
       templates: [],
       completionStatus: {
-        domain: false,
         lexemes: 0,
         templates: false,
+        grammars: false,
         profile: false,
       },
     };
@@ -177,6 +177,7 @@ export function createEmptyCulture(
   return {
     id: cultureId,
     name: cultureId,
+    domains: [],  // Culture-level domains
     entityConfigs,
   };
 }
@@ -191,15 +192,22 @@ export function calculateCultureCompletion(culture: CultureConfig): number {
   let totalSteps = 0;
   let completedSteps = 0;
 
+  // Culture-level: domains (1 step)
+  totalSteps += 1;
+  if (culture.domains && culture.domains.length > 0) {
+    completedSteps += 1;
+  }
+
+  // Per-entity: lexemes, grammars, templates, profile
   for (const kind of entityKinds) {
     const config = culture.entityConfigs[kind];
     const status = config.completionStatus;
 
-    // 4 steps per entity: domain, lexemes, templates, profile
+    // 4 steps per entity: lexemes, grammars, templates, profile
     totalSteps += 4;
 
-    if (status.domain) completedSteps += 1;
     if (status.lexemes > 0) completedSteps += Math.min(status.lexemes / 4, 1);
+    if (status.grammars) completedSteps += 1;
     if (status.templates) completedSteps += 1;
     if (status.profile) completedSteps += 1;
   }
@@ -215,13 +223,13 @@ export function calculateEntityCompletion(config: EntityConfig): {
   completed: number;
   percentage: number;
 } {
-  let total = 4; // domain, lexemes, templates, profile
+  let total = 4; // lexemes, grammars, templates, profile
   let completed = 0;
 
-  if (config.completionStatus.domain) completed++;
   if (config.completionStatus.lexemes > 0) {
     completed += Math.min(config.completionStatus.lexemes / 4, 1);
   }
+  if (config.completionStatus.grammars) completed++;
   if (config.completionStatus.templates) completed++;
   if (config.completionStatus.profile) completed++;
 
@@ -234,11 +242,13 @@ export function calculateEntityCompletion(config: EntityConfig): {
 
 /**
  * Auto-generate profile from entity config components
+ * @param cultureDomains - Array of domains from culture.domains
  */
 export function autoGenerateProfile(
   cultureId: string,
   entityKind: string,
-  config: EntityConfig
+  config: EntityConfig,
+  cultureDomains: any[] = []
 ): any {
   const strategies: any[] = [];
   let totalWeight = 0;
@@ -266,13 +276,15 @@ export function autoGenerateProfile(
     totalWeight += 0.3;
   }
 
-  // Add phonotactic strategy if domain exists
-  if (config.domain) {
+  // Add phonotactic strategy if culture has domains
+  if (cultureDomains && cultureDomains.length > 0) {
+    // Use first culture domain for phonotactic generation
+    // (profile executor expects domainId singular, not array)
     strategies.push({
       id: `${cultureId}_${entityKind}_phonotactic`,
       type: 'phonotactic',
       weight: 0.2,
-      domainId: config.domain.id,
+      domainId: cultureDomains[0].id,  // First domain ID
     });
     totalWeight += 0.2;
   }

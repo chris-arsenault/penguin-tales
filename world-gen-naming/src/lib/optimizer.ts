@@ -18,6 +18,7 @@ import { DEFAULT_BOUNDS } from "../types/optimization.js";
 
 /**
  * Run optimization on a domain config
+ * @param siblingDomains - Other domains to compare against for separation metric
  */
 export async function optimizeDomain(
   initialDomain: NamingDomain,
@@ -25,7 +26,8 @@ export async function optimizeDomain(
   fitnessWeights: FitnessWeights,
   optimizationSettings: OptimizationSettings,
   bounds: ParameterBounds = DEFAULT_BOUNDS,
-  seed?: string
+  seed?: string,
+  siblingDomains: NamingDomain[] = []
 ): Promise<OptimizationResult> {
   const algorithm = optimizationSettings.algorithm;
   const optimizationSeed = seed ?? `optimize-${initialDomain.id}`;
@@ -34,6 +36,9 @@ export async function optimizeDomain(
   console.log(`Algorithm: ${algorithm}`);
   console.log(`Iterations: ${optimizationSettings.iterations}`);
   console.log(`Fitness weights: capacity=${fitnessWeights.capacity}, diffuseness=${fitnessWeights.diffuseness}, separation=${fitnessWeights.separation}`);
+  if (siblingDomains.length > 0) {
+    console.log(`Sibling domains for separation: ${siblingDomains.map(d => d.id).join(', ')}`);
+  }
   console.log("");
 
   switch (algorithm) {
@@ -44,7 +49,8 @@ export async function optimizeDomain(
         fitnessWeights,
         optimizationSettings,
         bounds,
-        optimizationSeed
+        optimizationSeed,
+        siblingDomains
       );
 
     case "sim_anneal":
@@ -54,7 +60,8 @@ export async function optimizeDomain(
         fitnessWeights,
         optimizationSettings,
         bounds,
-        optimizationSeed
+        optimizationSeed,
+        siblingDomains
       );
 
     case "cma-es":

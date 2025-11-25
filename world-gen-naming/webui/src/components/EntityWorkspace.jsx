@@ -103,7 +103,10 @@ function EntityWorkspace({
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ config: entityConfig })
+          body: JSON.stringify({
+            config: entityConfig,
+            cultureDomains: cultureConfig?.domains || []  // Pass culture-level domains
+          })
         }
       );
 
@@ -132,24 +135,16 @@ function EntityWorkspace({
     }
   };
 
-  // Check if any domain in this culture applies to current entity type
-  const hasSharedDomain = () => {
-    if (!cultureConfig?.entityConfigs || !entityKind) return false;
-    for (const [kind, config] of Object.entries(cultureConfig.entityConfigs)) {
-      if (config?.domain && kind !== entityKind) {
-        const appliesTo = config.domain.appliesTo?.kind || [];
-        if (appliesTo.includes(entityKind)) return true;
-      }
-    }
-    return false;
+  // Check if culture has any domains (domains are now culture-level)
+  const hasCultureDomains = () => {
+    return (cultureConfig?.domains?.length || 0) > 0;
   };
 
   const getCompletionBadge = (key) => {
     // Compute status directly from data rather than stored completionStatus
     if (key === 'domain') {
-      if (entityConfig?.domain) return '✅';
-      if (hasSharedDomain()) return '🔗';
-      return '⭕';
+      // Domains are now at culture level
+      return hasCultureDomains() ? `✅ (${cultureConfig.domains.length})` : '⭕';
     } else if (key === 'lexemes') {
       const count = Object.keys(entityConfig?.lexemeLists || {}).length;
       return count > 0 ? `✅ (${count})` : '⭕';
@@ -281,6 +276,7 @@ function EntityWorkspace({
             onConfigChange={onConfigChange}
             worldSchema={worldSchema}
             cultureConfig={cultureConfig}
+            allCultures={allCultures}
           />
         )}
 
@@ -339,53 +335,48 @@ function EntityWorkspace({
 }
 
 // Domain Tab Component
-function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldSchema, cultureConfig }) {
+function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldSchema, cultureConfig, allCultures }) {
   const [editing, setEditing] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(-1); // -1 = new domain, >= 0 = editing existing
   const [expandedSections, setExpandedSections] = useState({
     phonology: true,
     morphology: false,
     style: false
   });
 
-  // Get all entity kinds from schema
-  const entityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
+  // Optimizer state
+  const [showOptimizer, setShowOptimizer] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizerResult, setOptimizerResult] = useState(null);
+  const [optimizerSettings, setOptimizerSettings] = useState({
+    algorithm: 'hillclimb',
+    iterations: 50,
+    fitnessWeights: { capacity: 0.4, diffuseness: 0.3, separation: 0.3 },
+    validationSettings: { requiredNames: 500, sampleFactor: 10 }
+  });
 
-  // Find existing domains in this culture (from other entity configs)
-  // Also find if any domain already applies to this entity type
-  const existingDomains = [];
-  let applicableDomain = null;
-  let applicableDomainSource = null;
+  // Culture-level domains (new structure)
+  const cultureDomains = cultureConfig?.domains || [];
 
-  if (cultureConfig?.entityConfigs) {
-    Object.entries(cultureConfig.entityConfigs).forEach(([kind, config]) => {
-      if (config?.domain) {
-        const domain = config.domain;
-        const appliesTo = domain.appliesTo?.kind || [];
-
-        // Check if this domain applies to our current entity type
-        if (appliesTo.includes(entityKind) && kind !== entityKind) {
-          applicableDomain = domain;
-          applicableDomainSource = kind;
-        }
-
-        // Add to existing domains list (for copy option)
-        if (kind !== entityKind) {
-          existingDomains.push({
+  // Collect ALL domains from ALL cultures for cross-domain separation
+  const allDomains = [];
+  if (allCultures) {
+    Object.entries(allCultures).forEach(([cultId, cultConfig]) => {
+      // Domains are now at culture level, not entity level
+      if (cultConfig?.domains) {
+        cultConfig.domains.forEach((domain) => {
+          allDomains.push({
             ...domain,
-            sourceEntity: kind
+            sourceCulture: cultId
           });
-        }
+        });
       }
     });
   }
 
-  // Use applicable domain from another entity if current entity has none
-  const effectiveDomain = entityConfig?.domain || applicableDomain;
-
   const defaultDomain = {
-    id: `${cultureId}_domain`,
+    id: `${cultureId}_domain_${cultureDomains.length + 1}`,
     cultureId: cultureId,
-    appliesTo: { kind: [entityKind], subKind: [], tags: [] },
     phonology: {
       consonants: [], vowels: [], syllableTemplates: ['CV', 'CVC'], lengthRange: [2, 4],
       favoredClusters: [], forbiddenClusters: [], favoredClusterBoost: 1.0
@@ -397,148 +388,423 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
     }
   };
 
-  const [formData, setFormData] = useState(entityConfig?.domain || defaultDomain);
+  const [formData, setFormData] = useState(defaultDomain);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({...prev, [section]: !prev[section]}));
   };
 
-  const handleSave = () => {
-    const updatedConfig = {
-      ...entityConfig,
-      domain: formData,
-      completionStatus: {
-        ...entityConfig?.completionStatus,
-        domain: true
+  // Save domain to culture-level domains array
+  const handleSave = async () => {
+    let newDomains;
+    if (editingIndex >= 0) {
+      // Update existing domain
+      newDomains = [...cultureDomains];
+      newDomains[editingIndex] = formData;
+    } else {
+      // Add new domain
+      newDomains = [...cultureDomains, formData];
+    }
+
+    // Save via API
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultureId}/domains`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domains: newDomains })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save domains');
       }
-    };
-    onConfigChange(updatedConfig);
-    setEditing(false);
+
+      // Update local state via parent callback
+      // Note: Parent needs to reload culture to get updated domains
+      if (onConfigChange && cultureConfig) {
+        // Trigger a refresh - this is a bit hacky, parent should handle domain updates
+        console.log(`✅ Saved ${newDomains.length} domains for culture '${cultureId}'`);
+      }
+
+      setEditing(false);
+      setEditingIndex(-1);
+
+      // Force page refresh to reload culture data
+      window.location.reload();
+    } catch (err) {
+      console.error('Save domains error:', err);
+      alert(`Failed to save: ${err.message}`);
+    }
   };
 
   const handleCreateNew = () => {
     setFormData({
       ...defaultDomain,
-      id: `${cultureId}_domain`,
-      appliesTo: { kind: [entityKind], subKind: [], tags: [] }
+      id: `${cultureId}_domain_${cultureDomains.length + 1}`
     });
+    setEditingIndex(-1);
     setEditing(true);
   };
 
-  const handleCopyFromExisting = (existingDomain) => {
-    // Copy the domain but add current entity kind to appliesTo
-    const kinds = existingDomain.appliesTo?.kind || [];
-    const newKinds = kinds.includes(entityKind) ? kinds : [...kinds, entityKind];
-
-    setFormData({
-      ...existingDomain,
-      appliesTo: {
-        ...existingDomain.appliesTo,
-        kind: newKinds
-      }
-    });
+  const handleEditDomain = (domain, index) => {
+    setFormData({ ...domain });
+    setEditingIndex(index);
     setEditing(true);
   };
 
-  const toggleEntityKind = (kind) => {
-    const currentKinds = formData.appliesTo?.kind || [];
-    const newKinds = currentKinds.includes(kind)
-      ? currentKinds.filter(k => k !== kind)
-      : [...currentKinds, kind];
+  const handleDeleteDomain = async (index) => {
+    if (!window.confirm('Delete this domain? This cannot be undone.')) return;
 
-    setFormData({
-      ...formData,
-      appliesTo: {
-        ...formData.appliesTo,
-        kind: newKinds
+    const newDomains = cultureDomains.filter((_, i) => i !== index);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultureId}/domains`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domains: newDomains })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete domain');
       }
-    });
+
+      // Force page refresh to reload culture data
+      window.location.reload();
+    } catch (err) {
+      console.error('Delete domain error:', err);
+      alert(`Failed to delete: ${err.message}`);
+    }
   };
 
-  if (!editing && effectiveDomain) {
-    const domain = effectiveDomain;
-    const isShared = !entityConfig?.domain && applicableDomain;
+  const handleCopyDomain = (domain) => {
+    // Create a copy with new ID
+    setFormData({
+      ...domain,
+      id: `${domain.id}_copy`
+    });
+    setEditingIndex(-1);
+    setEditing(true);
+  };
 
+  // Optimize a single domain (requires index in cultureDomains array)
+  const handleOptimizeDomain = async (domain, domainIndex) => {
+    if (!domain) return;
+
+    setOptimizing(true);
+    setOptimizerResult(null);
+
+    // Collect ALL sibling domains from ALL cultures for cross-domain separation
+    const siblingDomains = allDomains.filter(d => d.id !== domain.id);
+
+    try {
+      const response = await fetch(`${API_URL}/api/optimize/domain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain,
+          siblingDomains, // For cross-domain separation metric
+          validationSettings: optimizerSettings.validationSettings,
+          fitnessWeights: optimizerSettings.fitnessWeights,
+          optimizationSettings: {
+            algorithm: optimizerSettings.algorithm,
+            iterations: optimizerSettings.iterations
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Optimization failed');
+      }
+
+      setOptimizerResult(data.result);
+
+      // Update the domain in culture-level domains array
+      if (data.result?.optimizedConfig) {
+        const newDomains = [...cultureDomains];
+        newDomains[domainIndex] = data.result.optimizedConfig;
+
+        // Save updated domains
+        const saveResponse = await fetch(
+          `${API_URL}/api/v2/cultures/${cultureConfig?.metaDomain || 'seed'}/${cultureId}/domains`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domains: newDomains })
+          }
+        );
+
+        if (saveResponse.ok) {
+          console.log(`✅ Saved optimized domain '${domain.id}'`);
+          // Refresh to show updated domain
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('Optimization error:', error);
+      setOptimizerResult({ error: error.message });
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  const handleOptimizeAll = async () => {
+    if (allDomains.length === 0) return;
+
+    setOptimizing(true);
+    setOptimizerResult(null);
+
+    try {
+      // Optimize each domain sequentially, using all others as siblings
+      const results = [];
+      for (const domain of allDomains) {
+        const siblingDomains = allDomains.filter(d => d.id !== domain.id);
+
+        const response = await fetch(`${API_URL}/api/optimize/domain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain,
+            siblingDomains,
+            validationSettings: optimizerSettings.validationSettings,
+            fitnessWeights: optimizerSettings.fitnessWeights,
+            optimizationSettings: {
+              algorithm: optimizerSettings.algorithm,
+              iterations: optimizerSettings.iterations
+            }
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.result?.optimizedConfig) {
+          results.push({
+            domainId: domain.id,
+            sourceCulture: domain.sourceCulture,
+            initialFitness: data.result.initialFitness,
+            finalFitness: data.result.finalFitness,
+            improvement: data.result.improvement,
+            optimizedConfig: data.result.optimizedConfig
+          });
+        }
+      }
+
+      // Show batch results
+      setOptimizerResult({ batchResults: results });
+
+      // Note: Updating all cultures would require parent callback
+      // For now, just show results - user can manually update each
+      console.log('Batch optimization complete:', results);
+
+    } catch (error) {
+      console.error('Batch optimization error:', error);
+      setOptimizerResult({ error: error.message });
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  // View mode - show list of culture-level domains
+  if (!editing && cultureDomains.length > 0) {
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0 }}>Phonological Domain</h3>
-          <button className="secondary" onClick={() => { setFormData(domain); setEditing(true); }}>
-            Edit Domain
-          </button>
+          <h3 style={{ margin: 0 }}>Phonological Domains ({cultureDomains.length})</h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="secondary" onClick={() => setShowOptimizer(!showOptimizer)} style={{ background: showOptimizer ? 'rgba(147, 51, 234, 0.3)' : undefined }}>
+              {showOptimizer ? 'Hide Optimizer' : '⚡ Optimize'}
+            </button>
+            <button className="primary" onClick={handleCreateNew}>
+              + Add Domain
+            </button>
+          </div>
         </div>
 
-        <div style={{
-          background: isShared ? 'rgba(59, 130, 246, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-          border: `1px solid ${isShared ? 'rgba(59, 130, 246, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
-          borderRadius: '6px',
-          padding: '1rem',
-          marginBottom: '1rem'
-        }}>
-          <strong style={{ color: isShared ? 'rgb(147, 197, 253)' : 'rgb(134, 239, 172)' }}>
-            {isShared ? '🔗 Shared Domain:' : '✓ Domain:'} {domain.id}
-          </strong>
-          <div style={{ fontSize: '0.875rem', marginTop: '0.25rem', color: 'var(--arctic-frost)' }}>
-            Applies to: {domain.appliesTo?.kind?.join(', ') || entityKind}
-            {isShared && (
-              <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
-                (configured in {applicableDomainSource})
+        <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+          Domains define the sound patterns for <strong>{cultureId}</strong> names.
+          Reference them in grammars using <code>domain:domain_id</code>.
+        </p>
+
+        {showOptimizer && (
+          <div style={{ background: 'rgba(147, 51, 234, 0.1)', border: '1px solid rgba(147, 51, 234, 0.3)', borderRadius: '6px', padding: '1rem', marginBottom: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0' }}>⚡ Domain Optimizer</h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--arctic-frost)', marginBottom: '0.75rem' }}>
+              Tune weights to maximize diversity and pronounceability.
+              {allDomains.length > 1 && (
+                <span style={{ marginLeft: '0.5rem', color: 'var(--gold-accent)' }}>
+                  ({allDomains.length - 1} sibling domain{allDomains.length > 2 ? 's' : ''} across all cultures for separation)
+                </span>
+              )}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Algorithm</label>
+                <select value={optimizerSettings.algorithm} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, algorithm: e.target.value })} style={{ fontSize: '0.8rem' }}>
+                  <option value="hillclimb">Hill Climbing</option>
+                  <option value="sim_anneal">Simulated Annealing</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Iterations</label>
+                <input type="number" value={optimizerSettings.iterations} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, iterations: parseInt(e.target.value) || 50 })} min="10" max="500" style={{ fontSize: '0.8rem' }} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Sample Size</label>
+                <input type="number" value={optimizerSettings.validationSettings.requiredNames} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, validationSettings: { ...optimizerSettings.validationSettings, requiredNames: parseInt(e.target.value) || 500 } })} min="100" max="5000" style={{ fontSize: '0.8rem' }} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.7rem' }}>Separation Weight</label>
+                <input type="number" step="0.1" min="0" max="1" value={optimizerSettings.fitnessWeights.separation} onChange={(e) => setOptimizerSettings({ ...optimizerSettings, fitnessWeights: { ...optimizerSettings.fitnessWeights, separation: parseFloat(e.target.value) || 0 } })} style={{ fontSize: '0.8rem' }} disabled={allDomains.length <= 1} title={allDomains.length <= 1 ? 'No sibling domains to compare' : 'Weight for cross-domain distinctiveness'} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button className="secondary" onClick={handleOptimizeAll} disabled={optimizing} style={{ fontSize: '0.8rem' }}>
+                {optimizing ? 'Optimizing...' : `Optimize All (${allDomains.length} domains)`}
+              </button>
+              <span style={{ fontSize: '0.7rem', color: 'var(--arctic-frost)' }}>
+                Or use ⚡ button on individual domains below
               </span>
+              {optimizing && <span style={{ fontSize: '0.8rem' }}>~30-60 seconds per domain</span>}
+            </div>
+            {optimizerResult && !optimizerResult.error && !optimizerResult.batchResults && (
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '4px' }}>
+                <strong style={{ color: 'rgb(134, 239, 172)', fontSize: '0.85rem' }}>✓ Complete</strong>
+                <span style={{ fontSize: '0.8rem', marginLeft: '1rem' }}>
+                  {optimizerResult.initialFitness?.toFixed(3)} → {optimizerResult.finalFitness?.toFixed(3)}
+                  <span style={{ color: 'var(--gold-accent)', marginLeft: '0.5rem' }}>+{((optimizerResult.improvement || 0) * 100).toFixed(1)}%</span>
+                </span>
+              </div>
+            )}
+            {optimizerResult?.batchResults && (
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '4px' }}>
+                <strong style={{ color: 'rgb(134, 239, 172)', fontSize: '0.85rem' }}>✓ Batch Complete ({optimizerResult.batchResults.length} domains)</strong>
+                <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  {optimizerResult.batchResults.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: i < optimizerResult.batchResults.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
+                      <span>{r.sourceCulture}/{r.domainId}</span>
+                      <span>
+                        {r.initialFitness?.toFixed(3)} → {r.finalFitness?.toFixed(3)}
+                        <span style={{ color: 'var(--gold-accent)', marginLeft: '0.5rem' }}>+{((r.improvement || 0) * 100).toFixed(1)}%</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {optimizerResult?.error && (
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '4px', color: 'rgb(252, 165, 165)', fontSize: '0.8rem' }}>
+                Error: {optimizerResult.error}
+              </div>
             )}
           </div>
-        </div>
+        )}
 
+        {/* Domain List */}
         <div style={{ display: 'grid', gap: '1rem' }}>
-          <div style={{ background: 'rgba(30, 58, 95, 0.3)', padding: '1rem', borderRadius: '6px' }}>
-            <strong>Phonology</strong>
-            <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: 'var(--arctic-frost)' }}>
-              <div>Consonants: {domain.phonology?.consonants?.join(', ') || 'None'}</div>
-              <div>Vowels: {domain.phonology?.vowels?.join(', ') || 'None'}</div>
-              <div>Syllables: {domain.phonology?.syllableTemplates?.join(', ') || 'None'}</div>
-              <div>Length: {domain.phonology?.lengthRange?.join('-') || '2-4'}</div>
-            </div>
-          </div>
+          {cultureDomains.map((domain, index) => (
+            <div
+              key={domain.id}
+              style={{
+                background: 'rgba(30, 58, 95, 0.3)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '6px',
+                padding: '1rem'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <div>
+                  <strong style={{ color: 'rgb(134, 239, 172)' }}>{domain.id}</strong>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.25rem' }}>
+                    Use in grammars: <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>domain:{domain.id}</code>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => handleOptimizeDomain(domain, index)} disabled={optimizing}>
+                    ⚡
+                  </button>
+                  <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => handleCopyDomain(domain)}>
+                    📋
+                  </button>
+                  <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }} onClick={() => handleEditDomain(domain, index)}>
+                    ✏️
+                  </button>
+                  <button className="secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', color: '#ef4444' }} onClick={() => handleDeleteDomain(index)}>
+                    🗑️
+                  </button>
+                </div>
+              </div>
 
-          <div style={{ background: 'rgba(30, 58, 95, 0.3)', padding: '1rem', borderRadius: '6px' }}>
-            <strong>Morphology</strong>
-            <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: 'var(--arctic-frost)' }}>
-              <div>Prefixes: {domain.morphology?.prefixes?.join(', ') || 'None'}</div>
-              <div>Suffixes: {domain.morphology?.suffixes?.join(', ') || 'None'}</div>
-              <div>Structure: {domain.morphology?.structure?.join(', ') || 'None'}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', fontSize: '0.8rem' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Phonology</div>
+                  <div style={{ color: 'var(--arctic-frost)' }}>
+                    <div>C: {domain.phonology?.consonants?.slice(0, 5).join(' ') || 'None'}{domain.phonology?.consonants?.length > 5 ? '...' : ''}</div>
+                    <div>V: {domain.phonology?.vowels?.join(' ') || 'None'}</div>
+                    <div>Syl: {domain.phonology?.syllableTemplates?.join(', ') || 'CV, CVC'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Morphology</div>
+                  <div style={{ color: 'var(--arctic-frost)' }}>
+                    <div>Pre: {domain.morphology?.prefixes?.slice(0, 3).join(', ') || 'None'}</div>
+                    <div>Suf: {domain.morphology?.suffixes?.slice(0, 3).join(', ') || 'None'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Style</div>
+                  <div style={{ color: 'var(--arctic-frost)' }}>
+                    <div>Cap: {domain.style?.capitalization || 'title'}</div>
+                    <div>Rhythm: {domain.style?.rhythmBias || 'neutral'}</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div style={{ background: 'rgba(30, 58, 95, 0.3)', padding: '1rem', borderRadius: '6px' }}>
-            <strong>Style</strong>
-            <div style={{ fontSize: '0.875rem', marginTop: '0.5rem', color: 'var(--arctic-frost)' }}>
-              <div>Capitalization: {domain.style?.capitalization || 'title'}</div>
-              <div>Rhythm: {domain.style?.rhythmBias || 'neutral'}</div>
-              <div>Apostrophe rate: {domain.style?.apostropheRate || 0}</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     );
   }
 
-  if (!editing && !effectiveDomain) {
+  // No domains yet - show create prompt
+  if (!editing && cultureDomains.length === 0) {
     return (
       <div>
-        <h3>Phonological Domain</h3>
+        <h3>Phonological Domains</h3>
         <p className="text-muted">
           Define the sound patterns and morphology for <strong>{cultureId}</strong> names.
         </p>
 
-        {existingDomains.length > 0 && (
-          <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Use Existing Domain</h4>
-            <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-              Copy a domain already configured for this culture:
-            </p>
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '6px',
+          padding: '1.5rem',
+          textAlign: 'center',
+          marginTop: '1rem'
+        }}>
+          <p style={{ margin: '0 0 1rem 0' }}>
+            No domains configured for this culture yet.
+          </p>
+          <button className="primary" onClick={handleCreateNew}>
+            + Create First Domain
+          </button>
+        </div>
+
+        {/* Show domains from other cultures as inspiration */}
+        {allDomains.filter(d => d.sourceCulture !== cultureId).length > 0 && (
+          <div style={{ marginTop: '1.5rem' }}>
+            <h4 style={{ marginBottom: '0.5rem' }}>Copy from other cultures</h4>
             <div style={{ display: 'grid', gap: '0.5rem' }}>
-              {existingDomains.map((domain) => (
+              {allDomains.filter(d => d.sourceCulture !== cultureId).slice(0, 5).map((domain) => (
                 <div
-                  key={domain.id}
+                  key={`${domain.sourceCulture}_${domain.id}`}
                   style={{
                     background: 'rgba(30, 58, 95, 0.3)',
                     padding: '0.75rem 1rem',
@@ -552,13 +818,13 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
                   <div>
                     <strong>{domain.id}</strong>
                     <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)' }}>
-                      From: {domain.sourceEntity} • Applies to: {domain.appliesTo?.kind?.join(', ')}
+                      From culture: {domain.sourceCulture}
                     </div>
                   </div>
                   <button
                     className="secondary"
                     style={{ fontSize: '0.875rem' }}
-                    onClick={() => handleCopyFromExisting(domain)}
+                    onClick={() => handleCopyDomain(domain)}
                   >
                     Copy & Edit
                   </button>
@@ -567,22 +833,6 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
             </div>
           </div>
         )}
-
-        <div style={{
-          background: 'rgba(59, 130, 246, 0.1)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '6px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          marginTop: '1rem'
-        }}>
-          <p style={{ margin: '0 0 1rem 0' }}>
-            {existingDomains.length > 0 ? 'Or create a new domain from scratch:' : 'No domain configured yet.'}
-          </p>
-          <button className="primary" onClick={handleCreateNew}>
-            + Create New Domain
-          </button>
-        </div>
       </div>
     );
   }
@@ -591,7 +841,10 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0 }}>{entityConfig?.domain ? 'Edit Domain' : 'Create Domain'}</h3>
+        <h3 style={{ margin: 0 }}>{editingIndex >= 0 ? 'Edit Domain' : 'Create Domain'}</h3>
+        <button className="secondary" onClick={() => { setEditing(false); setEditingIndex(-1); }}>
+          Cancel
+        </button>
       </div>
 
       <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -601,35 +854,7 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
           onChange={(e) => setFormData({...formData, id: e.target.value})}
           placeholder={`${cultureId}_domain`}
         />
-        <small className="text-muted">Unique identifier for this domain</small>
-      </div>
-
-      {/* Applies To Section */}
-      <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(30, 58, 95, 0.2)', borderRadius: '6px' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem' }}>Applies To Entity Types</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {entityKinds.map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => toggleEntityKind(kind)}
-              style={{
-                padding: '0.25rem 0.75rem',
-                borderRadius: '4px',
-                border: '1px solid',
-                borderColor: formData.appliesTo?.kind?.includes(kind) ? 'var(--gold-accent)' : 'var(--border-color)',
-                background: formData.appliesTo?.kind?.includes(kind) ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
-                color: formData.appliesTo?.kind?.includes(kind) ? 'var(--gold-accent)' : 'var(--text-color)',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                textTransform: 'capitalize'
-              }}
-            >
-              {kind}
-            </button>
-          ))}
-        </div>
-        <small className="text-muted">Select all entity types this domain should apply to</small>
+        <small className="text-muted">Unique identifier for this domain. Use in grammars as <code>domain:{formData.id || 'domain_id'}</code></small>
       </div>
 
       {/* Phonology Section */}
@@ -880,7 +1105,7 @@ function DomainTab({ cultureId, entityKind, entityConfig, onConfigChange, worldS
 
       <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
         <button className="primary" onClick={handleSave}>Save Domain</button>
-        <button className="secondary" onClick={() => setEditing(false)}>Cancel</button>
+        <button className="secondary" onClick={() => { setEditing(false); setEditingIndex(-1); }}>Cancel</button>
       </div>
     </div>
   );
@@ -933,8 +1158,18 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
   const lexemeLists = entityConfig?.lexemeLists || {};
   const lexemeSpecs = entityConfig?.lexemeSpecs || [];
 
-  // Get domain for phonology hints
+  // Get domains from culture level (domains are now culture-level, not entity-level)
+  const getCultureDomains = () => {
+    return cultureConfig?.domains || [];
+  };
+  const cultureDomains = getCultureDomains();
+  // For backward compatibility, effectiveDomain returns first culture domain
   const getEffectiveDomain = () => {
+    // Domains are now at culture level
+    if (cultureConfig?.domains && cultureConfig.domains.length > 0) {
+      return cultureConfig.domains[0];
+    }
+    // Legacy: check if old entity-level domains exist
     if (entityConfig?.domain) return entityConfig.domain;
     if (cultureConfig?.entityConfigs) {
       for (const [kind, config] of Object.entries(cultureConfig.entityConfigs)) {
@@ -1921,7 +2156,7 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
 }
 
 // Templates Tab Component
-const SLOT_KINDS = ['lexemeList', 'phonotactic', 'grammar', 'entityName'];
+const SLOT_KINDS = ['lexemeList', 'phonotactic', 'grammar', 'entityName', 'context'];
 
 function TemplatesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigChange, worldSchema, cultureConfig, allCultures }) {
   const [mode, setMode] = useState('view');
@@ -1959,8 +2194,15 @@ function TemplatesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfi
 
   const availableLexemeLists = getAvailableLexemeLists();
 
+  // Get culture-level domains
+  const cultureDomains = cultureConfig?.domains || [];
   // Get effective domain for phonotactic generation
   const getEffectiveDomain = () => {
+    // Domains are now at culture level
+    if (cultureConfig?.domains && cultureConfig.domains.length > 0) {
+      return cultureConfig.domains[0];
+    }
+    // Legacy: check if old entity-level domains exist
     if (entityConfig?.domain) return entityConfig.domain;
     if (cultureConfig?.entityConfigs) {
       for (const [kind, config] of Object.entries(cultureConfig.entityConfigs)) {
@@ -2018,14 +2260,30 @@ function TemplatesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfi
     if (field === 'kind') {
       if (value === 'lexemeList') {
         delete newSlots[slotName].domainId;
+        delete newSlots[slotName].key;
+        delete newSlots[slotName].fallback;
         if (!newSlots[slotName].listId) {
           newSlots[slotName].listId = slotName;
         }
       } else if (value === 'phonotactic') {
         delete newSlots[slotName].listId;
+        delete newSlots[slotName].key;
+        delete newSlots[slotName].fallback;
         if (!newSlots[slotName].domainId && effectiveDomain) {
           newSlots[slotName].domainId = effectiveDomain.id;
         }
+      } else if (value === 'context') {
+        delete newSlots[slotName].listId;
+        delete newSlots[slotName].domainId;
+        if (!newSlots[slotName].key) {
+          newSlots[slotName].key = slotName;
+        }
+      } else {
+        // grammar, entityName, etc.
+        delete newSlots[slotName].listId;
+        delete newSlots[slotName].domainId;
+        delete newSlots[slotName].key;
+        delete newSlots[slotName].fallback;
       }
     }
 
@@ -2439,6 +2697,18 @@ function TemplatesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfi
                           {Object.entries(template.slots).map(([name, config]) => (
                             <div key={name} style={{ marginBottom: '0.25rem' }}>
                               <code>{name}</code>: {config.kind || 'lexemeList'}
+                              {config.kind === 'context' && config.key && (
+                                <span style={{ color: 'var(--gold-accent)' }}> → {config.key}</span>
+                              )}
+                              {config.kind === 'context' && config.fallback && (
+                                <span className="text-muted"> (fallback: "{config.fallback}")</span>
+                              )}
+                              {config.listId && config.kind !== 'context' && (
+                                <span className="text-muted"> → {config.listId}</span>
+                              )}
+                              {config.domainId && (
+                                <span className="text-muted"> → {config.domainId}</span>
+                              )}
                               {config.description && <span className="text-muted"> - {config.description}</span>}
                             </div>
                           ))}
@@ -2655,58 +2925,84 @@ function TemplatesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfi
               Slot Configuration
             </label>
             <small className="text-muted" style={{ display: 'block', marginBottom: '1rem' }}>
-              Configure each slot to pull from a lexeme list or generate phonotactically from a domain.
+              Configure each slot to pull from a lexeme list, generate phonotactically, or use a context entity name.
             </small>
 
             {Object.entries(manualForm.slots).map(([slotName, config]) => (
               <div
                 key={slotName}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 2fr',
-                  gap: '0.5rem',
-                  alignItems: 'center',
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
                   background: 'rgba(0, 0, 0, 0.2)',
                   borderRadius: '4px'
                 }}
               >
-                <code style={{ color: 'var(--gold-accent)' }}>{`{{${slotName}}}`}</code>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 2fr',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+                  <code style={{ color: 'var(--gold-accent)' }}>{`{{${slotName}}}`}</code>
 
-                <select
-                  value={config.kind || 'lexemeList'}
-                  onChange={(e) => handleSlotConfigChange(slotName, 'kind', e.target.value)}
-                  style={{ padding: '0.25rem' }}
-                >
-                  <option value="lexemeList">Lexeme List</option>
-                  <option value="phonotactic">Phonotactic (Domain)</option>
-                </select>
-
-                {config.kind === 'phonotactic' ? (
                   <select
-                    value={config.domainId || ''}
-                    onChange={(e) => handleSlotConfigChange(slotName, 'domainId', e.target.value)}
+                    value={config.kind || 'lexemeList'}
+                    onChange={(e) => handleSlotConfigChange(slotName, 'kind', e.target.value)}
                     style={{ padding: '0.25rem' }}
                   >
-                    <option value="">Select domain...</option>
-                    {effectiveDomain && (
-                      <option value={effectiveDomain.id}>{effectiveDomain.id} (current)</option>
-                    )}
+                    <option value="lexemeList">Lexeme List</option>
+                    <option value="phonotactic">Phonotactic (Domain)</option>
+                    <option value="context">Context (Entity Name)</option>
                   </select>
-                ) : (
-                  <select
-                    value={config.listId || slotName}
-                    onChange={(e) => handleSlotConfigChange(slotName, 'listId', e.target.value)}
-                    style={{ padding: '0.25rem' }}
-                  >
-                    <option value={slotName}>{slotName} (match slot name)</option>
-                    {availableLexemeLists.map(list => (
-                      <option key={list.id} value={list.id}>
-                        {list.id} {list.source !== 'local' ? `(${list.source})` : ''}
-                      </option>
-                    ))}
-                  </select>
+
+                  {config.kind === 'phonotactic' ? (
+                    <select
+                      value={config.domainId || ''}
+                      onChange={(e) => handleSlotConfigChange(slotName, 'domainId', e.target.value)}
+                      style={{ padding: '0.25rem' }}
+                    >
+                      <option value="">Select domain...</option>
+                      {effectiveDomain && (
+                        <option value={effectiveDomain.id}>{effectiveDomain.id} (current)</option>
+                      )}
+                    </select>
+                  ) : config.kind === 'context' ? (
+                    <input
+                      value={config.key || slotName}
+                      onChange={(e) => handleSlotConfigChange(slotName, 'key', e.target.value)}
+                      placeholder="Context key (e.g., owner, founder)"
+                      style={{ padding: '0.25rem' }}
+                    />
+                  ) : (
+                    <select
+                      value={config.listId || slotName}
+                      onChange={(e) => handleSlotConfigChange(slotName, 'listId', e.target.value)}
+                      style={{ padding: '0.25rem' }}
+                    >
+                      <option value={slotName}>{slotName} (match slot name)</option>
+                      {availableLexemeLists.map(list => (
+                        <option key={list.id} value={list.id}>
+                          {list.id} {list.source !== 'local' ? `(${list.source})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Context slot fallback option */}
+                {config.kind === 'context' && (
+                  <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)' }}>
+                      Fallback (if entity not found):
+                    </label>
+                    <input
+                      value={config.fallback || ''}
+                      onChange={(e) => handleSlotConfigChange(slotName, 'fallback', e.target.value)}
+                      placeholder="e.g., 'Unknown' (optional)"
+                      style={{ padding: '0.25rem', marginLeft: '0.5rem', width: '200px' }}
+                    />
+                  </div>
                 )}
               </div>
             ))}
@@ -2753,8 +3049,15 @@ function GrammarsTab({ entityConfig, onConfigChange, cultureId, entityKind, cult
   const allCultureIds = Object.keys(allCultures || {});
   const allEntityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
 
+  // Get culture-level domains
+  const cultureDomains = cultureConfig?.domains || [];
   // Get effective domain for phonology hints
   const getEffectiveDomain = () => {
+    // Domains are now at culture level
+    if (cultureConfig?.domains && cultureConfig.domains.length > 0) {
+      return cultureConfig.domains[0];
+    }
+    // Legacy: check if old entity-level domains exist
     if (entityConfig?.domain) return entityConfig.domain;
     if (cultureConfig?.entityConfigs) {
       for (const [kind, config] of Object.entries(cultureConfig.entityConfigs)) {
@@ -3005,11 +3308,26 @@ function GrammarsTab({ entityConfig, onConfigChange, cultureId, entityKind, cult
                 <ul style={{ fontSize: '0.875rem' }}>
                   <li><code>slot:lexeme_id</code> - Pull from a lexeme list</li>
                   <li><code>domain:domain_id</code> - Generate phonotactic name from a domain</li>
+                  <li><code>context:key</code> - Use a related entity's name (owner, founder, ruler, etc.)</li>
                   <li><code>^suffix</code> - Terminator with literal suffix (e.g., <code>domain:id^'s</code> → "Zixtrex's")</li>
                   <li><code>|</code> - Alternatives (random choice)</li>
                   <li><code>space</code> - Sequence (concatenate with space)</li>
                   <li>Literal text - Use as-is (e.g., "of", "the", "-")</li>
                 </ul>
+
+                <h4>Entity Linkage (Named Entity Propagation)</h4>
+                <div style={{ background: 'rgba(34, 197, 94, 0.2)', padding: '1rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--arctic-frost)' }}>// Location named after leader:</div>
+                  <div>name → context:leader^'s slot:location_types</div>
+                  <div style={{ marginTop: '0.5rem', color: 'var(--arctic-frost)' }}>// Faction HQ named after origin:</div>
+                  <div>name → slot:titles of context:origin</div>
+                </div>
+                <p style={{ fontSize: '0.875rem' }}>
+                  Generates: "Zixtrex's Fortress", "Guild of Aurora Stack"
+                </p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--arctic-frost)' }}>
+                  Context keys map to KG relationships: <code>leader</code>, <code>founder</code>, <code>discoverer</code>, <code>mentor</code>, <code>location</code>, <code>faction</code>, <code>birthplace</code>, <code>stronghold</code>
+                </p>
 
                 <h4>Mixing Lexemes with Phonotactic</h4>
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
@@ -3026,7 +3344,8 @@ function GrammarsTab({ entityConfig, onConfigChange, cultureId, entityKind, cult
                   <li>Start simple: adj-noun patterns work well</li>
                   <li>Use descriptive rule names (adj, noun, title)</li>
                   <li>Mix <code>slot:</code> and <code>domain:</code> for "Duke Zixtrexrtra" style names</li>
-                  <li>Use <code>^</code> to attach suffixes: <code>domain:id^'s</code> → "Zixtrex's"</li>
+                  <li>Use <code>context:</code> for entity-linked names like "Zixtrex's Oasis"</li>
+                  <li>Use <code>^</code> to attach suffixes: <code>context:owner^'s</code> → "Zixtrex's"</li>
                   <li>Create focused lexeme lists for each role</li>
                 </ul>
               </div>
@@ -3206,6 +3525,80 @@ function GrammarsTab({ entityConfig, onConfigChange, cultureId, entityKind, cult
         </div>
       )}
 
+      {/* Entity Linkage - Context References */}
+      <div style={{
+        background: 'rgba(34, 197, 94, 0.15)',
+        padding: '0.75rem',
+        borderRadius: '6px',
+        marginBottom: '1rem',
+        border: '1px solid rgba(34, 197, 94, 0.3)'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: 'rgb(134, 239, 172)', marginBottom: '0.5rem' }}>
+          <strong>Entity Linkage</strong> (click to insert - uses related entity names from KG relationships)
+        </div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--arctic-frost)', marginBottom: '0.5rem' }}>
+          NPC Relations:
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          {[
+            { key: 'leader', desc: "leader_of relationship (NPC who leads this location/faction)" },
+            { key: 'founder', desc: "founder_of relationship (NPC who founded this faction)" },
+            { key: 'discoverer', desc: "discovered_by relationship (NPC who discovered this location)" },
+            { key: 'mentor', desc: "mentor_of relationship (NPC's mentor)" },
+            { key: 'resident', desc: "resident_of relationship (NPC who lives here)" }
+          ].map(({ key, desc }) => (
+            <code
+              key={key}
+              style={{
+                background: 'rgba(10, 25, 41, 0.8)',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                color: 'rgb(134, 239, 172)',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                border: '1px solid rgba(34, 197, 94, 0.4)'
+              }}
+              onClick={() => insertIntoRule(`context:${key}`)}
+              title={desc}
+            >
+              context:{key}
+            </code>
+          ))}
+        </div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--arctic-frost)', marginBottom: '0.5rem' }}>
+          Location/Faction Relations:
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {[
+            { key: 'location', desc: "Related location (resident_of, stronghold_of, etc.)" },
+            { key: 'faction', desc: "Related faction (member_of, stronghold_of, etc.)" },
+            { key: 'birthplace', desc: "birthplace_of relationship (location where NPC was born)" },
+            { key: 'stronghold', desc: "stronghold_of relationship (faction's base location)" },
+            { key: 'origin', desc: "origin_of relationship (where faction originated)" }
+          ].map(({ key, desc }) => (
+            <code
+              key={key}
+              style={{
+                background: 'rgba(10, 25, 41, 0.8)',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                color: 'rgb(134, 239, 172)',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                border: '1px solid rgba(34, 197, 94, 0.4)'
+              }}
+              onClick={() => insertIntoRule(`context:${key}`)}
+              title={desc}
+            >
+              context:{key}
+            </code>
+          ))}
+        </div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--arctic-frost)', marginTop: '0.5rem' }}>
+          Use with possessives: <code style={{ color: 'rgb(134, 239, 172)' }}>context:leader^'s slot:nouns</code> → "Zixtrex's Fortress"
+        </div>
+      </div>
+
       {/* Common literals */}
       <div style={{
         background: 'rgba(30, 58, 95, 0.3)',
@@ -3218,7 +3611,7 @@ function GrammarsTab({ entityConfig, onConfigChange, cultureId, entityKind, cult
           <strong>Common Literals</strong> (click to insert)
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {['-', "'", 'of', 'the', 'von', 'de', 'el', 'al'].map((lit) => (
+          {['-', "'", "'s", 'of', 'the', 'von', 'de', 'el', 'al'].map((lit) => (
             <code
               key={lit}
               style={{
@@ -3441,8 +3834,15 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
 
   const profile = entityConfig?.profile;
 
+  // Get culture-level domains
+  const cultureDomains = cultureConfig?.domains || [];
   // Get effective domain (local or shared)
   const getEffectiveDomain = () => {
+    // Domains are now at culture level
+    if (cultureConfig?.domains && cultureConfig.domains.length > 0) {
+      return cultureConfig.domains[0];
+    }
+    // Legacy: check if old entity-level domains exist
     if (entityConfig?.domain) return entityConfig.domain;
     if (cultureConfig?.entityConfigs) {
       for (const [kind, config] of Object.entries(cultureConfig.entityConfigs)) {
@@ -3587,9 +3987,8 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
         mergedLexemeIds: Object.keys(lexemes),
         grammarIds: (entityConfig?.grammars || []).map(g => g.id),
         templateIds: (entityConfig?.templates || []).map(t => t.id),
-        hasDomain: !!effectiveDomain,
-        domainId: effectiveDomain?.id || 'none',
-        domainIsShared: !!effectiveDomain && !entityConfig?.domain
+        cultureDomainCount: cultureDomains.length,
+        cultureDomainIds: cultureDomains.map(d => d.id)
       });
 
       const response = await fetch(`${API_URL}/api/test-names`, {
@@ -3599,7 +3998,7 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
           profileId: profile.id,
           count,
           profile,
-          domains: effectiveDomain ? [effectiveDomain] : [],
+          domains: cultureDomains.length > 0 ? cultureDomains : (effectiveDomain ? [effectiveDomain] : []),
           grammars: entityConfig?.grammars || [],
           templates: entityConfig?.templates || [],
           lexemes
@@ -3796,6 +4195,175 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
                   </div>
                 </div>
               )}
+
+              {/* Conditions Section */}
+              <div style={{
+                marginTop: '0.75rem',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem'
+                }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                    Conditions
+                    <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
+                      (optional - when to use this strategy)
+                    </span>
+                  </label>
+                  {!strategy.conditions && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      onClick={() => {
+                        const strategies = [...editedProfile.strategies];
+                        strategies[idx] = { ...strategies[idx], conditions: {} };
+                        setEditedProfile({ ...editedProfile, strategies });
+                      }}
+                    >
+                      + Add Conditions
+                    </button>
+                  )}
+                  {strategy.conditions && (
+                    <button
+                      type="button"
+                      className="danger"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                      onClick={() => {
+                        const strategies = [...editedProfile.strategies];
+                        const { conditions, ...rest } = strategies[idx];
+                        strategies[idx] = rest;
+                        setEditedProfile({ ...editedProfile, strategies });
+                      }}
+                    >
+                      Remove Conditions
+                    </button>
+                  )}
+                </div>
+
+                {strategy.conditions && (
+                  <div style={{
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    padding: '0.75rem',
+                    display: 'grid',
+                    gap: '0.75rem'
+                  }}>
+                    {/* Tags */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem' }}>
+                        Tags
+                        <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
+                          (comma-separated, e.g., "royal, noble")
+                        </span>
+                      </label>
+                      <input
+                        value={(strategy.conditions.tags || []).join(', ')}
+                        onChange={(e) => {
+                          const tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+                          const strategies = [...editedProfile.strategies];
+                          strategies[idx] = {
+                            ...strategies[idx],
+                            conditions: { ...strategies[idx].conditions, tags: tags.length > 0 ? tags : undefined }
+                          };
+                          setEditedProfile({ ...editedProfile, strategies });
+                        }}
+                        placeholder="e.g., royal, noble, legendary"
+                        style={{ fontSize: '0.875rem' }}
+                      />
+                      <div style={{ marginTop: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={strategy.conditions.requireAllTags || false}
+                            onChange={(e) => {
+                              const strategies = [...editedProfile.strategies];
+                              strategies[idx] = {
+                                ...strategies[idx],
+                                conditions: { ...strategies[idx].conditions, requireAllTags: e.target.checked || undefined }
+                              };
+                              setEditedProfile({ ...editedProfile, strategies });
+                            }}
+                          />
+                          Require ALL tags (default: any tag matches)
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Prominence */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem' }}>Prominence Levels</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        {['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'].map(level => {
+                          const isSelected = (strategy.conditions.prominence || []).includes(level);
+                          return (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => {
+                                const strategies = [...editedProfile.strategies];
+                                const currentLevels = strategies[idx].conditions.prominence || [];
+                                const newLevels = isSelected
+                                  ? currentLevels.filter(l => l !== level)
+                                  : [...currentLevels, level];
+                                strategies[idx] = {
+                                  ...strategies[idx],
+                                  conditions: {
+                                    ...strategies[idx].conditions,
+                                    prominence: newLevels.length > 0 ? newLevels : undefined
+                                  }
+                                };
+                                setEditedProfile({ ...editedProfile, strategies });
+                              }}
+                              style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                borderRadius: '4px',
+                                border: '1px solid',
+                                borderColor: isSelected ? 'var(--gold-accent)' : 'var(--border-color)',
+                                background: isSelected ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+                                color: isSelected ? 'var(--gold-accent)' : 'var(--text-color)',
+                                cursor: 'pointer',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {level}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Subtype */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label style={{ fontSize: '0.8rem' }}>
+                        Subtypes
+                        <span style={{ fontWeight: 'normal', marginLeft: '0.5rem', color: 'var(--arctic-frost)' }}>
+                          (comma-separated, e.g., "merchant, artisan")
+                        </span>
+                      </label>
+                      <input
+                        value={(strategy.conditions.subtype || []).join(', ')}
+                        onChange={(e) => {
+                          const subtypes = e.target.value.split(',').map(t => t.trim()).filter(t => t);
+                          const strategies = [...editedProfile.strategies];
+                          strategies[idx] = {
+                            ...strategies[idx],
+                            conditions: { ...strategies[idx].conditions, subtype: subtypes.length > 0 ? subtypes : undefined }
+                          };
+                          setEditedProfile({ ...editedProfile, strategies });
+                        }}
+                        placeholder="e.g., merchant, artisan, warrior"
+                        style={{ fontSize: '0.875rem' }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
 
@@ -3872,6 +4440,38 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
                     <span>Templates: {strategy.templateIds?.length || 0} selected</span>
                   )}
                 </div>
+
+                {/* Show conditions if present */}
+                {strategy.conditions && (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(212, 175, 55, 0.1)',
+                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                    borderRadius: '4px',
+                    fontSize: '0.8rem'
+                  }}>
+                    <strong style={{ color: 'var(--gold-accent)' }}>Conditions:</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      {strategy.conditions.tags?.length > 0 && (
+                        <span style={{ background: 'rgba(59, 130, 246, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
+                          Tags: {strategy.conditions.tags.join(', ')}
+                          {strategy.conditions.requireAllTags && ' (ALL)'}
+                        </span>
+                      )}
+                      {strategy.conditions.prominence?.length > 0 && (
+                        <span style={{ background: 'rgba(147, 51, 234, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
+                          Prominence: {strategy.conditions.prominence.join(', ')}
+                        </span>
+                      )}
+                      {strategy.conditions.subtype?.length > 0 && (
+                        <span style={{ background: 'rgba(34, 197, 94, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '3px' }}>
+                          Subtype: {strategy.conditions.subtype.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
