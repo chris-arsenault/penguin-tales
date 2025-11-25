@@ -253,7 +253,7 @@ export const ValidationConfigSchema = z.object({
  */
 export const OptimizationConfigSchema = z.object({
   algorithm: z
-    .enum(["hillclimb", "sim_anneal", "cma-es", "ga", "bayes"])
+    .enum(["hillclimb", "sim_anneal", "cma-es", "ga", "bayes", "cluster"])
     .default("hillclimb")
     .describe("Optimization algorithm"),
   iterations: z
