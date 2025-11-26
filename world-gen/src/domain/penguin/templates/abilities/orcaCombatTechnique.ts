@@ -133,6 +133,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
       description: `A devastating combat technique used by orca raiders, witnessed when ${orca.name} attacked`,
       status: 'active',
       prominence,
+      culture: 'orca',  // Orca combat techniques belong to orca culture
       tags: ['combat', 'orca', 'offensive', 'external']
     };
 

@@ -142,6 +142,7 @@ export const cultFormation: GrowthTemplate = {
       description: `A mystical cult drawn to the power near ${location.name}`,
       status: 'illegal',
       prominence: 'marginal',
+      culture: location.culture,  // Inherit culture from location
       tags: ['mystical', 'secretive', 'cult']
     };
 
@@ -157,6 +158,7 @@ export const cultFormation: GrowthTemplate = {
       description: `The enigmatic prophet of ${cult.name}`,
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
+      culture: location.culture,  // Inherit culture from location
       tags: ['prophet', 'mystical']
     };
 
@@ -190,6 +192,7 @@ export const cultFormation: GrowthTemplate = {
             description: `A convert drawn to the cult's mystical teachings`,
             status: 'alive',
             prominence: 'marginal',
+            culture: location.culture,  // Inherit culture from cult location
             tags: ['cultist']
           }),
           maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs

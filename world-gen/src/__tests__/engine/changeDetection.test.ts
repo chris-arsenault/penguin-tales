@@ -33,6 +33,7 @@ function createEntity(
     description: '',
     status,
     prominence,
+    culture: 'world',
     tags: [],
     links,
     createdAt: 0,

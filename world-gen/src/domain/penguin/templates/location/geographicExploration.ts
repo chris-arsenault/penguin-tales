@@ -158,6 +158,7 @@ export const geographicExploration: GrowthTemplate = {
       description: `A newly discovered ${formattedTheme.toLowerCase()} during the ${graphView.currentEra.name}`,
       status: 'unspoiled',
       prominence: 'marginal',
+      culture: discoverer.culture,  // Inherit culture from discoverer
       tags: theme.tags,
       links: []
     };

@@ -138,6 +138,7 @@ export const familyExpansion: GrowthTemplate = {
         description: `Child of ${target.name}, raised in ${colony.name}`,
         status: 'alive',
         prominence: 'marginal',
+        culture: target.culture,  // Inherit parent's culture
         tags: ['second_generation']
       });
 

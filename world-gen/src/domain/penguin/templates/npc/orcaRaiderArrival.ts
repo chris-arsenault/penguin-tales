@@ -130,6 +130,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
         description: `A fearsome orca raider threatening ${colony.name}`,
         status: 'alive',
         prominence,
+        culture: 'orca',  // Orcas have their own culture
         tags: ['orca', 'raider', 'external-threat', 'predator']
       };
 

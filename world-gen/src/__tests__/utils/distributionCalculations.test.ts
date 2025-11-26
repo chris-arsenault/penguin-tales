@@ -19,6 +19,7 @@ describe('distributionCalculations', () => {
     description: `Test entity ${id}`,
     status: 'active',
     prominence: prominence as any,
+    culture: 'world',
     tags: [],
     links: [],
     createdAt: 0,

@@ -748,12 +748,13 @@ const disasterSpreadDomain: ActionDomain = {
             description: 'Magical corruption that spreads',
             status: 'active',
             prominence: 'renowned',
+            culture: 'world',  // Corruption is a world-level phenomenon
             tags: ['corruption', 'magic'],
             links: [],
             createdAt: graph.tick,
             updatedAt: graph.tick
           };
-          graph.entities.set(abilityId, corruptionAbility);
+          graph.entities.set(abilityId, corruptionAbility as HardState);
         }
 
         return {

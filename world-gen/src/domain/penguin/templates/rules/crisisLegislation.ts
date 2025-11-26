@@ -141,6 +141,7 @@ export const crisisLegislation: GrowthTemplate = {
         description: `Emergency measure enacted in ${colony.name}${lineageDesc}`,
         status: 'enacted',
         prominence: 'recognized',
+        culture: colony.culture,  // Inherit culture from enacting colony
         tags: ['crisis', 'emergency']
       }],
       relationships,

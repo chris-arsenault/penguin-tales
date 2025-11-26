@@ -176,6 +176,7 @@ export const magicDiscovery: GrowthTemplate = {
       description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
       status: 'emergent',
       prominence: 'recognized',
+      culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
       tags: ['magic', 'mystical']
     };
 

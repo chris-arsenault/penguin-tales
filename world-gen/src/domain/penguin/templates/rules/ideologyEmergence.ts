@@ -276,6 +276,7 @@ export const ideologyEmergence: GrowthTemplate = {
         description: `A ${ideologyTheme} ideology championed by ${champion.name}. This belief is spreading through whispered conversations and passionate debates${lineageDesc}.`,
         status: 'proposed', // Key: starts as proposed, will become enacted if adopted widely
         prominence: 'marginal', // Will grow with adoption
+        culture: champion.culture,  // Inherit culture from champion
         tags: [ideologyTheme, 'ideology', 'cultural']
       }],
       relationships,

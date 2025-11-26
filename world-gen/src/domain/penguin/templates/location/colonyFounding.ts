@@ -63,7 +63,15 @@ export const colonyFounding: GrowthTemplate = {
   
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const iceberg = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'iceberg' }));
-    
+
+    // Determine culture based on existing colonies on this iceberg
+    // or from the majority culture of nearby colonies
+    const existingColonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    const colonyOnIceberg = existingColonies.find(c =>
+      graphView.hasRelationship(c.id, iceberg.id, 'contained_by')
+    );
+    const culture = colonyOnIceberg?.culture || 'aurora-stack';  // Inherit from existing colony or default to aurora-stack
+
     return {
       entities: [{
         kind: 'location',
@@ -72,6 +80,7 @@ export const colonyFounding: GrowthTemplate = {
         description: `New colony established on ${iceberg.name}`,
         status: 'thriving',
         prominence: 'marginal',
+        culture,  // Inherit culture from nearby colony or null for new cultural territory
         tags: ['new', 'colony']
       }],
       relationships: [

@@ -108,6 +108,7 @@ export const heroEmergence: GrowthTemplate = {
       description: `A brave penguin who emerged during troubled times in ${colony.name}`,
       status: 'alive',
       prominence: 'marginal', // Heroes start marginal, must earn prominence
+      culture: colony.culture,  // Inherit culture from home colony
       tags: ['brave', 'emergent']
     };
 

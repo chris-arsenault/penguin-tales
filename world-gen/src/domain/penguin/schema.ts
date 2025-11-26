@@ -12,6 +12,7 @@ import {
   BaseDomainSchema,
   EntityKindDefinition,
   RelationshipKindDefinition,
+  CultureDefinition,
   NameGenerator
 } from '../../types/domainSchema';
 import { pickRandom } from '../../utils/helpers';
@@ -468,6 +469,37 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
 ];
 
 // ===========================
+// CULTURE DEFINITIONS
+// ===========================
+
+const penguinCultures: CultureDefinition[] = [
+  {
+    id: 'world',
+    name: 'World',
+    description: 'Transcendent entities that belong to the world itself - eras, major occurrences, and world-spanning events.',
+    homeland: undefined  // No specific homeland
+  },
+  {
+    id: 'aurora-stack',
+    name: 'Aurora Stack',
+    description: 'The orderly, trade-focused culture of Aurora Stack colony. Values commerce, organization, and technological progress.',
+    homeland: 'Aurora Stack'
+  },
+  {
+    id: 'nightshelf',
+    name: 'Nightfall Shelf',
+    description: 'The secretive, mystical culture of Nightfall Shelf colony. Values cunning, magic, and shadow dealings.',
+    homeland: 'Nightfall Shelf'
+  },
+  {
+    id: 'orca',
+    name: 'Orca Raiders',
+    description: 'The fierce warrior culture of the orca raiders. Values strength, conquest, and dominance.',
+    homeland: undefined  // Nomadic
+  }
+];
+
+// ===========================
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
@@ -478,6 +510,7 @@ const baseDomain = new BaseDomainSchema({
   version: '1.0.0',
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
+  cultures: penguinCultures,
   nameGenerator: penguinNameGenerator
 });
 
@@ -535,3 +568,5 @@ export const penguinDomain = Object.assign(baseDomain, {
 // Export penguin-specific constants for backward compatibility
 export const PENGUIN_ENTITY_KINDS = penguinEntityKinds.map(ek => ek.kind);
 export const PENGUIN_RELATIONSHIP_KINDS = penguinRelationshipKinds.map(rk => rk.kind);
+export const PENGUIN_CULTURES = penguinCultures.map(c => c.id);
+export { penguinCultures };

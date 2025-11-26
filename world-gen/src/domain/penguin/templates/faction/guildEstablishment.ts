@@ -101,6 +101,7 @@ export const guildEstablishment: GrowthTemplate = {
       description: `A merchant guild controlling trade in ${colony.name}`,
       status: 'state_sanctioned',
       prominence: 'recognized',
+      culture: colony.culture,  // Inherit culture from colony
       tags: ['trade', 'guild', 'organized']
     };
 
@@ -134,6 +135,7 @@ export const guildEstablishment: GrowthTemplate = {
             description: `An independent merchant seeking guild membership`,
             status: 'alive',
             prominence: 'marginal',
+            culture: colony.culture,  // Inherit culture from colony
             tags: ['trader', 'guild-founder']
           }),
           maxCreated: 2 // Max 2 new merchants per guild

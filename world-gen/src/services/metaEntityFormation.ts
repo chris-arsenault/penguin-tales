@@ -199,6 +199,7 @@ export class MetaEntityFormation {
       description: `A legislative body formed to administer ${legalCode.name}. Emerged from the consolidation of ${originalRules.length} laws.`,
       status: 'active',
       prominence: legalCode.prominence, // Match prominence of the legal code
+      culture: primaryLocation.culture,  // Inherit culture from primary location
       tags: ['governance', 'legislative', 'political'],
       links: [],
       createdAt: graph.tick,

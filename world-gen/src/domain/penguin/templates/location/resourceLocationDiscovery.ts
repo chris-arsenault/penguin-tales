@@ -154,6 +154,7 @@ export const resourceLocationDiscovery: GrowthTemplate = {
       description: `A resource-rich ${formattedTheme.toLowerCase()} discovered to address ${deficit.specific} scarcity`,
       status: 'unspoiled',
       prominence: 'marginal',
+      culture: discoverer.culture,  // Inherit culture from discoverer
       tags: theme.tags,
       links: []
     };

@@ -14,6 +14,7 @@ export interface HardState {
     description: string;
     status: string;
     prominence: Prominence;
+    culture: string;  // Domain-defined cultural affiliation (e.g., 'aurora-stack', 'nightshelf', 'orca', 'world')
     tags: string[];          // <= 10
     links: Relationship[];
     createdAt: number;       // tick or epoch index

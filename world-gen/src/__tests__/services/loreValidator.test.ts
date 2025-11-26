@@ -48,7 +48,7 @@ describe('LoreValidator', () => {
           description: 'A penguin',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -65,7 +65,7 @@ describe('LoreValidator', () => {
           description: 'A penguin',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -82,7 +82,7 @@ describe('LoreValidator', () => {
           description: 'A penguin',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -99,7 +99,7 @@ describe('LoreValidator', () => {
           description: 'A penguin',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -117,7 +117,7 @@ describe('LoreValidator', () => {
           description: 'A penguin',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -135,7 +135,7 @@ describe('LoreValidator', () => {
           description: 'A penguin from the ice berg',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A penguin from the ice berg');
 
@@ -152,7 +152,7 @@ describe('LoreValidator', () => {
           description: 'A character',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A character');
 
@@ -169,7 +169,7 @@ describe('LoreValidator', () => {
           description: 'Generic description',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity);
 
@@ -185,7 +185,7 @@ describe('LoreValidator', () => {
           description: 'Watches the aurora',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Watches the aurora lights');
 
@@ -201,7 +201,7 @@ describe('LoreValidator', () => {
           description: 'A glowing fissure',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A glowing fissure in the ice');
 
@@ -217,7 +217,7 @@ describe('LoreValidator', () => {
           description: 'Rich fishing',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Rich krill fishing grounds');
 
@@ -233,7 +233,7 @@ describe('LoreValidator', () => {
           description: 'From ICE BERG',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'From the ICE BERG');
 
@@ -251,7 +251,7 @@ describe('LoreValidator', () => {
           description: 'Ice magic power',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A powerful magic ability from the frost');
 
@@ -267,7 +267,7 @@ describe('LoreValidator', () => {
           description: 'Expert with harpoons',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Master of the harpoon on the ice');
 
@@ -283,7 +283,7 @@ describe('LoreValidator', () => {
           description: 'A generic skill',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A generic skill');
 
@@ -300,7 +300,7 @@ describe('LoreValidator', () => {
           description: 'A character',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'A character with no magic or tech');
 
@@ -319,7 +319,7 @@ describe('LoreValidator', () => {
           description: 'Generic',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, 'Generic description');
 
@@ -339,7 +339,7 @@ describe('LoreValidator', () => {
           name: 'Crystal Ridge',
           description: 'A high ridge on the ice berg',
           status: 'active',
-          prominence: 'marginal' as const,
+          prominence: 'marginal' as const, culture: 'world',
           tags: [],
           links: [],
           createdAt: 0,
@@ -361,7 +361,7 @@ describe('LoreValidator', () => {
           tags: [],
           links: [],
         status: 'active',
-          prominence: 'marginal' as const,
+          prominence: 'marginal' as const, culture: 'world',
           createdAt: 0,
           updatedAt: 0
         } as HardState;
@@ -385,7 +385,7 @@ describe('LoreValidator', () => {
             tags: [],
             links: [],
         status: "active",
-            prominence: "marginal" as const,
+            prominence: "marginal" as const, culture: 'world',
             createdAt: 0,
             updatedAt: 0
           };
@@ -404,7 +404,7 @@ describe('LoreValidator', () => {
           description: 'A ridge on the ice',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -420,7 +420,7 @@ describe('LoreValidator', () => {
           description: 'A colony',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -438,7 +438,7 @@ describe('LoreValidator', () => {
           description: 'A glowing place',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -455,7 +455,7 @@ describe('LoreValidator', () => {
           tags: [],
           links: [],
         status: 'active',
-          prominence: 'marginal' as const,
+          prominence: 'marginal' as const, culture: 'world',
           createdAt: 0,
           updatedAt: 0
         } as HardState;
@@ -479,7 +479,7 @@ describe('LoreValidator', () => {
             tags: [],
             links: [],
         status: "active",
-            prominence: "marginal" as const,
+            prominence: "marginal" as const, culture: 'world',
             createdAt: 0,
             updatedAt: 0
           };
@@ -498,7 +498,7 @@ describe('LoreValidator', () => {
           description: 'A colony',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -516,7 +516,7 @@ describe('LoreValidator', () => {
           description: 'A colony on the ice berg near the aurora',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -532,7 +532,7 @@ describe('LoreValidator', () => {
           description: 'A generic place where people live',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -549,7 +549,7 @@ describe('LoreValidator', () => {
           description: '',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateLocation(location);
 
@@ -569,7 +569,7 @@ describe('LoreValidator', () => {
           tags: [],
           links: [],
         status: 'active',
-          prominence: 'marginal' as const,
+          prominence: 'marginal' as const, culture: 'world',
           createdAt: 0,
           updatedAt: 0
         } as HardState;
@@ -591,7 +591,7 @@ describe('LoreValidator', () => {
           description: 'A colony on the ice',
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const discoveryContext = { discoveredBy: 'explorer1', tick: 100 };
 
@@ -612,7 +612,7 @@ describe('LoreValidator', () => {
         description: 'A penguin',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateEntity(entity);
@@ -628,7 +628,7 @@ describe('LoreValidator', () => {
         description: null as any,
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateEntity(entity);
@@ -644,7 +644,7 @@ describe('LoreValidator', () => {
         description: 'A place',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       expect(() => {
         validator.validateLocation(location);
@@ -660,7 +660,7 @@ describe('LoreValidator', () => {
         description: 'A penguin',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, '');
 
@@ -677,7 +677,7 @@ describe('LoreValidator', () => {
         description: 'A penguin',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, '   ');
 
@@ -694,7 +694,7 @@ describe('LoreValidator', () => {
         description: 'A penguin with ice magic',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'A penguin with ice magic');
 
@@ -710,7 +710,7 @@ describe('LoreValidator', () => {
         description: 'A penguin',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity);
 
@@ -727,7 +727,7 @@ describe('LoreValidator', () => {
         description: 'A penguin from the ice',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'A penguin from the ice');
 
@@ -748,7 +748,7 @@ describe('LoreValidator', () => {
           description: `Contains ${cue}`,
           tags: [],
           links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
         const result = validator.validateEntity(entity, `Contains ${cue}`);
         expect(result.valid).toBe(true);
@@ -764,7 +764,7 @@ describe('LoreValidator', () => {
         description: 'From iceberg',
         tags: [],
         links: [],
-        status: "active", prominence: "marginal" as const, createdAt: 0, updatedAt: 0 };
+        status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
       const result = validator.validateEntity(entity, 'From the iceberg');
 
@@ -781,7 +781,7 @@ describe('LoreValidator', () => {
         links: [],
         subtype: 'explorer',
         status: 'active',
-        prominence: 'marginal' as const,
+        prominence: 'marginal' as const, culture: 'world',
         createdAt: 0,
         updatedAt: 0
       };

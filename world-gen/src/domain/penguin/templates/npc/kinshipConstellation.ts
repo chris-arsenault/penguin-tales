@@ -258,6 +258,7 @@ export const kinshipConstellation: GrowthTemplate = {
         description: `A ${member.role} of the ${familyName} family, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
         status: 'alive',
         prominence: member.role === 'prodigy' ? 'recognized' : 'marginal',
+        culture: location.culture,  // Inherit culture from settlement location
         tags: tags.slice(0, 10)
       });
 

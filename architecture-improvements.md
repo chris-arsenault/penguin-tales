@@ -10,413 +10,184 @@
 
 ---
 
-## ⚠️ Quick Reference: Regression Check Commands
+## ⚠️ CRITICAL: Work-First Methodology
 
-**Run after every 2-3 refactoring passes:**
-```bash
-cd world-gen
-npm run build && npm start
-# Check all 5 eras reached: cat ./output/generated_world.json | jq '.hardState | map(select(.kind == "era")) | .[].name'
-# Check zero-entity epochs: cat ./output/generated_world.json | jq '.history | map(select(.description | contains("Growth: +0"))) | length'
-```
+**DO NOT** create progress reports, analysis documents, or documentation until the very end.
+**DO NOT** write PROGRESS.log entries or TEST_COVERAGE.md updates during work.
+**DO** write tests, refactor code, and make actual improvements continuously.
 
-Must pass: ✅ No crashes ✅ All 5 eras ✅ All epochs generate entities
+Your time breakdown should be:
+- **95% actual coding**: Writing tests, refactoring, improving code
+- **5% documentation**: Only at the very end, summarize what you did
 
 ---
 
-You are an expert software architect and test engineer tasked with comprehensively improving the world-gen codebase. Work methodically through multiple passes, continuing until you've addressed all areas. DO NOT stop early - this is an overnight task and thoroughness is more important than speed.
+## Quick Start (Do This First)
 
-## Phase 1: Discovery and Planning (First 30 minutes)
+1. Read `world-gen/CLAUDE.md` and `world-gen/ARCHITECTURE.md` (5 min max)
+2. Run `npm run test:coverage` to see current coverage
+3. Start writing tests immediately
 
-1. **Analyze Repository Structure**
-   - Focus on `world-gen/src/` directory structure
-   - Map out framework vs domain separation
-   - Identify dependencies between framework and domain code
-   - Document template/system registration flow
+---
 
-2. **Understand Current Architecture**
-   - Read existing `world-gen/ARCHITECTURE.md` and `world-gen/CLAUDE.md`
-   - Understand the hybrid template + simulation model
-   - Map entity types, relationship kinds, and graph operations
-   - Identify core abstractions: Graph, HardState, Relationship, GrowthTemplate, SimulationSystem
+## Phase 1: Write Tests (Primary Focus - 70% of your time)
 
-3. **Create Analysis Documents** in `world-gen/`:
-   - `TEST_COVERAGE.md` - Current test coverage status by module
-   - `REFACTORING_TODO.md` - Organized list of improvements needed:
-     - Missing tests (list every untested function/class)
-     - Code duplication instances
-     - Violated SOLID principles
-     - Tightly coupled components
-     - Missing abstractions
-     - Poor naming conventions
-     - Missing documentation
-     - Framework/domain boundary violations
-
-## Phase 2: Test Coverage (Iterate until >70% coverage)
-
-**Test Framework**: Vitest (already configured in `world-gen/vitest.config.ts`)
+**Goal**: Get to >70% test coverage by writing tests continuously.
 
 **Test Location**: `world-gen/src/__tests__/` (mirror source structure)
 
-**Priority Order**:
-1. Core framework utilities (`src/utils/helpers.ts`, `src/utils/validators.ts`)
-2. Engine components (`src/engine/worldEngine.ts`, `src/engine/contractEnforcer.ts`)
-3. Framework systems (`src/systems/*.ts`)
-4. Domain-specific code (`src/domain/penguin/**`)
+**Work in batches of 10-15 tests before any pause.** Do not stop to document or report after each test.
 
-**For EACH module without tests**:
-1. Create test file: `src/__tests__/[module-path]/[filename].test.ts`
-2. Write comprehensive unit tests:
-   - Happy path scenarios
-   - Edge cases (empty inputs, boundary values, null/undefined)
-   - Error conditions
-   - Type safety checks
-3. Mock external dependencies (Graph, config objects, etc.)
-4. Run tests: `npm test [pattern]`
-5. Measure coverage: `npm run test:coverage`
-6. Document coverage in `TEST_COVERAGE.md`
+**Priority Order** (work through ALL of these):
+1. `src/utils/helpers.ts` - all utility functions
+2. `src/utils/validators.ts` - all validators
+3. `src/engine/worldEngine.ts` - core engine logic
+4. `src/engine/contractEnforcer.ts` - contract enforcement
+5. `src/systems/*.ts` - each simulation system
+6. `src/domain/penguin/templates/*.ts` - each template
+7. `src/domain/penguin/systems/*.ts` - domain systems
 
-**Testing Patterns**:
+**For each file, write tests for ALL exported functions before moving to the next file.**
+
 ```typescript
-// Example test structure
 import { describe, it, expect, beforeEach } from 'vitest';
-import { functionToTest } from '../utils/helpers';
+import { functionToTest } from '../path/to/module';
 
 describe('functionToTest', () => {
-  it('should handle happy path', () => {
-    // Test normal operation
-  });
-
-  it('should handle edge cases', () => {
-    // Test boundaries, empty inputs, etc.
-  });
-
-  it('should throw on invalid input', () => {
-    expect(() => functionToTest(invalidInput)).toThrow();
-  });
+  it('handles normal input', () => { /* test */ });
+  it('handles empty input', () => { /* test */ });
+  it('handles edge cases', () => { /* test */ });
+  it('throws on invalid input', () => { /* test */ });
 });
 ```
 
-**DO NOT** move to next phase until you've attempted tests for EVERY untested function.
-
-## Phase 3: Refactoring Iterations (Repeat 5+ times)
-
-Perform multiple refactoring passes. In each pass, run tests after changes to ensure nothing breaks.
-
-### ⚠️ CRITICAL: Regression Check (Run After Every 2-3 Passes)
-
-After every 2-3 refactoring passes, run a full regression check to ensure the world generation process still works:
-
-```bash
-cd world-gen
-npm run build
-npm start  # Run world generation WITHOUT LLM integration
-```
-
-**Regression Check Criteria** (must ALL pass):
-1. ✅ **World generation completes** without crashes or errors
-2. ✅ **All 5 eras are reached**: Check output logs show transitions through:
-   - The Great Thaw (expansion)
-   - The Faction Wars (conflict)
-   - The Clever Ice Age (innovation)
-   - The Orca Incursion (invasion)
-   - The Frozen Peace (reconstruction)
-3. ✅ **All epochs generate entities**: Every epoch should show `Growth: +X entities` where X > 0
-   - Perfect distribution is NOT required
-   - Some epochs can have fewer entities than others
-   - Zero-entity epochs = REGRESSION FAILURE
-4. ✅ **Output files are generated**: `./output/generated_world.json` and `./output/graph_viz.json` exist
-5. ✅ **Output is valid JSON**: Files parse without errors
-
-**Validation Commands**:
-```bash
-# Check era progression (should show all 5 eras)
-cat ./output/generated_world.json | jq '.hardState | map(select(.kind == "era")) | .[].name'
-
-# Count entities (should be >100)
-cat ./output/generated_world.json | jq '.hardState | length'
-
-# Check for zero-entity epochs (should be empty or near-empty)
-cat ./output/generated_world.json | jq '.history | map(select(.description | contains("Growth: +0"))) | length'
-```
-
-**If Regression Check FAILS**:
-1. STOP further refactoring immediately
-2. Review changes since last successful regression check
-3. Use git to identify breaking changes: `git diff HEAD~5`
-4. Fix the regression before continuing
-5. Document what broke and how you fixed it in `PROGRESS.log`
-
-**Frequency**: Run regression check:
-- After completing Pass A, B, C, or D
-- Before moving to Phase 4
-- After any changes to core engine files (`worldEngine.ts`, `contractEnforcer.ts`)
-- After modifying template/system registration code
-- If you're unsure whether a change might break things
-
-### Pass A: Extract Abstractions
-
-**Focus Areas**:
-- Template/system metadata boilerplate → shared factory functions
-- Relationship creation patterns → builder utilities
-- Entity finding/filtering → query DSL or helper methods
-- Repeated graph traversal logic → graph query utilities
-- Configuration validation → schema validators
-
-**Example Patterns**:
-```typescript
-// Before: Repeated relationship creation
-graph.relationships.push({ kind: 'trades_with', src: a, dst: b, strength: 0.5 });
-
-// After: Helper function
-addRelationship(graph, { kind: 'trades_with', from: a, to: b, strength: 0.5 });
-```
-
-### Pass B: Separation of Concerns
-
-**Framework/Domain Boundaries**:
-- Ensure `src/engine/` only contains domain-agnostic code
-- Move penguin-specific logic from framework to `src/domain/penguin/`
-- Extract hardcoded penguin data to configuration files
-- Create clear interfaces between framework and domain
-
-**File Structure Guidelines**:
-- If a file has >400 lines, consider splitting by responsibility
-- If a class has >5 public methods, evaluate if it does multiple things
-- Separate data transformation from business logic
-- Isolate I/O operations (file reads, JSON parsing) from core logic
-
-**Example Refactorings**:
-```typescript
-// Split large files
-worldEngine.ts (800 lines) →
-  - worldEngine.ts (core orchestration)
-  - growthPhase.ts (template execution)
-  - simulationPhase.ts (system execution)
-  - graphBuilder.ts (graph construction)
-```
-
-### Pass C: SOLID Principles
-
-**Single Responsibility**:
-- Each template should create ONE type of entity cluster
-- Each system should modify ONE aspect of world state
-- Each helper function should do ONE thing
-
-**Open/Closed**:
-- Use strategy pattern for template selection algorithms
-- Plugin architecture for new entity kinds
-- Extensible pressure/system/template registries
-
-**Dependency Inversion**:
-- Inject domain schema into framework engine (already done via `domain` property)
-- Pass dependencies through constructors, not global imports
-- Use interfaces for external services (enrichment, image generation)
-
-**Interface Segregation**:
-- Split large contracts into focused interfaces
-- Don't require templates to implement unused metadata fields
-
-### Pass D: Code Quality
-
-**Naming Improvements**:
-- Use domain terminology consistently (entity vs node, relationship vs edge)
-- Avoid abbreviations unless standard (npc → keep, ent → entity)
-- Method names should be verbs (getEntity, createRelationship, applySystem)
-- Boolean variables should be predicates (isActive, hasChildren, canApply)
-
-**Documentation Standards**:
-- Every template/system should have JSDoc with:
-  - Purpose and behavior
-  - Example usage
-  - Contract violations to avoid
-- Complex algorithms should have inline comments explaining WHY
-- Type definitions should have descriptive comments
-
-**Error Handling**:
-- Use typed error classes for different failure modes
-- Validate inputs at public API boundaries
-- Fail fast with descriptive error messages
-- Add context to re-thrown errors
+**Run tests frequently**: `npm test` after every 3-5 tests to catch issues early.
 
 ---
 
-**🔄 After completing Pass D, run the Regression Check before proceeding to Phase 4!**
+## Phase 2: Refactoring (25% of your time)
+
+**Only start this after you have >50% test coverage.**
+
+Do refactoring in focused batches. Complete 5-10 related refactors before running regression check.
+
+### Refactoring Targets (work through all):
+
+**Extract Common Patterns**:
+- Relationship creation → builder utilities
+- Entity filtering → query helpers
+- Graph traversal → reusable functions
+
+**Clean Up Code**:
+- Remove duplication
+- Improve naming
+- Add type safety where missing
+- Split files >400 lines
+
+**Strengthen Boundaries**:
+- Move penguin-specific code to `domain/penguin/`
+- Keep `engine/` domain-agnostic
+
+### Regression Check (Once per phase, not per pass)
+
+Run ONE regression check after completing all refactoring:
+
+```bash
+cd world-gen && npm run build && npm start
+```
+
+Must pass: No crashes, all 5 eras reached, entities generated each epoch.
+
+If it fails, fix immediately then continue.
 
 ---
 
-## Phase 4: Architecture Improvements
+## Phase 3: Final Validation and Documentation (5% of your time)
 
-### Existing Architecture (Preserve)
-The codebase already has good separation:
-- **Engine Layer**: Framework orchestration (`worldEngine.ts`, `contractEnforcer.ts`)
-- **Domain Layer**: Penguin-specific content (`domain/penguin/`)
-- **Data Layer**: JSON config files, initial state
+**Only do this at the very end after all tests and refactoring are complete.**
 
-**DO NOT** drastically restructure this - it works well.
+1. Run final test suite: `npm test && npm run test:coverage`
+2. Run final regression: `npm run build && npm start`
+3. Create ONE summary file `IMPROVEMENTS.md` listing what you accomplished
+4. Update `CLAUDE.md` only if architecture changed significantly
 
-### Targeted Improvements
+---
 
-1. **Strengthen Type Safety**:
-   - Add strict TypeScript checks where missing
-   - Use discriminated unions for entity subtypes
-   - Type-safe relationship kind validation
+## Work Rules
 
-2. **Improve Observability**:
-   - Add structured logging with log levels
-   - Emit events for major state transitions
-   - Performance instrumentation for bottlenecks
-
-3. **Configuration Validation**:
-   - JSON schema validation for config files
-   - Startup validation of template/system contracts
-   - Better error messages for invalid config
-
-4. **Design Patterns to Consider**:
-   - **Builder Pattern**: For complex Graph construction
-   - **Strategy Pattern**: For template selection algorithms (already partially present)
-   - **Observer Pattern**: For system notifications
-   - **Factory Pattern**: For entity/relationship creation with validation
-
-5. **Architectural Decision Records (ADRs)**:
-   - Create `world-gen/docs/adr/` directory
-   - Document major architectural decisions:
-     - Why hybrid template+simulation model?
-     - Why domain/framework separation?
-     - Why pressure-based template triggering?
-     - Why relationship culling system?
-
-## Phase 5: Validation and Documentation
-
-1. **Run Final Regression Check**:
-   ```bash
-   cd world-gen
-   npm run build
-   npm start
-   ```
-   - ✅ Verify world generation completes successfully
-   - ✅ Confirm all 5 eras are reached
-   - ✅ Confirm all epochs generate entities (no zero-entity epochs)
-   - ✅ Validate output files exist and contain valid JSON
-   - **THIS MUST PASS before proceeding to documentation**
-
-2. **Run Full Test Suite**:
-   ```bash
-   cd world-gen
-   npm test
-   npm run test:coverage
-   ```
-   - Fix any broken tests
-   - Ensure coverage >70%
-
-3. **Update Documentation**:
-   - Update `world-gen/CLAUDE.md` with:
-     - New test running instructions
-     - Any architectural changes
-     - New utility functions available
-   - Update `world-gen/README.md` (create if missing)
-   - Generate `IMPROVEMENTS.md` listing all changes
-
-4. **Code Quality**:
-   ```bash
-   npm run lint
-   npm run build
-   ```
-   - Fix any linting errors
-   - Ensure TypeScript compilation succeeds
-   - Clean up unused imports
-
-5. **Performance Check**:
-   - Compare generation time to baseline (should be similar or faster)
-   - Check entity/relationship counts are in expected ranges
-   - Verify memory usage hasn't increased significantly
-
-## Phase 6: Advanced Improvements (If Time Permits)
-
-1. **Performance Optimization**:
-   - Profile world generation: identify bottlenecks
-   - Optimize hot paths (relationship lookups, entity filtering)
-   - Consider caching frequently accessed data
-   - Benchmark before/after improvements
-
-2. **Integration Tests**:
-   - Full world generation test (seed → valid output)
-   - Template application tests (canApply → expand → validate)
-   - System application tests (graph state → modifications)
-   - Era progression test (spawn → transitions)
-
-3. **Developer Experience**:
-   - Add debug mode with verbose logging
-   - Create example templates/systems as guides
-   - Add validation tools for custom templates
-   - Generate API documentation from JSDoc
-
-4. **CI/CD Setup** (if not present):
-   - GitHub Actions workflow for tests
-   - Automated test coverage reporting
-   - TypeScript compilation check
-   - Linting enforcement
-
-## Critical Instructions
-
-### Scope Limitations
-- **ONLY WORK IN**: `world-gen/` directory
-- **DO NOT MODIFY**: `world-explorer/`, `world-gen-optimizer/`, or root-level files (except this file)
-- **PRESERVE**: Existing architectural patterns (domain/framework separation)
-
-### Work Methodology
-- CONTINUE WORKING through all phases even if it takes hours
-- After completing Phase 5, return to Phase 2 for any remaining untested code
-- Use frequent, small commits with clear messages
-- Run tests after each refactoring to catch regressions
-- Document decisions in ADRs for major changes
-
-### Progress Tracking
-- Create `world-gen/PROGRESS.log` file
-- Every 30 minutes, append entry with:
-  - Timestamp
-  - Current phase
-  - Files modified
-  - Tests added
-  - Coverage percentage
-  - Next steps
-
-### Git Workflow
-```bash
-cd world-gen
-git checkout -b autonomous-improvements
-# ... make changes ...
-git add .
-git commit -m "feat: add tests for helpers.ts utility functions"
-# Repeat frequently
-```
+1. **Minimize overhead**: No progress logs, no interim reports, no analysis documents
+2. **Batch your work**: Write 10+ tests before pausing, do 5+ refactors before checking
+3. **Stay in code**: Your output should be test files and improved source files
+4. **One regression check per phase**: Not after every change
+5. **Document at end only**: Create IMPROVEMENTS.md as final step
 
 ## Success Criteria
 
-By completion, the world-gen codebase should have:
+- ✅ >70% test coverage
+- ✅ All tests passing
+- ✅ Regression check passes (runs, 5 eras, entities each epoch)
+- ✅ TypeScript compiles without errors
+- ✅ One IMPROVEMENTS.md summarizing changes
 
-- ✅ >70% test coverage (measured by Vitest)
-- ✅ All critical paths tested (worldEngine, contractEnforcer, helpers)
-- ✅ Zero TypeScript compilation errors
-- ✅ Zero linting errors
-- ✅ Clean separation of framework and domain concerns
-- ✅ Comprehensive documentation for all public APIs
-- ✅ IMPROVEMENTS.md summarizing all changes
-- ✅ Updated CLAUDE.md with new information
-- ✅ All tests passing (`npm test`)
-- ✅ **Regression check passing**:
-  - World generation completes without errors
-  - All 5 eras reached (expansion → conflict → innovation → invasion → reconstruction)
-  - All epochs generate entities (no zero-entity epochs)
-  - Output files generated and valid
+---
 
-## Reference Files
+## Reference: Test Writing Targets
 
-Before starting, review these key files:
-- `world-gen/CLAUDE.md` - Project overview and domain knowledge
-- `world-gen/ARCHITECTURE.md` - Current architecture documentation
-- `world-gen/src/types/worldTypes.ts` - Core type definitions
-- `world-gen/src/types/engine.ts` - Engine and contract types
-- `world-gen/src/engine/worldEngine.ts` - Main orchestration logic
+Write tests for ALL exports in these files (in order):
 
-Remember: The goal is to wake up to a significantly improved codebase with excellent test coverage, clean architecture, and well-documented code. Be thorough rather than quick. If you complete everything, find more improvements to make. Keep working.
+### Utils (do all of these first)
+- `helpers.ts`: generateName, generateId, pickRandom, pickMultiple, findEntities, getRelated, getLocation, getFactionMembers, hasRelationship
+- `validators.ts`: all validation functions
+
+### Engine (critical path)
+- `worldEngine.ts`: runGrowthPhase, runSimulationPhase, selectTemplates, applyTemplate
+- `contractEnforcer.ts`: validateEntity, validateRelationship, enforceContracts
+
+### Systems
+- Test each system's `apply()` method with mock graphs
+- Test edge cases: empty graph, no matching entities, max capacity
+
+### Templates
+- Test each template's `canApply()` and `expand()` methods
+- Test with various graph states and pressure levels
+
+---
+
+## Reference: Refactoring Checklist
+
+Work through these quickly without documenting each one:
+
+- [ ] Extract repeated relationship creation to helper
+- [ ] Extract repeated entity queries to helper
+- [ ] Split any file >400 lines
+- [ ] Move hardcoded penguin strings to config
+- [ ] Add missing TypeScript types
+- [ ] Remove dead code
+- [ ] Rename unclear variables/functions
+
+---
+
+## Scope
+
+- **ONLY WORK IN**: `world-gen/` directory
+- **DO NOT MODIFY**: `world-explorer/`, `world-gen-optimizer/`
+- **PRESERVE**: Domain/framework separation pattern
+
+---
+
+## Git Workflow
+
+Commit after completing each file's tests (not after each test):
+
+```bash
+git add . && git commit -m "test: add tests for helpers.ts"
+```
+
+---
+
+## Final Checklist (only check at the very end)
+
+- [ ] `npm test` passes
+- [ ] `npm run test:coverage` shows >70%
+- [ ] `npm run build && npm start` completes without error
+- [ ] Created `IMPROVEMENTS.md` with summary of changes

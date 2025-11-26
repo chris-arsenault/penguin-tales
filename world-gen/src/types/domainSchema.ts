@@ -86,6 +86,23 @@ export interface NameGenerator {
 }
 
 /**
+ * Culture definition for the domain
+ */
+export interface CultureDefinition {
+  /** Unique identifier for this culture */
+  id: string;
+
+  /** Human-readable name */
+  name: string;
+
+  /** Description of this culture */
+  description?: string;
+
+  /** Associated location (homeland) if any */
+  homeland?: string;
+}
+
+/**
  * Complete domain schema definition
  */
 export interface DomainSchema {
@@ -104,6 +121,9 @@ export interface DomainSchema {
   /** All relationship kinds supported by this domain */
   relationshipKinds: RelationshipKindDefinition[];
 
+  /** All cultures defined in this domain */
+  cultures: CultureDefinition[];
+
   /** Name generation service */
   nameGenerator: NameGenerator;
 
@@ -121,6 +141,12 @@ export interface DomainSchema {
 
   /** Optional: Get all mutable relationship kinds */
   getMutableRelationshipKinds?(): string[];
+
+  /** Optional: Get culture definition by id */
+  getCulture?(id: string): CultureDefinition | undefined;
+
+  /** Optional: Get all culture ids */
+  getCultureIds?(): string[];
 
   /** Optional: Validate that an entity has all required relationships */
   validateEntityStructure?(entity: HardState): { valid: boolean; missing: string[] };
@@ -154,6 +180,7 @@ export class BaseDomainSchema implements DomainSchema {
   version: string;
   entityKinds: EntityKindDefinition[];
   relationshipKinds: RelationshipKindDefinition[];
+  cultures: CultureDefinition[];
   nameGenerator: NameGenerator;
 
   constructor(config: {
@@ -162,6 +189,7 @@ export class BaseDomainSchema implements DomainSchema {
     version: string;
     entityKinds: EntityKindDefinition[];
     relationshipKinds: RelationshipKindDefinition[];
+    cultures: CultureDefinition[];
     nameGenerator: NameGenerator;
   }) {
     this.id = config.id;
@@ -169,6 +197,7 @@ export class BaseDomainSchema implements DomainSchema {
     this.version = config.version;
     this.entityKinds = config.entityKinds;
     this.relationshipKinds = config.relationshipKinds;
+    this.cultures = config.cultures;
     this.nameGenerator = config.nameGenerator;
   }
 
@@ -196,6 +225,14 @@ export class BaseDomainSchema implements DomainSchema {
     return this.relationshipKinds
       .filter(rk => rk.mutability === 'mutable')
       .map(rk => rk.kind);
+  }
+
+  getCulture(id: string): CultureDefinition | undefined {
+    return this.cultures.find(c => c.id === id);
+  }
+
+  getCultureIds(): string[] {
+    return this.cultures.map(c => c.id);
   }
 
   /**

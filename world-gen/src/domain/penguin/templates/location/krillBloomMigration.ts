@@ -260,6 +260,11 @@ export const krillBloomMigration: GrowthTemplate = {
         const newBloomIndex = entities.length;
         bloomIds.push(`will-be-assigned-${newBloomIndex}`);
 
+        // Connect new bloom to 2 nearest colonies
+        // Since we don't have the new location's position yet, connect to random colonies
+        // (In a real Voronoi implementation, we'd place at cell boundaries)
+        const selectedColonies = pickMultiple(colonies, Math.min(2, colonies.length));
+
         entities.push({
           kind: 'location',
           subtype: 'geographic_feature',
@@ -267,13 +272,9 @@ export const krillBloomMigration: GrowthTemplate = {
           description: `Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.`,
           status: 'thriving',
           prominence: 'recognized',
+          culture: selectedColonies[0]?.culture || 'aurora-stack',  // Inherit culture from nearest colony
           tags: ['krill', 'bloom', 'resource'].slice(0, 10)
         });
-
-        // Connect new bloom to 2 nearest colonies
-        // Since we don't have the new location's position yet, connect to random colonies
-        // (In a real Voronoi implementation, we'd place at cell boundaries)
-        const selectedColonies = pickMultiple(colonies, Math.min(2, colonies.length));
 
         selectedColonies.forEach(colony => {
           relationships.push({
@@ -305,6 +306,7 @@ export const krillBloomMigration: GrowthTemplate = {
         description: `An enterprising merchant who discovered the krill blooms and now leads expeditions to harvest them.`,
         status: 'alive',
         prominence: 'marginal', // Discoverers start marginal
+        culture: homeColony.culture,  // Inherit culture from home colony
         tags: ['explorer', 'merchant', 'krill'].slice(0, 10)
       });
 

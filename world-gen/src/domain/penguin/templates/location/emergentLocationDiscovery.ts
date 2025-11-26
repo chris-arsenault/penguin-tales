@@ -171,6 +171,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       description: description,
       status: 'unspoiled',
       prominence: 'recognized',
+      culture: discoverer.culture,  // Inherit culture from discoverer
       tags: locationTags.slice(0, 10),
       links: []
     };

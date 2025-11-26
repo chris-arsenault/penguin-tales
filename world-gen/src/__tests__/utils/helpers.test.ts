@@ -101,6 +101,7 @@ function createMockEntity(overrides: Partial<HardState> = {}): HardState {
     description: 'A test entity',
     status: 'alive',
     prominence: 'marginal',
+    culture: 'world',
     tags: [],
     links: [],
     createdAt: 0,

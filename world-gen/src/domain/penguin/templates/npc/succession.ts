@@ -103,6 +103,7 @@ export const succession: GrowthTemplate = {
       description: `Successor to ${oldLeader.name} in ${colony.name}`,
       status: 'alive',
       prominence: 'marginal', // New leaders start marginal, must earn respect
+      culture: colony.culture,  // Inherit culture from colony
       tags: ['successor']
     };
 

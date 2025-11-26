@@ -141,6 +141,7 @@ export const factionSplinter: GrowthTemplate = {
       description: `A splinter group that broke away from ${parentFaction.name}`,
       status: 'waning',
       prominence: 'marginal',
+      culture: parentFaction.culture,  // Inherit culture from parent faction
       tags: ['splinter', ...parentFaction.tags.slice(0, 2)]
     };
 
@@ -171,6 +172,7 @@ export const factionSplinter: GrowthTemplate = {
         description: `Charismatic leader of the ${splinter.name}`,
         status: 'alive',
         prominence: 'recognized',
+        culture: parentFaction.culture,  // Inherit culture from parent faction
         tags: ['rebel', 'charismatic']
       };
 

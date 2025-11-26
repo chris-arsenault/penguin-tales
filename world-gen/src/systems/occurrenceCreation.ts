@@ -277,6 +277,7 @@ function checkForWar(
     description: `A major conflict between ${largestCluster.factions.length} factions`,
     status: 'active',
     prominence: 'recognized',
+    culture: 'world',  // Wars are world-level events
     tags: ['war', 'conflict', 'violence'],
     links: [],
     createdAt: graph.tick,
@@ -368,6 +369,7 @@ function checkForMagicalDisaster(
     description: `Magical corruption spreads uncontrollably`,
     status: 'active',
     prominence: 'renowned',
+    culture: 'world',  // Disasters are world-level events
     tags: ['disaster', 'magic', 'corruption'],
     links: [],
     createdAt: graph.tick,
@@ -480,6 +482,7 @@ function checkForCulturalMovement(
     description: `Widespread adoption of ${rule.name}`,
     status: 'active',
     prominence: 'recognized',
+    culture: 'world',  // Cultural movements are world-level events
     tags: ['cultural', 'ideology', 'movement'],
     links: [],
     createdAt: graph.tick,
@@ -550,6 +553,7 @@ function checkForEconomicBoom(
     description: `Economic prosperity driven by ${tradeRoutes.length} trade connections`,
     status: 'active',
     prominence: 'recognized',
+    culture: 'world',  // Economic events are world-level events
     tags: ['economic', 'prosperity', 'trade'],
     links: [],
     createdAt: graph.tick,

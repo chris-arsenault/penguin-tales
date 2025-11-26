@@ -150,6 +150,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       description: `A strategic ${formattedTheme.toLowerCase()} providing tactical advantage in the ${conflict.type} conflict`,
       status: 'unspoiled',
       prominence: 'recognized',  // Strategic locations are notable
+      culture: discoverer.culture,  // Inherit culture from discoverer
       tags: theme.tags,
       links: []
     };

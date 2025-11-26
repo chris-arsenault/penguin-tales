@@ -133,6 +133,7 @@ export const anomalyManifestation: GrowthTemplate = {
         description: `A mysterious phenomenon${locationDesc}`,
         status: 'unspoiled',
         prominence: 'recognized',
+        culture: nearbyLocation.culture,  // Inherit culture from nearby location
         tags: ['anomaly', 'mystical']
       }],
       relationships,

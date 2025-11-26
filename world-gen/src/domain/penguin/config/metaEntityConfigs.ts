@@ -86,6 +86,21 @@ export const magicSchoolFormation: MetaEntityConfig = {
       prominence = 'marginal';
     }
 
+    // Determine dominant culture from cluster
+    const cultureCounts = new Map<string, number>();
+    cluster.forEach(ability => {
+      const culture = ability.culture || 'world';
+      cultureCounts.set(culture, (cultureCounts.get(culture) || 0) + 1);
+    });
+    let majorityCulture = 'world';
+    let maxCultureCount = 0;
+    cultureCounts.forEach((count, culture) => {
+      if (count > maxCultureCount) {
+        maxCultureCount = count;
+        majorityCulture = culture;
+      }
+    });
+
     // Create an ABILITY that represents the school
     // It functions as an ability in all existing systems
     return {
@@ -95,6 +110,7 @@ export const magicSchoolFormation: MetaEntityConfig = {
       description,
       status: 'active',
       prominence,
+      culture: majorityCulture,  // Inherit dominant culture from cluster
       tags: [...tags, 'meta-entity']  // Mark as meta-entity via tag
     };
   }
@@ -183,6 +199,21 @@ export const legalCodeFormation: MetaEntityConfig = {
       prominence = 'marginal';
     }
 
+    // Determine dominant culture from cluster
+    const cultureCounts = new Map<string, number>();
+    cluster.forEach(rule => {
+      const culture = rule.culture || 'world';
+      cultureCounts.set(culture, (cultureCounts.get(culture) || 0) + 1);
+    });
+    let majorityCulture = 'world';
+    let maxCultureCount = 0;
+    cultureCounts.forEach((count, culture) => {
+      if (count > maxCultureCount) {
+        maxCultureCount = count;
+        majorityCulture = culture;
+      }
+    });
+
     // Create a RULE that represents the legal code
     // It functions as a rule in all existing systems
     return {
@@ -192,6 +223,7 @@ export const legalCodeFormation: MetaEntityConfig = {
       description,
       status: 'enacted',
       prominence,
+      culture: majorityCulture,  // Inherit dominant culture from cluster
       tags: [...tags, 'meta-entity']  // Mark as meta-entity via tag
     };
   }
@@ -283,6 +315,21 @@ export const combatTechniqueFormation: MetaEntityConfig = {
       prominence = 'marginal';
     }
 
+    // Determine dominant culture from cluster
+    const cultureCounts = new Map<string, number>();
+    combatAbilities.forEach(ability => {
+      const culture = ability.culture || 'world';
+      cultureCounts.set(culture, (cultureCounts.get(culture) || 0) + 1);
+    });
+    let majorityCulture = 'world';
+    let maxCultureCount = 0;
+    cultureCounts.forEach((count, culture) => {
+      if (count > maxCultureCount) {
+        maxCultureCount = count;
+        majorityCulture = culture;
+      }
+    });
+
     return {
       kind: 'abilities',
       subtype: majoritySubtype,
@@ -290,6 +337,7 @@ export const combatTechniqueFormation: MetaEntityConfig = {
       description,
       status: 'active',
       prominence,
+      culture: majorityCulture,  // Inherit dominant culture from cluster
       tags: [...tags, 'meta-entity', 'combat-style']
     };
   }

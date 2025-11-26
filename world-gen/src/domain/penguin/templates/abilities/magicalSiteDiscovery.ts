@@ -159,6 +159,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       description: `A mystical site where ${target.name} manifests with unusual intensity`,
       status: 'thriving',
       prominence: 'recognized',
+      culture: catalyst.culture,  // Inherit culture from discovering practitioner
       tags: ['anomaly', 'magical', target.name.toLowerCase().split(' ')[0]],
       links: []
     };

@@ -162,6 +162,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       description: `A mystical ${formattedTheme.toLowerCase()} manifesting ${magic.manifestationType} energies`,
       status: 'unspoiled',
       prominence: 'recognized',  // Mystical places are notable
+      culture: discoverer.culture,  // Inherit culture from discoverer
       tags: theme.tags,
       links: []
     };

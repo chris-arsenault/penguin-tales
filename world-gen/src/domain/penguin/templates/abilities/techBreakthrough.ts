@@ -190,6 +190,7 @@ export const techBreakthrough: GrowthTemplate = {
       description: `A ${techDesc} developed by ${target.name} at ${originLocation.name}`,
       status: 'active',
       prominence: 'recognized',
+      culture: target.culture,  // Inherit culture from developing faction
       tags: ['technology', 'innovation', target.subtype],
       links: []
     };

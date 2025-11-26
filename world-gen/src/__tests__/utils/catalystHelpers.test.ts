@@ -35,7 +35,7 @@ function createEntity(
     name: `Test ${kind}`,
     description: '',
     status: 'active',
-    prominence,
+    prominence, culture: 'world',
     tags: [],
     links: [],
     createdAt: 0,

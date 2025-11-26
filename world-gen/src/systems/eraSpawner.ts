@@ -123,6 +123,7 @@ export const eraSpawner: SimulationSystem = {
         description: configEra.description,
         status: isFirst ? 'current' : 'future',
         prominence: 'mythic',  // Eras are always mythic (world-defining)
+        culture: 'world',  // Eras are world-level entities
         tags: ['temporal', 'era', configEra.id],
         links: [],
         createdAt: graph.tick,

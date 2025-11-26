@@ -200,6 +200,7 @@ export function normalizeInitialState(entities: any[]): HardState[] {
     description: entity.description || '',
     status: entity.status || 'alive',
     prominence: entity.prominence as HardState['prominence'] || 'marginal',
+    culture: entity.culture || 'world',  // Domain-defined cultural affiliation, defaults to 'world'
     tags: entity.tags || [],
     links: entity.links || [],
     createdAt: 0,  // Initial entities created at tick 0
@@ -219,6 +220,7 @@ export function addEntity(graph: Graph, entity: Partial<HardState>): string {
     description: entity.description || '',
     status: entity.status || 'alive',
     prominence: entity.prominence || 'marginal',
+    culture: entity.culture || 'world',  // Domain-defined cultural affiliation, defaults to 'world'
     tags: entity.tags || [],
     links: entity.links || [],
     createdAt: entity.createdAt || graph.tick,

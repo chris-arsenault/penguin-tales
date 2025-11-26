@@ -217,6 +217,7 @@ export const legendCrystallization: SimulationSystem = {
         description: entity.description!,
         status: entity.status!,
         prominence: entity.prominence!,
+        culture: entity.culture || 'world',
         tags: entity.tags!,
         links: [],
         createdAt: entity.createdAt!,

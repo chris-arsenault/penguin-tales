@@ -74,7 +74,7 @@ describe('MetaEntityFormation', () => {
           name: `School of Magic`,
           description: `A magical school`,
           status: 'active',
-          prominence: 'recognized',
+          prominence: 'recognized', culture: 'world',
           tags: ['meta-entity', 'school'],
           links: []
         })
@@ -105,12 +105,12 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School 1', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School 1', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       const config2: MetaEntityConfig = {
         ...config1,
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School 2', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School 2', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config1);
@@ -145,7 +145,7 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config);
@@ -158,7 +158,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell',
         description: 'Shoots fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 10,
@@ -172,7 +172,7 @@ describe('MetaEntityFormation', () => {
         name: 'Ice Spell',
         description: 'Shoots ice',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['ice', 'combat'],
         links: [],
         createdAt: 20,
@@ -201,7 +201,7 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config);
@@ -214,7 +214,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell',
         description: 'Shoots fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 10,
@@ -228,7 +228,7 @@ describe('MetaEntityFormation', () => {
         name: 'Ice Spell',
         description: 'Shoots ice',
         status: 'historical',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['ice', 'combat'],
         links: [],
         createdAt: 20,
@@ -242,7 +242,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fireball',
         description: 'Big fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 30,
@@ -278,7 +278,7 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config);
@@ -291,7 +291,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell',
         description: 'Shoots fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 10,
@@ -305,7 +305,7 @@ describe('MetaEntityFormation', () => {
         name: 'Existing School',
         description: 'Already a school',
         status: 'active',
-        prominence: 'recognized',
+        prominence: 'recognized', culture: 'world',
         tags: ['meta-entity', 'fire', 'combat'],
         links: [],
         createdAt: 20,
@@ -319,7 +319,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fireball',
         description: 'Big fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 30,
@@ -354,7 +354,7 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config);
@@ -367,7 +367,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell 1',
         description: 'Fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat', 'ranged'],
         links: [],
         createdAt: 10,
@@ -381,7 +381,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell 2',
         description: 'Fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat', 'area'],
         links: [],
         createdAt: 20,
@@ -395,7 +395,7 @@ describe('MetaEntityFormation', () => {
         name: 'Fire Spell 3',
         description: 'Fire',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['fire', 'combat'],
         links: [],
         createdAt: 30,
@@ -409,7 +409,7 @@ describe('MetaEntityFormation', () => {
         name: 'Ice Spell 1',
         description: 'Ice',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['ice', 'control'],
         links: [],
         createdAt: 40,
@@ -423,7 +423,7 @@ describe('MetaEntityFormation', () => {
         name: 'Ice Spell 2',
         description: 'Ice',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: ['ice', 'control'],
         links: [],
         createdAt: 50,
@@ -459,7 +459,7 @@ describe('MetaEntityFormation', () => {
           preserveOriginalLinks: true,
           createGovernanceFaction: false
         },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config);
@@ -473,7 +473,7 @@ describe('MetaEntityFormation', () => {
           name: `Fire Spell ${i}`,
           description: 'Fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire', 'combat', 'elemental'],
           links: [],
           createdAt: i * 10,
@@ -500,7 +500,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fire Spell',
           description: 'Fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [],
           createdAt: 10,
@@ -513,7 +513,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fireball',
           description: 'Big fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [],
           createdAt: 20,
@@ -547,7 +547,7 @@ describe('MetaEntityFormation', () => {
           name: `School of Fire (${cluster.length} spells)`,
           description: 'A fire magic school',
           status: 'active',
-          prominence: 'recognized',
+          prominence: 'recognized', culture: 'world',
           tags: ['meta-entity', 'fire', 'school'],
           links: []
         })
@@ -572,7 +572,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fire Spell',
           description: 'Fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [],
           createdAt: 10,
@@ -585,7 +585,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fireball',
           description: 'Big fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [],
           createdAt: 20,
@@ -618,7 +618,7 @@ describe('MetaEntityFormation', () => {
           name: 'School',
           description: 'School',
           status: 'active',
-          prominence: 'recognized',
+          prominence: 'recognized', culture: 'world',
           tags: ['meta-entity'],
           links: []
         })
@@ -643,7 +643,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fire Spell',
           description: 'Fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [],
           createdAt: 10,
@@ -676,7 +676,7 @@ describe('MetaEntityFormation', () => {
           name: 'School',
           description: 'School',
           status: 'active',
-          prominence: 'recognized',
+          prominence: 'recognized', culture: 'world',
           tags: ['meta-entity'],
           links: []
         })
@@ -697,7 +697,7 @@ describe('MetaEntityFormation', () => {
         name: 'Wizard',
         description: 'A wizard',
         status: 'active',
-        prominence: 'marginal',
+        prominence: 'marginal', culture: 'world',
         tags: [],
         links: [],
         createdAt: 5,
@@ -712,7 +712,7 @@ describe('MetaEntityFormation', () => {
           name: 'Fire Spell',
           description: 'Fire',
           status: 'active',
-          prominence: 'marginal',
+          prominence: 'marginal', culture: 'world',
           tags: ['fire'],
           links: [{ kind: 'practiced_by', src: 'ability1', dst: 'npc1' }],
           createdAt: 10,
@@ -749,7 +749,7 @@ describe('MetaEntityFormation', () => {
           name: 'School',
           description: 'School',
           status: 'active',
-          prominence: 'recognized',
+          prominence: 'recognized', culture: 'world',
           tags: ['meta-entity'],
           links: []
         })
@@ -778,7 +778,7 @@ describe('MetaEntityFormation', () => {
         trigger: 'epoch_end',
         clustering: { minSize: 3, maxSize: 8, minimumScore: 2.0, criteria: [] },
         transformation: { transferRelationships: true, markOriginalsHistorical: true, redirectFutureRelationships: false, preserveOriginalLinks: true, createGovernanceFaction: false },
-        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'abilities', subtype: 'school', name: 'School', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       const config2: MetaEntityConfig = {
@@ -787,7 +787,7 @@ describe('MetaEntityFormation', () => {
         trigger: 'epoch_end',
         clustering: { minSize: 3, maxSize: 10, minimumScore: 2.0, criteria: [] },
         transformation: { transferRelationships: true, markOriginalsHistorical: true, redirectFutureRelationships: false, preserveOriginalLinks: true, createGovernanceFaction: true },
-        factory: () => ({ kind: 'rules', subtype: 'legal_code', name: 'Code', description: '', status: 'active', prominence: 'recognized', tags: [], links: [] })
+        factory: () => ({ kind: 'rules', subtype: 'legal_code', name: 'Code', description: '', status: 'active', prominence: 'recognized', culture: 'world', tags: [], links: [] })
       };
 
       formation.registerConfig(config1);
