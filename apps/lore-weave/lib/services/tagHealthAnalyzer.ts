@@ -411,7 +411,6 @@ export class TagHealthAnalyzer {
 
   /**
    * Check if adding tags to an entity would create saturation
-   * (Backward compatibility method for contractEnforcer)
    */
   public checkTagSaturation(
     graph: Graph,
@@ -449,7 +448,6 @@ export class TagHealthAnalyzer {
 
   /**
    * Check if tags are orphans (unregistered)
-   * (Backward compatibility method for contractEnforcer)
    */
   public checkTagOrphans(tagsToAdd: string[]): { hasOrphans: boolean; orphanTags: string[] } {
     const orphanTags = tagsToAdd.filter(tag => {
@@ -465,7 +463,6 @@ export class TagHealthAnalyzer {
 
   /**
    * Validate tag taxonomy for conflicts
-   * (Backward compatibility method for contractEnforcer)
    */
   public validateTagTaxonomy(entity: HardState): Array<{ tag1: string; tag2: string; reason: string }> {
     const conflicts: Array<{ tag1: string; tag2: string; reason: string }> = [];

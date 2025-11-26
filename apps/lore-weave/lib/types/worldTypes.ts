@@ -8,7 +8,7 @@ export type Prominence =
 
 export interface HardState {
     id: string;              // stable ID in the graph
-    kind: string;            // Domain defines valid values (was: 'npc' | 'location' | 'faction' | 'rules' | 'abilities')
+    kind: string;            // Domain defines valid values
     subtype: string;
     name: string;
     description: string;

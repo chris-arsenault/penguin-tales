@@ -28,7 +28,6 @@ export function setNameGenerator(generator: NameGenerator): void {
 
 /**
  * Generate a name using the current name generator.
- * DEPRECATED: Templates should use graph.config.domain.nameGenerator directly.
  */
 export function generateName(type: string = 'default'): string {
   return currentNameGenerator.generate(type);

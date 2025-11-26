@@ -33,7 +33,7 @@ export class ContractEnforcer {
     graph: Graph,
     graphView: TemplateGraphView
   ): { allowed: boolean; reason?: string } {
-    // No contract = always allowed (backward compatibility)
+    // No contract = always allowed
     if (!template.contract?.enabledBy) {
       return { allowed: true };
     }

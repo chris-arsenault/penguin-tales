@@ -82,10 +82,8 @@ export class TemplateGraphView {
   }
 
   /**
-   * ESCAPE HATCH: Get internal graph for legacy functions
-   * Only use this for helper functions that absolutely need full graph access
-   * New code should use TemplateGraphView methods instead
-   * @deprecated Prefer using TemplateGraphView methods
+   * Get direct access to the internal graph.
+   * Use when you need full graph access beyond what TemplateGraphView provides.
    */
   getInternalGraph(): Graph {
     return this.graph;
@@ -130,11 +128,9 @@ export class TemplateGraphView {
   /**
    * Find entities matching criteria
    *
-   * WARNING: Use this sparingly for canApply() checks only!
-   * For entity SELECTION, use targetSelector.selectTargets() instead.
-   *
-   * This method is provided for backward compatibility and validation logic,
-   * but should NOT be used for selecting entities to connect to new entities.
+   * NOTE: Use sparingly for canApply() checks and validation logic.
+   * For entity SELECTION, use targetSelector.selectTargets() instead
+   * to ensure proper hub-aware distribution.
    */
   findEntities(criteria: {
     kind?: string;

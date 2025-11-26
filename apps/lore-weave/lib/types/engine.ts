@@ -83,7 +83,7 @@ export interface GrowthTemplate {
   name: string;
   requiredEra?: string[];  // optional era restrictions
   metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
-  contract?: ComponentContract;  // Optional: will become required after migration
+  contract?: ComponentContract;
 
   // Check if template can be applied
   // Uses TemplateGraphView for safe, restricted graph access
@@ -109,7 +109,7 @@ export interface SimulationSystem {
   id: string;
   name: string;
   metadata?: SystemMetadata;  // Statistical metadata for distribution tuning
-  contract?: ComponentContract;  // Optional: will become required after migration
+  contract?: ComponentContract;
 
   // Run one tick of this system
   apply: (graph: Graph, modifier: number) => SystemResult;
@@ -260,7 +260,7 @@ export interface Pressure {
   value: number;  // 0-100
   growth: (graph: Graph) => number;  // delta per tick
   decay: number;  // natural decay per tick
-  contract?: PressureContract;  // Optional: will become required after migration
+  contract?: PressureContract;
 }
 
 // Engine configuration
@@ -272,7 +272,7 @@ export interface EngineConfig {
   templates: GrowthTemplate[];
   systems: SimulationSystem[];
   pressures: Pressure[];
-  entityRegistries?: EntityOperatorRegistry[];  // Optional: will become required after migration
+  entityRegistries?: EntityOperatorRegistry[];
 
   // Configuration
   epochLength: number;  // ticks per epoch
