@@ -15,6 +15,15 @@ import { HardState, Relationship } from './worldTypes';
 export type RelationshipMutability = 'immutable' | 'mutable';
 
 /**
+ * Relationship category for behavior classification
+ * - immutable_fact: Lineage and facts, set at creation, never change
+ * - political: Political relationships that can change strength/be archived
+ * - social: Social relationships that can change strength/be archived
+ * - institutional: Membership/role relationships that can change
+ */
+export type RelationshipCategory = 'immutable_fact' | 'political' | 'social' | 'institutional';
+
+/**
  * Definition of a relationship kind in the domain
  */
 export interface RelationshipKindDefinition {
@@ -38,6 +47,161 @@ export interface RelationshipKindDefinition {
 
   /** If true, this relationship is required for entity validity */
   structural?: boolean;
+
+  // ===========================
+  // RELATIONSHIP BEHAVIOR CONFIG
+  // ===========================
+
+  /**
+   * Narrative strength/importance of this relationship (0.0-1.0)
+   * Higher values = more narratively significant
+   * Default: 0.5
+   */
+  strength?: number;
+
+  /**
+   * Behavioral category for this relationship
+   * Default: 'social'
+   */
+  category?: RelationshipCategory;
+
+  /**
+   * If true, this is a lineage relationship that requires cognitive/spatial distance
+   */
+  isLineage?: boolean;
+
+  /**
+   * Expected distance range for lineage relationships
+   * Only applies when isLineage is true
+   */
+  distanceRange?: { min: number; max: number };
+
+  /**
+   * Relationship kinds that conflict with this one
+   * (mutually exclusive - cannot exist between same entity pair)
+   */
+  conflictsWith?: string[];
+}
+
+/**
+ * Per-entity-kind relationship limits
+ * Defines warning thresholds for relationship counts
+ */
+export interface RelationshipLimits {
+  /** Default limit for relationship types not explicitly specified */
+  default: number;
+  /** Per-relationship-kind limits */
+  perKind?: Record<string, number>;
+}
+
+/**
+ * Complete relationship configuration for a domain
+ */
+export interface RelationshipConfig {
+  /** Per-entity-kind relationship limits */
+  limits?: Record<string, RelationshipLimits>;
+
+  /**
+   * Default relationship strength for unknown kinds
+   * Default: 0.5
+   */
+  defaultStrength?: number;
+
+  /**
+   * Default relationship category for unknown kinds
+   * Default: 'social'
+   */
+  defaultCategory?: RelationshipCategory;
+}
+
+// ===========================
+// EMERGENT DISCOVERY CONFIG
+// ===========================
+
+/**
+ * Configuration for emergent location discovery system.
+ * Allows domains to customize discovery behavior based on world state.
+ */
+export interface EmergentDiscoveryConfig {
+  /**
+   * Entity subtypes that represent settlements/colonies
+   * Used to analyze resource needs
+   * Default: ['colony']
+   */
+  settlementSubtypes?: string[];
+
+  /**
+   * Entity statuses that indicate a thriving settlement
+   * Default: ['thriving']
+   */
+  thrivingStatuses?: string[];
+
+  /**
+   * Entity statuses that indicate a struggling settlement
+   * Default: ['waning', 'derelict']
+   */
+  strugglingStatuses?: string[];
+
+  /**
+   * Entity subtypes that can discover new locations
+   * Default: ['hero']
+   */
+  explorerSubtypes?: string[];
+
+  /**
+   * Entity status required for explorers to be active
+   * Default: 'alive'
+   */
+  explorerActiveStatus?: string;
+
+  /**
+   * Resources that can be scarce (for resource analysis)
+   * Default: ['food', 'water', 'shelter', 'safety']
+   */
+  resourceTypes?: string[];
+
+  /**
+   * Specific resource subtypes for food scarcity
+   * Default: ['krill', 'fish', 'kelp']
+   */
+  foodResources?: string[];
+
+  /**
+   * Discovery probability modifiers by era ID
+   * Default: { expansion: 0.15, conflict: 0.08, ... }
+   */
+  eraDiscoveryModifiers?: Record<string, number>;
+
+  /**
+   * Maximum locations before stopping discoveries
+   * Default: 40
+   */
+  maxLocations?: number;
+
+  /**
+   * Maximum discoveries per epoch
+   * Default: 3
+   */
+  maxDiscoveriesPerEpoch?: number;
+
+  /**
+   * Minimum ticks between discoveries
+   * Default: 5
+   */
+  minTicksBetweenDiscoveries?: number;
+
+  /**
+   * Era-specific word lists for theme generation
+   */
+  eraThemeWords?: Record<string, {
+    depthWords?: string[];
+    descriptors?: string[];
+  }>;
+
+  /**
+   * Resource-specific theme words for location naming
+   */
+  resourceThemeWords?: Record<string, string[]>;
 }
 
 /**
@@ -52,6 +216,51 @@ export interface EntityValidationRule {
 
   /** Human-readable description of why this is required */
   description?: string;
+}
+
+/**
+ * Configuration for entity snapshot and change detection
+ * Allows domains to define what triggers enrichment for each entity kind
+ */
+export interface SnapshotConfig {
+  /**
+   * Relationship kinds to track for this entity.
+   * Changes in these relationships may trigger enrichment.
+   */
+  trackedRelationships?: Array<{
+    kind: string;
+    direction: 'src' | 'dst';  // Track when entity is src or dst
+    countThreshold?: number;   // Minimum change in count to trigger enrichment
+    trackIds?: boolean;        // Track specific related entity IDs
+  }>;
+
+  /**
+   * Custom metrics to calculate for snapshots.
+   * These are domain-specific computed values.
+   */
+  customMetrics?: Array<{
+    name: string;
+    /** Function to calculate the metric value from entity and graph */
+    calculate: (entity: HardState, graph: any) => number | string | Set<string>;
+    /** Threshold for numeric metrics (change must exceed this) */
+    threshold?: number;
+  }>;
+
+  /**
+   * Function to detect significant changes for this entity kind.
+   * Returns array of change descriptions that warrant enrichment.
+   */
+  detectChanges?: (
+    entity: HardState,
+    snapshot: Record<string, any>,
+    graph: any
+  ) => string[];
+
+  /** Minimum ticks between enrichment attempts for this kind */
+  enrichmentCooldown?: number;
+
+  /** Priority tier for enrichment (lower = higher priority) */
+  enrichmentPriority?: number;
 }
 
 /**
@@ -75,6 +284,12 @@ export interface EntityKindDefinition {
 
   /** Default status for new entities of this kind */
   defaultStatus?: string;
+
+  /**
+   * Configuration for entity snapshotting and change detection.
+   * Used by the enrichment system to decide when to re-enrich entities.
+   */
+  snapshotConfig?: SnapshotConfig;
 }
 
 /**
@@ -169,6 +384,53 @@ export interface DomainSchema {
 
   /** Optional: Get era transition effects */
   getEraTransitionEffects?(fromEra: HardState, toEra: HardState, graph: any): any;
+
+  // ===========================
+  // CATALYST SYSTEM - ENTITY ACTION DOMAINS
+  // ===========================
+
+  /**
+   * Get action domains for an entity based on its kind and subtype.
+   * This is domain-specific logic that maps entity types to their capabilities.
+   * @param entity - The entity to check
+   * @returns Array of action domain IDs
+   */
+  getActionDomainsForEntity?(entity: HardState): string[];
+
+  // ===========================
+  // RELATIONSHIP BEHAVIOR CONFIG
+  // ===========================
+
+  /** Optional: Relationship configuration (limits, defaults) */
+  relationshipConfig?: RelationshipConfig;
+
+  /** Get narrative strength for a relationship kind (0.0-1.0) */
+  getRelationshipStrength?(kind: string): number;
+
+  /** Get behavioral category for a relationship kind */
+  getRelationshipCategory?(kind: string): RelationshipCategory;
+
+  /** Get warning threshold for relationship count */
+  getRelationshipWarningThreshold?(entityKind: string, relationshipKind: string): number;
+
+  /** Check if a relationship kind requires distance (is a lineage relationship) */
+  isLineageRelationship?(kind: string): boolean;
+
+  /** Get expected distance range for a lineage relationship kind */
+  getExpectedDistanceRange?(kind: string): { min: number; max: number } | undefined;
+
+  /** Check if a new relationship conflicts with existing relationships */
+  checkRelationshipConflict?(existingKinds: string[], newKind: string): boolean;
+
+  /** Get all lineage relationship kinds */
+  getLineageRelationshipKinds?(): string[];
+
+  // ===========================
+  // EMERGENT DISCOVERY CONFIG
+  // ===========================
+
+  /** Optional: Configuration for emergent location discovery system */
+  emergentDiscoveryConfig?: EmergentDiscoveryConfig;
 }
 
 /**
@@ -182,6 +444,7 @@ export class BaseDomainSchema implements DomainSchema {
   relationshipKinds: RelationshipKindDefinition[];
   cultures: CultureDefinition[];
   nameGenerator: NameGenerator;
+  relationshipConfig?: RelationshipConfig;
 
   constructor(config: {
     id: string;
@@ -191,6 +454,7 @@ export class BaseDomainSchema implements DomainSchema {
     relationshipKinds: RelationshipKindDefinition[];
     cultures: CultureDefinition[];
     nameGenerator: NameGenerator;
+    relationshipConfig?: RelationshipConfig;
   }) {
     this.id = config.id;
     this.name = config.name;
@@ -199,6 +463,7 @@ export class BaseDomainSchema implements DomainSchema {
     this.relationshipKinds = config.relationshipKinds;
     this.cultures = config.cultures;
     this.nameGenerator = config.nameGenerator;
+    this.relationshipConfig = config.relationshipConfig;
   }
 
   getRelationshipKind(kind: string): RelationshipKindDefinition | undefined {
@@ -278,5 +543,83 @@ export class BaseDomainSchema implements DomainSchema {
       valid: missing.length === 0,
       missing
     };
+  }
+
+  // ===========================
+  // RELATIONSHIP BEHAVIOR METHODS
+  // ===========================
+
+  /**
+   * Get narrative strength for a relationship kind (0.0-1.0)
+   * Reads from RelationshipKindDefinition.strength, falls back to config default
+   */
+  getRelationshipStrength(kind: string): number {
+    const def = this.getRelationshipKind(kind);
+    if (def?.strength !== undefined) {
+      return def.strength;
+    }
+    return this.relationshipConfig?.defaultStrength ?? 0.5;
+  }
+
+  /**
+   * Get behavioral category for a relationship kind
+   * Reads from RelationshipKindDefinition.category, falls back to config default
+   */
+  getRelationshipCategory(kind: string): RelationshipCategory {
+    const def = this.getRelationshipKind(kind);
+    if (def?.category) {
+      return def.category;
+    }
+    return this.relationshipConfig?.defaultCategory ?? 'social';
+  }
+
+  /**
+   * Get warning threshold for relationship count
+   * Uses per-entity-kind limits from relationshipConfig
+   */
+  getRelationshipWarningThreshold(entityKind: string, relationshipKind: string): number {
+    const limits = this.relationshipConfig?.limits?.[entityKind];
+    if (!limits) {
+      return 10; // Sensible default
+    }
+    return limits.perKind?.[relationshipKind] ?? limits.default;
+  }
+
+  /**
+   * Check if a relationship kind requires distance (is a lineage relationship)
+   */
+  isLineageRelationship(kind: string): boolean {
+    const def = this.getRelationshipKind(kind);
+    return def?.isLineage === true;
+  }
+
+  /**
+   * Get expected distance range for a lineage relationship kind
+   * Returns undefined for non-lineage relationships
+   */
+  getExpectedDistanceRange(kind: string): { min: number; max: number } | undefined {
+    const def = this.getRelationshipKind(kind);
+    if (!def?.isLineage) return undefined;
+    return def.distanceRange;
+  }
+
+  /**
+   * Check if a new relationship conflicts with existing relationships
+   * Returns true if there is a conflict (should not create relationship)
+   */
+  checkRelationshipConflict(existingKinds: string[], newKind: string): boolean {
+    const def = this.getRelationshipKind(newKind);
+    if (!def?.conflictsWith) return false;
+
+    return existingKinds.some(existing => def.conflictsWith!.includes(existing));
+  }
+
+  /**
+   * Get all lineage relationship kinds
+   */
+  getLineageRelationshipKinds(): string[] {
+    return this.relationshipKinds
+      .filter(rk => rk.isLineage === true)
+      .map(rk => rk.kind);
   }
 }

@@ -36,7 +36,13 @@ export type {
   DomainSchema,
   EntityKindSchema,
   RelationshipKindDefinition,
-  DomainCapabilities
+  RelationshipConfig,
+  RelationshipLimits,
+  RelationshipCategory,
+  DomainCapabilities,
+  SnapshotConfig,
+  EntityKindDefinition,
+  EmergentDiscoveryConfig
 } from './types/domainSchema';
 
 export type {
@@ -50,6 +56,32 @@ export type {
   RelationshipLore,
   EraNarrative
 } from './types/lore';
+
+// Framework Primitives (domain-agnostic types)
+export {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_STATUS,
+  FRAMEWORK_ENTITY_KIND_VALUES,
+  FRAMEWORK_RELATIONSHIP_KIND_VALUES,
+  FRAMEWORK_STATUS_VALUES,
+  FRAMEWORK_ERA_STATUS_VALUES,
+  FRAMEWORK_OCCURRENCE_STATUS_VALUES,
+  FRAMEWORK_RELATIONSHIP_PROPERTIES,
+  isFrameworkEntityKind,
+  isFrameworkRelationshipKind,
+  isFrameworkStatus,
+  isFrameworkEntity,
+  isFrameworkRelationship,
+  getFrameworkRelationshipStrength,
+  isProtectedFrameworkRelationship
+} from './types/frameworkPrimitives';
+
+export type {
+  FrameworkEntityKind,
+  FrameworkRelationshipKind,
+  FrameworkStatus
+} from './types/frameworkPrimitives';
 
 export type {
   DomainLoreProvider,
@@ -73,7 +105,8 @@ export { LoreValidator } from './services/loreValidator';
 export { DistributionTracker } from './services/distributionTracker';
 export { DynamicWeightCalculator } from './services/dynamicWeightCalculator';
 export { FeedbackAnalyzer } from './services/feedbackAnalyzer';
-export { MetaEntityFormation, MetaEntityConfig } from './services/metaEntityFormation';
+// @deprecated - MetaEntityFormation replaced by SimulationSystems with clusteringUtils/entityArchival
+// export { MetaEntityFormation, MetaEntityConfig } from './services/metaEntityFormation';
 export { NameLogger } from './services/nameLogger';
 export { PopulationTracker } from './services/populationTracker';
 export { StatisticsCollector } from './services/statisticsCollector';
@@ -102,7 +135,13 @@ export {
   getLocation,
   getFactionMembers,
   hasRelationship,
-  normalizeInitialState
+  normalizeInitialState,
+  // Relationship config utilities (domain-aware)
+  isLineageRelationship,
+  getExpectedDistanceRange,
+  getRelationshipStrength,
+  getRelationshipCategory,
+  areRelationshipsCompatible
 } from './utils/helpers';
 
 export {
@@ -160,7 +199,45 @@ export {
   applyCatalystAction
 } from './utils/catalystHelpers';
 
+export {
+  calculateSimilarity,
+  detectClusters,
+  filterClusterableEntities,
+  findBestClusterMatch
+} from './utils/clusteringUtils';
+
+export type {
+  Cluster,
+  ClusterCriterion,
+  ClusterCriterionType,
+  ClusterConfig
+} from './utils/clusteringUtils';
+
+export {
+  archiveEntity,
+  archiveEntities,
+  transferRelationships,
+  createPartOfRelationships,
+  getActiveRelationships,
+  getHistoricalRelationships,
+  isHistoricalEntity,
+  getPartOfMembers,
+  supersedeEntity
+} from './utils/entityArchival';
+
+export type {
+  ArchiveEntityOptions,
+  TransferRelationshipsOptions,
+  SupersedeEntityOptions
+} from './utils/entityArchival';
+
 // Configuration (framework-level)
+// Note: entityRegistries has been moved to domain layer (penguin-tales/lore/config/entityRegistries.ts)
+// The empty export below is for backwards compatibility only
+/**
+ * @deprecated Import entityRegistries from your domain layer instead of the framework.
+ * For penguin-tales, use: import { penguinEntityRegistries } from './lore/index.js'
+ */
 export { entityRegistries } from './config/entityRegistries';
 export { tagRegistry } from './config/tagRegistry';
 export { feedbackLoops } from './config/feedbackLoops';

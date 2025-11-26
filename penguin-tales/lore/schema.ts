@@ -12,10 +12,88 @@ import {
   BaseDomainSchema,
   EntityKindDefinition,
   RelationshipKindDefinition,
+  RelationshipConfig,
+  RelationshipLimits,
   CultureDefinition,
-  NameGenerator
+  NameGenerator,
+  SnapshotConfig,
+  EmergentDiscoveryConfig
 } from '../../apps/lore-weave/lib/types/domainSchema';
 import { pickRandom } from '../../apps/lore-weave/lib/utils/helpers';
+
+// ===========================
+// SNAPSHOT CONFIGURATIONS
+// ===========================
+
+/**
+ * Location snapshot config - Tier 1 enrichment priority
+ * Track population changes and control shifts
+ */
+const locationSnapshotConfig: SnapshotConfig = {
+  trackedRelationships: [
+    { kind: 'resident_of', direction: 'dst', countThreshold: 3, trackIds: false },
+    { kind: 'stronghold_of', direction: 'dst', trackIds: true },
+    { kind: 'controls', direction: 'dst', trackIds: true }
+  ],
+  enrichmentCooldown: 10,
+  enrichmentPriority: 1
+};
+
+/**
+ * Faction snapshot config - Tier 1 enrichment priority
+ * Track leadership, territory, and diplomatic changes
+ */
+const factionSnapshotConfig: SnapshotConfig = {
+  trackedRelationships: [
+    { kind: 'leader_of', direction: 'dst', trackIds: true },
+    { kind: 'stronghold_of', direction: 'src', countThreshold: 1, trackIds: true },
+    { kind: 'allied_with', direction: 'src', trackIds: true },
+    { kind: 'at_war_with', direction: 'src', trackIds: true }
+  ],
+  enrichmentCooldown: 10,
+  enrichmentPriority: 1
+};
+
+/**
+ * Rules snapshot config - Tier 2 enrichment priority
+ * Track enforcement and geographic reach
+ */
+const rulesSnapshotConfig: SnapshotConfig = {
+  trackedRelationships: [
+    { kind: 'applies_in', direction: 'src', countThreshold: 1, trackIds: true },
+    { kind: 'weaponized_by', direction: 'dst', trackIds: true },
+    { kind: 'believer_of', direction: 'dst', countThreshold: 3 }
+  ],
+  enrichmentCooldown: 15,
+  enrichmentPriority: 2
+};
+
+/**
+ * Abilities snapshot config - Tier 2 enrichment priority
+ * Track practitioners and manifestation spread
+ */
+const abilitiesSnapshotConfig: SnapshotConfig = {
+  trackedRelationships: [
+    { kind: 'practitioner_of', direction: 'dst', countThreshold: 2 },
+    { kind: 'manifests_at', direction: 'src', countThreshold: 1, trackIds: true }
+  ],
+  enrichmentCooldown: 15,
+  enrichmentPriority: 2
+};
+
+/**
+ * NPC snapshot config - Tier 3 enrichment priority
+ * Track leadership and affiliations
+ */
+const npcSnapshotConfig: SnapshotConfig = {
+  trackedRelationships: [
+    { kind: 'leader_of', direction: 'src', trackIds: true },
+    { kind: 'member_of', direction: 'src', trackIds: true },
+    { kind: 'resident_of', direction: 'src', trackIds: true }
+  ],
+  enrichmentCooldown: 20,
+  enrichmentPriority: 3
+};
 
 // ===========================
 // NAME GENERATION
@@ -71,35 +149,40 @@ const penguinEntityKinds: EntityKindDefinition[] = [
         when: (entity) => entity.status === 'alive' && entity.subtype !== 'orca',
         description: 'Living non-orca NPCs must have a location'
       }
-    ]
+    ],
+    snapshotConfig: npcSnapshotConfig
   },
   {
     kind: 'location',
     description: 'Physical places in the world',
     subtypes: ['iceberg', 'colony', 'igloo', 'geographic_feature', 'anomaly'],
     statusValues: ['thriving', 'waning', 'abandoned'],
-    defaultStatus: 'thriving'
+    defaultStatus: 'thriving',
+    snapshotConfig: locationSnapshotConfig
   },
   {
     kind: 'faction',
     description: 'Organized groups with shared goals',
     subtypes: ['political', 'criminal', 'cult', 'company'],
     statusValues: ['active', 'disbanded', 'waning'],
-    defaultStatus: 'active'
+    defaultStatus: 'active',
+    snapshotConfig: factionSnapshotConfig
   },
   {
     kind: 'rules',
     description: 'Social norms, laws, and customs',
     subtypes: ['edict', 'taboo', 'social', 'natural'],
     statusValues: ['active', 'forgotten', 'proposed', 'enacted', 'repealed'],
-    defaultStatus: 'enacted'
+    defaultStatus: 'enacted',
+    snapshotConfig: rulesSnapshotConfig
   },
   {
     kind: 'abilities',
     description: 'Special powers, technologies, or skills',
     subtypes: ['magic', 'faith', 'technology', 'physical', 'combat'],
     statusValues: ['active', 'lost', 'emergent'],
-    defaultStatus: 'active'
+    defaultStatus: 'active',
+    snapshotConfig: abilitiesSnapshotConfig
   },
   {
     kind: 'era',
@@ -130,7 +213,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['location'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.2,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.0, max: 0.3 }
   },
   {
     kind: 'contained_by',
@@ -139,7 +226,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['location'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.2,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.0, max: 0.3 }
   },
   {
     kind: 'adjacent_to',
@@ -148,7 +239,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['location'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.2,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.0, max: 0.5 }
   },
 
   // MEMBERSHIP RELATIONSHIPS (Mutable but protected - core structure)
@@ -158,7 +253,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['faction'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 1.0,
+    category: 'institutional'
   },
   {
     kind: 'leader_of',
@@ -166,7 +263,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['faction'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 1.0,
+    category: 'institutional'
   },
   {
     kind: 'resident_of',
@@ -175,7 +274,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['location'],
     mutability: 'mutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.3,
+    category: 'social'
   },
 
   // ABILITY RELATIONSHIPS (Immutable - facts about abilities)
@@ -185,7 +286,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['abilities'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 0.9,
+    category: 'institutional'
   },
   {
     kind: 'manifests_at',
@@ -193,7 +296,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['abilities'],
     dstKinds: ['location'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'immutable_fact'
   },
   {
     kind: 'slumbers_beneath',
@@ -201,7 +306,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['abilities'],
     dstKinds: ['location'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.3,
+    category: 'immutable_fact'
   },
   {
     kind: 'discoverer_of',
@@ -209,7 +316,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['abilities'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.2,
+    category: 'immutable_fact'
   },
   {
     kind: 'originated_in',
@@ -217,7 +326,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['abilities'],
     dstKinds: ['location'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.9,
+    category: 'immutable_fact'
   },
   {
     kind: 'derived_from',
@@ -226,7 +337,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['abilities', 'rules'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.6,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.05, max: 0.6 }
   },
   {
     kind: 'related_to',
@@ -235,7 +350,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['abilities', 'rules', 'faction'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.5,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.3, max: 0.7 }
   },
   {
     kind: 'inspired_by',
@@ -243,7 +362,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc', 'abilities'],
     dstKinds: ['npc', 'abilities'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.5,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.3, max: 0.6 }
   },
   {
     kind: 'part_of',
@@ -252,7 +375,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['abilities', 'rules'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.7,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.0, max: 0.3 }
   },
 
   // SOCIAL RELATIONSHIPS (Mutable - naturally change over time)
@@ -264,7 +391,10 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['npc'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'social',
+    conflictsWith: ['lover_of', 'follower_of', 'ally_of', 'allied_with']
   },
   {
     kind: 'rival_of',
@@ -272,7 +402,10 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['npc'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.5,
+    category: 'social',
+    conflictsWith: ['lover_of', 'follower_of', 'mentor_of']
   },
   {
     kind: 'ally_of',
@@ -280,7 +413,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['npc'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'social'
   },
   {
     kind: 'family_of',
@@ -288,7 +423,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['npc'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.5,
+    category: 'immutable_fact'
   },
 
   // POLITICAL RELATIONSHIPS (Mutable)
@@ -298,7 +435,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['faction'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'political'
   },
   {
     kind: 'at_war_with',
@@ -306,7 +445,10 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['faction'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'political',
+    conflictsWith: ['allied_with']
   },
   {
     kind: 'split_from',
@@ -315,7 +457,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['faction'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.8,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.15, max: 0.8 }
   },
   {
     kind: 'stronghold_of',
@@ -323,7 +469,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['location'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'political'
   },
   {
     kind: 'controls',
@@ -331,7 +479,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['location'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'political'
   },
 
   // RULE RELATIONSHIPS (Mixed - some structural, some mutable)
@@ -341,7 +491,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['rules'],
     dstKinds: ['location'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'immutable_fact'
   },
   {
     kind: 'supersedes',
@@ -350,7 +502,11 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     dstKinds: ['rules'],
     mutability: 'immutable',
     protected: true,
-    structural: true
+    structural: true,
+    strength: 0.7,
+    category: 'immutable_fact',
+    isLineage: true,
+    distanceRange: { min: 0.1, max: 0.5 }
   },
   {
     kind: 'champion_of',
@@ -358,7 +514,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['rules'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'social'
   },
   {
     kind: 'believer_of',
@@ -366,7 +524,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc'],
     dstKinds: ['rules'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.5,
+    category: 'social'
   },
   {
     kind: 'celebrated_by',
@@ -374,7 +534,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['rules'],
     dstKinds: ['faction'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'institutional'
   },
   {
     kind: 'wields',
@@ -382,7 +544,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['abilities'],
     mutability: 'mutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'institutional'
   },
   {
     kind: 'weaponized_by',
@@ -390,7 +554,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['rules'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.5,
+    category: 'institutional'
   },
   {
     kind: 'kept_secret_by',
@@ -398,7 +564,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['faction'],
     dstKinds: ['rules'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.5,
+    category: 'institutional'
   },
 
   // TEMPORAL RELATIONSHIPS (New - for era and occurrence entities)
@@ -408,7 +576,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc', 'faction', 'occurrence', 'location', 'abilities'],
     dstKinds: ['era'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.6,
+    category: 'immutable_fact'
   },
   {
     kind: 'participant_in',
@@ -416,7 +586,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['npc', 'faction', 'location'],
     dstKinds: ['occurrence'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.7,
+    category: 'social'
   },
   {
     kind: 'epicenter_of',
@@ -424,7 +596,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['location'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.8,
+    category: 'immutable_fact'
   },
   {
     kind: 'triggered_by',
@@ -432,7 +606,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['npc', 'faction'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.9,
+    category: 'immutable_fact'
   },
   {
     kind: 'escalated_by',
@@ -440,7 +616,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['npc', 'faction'],
     mutability: 'mutable',
-    protected: false
+    protected: false,
+    strength: 0.6,
+    category: 'social'
   },
   {
     kind: 'ended_by',
@@ -448,7 +626,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['npc', 'faction'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.8,
+    category: 'immutable_fact'
   },
   {
     kind: 'spawned',
@@ -456,7 +636,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['occurrence'],
     mutability: 'immutable',
-    protected: true
+    protected: true,
+    strength: 0.7,
+    category: 'immutable_fact'
   },
   {
     kind: 'concurrent_with',
@@ -464,7 +646,9 @@ const penguinRelationshipKinds: RelationshipKindDefinition[] = [
     srcKinds: ['occurrence'],
     dstKinds: ['occurrence'],
     mutability: 'immutable',
-    protected: false
+    protected: false,
+    strength: 0.4,
+    category: 'immutable_fact'
   }
 ];
 
@@ -500,6 +684,118 @@ const penguinCultures: CultureDefinition[] = [
 ];
 
 // ===========================
+// RELATIONSHIP CONFIGURATION
+// ===========================
+
+/**
+ * Per-entity-kind relationship limits.
+ * Warns when relationships of a given type exceed these thresholds.
+ */
+const penguinRelationshipLimits: Record<string, RelationshipLimits> = {
+  npc: {
+    default: 5,        // NPCs shouldn't have too many of any single relationship type
+    perKind: {
+      member_of: 3,    // NPCs rarely in more than 3 factions
+      enemy_of: 5,
+      ally_of: 5,
+      lover_of: 2      // Keep romantic relationships limited
+    }
+  },
+  location: {
+    default: 15,       // Locations can have many connections
+    perKind: {
+      resident_of: 50, // Colonies can have many residents
+      adjacent_to: 10
+    }
+  },
+  faction: {
+    default: 20,       // Factions can have many members and relationships
+    perKind: {
+      member_of: 50,   // Factions can have many members (as dst)
+      allied_to: 8,
+      enemy_of: 8
+    }
+  },
+  rules: {
+    default: 10        // Rules can apply to multiple entities
+  },
+  abilities: {
+    default: 10        // Abilities can be practiced by multiple entities
+  }
+};
+
+/**
+ * Complete relationship configuration for penguin domain.
+ */
+const penguinRelationshipConfig: RelationshipConfig = {
+  limits: penguinRelationshipLimits,
+  defaultStrength: 0.5,
+  defaultCategory: 'social'
+};
+
+// ===========================
+// EMERGENT DISCOVERY CONFIG
+// ===========================
+
+/**
+ * Penguin-domain emergent discovery configuration.
+ * Defines penguin-specific discovery behavior.
+ */
+const penguinDiscoveryConfig: EmergentDiscoveryConfig = {
+  // Settlements in penguin world are colonies
+  settlementSubtypes: ['colony'],
+
+  // Colony status values
+  thrivingStatuses: ['thriving'],
+  strugglingStatuses: ['waning', 'derelict'],
+
+  // Who can discover new locations
+  explorerSubtypes: ['hero', 'outlaw', 'merchant'],
+  explorerActiveStatus: 'alive',
+
+  // Penguin food resources
+  resourceTypes: ['food', 'water', 'shelter', 'safety'],
+  foodResources: ['krill', 'fish', 'kelp'],
+
+  // Era-based discovery probabilities
+  eraDiscoveryModifiers: {
+    'expansion': 0.15,      // High exploration during expansion
+    'conflict': 0.08,       // Low during conflict
+    'innovation': 0.12,     // Moderate during innovation
+    'invasion': 0.06,       // Very low during invasion
+    'reconstruction': 0.10  // Moderate during reconstruction
+  },
+
+  // Discovery limits
+  maxLocations: 40,
+  maxDiscoveriesPerEpoch: 3,
+  minTicksBetweenDiscoveries: 5,
+
+  // Era-specific theme words
+  eraThemeWords: {
+    'conflict': {
+      depthWords: ['hidden', 'secret', 'deep']
+    },
+    'expansion': {
+      depthWords: ['open', 'accessible', 'shallow'],
+      descriptors: ['fertile', 'pristine', 'untouched', 'virgin']
+    },
+    'reconstruction': {
+      descriptors: ['renewed', 'reclaimed', 'restored', 'peaceful']
+    }
+  },
+
+  // Resource-specific theme words
+  resourceThemeWords: {
+    'fishing': ['krill', 'fish', 'kelp', 'current'],
+    'fresh_water': ['spring', 'melt', 'pool', 'stream'],
+    'krill': ['breeding', 'swarm', 'bloom', 'migration'],
+    'fish': ['spawning', 'feeding', 'schooling', 'hunting'],
+    'kelp': ['forest', 'grove', 'bed', 'garden']
+  }
+};
+
+// ===========================
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
@@ -511,16 +807,27 @@ const baseDomain = new BaseDomainSchema({
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
   cultures: penguinCultures,
-  nameGenerator: penguinNameGenerator
+  nameGenerator: penguinNameGenerator,
+  relationshipConfig: penguinRelationshipConfig
 });
 
-// Extend with catalyst system methods
+// Extend with catalyst system methods and discovery config
 export const penguinDomain = Object.assign(baseDomain, {
+  // Emergent discovery configuration
+  emergentDiscoveryConfig: penguinDiscoveryConfig,
+
   // Action domains for catalyst system
   getActionDomains() {
     // Import here to avoid circular dependencies
     const { getActionDomains } = require('./config/actionDomains');
     return getActionDomains();
+  },
+
+  // Action domains for a specific entity
+  getActionDomainsForEntity(entity: any) {
+    // Import here to avoid circular dependencies
+    const { getActionDomainsForEntity } = require('./config/actionDomains');
+    return getActionDomainsForEntity(entity);
   },
 
   // Pressure-domain mappings

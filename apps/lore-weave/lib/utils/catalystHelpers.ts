@@ -249,17 +249,26 @@ export function initializeCatalyst(
 
 /**
  * Smart catalyst initialization based on entity type and prominence
- * Automatically determines action domains and influence based on entity properties
+ * Automatically determines action domains and influence based on entity properties.
+ *
+ * If a graph is provided, uses the domain schema's getActionDomainsForEntity() method.
+ * Otherwise falls back to the hardcoded domain-agnostic defaults.
+ *
  * @param entity - The entity to initialize
+ * @param graph - Optional graph with domain schema for domain-specific action domain mapping
  */
-export function initializeCatalystSmart(entity: HardState): void {
+export function initializeCatalystSmart(entity: HardState, graph?: Graph): void {
   // Only prominent entities can act
   if (!['recognized', 'renowned', 'mythic'].includes(entity.prominence)) {
     return;
   }
 
   // Determine which action domains this entity can use
-  const actionDomains = getActionDomainsForEntity(entity);
+  // Use domain schema if available, otherwise fall back to hardcoded defaults
+  const actionDomains = graph?.config?.domain?.getActionDomainsForEntity
+    ? graph.config.domain.getActionDomainsForEntity(entity)
+    : getActionDomainsForEntityFallback(entity);
+
   if (actionDomains.length === 0) {
     return;
   }
@@ -273,11 +282,16 @@ export function initializeCatalystSmart(entity: HardState): void {
 }
 
 /**
- * Get action domains for an entity based on its kind and subtype
+ * Get action domains for an entity based on its kind and subtype.
+ * This is a minimal fallback for backwards compatibility.
+ *
+ * @deprecated Use domain schema's getActionDomainsForEntity() instead.
+ * For penguin-tales domain, import from 'penguin-tales/lore/config/actionDomains.js'.
+ *
  * @param entity - The entity to check
  * @returns Array of action domain IDs
  */
-function getActionDomainsForEntity(entity: HardState): string[] {
+function getActionDomainsForEntityFallback(entity: HardState): string[] {
   const domains: string[] = [];
 
   switch (entity.kind) {

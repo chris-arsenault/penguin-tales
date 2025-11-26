@@ -252,7 +252,10 @@ export function addEntity(graph: Graph, entity: Partial<HardState>): string {
   return id;
 }
 
-// Relationship strength by kind (0.0 = weak/spatial, 1.0 = strong/narrative)
+/**
+ * FALLBACK: Relationship strength by kind (0.0 = weak/spatial, 1.0 = strong/narrative)
+ * @deprecated Use domain.getRelationshipStrength() instead - values should be in RelationshipKindDefinition.strength
+ */
 const RELATIONSHIP_STRENGTHS: Record<string, number> = {
   // Strong (1.0-0.8): Narrative-defining relationships
   'member_of': 1.0,           // Faction membership defines identity
@@ -305,7 +308,10 @@ const RELATIONSHIP_STRENGTHS: Record<string, number> = {
 // LINEAGE RELATIONSHIP IDENTIFICATION
 // ===========================
 
-// Lineage relationships that REQUIRE cognitive/ideological/spatial distance
+/**
+ * FALLBACK: Lineage relationships that REQUIRE cognitive/ideological/spatial distance
+ * @deprecated Use domain.isLineageRelationship() instead - values should be in RelationshipKindDefinition.isLineage
+ */
 const LINEAGE_RELATIONSHIPS = new Set([
   'derived_from',      // Cognitive distance (abilities/rules)
   'related_to',        // Cognitive distance (same-kind similarity)
@@ -319,17 +325,20 @@ const LINEAGE_RELATIONSHIPS = new Set([
 ]);
 
 /**
- * Check if a relationship kind requires distance (is a lineage relationship)
+ * FALLBACK: Check if a relationship kind requires distance (is a lineage relationship)
+ * Used when domain schema is not available
+ * @deprecated Use domain.isLineageRelationship() instead
  */
-export function isLineageRelationship(kind: string): boolean {
+function isLineageRelationshipFallback(kind: string): boolean {
   return LINEAGE_RELATIONSHIPS.has(kind);
 }
 
 /**
- * Get expected distance range for a lineage relationship kind
- * Returns undefined for non-lineage relationships
+ * FALLBACK: Get expected distance range for a lineage relationship kind
+ * Used when domain schema is not available
+ * @deprecated Use domain.getExpectedDistanceRange() instead
  */
-export function getExpectedDistanceRange(kind: string): { min: number; max: number } | undefined {
+function getExpectedDistanceRangeFallback(kind: string): { min: number; max: number } | undefined {
   const ranges: Record<string, { min: number; max: number }> = {
     'derived_from': { min: 0.05, max: 0.6 },    // Incremental improvement to revolutionary
     'related_to': { min: 0.3, max: 0.7 },       // Moderate similarity
@@ -344,7 +353,55 @@ export function getExpectedDistanceRange(kind: string): { min: number; max: numb
   return ranges[kind];
 }
 
-// Relationship categories (immutable vs mutable)
+/**
+ * Check if a relationship kind requires distance (is a lineage relationship)
+ * Uses domain schema if available in graph context
+ */
+export function isLineageRelationship(kind: string, graph?: Graph): boolean {
+  if (graph?.config?.domain?.isLineageRelationship) {
+    return graph.config.domain.isLineageRelationship(kind);
+  }
+  return isLineageRelationshipFallback(kind);
+}
+
+/**
+ * Get expected distance range for a lineage relationship kind
+ * Uses domain schema if available in graph context
+ * Returns undefined for non-lineage relationships
+ */
+export function getExpectedDistanceRange(kind: string, graph?: Graph): { min: number; max: number } | undefined {
+  if (graph?.config?.domain?.getExpectedDistanceRange) {
+    return graph.config.domain.getExpectedDistanceRange(kind);
+  }
+  return getExpectedDistanceRangeFallback(kind);
+}
+
+/**
+ * Get narrative strength for a relationship kind (0.0-1.0)
+ * Uses domain schema if available in graph context
+ */
+export function getRelationshipStrength(kind: string, graph?: Graph): number {
+  if (graph?.config?.domain?.getRelationshipStrength) {
+    return graph.config.domain.getRelationshipStrength(kind);
+  }
+  return RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default;
+}
+
+/**
+ * Get behavioral category for a relationship kind
+ * Uses domain schema if available in graph context
+ */
+export function getRelationshipCategory(kind: string, graph?: Graph): string {
+  if (graph?.config?.domain?.getRelationshipCategory) {
+    return graph.config.domain.getRelationshipCategory(kind);
+  }
+  return RELATIONSHIP_CATEGORIES[kind] ?? RELATIONSHIP_CATEGORIES.default;
+}
+
+/**
+ * FALLBACK: Relationship categories (immutable vs mutable)
+ * @deprecated Use domain.getRelationshipCategory() instead - values should be in RelationshipKindDefinition.category
+ */
 const RELATIONSHIP_CATEGORIES: Record<string, string> = {
   // Immutable (lineage and facts - set at creation, never change)
   'derived_from': 'immutable_fact',
@@ -388,7 +445,10 @@ const RELATIONSHIP_CATEGORIES: Record<string, string> = {
   'default': 'social'
 };
 
-// Per-kind relationship warning thresholds
+/**
+ * FALLBACK: Per-kind relationship warning thresholds
+ * @deprecated Use domain.getRelationshipWarningThreshold() instead - values should be in RelationshipConfig.limits
+ */
 const RELATIONSHIP_WARNING_THRESHOLDS: Record<string, Record<string, number>> = {
   npc: {
     default: 5,        // NPCs shouldn't have too many of any single relationship type
@@ -439,16 +499,23 @@ export function addRelationship(
     return;
   }
 
+  // Get domain schema for configuration lookup
+  const domain = graph.config?.domain;
+
   // Auto-assign strength based on relationship kind, or use override
-  const strength = strengthOverride ?? (RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default);
+  // Use domain schema if available, otherwise fall back to hardcoded defaults
+  const strength = strengthOverride ??
+    (domain?.getRelationshipStrength?.(kind) ?? RELATIONSHIP_STRENGTHS[kind] ?? RELATIONSHIP_STRENGTHS.default);
 
   // Auto-assign category based on relationship kind
-  const category = RELATIONSHIP_CATEGORIES[kind] ?? RELATIONSHIP_CATEGORIES.default;
+  const category = domain?.getRelationshipCategory?.(kind) ??
+    RELATIONSHIP_CATEGORIES[kind] ?? RELATIONSHIP_CATEGORIES.default;
 
   // LINEAGE ENFORCEMENT: Auto-assign distance for lineage relationships if missing
   let finalDistance = distance;
-  if (finalDistance === undefined && isLineageRelationship(kind)) {
-    const range = getExpectedDistanceRange(kind);
+  const isLineage = domain?.isLineageRelationship?.(kind) ?? isLineageRelationshipFallback(kind);
+  if (finalDistance === undefined && isLineage) {
+    const range = domain?.getExpectedDistanceRange?.(kind) ?? getExpectedDistanceRangeFallback(kind);
     if (range) {
       finalDistance = range.min + Math.random() * (range.max - range.min);
 
@@ -463,8 +530,11 @@ export function addRelationship(
   const srcEntity = graph.entities.get(srcId);
   if (srcEntity) {
     const existingOfType = srcEntity.links.filter(link => link.kind === kind).length;
-    const kindThresholds = RELATIONSHIP_WARNING_THRESHOLDS[srcEntity.kind] || {};
-    const threshold = kindThresholds[kind] || kindThresholds.default || 10;
+
+    // Use domain schema for thresholds if available
+    const threshold = domain?.getRelationshipWarningThreshold?.(srcEntity.kind, kind) ??
+      (RELATIONSHIP_WARNING_THRESHOLDS[srcEntity.kind]?.[kind] ??
+       RELATIONSHIP_WARNING_THRESHOLDS[srcEntity.kind]?.default ?? 10);
 
     if (existingOfType >= threshold) {
       // Write to warnings log file instead of console
@@ -757,8 +827,23 @@ export function recordRelationshipFormation(
 }
 
 /**
+ * FALLBACK: Hardcoded contradictions for backwards compatibility
+ * @deprecated Use domain schema conflictsWith instead
+ */
+const RELATIONSHIP_CONTRADICTIONS: Record<string, string[]> = {
+  'enemy_of': ['lover_of', 'follower_of', 'ally_of', 'allied_with'],
+  'lover_of': ['enemy_of', 'rival_of'],
+  'rival_of': ['lover_of', 'follower_of', 'mentor_of'],  // Can't mentor your rival
+  'follower_of': ['enemy_of', 'rival_of'],
+  'at_war_with': ['allied_with'],
+  'mentor_of': ['rival_of'],  // Can't mentor your rival
+  'searching_for': ['lover_of', 'follower_of']  // Implies absence/distance
+};
+
+/**
  * Check if a new relationship is compatible with existing relationships.
  * Prevents contradictory relationships like being both lover and enemy.
+ * Uses domain schema conflictsWith if available, otherwise falls back to hardcoded.
  *
  * @param graph - The world graph
  * @param srcId - Source entity ID
@@ -772,25 +857,21 @@ export function areRelationshipsCompatible(
   dstId: string,
   newKind: string
 ): boolean {
-  // Define mutually exclusive relationship types
-  const CONTRADICTIONS: Record<string, string[]> = {
-    'enemy_of': ['lover_of', 'follower_of', 'ally_of', 'allied_with'],
-    'lover_of': ['enemy_of', 'rival_of'],
-    'rival_of': ['lover_of', 'follower_of', 'mentor_of'],  // Can't mentor your rival
-    'follower_of': ['enemy_of', 'rival_of'],
-    'at_war_with': ['allied_with'],
-    'mentor_of': ['rival_of'],  // Can't mentor your rival
-    'searching_for': ['lover_of', 'follower_of']  // Implies absence/distance
-  };
-
-  const incompatible = CONTRADICTIONS[newKind] || [];
-
-  // Check if any existing relationship contradicts the new one
+  // Get existing relationship kinds between these entities
   const existingRelationships = graph.relationships.filter(
     r => r.src === srcId && r.dst === dstId
   );
+  const existingKinds = existingRelationships.map(r => r.kind);
 
-  return !existingRelationships.some(rel => incompatible.includes(rel.kind));
+  // Use domain schema if available
+  const domain = graph.config?.domain;
+  if (domain?.checkRelationshipConflict) {
+    return !domain.checkRelationshipConflict(existingKinds, newKind);
+  }
+
+  // Fallback to hardcoded contradictions
+  const incompatible = RELATIONSHIP_CONTRADICTIONS[newKind] || [];
+  return !existingKinds.some(kind => incompatible.includes(kind));
 }
 
 /**

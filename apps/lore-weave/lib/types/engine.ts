@@ -63,8 +63,7 @@ export interface Graph {
     violations: Array<{ kind: string; strength: number }>;
   }>;
 
-  // Meta-entity formation service
-  metaEntityFormation?: import('../services/metaEntityFormation').MetaEntityFormation;
+  // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
 }
 
 // History tracking
@@ -299,11 +298,17 @@ export interface EngineConfig {
   loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
 
-  // Meta-entity formation configs (domain-specific)
-  metaEntityConfigs?: MetaEntityConfig[];
+  // DEPRECATED: metaEntityConfigs removed - use SimulationSystems instead
+  // Meta-entity formation is now handled by domain-specific SimulationSystems:
+  // - magicSchoolFormation, legalCodeFormation, combatTechniqueFormation
+  // These systems use clusteringUtils and entityArchival utilities
 }
 
-// Meta-Entity Formation System
+/**
+ * @deprecated Use SimulationSystem pattern with clusteringUtils/entityArchival instead
+ * Meta-entity formation configs are no longer supported in EngineConfig.
+ * Convert to SimulationSystems that run at epoch end.
+ */
 export interface MetaEntityConfig {
   sourceKind: string;       // Entity kind to cluster (e.g., 'abilities', 'rules')
   metaKind: string;         // Meta-entity kind to create (e.g., 'school', 'legal_code')

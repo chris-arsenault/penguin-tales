@@ -36,6 +36,9 @@ export { allTemplates } from './templates/index.js';
 // Systems
 export { allSystems } from './systems/index.js';
 
+// Entity Registries (domain-specific entity operator configs)
+export { penguinEntityRegistries } from './config/entityRegistries.js';
+
 // Initial State
 import initialStateData from './data/initialState.json' with { type: 'json' };
 export const initialState = initialStateData;

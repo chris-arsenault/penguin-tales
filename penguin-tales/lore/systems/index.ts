@@ -30,6 +30,11 @@ export { successionVacuum } from './successionVacuum';
 export { relationshipDecay } from './relationshipDecay';
 export { relationshipReinforcement } from './relationshipReinforcement';
 
+// Meta-entity formation systems (run at epoch end)
+export { magicSchoolFormation } from './magicSchoolFormation';
+export { legalCodeFormation } from './legalCodeFormation';
+export { combatTechniqueFormation } from './combatTechniqueFormation';
+
 // Import for aggregation
 import { relationshipFormation } from './relationshipFormation';
 import { conflictContagion } from './conflictContagion';
@@ -43,6 +48,9 @@ import { beliefContagion } from './beliefContagion';
 import { successionVacuum } from './successionVacuum';
 import { relationshipDecay } from './relationshipDecay';
 import { relationshipReinforcement } from './relationshipReinforcement';
+import { magicSchoolFormation } from './magicSchoolFormation';
+import { legalCodeFormation } from './legalCodeFormation';
+import { combatTechniqueFormation } from './combatTechniqueFormation';
 
 /**
  * All penguin-specific simulation systems
@@ -83,5 +91,10 @@ export const allSystems: SimulationSystem[] = [
   successionVacuum,            // Leadership transitions
 
   // Phase 4: Occurrence Creation
-  occurrenceCreation           // Create war/disaster occurrences based on accumulated state
+  occurrenceCreation,          // Create war/disaster occurrences based on accumulated state
+
+  // Phase 5: Meta-Entity Formation (epoch end only)
+  magicSchoolFormation,        // Cluster abilities into schools
+  legalCodeFormation,          // Cluster rules into legal codes
+  combatTechniqueFormation     // Cluster combat abilities into fighting styles
 ];

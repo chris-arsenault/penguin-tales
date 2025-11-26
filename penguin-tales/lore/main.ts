@@ -17,7 +17,6 @@ import {
   normalizeInitialState,
   validateWorld,
   applyParameterOverrides,
-  entityRegistries,
   relationshipCulling
 } from '../../apps/lore-weave/lib/index.js';
 
@@ -34,11 +33,11 @@ import {
   pressures,
   allTemplates,
   allSystems as penguinSystems,
-  initialState as penguinInitialState
+  initialState as penguinInitialState,
+  penguinEntityRegistries
 } from './index.js';
 
 import { penguinLoreProvider } from './config/loreProvider.js';
-import { magicSchoolFormation, legalCodeFormation, combatTechniqueFormation } from './config/metaEntityConfigs.js';
 
 // Import setNameGenerator to configure the framework with penguin name generator
 import { setNameGenerator } from '../../apps/lore-weave/lib/utils/helpers.js';
@@ -109,7 +108,7 @@ function scaleEntityRegistries(registries: any[], scale: number): any[] {
   });
 }
 
-const scaledEntityRegistries = scaleEntityRegistries(entityRegistries, SCALE_FACTOR);
+const scaledEntityRegistries = scaleEntityRegistries(penguinEntityRegistries, SCALE_FACTOR);
 
 // Parse CLI arguments
 function parseArgs(): { runId?: string; configPath?: string } {
@@ -238,14 +237,11 @@ const config: EngineConfig = {
   },
 
   // Pass scale factor to engine for internal calculations
-  scaleFactor: SCALE_FACTOR,
+  scaleFactor: SCALE_FACTOR
 
-  // Meta-entity formation configurations (domain-specific)
-  metaEntityConfigs: [
-    magicSchoolFormation,
-    legalCodeFormation,
-    combatTechniqueFormation
-  ]
+  // Meta-entity formation is now handled by SimulationSystems:
+  // magicSchoolFormation, legalCodeFormation, combatTechniqueFormation
+  // These are included in penguinSystems and run at epoch end
 };
 
 // Main execution

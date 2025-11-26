@@ -827,3 +827,62 @@ export const pressureDomainMappings: Record<string, string[]> = {
 export function getPressureDomainMappings(): Record<string, string[]> {
   return pressureDomainMappings;
 }
+
+/**
+ * Get action domains for an entity based on its kind and subtype
+ * This is penguin-domain specific logic that maps entity types to their capabilities.
+ * @param entity - The entity to check
+ * @returns Array of action domain IDs
+ */
+export function getActionDomainsForEntity(entity: HardState): string[] {
+  const domains: string[] = [];
+
+  switch (entity.kind) {
+    case 'npc':
+      if (entity.subtype === 'hero') {
+        domains.push('political', 'military', 'cultural');
+      } else if (entity.subtype === 'mayor') {
+        domains.push('political', 'economic');
+      } else if (entity.subtype === 'orca') {
+        domains.push('military');
+      } else if (entity.subtype === 'outlaw') {
+        domains.push('military', 'economic');
+      } else {
+        // Other NPC types get economic domain
+        domains.push('economic');
+      }
+      break;
+
+    case 'faction':
+      domains.push('political', 'economic', 'cultural');
+      if (entity.subtype === 'criminal') {
+        domains.push('military');
+      }
+      break;
+
+    case 'abilities':
+      if (entity.subtype === 'magic') {
+        domains.push('magical');
+      } else if (entity.subtype === 'technology') {
+        domains.push('technological');
+      }
+      break;
+
+    case 'occurrence':
+      if (entity.subtype === 'war') {
+        domains.push('conflict_escalation', 'military');
+      } else if (entity.subtype === 'magical_disaster') {
+        domains.push('disaster_spread');
+      }
+      break;
+
+    case 'location':
+      // Anomalies can cause environmental effects
+      if (entity.subtype === 'anomaly') {
+        domains.push('environmental', 'magical');
+      }
+      break;
+  }
+
+  return domains;
+}

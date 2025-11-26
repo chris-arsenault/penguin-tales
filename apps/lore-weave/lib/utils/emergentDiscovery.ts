@@ -3,11 +3,74 @@
  *
  * Analyzes graph state to procedurally generate location discoveries.
  * No pre-defined lists - everything emerges from world conditions.
+ *
+ * Uses EmergentDiscoveryConfig from domain schema for domain-specific behavior.
+ * Falls back to sensible defaults when domain config is not available.
  */
 
 import { Graph } from '../types/engine';
 import { HardState, LocationSubtype } from '../types/worldTypes';
+import { EmergentDiscoveryConfig } from '../types/domainSchema';
 import { pickRandom, pickMultiple } from './helpers';
+
+// ============================================================================
+// DEFAULT CONFIGURATION (used when domain doesn't provide config)
+// ============================================================================
+
+/**
+ * Default emergent discovery configuration.
+ * These values are used when domain schema doesn't provide config.
+ * @deprecated Domains should provide their own EmergentDiscoveryConfig
+ */
+const DEFAULT_DISCOVERY_CONFIG: EmergentDiscoveryConfig = {
+  settlementSubtypes: ['colony'],
+  thrivingStatuses: ['thriving'],
+  strugglingStatuses: ['waning', 'derelict'],
+  explorerSubtypes: ['hero', 'outlaw', 'merchant'],
+  explorerActiveStatus: 'alive',
+  resourceTypes: ['food', 'water', 'shelter', 'safety'],
+  foodResources: ['krill', 'fish', 'kelp'],
+  eraDiscoveryModifiers: {
+    'expansion': 0.15,
+    'conflict': 0.08,
+    'innovation': 0.12,
+    'invasion': 0.06,
+    'reconstruction': 0.10
+  },
+  maxLocations: 40,
+  maxDiscoveriesPerEpoch: 3,
+  minTicksBetweenDiscoveries: 5,
+  eraThemeWords: {
+    'conflict': { depthWords: ['hidden', 'secret', 'deep'] },
+    'expansion': { depthWords: ['open', 'accessible', 'shallow'], descriptors: ['fertile', 'pristine', 'untouched', 'virgin'] },
+    'reconstruction': { descriptors: ['renewed', 'reclaimed', 'restored', 'peaceful'] }
+  },
+  resourceThemeWords: {
+    'fishing': ['krill', 'fish', 'kelp', 'current'],
+    'fresh_water': ['spring', 'melt', 'pool', 'stream'],
+    'krill': ['breeding', 'swarm', 'bloom', 'migration'],
+    'fish': ['spawning', 'feeding', 'schooling', 'hunting'],
+    'kelp': ['forest', 'grove', 'bed', 'garden']
+  }
+};
+
+/**
+ * Get discovery config from graph or use defaults
+ */
+function getDiscoveryConfig(graph: Graph): EmergentDiscoveryConfig {
+  return graph.config?.domain?.emergentDiscoveryConfig ?? DEFAULT_DISCOVERY_CONFIG;
+}
+
+/**
+ * Get a config value with fallback to default
+ */
+function getConfigValue<K extends keyof EmergentDiscoveryConfig>(
+  config: EmergentDiscoveryConfig,
+  key: K,
+  fallback: NonNullable<EmergentDiscoveryConfig[K]>
+): NonNullable<EmergentDiscoveryConfig[K]> {
+  return (config[key] ?? fallback) as NonNullable<EmergentDiscoveryConfig[K]>;
+}
 
 // ============================================================================
 // WORLD STATE ANALYSIS
@@ -24,14 +87,20 @@ export interface ResourceAnalysis {
  * Analyze resource deficit by examining colony status and population
  */
 export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
+  const config = getDiscoveryConfig(graph);
+  const settlementSubtypes = getConfigValue(config, 'settlementSubtypes', ['colony']);
+  const thrivingStatuses = getConfigValue(config, 'thrivingStatuses', ['thriving']);
+  const strugglingStatuses = getConfigValue(config, 'strugglingStatuses', ['waning', 'derelict']);
+  const foodResources = getConfigValue(config, 'foodResources', ['krill', 'fish', 'kelp']);
+
   const colonies = Array.from(graph.entities.values()).filter(
-    e => e.kind === 'location' && e.subtype === 'colony'
+    e => e.kind === 'location' && settlementSubtypes.includes(e.subtype)
   );
 
   if (colonies.length === 0) return null;
 
-  const waningColonies = colonies.filter(c => c.status === 'waning' || c.status === 'derelict');
-  const thrivingColonies = colonies.filter(c => c.status === 'thriving');
+  const waningColonies = colonies.filter(c => strugglingStatuses.includes(c.status));
+  const thrivingColonies = colonies.filter(c => thrivingStatuses.includes(c.status));
 
   // Food scarcity if colonies are waning
   if (waningColonies.length > thrivingColonies.length) {
@@ -62,7 +131,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
     return {
       primary: 'food',
       severity: scarcity,
-      specific: pickRandom(['krill', 'fish', 'kelp']),
+      specific: pickRandom(foodResources),
       affectedColonies: colonies.map(c => c.id)
     };
   }
@@ -174,26 +243,29 @@ export interface LocationTheme {
 /**
  * Generate location theme from resource needs
  */
-export function generateResourceTheme(analysis: ResourceAnalysis, era: string): LocationTheme {
-  // Depth modifiers based on era
-  const depthWords = era === 'conflict' ? ['hidden', 'secret', 'deep'] :
-                     era === 'expansion' ? ['open', 'accessible', 'shallow'] :
-                     ['underground', 'deep', 'surface'];
+export function generateResourceTheme(
+  analysis: ResourceAnalysis,
+  era: string,
+  config?: EmergentDiscoveryConfig
+): LocationTheme {
+  // Use provided config or defaults
+  const discoveryConfig = config ?? DEFAULT_DISCOVERY_CONFIG;
+  const eraThemeWords = getConfigValue(discoveryConfig, 'eraThemeWords', {});
+  const resourceThemeWords = getConfigValue(discoveryConfig, 'resourceThemeWords', {});
 
-  // Resource types
-  const resourceMap: Record<string, string[]> = {
-    'fishing': ['krill', 'fish', 'kelp', 'current'],
-    'fresh_water': ['spring', 'melt', 'pool', 'stream'],
-    'krill': ['breeding', 'swarm', 'bloom', 'migration'],
-    'fish': ['spawning', 'feeding', 'schooling', 'hunting'],
-    'kelp': ['forest', 'grove', 'bed', 'garden']
-  };
+  // Depth modifiers based on era (from config)
+  const eraWords = eraThemeWords[era];
+  const depthWords = eraWords?.depthWords ?? ['underground', 'deep', 'surface'];
 
-  // Formation types
+  // Resource types (from config)
+  const resourceMap = resourceThemeWords;
+  const defaultResourceWords = ['resource'];
+
+  // Formation types (framework defaults - domain-agnostic)
   const formWords = ['grounds', 'channel', 'pool', 'canyon', 'valley', 'shelf', 'zone', 'field'];
 
   const depth = pickRandom(depthWords);
-  const resource = pickRandom(resourceMap[analysis.specific] || ['resource']);
+  const resource = pickRandom(resourceMap[analysis.specific] || defaultResourceWords);
   const form = pickRandom(formWords);
 
   const themeString = `${depth}_${resource}_${form}`;
@@ -266,14 +338,15 @@ export function generateMysticalTheme(analysis: MagicAnalysis, era: string): Loc
  * Generate a neutral exploration theme
  */
 export function generateExplorationTheme(graph: Graph): LocationTheme {
+  const config = getDiscoveryConfig(graph);
+  const eraThemeWords = getConfigValue(config, 'eraThemeWords', {});
   const era = graph.currentEra.id;
 
   const geographicWords = ['shelf', 'terrace', 'ledge', 'plateau', 'hollow', 'valley'];
-  const descriptors = era === 'expansion' ?
-    ['fertile', 'pristine', 'untouched', 'virgin'] :
-    era === 'reconstruction' ?
-    ['renewed', 'reclaimed', 'restored', 'peaceful'] :
-    ['mysterious', 'unknown', 'uncharted', 'distant'];
+
+  // Get era-specific descriptors from config, or use defaults
+  const eraWords = eraThemeWords[era];
+  const descriptors = eraWords?.descriptors ?? ['mysterious', 'unknown', 'uncharted', 'distant'];
 
   const descriptor = pickRandom(descriptors);
   const geographic = pickRandom(geographicWords);
@@ -296,35 +369,37 @@ export function generateExplorationTheme(graph: Graph): LocationTheme {
  * Calculate if a discovery should occur based on world state
  */
 export function shouldDiscoverLocation(graph: Graph): boolean {
+  const config = getDiscoveryConfig(graph);
+  const maxLocations = getConfigValue(config, 'maxLocations', 40);
+  const maxDiscoveriesPerEpoch = getConfigValue(config, 'maxDiscoveriesPerEpoch', 3);
+  const minTicksBetweenDiscoveries = getConfigValue(config, 'minTicksBetweenDiscoveries', 5);
+  const explorerSubtypes = getConfigValue(config, 'explorerSubtypes', ['hero', 'outlaw', 'merchant']);
+  const explorerActiveStatus = getConfigValue(config, 'explorerActiveStatus', 'alive');
+  const eraDiscoveryModifiers = getConfigValue(config, 'eraDiscoveryModifiers', {});
+
   const locationCount = Array.from(graph.entities.values()).filter(
     e => e.kind === 'location'
   ).length;
 
   // Hard cap
-  if (locationCount >= 40) return false;
+  if (locationCount >= maxLocations) return false;
 
   // Check discovery state
   const ticksSince = graph.tick - graph.discoveryState.lastDiscoveryTick;
-  if (ticksSince < 5) return false; // Min 5 ticks between
+  if (ticksSince < minTicksBetweenDiscoveries) return false;
 
-  if (graph.discoveryState.discoveriesThisEpoch >= 3) return false; // Max 3 per epoch
+  if (graph.discoveryState.discoveriesThisEpoch >= maxDiscoveriesPerEpoch) return false;
 
   // Must have explorers
   const explorers = Array.from(graph.entities.values()).filter(
-    e => e.kind === 'npc' && ['hero', 'outlaw', 'merchant'].includes(e.subtype) && e.status === 'alive'
+    e => e.kind === 'npc' &&
+         explorerSubtypes.includes(e.subtype) &&
+         e.status === explorerActiveStatus
   );
   if (explorers.length === 0) return false;
 
-  // Base probability scaled by era
-  const eraModifiers: Record<string, number> = {
-    'expansion': 0.15,      // 15% base chance
-    'conflict': 0.08,       // 8% base chance
-    'innovation': 0.12,     // 12% base chance
-    'invasion': 0.06,       // 6% base chance
-    'reconstruction': 0.10  // 10% base chance
-  };
-
-  const baseChance = eraModifiers[graph.currentEra.id] || 0.10;
+  // Base probability scaled by era (from config)
+  const baseChance = eraDiscoveryModifiers[graph.currentEra.id] ?? 0.10;
 
   return Math.random() < baseChance;
 }
