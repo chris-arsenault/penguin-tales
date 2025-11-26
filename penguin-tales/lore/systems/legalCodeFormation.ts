@@ -250,7 +250,7 @@ export const legalCodeFormation: SimulationSystem = {
   name: 'Legal Code Formation',
 
   contract: {
-    purpose: ComponentPurpose.ENTITY_CREATION,
+    purpose: ComponentPurpose.STATE_MODIFICATION,
     enabledBy: {
       entityCounts: [
         { kind: 'rules', min: 8 }

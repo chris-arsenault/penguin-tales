@@ -20,6 +20,11 @@ import {
   EmergentDiscoveryConfig
 } from '../../apps/lore-weave/lib/types/domainSchema';
 import { pickRandom } from '../../apps/lore-weave/lib/utils/helpers';
+import {
+  getActionDomains,
+  getActionDomainsForEntity,
+  getPressureDomainMappings
+} from './config/actionDomains';
 
 // ===========================
 // SNAPSHOT CONFIGURATIONS
@@ -818,21 +823,16 @@ export const penguinDomain = Object.assign(baseDomain, {
 
   // Action domains for catalyst system
   getActionDomains() {
-    // Import here to avoid circular dependencies
-    const { getActionDomains } = require('./config/actionDomains');
     return getActionDomains();
   },
 
   // Action domains for a specific entity
   getActionDomainsForEntity(entity: any) {
-    // Import here to avoid circular dependencies
-    const { getActionDomainsForEntity } = require('./config/actionDomains');
     return getActionDomainsForEntity(entity);
   },
 
   // Pressure-domain mappings
   getPressureDomainMappings() {
-    const { getPressureDomainMappings } = require('./config/actionDomains');
     return getPressureDomainMappings();
   },
 

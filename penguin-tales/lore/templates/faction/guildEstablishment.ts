@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { generateName, pickRandom, findEntities, slugifyName } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 import { buildRelationships } from '../../../../apps/lore-weave/lib/utils/relationshipBuilder';
 
 /**
@@ -104,11 +103,6 @@ export const guildEstablishment: GrowthTemplate = {
       culture: colony.culture,  // Inherit culture from colony
       tags: ['trade', 'guild', 'organized']
     };
-
-    // Initialize catalyst - guilds with recognized prominence can act
-    const guildEntity = guild as HardState;
-    guildEntity.id = 'temp'; // Temporary ID for initialization
-    initializeCatalystSmart(guildEntity);
 
     // Use targetSelector to intelligently select merchants (prevents super-hubs)
     let merchantsToRecruit: HardState[] = [];

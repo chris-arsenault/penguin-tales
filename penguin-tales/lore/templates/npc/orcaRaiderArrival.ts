@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { pickRandom, pickMultiple } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
@@ -133,11 +132,6 @@ export const orcaRaiderArrival: GrowthTemplate = {
         culture: 'orca',  // Orcas have their own culture
         tags: ['orca', 'raider', 'external-threat', 'predator']
       };
-
-      // Initialize catalyst - orcas with recognized+ prominence can act
-      const orcaEntity = orca as HardState;
-      orcaEntity.id = 'temp'; // Temporary ID for initialization
-      initializeCatalystSmart(orcaEntity);
 
       orcas.push(orca);
     }

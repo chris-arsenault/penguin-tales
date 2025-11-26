@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { generateId } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 
 /**
  * Tech Breakthrough Template
@@ -194,11 +193,6 @@ export const techBreakthrough: GrowthTemplate = {
       tags: ['technology', 'innovation', target.subtype],
       links: []
     };
-
-    // Initialize catalyst - technology abilities with recognized prominence can act
-    const techEntity = newTech as HardState;
-    techEntity.id = 'temp';
-    initializeCatalystSmart(techEntity);
 
     // Create relationships
     const relationships: Relationship[] = [

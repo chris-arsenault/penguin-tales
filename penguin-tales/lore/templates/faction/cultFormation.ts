@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { generateName, pickRandom, findEntities } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 
 /**
  * Cult Formation Template
@@ -146,11 +145,6 @@ export const cultFormation: GrowthTemplate = {
       tags: ['mystical', 'secretive', 'cult']
     };
 
-    // Initialize catalyst for cult
-    const cultEntity = cult as HardState;
-    cultEntity.id = 'temp';
-    initializeCatalystSmart(cultEntity);
-
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
@@ -161,11 +155,6 @@ export const cultFormation: GrowthTemplate = {
       culture: location.culture,  // Inherit culture from location
       tags: ['prophet', 'mystical']
     };
-
-    // Initialize catalyst for prophet
-    const prophetEntity = prophet as HardState;
-    prophetEntity.id = 'temp';
-    initializeCatalystSmart(prophetEntity);
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)
     let cultists: HardState[] = [];

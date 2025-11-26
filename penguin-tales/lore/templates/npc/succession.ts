@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { generateName, pickRandom, slugifyName, archiveRelationship } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -106,11 +105,6 @@ export const succession: GrowthTemplate = {
       culture: colony.culture,  // Inherit culture from colony
       tags: ['successor']
     };
-
-    // Initialize catalyst - mayors start marginal but will gain prominence and become actors
-    const leaderEntity = newLeader as HardState;
-    leaderEntity.id = 'temp'; // Temporary ID for initialization
-    initializeCatalystSmart(leaderEntity);
 
     const relationships: Relationship[] = [
       {

@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { pickRandom } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 
 /**
  * Magic Discovery Template
@@ -179,11 +178,6 @@ export const magicDiscovery: GrowthTemplate = {
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
       tags: ['magic', 'mystical']
     };
-
-    // Initialize catalyst - magic abilities with recognized prominence can act
-    const magicEntity = magicAbility as HardState;
-    magicEntity.id = 'temp';
-    initializeCatalystSmart(magicEntity);
 
     return {
       entities: [magicAbility],

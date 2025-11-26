@@ -151,7 +151,7 @@ export const magicSchoolFormation: SimulationSystem = {
   name: 'Magic School Formation',
 
   contract: {
-    purpose: ComponentPurpose.ENTITY_CREATION,
+    purpose: ComponentPurpose.STATE_MODIFICATION,
     enabledBy: {
       entityCounts: [
         { kind: 'abilities', min: 6 }

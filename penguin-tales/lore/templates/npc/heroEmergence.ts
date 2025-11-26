@@ -2,7 +2,6 @@ import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../ap
 import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
 import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
 import { generateName, pickRandom, slugifyName } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { initializeCatalystSmart } from '../../../../apps/lore-weave/lib/utils/catalystHelpers';
 import { EntityClusterBuilder } from '../../../../apps/lore-weave/lib/utils/entityClusterBuilder';
 
 export const heroEmergence: GrowthTemplate = {
@@ -111,12 +110,6 @@ export const heroEmergence: GrowthTemplate = {
       culture: colony.culture,  // Inherit culture from home colony
       tags: ['brave', 'emergent']
     };
-
-    // Initialize catalyst - heroes start marginal but will gain prominence and become actors
-    // Note: marginal heroes won't act yet, but system is ready when they become recognized
-    const heroEntity = hero as HardState;
-    heroEntity.id = 'temp'; // Temporary ID for initialization
-    initializeCatalystSmart(heroEntity);
 
     // Use EntityClusterBuilder for cleaner relationship creation
     const cluster = new EntityClusterBuilder()

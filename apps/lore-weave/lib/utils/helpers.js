@@ -1,0 +1,585 @@
+import * as fs from 'fs';
+import * as path from 'path';
+// Default name generator for when no domain-specific generator is available
+const defaultNameGenerator = {
+    generate(type = 'default') {
+        const prefixes = ['Swift', 'Bold', 'Wise', 'Storm', 'Ice', 'Frost', 'Dawn', 'Dusk'];
+        const suffixes = ['walker', 'keeper', 'watcher', 'seeker', 'finder', 'bringer'];
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+        return `${prefix}${suffix}`;
+    }
+};
+// Current name generator - set by domain at initialization
+let currentNameGenerator = defaultNameGenerator;
+/**
+ * Set the name generator to use for generating entity names.
+ * Should be called during domain initialization.
+ */
+export function setNameGenerator(generator) {
+    currentNameGenerator = generator;
+}
+/**
+ * Generate a name using the current name generator.
+ */
+export function generateName(type = 'default') {
+    return currentNameGenerator.generate(type);
+}
+// ID generation
+let idCounter = 1000;
+export function generateId(prefix) {
+    return `${prefix}_${idCounter++}`;
+}
+// Random selection
+export function pickRandom(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+export function pickMultiple(array, count) {
+    const shuffled = [...array].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, array.length));
+}
+// Entity finding
+export function findEntities(graph, criteria) {
+    const results = [];
+    graph.entities.forEach(entity => {
+        let matches = true;
+        for (const [key, value] of Object.entries(criteria)) {
+            if (entity[key] !== value) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            results.push(entity);
+        }
+    });
+    return results;
+}
+// Relationship helpers
+export function getRelated(graph, entityId, relationshipKind, direction = 'both', options) {
+    const related = [];
+    const opts = options || {};
+    graph.relationships.forEach(rel => {
+        if (relationshipKind && rel.kind !== relationshipKind)
+            return;
+        // Strength filtering
+        const strength = rel.strength ?? 0.5;
+        if (opts.minStrength !== undefined && strength < opts.minStrength)
+            return;
+        if (opts.maxStrength !== undefined && strength > opts.maxStrength)
+            return;
+        if ((direction === 'src' || direction === 'both') && rel.src === entityId) {
+            const entity = graph.entities.get(rel.dst);
+            if (entity)
+                related.push({ entity, strength });
+        }
+        if ((direction === 'dst' || direction === 'both') && rel.dst === entityId) {
+            const entity = graph.entities.get(rel.src);
+            if (entity)
+                related.push({ entity, strength });
+        }
+    });
+    // Sort by strength if requested
+    if (opts.sortByStrength) {
+        related.sort((a, b) => b.strength - a.strength);
+    }
+    return related.map(r => r.entity);
+}
+export function hasRelationship(graph, srcId, dstId, kind) {
+    return graph.relationships.some(rel => rel.src === srcId &&
+        rel.dst === dstId &&
+        (!kind || rel.kind === kind));
+}
+// Location helpers
+export function getResidents(graph, locationId) {
+    return getRelated(graph, locationId, 'resident_of', 'dst');
+}
+export function getLocation(graph, npcId) {
+    const locations = getRelated(graph, npcId, 'resident_of', 'src');
+    return locations[0];
+}
+// Faction helpers
+export function getFactionMembers(graph, factionId) {
+    return getRelated(graph, factionId, 'member_of', 'dst');
+}
+export function getFactionLeader(graph, factionId) {
+    const leaders = getRelated(graph, factionId, 'leader_of', 'dst');
+    return leaders[0];
+}
+// Strength-aware faction helpers
+export function getCoreFactionMembers(graph, factionId) {
+    return getRelated(graph, factionId, 'member_of', 'dst', { minStrength: 0.7 });
+}
+export function getStrongAllies(graph, entityId) {
+    return getRelated(graph, entityId, 'ally_of', 'src', { minStrength: 0.6 });
+}
+export function getWeakRelationships(graph, entityId) {
+    return graph.relationships.filter(r => (r.src === entityId || r.dst === entityId) &&
+        (r.strength ?? 0.5) < 0.3);
+}
+// Prominence helpers
+export function getProminenceValue(prominence) {
+    const values = {
+        'forgotten': 0,
+        'marginal': 1,
+        'recognized': 2,
+        'renowned': 3,
+        'mythic': 4
+    };
+    return values[prominence] || 0;
+}
+export function adjustProminence(current, delta) {
+    const order = [
+        'forgotten', 'marginal', 'recognized', 'renowned', 'mythic'
+    ];
+    const currentIndex = order.indexOf(current);
+    const newIndex = Math.max(0, Math.min(order.length - 1, currentIndex + delta));
+    return order[newIndex];
+}
+// Name tag helpers (for deterministic slug tags that track final names)
+export function slugifyName(name) {
+    return name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'unknown';
+}
+export function upsertNameTag(entity, sourceName) {
+    const slug = slugifyName(sourceName);
+    const withoutNameTags = (entity.tags || []).filter(tag => !tag.startsWith('name:'));
+    const base = withoutNameTags.slice(0, 4); // reserve space for name tag
+    entity.tags = [...base, `name:${slug}`];
+}
+// Initial state normalization
+export function normalizeInitialState(entities) {
+    return entities.map(entity => ({
+        id: entity.id || entity.name || generateId(entity.kind || 'unknown'),
+        kind: entity.kind || 'npc',
+        subtype: entity.subtype || 'merchant',
+        name: entity.name || generateName(),
+        description: entity.description || '',
+        status: entity.status || 'alive',
+        prominence: entity.prominence || 'marginal',
+        culture: entity.culture || 'world', // Domain-defined cultural affiliation, defaults to 'world'
+        tags: entity.tags || [],
+        links: entity.links || [],
+        createdAt: 0, // Initial entities created at tick 0
+        updatedAt: 0
+    }));
+}
+// Graph modification helpers
+export function addEntity(graph, entity) {
+    const id = generateId(entity.kind || 'unknown');
+    const fullEntity = {
+        id,
+        kind: entity.kind || 'npc',
+        subtype: entity.subtype || 'merchant',
+        name: entity.name || generateName(),
+        description: entity.description || '',
+        status: entity.status || 'alive',
+        prominence: entity.prominence || 'marginal',
+        culture: entity.culture || 'world', // Domain-defined cultural affiliation, defaults to 'world'
+        tags: entity.tags || [],
+        links: entity.links || [],
+        createdAt: entity.createdAt || graph.tick,
+        updatedAt: entity.updatedAt || graph.tick
+    };
+    graph.entities.set(id, fullEntity);
+    return id;
+}
+// ===========================
+// RELATIONSHIP HELPER FUNCTIONS
+// ===========================
+/**
+ * Check if a relationship kind requires distance (is a lineage relationship).
+ * Requires graph with domain schema.
+ */
+export function isLineageRelationship(kind, graph) {
+    if (graph.config?.domain?.isLineageRelationship) {
+        return graph.config.domain.isLineageRelationship(kind);
+    }
+    return false; // Default: not a lineage relationship
+}
+/**
+ * Get expected distance range for a lineage relationship kind.
+ * Requires graph with domain schema.
+ * Returns undefined for non-lineage relationships.
+ */
+export function getExpectedDistanceRange(kind, graph) {
+    if (graph.config?.domain?.getExpectedDistanceRange) {
+        return graph.config.domain.getExpectedDistanceRange(kind);
+    }
+    return undefined;
+}
+/**
+ * Get narrative strength for a relationship kind (0.0-1.0).
+ * Requires graph with domain schema.
+ */
+export function getRelationshipStrength(kind, graph) {
+    if (graph.config?.domain?.getRelationshipStrength) {
+        return graph.config.domain.getRelationshipStrength(kind);
+    }
+    return 0.5; // Default strength
+}
+/**
+ * Get behavioral category for a relationship kind.
+ * Requires graph with domain schema.
+ */
+export function getRelationshipCategory(kind, graph) {
+    if (graph.config?.domain?.getRelationshipCategory) {
+        return graph.config.domain.getRelationshipCategory(kind);
+    }
+    return 'social'; // Default category
+}
+/**
+ * Add a relationship between two entities.
+ *
+ * @param graph - The world graph
+ * @param kind - Relationship type
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param strengthOverride - Optional strength override (0.0-1.0). If not provided, auto-assigned based on kind.
+ * @param distance - Optional cognitive similarity distance (0.0 = identical, 1.0 = maximally different)
+ */
+export function addRelationship(graph, kind, srcId, dstId, strengthOverride, distance) {
+    // Check if relationship already exists
+    if (hasRelationship(graph, srcId, dstId, kind)) {
+        return;
+    }
+    // Get domain schema for configuration lookup
+    const domain = graph.config?.domain;
+    // Auto-assign strength based on relationship kind, or use override
+    const strength = strengthOverride ?? (domain?.getRelationshipStrength?.(kind) ?? 0.5);
+    // Auto-assign category based on relationship kind
+    const category = domain?.getRelationshipCategory?.(kind) ?? 'social';
+    // LINEAGE ENFORCEMENT: Auto-assign distance for lineage relationships if missing
+    let finalDistance = distance;
+    const isLineage = domain?.isLineageRelationship?.(kind) ?? false;
+    if (finalDistance === undefined && isLineage) {
+        const range = domain?.getExpectedDistanceRange?.(kind);
+        if (range) {
+            finalDistance = range.min + Math.random() * (range.max - range.min);
+            // Log warning for debugging (only occasionally to avoid spam)
+            if (Math.random() < 0.05) { // 5% sample rate
+                console.warn(`⚠️  Auto-adding distance to ${kind} relationship (${srcId} → ${dstId}): ${finalDistance.toFixed(3)}`);
+            }
+        }
+    }
+    // Check relationship warning thresholds (per-kind, non-blocking)
+    const srcEntity = graph.entities.get(srcId);
+    if (srcEntity) {
+        const existingOfType = srcEntity.links.filter(link => link.kind === kind).length;
+        // Use domain schema for thresholds (default: 10)
+        const threshold = domain?.getRelationshipWarningThreshold?.(srcEntity.kind, kind) ?? 10;
+        if (existingOfType >= threshold) {
+            // Write to warnings log file instead of console
+            const warningMessage = `⚠️  RELATIONSHIP WARNING (${srcEntity.kind.toUpperCase()}):\n` +
+                `   Entity: ${srcEntity.name} (${srcEntity.id})\n` +
+                `   Kind: ${srcEntity.kind}\n` +
+                `   Relationship Type: ${kind}\n` +
+                `   Current count: ${existingOfType}\n` +
+                `   Warning threshold: ${threshold}\n` +
+                `   Target: ${graph.entities.get(dstId)?.name || dstId}\n` +
+                `   Tick: ${graph.tick}\n` +
+                `   Era: ${graph.currentEra.name}\n` +
+                `   ℹ️  This is a WARNING only - relationship will still be added\n`;
+            try {
+                const warningLogPath = path.join(process.cwd(), 'output', 'warnings.log');
+                const timestamp = new Date().toISOString();
+                const logEntry = `[${timestamp}] [Tick ${graph.tick}]\n${warningMessage}\n`;
+                fs.appendFileSync(warningLogPath, logEntry);
+            }
+            catch (error) {
+                // Silently fail - don't spam console with file write errors
+            }
+        }
+    }
+    // Add relationship (always, no hard limit) with strength, distance, and category
+    graph.relationships.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
+    // Update entity links
+    const dstEntity = graph.entities.get(dstId);
+    if (srcEntity) {
+        srcEntity.links.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
+        srcEntity.updatedAt = graph.tick;
+    }
+    if (dstEntity) {
+        dstEntity.updatedAt = graph.tick;
+    }
+}
+export function updateEntity(graph, entityId, changes) {
+    const entity = graph.entities.get(entityId);
+    if (entity) {
+        Object.assign(entity, changes, { updatedAt: graph.tick });
+    }
+}
+/**
+ * Add a relationship with a bounded random distance.
+ * Used for lineage-based connectivity where entities link to existing same-kind entities.
+ *
+ * @param graph - The world graph
+ * @param kind - Relationship type
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param distanceRange - Min/max range for random distance selection
+ * @param strengthOverride - Optional strength override (0.0-1.0)
+ *
+ * @example
+ * // Incremental tech improvement (0.1-0.3 distance)
+ * addRelationshipWithDistance(graph, 'derived_from', newTechId, oldTechId, { min: 0.1, max: 0.3 })
+ *
+ * @example
+ * // Major faction split (0.6-0.8 distance)
+ * addRelationshipWithDistance(graph, 'split_from', splinterId, parentId, { min: 0.6, max: 0.8 })
+ */
+export function addRelationshipWithDistance(graph, kind, srcId, dstId, distanceRange, strengthOverride) {
+    // Validate range
+    if (distanceRange.min < 0 || distanceRange.max > 1 || distanceRange.min > distanceRange.max) {
+        console.warn(`Invalid distance range: [${distanceRange.min}, ${distanceRange.max}]. Using [0, 1].`);
+        distanceRange = { min: 0, max: 1 };
+    }
+    // Calculate random distance within range
+    const distance = distanceRange.min + Math.random() * (distanceRange.max - distanceRange.min);
+    // Delegate to addRelationship with calculated distance
+    addRelationship(graph, kind, srcId, dstId, strengthOverride, distance);
+}
+/**
+ * Archive a relationship by marking it as historical.
+ * Used for temporal tracking to maintain day 0 coherence.
+ *
+ * @param graph - The world graph
+ * @param src - Source entity ID
+ * @param dst - Destination entity ID
+ * @param kind - Relationship kind to archive
+ */
+export function archiveRelationship(graph, src, dst, kind) {
+    // Find matching active relationship in graph
+    const rel = graph.relationships.find(r => r.src === src &&
+        r.dst === dst &&
+        r.kind === kind &&
+        r.status !== 'historical');
+    if (rel) {
+        rel.status = 'historical';
+        rel.archivedAt = graph.tick;
+    }
+    // Update entity links for source entity
+    const srcEntity = graph.entities.get(src);
+    if (srcEntity) {
+        const link = srcEntity.links.find(l => l.src === src &&
+            l.dst === dst &&
+            l.kind === kind &&
+            l.status !== 'historical');
+        if (link) {
+            link.status = 'historical';
+            link.archivedAt = graph.tick;
+        }
+        srcEntity.updatedAt = graph.tick;
+    }
+    // Update destination entity's updatedAt
+    const dstEntity = graph.entities.get(dst);
+    if (dstEntity) {
+        dstEntity.updatedAt = graph.tick;
+    }
+}
+/**
+ * Modify relationship strength by delta
+ * @param delta - Amount to change strength (+/- value)
+ * @returns true if relationship was modified, false if not found
+ */
+export function modifyRelationshipStrength(graph, srcId, dstId, kind, delta) {
+    // Find relationship in graph
+    const rel = graph.relationships.find(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+    if (!rel)
+        return false;
+    // Update strength (clamp to 0.0-1.0)
+    const currentStrength = rel.strength ?? 0.5;
+    rel.strength = Math.max(0.0, Math.min(1.0, currentStrength + delta));
+    // Also update in entity links
+    const srcEntity = graph.entities.get(srcId);
+    const dstEntity = graph.entities.get(dstId);
+    if (srcEntity) {
+        const link = srcEntity.links.find(l => l.kind === kind && l.src === srcId && l.dst === dstId);
+        if (link)
+            link.strength = rel.strength;
+        srcEntity.updatedAt = graph.tick;
+    }
+    if (dstEntity) {
+        dstEntity.updatedAt = graph.tick;
+    }
+    return true;
+}
+// Validation helpers
+export function validateRelationship(schema, srcKind, dstKind, relKind) {
+    const allowedRelations = schema.relationships[srcKind]?.[dstKind];
+    return allowedRelations?.includes(relKind) || false;
+}
+// Weighted random selection
+export function weightedRandom(items, weights) {
+    if (items.length === 0 || items.length !== weights.length)
+        return undefined;
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < items.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+            return items[i];
+        }
+    }
+    return items[items.length - 1];
+}
+/**
+ * Check if a probabilistic event should occur, scaled by an era modifier.
+ *
+ * @param baseProbability - Base chance of the event occurring (0.0 to 1.0)
+ *                         e.g., 0.3 = 30% chance
+ * @param eraModifier - Era-based multiplier for the probability
+ *                      > 1 increases likelihood, < 1 decreases it
+ * @returns true if the event should occur
+ *
+ * @example
+ * // 30% base chance, doubled in conflict era (modifier = 2)
+ * if (rollProbability(0.3, eraModifier)) {
+ *   createConflict();
+ * }
+ */
+export function rollProbability(baseProbability, eraModifier = 1.0) {
+    const p = baseProbability;
+    // odds scaling
+    const odds = p / (1 - p);
+    const scaledOdds = Math.pow(odds, eraModifier);
+    const scaledP = scaledOdds / (1 + scaledOdds);
+    return Math.random() < scaledP;
+}
+// Relationship Cooldown Management
+/**
+ * Check if an entity can form a new relationship of a given type based on cooldown.
+ *
+ * @param graph - The world graph
+ * @param entityId - The entity attempting to form a relationship
+ * @param relationshipType - The type of relationship (e.g., 'lover_of', 'enemy_of')
+ * @param cooldownTicks - Minimum ticks that must pass between forming relationships of this type
+ * @returns true if the entity is not on cooldown for this relationship type
+ */
+export function canFormRelationship(graph, entityId, relationshipType, cooldownTicks) {
+    const entityCooldowns = graph.relationshipCooldowns.get(entityId);
+    if (!entityCooldowns)
+        return true;
+    const lastFormationTick = entityCooldowns.get(relationshipType);
+    if (lastFormationTick === undefined)
+        return true;
+    return (graph.tick - lastFormationTick) >= cooldownTicks;
+}
+/**
+ * Record that an entity has formed a relationship, updating cooldown tracking.
+ *
+ * @param graph - The world graph
+ * @param entityId - The entity that formed a relationship
+ * @param relationshipType - The type of relationship formed
+ */
+export function recordRelationshipFormation(graph, entityId, relationshipType) {
+    let entityCooldowns = graph.relationshipCooldowns.get(entityId);
+    if (!entityCooldowns) {
+        entityCooldowns = new Map();
+        graph.relationshipCooldowns.set(entityId, entityCooldowns);
+    }
+    entityCooldowns.set(relationshipType, graph.tick);
+}
+/**
+ * Check if a new relationship is compatible with existing relationships.
+ * Prevents contradictory relationships like being both lover and enemy.
+ * Uses domain schema conflictsWith.
+ *
+ * @param graph - The world graph
+ * @param srcId - Source entity ID
+ * @param dstId - Destination entity ID
+ * @param newKind - The relationship kind to check
+ * @returns true if the new relationship is compatible with existing ones
+ */
+export function areRelationshipsCompatible(graph, srcId, dstId, newKind) {
+    // Get existing relationship kinds between these entities
+    const existingRelationships = graph.relationships.filter(r => r.src === srcId && r.dst === dstId);
+    const existingKinds = existingRelationships.map(r => r.kind);
+    // Use domain schema for conflict checking
+    const domain = graph.config?.domain;
+    if (domain?.checkRelationshipConflict) {
+        return !domain.checkRelationshipConflict(existingKinds, newKind);
+    }
+    // No conflicts defined - all relationships are compatible
+    return true;
+}
+/**
+ * Calculate relationship formation weight based on existing connection count.
+ * Favors underconnected entities to balance network density and prevent hubs.
+ *
+ * @param entity - The entity to calculate weight for
+ * @returns Weight multiplier (higher = more likely to form relationships)
+ */
+export function getConnectionWeight(entity) {
+    const connectionCount = entity.links.length;
+    // Boost isolated/underconnected entities
+    if (connectionCount === 0)
+        return 3.0; // Strongly boost isolated
+    if (connectionCount <= 2)
+        return 2.0; // Boost underconnected (below median)
+    if (connectionCount <= 5)
+        return 1.0; // Normal
+    if (connectionCount <= 10)
+        return 0.5; // Reduce well-connected
+    return 0.2; // Heavily reduce hubs (15+)
+}
+/**
+ * Determine the relationship between two sets of factions.
+ *
+ * @param factions1 - First set of factions
+ * @param factions2 - Second set of factions
+ * @param graph - The world graph
+ * @returns 'allied', 'enemy', or 'neutral'
+ */
+export function getFactionRelationship(factions1, factions2, graph) {
+    // Check for warfare/enmity
+    const atWar = factions1.some(f1 => factions2.some(f2 => hasRelationship(graph, f1.id, f2.id, 'at_war_with') ||
+        hasRelationship(graph, f1.id, f2.id, 'enemy_of')));
+    if (atWar)
+        return 'enemy';
+    // Check for alliances
+    const allied = factions1.some(f1 => factions2.some(f2 => hasRelationship(graph, f1.id, f2.id, 'allied_with')));
+    if (allied)
+        return 'allied';
+    return 'neutral';
+}
+// JSON parsing utilities
+/**
+ * Safely parse JSON with automatic cleanup of markdown code blocks
+ * Returns null if parsing fails
+ */
+export function parseJsonSafe(raw) {
+    if (!raw)
+        return null;
+    let cleaned = raw.trim();
+    cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    try {
+        return JSON.parse(cleaned);
+    }
+    catch {
+        return null;
+    }
+}
+// Array utilities
+/**
+ * Split an array into chunks of a specified size
+ */
+export function chunk(items, size) {
+    const result = [];
+    for (let i = 0; i < items.length; i += size) {
+        result.push(items.slice(i, i + size));
+    }
+    return result;
+}
+// ID generation for lore records
+let loreRecordCounter = 0;
+/**
+ * Generate unique ID for lore records with timestamp and counter
+ */
+export function generateLoreId(prefix) {
+    return `${prefix}_${Date.now()}_${loreRecordCounter++}`;
+}
+//# sourceMappingURL=helpers.js.map

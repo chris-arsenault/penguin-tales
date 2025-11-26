@@ -684,8 +684,6 @@ export class WorldEngine {
     // Link up to 10 most prominent entities
     let linkedCount = 0;
     entitiesToLink.slice(0, 10).forEach(entity => {
-      // Use addRelationship to avoid duplicate links
-      const { addRelationship } = require('../utils/helpers');
       addRelationship(this.graph, 'active_during', entity.id, currentEra.id);
       linkedCount++;
     });
@@ -1046,6 +1044,13 @@ export class WorldEngine {
             clusterEntities.push(ref);
           }
         });
+
+        // Auto-initialize catalysts for newly created entities
+        // This ensures consistent catalyst initialization for all entities,
+        // whether from initial state or templates
+        for (const entity of clusterEntities) {
+          initializeCatalystSmart(entity, this.graph);
+        }
 
         // Add relationships (resolve placeholder IDs and preserve distance/strength)
         result.relationships.forEach(rel => {

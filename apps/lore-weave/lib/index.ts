@@ -1,17 +1,20 @@
 /**
  * Lore Weave - Procedural World History Generation Framework
  *
- * This module exports all framework types, classes, and utilities.
- * Domain-specific implementations (like penguin-tales) import from here.
+ * PUBLIC API - These exports form the contract between framework and domain.
+ * Internal framework services and utilities are not exported.
  */
 
-// Core Engine
-export { WorldEngine } from './engine/worldEngine';
-export { FrameworkValidator } from './engine/frameworkValidator';
-export { ContractEnforcer } from './engine/contractEnforcer';
-export { ValidationOrchestrator } from './engine/validationOrchestrator';
+// =============================================================================
+// CORE ENGINE
+// =============================================================================
 
-// Core Types
+export { WorldEngine } from './engine/worldEngine';
+
+// =============================================================================
+// CORE TYPES - Used by domain for type definitions
+// =============================================================================
+
 export type {
   HardState,
   Relationship,
@@ -27,87 +30,57 @@ export type {
   SimulationSystem,
   EngineConfig,
   HistoryEvent,
-  SystemResult
+  SystemResult,
+  TemplateResult,
+  MetaEntityConfig,
+  EntityOperatorRegistry
 } from './types/engine';
+
+export { ComponentPurpose } from './types/engine';
+
+// =============================================================================
+// DOMAIN SCHEMA TYPES - For implementing domain schemas
+// =============================================================================
 
 export type {
   DomainSchema,
+  BaseDomainSchema,
   RelationshipKindDefinition,
   RelationshipConfig,
   RelationshipLimits,
   RelationshipCategory,
   SnapshotConfig,
   EntityKindDefinition,
-  EmergentDiscoveryConfig
+  EmergentDiscoveryConfig,
+  CultureDefinition,
+  NameGenerator
 } from './types/domainSchema';
-
-export type {
-  DistributionTargets
-} from './types/distribution';
-
-export type {
-  LoreRecord
-} from './types/lore';
-
-// Framework Primitives (domain-agnostic types)
-export {
-  FRAMEWORK_ENTITY_KINDS,
-  FRAMEWORK_RELATIONSHIP_KINDS,
-  FRAMEWORK_STATUS,
-  FRAMEWORK_ENTITY_KIND_VALUES,
-  FRAMEWORK_RELATIONSHIP_KIND_VALUES,
-  FRAMEWORK_STATUS_VALUES,
-  FRAMEWORK_ERA_STATUS_VALUES,
-  FRAMEWORK_OCCURRENCE_STATUS_VALUES,
-  FRAMEWORK_RELATIONSHIP_PROPERTIES,
-  isFrameworkEntityKind,
-  isFrameworkRelationshipKind,
-  isFrameworkStatus,
-  isFrameworkEntity,
-  isFrameworkRelationship,
-  getFrameworkRelationshipStrength,
-  isProtectedFrameworkRelationship
-} from './types/frameworkPrimitives';
-
-export type {
-  FrameworkEntityKind,
-  FrameworkRelationshipKind,
-  FrameworkStatus
-} from './types/frameworkPrimitives';
 
 export type {
   DomainLoreProvider
 } from './types/domainLore';
 
 export type {
-  FitnessMetrics
-} from './types/statistics';
+  DistributionTargets
+} from './types/distribution';
 
-// Services
+// =============================================================================
+// SERVICES - For domain templates and systems
+// =============================================================================
+
+export { TemplateGraphView } from './services/templateGraphView';
+export { TargetSelector } from './services/targetSelector';
+export type { SelectionBias, SelectionResult } from './services/targetSelector';
+
+// Services for optional LLM integration (domain configures these)
 export { EnrichmentService } from './services/enrichmentService';
 export { ImageGenerationService } from './services/imageGenerationService';
-export { LLMClient } from './services/llmClient';
-export { LoreValidator } from './services/loreValidator';
-export { DistributionTracker } from './services/distributionTracker';
-export { DynamicWeightCalculator } from './services/dynamicWeightCalculator';
-export { FeedbackAnalyzer } from './services/feedbackAnalyzer';
-export { NameLogger } from './services/nameLogger';
-export { PopulationTracker } from './services/populationTracker';
-export { StatisticsCollector } from './services/statisticsCollector';
-export { SystemSelector } from './services/systemSelector';
-export { TagHealthAnalyzer } from './services/tagHealthAnalyzer';
-export { TargetSelector } from './services/targetSelector';
-export { TemplateGraphView } from './services/templateGraphView';
-export { TemplateSelector } from './services/templateSelector';
 
-// Framework Systems (domain-agnostic)
-export { relationshipCulling } from './systems/relationshipCulling';
-export { eraSpawner } from './systems/eraSpawner';
-export { eraTransition } from './systems/eraTransition';
-export { occurrenceCreation } from './systems/occurrenceCreation';
-export { universalCatalyst } from './systems/universalCatalyst';
+// =============================================================================
+// UTILITY FUNCTIONS - For domain templates and systems
+// =============================================================================
 
-// Utilities
+// Core helpers
 export {
   generateId,
   generateName,
@@ -120,30 +93,22 @@ export {
   getFactionMembers,
   hasRelationship,
   normalizeInitialState,
-  // Relationship config utilities (domain-aware)
-  isLineageRelationship,
-  getExpectedDistanceRange,
-  getRelationshipStrength,
-  getRelationshipCategory,
+  slugifyName,
+  archiveRelationship,
+  addRelationshipWithDistance,
+  modifyRelationshipStrength,
   areRelationshipsCompatible
 } from './utils/helpers';
 
-export {
-  selectEra,
-  getTemplateWeight,
-  getSystemModifier
-} from './utils/eraUtils';
+// Validation
+export { validateWorld } from './utils/validators';
+export type { ValidationResult, ValidationReport } from './utils/validators';
 
-export {
-  validateWorld,
-  ValidationResult,
-  ValidationReport
-} from './utils/validators';
+// Parameter configuration
+export { applyParameterOverrides } from './utils/parameterOverrides';
+export { extractParams } from './utils/parameterExtractor';
 
-export {
-  applyParameterOverrides
-} from './utils/parameterOverrides';
-
+// Entity clustering (for meta-entity formation systems)
 export {
   calculateSimilarity,
   detectClusters,
@@ -158,6 +123,7 @@ export type {
   ClusterConfig
 } from './utils/clusteringUtils';
 
+// Entity archival (for entity lifecycle management)
 export {
   archiveEntity,
   archiveEntities,
@@ -176,7 +142,7 @@ export type {
   SupersedeEntityOptions
 } from './utils/entityArchival';
 
-// Emergent discovery exports
+// Emergent discovery (for location discovery templates)
 export {
   analyzeResourceDeficit,
   analyzeConflictPatterns,
@@ -197,12 +163,28 @@ export type {
   LocationTheme
 } from './utils/emergentDiscovery';
 
-// Catalyst helpers
-export {
-  initializeCatalyst,
-  initializeCatalystSmart
-} from './utils/catalystHelpers';
+// Template building utilities
+export { EntityClusterBuilder } from './utils/entityClusterBuilder';
+export { buildRelationships } from './utils/relationshipBuilder';
 
-// Configuration (framework-level)
-export { tagRegistry } from './config/tagRegistry';
-export { feedbackLoops } from './config/feedbackLoops';
+// =============================================================================
+// FRAMEWORK SYSTEMS - Domain registers these with engine config
+// =============================================================================
+
+export { relationshipCulling } from './systems/relationshipCulling';
+export { eraSpawner } from './systems/eraSpawner';
+export { eraTransition } from './systems/eraTransition';
+export { occurrenceCreation } from './systems/occurrenceCreation';
+export { universalCatalyst } from './systems/universalCatalyst';
+
+// =============================================================================
+// FRAMEWORK PRIMITIVES - Minimal constants needed by domain
+// =============================================================================
+
+export {
+  FRAMEWORK_RELATIONSHIP_KINDS
+} from './types/frameworkPrimitives';
+
+export type {
+  FrameworkRelationshipKind
+} from './types/frameworkPrimitives';

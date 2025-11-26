@@ -1,0 +1,517 @@
+import { ComponentPurpose } from '../types/engine';
+import { initializeCatalyst } from '../utils/catalystHelpers';
+import { generateId } from '../utils/helpers';
+/**
+ * Occurrence Creation System
+ *
+ * Framework-level system that creates occurrence entities when domain-defined
+ * conditions are met. Occurrences are second-order agents - created by first-order
+ * agents, then they act with their own momentum.
+ *
+ * Examples:
+ * - War: Faction conflicts reach threshold → war occurrence created → war escalates
+ * - Magical Disaster: Corruption spreads → disaster occurrence → disaster spreads
+ * - Cultural Movement: Ideology spreads → movement occurrence → movement converts factions
+ * - Economic Boom: Trade routes abundant → boom occurrence → boom drives expansion
+ */
+export const occurrenceCreation = {
+    id: 'occurrence_creation',
+    name: 'Major Event Occurrences',
+    contract: {
+        purpose: ComponentPurpose.STATE_MODIFICATION, // Creates occurrence entities (event records) as side effect
+        enabledBy: {
+            entityCounts: [
+                { kind: 'faction', min: 2 }
+            ]
+        },
+        affects: {
+            entities: [
+                {
+                    kind: 'occurrence',
+                    operation: 'create',
+                    count: { min: 0, max: 4 }
+                }
+            ],
+            relationships: [
+                {
+                    kind: 'participant_in',
+                    operation: 'create',
+                    count: { min: 0, max: 10 }
+                },
+                {
+                    kind: 'epicenter_of',
+                    operation: 'create',
+                    count: { min: 0, max: 4 }
+                },
+                {
+                    kind: 'triggered_by',
+                    operation: 'create',
+                    count: { min: 0, max: 4 }
+                }
+            ]
+        }
+    },
+    metadata: {
+        produces: {
+            relationships: [
+                { kind: 'participant_in', frequency: 'rare', comment: 'Entities become participants in occurrences' },
+                { kind: 'epicenter_of', frequency: 'rare', comment: 'Occurrences have geographic epicenters' },
+                { kind: 'triggered_by', frequency: 'rare', comment: 'Occurrences triggered by agents' }
+            ],
+            modifications: [
+                { type: 'status', frequency: 'rare', comment: 'Creates occurrence entities' }
+            ]
+        },
+        effects: {
+            graphDensity: 0.3,
+            clusterFormation: 0.8,
+            diversityImpact: 0.6,
+            comment: 'Creates macro-level events (wars, disasters) that become agents themselves'
+        },
+        parameters: {
+            warThreshold: {
+                value: 1,
+                min: 1,
+                max: 5,
+                description: 'Minimum at_war_with relationships to trigger war occurrence (lowered from 2 to 1 to make wars more frequent)'
+            },
+            disasterThreshold: {
+                value: 2,
+                min: 1,
+                max: 4,
+                description: 'Minimum corruption events in one tick to trigger disaster'
+            },
+            movementThreshold: {
+                value: 3,
+                min: 2,
+                max: 6,
+                description: 'Minimum factions sharing ideology to trigger movement'
+            },
+            boomThreshold: {
+                value: 4,
+                min: 2,
+                max: 8,
+                description: 'Minimum trade routes to trigger economic boom'
+            }
+        },
+        triggers: {
+            graphConditions: [
+                'Multiple faction conflicts',
+                'Widespread corruption',
+                'Ideology spreading',
+                'Trade network density'
+            ],
+            comment: 'Runs every tick, creates occurrences when thresholds met'
+        }
+    },
+    apply: (graph, modifier = 1.0) => {
+        const params = occurrenceCreation.metadata?.parameters || {};
+        const warThreshold = params.warThreshold?.value ?? 2;
+        const disasterThreshold = params.disasterThreshold?.value ?? 2;
+        const movementThreshold = params.movementThreshold?.value ?? 3;
+        const boomThreshold = params.boomThreshold?.value ?? 4;
+        // Get occurrence creation triggers from domain config
+        const occurrenceTriggers = graph.config.domain.getOccurrenceTriggers?.() || {};
+        const relationshipsAdded = [];
+        const entitiesModified = [];
+        const occurrencesCreated = [];
+        // CONDITION 1: Create war occurrence if major faction conflicts
+        const warOutcome = checkForWar(graph, warThreshold, occurrenceTriggers.war);
+        if (warOutcome) {
+            occurrencesCreated.push(warOutcome.occurrence);
+            relationshipsAdded.push(...warOutcome.relationships);
+            graph.history.push({
+                tick: graph.tick,
+                era: graph.currentEra.id,
+                type: 'special',
+                description: warOutcome.description,
+                entitiesCreated: [warOutcome.occurrence.id],
+                relationshipsCreated: warOutcome.relationships,
+                entitiesModified: []
+            });
+        }
+        // CONDITION 2: Create magical disaster if corruption spreads
+        const disasterOutcome = checkForMagicalDisaster(graph, disasterThreshold, occurrenceTriggers.magical_disaster);
+        if (disasterOutcome) {
+            occurrencesCreated.push(disasterOutcome.occurrence);
+            relationshipsAdded.push(...disasterOutcome.relationships);
+            graph.history.push({
+                tick: graph.tick,
+                era: graph.currentEra.id,
+                type: 'special',
+                description: disasterOutcome.description,
+                entitiesCreated: [disasterOutcome.occurrence.id],
+                relationshipsCreated: disasterOutcome.relationships,
+                entitiesModified: []
+            });
+        }
+        // CONDITION 3: Create cultural movement if ideology spreading
+        const movementOutcome = checkForCulturalMovement(graph, movementThreshold, occurrenceTriggers.cultural_movement);
+        if (movementOutcome) {
+            occurrencesCreated.push(movementOutcome.occurrence);
+            relationshipsAdded.push(...movementOutcome.relationships);
+            graph.history.push({
+                tick: graph.tick,
+                era: graph.currentEra.id,
+                type: 'special',
+                description: movementOutcome.description,
+                entitiesCreated: [movementOutcome.occurrence.id],
+                relationshipsCreated: movementOutcome.relationships,
+                entitiesModified: []
+            });
+        }
+        // CONDITION 4: Create economic boom if trade network abundant
+        const boomOutcome = checkForEconomicBoom(graph, boomThreshold, occurrenceTriggers.economic_boom);
+        if (boomOutcome) {
+            occurrencesCreated.push(boomOutcome.occurrence);
+            relationshipsAdded.push(...boomOutcome.relationships);
+            graph.history.push({
+                tick: graph.tick,
+                era: graph.currentEra.id,
+                type: 'special',
+                description: boomOutcome.description,
+                entitiesCreated: [boomOutcome.occurrence.id],
+                relationshipsCreated: boomOutcome.relationships,
+                entitiesModified: []
+            });
+        }
+        // Add created occurrences to graph
+        occurrencesCreated.forEach(occ => {
+            graph.entities.set(occ.id, occ);
+        });
+        return {
+            relationshipsAdded,
+            entitiesModified,
+            pressureChanges: {},
+            description: occurrencesCreated.length > 0
+                ? `Major occurrences emerge (${occurrencesCreated.length}: ${occurrencesCreated.map(o => o.name).join(', ')})`
+                : 'No major occurrences this cycle'
+        };
+    }
+};
+/**
+ * Check if conditions are met for war occurrence
+ */
+function checkForWar(graph, threshold, trigger) {
+    // Find faction conflicts
+    const warRelationships = graph.relationships.filter(rel => rel.kind === 'at_war_with' &&
+        graph.entities.get(rel.src)?.kind === 'faction' &&
+        graph.entities.get(rel.dst)?.kind === 'faction');
+    if (warRelationships.length < threshold)
+        return null;
+    // Group conflicts - look for multi-faction wars
+    const conflictClusters = findConflictClusters(graph, warRelationships);
+    // Find largest cluster
+    const largestCluster = conflictClusters.reduce((max, cluster) => cluster.factions.length > max.factions.length ? cluster : max, { factions: [], center: null });
+    if (largestCluster.factions.length < 2)
+        return null;
+    // Generate war name
+    const factionNames = largestCluster.factions.slice(0, 2).map(f => f.name);
+    const expectedWarName = trigger?.nameGenerator?.(factionNames) ||
+        `The ${factionNames[0]}-${factionNames[1]} War`;
+    // Check if war occurrence already exists for this cluster
+    // Use faction tags to detect recent war participation (more reliable than relationships)
+    // Reduced cooldown from 50 to 20 ticks to allow wars to happen more frequently
+    const factionsInRecentWar = largestCluster.factions.some(f => f.tags?.some(tag => tag.startsWith('war:') && parseInt(tag.split(':')[1]) > graph.tick - 20));
+    if (factionsInRecentWar)
+        return null; // Factions recently involved in war
+    // Also check for existing active war involving these factions
+    const existingWar = Array.from(graph.entities.values()).find(e => {
+        if (e.kind !== 'occurrence' || e.subtype !== 'war' || e.status === 'ended') {
+            return false;
+        }
+        // Check if any faction in THIS cluster already participates in this war
+        return largestCluster.factions.some(f => graph.relationships.some(r => r.kind === 'participant_in' &&
+            r.src === f.id &&
+            r.dst === e.id));
+    });
+    if (existingWar)
+        return null; // War already exists for these factions
+    // Create war occurrence
+    const warId = generateId('occurrence');
+    const warOccurrence = {
+        id: warId,
+        kind: 'occurrence',
+        subtype: 'war',
+        name: expectedWarName,
+        description: `A major conflict between ${largestCluster.factions.length} factions`,
+        status: 'active',
+        prominence: 'recognized',
+        culture: 'world', // Wars are world-level events
+        tags: ['war', 'conflict', 'violence'],
+        links: [],
+        createdAt: graph.tick,
+        updatedAt: graph.tick,
+        temporal: {
+            startTick: graph.tick,
+            endTick: null
+        }
+    };
+    // Initialize catalyst properties
+    initializeCatalyst(warOccurrence, true, ['military', 'conflict_escalation', 'political'], 0.7);
+    // Create participant relationships and tag factions
+    const relationships = [];
+    largestCluster.factions.forEach(faction => {
+        relationships.push({
+            kind: 'participant_in',
+            src: faction.id,
+            dst: warId,
+            strength: 1.0,
+            catalyzedBy: faction.id,
+            createdAt: graph.tick
+        });
+        // Tag faction with war participation timestamp for cooldown tracking
+        if (!faction.tags)
+            faction.tags = [];
+        faction.tags = faction.tags.filter(t => !t.startsWith('war:')); // Remove old war tags
+        faction.tags.push(`war:${graph.tick}`);
+        if (faction.tags.length > 10)
+            faction.tags = faction.tags.slice(-10); // Keep last 10 tags
+        faction.updatedAt = graph.tick;
+    });
+    // Add epicenter if there's a contested location
+    const contestedLocation = findContestedLocation(graph, largestCluster.factions);
+    if (contestedLocation) {
+        relationships.push({
+            kind: 'epicenter_of',
+            src: warId,
+            dst: contestedLocation.id,
+            strength: 1.0,
+            createdAt: graph.tick
+        });
+    }
+    // Note: warOccurrence.links will be populated by addRelationship() in worldEngine
+    return {
+        occurrence: warOccurrence,
+        relationships,
+        description: `${expectedWarName} erupts between ${largestCluster.factions.length} factions`
+    };
+}
+/**
+ * Check if conditions are met for magical disaster occurrence
+ */
+function checkForMagicalDisaster(graph, threshold, trigger) {
+    // Find recent corruption events (this tick only)
+    const recentCorruption = graph.relationships.filter(rel => rel.kind === 'corrupted_by' &&
+        rel.createdAt === graph.tick);
+    if (recentCorruption.length < threshold)
+        return null;
+    // Check if disaster already exists
+    const existingDisaster = Array.from(graph.entities.values()).find(e => e.kind === 'occurrence' &&
+        e.subtype === 'magical_disaster' &&
+        e.status === 'active');
+    if (existingDisaster)
+        return null;
+    // Create disaster occurrence
+    const disasterId = generateId('occurrence');
+    const disasterName = trigger?.nameGenerator?.() || `The Corruption Cascade`;
+    const disaster = {
+        id: disasterId,
+        kind: 'occurrence',
+        subtype: 'magical_disaster',
+        name: disasterName,
+        description: `Magical corruption spreads uncontrollably`,
+        status: 'active',
+        prominence: 'renowned',
+        culture: 'world', // Disasters are world-level events
+        tags: ['disaster', 'magic', 'corruption'],
+        links: [],
+        createdAt: graph.tick,
+        updatedAt: graph.tick,
+        temporal: {
+            startTick: graph.tick,
+            endTick: null
+        }
+    };
+    initializeCatalyst(disaster, true, ['magical', 'disaster_spread'], 0.8);
+    const relationships = [];
+    // Find epicenter (most corrupted location)
+    const corruptedLocations = new Map();
+    recentCorruption.forEach(rel => {
+        const locId = rel.src;
+        corruptedLocations.set(locId, (corruptedLocations.get(locId) || 0) + 1);
+    });
+    if (corruptedLocations.size > 0) {
+        const epicenterId = Array.from(corruptedLocations.entries())
+            .reduce((max, [id, count]) => count > max.count ? { id, count } : max, { id: '', count: 0 })
+            .id;
+        relationships.push({
+            kind: 'epicenter_of',
+            src: disasterId,
+            dst: epicenterId,
+            strength: 1.0,
+            createdAt: graph.tick
+        });
+        // Note: disaster.links will be populated by addRelationship() in worldEngine
+    }
+    return {
+        occurrence: disaster,
+        relationships,
+        description: `${disasterName} unleashed as corruption spreads`
+    };
+}
+/**
+ * Check if conditions are met for cultural movement occurrence
+ */
+function checkForCulturalMovement(graph, threshold, trigger) {
+    // Find rules with multiple adopters
+    const ruleAdoption = new Map();
+    graph.relationships.forEach(rel => {
+        if (rel.kind === 'weaponized_by' || rel.kind === 'kept_secret_by') {
+            const rule = graph.entities.get(rel.dst);
+            const faction = graph.entities.get(rel.src);
+            if (rule && faction && rule.kind === 'rules' && faction.kind === 'faction') {
+                if (!ruleAdoption.has(rule.id)) {
+                    ruleAdoption.set(rule.id, []);
+                }
+                ruleAdoption.get(rule.id).push(faction);
+            }
+        }
+    });
+    // Find rules with enough adopters
+    const widelyAdoptedRules = Array.from(ruleAdoption.entries())
+        .filter(([_, factions]) => factions.length >= threshold);
+    if (widelyAdoptedRules.length === 0)
+        return null;
+    // Pick most widely adopted
+    const [ruleId, factions] = widelyAdoptedRules[0];
+    const rule = graph.entities.get(ruleId);
+    if (!rule)
+        return null;
+    // Check if movement already exists
+    // Check both by name (immediate) and by relationships (after engine adds them)
+    const expectedMovementName = trigger?.nameGenerator?.(rule.name) ||
+        `The ${rule.name} Movement`;
+    const existingMovement = Array.from(graph.entities.values()).find(e => {
+        if (e.kind !== 'occurrence' || e.subtype !== 'cultural_movement' || e.status !== 'active') {
+            return false;
+        }
+        // Check by name first (works immediately)
+        if (e.name === expectedMovementName) {
+            return true;
+        }
+        // Also check if this movement is already about this rule
+        return graph.relationships.some(r => r.src === e.id && r.dst === ruleId);
+    });
+    if (existingMovement)
+        return null;
+    // Create cultural movement occurrence
+    const movementId = generateId('occurrence');
+    const movement = {
+        id: movementId,
+        kind: 'occurrence',
+        subtype: 'cultural_movement',
+        name: expectedMovementName,
+        description: `Widespread adoption of ${rule.name}`,
+        status: 'active',
+        prominence: 'recognized',
+        culture: 'world', // Cultural movements are world-level events
+        tags: ['cultural', 'ideology', 'movement'],
+        links: [],
+        createdAt: graph.tick,
+        updatedAt: graph.tick,
+        temporal: {
+            startTick: graph.tick,
+            endTick: null
+        }
+    };
+    initializeCatalyst(movement, true, ['cultural', 'political'], 0.6);
+    const relationships = [];
+    // Add participants
+    factions.forEach(faction => {
+        relationships.push({
+            kind: 'participant_in',
+            src: faction.id,
+            dst: movementId,
+            strength: 1.0,
+            catalyzedBy: faction.id,
+            createdAt: graph.tick
+        });
+        // Note: movement.links will be populated by addRelationship() in worldEngine
+    });
+    return {
+        occurrence: movement,
+        relationships,
+        description: `${expectedMovementName} spreads across ${factions.length} factions`
+    };
+}
+/**
+ * Check if conditions are met for economic boom occurrence
+ */
+function checkForEconomicBoom(graph, threshold, trigger) {
+    // Count trade-related relationships
+    const tradeRoutes = graph.relationships.filter(rel => rel.kind === 'trades_with' || rel.kind === 'monopolizes');
+    if (tradeRoutes.length < threshold)
+        return null;
+    // Check if boom already exists
+    const existingBoom = Array.from(graph.entities.values()).find(e => e.kind === 'occurrence' &&
+        e.subtype === 'economic_boom' &&
+        e.status === 'active');
+    if (existingBoom)
+        return null;
+    // Create economic boom occurrence
+    const boomId = generateId('occurrence');
+    const boomName = trigger?.nameGenerator?.() || `The Prosperity Era`;
+    const boom = {
+        id: boomId,
+        kind: 'occurrence',
+        subtype: 'economic_boom',
+        name: boomName,
+        description: `Economic prosperity driven by ${tradeRoutes.length} trade connections`,
+        status: 'active',
+        prominence: 'recognized',
+        culture: 'world', // Economic events are world-level events
+        tags: ['economic', 'prosperity', 'trade'],
+        links: [],
+        createdAt: graph.tick,
+        updatedAt: graph.tick,
+        temporal: {
+            startTick: graph.tick,
+            endTick: null
+        }
+    };
+    initializeCatalyst(boom, true, ['economic', 'environmental'], 0.7);
+    return {
+        occurrence: boom,
+        relationships: [],
+        description: `${boomName} begins as trade flourishes`
+    };
+}
+/**
+ * Helper: Find conflict clusters
+ */
+function findConflictClusters(graph, warRelationships) {
+    const clusters = [];
+    // Simple clustering: each war relationship is a cluster
+    warRelationships.forEach(rel => {
+        const src = graph.entities.get(rel.src);
+        const dst = graph.entities.get(rel.dst);
+        if (src && dst) {
+            clusters.push({
+                factions: [src, dst],
+                center: null
+            });
+        }
+    });
+    return clusters;
+}
+/**
+ * Helper: Find contested location
+ */
+function findContestedLocation(graph, factions) {
+    // Find locations controlled by different factions in conflict
+    const locations = Array.from(graph.entities.values())
+        .filter(e => e.kind === 'location');
+    for (const loc of locations) {
+        const controllers = graph.relationships
+            .filter(rel => rel.kind === 'controls' && rel.dst === loc.id)
+            .map(rel => rel.src);
+        const inConflict = controllers.some(c1 => controllers.some(c2 => c1 !== c2 &&
+            factions.some(f => f.id === c1) &&
+            factions.some(f => f.id === c2)));
+        if (inConflict)
+            return loc;
+    }
+    return null;
+}
+//# sourceMappingURL=occurrenceCreation.js.map

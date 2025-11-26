@@ -151,7 +151,7 @@ export const combatTechniqueFormation: SimulationSystem = {
   name: 'Combat Technique Formation',
 
   contract: {
-    purpose: ComponentPurpose.ENTITY_CREATION,
+    purpose: ComponentPurpose.STATE_MODIFICATION,
     enabledBy: {
       entityCounts: [
         { kind: 'abilities', min: 6 }
