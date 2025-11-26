@@ -1,0 +1,19 @@
+{
+  "id": "tech:location",
+  "cultureId": "tech",
+  "entityType": "location",
+  "strategies": [
+    {
+      "id": "tech_location_grammar",
+      "type": "grammar",
+      "weight": 0.6,
+      "grammarId": "tech_location_grammar"
+    },
+    {
+      "id": "tech_location_phonotactic",
+      "type": "phonotactic",
+      "weight": 0.4,
+      "domainId": "tech_domain"
+    }
+  ]
+}

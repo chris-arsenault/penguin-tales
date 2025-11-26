@@ -1,0 +1,25 @@
+{
+  "grammars": [
+    {
+      "id": "tech_names",
+      "start": "name",
+      "rules": {
+        "name": [
+          [
+            "markov:japanese",
+            "von",
+            "markov:african"
+          ]
+        ]
+      },
+      "appliesTo": {
+        "cultures": [
+          "tech"
+        ],
+        "entityKinds": [
+          "npc"
+        ]
+      }
+    }
+  ]
+}
