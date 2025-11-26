@@ -12,6 +12,14 @@ function calculateMatchScore(
   let score = 0;
   const reasons: string[] = [];
 
+  // Handle domains without appliesTo field (legacy or webui-created domains)
+  if (!domain.appliesTo || !domain.appliesTo.kind) {
+    // Treat as matching all kinds (universal domain)
+    score += 50;
+    reasons.push("universal domain (no appliesTo)");
+    return { score, reason: reasons.join(", ") };
+  }
+
   // Check kind match (required)
   if (!domain.appliesTo.kind.includes(kind)) {
     return { score: 0, reason: "kind mismatch" };
@@ -142,7 +150,13 @@ export function findDomainsForKind(
   domains: NamingDomain[],
   kind: string
 ): NamingDomain[] {
-  return domains.filter((domain) => domain.appliesTo.kind.includes(kind));
+  return domains.filter((domain) => {
+    // Handle domains without appliesTo (treat as universal)
+    if (!domain.appliesTo || !domain.appliesTo.kind) {
+      return true;
+    }
+    return domain.appliesTo.kind.includes(kind);
+  });
 }
 
 /**
@@ -163,16 +177,20 @@ export function findDomainConflicts(
       const d1 = domains[i];
       const d2 = domains[j];
 
+      // Handle domains without appliesTo
+      const d1Kind = d1.appliesTo?.kind || [];
+      const d2Kind = d2.appliesTo?.kind || [];
+
       // Check if they have identical appliesTo criteria
       const sameKinds =
-        JSON.stringify(d1.appliesTo.kind.sort()) ===
-        JSON.stringify(d2.appliesTo.kind.sort());
+        JSON.stringify([...d1Kind].sort()) ===
+        JSON.stringify([...d2Kind].sort());
       const sameSubKinds =
-        JSON.stringify(d1.appliesTo.subKind?.sort()) ===
-        JSON.stringify(d2.appliesTo.subKind?.sort());
+        JSON.stringify(d1.appliesTo?.subKind?.sort()) ===
+        JSON.stringify(d2.appliesTo?.subKind?.sort());
       const sameTags =
-        JSON.stringify(d1.appliesTo.tags?.sort()) ===
-        JSON.stringify(d2.appliesTo.tags?.sort());
+        JSON.stringify(d1.appliesTo?.tags?.sort()) ===
+        JSON.stringify(d2.appliesTo?.tags?.sort());
 
       if (sameKinds && sameSubKinds && sameTags) {
         conflicts.push({

@@ -223,15 +223,19 @@ program
 
       for (const domain of domains) {
         console.log(`  - ${domain.id}`);
-        console.log(
-          `    Applies to: kind=${domain.appliesTo.kind.join(",")}`
-        );
+        if (domain.appliesTo?.kind) {
+          console.log(
+            `    Applies to: kind=${domain.appliesTo.kind.join(",")}`
+          );
+        } else {
+          console.log(`    Applies to: all (universal domain)`);
+        }
 
-        if (domain.appliesTo.subKind && domain.appliesTo.subKind.length > 0) {
+        if (domain.appliesTo?.subKind && domain.appliesTo.subKind.length > 0) {
           console.log(`    SubKinds: ${domain.appliesTo.subKind.join(",")}`);
         }
 
-        if (domain.appliesTo.tags && domain.appliesTo.tags.length > 0) {
+        if (domain.appliesTo?.tags && domain.appliesTo.tags.length > 0) {
           console.log(`    Tags: ${domain.appliesTo.tags.join(",")}`);
         }
 

@@ -1,18 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import './App.css';
-import MetaDomainManager from './components/MetaDomainManager';
+import ProjectManager from './components/ProjectManager';
 import SchemaLoader from './components/SchemaLoader';
 import CultureSidebar from './components/CultureSidebar';
 import EntityWorkspace from './components/EntityWorkspace';
 import OptimizerWorkshop from './components/OptimizerWorkshop';
-
-const API_URL = 'http://localhost:3001';
+import GenerateTab from './components/GenerateTab';
+import { useProjectStorage } from './storage';
 
 // Read initial state from URL
 function getInitialStateFromURL() {
   const params = new URLSearchParams(window.location.search);
   return {
-    metaDomain: params.get('md') || null,
     culture: params.get('culture') || null,
     entity: params.get('entity') || null,
     tab: params.get('tab') || 'schema',
@@ -23,21 +22,38 @@ function getInitialStateFromURL() {
 function App() {
   const initialState = getInitialStateFromURL();
 
-  const [currentMetaDomain, setCurrentMetaDomain] = useState(initialState.metaDomain);
   const [activeTab, setActiveTab] = useState(initialState.tab);
-  const [loading, setLoading] = useState(false);
-
-  // V2 architecture state
-  const [worldSchema, setWorldSchema] = useState(null);
-  const [cultures, setCultures] = useState({});
   const [selectedCulture, setSelectedCulture] = useState(initialState.culture);
   const [selectedEntityKind, setSelectedEntityKind] = useState(initialState.entity);
   const [workspaceTab, setWorkspaceTab] = useState(initialState.workspaceTab);
 
+  // Session-only API key (not persisted)
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+
+  // Use IndexedDB storage
+  const {
+    projects,
+    currentProject,
+    loading,
+    error,
+    storageAvailable,
+    createProject,
+    loadProjectById,
+    deleteProjectById,
+    exportCurrentProject,
+    importProjectFromFile,
+    updateProject,
+    clearError
+  } = useProjectStorage();
+
+  // Derived state from current project
+  const worldSchema = currentProject?.worldSchema || null;
+  const cultures = currentProject?.cultures || {};
+
   // Update URL when state changes
   const updateURL = useCallback(() => {
     const params = new URLSearchParams();
-    if (currentMetaDomain) params.set('md', currentMetaDomain);
     if (selectedCulture) params.set('culture', selectedCulture);
     if (selectedEntityKind) params.set('entity', selectedEntityKind);
     if (activeTab && activeTab !== 'schema') params.set('tab', activeTab);
@@ -45,79 +61,143 @@ function App() {
 
     const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, '', newURL);
-  }, [currentMetaDomain, selectedCulture, selectedEntityKind, activeTab, workspaceTab]);
+  }, [selectedCulture, selectedEntityKind, activeTab, workspaceTab]);
 
   useEffect(() => {
     updateURL();
   }, [updateURL]);
 
-  // Load meta-domain data when selection changes
-  useEffect(() => {
-    if (!currentMetaDomain) return;
+  // Handle worldSchema updates
+  const handleSchemaLoaded = async (newSchema) => {
+    if (!currentProject) return;
+    await updateProject({ worldSchema: newSchema });
+  };
 
-    loadMetaDomainV2(currentMetaDomain);
-  }, [currentMetaDomain]);
+  // Handle cultures updates
+  const handleCulturesChange = async (newCultures) => {
+    if (!currentProject) return;
+    await updateProject({ cultures: newCultures });
+  };
 
-  // Load v2 meta-domain data
-  const loadMetaDomainV2 = async (metaDomain) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/api/v2/meta-domains/${metaDomain}`);
-      if (!response.ok) {
-        console.warn(`V2 Meta-domain ${metaDomain} not found`);
-        setCultures({});
-        setLoading(false);
-        return;
+  // Handle single culture updates (e.g., domains)
+  const handleCultureChange = async (updatedCulture) => {
+    if (!currentProject || !selectedCulture) return;
+
+    const newCultures = {
+      ...cultures,
+      [selectedCulture]: updatedCulture
+    };
+
+    await updateProject({ cultures: newCultures });
+  };
+
+  // Handle entity config updates
+  const handleConfigChange = async (updatedConfig) => {
+    if (!currentProject || !selectedCulture || !selectedEntityKind) return;
+
+    const newCultures = {
+      ...cultures,
+      [selectedCulture]: {
+        ...cultures[selectedCulture],
+        entityConfigs: {
+          ...cultures[selectedCulture]?.entityConfigs,
+          [selectedEntityKind]: updatedConfig
+        }
       }
+    };
 
-      const result = await response.json();
-      const data = result.data;
-
-      if (data) {
-        setWorldSchema(data.worldSchema);
-        setCultures(data.cultures || {});
-
-        // Debug: log what we loaded
-        console.log(`Loaded v2 meta-domain '${metaDomain}':`, {
-          cultures: Object.keys(data.cultures || {}).length,
-          entityTypes: data.worldSchema?.hardState?.length || 0
-        });
-
-        // Debug: show detailed data for each culture/entity
-        Object.entries(data.cultures || {}).forEach(([cultureId, culture]) => {
-          Object.entries(culture.entityConfigs || {}).forEach(([entityKind, config]) => {
-            console.log(`  ${cultureId}/${entityKind}:`, {
-              hasProfile: !!config.profile,
-              profileStrategies: config.profile?.strategies?.map(s => s.type),
-              lexemeCount: Object.keys(config.lexemeLists || {}).length,
-              lexemeIds: Object.keys(config.lexemeLists || {}),
-              grammarCount: (config.grammars || []).length
-            });
-          });
-        });
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to load v2 meta-domain data:', error);
-      setLoading(false);
-    }
+    await updateProject({ cultures: newCultures });
   };
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Name Forge</h1>
-        <p className="subtitle">
-          Craft distinctive names for your worlds
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1>Name Forge</h1>
+            <p className="subtitle">
+              Craft distinctive names for your worlds
+            </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <button
+              onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+              style={{
+                background: apiKey ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                border: `1px solid ${apiKey ? 'rgba(34, 197, 94, 0.4)' : 'rgba(59, 130, 246, 0.4)'}`,
+                borderRadius: '4px',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                color: apiKey ? 'rgb(134, 239, 172)' : 'var(--arctic-frost)'
+              }}
+            >
+              {apiKey ? 'API Key Set' : 'Set API Key'}
+            </button>
+            {showApiKeyInput && (
+              <div style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '4rem',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                padding: '1rem',
+                zIndex: 100,
+                width: '300px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                  Anthropic API Key
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginBottom: '0.75rem' }}>
+                  Required for LLM lexeme generation. Not stored - session only.
+                </p>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-ant-..."
+                  style={{ width: '100%', marginBottom: '0.5rem' }}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    className="primary"
+                    style={{ flex: 1, fontSize: '0.8rem' }}
+                    onClick={() => setShowApiKeyInput(false)}
+                  >
+                    Done
+                  </button>
+                  {apiKey && (
+                    <button
+                      className="secondary"
+                      style={{ fontSize: '0.8rem' }}
+                      onClick={() => { setApiKey(''); }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       <div className="app-container">
         <aside className="sidebar">
-          <MetaDomainManager
-            currentMetaDomain={currentMetaDomain}
-            onSelectMetaDomain={setCurrentMetaDomain}
+          <ProjectManager
+            projects={projects}
+            currentProject={currentProject}
+            loading={loading}
+            error={error}
+            storageAvailable={storageAvailable}
+            onCreateProject={createProject}
+            onLoadProject={loadProjectById}
+            onDeleteProject={deleteProjectById}
+            onExportProject={exportCurrentProject}
+            onImportProject={importProjectFromFile}
+            onClearError={clearError}
           />
 
           <nav className="tab-nav">
@@ -138,6 +218,12 @@ function App() {
               onClick={() => setActiveTab('optimizer')}
             >
               Optimizer
+            </button>
+            <button
+              className={activeTab === 'generate' ? 'active' : ''}
+              onClick={() => setActiveTab('generate')}
+            >
+              Generate
             </button>
           </nav>
 
@@ -164,23 +250,30 @@ function App() {
           {loading ? (
             <div className="loading">
               <div className="spinner"></div>
-              <span>Loading {currentMetaDomain} data...</span>
+              <span>Loading...</span>
             </div>
-          ) : !currentMetaDomain ? (
+          ) : !currentProject ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-              <p>Select or create a meta-domain to begin</p>
+              <h2>Welcome to Name Forge</h2>
+              <p>Create a new project or import an existing one to begin.</p>
+              <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--arctic-frost)' }}>
+                Your projects are stored locally in your browser.
+                Use Export to save backups or share with others.
+              </p>
             </div>
           ) : (
             <>
               {activeTab === 'schema' && (
                 <SchemaLoader
-                  metaDomain={currentMetaDomain}
-                  onSchemaLoaded={setWorldSchema}
+                  worldSchema={worldSchema}
+                  cultures={cultures}
+                  onSchemaLoaded={handleSchemaLoaded}
+                  onCulturesChange={handleCulturesChange}
                 />
               )}
 
               {activeTab === 'workshop' && (
-                <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+                <div className="workshop-container">
                   <div style={{
                     width: '300px',
                     borderRight: '1px solid var(--border-color)',
@@ -188,19 +281,17 @@ function App() {
                     overflowY: 'auto'
                   }}>
                     <CultureSidebar
-                      metaDomain={currentMetaDomain}
                       worldSchema={worldSchema}
                       cultures={cultures}
                       selectedCulture={selectedCulture}
                       selectedEntityKind={selectedEntityKind}
                       onSelectCulture={setSelectedCulture}
                       onSelectEntityKind={setSelectedEntityKind}
-                      onCulturesChange={setCultures}
+                      onCulturesChange={handleCulturesChange}
                     />
                   </div>
                   <div style={{ flex: 1, overflowY: 'auto' }}>
                     <EntityWorkspace
-                      metaDomain={currentMetaDomain}
                       worldSchema={worldSchema}
                       cultureId={selectedCulture}
                       entityKind={selectedEntityKind}
@@ -213,83 +304,108 @@ function App() {
                       allCultures={cultures}
                       activeTab={workspaceTab}
                       onTabChange={setWorkspaceTab}
-                      onConfigChange={(updatedConfig) => {
-                        if (selectedCulture && selectedEntityKind) {
-                          setCultures(prev => ({
-                            ...prev,
-                            [selectedCulture]: {
-                              ...prev[selectedCulture],
-                              entityConfigs: {
-                                ...prev[selectedCulture].entityConfigs,
-                                [selectedEntityKind]: updatedConfig
-                              }
-                            }
-                          }));
-                        }
-                      }}
+                      onConfigChange={handleConfigChange}
+                      onCultureChange={handleCultureChange}
+                      apiKey={apiKey}
                     />
                   </div>
                 </div>
               )}
 
-              {activeTab === 'optimizer' && (
-                <OptimizerWorkshop
-                  metaDomain={currentMetaDomain}
+              {activeTab === 'generate' && (
+                <GenerateTab
+                  worldSchema={worldSchema}
                   cultures={cultures}
                 />
               )}
 
+              {activeTab === 'optimizer' && (
+                <OptimizerWorkshop
+                  cultures={cultures}
+                  onCulturesChange={handleCulturesChange}
+                />
+              )}
             </>
           )}
         </main>
 
         <aside className="guide-sidebar">
           <div className="guide-content">
-            <h2>Culture Workshop Workflow</h2>
+            <h2>Name Forge Workflow</h2>
             <p className="text-muted">
               Build naming configurations organized by culture and entity type.
             </p>
 
             <div className="guide-step">
-              <h3>1. Schema Setup</h3>
-              <p>Review the world schema which defines:</p>
+              <h3>1. Project Setup</h3>
+              <p>Create a new project or import an existing one:</p>
               <ul>
-                <li>Available cultures (e.g., dwarf, elf, goauld)</li>
-                <li>Entity types (npc, location, faction, etc.)</li>
-                <li>Subtypes and status values for each</li>
+                <li>Projects are stored in your browser</li>
+                <li>Export to save backups as JSON files</li>
+                <li>Import to restore or share projects</li>
               </ul>
             </div>
 
             <div className="guide-step">
-              <h3>2. Culture Workshop</h3>
+              <h3>2. Schema Tab</h3>
+              <p>Define your world structure:</p>
+              <ul>
+                <li>Add cultures (e.g., dwarf, elf, goauld)</li>
+                <li>Entity types are predefined (npc, location, etc.)</li>
+                <li>Customize subtypes and statuses</li>
+              </ul>
+            </div>
+
+            <div className="guide-step">
+              <h3>3. Workshop Tab</h3>
               <p>Select a culture and entity type to configure:</p>
               <ul>
-                <li><strong>Domain:</strong> Sound patterns, syllables, morphology</li>
-                <li><strong>Lexemes:</strong> Word lists (nouns, adjectives, titles)</li>
-                <li><strong>Grammars:</strong> CFG-based name generation rules</li>
-                <li><strong>Profile:</strong> Combine strategies with weights</li>
+                <li><strong>Domain:</strong> Sound patterns, syllables</li>
+                <li><strong>Lexemes:</strong> Word lists for grammars</li>
+                <li><strong>Grammars:</strong> Name structure rules</li>
+                <li><strong>Profile:</strong> Combine strategies</li>
               </ul>
             </div>
 
             <div className="guide-step">
-              <h3>3. Optimizer</h3>
-              <p>Use the Optimizer tab to tune domain parameters:</p>
+              <h3>4. Optimizer Tab</h3>
+              <p>Auto-tune domain parameters:</p>
               <ul>
-                <li><strong>Hill Climbing:</strong> Fast local optimization</li>
-                <li><strong>Simulated Annealing:</strong> Escape local optima</li>
-                <li><strong>Genetic Algorithm:</strong> Evolve phoneme combinations</li>
-                <li><strong>Bayesian (TPE):</strong> Efficient discrete search</li>
-                <li><strong>Cluster Discovery:</strong> Find effective patterns</li>
+                <li>Hill Climbing, Simulated Annealing</li>
+                <li>Genetic Algorithm, Bayesian (TPE)</li>
               </ul>
             </div>
 
             <div className="guide-step">
-              <h3>4. Test Names</h3>
-              <p>In the Profile tab, use "Generate Test Names" to preview generated names and verify your configuration works correctly.</p>
+              <h3>5. Generate Tab</h3>
+              <p>Generate names with full control:</p>
+              <ul>
+                <li>Select culture, entity kind, and subtype</li>
+                <li>Filter by tags and prominence level</li>
+                <li>Generate 1-100 names at once</li>
+                <li>View strategy usage and copy results</li>
+              </ul>
             </div>
 
             <div className="guide-quickstart">
-              <strong>Quick Start:</strong> Select "seed" or "test" meta-domain, pick a culture like "dwarf", then create a domain for "npc" names.
+              <strong>Quick Start:</strong> Create a project, add a culture in Schema tab, then go to Workshop to configure naming.
+            </div>
+
+            <div className="guide-step" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <h3>TypeScript Integration</h3>
+              <p style={{ fontSize: '0.85rem' }}>
+                Export your project JSON and use the generation library in your TypeScript projects.
+                See the{' '}
+                <a
+                  href="https://github.com/chris-arsenault/penguin-tales/apps/name-forge"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--gold-accent)', textDecoration: 'underline' }}
+                >
+                  GitHub repository
+                </a>
+                {' '}for usage examples.
+              </p>
             </div>
           </div>
         </aside>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-
-const API_URL = 'http://localhost:3001';
+import { optimizeDomain as runOptimizer } from '../lib/browser-optimizer.js';
 
 /**
  * Compute diff between two domain configs
@@ -240,8 +239,9 @@ const ALGORITHMS = {
 
 /**
  * Optimizer Workshop - Dedicated UI for domain optimization
+ * Now runs entirely in the browser (no server required)
  */
-export default function OptimizerWorkshop({ metaDomain, cultures }) {
+export default function OptimizerWorkshop({ cultures, onCulturesChange }) {
   // Domain selection state
   const [selectedDomains, setSelectedDomains] = useState(new Set());
   const [expandedCultures, setExpandedCultures] = useState(new Set());
@@ -356,7 +356,7 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
     setLogs(prev => [...prev, { message, type, timestamp: new Date().toISOString() }]);
   };
 
-  // Run optimization
+  // Run optimization (now runs in browser, no API needed)
   const handleOptimize = async () => {
     const domainsToOptimize = allDomains.filter(d => selectedDomains.has(d.id));
 
@@ -372,6 +372,7 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
     setShowModal(true);
 
     addLog(`Starting optimization of ${domainsToOptimize.length} domain(s) using ${ALGORITHMS[algorithm].name}`, 'info');
+    addLog('Running in browser (no server required)', 'info');
 
     const newResults = [];
 
@@ -384,45 +385,36 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
         // Get all sibling domains for separation metric
         const siblingDomains = allDomains.filter(d => d.id !== domain.id);
 
-        const response = await fetch(`${API_URL}/api/optimize/domain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            domain,
-            validationSettings,
-            fitnessWeights,
-            optimizationSettings: {
-              algorithm,
-              ...algorithmParams,
-            },
-            siblingDomains,
-          }),
-        });
+        // Progress callback for real-time updates
+        const onProgress = (message) => {
+          addLog(`  ${message}`, 'info');
+        };
 
-        const data = await response.json();
+        // Run optimizer directly in browser
+        const optimizationResult = await runOptimizer(
+          domain,
+          validationSettings,
+          fitnessWeights,
+          {
+            algorithm,
+            ...algorithmParams,
+          },
+          siblingDomains,
+          onProgress
+        );
 
-        if (response.ok && data.result?.optimizedConfig) {
-          const result = {
-            domainId: domain.id,
-            cultureId: domain.cultureId,
-            initialFitness: data.result.initialFitness,
-            finalFitness: data.result.finalFitness,
-            improvement: data.result.improvement,
-            initialConfig: data.result.initialConfig || domain, // Fallback to original domain if API doesn't return it
-            optimizedConfig: data.result.optimizedConfig,
-            success: true,
-          };
-          newResults.push(result);
-          addLog(`  ${domain.id}: ${(result.initialFitness || 0).toFixed(3)} -> ${(result.finalFitness || 0).toFixed(3)} (+${((result.improvement || 0) * 100).toFixed(1)}%)`, 'success');
-        } else {
-          newResults.push({
-            domainId: domain.id,
-            cultureId: domain.cultureId,
-            error: data.error || 'Unknown error',
-            success: false,
-          });
-          addLog(`  ${domain.id}: Error - ${data.error || 'Unknown error'}`, 'error');
-        }
+        const result = {
+          domainId: domain.id,
+          cultureId: domain.cultureId,
+          initialFitness: optimizationResult.initialFitness,
+          finalFitness: optimizationResult.finalFitness,
+          improvement: optimizationResult.improvement,
+          initialConfig: optimizationResult.initialConfig || domain,
+          optimizedConfig: optimizationResult.optimizedConfig,
+          success: true,
+        };
+        newResults.push(result);
+        addLog(`  ${domain.id}: ${(result.initialFitness || 0).toFixed(3)} -> ${(result.finalFitness || 0).toFixed(3)} (+${((result.improvement || 0) * 100).toFixed(1)}%)`, 'success');
       } catch (error) {
         newResults.push({
           domainId: domain.id,
@@ -442,7 +434,7 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
     addLog(`Optimization complete: ${successCount}/${domainsToOptimize.length} succeeded`, successCount === domainsToOptimize.length ? 'success' : 'warning');
   };
 
-  // Save results to disk
+  // Save results to local storage (IndexedDB)
   const handleSaveResults = async () => {
     const successfulResults = results.filter(r => r.success);
     if (successfulResults.length === 0) {
@@ -450,7 +442,12 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
       return;
     }
 
-    addLog(`Saving ${successfulResults.length} optimized domain(s)...`, 'info');
+    if (!onCulturesChange) {
+      addLog('Cannot save: no storage handler provided', 'error');
+      return;
+    }
+
+    addLog(`Saving ${successfulResults.length} optimized domain(s) to browser storage...`, 'info');
 
     // Group by culture
     const byCulture = {};
@@ -461,7 +458,9 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
       byCulture[r.cultureId].push(r);
     });
 
-    // Save each culture's domains
+    // Build updated cultures object
+    const updatedCultures = { ...cultures };
+
     for (const [cultureId, cultureResults] of Object.entries(byCulture)) {
       const culture = cultures[cultureId];
       if (!culture?.domains) continue;
@@ -472,24 +471,21 @@ export default function OptimizerWorkshop({ metaDomain, cultures }) {
         return optimized ? optimized.optimizedConfig : domain;
       });
 
-      try {
-        const response = await fetch(`${API_URL}/api/v2/cultures/${metaDomain}/${cultureId}/domains`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domains: updatedDomains }),
-        });
+      updatedCultures[cultureId] = {
+        ...culture,
+        domains: updatedDomains,
+      };
 
-        if (response.ok) {
-          addLog(`  Saved ${cultureResults.length} domain(s) to ${cultureId}`, 'success');
-        } else {
-          addLog(`  Failed to save ${cultureId}: ${response.statusText}`, 'error');
-        }
-      } catch (error) {
-        addLog(`  Failed to save ${cultureId}: ${error.message}`, 'error');
-      }
+      addLog(`  Updated ${cultureResults.length} domain(s) in ${cultureId}`, 'success');
     }
 
-    addLog('Save complete', 'success');
+    // Save via callback
+    try {
+      await onCulturesChange(updatedCultures);
+      addLog('Save complete (stored in browser)', 'success');
+    } catch (error) {
+      addLog(`Save failed: ${error.message}`, 'error');
+    }
   };
 
   // Render algorithm parameter inputs

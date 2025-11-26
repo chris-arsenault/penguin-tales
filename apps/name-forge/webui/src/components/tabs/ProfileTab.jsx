@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { API_URL } from '../constants';
 import { getEffectiveDomain, getAllDomains, getSharedLexemeLists, getStrategyColor, getStrategyBorder, getSortedGroups } from '../utils';
 import ConditionsModal from '../modals/ConditionsModal';
+import { generateTestNames } from '../../lib/browser-generator.js';
 
 function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAutoGenerate, cultureConfig, allCultures }) {
   const [editing, setEditing] = useState(false);
@@ -89,6 +89,23 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
       profileCopy.strategyGroups = [];
     }
     setEditedProfile(profileCopy);
+    setEditing(true);
+  };
+
+  // Create a new empty profile for manual editing
+  const handleCreateEmptyProfile = () => {
+    const newProfile = {
+      id: `${cultureId}_${entityKind}_profile`,
+      strategyGroups: [
+        {
+          name: 'Default',
+          priority: 0,
+          conditions: null,
+          strategies: []
+        }
+      ]
+    };
+    setEditedProfile(newProfile);
     setEditing(true);
   };
 
@@ -216,27 +233,18 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
       const localLexemes = entityConfig?.lexemeLists || {};
       const lexemes = { ...sharedLexemeLists, ...localLexemes };
 
-      const response = await fetch(`${API_URL}/api/test-names`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: profile.id,
-          count,
-          profile,
-          domains: cultureDomains.length > 0 ? cultureDomains : (effectiveDomain ? [effectiveDomain] : []),
-          grammars: entityConfig?.grammars || [],
-          lexemes
-        })
+      // Generate names directly in browser (no server required)
+      const result = generateTestNames({
+        profile,
+        domains: cultureDomains.length > 0 ? cultureDomains : (effectiveDomain ? [effectiveDomain] : []),
+        grammars: entityConfig?.grammars || [],
+        lexemes,
+        count,
+        seed: `test-${Date.now()}`
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate test names');
-      }
-
-      const data = await response.json();
-      setTestNames(data.names || []);
-      setStrategyUsage(data.strategyUsage || null);
+      setTestNames(result.names || []);
+      setStrategyUsage(result.strategyUsage || null);
     } catch (err) {
       setTestError(err.message);
     } finally {
@@ -313,8 +321,21 @@ function ProfileTab({ cultureId, entityKind, entityConfig, onConfigChange, onAut
 
       {/* No profile yet */}
       {!editing && !profile && (
-        <div className="info" style={{ marginTop: '1.5rem' }}>
-          No profile configured yet. Click "Auto-Generate Profile" above to create one automatically.
+        <div style={{
+          marginTop: '1.5rem',
+          padding: '1.5rem',
+          background: 'rgba(30, 58, 95, 0.3)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '6px',
+          textAlign: 'center'
+        }}>
+          <p style={{ margin: '0 0 1rem 0' }}>No profile configured yet.</p>
+          <button className="primary" onClick={handleCreateEmptyProfile}>
+            Create Empty Profile
+          </button>
+          <p className="text-muted" style={{ margin: '1rem 0 0 0', fontSize: '0.85rem' }}>
+            Or use "Auto-Generate Profile" above to create one from your domains and grammars.
+          </p>
         </div>
       )}
     </div>

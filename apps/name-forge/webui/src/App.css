@@ -32,6 +32,9 @@ body {
   flex-direction: column;
   height: 100vh;
   background: linear-gradient(135deg, #0a1929 0%, #1a2332 50%, #0f1f3a 100%);
+  max-width: 2400px;
+  margin: 0 auto;
+  position: relative;
 }
 
 .app-header {
@@ -40,6 +43,8 @@ body {
   padding: 2rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  height: 106px;
+  box-sizing: border-box;
 }
 
 .app-header h1 {
@@ -82,6 +87,7 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  margin-left: 100px;
   margin-right: 380px;
 }
 
@@ -100,21 +106,32 @@ body {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+  overflow-x: hidden;
   background: rgba(10, 25, 41, 0.4);
   min-width: 0;
+  max-width: 100%;
 }
 
 .main-content > div {
   max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
+}
+
+.workshop-container {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .guide-sidebar {
-  position: fixed;
+  position: absolute;
   right: 0;
-  top: 0;
+  top: 106px;
   width: 380px;
-  height: 100vh;
+  height: calc(100vh - 106px);
   background: rgba(30, 58, 95, 0.6);
   border-left: 1px solid rgba(59, 130, 246, 0.2);
   overflow-y: auto;
@@ -124,7 +141,6 @@ body {
 
 .guide-content {
   padding: 1.5rem;
-  padding-top: 6rem;
 }
 
 .guide-content h2 {
@@ -374,6 +390,8 @@ button:active {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(59, 130, 246, 0.2);
   backdrop-filter: blur(10px);
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .card h3 {

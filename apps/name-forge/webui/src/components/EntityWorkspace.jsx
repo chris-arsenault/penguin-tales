@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { API_URL } from './constants';
+import { useState } from 'react';
 import { DomainTab, LexemesTab, GrammarsTab, ProfileTab } from './tabs';
 
 function EntityWorkspace({
-  metaDomain,
   worldSchema,
   cultureId,
   entityKind,
@@ -12,80 +10,14 @@ function EntityWorkspace({
   allCultures,
   activeTab = 'domain',
   onTabChange,
-  onConfigChange
+  onConfigChange,
+  onCultureChange,
+  apiKey
 }) {
   const [error, setError] = useState(null);
 
   // Use prop or fallback to local handling
   const setActiveTab = onTabChange || (() => {});
-  const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error'
-  const saveTimeoutRef = useRef(null);
-  const lastSavedConfigRef = useRef(null);
-  const isInitialMount = useRef(true);
-
-  // Autosave effect - debounced save when entityConfig changes
-  useEffect(() => {
-    // Skip if no valid selection
-    if (!cultureId || !entityKind || !entityConfig) return;
-
-    // Skip initial mount to avoid saving on load
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      lastSavedConfigRef.current = JSON.stringify(entityConfig);
-      return;
-    }
-
-    // Check if config actually changed
-    const configStr = JSON.stringify(entityConfig);
-    if (configStr === lastSavedConfigRef.current) return;
-
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    // Debounced save after 1.5 seconds of no changes
-    saveTimeoutRef.current = setTimeout(async () => {
-      setSaveStatus('saving');
-      try {
-        const response = await fetch(
-          `${API_URL}/api/v2/entity-config/${metaDomain}/${cultureId}/${entityKind}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config: entityConfig })
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to save');
-        }
-
-        lastSavedConfigRef.current = configStr;
-        setSaveStatus('saved');
-
-        // Clear "saved" status after 2 seconds
-        setTimeout(() => setSaveStatus(null), 2000);
-      } catch (err) {
-        setSaveStatus('error');
-        setError(err.message);
-      }
-    }, 1500);
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [entityConfig, cultureId, entityKind, metaDomain]);
-
-  // Reset initial mount flag when culture/entity changes
-  useEffect(() => {
-    isInitialMount.current = true;
-    lastSavedConfigRef.current = null;
-    setSaveStatus(null);
-  }, [cultureId, entityKind]);
 
   if (!cultureId || !entityKind) {
     return (
@@ -95,41 +27,72 @@ function EntityWorkspace({
     );
   }
 
-  const handleAutoGenerateProfile = async () => {
-    try {
-      const response = await fetch(
-        `${API_URL}/api/v2/auto-profile/${metaDomain}/${cultureId}/${entityKind}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            config: entityConfig,
-            cultureDomains: cultureConfig?.domains || []  // Pass culture-level domains
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate profile');
-      }
-
-      const data = await response.json();
-
-      // Update entity config with new profile
-      const updatedConfig = {
-        ...entityConfig,
-        profile: data.profile,
-        completionStatus: {
-          ...entityConfig.completionStatus,
-          profile: true
-        }
-      };
-
-      onConfigChange(updatedConfig);
-    } catch (err) {
-      setError(err.message);
+  // Handle domains change at culture level
+  const handleDomainsChange = (newDomains) => {
+    if (onCultureChange) {
+      onCultureChange({
+        ...cultureConfig,
+        domains: newDomains
+      });
     }
+  };
+
+  // Auto-generate profile from existing domains and grammars
+  const handleAutoGenerateProfile = () => {
+    const strategies = [];
+    const cultureDomains = cultureConfig?.domains || [];
+    const grammars = entityConfig?.grammars || [];
+
+    // Add grammar strategies for each grammar
+    grammars.forEach((grammar, idx) => {
+      strategies.push({
+        type: 'grammar',
+        weight: 0.5 / Math.max(grammars.length, 1),
+        grammarId: grammar.id
+      });
+    });
+
+    // Add phonotactic strategy if culture has domains
+    if (cultureDomains.length > 0) {
+      strategies.push({
+        type: 'phonotactic',
+        weight: 0.5,
+        domainId: cultureDomains[0].id
+      });
+    }
+
+    // Normalize weights
+    const totalWeight = strategies.reduce((sum, s) => sum + s.weight, 0);
+    if (totalWeight > 0) {
+      strategies.forEach(s => {
+        s.weight = s.weight / totalWeight;
+      });
+    }
+
+    // Create profile with strategyGroups format
+    const profile = {
+      id: `${cultureId}_${entityKind}_profile`,
+      strategyGroups: [
+        {
+          name: 'Default',
+          priority: 0,
+          conditions: null,
+          strategies: strategies
+        }
+      ]
+    };
+
+    // Update entity config with new profile
+    const updatedConfig = {
+      ...entityConfig,
+      profile,
+      completionStatus: {
+        ...entityConfig?.completionStatus,
+        profile: true
+      }
+    };
+
+    onConfigChange(updatedConfig);
   };
 
   // Check if culture has any domains (domains are now culture-level)
@@ -179,42 +142,12 @@ function EntityWorkspace({
             </div>
           </div>
 
-          {/* Autosave status indicator */}
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.875rem',
-            color: saveStatus === 'error' ? 'var(--error-color)' : 'var(--arctic-frost)'
+            fontSize: '0.75rem',
+            color: 'var(--arctic-frost)',
+            opacity: 0.6
           }}>
-            {saveStatus === 'saving' && (
-              <>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: 'var(--gold-accent)',
-                  animation: 'pulse 1s infinite'
-                }} />
-                Saving...
-              </>
-            )}
-            {saveStatus === 'saved' && (
-              <>
-                <span style={{ color: '#22c55e' }}>✓</span>
-                Saved
-              </>
-            )}
-            {saveStatus === 'error' && (
-              <>
-                <span style={{ color: 'var(--error-color)' }}>✗</span>
-                Save failed
-              </>
-            )}
-            {!saveStatus && (
-              <span style={{ opacity: 0.6 }}>Autosave enabled</span>
-            )}
+            Auto-saved locally
           </div>
         </div>
 
@@ -264,16 +197,15 @@ function EntityWorkspace({
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
         {activeTab === 'domain' && (
           <DomainTab
-            metaDomain={metaDomain}
             cultureId={cultureId}
             cultureConfig={cultureConfig}
             allCultures={allCultures}
+            onDomainsChange={handleDomainsChange}
           />
         )}
 
         {activeTab === 'lexemes' && (
           <LexemesTab
-            metaDomain={metaDomain}
             cultureId={cultureId}
             entityKind={entityKind}
             entityConfig={entityConfig}
@@ -281,6 +213,7 @@ function EntityWorkspace({
             worldSchema={worldSchema}
             cultureConfig={cultureConfig}
             allCultures={allCultures}
+            apiKey={apiKey}
           />
         )}
 
