@@ -1,0 +1,125 @@
+{
+  "domains": [
+    {
+      "id": "world_domain",
+      "cultureId": "world",
+      "appliesTo": {
+        "kind": [
+          "npc",
+          "location",
+          "faction",
+          "rules",
+          "abilities"
+        ],
+        "subKind": [],
+        "tags": []
+      },
+      "phonology": {
+        "consonants": [
+          "m",
+          "n",
+          "r",
+          "l",
+          "s",
+          "t",
+          "v",
+          "th",
+          "d"
+        ],
+        "vowels": [
+          "a",
+          "e",
+          "i",
+          "o",
+          "u",
+          "ae",
+          "ea"
+        ],
+        "syllableTemplates": [
+          "CV",
+          "CVC",
+          "VCV",
+          "CVV"
+        ],
+        "lengthRange": [
+          4,
+          4
+        ],
+        "favoredClusters": [
+          "th",
+          "ae",
+          "ea"
+        ],
+        "forbiddenClusters": [],
+        "favoredClusterBoost": 1.6316465253274548,
+        "consonantWeights": [
+          0.11372392367624422,
+          0.11527961976574161,
+          0.10013492980064226,
+          0.10431890053294045,
+          0.12529653278952202,
+          0.09216720233638309,
+          0.12672873963465908,
+          0.13073019106687517,
+          0.09161996039699208
+        ],
+        "vowelWeights": [
+          0.20079271464366882,
+          0.15375881897608898,
+          0.13563156595512046,
+          0.13198440641991285,
+          0.12817034582317688,
+          0.130234551565732,
+          0.11942759661630006
+        ],
+        "templateWeights": [
+          0.25528272234943117,
+          0.23241231483922112,
+          0.23814619501131398,
+          0.2741587678000338
+        ]
+      },
+      "morphology": {
+        "prefixes": [
+          "Vor",
+          "Eth",
+          "Mal",
+          "Sol",
+          "Ter"
+        ],
+        "suffixes": [
+          "us",
+          "ia",
+          "um",
+          "or",
+          "an",
+          "is"
+        ],
+        "structure": [
+          "root",
+          "root-suffix",
+          "prefix-root"
+        ],
+        "structureWeights": [
+          0.3683045479091194,
+          0.3479632674532743,
+          0.2837321846376064
+        ]
+      },
+      "style": {
+        "capitalization": "title",
+        "apostropheRate": 0.057437198074554704,
+        "hyphenRate": 9.573197613226489e-11,
+        "preferredEndings": [
+          "us",
+          "ia",
+          "um",
+          "or"
+        ],
+        "preferredEndingBoost": 1.2,
+        "rhythmBias": "neutral"
+      },
+      "sourceCulture": "world"
+    }
+  ]
+}

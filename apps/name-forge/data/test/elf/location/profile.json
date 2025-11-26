@@ -1,0 +1,13 @@
+{
+  "id": "elf:location",
+  "cultureId": "elf",
+  "entityType": "location",
+  "strategies": [
+    {
+      "id": "elf_location_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "elf_domain"
+    }
+  ]
+}

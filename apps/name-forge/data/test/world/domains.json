@@ -1,0 +1,135 @@
+{
+  "domains": [
+    {
+      "id": "world_domain",
+      "cultureId": "world",
+      "appliesTo": {
+        "kind": [
+          "npc",
+          "location",
+          "faction",
+          "rules",
+          "abilities"
+        ],
+        "subKind": [],
+        "tags": []
+      },
+      "phonology": {
+        "consonants": [
+          "ɲ",
+          "n",
+          "k",
+          "q",
+          "s",
+          "t",
+          "v",
+          "x",
+          "d",
+          "ɹ",
+          "ʃ",
+          "ð",
+          "h"
+        ],
+        "vowels": [
+          "a",
+          "e",
+          "i",
+          "o",
+          "ae",
+          "ä",
+          "ü",
+          "ou",
+          "ö",
+          "u"
+        ],
+        "syllableTemplates": [
+          "VCV",
+          "CV",
+          "V",
+          "CCV"
+        ],
+        "lengthRange": [
+          3,
+          7
+        ],
+        "favoredClusters": [],
+        "forbiddenClusters": [],
+        "favoredClusterBoost": 1.2,
+        "vowelWeights": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "consonantWeights": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "templateWeights": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "morphology": {
+        "prefixes": [
+          "Vor",
+          "Eth",
+          "Mal",
+          "Sol",
+          "Ter"
+        ],
+        "suffixes": [
+          "us",
+          "ia",
+          "um",
+          "or",
+          "an",
+          "is"
+        ],
+        "structure": [
+          "root",
+          "root-suffix",
+          "prefix-root"
+        ],
+        "structureWeights": [
+          0.3,
+          0.4,
+          0.3
+        ]
+      },
+      "style": {
+        "capitalization": "title",
+        "apostropheRate": 0.05965258776437607,
+        "hyphenRate": 0.08511292113281757,
+        "preferredEndings": [
+          "us",
+          "ia",
+          "um",
+          "or"
+        ],
+        "preferredEndingBoost": 1.2,
+        "rhythmBias": "neutral"
+      },
+      "cultureName": "world"
+    }
+  ]
+}

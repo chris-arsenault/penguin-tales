@@ -1,0 +1,13 @@
+{
+  "id": "goauld:faction",
+  "cultureId": "goauld",
+  "entityType": "faction",
+  "strategies": [
+    {
+      "id": "goauld_faction_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "goauld_domain"
+    }
+  ]
+}

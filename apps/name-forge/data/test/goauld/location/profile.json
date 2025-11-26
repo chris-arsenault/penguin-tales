@@ -1,0 +1,13 @@
+{
+  "id": "goauld:location",
+  "cultureId": "goauld",
+  "entityType": "location",
+  "strategies": [
+    {
+      "id": "goauld_location_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "goauld_domain"
+    }
+  ]
+}

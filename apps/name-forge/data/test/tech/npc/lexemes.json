@@ -1,0 +1,92 @@
+{
+  "lexemeLists": {
+    "tech_nouns": {
+      "id": "tech_nouns",
+      "description": "Manual list",
+      "entries": [
+        "dirty",
+        "fungus",
+        "man",
+        "socks"
+      ],
+      "source": "manual"
+    },
+    "tech_verbs": {
+      "id": "tech_verbs",
+      "description": "Generated verb_3sg list: vibe warriors who fade from reality ",
+      "entries": [
+        "glitches",
+        "phases",
+        "dissolves",
+        "hums",
+        "flickers",
+        "fades",
+        "warps",
+        "pulses",
+        "vanishes",
+        "distorts",
+        "shifts",
+        "echoes",
+        "resonates",
+        "fragments",
+        "blinks",
+        "jitters",
+        "transmutes",
+        "harmonizes",
+        "cascades",
+        "drifts",
+        "oscillates",
+        "decays",
+        "manifests",
+        "synchronizes",
+        "fractures",
+        "vibrates",
+        "dematerializes",
+        "stutters",
+        "refracts",
+        "emanates"
+      ],
+      "source": "llm",
+      "filtered": 0,
+      "tokensUsed": 549
+    },
+    "royalty_names": {
+      "id": "royalty_names",
+      "description": "Titles and Honorifcist",
+      "entries": [
+        "cheesemaster",
+        "funguslord",
+        "weebherder"
+      ],
+      "source": "manual",
+      "appliesTo": {
+        "cultures": [
+          "dwarf",
+          "elf"
+        ],
+        "entityKinds": [
+          "npc"
+        ]
+      }
+    },
+    "prepositions": {
+      "id": "prepositions",
+      "description": "as/in/of",
+      "entries": [
+        "as",
+        "in",
+        "of",
+        "until"
+      ],
+      "source": "manual",
+      "appliesTo": {
+        "cultures": [
+          "*"
+        ],
+        "entityKinds": [
+          "*"
+        ]
+      }
+    }
+  }
+}

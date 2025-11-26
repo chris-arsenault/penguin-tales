@@ -1,0 +1,13 @@
+{
+  "id": "dwarf:faction",
+  "cultureId": "dwarf",
+  "entityType": "faction",
+  "strategies": [
+    {
+      "id": "dwarf_faction_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "dwarf_domain"
+    }
+  ]
+}
