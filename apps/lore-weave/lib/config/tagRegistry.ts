@@ -996,18 +996,3 @@ export function validateEntityTags(tags: string[]): { valid: boolean; conflicts:
   };
 }
 
-/**
- * Check if a tag is registered in the registry
- * (Backward compatibility export)
- */
-export function isRegisteredTag(tag: string): boolean {
-  return !!getTagMetadata(tag);
-}
-
-/**
- * Get tag definition/metadata by tag name
- * (Backward compatibility export - alias for getTagMetadata)
- */
-export function getTagDefinition(tag: string): TagMetadata | undefined {
-  return getTagMetadata(tag);
-}

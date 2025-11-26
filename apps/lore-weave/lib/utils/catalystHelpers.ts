@@ -248,26 +248,21 @@ export function initializeCatalyst(
 }
 
 /**
- * Smart catalyst initialization based on entity type and prominence
+ * Smart catalyst initialization based on entity type and prominence.
  * Automatically determines action domains and influence based on entity properties.
- *
- * If a graph is provided, uses the domain schema's getActionDomainsForEntity() method.
- * Otherwise falls back to the hardcoded domain-agnostic defaults.
+ * Requires graph with domain schema for action domain mapping.
  *
  * @param entity - The entity to initialize
- * @param graph - Optional graph with domain schema for domain-specific action domain mapping
+ * @param graph - Graph with domain schema
  */
-export function initializeCatalystSmart(entity: HardState, graph?: Graph): void {
+export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
   // Only prominent entities can act
   if (!['recognized', 'renowned', 'mythic'].includes(entity.prominence)) {
     return;
   }
 
-  // Determine which action domains this entity can use
-  // Use domain schema if available, otherwise fall back to hardcoded defaults
-  const actionDomains = graph?.config?.domain?.getActionDomainsForEntity
-    ? graph.config.domain.getActionDomainsForEntity(entity)
-    : getActionDomainsForEntityFallback(entity);
+  // Determine which action domains this entity can use from domain schema
+  const actionDomains = graph.config?.domain?.getActionDomainsForEntity?.(entity) ?? [];
 
   if (actionDomains.length === 0) {
     return;
@@ -279,69 +274,6 @@ export function initializeCatalystSmart(entity: HardState, graph?: Graph): void 
     influence: prominenceToInfluence(entity.prominence),
     catalyzedEvents: []
   };
-}
-
-/**
- * Get action domains for an entity based on its kind and subtype.
- * This is a minimal fallback for backwards compatibility.
- *
- * @deprecated Use domain schema's getActionDomainsForEntity() instead.
- * For penguin-tales domain, import from 'penguin-tales/lore/config/actionDomains.js'.
- *
- * @param entity - The entity to check
- * @returns Array of action domain IDs
- */
-function getActionDomainsForEntityFallback(entity: HardState): string[] {
-  const domains: string[] = [];
-
-  switch (entity.kind) {
-    case 'npc':
-      if (entity.subtype === 'hero') {
-        domains.push('political', 'military', 'cultural');
-      } else if (entity.subtype === 'mayor') {
-        domains.push('political', 'economic');
-      } else if (entity.subtype === 'orca') {
-        domains.push('military');
-      } else if (entity.subtype === 'outlaw') {
-        domains.push('military', 'economic');
-      } else {
-        // Other NPC types get economic domain
-        domains.push('economic');
-      }
-      break;
-
-    case 'faction':
-      domains.push('political', 'economic', 'cultural');
-      if (entity.subtype === 'criminal') {
-        domains.push('military');
-      }
-      break;
-
-    case 'abilities':
-      if (entity.subtype === 'magic') {
-        domains.push('magical');
-      } else if (entity.subtype === 'technology') {
-        domains.push('technological');
-      }
-      break;
-
-    case 'occurrence':
-      if (entity.subtype === 'war') {
-        domains.push('conflict_escalation', 'military');
-      } else if (entity.subtype === 'magical_disaster') {
-        domains.push('disaster_spread');
-      }
-      break;
-
-    case 'location':
-      // Anomalies can cause environmental effects
-      if (entity.subtype === 'anomaly') {
-        domains.push('environmental', 'magical');
-      }
-      break;
-  }
-
-  return domains;
 }
 
 /**

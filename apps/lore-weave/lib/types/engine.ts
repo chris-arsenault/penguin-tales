@@ -77,12 +77,6 @@ export interface HistoryEvent {
   entitiesModified: string[];
 }
 
-// Template execution context (framework services available to templates)
-// DEPRECATED: No longer used - TemplateGraphView provides all services
-export interface TemplateContext {
-  targetSelector: import('../services/targetSelector').TargetSelector;
-}
-
 // Growth template interface
 export interface GrowthTemplate {
   id: string;
@@ -297,18 +291,9 @@ export interface EngineConfig {
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
-
-  // DEPRECATED: metaEntityConfigs removed - use SimulationSystems instead
-  // Meta-entity formation is now handled by domain-specific SimulationSystems:
-  // - magicSchoolFormation, legalCodeFormation, combatTechniqueFormation
-  // These systems use clusteringUtils and entityArchival utilities
 }
 
-/**
- * @deprecated Use SimulationSystem pattern with clusteringUtils/entityArchival instead
- * Meta-entity formation configs are no longer supported in EngineConfig.
- * Convert to SimulationSystems that run at epoch end.
- */
+// Meta-entity formation config (legacy - used by validationOrchestrator)
 export interface MetaEntityConfig {
   sourceKind: string;       // Entity kind to cluster (e.g., 'abilities', 'rules')
   metaKind: string;         // Meta-entity kind to create (e.g., 'school', 'legal_code')

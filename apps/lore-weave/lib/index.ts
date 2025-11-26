@@ -9,7 +9,6 @@
 export { WorldEngine } from './engine/worldEngine';
 export { FrameworkValidator } from './engine/frameworkValidator';
 export { ContractEnforcer } from './engine/contractEnforcer';
-export { ChangeDetector, detectChanges } from './engine/changeDetection';
 export { ValidationOrchestrator } from './engine/validationOrchestrator';
 
 // Core Types
@@ -17,8 +16,7 @@ export type {
   HardState,
   Relationship,
   Prominence,
-  EntityKind,
-  Catalyst
+  EntityKind
 } from './types/worldTypes';
 
 export type {
@@ -34,27 +32,21 @@ export type {
 
 export type {
   DomainSchema,
-  EntityKindSchema,
   RelationshipKindDefinition,
   RelationshipConfig,
   RelationshipLimits,
   RelationshipCategory,
-  DomainCapabilities,
   SnapshotConfig,
   EntityKindDefinition,
   EmergentDiscoveryConfig
 } from './types/domainSchema';
 
 export type {
-  DistributionTargets,
-  DistributionTarget
+  DistributionTargets
 } from './types/distribution';
 
 export type {
-  LoreRecord,
-  EntityLore,
-  RelationshipLore,
-  EraNarrative
+  LoreRecord
 } from './types/lore';
 
 // Framework Primitives (domain-agnostic types)
@@ -84,15 +76,10 @@ export type {
 } from './types/frameworkPrimitives';
 
 export type {
-  DomainLoreProvider,
-  LoreContext,
-  EntityLoreContext,
-  RelationshipLoreContext,
-  EraNarrativeContext
+  DomainLoreProvider
 } from './types/domainLore';
 
 export type {
-  StatisticsExport,
   FitnessMetrics
 } from './types/statistics';
 
@@ -100,13 +87,10 @@ export type {
 export { EnrichmentService } from './services/enrichmentService';
 export { ImageGenerationService } from './services/imageGenerationService';
 export { LLMClient } from './services/llmClient';
-export { LoreIndex } from './services/loreIndex';
 export { LoreValidator } from './services/loreValidator';
 export { DistributionTracker } from './services/distributionTracker';
 export { DynamicWeightCalculator } from './services/dynamicWeightCalculator';
 export { FeedbackAnalyzer } from './services/feedbackAnalyzer';
-// @deprecated - MetaEntityFormation replaced by SimulationSystems with clusteringUtils/entityArchival
-// export { MetaEntityFormation, MetaEntityConfig } from './services/metaEntityFormation';
 export { NameLogger } from './services/nameLogger';
 export { PopulationTracker } from './services/populationTracker';
 export { StatisticsCollector } from './services/statisticsCollector';
@@ -118,7 +102,7 @@ export { TemplateSelector } from './services/templateSelector';
 
 // Framework Systems (domain-agnostic)
 export { relationshipCulling } from './systems/relationshipCulling';
-export { eraSpawner, EraSpawnerConfig } from './systems/eraSpawner';
+export { eraSpawner } from './systems/eraSpawner';
 export { eraTransition } from './systems/eraTransition';
 export { occurrenceCreation } from './systems/occurrenceCreation';
 export { universalCatalyst } from './systems/universalCatalyst';
@@ -161,45 +145,6 @@ export {
 } from './utils/parameterOverrides';
 
 export {
-  extractParameters,
-  ParameterExtractor
-} from './utils/parameterExtractor';
-
-export {
-  buildEntityCluster,
-  EntityClusterBuilder
-} from './utils/entityClusterBuilder';
-
-export {
-  buildRelationship,
-  RelationshipBuilder
-} from './utils/relationshipBuilder';
-
-export {
-  calculateDistribution,
-  DistributionCalculator
-} from './utils/distributionCalculations';
-
-export {
-  discoverEmergentPatterns,
-  EmergentDiscovery
-} from './utils/emergentDiscovery';
-
-export {
-  findShortestPath,
-  findAllPaths,
-  getNeighbors,
-  getEntityDegree,
-  getConnectedComponents
-} from './utils/graphQueries';
-
-export {
-  getCatalystActions,
-  canActAsCatalyst,
-  applyCatalystAction
-} from './utils/catalystHelpers';
-
-export {
   calculateSimilarity,
   detectClusters,
   filterClusterableEntities,
@@ -231,13 +176,33 @@ export type {
   SupersedeEntityOptions
 } from './utils/entityArchival';
 
+// Emergent discovery exports
+export {
+  analyzeResourceDeficit,
+  analyzeConflictPatterns,
+  analyzeMagicPresence,
+  generateResourceTheme,
+  generateStrategicTheme,
+  generateMysticalTheme,
+  generateExplorationTheme,
+  shouldDiscoverLocation,
+  calculateThemeSimilarity,
+  findNearbyLocations
+} from './utils/emergentDiscovery';
+
+export type {
+  ResourceAnalysis,
+  ConflictAnalysis,
+  MagicAnalysis,
+  LocationTheme
+} from './utils/emergentDiscovery';
+
+// Catalyst helpers
+export {
+  initializeCatalyst,
+  initializeCatalystSmart
+} from './utils/catalystHelpers';
+
 // Configuration (framework-level)
-// Note: entityRegistries has been moved to domain layer (penguin-tales/lore/config/entityRegistries.ts)
-// The empty export below is for backwards compatibility only
-/**
- * @deprecated Import entityRegistries from your domain layer instead of the framework.
- * For penguin-tales, use: import { penguinEntityRegistries } from './lore/index.js'
- */
-export { entityRegistries } from './config/entityRegistries';
 export { tagRegistry } from './config/tagRegistry';
 export { feedbackLoops } from './config/feedbackLoops';

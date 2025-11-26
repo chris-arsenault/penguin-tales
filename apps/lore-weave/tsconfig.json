@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": ".",
@@ -23,6 +23,7 @@
     "node_modules",
     "dist",
     "validation",
-    "webui"
+    "webui",
+    "lib/__tests__/**/*"
   ]
 }

@@ -1,4 +1,4 @@
-import { Graph, TemplateContext } from '../types/engine';
+import { Graph } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
 import { TargetSelector } from './targetSelector';
 

@@ -70,22 +70,19 @@ export interface WorldSchema {
     relationships: Record<string, Record<string, string[]>>;
 }
 
-// DEPRECATED: Domain-specific types moved to domain schema
-// These are kept for backward compatibility but should not be used in new code
-// TODO: Remove after migration complete
-export type EntityKind = string; // was: HardState['kind']
-export type NPCSubtype = string; // was: 'merchant' | 'mayor' | 'hero' | 'outlaw'
-export type LocationSubtype = string; // was: 'iceberg' | 'colony' | 'igloo' | 'geographic_feature' | 'anomaly'
-export type FactionSubtype = string; // was: 'political' | 'criminal' | 'cult' | 'company'
-export type RulesSubtype = string; // was: 'edict' | 'taboo' | 'social' | 'natural'
-export type AbilitiesSubtype = string; // was: 'magic' | 'faith' | 'technology' | 'physical'
-
-// DEPRECATED: Domain-specific status types
-export type NPCStatus = string; // was: 'alive' | 'dead' | 'fictional' | 'missing'
-export type FactionStatus = string; // was: 'active' | 'disbanded' | 'waning'
-export type LocationStatus = string; // was: 'thriving' | 'waning' | 'abandoned'
-export type RulesStatus = string; // was: 'active' | 'forgotten' | 'proposed' | 'enacted' | 'repealed'
-export type AbilitiesStatus = string; // was: 'active' | 'lost'
+// Convenience type aliases for domain-specific subtypes and statuses
+// These are string types - actual valid values are defined in domain schema
+export type EntityKind = string;
+export type NPCSubtype = string;
+export type LocationSubtype = string;
+export type FactionSubtype = string;
+export type RulesSubtype = string;
+export type AbilitiesSubtype = string;
+export type NPCStatus = string;
+export type FactionStatus = string;
+export type LocationStatus = string;
+export type RulesStatus = string;
+export type AbilitiesStatus = string;
 
 // Discovery tracking (emergent system)
 export interface DiscoveryState {
