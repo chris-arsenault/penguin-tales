@@ -1,0 +1,307 @@
+{
+  "cultures": [
+    {
+      "id": "world",
+      "name": "World",
+      "description": "Transcendent entities that belong to no single culture (eras, occurrences, world-spanning events)"
+    },
+    {
+      "id": "aurora-stack",
+      "name": "Aurora Stack",
+      "description": "The orderly, trade-focused penguins of Aurora Stack colony on the sunlit face of Aurora Berg",
+      "homeland": "Aurora Stack"
+    },
+    {
+      "id": "nightshelf",
+      "name": "Nightfall Shelf",
+      "description": "The secretive, shadow-dwelling penguins of Nightfall Shelf on the dark side of Aurora Berg",
+      "homeland": "Nightfall Shelf"
+    },
+    {
+      "id": "orca",
+      "name": "Orca Raiders",
+      "description": "The fearsome orca raiders who threaten penguin civilization from the deep waters"
+    }
+  ],
+
+  "tags": {
+    "role": {
+      "description": "Entity roles and archetypes",
+      "appliesTo": ["npc"],
+      "values": ["leader", "explorer", "prophet", "cultist", "raider", "predator", "recruit", "successor", "rebel", "guild-founder"]
+    },
+    "trait": {
+      "description": "Character traits and qualities",
+      "appliesTo": ["npc"],
+      "values": ["brave", "charismatic", "talented", "rebellious"]
+    },
+    "geographic": {
+      "description": "Physical location characteristics",
+      "appliesTo": ["location"],
+      "values": ["landmark", "vantage", "frontier", "icy", "windy", "multilevel", "thermal", "unstable"]
+    },
+    "resource": {
+      "description": "Resource-related tags",
+      "values": ["resource", "krill", "bloom", "food", "fishing", "valuable", "economic", "trade"]
+    },
+    "mystical": {
+      "description": "Magic and supernatural elements",
+      "values": ["mystical", "magical", "magic", "anomaly", "glowing"]
+    },
+    "conflict": {
+      "description": "Combat and conflict tags",
+      "values": ["combat", "offensive", "defensive", "strategic", "external-threat", "invasion", "conflict"]
+    },
+    "organizational": {
+      "description": "Organization type and structure",
+      "appliesTo": ["faction"],
+      "values": ["guild", "governance", "legislative"]
+    },
+    "alignment": {
+      "description": "Moral/legal alignment (factions, locations, NPCs)",
+      "values": ["political", "criminal", "cult", "secretive", "organized"]
+    },
+    "cultural": {
+      "description": "Cultural and social events",
+      "values": ["cultural", "festival", "memorial", "ideology", "unity", "cultural-shift"]
+    },
+    "technology": {
+      "description": "Technology and innovation",
+      "values": ["technology", "technological", "innovation", "discovery"]
+    },
+    "lineage": {
+      "description": "Family and generational relationships",
+      "appliesTo": ["npc", "faction"],
+      "values": ["family", "generational", "second_generation", "splinter", "successor", "new"]
+    },
+    "location_type": {
+      "description": "Location subtypes and features",
+      "appliesTo": ["location"],
+      "values": ["colony", "strategic"]
+    },
+    "system": {
+      "description": "Internal system/meta tags for generation logic (any entity)",
+      "values": ["meta-entity", "emergent", "world-level", "cluster-forming", "cluster", "ability-creation", "era-driven", "pressure-driven", "crisis-driven", "scarcity-driven", "conflict-driven", "magic-driven", "anomaly-driven", "belief-driven", "rare-event", "status-changing", "colony-centric", "colony-based", "colony-formation", "faction-expansion", "faction-diversity", "adaptive", "exploration", "expansion", "territorial"]
+    },
+    "event": {
+      "description": "Event and process types (any entity)",
+      "values": ["crisis", "emergency", "legislation", "succession", "vanishing", "mystery", "leadership-change"]
+    }
+  },
+  "hardState": [{
+    "kind": "npc",
+    "subtype": [
+      "merchant",
+      "mayor",
+      "hero",
+      "outlaw"
+    ],
+    "status": [
+      "alive",
+      "dead",
+      "missing",
+      "fictional"
+    ]
+  },
+    {
+      "kind": "location",
+      "subtype": [
+        "iceberg",
+        "colony",
+        "igloo",
+        "geographic_feature",
+        "anomaly"
+      ],
+      "status": [
+        "thriving",
+        "derelict",
+        "unspoiled",
+        "ruined"
+      ]
+    },
+    {
+      "kind": "faction",
+      "subtype": [
+        "political",
+        "criminal",
+        "cult",
+        "company"
+      ],
+      "status": [
+        "in_power",
+        "waning",
+        "illegal",
+        "state_sanctioned"
+      ]
+    },
+    {
+      "kind": "rules",
+      "subtype": [
+        "edict",
+        "taboo",
+        "social",
+        "natural"
+      ],
+      "status": [
+        "proposed",
+        "enacted",
+        "repealed",
+        "unofficial"
+      ]
+    },
+    {
+      "kind": "abilities",
+      "subtype": [
+        "magic",
+        "faith",
+        "technology",
+        "physical"
+      ],
+      "status": [
+        "discovered",
+        "emergent",
+        "forgotten"
+      ]
+    }
+  ],
+  "relationships": {
+    "npc": {
+      "npc": [
+        "lover_of",
+        "enemy_of",
+        "rival_of",
+        "mentor_of",
+        "follower_of"
+      ],
+      "location": [
+        "leader_of",
+        "resident_of",
+        "explorer_of",
+        "attacking",
+        "exiled_from"
+      ],
+      "faction": [
+        "leader_of",
+        "member_of",
+        "founder_of",
+        "antagonist_of",
+        "informant_for"
+      ],
+      "rules": [
+        "creator_of",
+        "adherent_of",
+        "opposer_of",
+        "punished_by"
+      ],
+      "abilities": [
+        "researching",
+        "discoverer_of",
+        "practitioner_of",
+        "granted_by"
+      ]
+    },
+    "location": {
+      "npc": [
+        "birthplace_of",
+        "burial_site_of",
+        "host_to",
+        "discovered_by"
+      ],
+      "location": [
+        "adjacent_to",
+        "contains",
+        "contained_by",
+        "hidden_path_to"
+      ],
+      "faction": [
+        "stronghold_of",
+        "contested_by",
+        "origin_of"
+      ],
+      "rules": [
+        "governed_by",
+        "sacred_under",
+        "ignores_rule"
+      ],
+      "abilities": [
+        "source_of",
+        "suppresses",
+        "amplifies"
+      ]
+    },
+    "faction": {
+      "npc": [
+        "commands",
+        "persecutes",
+        "recruits",
+        "elevates"
+      ],
+      "location": [
+        "controls",
+        "occupies",
+        "defends",
+        "raids"
+      ],
+      "faction": [
+        "allied_with",
+        "at_war_with",
+        "splinter_of",
+        "dominates"
+      ],
+      "rules": [
+        "enforces",
+        "violates",
+        "lobbies_for",
+        "codifies"
+      ],
+      "abilities": [
+        "seeks",
+        "wields",
+        "bans"
+      ]
+    },
+    "rules": {
+      "npc": [
+        "restricts",
+        "protects"
+      ],
+      "location": [
+        "applies_in",
+        "originated_in"
+      ],
+      "faction": [
+        "sponsored_by",
+        "opposed_by"
+      ],
+      "rules": [
+        "precedes",
+        "overrides"
+      ],
+      "abilities": [
+        "regulates_use_of"
+      ]
+    },
+    "abilities": {
+      "npc": [
+        "granted_to",
+        "awakened_in"
+      ],
+      "location": [
+        "manifests_at",
+        "slumbers_beneath"
+      ],
+      "faction": [
+        "kept_secret_by",
+        "weaponized_by"
+      ],
+      "rules": [
+        "constrained_by",
+        "inspired_rule"
+      ],
+      "abilities": [
+        "evolved_from",
+        "countered_by"
+      ]
+    }
+  }
+}
