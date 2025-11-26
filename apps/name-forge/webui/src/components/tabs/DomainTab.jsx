@@ -18,11 +18,6 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
   const defaultDomain = {
     id: `${cultureId}_domain_${cultureDomains.length + 1}`,
     cultureId: cultureId,
-    appliesTo: {
-      kind: ['npc'],  // Default to NPC, user can change
-      subKind: [],
-      tags: []
-    },
     phonology: {
       consonants: [], vowels: [], syllableTemplates: ['CV', 'CVC'], lengthRange: [2, 4],
       favoredClusters: [], forbiddenClusters: [], favoredClusterBoost: 1.0
@@ -130,10 +125,6 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
                 <div>
                   <strong style={{ color: 'rgb(134, 239, 172)' }}>{domain.id}</strong>
                   <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.25rem' }}>
-                    Applies to: {domain.appliesTo?.kind?.join(', ') || 'all'}
-                    {domain.appliesTo?.subKind?.length > 0 && ` (${domain.appliesTo.subKind.join(', ')})`}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.1rem' }}>
                     Use in grammars: <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>domain:{domain.id}</code>
                   </div>
                 </div>
@@ -251,9 +242,12 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>{editingIndex >= 0 ? 'Edit Domain' : 'Create Domain'}</h3>
-        <button className="secondary" onClick={() => { setEditing(false); setEditingIndex(-1); }}>
-          Cancel
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="primary" onClick={handleSave}>Save</button>
+          <button className="secondary" onClick={() => { setEditing(false); setEditingIndex(-1); }}>
+            Cancel
+          </button>
+        </div>
       </div>
 
       <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -264,83 +258,6 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
           placeholder={`${cultureId}_domain`}
         />
         <small className="text-muted">Unique identifier for this domain. Use in grammars as <code>domain:{formData.id || 'domain_id'}</code></small>
-      </div>
-
-      {/* Applies To Section */}
-      <div style={{
-        padding: '1rem',
-        background: 'rgba(59, 130, 246, 0.1)',
-        borderRadius: '6px',
-        marginBottom: '1rem',
-        border: '1px solid rgba(59, 130, 246, 0.3)'
-      }}>
-        <h4 style={{ margin: '0 0 0.75rem 0' }}>Applies To</h4>
-        <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-          Select which entity kinds this domain generates names for.
-        </p>
-        <div className="form-group">
-          <label>Entity Kinds (select multiple)</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
-            {['npc', 'location', 'faction', 'artifact', 'creature'].map((kind) => (
-              <label key={kind} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                background: formData.appliesTo?.kind?.includes(kind) ? 'rgba(34, 197, 94, 0.2)' : 'rgba(30, 58, 95, 0.3)',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                border: formData.appliesTo?.kind?.includes(kind) ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid transparent'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={formData.appliesTo?.kind?.includes(kind) || false}
-                  onChange={(e) => {
-                    const currentKinds = formData.appliesTo?.kind || [];
-                    const newKinds = e.target.checked
-                      ? [...currentKinds, kind]
-                      : currentKinds.filter(k => k !== kind);
-                    setFormData({
-                      ...formData,
-                      appliesTo: { ...formData.appliesTo, kind: newKinds }
-                    });
-                  }}
-                />
-                <span style={{ textTransform: 'capitalize' }}>{kind}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="form-group" style={{ marginTop: '0.75rem' }}>
-          <label>Subtypes (comma-separated, optional)</label>
-          <input
-            value={formData.appliesTo?.subKind?.join(', ') || ''}
-            onChange={(e) => setFormData({
-              ...formData,
-              appliesTo: {
-                ...formData.appliesTo,
-                subKind: e.target.value.split(',').map(s => s.trim()).filter(s => s)
-              }
-            })}
-            placeholder="merchant, warrior, mage"
-          />
-          <small className="text-muted">Leave empty to apply to all subtypes</small>
-        </div>
-        <div className="form-group" style={{ marginTop: '0.75rem' }}>
-          <label>Tags (comma-separated, optional)</label>
-          <input
-            value={formData.appliesTo?.tags?.join(', ') || ''}
-            onChange={(e) => setFormData({
-              ...formData,
-              appliesTo: {
-                ...formData.appliesTo,
-                tags: e.target.value.split(',').map(s => s.trim()).filter(s => s)
-              }
-            })}
-            placeholder="noble, ancient, mystical"
-          />
-          <small className="text-muted">Match entities with specific tags</small>
-        </div>
       </div>
 
       {/* Phonology Section */}
@@ -589,10 +506,6 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-        <button className="primary" onClick={handleSave}>Save Domain</button>
-        <button className="secondary" onClick={() => { setEditing(false); setEditingIndex(-1); }}>Cancel</button>
-      </div>
     </div>
   );
 }

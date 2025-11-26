@@ -1,0 +1,508 @@
+{
+  "id": "example_project",
+  "name": "Fantasy World Example",
+  "version": "1.0",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "worldSchema": {
+    "hardState": [
+      {
+        "kind": "npc",
+        "subtype": ["warrior", "mage", "merchant", "noble", "outlaw"],
+        "status": ["alive", "dead", "missing", "ascended"]
+      },
+      {
+        "kind": "location",
+        "subtype": ["city", "fortress", "ruins", "wilderness", "anomaly"],
+        "status": ["thriving", "derelict", "contested", "hidden"]
+      },
+      {
+        "kind": "faction",
+        "subtype": ["guild", "cult", "military", "criminal"],
+        "status": ["dominant", "rising", "declining", "underground"]
+      },
+      {
+        "kind": "rules",
+        "subtype": ["law", "tradition", "prophecy", "natural"],
+        "status": ["enforced", "forgotten", "disputed", "sacred"]
+      },
+      {
+        "kind": "abilities",
+        "subtype": ["magic", "divine", "technology", "martial"],
+        "status": ["common", "rare", "forbidden", "lost"]
+      }
+    ],
+    "relationships": {
+      "npc": {
+        "npc": ["ally_of", "enemy_of", "mentor_of", "rival_of", "kin_of"],
+        "location": ["ruler_of", "resident_of", "exile_from", "guardian_of"],
+        "faction": ["leader_of", "member_of", "spy_for", "hunted_by"],
+        "rules": ["author_of", "enforcer_of", "violator_of"],
+        "abilities": ["master_of", "student_of", "granted_by"]
+      },
+      "location": {
+        "npc": ["birthplace_of", "tomb_of", "sanctuary_for"],
+        "location": ["adjacent_to", "contains", "portal_to"],
+        "faction": ["headquarters_of", "contested_by", "sacred_to"],
+        "rules": ["governed_by", "exempt_from"],
+        "abilities": ["source_of", "amplifies", "suppresses"]
+      },
+      "faction": {
+        "npc": ["commands", "protects", "hunts"],
+        "location": ["controls", "raids", "defends"],
+        "faction": ["allied_with", "at_war_with", "splinter_of"],
+        "rules": ["enforces", "defies", "created"],
+        "abilities": ["wields", "seeks", "forbids"]
+      },
+      "rules": {
+        "npc": ["binds", "empowers", "condemns"],
+        "location": ["applies_in", "originated_at"],
+        "faction": ["governs", "opposed_by"],
+        "rules": ["supersedes", "derives_from"],
+        "abilities": ["regulates", "enables"]
+      },
+      "abilities": {
+        "npc": ["bestowed_upon", "awakened_in"],
+        "location": ["manifests_at", "dormant_in"],
+        "faction": ["monopolized_by", "feared_by"],
+        "rules": ["constrained_by", "transcends"],
+        "abilities": ["evolved_from", "counters"]
+      }
+    }
+  },
+  "cultures": {
+    "tech": {
+      "id": "tech",
+      "name": "Tech Collective",
+      "description": "The cybernetic factions of the industrial wastes, merging flesh with machine",
+      "domains": [
+        {
+          "id": "tech_domain",
+          "phonology": {
+            "consonants": ["m", "k", "f", "t", "s", "r", "ng", "th", "zh", "j", "ny"],
+            "vowels": ["a", "e", "ae", "o", "ai", "oi", "oe", "uu", "ue", "ai", "u"],
+            "syllableTemplates": ["CV", "CCV", "CVCV", "VCVCV", "VCV", "V", "VV"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["ex", "tr", "pr", "zr", "sp"],
+            "forbiddenClusters": ["ae", "th"],
+            "favoredClusterBoost": 1.4,
+            "consonantWeights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            "templateWeights": [1, 1, 1]
+          },
+          "morphology": {
+            "prefixes": ["Nex", "Vex", "Zyr", "Kron", "Plex"],
+            "suffixes": ["ix", "ex", "on", "ax", "or", "us"],
+            "structure": ["prefix-root", "root-suffix", "root"],
+            "structureWeights": [0.3, 0.4, 0.3]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 1,
+            "hyphenRate": 0.95,
+            "preferredEndings": ["ix", "ex", "on", "ax"],
+            "preferredEndingBoost": 1.5,
+            "rhythmBias": "neutral"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "tech_nouns": {
+          "id": "tech_nouns",
+          "description": "Tech-themed nouns",
+          "entries": ["circuit", "node", "matrix", "core", "nexus", "grid", "pulse", "beam", "flux", "wave"],
+          "source": "manual"
+        },
+        "tech_verbs": {
+          "id": "tech_verbs",
+          "description": "Action verbs for tech entities",
+          "entries": ["glitches", "phases", "dissolves", "hums", "flickers", "fades", "warps", "pulses", "vanishes", "distorts", "shifts", "echoes", "resonates", "fragments", "blinks"],
+          "source": "manual"
+        },
+        "tech_adjectives": {
+          "id": "tech_adjectives",
+          "description": "Descriptive terms",
+          "entries": ["chrome", "digital", "quantum", "neon", "synthetic", "binary", "plasma", "cyber", "holographic", "neural"],
+          "source": "manual"
+        },
+        "prepositions": {
+          "id": "prepositions",
+          "description": "Connecting words",
+          "entries": ["of", "the", "from", "beyond", "within"],
+          "source": "manual"
+        }
+      },
+      "lexemeSpecs": {},
+      "grammars": [
+        {
+          "id": "tech_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["markov:norse"],
+              ["markov:germanic"],
+              ["markov:finnish"],
+              ["markov:celtic"],
+              ["markov:slavic"],
+              ["markov:latin"],
+              ["domain:tech_domain"]
+            ]
+          }
+        },
+        {
+          "id": "tech_titles",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["title", "markov:norse"],
+              ["markov:germanic", "slot:prepositions", "slot:tech_nouns"]
+            ],
+            "title": [
+              ["slot:tech_adjectives"]
+            ]
+          }
+        },
+        {
+          "id": "location_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:tech_adjectives", "slot:tech_nouns"],
+              ["The", "slot:tech_adjectives", "slot:tech_nouns"],
+              ["domain:tech_domain", "slot:tech_nouns"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "tech_default",
+          "name": "Tech Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "tech_names" },
+                { "type": "grammar", "weight": 1, "grammarId": "tech_titles" },
+                { "type": "phonotactic", "weight": 1, "domainId": "tech_domain" }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "location_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "tech_domain" }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "tech_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "elf": {
+      "id": "elf",
+      "name": "High Elves",
+      "description": "The ancient and ethereal woodland dwellers, masters of magic and lore",
+      "domains": [
+        {
+          "id": "elf_domain",
+          "phonology": {
+            "consonants": ["l", "r", "n", "m", "th", "s", "v", "d", "w", "y"],
+            "vowels": ["a", "e", "i", "o", "ae", "ie", "ai", "ei", "ia", "ea"],
+            "syllableTemplates": ["CV", "VCV", "CVV", "V", "CVC"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["el", "ar", "il", "an", "th", "ri"],
+            "forbiddenClusters": ["gg", "kk", "ck", "xx"],
+            "favoredClusterBoost": 1.4,
+            "consonantWeights": [1.5, 1.3, 1.2, 1, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1, 1, 1, 1, 1.2, 1.2, 1, 1, 1, 1],
+            "templateWeights": [1, 1.2, 1, 0.8, 0.8]
+          },
+          "morphology": {
+            "prefixes": ["Ael", "Cel", "Gal", "Lir", "Tha", "Ela", "Syl", "Fae"],
+            "suffixes": ["iel", "wen", "riel", "ion", "ath", "oth", "ara", "iel", "ynn"],
+            "structure": ["root", "root-suffix", "prefix-root-suffix"],
+            "structureWeights": [0.2, 0.5, 0.3]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.15,
+            "hyphenRate": 0.05,
+            "preferredEndings": ["iel", "wen", "ion", "ath", "a", "e", "ara"],
+            "preferredEndingBoost": 1.4,
+            "rhythmBias": "flowing"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "elf_nature": {
+          "id": "elf_nature",
+          "description": "Nature and forest words",
+          "entries": ["star", "moon", "leaf", "wind", "silver", "dawn", "dream", "light", "song", "river", "forest", "blossom"],
+          "source": "manual"
+        },
+        "elf_virtues": {
+          "id": "elf_virtues",
+          "description": "Elven virtues and qualities",
+          "entries": ["wise", "fair", "swift", "bright", "ancient", "serene", "graceful", "eternal", "noble"],
+          "source": "manual"
+        },
+        "elf_titles": {
+          "id": "elf_titles",
+          "description": "Elven honorifics",
+          "entries": ["Lord", "Lady", "Prince", "Princess", "Sage", "Guardian", "Warden", "Elder"],
+          "source": "manual"
+        }
+      },
+      "lexemeSpecs": {},
+      "grammars": [
+        {
+          "id": "elf_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:elf_domain"],
+              ["markov:celtic"],
+              ["markov:finnish"]
+            ]
+          }
+        },
+        {
+          "id": "elf_full_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:elf_domain", "of the", "slot:elf_nature"],
+              ["slot:elf_virtues", "domain:elf_domain"]
+            ]
+          }
+        },
+        {
+          "id": "elf_location_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:elf_nature", "domain:elf_domain"],
+              ["domain:elf_domain", "slot:elf_nature"],
+              ["The", "slot:elf_virtues", "slot:elf_nature"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "elf_default",
+          "name": "Elven Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "elf_names" },
+                { "type": "grammar", "weight": 1, "grammarId": "elf_full_names" },
+                { "type": "phonotactic", "weight": 1, "domainId": "elf_domain" }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "elf_location_names" },
+                { "type": "phonotactic", "weight": 1, "domainId": "elf_domain" }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "elf_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "dwarf": {
+      "id": "dwarf",
+      "name": "Mountain Dwarves",
+      "description": "The stalwart forge-masters of the deep mountains, keepers of ancient craft and grudges",
+      "domains": [
+        {
+          "id": "dwarf_domain",
+          "phonology": {
+            "consonants": ["k", "g", "d", "b", "r", "n", "m", "th", "gr", "dr"],
+            "vowels": ["a", "i", "u", "o", "ar", "or", "ur", "ir"],
+            "syllableTemplates": ["CVC", "CV", "CCV", "CVCC"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["gr", "dr", "th", "br", "kr", "gn"],
+            "forbiddenClusters": ["ae", "ii", "uu"],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [1.3, 1.3, 1.2, 1.2, 1.5, 1, 1, 1, 1.4, 1.4],
+            "vowelWeights": [1.3, 1.2, 1.2, 1, 1.4, 1.2, 1.2, 1],
+            "templateWeights": [1.3, 1, 1.2, 1]
+          },
+          "morphology": {
+            "prefixes": ["Dur", "Thor", "Brom", "Grim", "Kaz", "Bal", "Dor", "Gor"],
+            "suffixes": ["in", "din", "rim", "grim", "ak", "ok", "dur", "rik", "gar"],
+            "structure": ["root", "root-suffix", "prefix-root", "prefix-root-suffix"],
+            "structureWeights": [0.2, 0.4, 0.2, 0.2]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.02,
+            "preferredEndings": ["in", "im", "ak", "ok", "ur", "rik"],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "harsh"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "dwarf_stone": {
+          "id": "dwarf_stone",
+          "description": "Stone and metal words",
+          "entries": ["stone", "iron", "gold", "silver", "hammer", "anvil", "forge", "mountain", "deep", "helm", "axe", "shield"],
+          "source": "manual"
+        },
+        "dwarf_virtues": {
+          "id": "dwarf_virtues",
+          "description": "Dwarven qualities",
+          "entries": ["strong", "stern", "bold", "proud", "ancient", "mighty", "gruff", "stalwart", "unyielding"],
+          "source": "manual"
+        },
+        "dwarf_titles": {
+          "id": "dwarf_titles",
+          "description": "Dwarven honorifics",
+          "entries": ["King", "Thane", "Lord", "Master", "Forgemaster", "Stonelord", "Ironhand", "Elder"],
+          "source": "manual"
+        }
+      },
+      "lexemeSpecs": {},
+      "grammars": [
+        {
+          "id": "dwarf_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:dwarf_domain"],
+              ["markov:norse"],
+              ["markov:germanic"]
+            ]
+          }
+        },
+        {
+          "id": "dwarf_full_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:dwarf_domain", "slot:dwarf_stone^-son"],
+              ["domain:dwarf_domain", "slot:dwarf_virtues^beard"]
+            ]
+          }
+        },
+        {
+          "id": "dwarf_location_names",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:dwarf_stone", "domain:dwarf_domain"],
+              ["The", "slot:dwarf_virtues", "slot:dwarf_stone"],
+              ["domain:dwarf_domain^'s", "slot:dwarf_stone"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "dwarf_default",
+          "name": "Dwarven Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "dwarf_names" },
+                { "type": "grammar", "weight": 1, "grammarId": "dwarf_full_names" },
+                { "type": "phonotactic", "weight": 1, "domainId": "dwarf_domain" }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "dwarf_location_names" },
+                { "type": "phonotactic", "weight": 1, "domainId": "dwarf_domain" }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "dwarf_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
