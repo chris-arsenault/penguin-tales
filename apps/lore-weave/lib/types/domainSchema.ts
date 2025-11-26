@@ -339,8 +339,8 @@ export interface DomainSchema {
   /** All cultures defined in this domain */
   cultures: CultureDefinition[];
 
-  /** Name generation service */
-  nameGenerator: NameGenerator;
+  /** Name generation service (deprecated - use NameForgeService instead) */
+  nameGenerator?: NameGenerator;
 
   /** Optional: Get relationship definition by kind */
   getRelationshipKind?(kind: string): RelationshipKindDefinition | undefined;
@@ -443,7 +443,7 @@ export class BaseDomainSchema implements DomainSchema {
   entityKinds: EntityKindDefinition[];
   relationshipKinds: RelationshipKindDefinition[];
   cultures: CultureDefinition[];
-  nameGenerator: NameGenerator;
+  nameGenerator?: NameGenerator;
   relationshipConfig?: RelationshipConfig;
 
   constructor(config: {
@@ -453,7 +453,7 @@ export class BaseDomainSchema implements DomainSchema {
     entityKinds: EntityKindDefinition[];
     relationshipKinds: RelationshipKindDefinition[];
     cultures: CultureDefinition[];
-    nameGenerator: NameGenerator;
+    nameGenerator?: NameGenerator;
     relationshipConfig?: RelationshipConfig;
   }) {
     this.id = config.id;

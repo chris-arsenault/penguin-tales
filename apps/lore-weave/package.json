@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
+    "name-forge": "file:../name-forge",
     "openai": "^6.9.1"
   },
   "devDependencies": {

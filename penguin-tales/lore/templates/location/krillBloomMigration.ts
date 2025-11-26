@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
 
 /**
  * Krill Bloom Migration Template
@@ -256,7 +256,6 @@ export const krillBloomMigration: GrowthTemplate = {
         }
       } else {
         // Create new geographic feature
-        const bloomName = generateName('location');
         const newBloomIndex = entities.length;
         bloomIds.push(`will-be-assigned-${newBloomIndex}`);
 
@@ -268,7 +267,6 @@ export const krillBloomMigration: GrowthTemplate = {
         entities.push({
           kind: 'location',
           subtype: 'geographic_feature',
-          name: `${bloomName} Krill Grounds`,
           description: `Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.`,
           status: 'thriving',
           prominence: 'recognized',
@@ -298,11 +296,9 @@ export const krillBloomMigration: GrowthTemplate = {
 
       if (!faction || !homeColony) continue;
 
-      const discovererName = generateName('npc');
       entities.push({
         kind: 'npc',
         subtype: 'merchant',
-        name: discovererName,
         description: `An enterprising merchant who discovered the krill blooms and now leads expeditions to harvest them.`,
         status: 'alive',
         prominence: 'marginal', // Discoverers start marginal

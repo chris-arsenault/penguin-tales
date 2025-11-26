@@ -13,7 +13,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName, findEntities } from '@lore-weave/core/utils/helpers';
+import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
 
 export const emergentLocationDiscovery: GrowthTemplate = {
   id: 'emergent_location_discovery',
@@ -163,11 +163,9 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       description = `Rich ${locationTheme.toLowerCase()} providing essential resources`;
     }
 
-    const locationName = generateName('location');
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: locationType,
-      name: `${locationName} ${locationTheme}`,
       description: description,
       status: 'unspoiled',
       prominence: 'recognized',
@@ -207,7 +205,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       });
     }
 
-    const discoveryDescription = `${discoverer.name} discovered ${locationTheme.toLowerCase()} driven by ${dominantPressure} pressure`;
+    const discoveryDescription = `${discoverer.name} discovered a new ${locationTheme.toLowerCase()} driven by ${dominantPressure} pressure`;
 
     return {
       entities,

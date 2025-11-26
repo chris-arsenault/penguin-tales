@@ -17,13 +17,15 @@ import {
   normalizeInitialState,
   validateWorld,
   applyParameterOverrides,
-  relationshipCulling
+  relationshipCulling,
+  NameForgeService
 } from '@lore-weave/core/index.js';
 
 import type {
   EngineConfig,
   HardState,
-  DistributionTargets
+  DistributionTargets,
+  NameForgeConfig
 } from '@lore-weave/core/index.js';
 
 // Domain imports (penguin-specific)
@@ -39,15 +41,13 @@ import {
 
 import { penguinLoreProvider } from './config/loreProvider.js';
 
-// Import setNameGenerator to configure the framework with penguin name generator
-import { setNameGenerator } from '@lore-weave/core/utils/helpers.js';
-
-// Configure the name generator for this domain
-setNameGenerator(penguinDomain.nameGenerator);
-
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
 import parameterOverridesData from './config/json/templateSystemParameters.json' with { type: 'json' };
+import nameForgeConfigData from './config/nameforge.json' with { type: 'json' };
+
+// Create NameForgeService from config (cast through unknown for JSON import compatibility)
+const nameForgeService = new NameForgeService(nameForgeConfigData as unknown as NameForgeConfig);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,6 +219,9 @@ const config: EngineConfig = {
   entityRegistries: scaledEntityRegistries,  // Framework formalization: entity operator registry (scaled)
   llmConfig,
   enrichmentConfig,
+
+  // Name generation service (used by addEntity when name not provided)
+  nameForgeService,
 
   // Statistical distribution targets (enables mid-run tuning, scaled by SCALE_FACTOR)
   distributionTargets: scaledDistributionTargets as DistributionTargets,

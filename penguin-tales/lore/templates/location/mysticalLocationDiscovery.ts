@@ -9,7 +9,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName } from '@lore-weave/core/utils/helpers';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   analyzeMagicPresence,
   generateMysticalTheme,
@@ -148,8 +148,6 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     // PROCEDURALLY GENERATE theme based on magical state
     const theme = generateMysticalTheme(magic, graphView.currentEra.id);
 
-    // Generate penguin-style name with themeString as descriptor
-    const locationName = generateName('location');
     const formattedTheme = theme.themeString.split('_').map(w =>
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
@@ -158,7 +156,6 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,  // 'anomaly'
-      name: `${locationName} ${formattedTheme}`,
       description: `A mystical ${formattedTheme.toLowerCase()} manifesting ${magic.manifestationType} energies`,
       status: 'unspoiled',
       prominence: 'recognized',  // Mystical places are notable
