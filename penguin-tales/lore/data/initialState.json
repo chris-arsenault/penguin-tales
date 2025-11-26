@@ -1,0 +1,272 @@
+{
+  "hardState": [
+    {
+      "kind": "location",
+      "subtype": "iceberg",
+      "name": "Aurora Berg",
+      "description": "A towering, many-tiered iceberg whose shelves host rival super-penguin colonies.",
+      "status": "unspoiled",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["icy", "landmark", "multilevel"],
+      "links": [
+        { "kind": "contains", "src": "Aurora Berg", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.1 },
+        { "kind": "contains", "src": "Aurora Berg", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.12 },
+        { "kind": "contains", "src": "Aurora Berg", "dst": "The Glow-Fissure", "strength": 0.2, "distance": 0.15 },
+        { "kind": "contains", "src": "Aurora Berg", "dst": "Krill Shoals", "strength": 0.2, "distance": 0.18 },
+        { "kind": "contains", "src": "Aurora Berg", "dst": "Windward Ridge", "strength": 0.2, "distance": 0.08 }
+      ]
+    },
+
+    {
+      "kind": "location",
+      "subtype": "colony",
+      "name": "Aurora Stack",
+      "description": "A vertical colony carved into the sunlit face of Aurora Berg, known for orderly terraces and bright trade banners.",
+      "status": "thriving",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["colony", "trade", "organized"],
+      "links": [
+        { "kind": "contained_by", "src": "Aurora Stack", "dst": "Aurora Berg", "strength": 0.2, "distance": 0.1 },
+        { "kind": "adjacent_to", "src": "Aurora Stack", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.15 },
+        { "kind": "stronghold_of", "src": "Aurora Stack", "dst": "The Icebound Exchange", "strength": 0.7 },
+        { "kind": "adjacent_to", "src": "Aurora Stack", "dst": "Krill Shoals", "strength": 0.2, "distance": 0.25 }
+      ]
+    },
+
+    {
+      "kind": "location",
+      "subtype": "colony",
+      "name": "Nightfall Shelf",
+      "description": "A shadowed ledge on the far side of Aurora Berg, lit by bioluminescent ice glyphs and whispered deals.",
+      "status": "thriving",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["colony", "criminal", "secretive"],
+      "links": [
+        { "kind": "contained_by", "src": "Nightfall Shelf", "dst": "Aurora Berg", "strength": 0.2, "distance": 0.12 },
+        { "kind": "adjacent_to", "src": "Nightfall Shelf", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.15 },
+        { "kind": "stronghold_of", "src": "Nightfall Shelf", "dst": "The Midnight Claws", "strength": 0.7 },
+        { "kind": "adjacent_to", "src": "Nightfall Shelf", "dst": "The Glow-Fissure", "strength": 0.2, "distance": 0.05 }
+      ]
+    },
+
+    {
+      "kind": "location",
+      "subtype": "geographic_feature",
+      "name": "Krill Shoals",
+      "description": "Dense drifting clouds of krill that pass regularly beneath Aurora Stack, the lifeblood of its fisheries.",
+      "status": "unspoiled",
+      "prominence": "marginal",
+      "culture": "aurora-stack",
+      "tags": ["krill", "food", "resource"],
+      "links": [
+        { "kind": "adjacent_to", "src": "Krill Shoals", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.25 }
+      ]
+    },
+
+    {
+      "kind": "location",
+      "subtype": "anomaly",
+      "name": "The Glow-Fissure",
+      "description": "A deep crack in the ice under Nightfall Shelf that pulses with otherworldly light and warps the currents.",
+      "status": "unspoiled",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["anomaly", "mystical", "glowing"],
+      "links": [
+        { "kind": "adjacent_to", "src": "The Glow-Fissure", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.05 }
+      ]
+    },
+
+    {
+      "kind": "location",
+      "subtype": "geographic_feature",
+      "name": "Windward Ridge",
+      "description": "A knife-edge crest of ice where the high winds carve strange patterns and carry news between colonies.",
+      "status": "unspoiled",
+      "prominence": "marginal",
+      "culture": "aurora-stack",
+      "tags": ["strategic", "windy", "vantage"],
+      "links": [
+        { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.3 },
+        { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.35 }
+      ]
+    },
+
+    {
+      "kind": "faction",
+      "subtype": "company",
+      "name": "The Icebound Exchange",
+      "description": "A merchant guild that monopolizes trade through Aurora Stack, issuing carved-ice credit chits and regulating fish prices.",
+      "status": "in_power",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["merchant", "trade", "organized"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "economic", "cultural"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "controls", "src": "The Icebound Exchange", "dst": "Aurora Stack", "strength": 0.7 },
+        { "kind": "weaponized_by", "src": "The Icebound Exchange", "dst": "Harmonic Harpoon Arrays", "strength": 0.5 }
+      ]
+    },
+
+    {
+      "kind": "faction",
+      "subtype": "criminal",
+      "name": "The Midnight Claws",
+      "description": "A clandestine syndicate ruling Nightfall Shelf from the shadows, smuggling forbidden tech and siphoning magic from the Glow-Fissure.",
+      "status": "illegal",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["criminal", "secretive", "organized"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "economic", "cultural", "military"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "controls", "src": "The Midnight Claws", "dst": "Nightfall Shelf", "strength": 0.7 },
+        { "kind": "weaponized_by", "src": "The Midnight Claws", "dst": "Harmonic Harpoon Arrays", "strength": 0.5 },
+        { "kind": "kept_secret_by", "src": "The Midnight Claws", "dst": "Fissure-Drawn Runes", "strength": 0.5 }
+      ]
+    },
+
+    {
+      "kind": "npc",
+      "subtype": "mayor",
+      "name": "High-Beak Auditor Selka",
+      "description": "The meticulous mayor of Aurora Stack, famed for balancing ledgers as easily as she balances on sheer ice walls.",
+      "status": "alive",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["leader", "organized", "trade"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "economic"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "leader_of", "src": "High-Beak Auditor Selka", "dst": "Aurora Stack", "strength": 1.0 },
+        { "kind": "leader_of", "src": "High-Beak Auditor Selka", "dst": "The Icebound Exchange", "strength": 1.0 },
+        { "kind": "resident_of", "src": "High-Beak Auditor Selka", "dst": "Aurora Stack", "strength": 0.3 },
+        { "kind": "adherent_of", "src": "High-Beak Auditor Selka", "dst": "Fissure-Drawn Runes", "strength": 0.6 }
+      ]
+    },
+
+    {
+      "kind": "npc",
+      "subtype": "hero",
+      "name": "Tide-Splitter Rukan",
+      "description": "A daring super-penguin hero of Aurora Stack, whose experimental fishing gun techniques doubled the colony's catch.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "aurora-stack",
+      "tags": ["brave", "explorer", "fishing"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "military", "cultural"],
+        "influence": 0.7,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "member_of", "src": "Tide-Splitter Rukan", "dst": "The Icebound Exchange", "strength": 1.0 },
+        { "kind": "resident_of", "src": "Tide-Splitter Rukan", "dst": "Aurora Stack", "strength": 0.3 },
+        { "kind": "practitioner_of", "src": "Tide-Splitter Rukan", "dst": "Harmonic Harpoon Arrays", "strength": 0.9 }
+      ]
+    },
+
+    {
+      "kind": "npc",
+      "subtype": "mayor",
+      "name": "Shadow-Broker Nyla",
+      "description": "The unofficial mayor of Nightfall Shelf, a veiled negotiator who settles disputes before anyone admits they exist.",
+      "status": "alive",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["leader", "secretive", "charismatic"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "economic"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "leader_of", "src": "Shadow-Broker Nyla", "dst": "Nightfall Shelf", "strength": 1.0 },
+        { "kind": "leader_of", "src": "Shadow-Broker Nyla", "dst": "The Midnight Claws", "strength": 1.0 },
+        { "kind": "resident_of", "src": "Shadow-Broker Nyla", "dst": "Nightfall Shelf", "strength": 0.3 }
+      ]
+    },
+
+    {
+      "kind": "npc",
+      "subtype": "hero",
+      "name": "Fissure-Walker Draen",
+      "description": "A reckless hero of Nightfall Shelf who walks the very lip of the Glow-Fissure to draw power from its light.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "nightshelf",
+      "tags": ["brave", "mystical", "explorer"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["political", "military", "cultural"],
+        "influence": 0.7,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "member_of", "src": "Fissure-Walker Draen", "dst": "The Midnight Claws", "strength": 1.0 },
+        { "kind": "resident_of", "src": "Fissure-Walker Draen", "dst": "Nightfall Shelf", "strength": 0.3 },
+        { "kind": "practitioner_of", "src": "Fissure-Walker Draen", "dst": "Fissure-Drawn Runes", "strength": 0.9 }
+      ]
+    },
+
+    {
+      "kind": "abilities",
+      "subtype": "magic",
+      "name": "Fissure-Drawn Runes",
+      "description": "A school of ice-magic where glowing sigils are etched with claws chilled in the light of the Glow-Fissure.",
+      "status": "discovered",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["magic", "mystical", "glowing"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["magical"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "manifests_at", "src": "Fissure-Drawn Runes", "dst": "The Glow-Fissure", "strength": 0.6 },
+        { "kind": "slumbers_beneath", "src": "Fissure-Drawn Runes", "dst": "Aurora Berg", "strength": 0.3 }
+      ]
+    },
+
+    {
+      "kind": "abilities",
+      "subtype": "technology",
+      "name": "Harmonic Harpoon Arrays",
+      "description": "Advanced fishing guns that fire sonic-locked harpoons, letting penguins reel in entire shoals with minimal effort.",
+      "status": "discovered",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["technology", "fishing", "offensive"],
+      "catalyst": {
+        "canAct": true,
+        "actionDomains": ["technological"],
+        "influence": 0.5,
+        "catalyzedEvents": []
+      },
+      "links": [
+        { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Krill Shoals", "strength": 0.6 },
+        { "kind": "manifests_at", "src": "Harmonic Harpoon Arrays", "dst": "Aurora Stack", "strength": 0.6 }
+      ]
+    }
+  ]
+}
