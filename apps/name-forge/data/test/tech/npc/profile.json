@@ -1,0 +1,39 @@
+{
+  "id": "tech:npc",
+  "cultureId": "tech",
+  "entityType": "npc",
+  "strategyGroups": [
+    {
+      "name": "Default",
+      "priority": 0,
+      "conditions": {
+        "prominence": [
+          "marginal"
+        ]
+      },
+      "strategies": [
+        {
+          "id": "tech_npc_grammar",
+          "type": "grammar",
+          "weight": 1,
+          "grammarId": "tech_names"
+        }
+      ]
+    },
+    {
+      "name": "New Group",
+      "priority": 0,
+      "conditions": null,
+      "strategies": []
+    },
+    {
+      "name": "New Conditional Group",
+      "priority": 50,
+      "conditions": {
+        "tags": [],
+        "prominence": []
+      },
+      "strategies": []
+    }
+  ]
+}

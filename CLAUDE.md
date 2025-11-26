@@ -227,6 +227,22 @@ The seed world contains 14 pre-defined entities:
 - **Strategy Pattern**: Eras modify behavior without code changes
 - **Builder Pattern**: Entities built incrementally through growth + simulation
 
+## Refactoring Rules
+
+**CRITICAL: Always complete refactors. Never stop in the middle.**
+
+1. **No "consolidation" modules without actual consolidation**: Do not create new shared modules/functions unless you immediately update ALL callers to use them. Adding a new abstraction without removing the old code paths makes the problem worse, not better.
+
+2. **Delete duplicate code, don't add to it**: When fixing bugs in duplicated code, either:
+   - Fix all instances of the duplication (quick fix), OR
+   - Consolidate to one implementation and delete the others (proper fix)
+
+   Never create a 4th implementation when there are already 3.
+
+3. **Backwards compatibility is not an excuse**: In this codebase, prefer breaking changes over accumulating cruft. Update all callers rather than maintaining parallel implementations.
+
+4. **Complete the refactor in one session**: If you start consolidating code, finish it. Don't leave "future work" TODOs for consolidation - the future work never happens and now there's more duplication.
+
 ## Debugging Tips
 
 1. Set small targets first: `targetEntitiesPerKind: 5` in `src/main.ts`
