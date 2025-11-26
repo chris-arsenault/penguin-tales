@@ -82,13 +82,12 @@ body {
   background: linear-gradient(180deg, var(--arctic-frost) 0%, var(--arctic-ice) 100%);
 }
 
-/* Layout */
+/* Layout - Three Column Flex */
 .app-container {
   display: flex;
   flex: 1;
   overflow: hidden;
-  margin-left: 100px;
-  margin-right: 380px;
+  gap: 0;
 }
 
 .sidebar {
@@ -109,7 +108,6 @@ body {
   overflow-x: hidden;
   background: rgba(10, 25, 41, 0.4);
   min-width: 0;
-  max-width: 100%;
 }
 
 .main-content > div {
@@ -127,16 +125,12 @@ body {
 }
 
 .guide-sidebar {
-  position: absolute;
-  right: 0;
-  top: 106px;
   width: 380px;
-  height: calc(100vh - 106px);
   background: rgba(30, 58, 95, 0.6);
   border-left: 1px solid rgba(59, 130, 246, 0.2);
   overflow-y: auto;
   backdrop-filter: blur(10px);
-  z-index: 10;
+  flex-shrink: 0;
 }
 
 .guide-content {
