@@ -11,6 +11,14 @@ export interface LLMConfig {
   temperature?: number;
 }
 
+/**
+ * Interface for name generation service.
+ * Implemented by NameForgeService, but defined here to avoid circular imports.
+ */
+export interface NameGenerationService {
+  generate(kind: string, subtype: string, prominence: string, tags: string[], culture: string): string;
+}
+
 export type EnrichmentMode = 'off' | 'partial' | 'full';
 
 export interface EnrichmentConfig {
@@ -291,6 +299,9 @@ export interface EngineConfig {
   enrichmentConfig?: EnrichmentConfig;
   loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
+
+  // Name generation service (wraps name-forge)
+  nameForgeService?: NameGenerationService;
 }
 
 // Meta-entity formation config (legacy - used by validationOrchestrator)

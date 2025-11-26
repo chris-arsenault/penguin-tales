@@ -8,7 +8,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName } from '@lore-weave/core/utils/helpers';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   generateExplorationTheme,
   shouldDiscoverLocation,
@@ -151,17 +151,15 @@ export const geographicExploration: GrowthTemplate = {
       };
     }
 
-    // Generate penguin-style name with themeString as descriptor
-    const locationName = generateName('location');
+    // Format theme for description
     const formattedTheme = theme.themeString.split('_').map(w =>
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
-    // Create the discovered location
+    // Create the discovered location (name will be auto-generated)
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,
-      name: `${locationName} ${formattedTheme}`,
       description: `A newly discovered ${formattedTheme.toLowerCase()} during the ${graphView.currentEra.name}`,
       status: 'unspoiled',
       prominence: 'marginal',

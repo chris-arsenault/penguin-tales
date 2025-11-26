@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
+import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
 
 /**
  * Cult Formation Template
@@ -148,7 +148,6 @@ export const cultFormation: GrowthTemplate = {
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
-      name: generateName('mystic'),
       description: `The enigmatic prophet of ${cult.name}`,
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
@@ -177,7 +176,6 @@ export const cultFormation: GrowthTemplate = {
           factory: (gv, ctx) => ({
             kind: 'npc',
             subtype: pickRandom(['merchant', 'outlaw']),
-            name: generateName('npc'),
             description: `A convert drawn to the cult's mystical teachings`,
             status: 'alive',
             prominence: 'marginal',

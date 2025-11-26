@@ -33,7 +33,8 @@ export type {
   SystemResult,
   TemplateResult,
   MetaEntityConfig,
-  EntityOperatorRegistry
+  EntityOperatorRegistry,
+  NameGenerationService
 } from './types/engine';
 
 export { ComponentPurpose } from './types/engine';
@@ -83,8 +84,6 @@ export { ImageGenerationService } from './services/imageGenerationService';
 // Core helpers
 export {
   generateId,
-  generateName,
-  setNameGenerator,
   pickRandom,
   pickMultiple,
   findEntities,
@@ -99,6 +98,10 @@ export {
   modifyRelationshipStrength,
   areRelationshipsCompatible
 } from './utils/helpers';
+
+// Name generation service (wraps name-forge)
+export { NameForgeService } from './services/nameForgeService';
+export type { NameForgeConfig, NameForgeCultureConfig } from './services/nameForgeService';
 
 // Validation
 export { validateWorld } from './utils/validators';

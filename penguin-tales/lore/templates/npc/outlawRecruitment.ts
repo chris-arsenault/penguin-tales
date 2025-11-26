@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom } from '@lore-weave/core/utils/helpers';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 
 export const outlawRecruitment: GrowthTemplate = {
   id: 'outlaw_recruitment',
@@ -88,7 +88,6 @@ export const outlawRecruitment: GrowthTemplate = {
         factory: (gv, ctx) => ({
           kind: 'npc',
           subtype: 'outlaw',
-          name: generateName('outlaw'),
           description: `A shady character working for ${faction.name}`,
           status: 'alive',
           prominence: 'marginal',

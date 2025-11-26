@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom, slugifyName, archiveRelationship } from '@lore-weave/core/utils/helpers';
+import { pickRandom, slugifyName, archiveRelationship } from '@lore-weave/core/utils/helpers';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -98,7 +98,6 @@ export const succession: GrowthTemplate = {
     const newLeader: Partial<HardState> = {
       kind: 'npc',
       subtype: 'mayor',
-      name: generateName('mayor'),
       description: `Successor to ${oldLeader.name} in ${colony.name}`,
       status: 'alive',
       prominence: 'marginal', // New leaders start marginal, must earn respect
@@ -143,7 +142,7 @@ export const succession: GrowthTemplate = {
     return {
       entities: [newLeader],
       relationships,
-      description: `${newLeader.name} succeeds ${oldLeader.name} in ${colony.name}`
+      description: `New mayor succeeds ${oldLeader.name} in ${colony.name}`
     };
   }
 };

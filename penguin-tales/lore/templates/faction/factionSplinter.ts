@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom, archiveRelationship, addRelationshipWithDistance } from '@lore-weave/core/utils/helpers';
+import { pickRandom, archiveRelationship, addRelationshipWithDistance } from '@lore-weave/core/utils/helpers';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -162,7 +162,6 @@ export const factionSplinter: GrowthTemplate = {
       leader = {
         kind: 'npc',
         subtype: Math.random() < leaderHeroChance ? 'hero' : 'outlaw',
-        name: generateName('leader'),
         description: `Charismatic leader of the ${splinter.name}`,
         status: 'alive',
         prominence: 'recognized',

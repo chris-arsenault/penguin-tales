@@ -5,7 +5,7 @@ import { DomainLoreProvider } from '../types/domainLore';
 import { LLMClient } from './llmClient';
 import { LoreValidator } from './loreValidator';
 import { NameLogger } from './nameLogger';
-import { generateName, upsertNameTag, parseJsonSafe, chunk, generateLoreId } from '../utils/helpers';
+import { upsertNameTag, parseJsonSafe, chunk, generateLoreId } from '../utils/helpers';
 
 export class EnrichmentService {
   private llm: LLMClient;
@@ -41,115 +41,9 @@ export class EnrichmentService {
     return this.loreLog;
   }
 
-  /**
-   * Generate unique names for entities in large batches
-   * This runs BEFORE description generation to ensure all lore uses final names
-   */
-  private async batchGenerateNames(
-    entities: HardState[],
-    context: EnrichmentContext
-  ): Promise<void> {
-    if (!this.isEnabled() || entities.length === 0) return;
-
-    // Use MUCH larger batches for naming (up to 20 entities at once)
-    const namingBatchSize = 20;
-    const batches = chunk(entities, namingBatchSize);
-
-    console.log(`\n🏷️  Generating names for ${entities.length} entities in ${batches.length} batch(es)...`);
-
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-
-      // Get all existing names to avoid collisions
-      const existingNames = this.nameLogger.getCurrentNames();
-
-      const promptEntities = batch.map(e => ({
-        id: e.id,
-        kind: e.kind,
-        subtype: e.subtype,
-        prominence: e.prominence,
-        placeholder: e.name
-      }));
-
-      const namingRules = this.loreProvider.getNamingRules();
-      const toneInstructions = Object.entries(namingRules.toneGuidance)
-        .map(([group, tone]) => `${group}: ${tone}`)
-        .join('; ');
-
-      const prompt = [
-        `You are naming entities in ${this.loreProvider.getWorldName()}.`,
-        ``,
-        `CRITICAL NAME UNIQUENESS REQUIREMENTS:`,
-        `1. Every name MUST be completely unique - no duplicates allowed`,
-        `2. Names must be SIGNIFICANTLY different from each other - vary structure, themes, and word choices`,
-        `3. Do NOT reuse these existing names: ${existingNames.slice(-30).join(', ')}`,
-        `4. BANNED patterns to avoid: generic descriptors (New X, Old Y, East/West/North/South + common noun)`,
-        `5. Use creative, evocative, MEMORABLE names with varied structures`,
-        ``,
-        `Entities to name (JSON array of ${batch.length} items):`,
-        JSON.stringify(promptEntities, null, 2),
-        ``,
-        `Tone guidance: ${toneInstructions}`,
-        `Naming patterns: ${namingRules.patterns.join('; ')}`,
-        `Canon facts: ${this.loreProvider.getCanonFacts().join('; ')}`,
-        ``,
-        `IMPORTANT VARIETY REQUIREMENTS:`,
-        `- Use different word structures (2-word, 3-word, compound words, possessives)`,
-        `- Mix themes (geographic, mythical, functional, historical, emotional)`,
-        `- Vary syllable counts (2-8 syllables)`,
-        `- Use unexpected combinations and creative metaphors`,
-        `- Make each name MEMORABLE and DISTINCT`,
-        ``,
-        `Return JSON array with ONLY id and name fields: [{"id": "...", "name": "..."}]`,
-        `Every name must be completely unique!`
-      ].join('\n');
-
-      const result = await this.llm.complete({
-        systemPrompt: 'You generate unique, creative, memorable names. Every name must be completely different. NO DUPLICATES. Be bold and inventive.',
-        prompt,
-        maxTokens: Math.min(2000, batch.length * 80),
-        temperature: 0.8 // Higher temperature for more variety
-      });
-
-      const parsed = parseJsonSafe<Array<{ id: string; name: string }>>(result.text);
-      if (!parsed) {
-        console.warn(`Batch ${batchIndex + 1}: Failed to parse naming response, keeping placeholders`);
-        continue;
-      }
-
-      // Apply names and log changes
-      let namesApplied = 0;
-      parsed.forEach(entry => {
-        const entity = batch.find(e => e.id === entry.id);
-        if (!entity || !entry.name) return;
-
-        const oldName = entity.name;
-        entity.name = entry.name;
-        namesApplied++;
-
-        // Log the change
-        this.nameLogger.recordChange(entity.id, entity.kind, oldName, entry.name, context.graphSnapshot.tick);
-
-        // Update name tag
-        if (entry.name !== oldName) {
-          upsertNameTag(entity, entry.name);
-        }
-      });
-
-      console.log(`  Batch ${batchIndex + 1}/${batches.length}: Named ${namesApplied}/${batch.length} entities`);
-    }
-
-    // Report on duplicates
-    const stats = this.nameLogger.getStats();
-    if (stats.duplicateNames > 0) {
-      console.warn(`  ⚠️  ${stats.duplicateNames} duplicate names detected!`);
-    }
-  }
-
   public async enrichEntities(
     entities: HardState[],
-    context: EnrichmentContext,
-    options?: { preserveNames?: boolean }
+    context: EnrichmentContext
   ): Promise<LoreRecord[]> {
     if (!this.isEnabled() || entities.length === 0) {
       return [];
@@ -157,15 +51,9 @@ export class EnrichmentService {
 
     const records: LoreRecord[] = [];
     const loreHighlights = this.buildLoreHighlights();
-    const preserveNames = options?.preserveNames || false;
 
-    // PHASE 1: Generate all names first (in large batches for variety)
-    if (!preserveNames) {
-      await this.batchGenerateNames(entities, context);
-    }
-
-    // PHASE 2: Generate descriptions using the finalized names
-    // Smaller batches for descriptions since they're more complex
+    // Names are now generated synchronously by name-forge via addEntity()
+    // This method only handles description enrichment
     const descriptionBatchSize = 6;
     const batches = entities.length > descriptionBatchSize
       ? chunk(entities, descriptionBatchSize)
