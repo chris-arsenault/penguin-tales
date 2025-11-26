@@ -129,6 +129,24 @@ export async function listProjects() {
 }
 
 /**
+ * Check if a project exists by ID
+ * @param {string} id
+ * @returns {Promise<boolean>}
+ */
+export async function projectExists(id) {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.count(IDBKeyRange.only(id));
+
+    request.onsuccess = () => resolve(request.result > 0);
+    request.onerror = () => reject(new Error('Failed to check project existence'));
+  });
+}
+
+/**
  * Check if IndexedDB is available
  * @returns {boolean}
  */

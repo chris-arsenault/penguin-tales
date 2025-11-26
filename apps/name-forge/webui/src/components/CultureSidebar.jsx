@@ -1,12 +1,9 @@
 import { useState } from 'react';
 
 function CultureSidebar({
-  worldSchema,
   cultures,
   selectedCulture,
-  selectedEntityKind,
   onSelectCulture,
-  onSelectEntityKind,
   onCulturesChange
 }) {
   const [creatingCulture, setCreatingCulture] = useState(false);
@@ -20,8 +17,8 @@ function CultureSidebar({
       return;
     }
 
-    if (!/^[a-z0-9_-]+$/.test(newCultureId)) {
-      setError('Culture ID must be lowercase letters, numbers, hyphens, and underscores only');
+    if (!/^[a-z0-9_]+$/.test(newCultureId)) {
+      setError('Culture ID must be lowercase letters, numbers, and underscores only (no hyphens)');
       return;
     }
 
@@ -32,12 +29,15 @@ function CultureSidebar({
 
     const cultureName = newCultureName || newCultureId;
 
-    // Create new culture in cultures object (single source of truth)
+    // Create new culture with culture-level resources
     const newCulture = {
       id: newCultureId,
       name: cultureName,
       domains: [],
-      entityConfigs: {}
+      lexemeLists: {},
+      lexemeSpecs: {},
+      grammars: [],
+      profiles: []
     };
 
     const updatedCultures = { ...cultures, [newCultureId]: newCulture };
@@ -53,63 +53,26 @@ function CultureSidebar({
     setError(null);
   };
 
-  // Check if any domain in the culture applies to a specific entity kind
-  const hasApplicableDomain = (culture, entityKind) => {
-    if (!culture?.entityConfigs) return false;
-    for (const [kind, config] of Object.entries(culture.entityConfigs)) {
-      if (config?.domain) {
-        const appliesTo = config.domain.appliesTo?.kind || [];
-        if (appliesTo.includes(entityKind)) return true;
-      }
-    }
-    return false;
+  // Get resource counts for a culture
+  const getResourceCounts = (culture) => {
+    return {
+      domains: culture?.domains?.length || 0,
+      lexemes: Object.keys(culture?.lexemeLists || {}).length,
+      grammars: culture?.grammars?.length || 0,
+      profiles: culture?.profiles?.length || 0
+    };
   };
 
+  // Calculate completion based on having at least one of each resource
   const calculateCompletion = (culture) => {
-    if (!culture || !culture.entityConfigs) return 0;
-
-    const kinds = worldSchema?.hardState?.map(e => e.kind) || [];
-    if (kinds.length === 0) return 0;
-
-    let totalSteps = 0;
-    let completedSteps = 0;
-
-    for (const kind of kinds) {
-      const config = culture.entityConfigs[kind];
-      const status = config?.completionStatus || {};
-
-      // 3 steps per entity: domain, lexemes, profile
-      totalSteps += 3;
-
-      // Domain: check direct config OR shared domain
-      if (status.domain || hasApplicableDomain(culture, kind)) completedSteps += 1;
-      if (status.lexemes > 0) completedSteps += Math.min(status.lexemes / 4, 1);
-      if (status.profile) completedSteps += 1;
-    }
-
-    return Math.round((completedSteps / totalSteps) * 100);
-  };
-
-  const getEntityCompletion = (culture, entityKind, entityConfig) => {
-    const status = entityConfig?.completionStatus || {};
+    const counts = getResourceCounts(culture);
     let completed = 0;
-
-    // Domain: check direct config OR shared domain
-    if (status.domain || hasApplicableDomain(culture, entityKind)) completed++;
-    if (status.lexemes > 0) completed += Math.min(status.lexemes / 4, 1);
-    if (status.profile) completed++;
-
-    return Math.round((completed / 3) * 100);
+    if (counts.domains > 0) completed++;
+    if (counts.lexemes > 0) completed++;
+    if (counts.grammars > 0) completed++;
+    if (counts.profiles > 0) completed++;
+    return Math.round((completed / 4) * 100);
   };
-
-  // Check if entity has shared domain (not direct)
-  const hasSharedDomain = (culture, entityKind) => {
-    const config = culture?.entityConfigs?.[entityKind];
-    if (config?.completionStatus?.domain) return false; // Has direct domain
-    return hasApplicableDomain(culture, entityKind);
-  };
-
-  const entityKinds = worldSchema ? worldSchema.hardState.map(e => e.kind) : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -188,11 +151,13 @@ function CultureSidebar({
         ) : (
           Object.values(cultures).map((culture) => {
             const completion = calculateCompletion(culture);
+            const counts = getResourceCounts(culture);
             const isSelected = selectedCulture === culture.id;
 
             return (
               <div
                 key={culture.id}
+                onClick={() => onSelectCulture(culture.id)}
                 style={{
                   marginBottom: '0.5rem',
                   border: isSelected
@@ -202,37 +167,66 @@ function CultureSidebar({
                   background: isSelected
                     ? 'rgba(255, 215, 0, 0.1)'
                     : 'rgba(30, 58, 95, 0.3)',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'rgba(30, 58, 95, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = 'rgba(30, 58, 95, 0.3)';
+                  }
                 }}
               >
-                <div
-                  onClick={() => onSelectCulture(culture.id)}
-                  style={{
-                    padding: '0.75rem',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'rgba(30, 58, 95, 0.5)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
+                <div style={{ padding: '0.75rem' }}>
                   <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
                     {culture.name || culture.id}
                   </div>
+
+                  {/* Resource counts */}
                   <div style={{
-                    fontSize: '0.75rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '0.25rem',
+                    fontSize: '0.7rem',
                     color: 'var(--arctic-frost)',
                     marginBottom: '0.5rem'
                   }}>
-                    Completion: {completion}%
+                    <span style={{
+                      padding: '0.15rem 0.35rem',
+                      background: counts.domains > 0 ? 'rgba(147, 51, 234, 0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: '3px'
+                    }}>
+                      {counts.domains} domains
+                    </span>
+                    <span style={{
+                      padding: '0.15rem 0.35rem',
+                      background: counts.lexemes > 0 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: '3px'
+                    }}>
+                      {counts.lexemes} lexemes
+                    </span>
+                    <span style={{
+                      padding: '0.15rem 0.35rem',
+                      background: counts.grammars > 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: '3px'
+                    }}>
+                      {counts.grammars} grammars
+                    </span>
+                    <span style={{
+                      padding: '0.15rem 0.35rem',
+                      background: counts.profiles > 0 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: '3px'
+                    }}>
+                      {counts.profiles} profiles
+                    </span>
                   </div>
+
+                  {/* Progress bar */}
                   <div style={{
                     width: '100%',
                     height: '4px',
@@ -250,70 +244,6 @@ function CultureSidebar({
                     }} />
                   </div>
                 </div>
-
-                {isSelected && culture.entityConfigs && (
-                  <div style={{
-                    borderTop: '1px solid rgba(255, 215, 0, 0.3)',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    padding: '0.5rem'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'uppercase', color: 'var(--arctic-light)' }}>
-                      Entity Types
-                    </div>
-                    {entityKinds.map((kind) => {
-                      const entityConfig = culture.entityConfigs[kind];
-                      const entityCompletion = getEntityCompletion(culture, kind, entityConfig);
-                      const isEntitySelected = selectedEntityKind === kind;
-                      const isShared = hasSharedDomain(culture, kind);
-                      const hasDirect = entityConfig?.completionStatus?.domain;
-
-                      return (
-                        <div
-                          key={kind}
-                          onClick={() => onSelectEntityKind(kind)}
-                          style={{
-                            padding: '0.5rem',
-                            marginBottom: '0.25rem',
-                            borderRadius: '4px',
-                            background: isEntitySelected
-                              ? 'rgba(255, 215, 0, 0.2)'
-                              : 'rgba(30, 58, 95, 0.3)',
-                            border: isEntitySelected
-                              ? '1px solid var(--gold-accent)'
-                              : '1px solid transparent',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isEntitySelected) {
-                              e.currentTarget.style.background = 'rgba(30, 58, 95, 0.5)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isEntitySelected) {
-                              e.currentTarget.style.background = 'rgba(30, 58, 95, 0.3)';
-                            }
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ textTransform: 'capitalize' }}>
-                              {kind}
-                              {isShared && <span title="Shared domain" style={{ marginLeft: '0.25rem' }}>🔗</span>}
-                              {hasDirect && <span title="Has domain" style={{ marginLeft: '0.25rem' }}>✓</span>}
-                            </span>
-                            <span style={{
-                              fontSize: '0.75rem',
-                              color: entityCompletion === 100 ? 'var(--gold-accent)' : 'var(--arctic-frost)'
-                            }}>
-                              {entityCompletion}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             );
           })

@@ -17,6 +17,29 @@ import { exportProject, promptImportProject } from './export-import.js';
 import { createEmptyProject } from './types.js';
 
 /**
+ * Fetch and load the default example project
+ * @returns {Promise<Object|null>} The default project or null if fetch fails
+ */
+async function fetchDefaultProject() {
+  try {
+    const response = await fetch('/default-project.json');
+    if (!response.ok) {
+      console.warn('Default project not found');
+      return null;
+    }
+    const project = await response.json();
+    // Update timestamps to now
+    const now = new Date().toISOString();
+    project.createdAt = now;
+    project.updatedAt = now;
+    return project;
+  } catch (error) {
+    console.warn('Failed to load default project:', error);
+    return null;
+  }
+}
+
+/**
  * Hook for managing project storage
  * @returns {Object} Storage operations and state
  */
@@ -39,7 +62,17 @@ export function useProjectStorage() {
 
       try {
         await openDatabase();
-        const projectList = await listProjects();
+        let projectList = await listProjects();
+
+        // If no projects exist, load the default example project
+        if (projectList.length === 0) {
+          const defaultProject = await fetchDefaultProject();
+          if (defaultProject) {
+            await saveProject(defaultProject);
+            projectList = await listProjects();
+          }
+        }
+
         setProjects(projectList);
 
         // Auto-load most recent project if available

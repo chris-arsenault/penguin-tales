@@ -1,6 +1,36 @@
 export const API_URL = 'http://localhost:3001';
 
-export const POS_TAGS = ['noun', 'verb_3sg', 'adj', 'noun_abstract', 'prep', 'ordinal'];
+// Lexeme categories for name generation
+export const LEXEME_CATEGORIES = {
+  // Grammatical
+  noun: { label: 'Noun', desc: 'Concrete nouns - objects, things' },
+  verb: { label: 'Verb', desc: 'Action words' },
+  adjective: { label: 'Adjective', desc: 'Descriptive words' },
+  abstract: { label: 'Abstract', desc: 'Concepts, ideas, qualities' },
+
+  // Name components
+  title: { label: 'Title', desc: 'Honorifics before names' },
+  epithet: { label: 'Epithet', desc: 'Descriptive phrases after names' },
+  prefix: { label: 'Prefix', desc: 'Word beginnings that attach to roots' },
+  suffix: { label: 'Suffix', desc: 'Word endings that attach to roots' },
+  connector: { label: 'Connector', desc: 'Linking words (of, the, von)' },
+
+  // Semantic categories
+  place: { label: 'Place Word', desc: 'Geographic/location terms' },
+  creature: { label: 'Creature', desc: 'Beasts, monsters, animals' },
+  element: { label: 'Element', desc: 'Natural forces and phenomena' },
+  material: { label: 'Material', desc: 'Substances and materials' },
+  celestial: { label: 'Celestial', desc: 'Heavenly bodies, sky phenomena' },
+  color: { label: 'Color', desc: 'Color words' },
+  kinship: { label: 'Kinship', desc: 'Family and clan terms' },
+  occupation: { label: 'Occupation', desc: 'Roles, jobs, callings' },
+  virtue: { label: 'Virtue', desc: 'Positive traits and values' },
+  vice: { label: 'Vice', desc: 'Negative traits and flaws' },
+  number: { label: 'Number', desc: 'Numeric and ordinal words' },
+};
+
+// For backwards compatibility
+export const POS_TAGS = Object.keys(LEXEME_CATEGORIES);
 
 export const PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 

@@ -13,7 +13,6 @@ function getInitialStateFromURL() {
   const params = new URLSearchParams(window.location.search);
   return {
     culture: params.get('culture') || null,
-    entity: params.get('entity') || null,
     tab: params.get('tab') || 'schema',
     workspaceTab: params.get('wtab') || 'domain'
   };
@@ -24,12 +23,23 @@ function App() {
 
   const [activeTab, setActiveTab] = useState(initialState.tab);
   const [selectedCulture, setSelectedCulture] = useState(initialState.culture);
-  const [selectedEntityKind, setSelectedEntityKind] = useState(initialState.entity);
   const [workspaceTab, setWorkspaceTab] = useState(initialState.workspaceTab);
 
   // Session-only API key (not persisted)
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+
+  // GenerateTab form state (persisted across tab switches)
+  const [generateFormState, setGenerateFormState] = useState({
+    selectedCulture: '',
+    selectedProfile: '',
+    selectedKind: '',
+    selectedSubKind: '',
+    tags: '',
+    prominence: '',
+    count: 20,
+    contextPairs: [{ key: '', value: '' }]
+  });
 
   // Use IndexedDB storage
   const {
@@ -55,13 +65,12 @@ function App() {
   const updateURL = useCallback(() => {
     const params = new URLSearchParams();
     if (selectedCulture) params.set('culture', selectedCulture);
-    if (selectedEntityKind) params.set('entity', selectedEntityKind);
     if (activeTab && activeTab !== 'schema') params.set('tab', activeTab);
     if (workspaceTab && workspaceTab !== 'domain') params.set('wtab', workspaceTab);
 
     const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, '', newURL);
-  }, [selectedCulture, selectedEntityKind, activeTab, workspaceTab]);
+  }, [selectedCulture, activeTab, workspaceTab]);
 
   useEffect(() => {
     updateURL();
@@ -91,23 +100,6 @@ function App() {
     await updateProject({ cultures: newCultures });
   };
 
-  // Handle entity config updates
-  const handleConfigChange = async (updatedConfig) => {
-    if (!currentProject || !selectedCulture || !selectedEntityKind) return;
-
-    const newCultures = {
-      ...cultures,
-      [selectedCulture]: {
-        ...cultures[selectedCulture],
-        entityConfigs: {
-          ...cultures[selectedCulture]?.entityConfigs,
-          [selectedEntityKind]: updatedConfig
-        }
-      }
-    };
-
-    await updateProject({ cultures: newCultures });
-  };
 
   return (
     <div className="app">
@@ -281,12 +273,9 @@ function App() {
                     overflowY: 'auto'
                   }}>
                     <CultureSidebar
-                      worldSchema={worldSchema}
                       cultures={cultures}
                       selectedCulture={selectedCulture}
-                      selectedEntityKind={selectedEntityKind}
                       onSelectCulture={setSelectedCulture}
-                      onSelectEntityKind={setSelectedEntityKind}
                       onCulturesChange={handleCulturesChange}
                     />
                   </div>
@@ -294,17 +283,10 @@ function App() {
                     <EntityWorkspace
                       worldSchema={worldSchema}
                       cultureId={selectedCulture}
-                      entityKind={selectedEntityKind}
-                      entityConfig={
-                        selectedCulture && selectedEntityKind
-                          ? cultures[selectedCulture]?.entityConfigs?.[selectedEntityKind]
-                          : null
-                      }
                       cultureConfig={selectedCulture ? cultures[selectedCulture] : null}
                       allCultures={cultures}
                       activeTab={workspaceTab}
                       onTabChange={setWorkspaceTab}
-                      onConfigChange={handleConfigChange}
                       onCultureChange={handleCultureChange}
                       apiKey={apiKey}
                     />
@@ -316,6 +298,8 @@ function App() {
                 <GenerateTab
                   worldSchema={worldSchema}
                   cultures={cultures}
+                  formState={generateFormState}
+                  onFormStateChange={setGenerateFormState}
                 />
               )}
 

@@ -21,30 +21,25 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background: var(--arctic-deep);
   color: #ffffff;
 }
 
 .app {
+  width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
   background: linear-gradient(135deg, #0a1929 0%, #1a2332 50%, #0f1f3a 100%);
-  max-width: 2400px;
-  margin: 0 auto;
-  position: relative;
 }
 
 .app-header {
   background: linear-gradient(135deg, var(--arctic-dark) 0%, var(--arctic-mid) 100%);
   color: white;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   border-bottom: 1px solid rgba(59, 130, 246, 0.2);
-  height: 106px;
-  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .app-header h1 {
@@ -82,55 +77,58 @@ body {
   background: linear-gradient(180deg, var(--arctic-frost) 0%, var(--arctic-ice) 100%);
 }
 
-/* Layout - Three Column Flex */
+/* Layout - Three Column Flex (Fixed | Flexible | Fixed) */
 .app-container {
   display: flex;
-  flex: 1;
-  overflow: hidden;
-  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0; /* Critical for nested flex scrolling */
+  width: 100%;
 }
 
+/* Left sidebar - Fixed width navigation */
 .sidebar {
   width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   background: rgba(30, 58, 95, 0.6);
   border-right: 1px solid rgba(59, 130, 246, 0.2);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   backdrop-filter: blur(10px);
-  flex-shrink: 0;
 }
 
+/* Center content - Expands to fill available space */
 .main-content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0; /* Critical for flex item overflow */
   padding: 2rem;
   overflow-y: auto;
   overflow-x: hidden;
   background: rgba(10, 25, 41, 0.4);
-  min-width: 0;
 }
 
 .main-content > div {
-  max-width: 100%;
   width: 100%;
-  box-sizing: border-box;
+  height: 100%;
 }
 
 .workshop-container {
   display: flex;
   height: 100%;
+  width: 100%;
   overflow: hidden;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
+/* Right sidebar - Fixed width guide */
 .guide-sidebar {
   width: 380px;
+  min-width: 380px;
+  max-width: 380px;
   background: rgba(30, 58, 95, 0.6);
   border-left: 1px solid rgba(59, 130, 246, 0.2);
   overflow-y: auto;
   backdrop-filter: blur(10px);
-  flex-shrink: 0;
 }
 
 .guide-content {
@@ -274,6 +272,35 @@ body {
 }
 
 /* Forms and Inputs */
+
+/* Global input styling */
+input,
+textarea,
+select {
+  padding: 0.75rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: rgba(30, 58, 95, 0.4);
+  color: #ffffff;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--arctic-ice);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  background: rgba(30, 58, 95, 0.6);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(147, 197, 253, 0.5);
+}
+
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -290,23 +317,6 @@ body {
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 6px;
-  font-size: 1rem;
-  font-family: inherit;
-  transition: all 0.2s;
-  background: rgba(30, 58, 95, 0.4);
-  color: #ffffff;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--arctic-ice);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-  background: rgba(30, 58, 95, 0.6);
 }
 
 .form-group textarea {

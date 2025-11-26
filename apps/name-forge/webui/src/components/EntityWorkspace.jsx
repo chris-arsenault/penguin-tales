@@ -4,13 +4,10 @@ import { DomainTab, LexemesTab, GrammarsTab, ProfileTab } from './tabs';
 function EntityWorkspace({
   worldSchema,
   cultureId,
-  entityKind,
-  entityConfig,
   cultureConfig,
   allCultures,
   activeTab = 'domain',
   onTabChange,
-  onConfigChange,
   onCultureChange,
   apiKey
 }) {
@@ -19,10 +16,10 @@ function EntityWorkspace({
   // Use prop or fallback to local handling
   const setActiveTab = onTabChange || (() => {});
 
-  if (!cultureId || !entityKind) {
+  if (!cultureId) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-        <p>Select a culture and entity type from the sidebar to begin</p>
+        <p>Select a culture from the sidebar to begin</p>
       </div>
     );
   }
@@ -37,82 +34,50 @@ function EntityWorkspace({
     }
   };
 
-  // Auto-generate profile from existing domains and grammars
-  const handleAutoGenerateProfile = () => {
-    const strategies = [];
-    const cultureDomains = cultureConfig?.domains || [];
-    const grammars = entityConfig?.grammars || [];
-
-    // Add grammar strategies for each grammar
-    grammars.forEach((grammar, idx) => {
-      strategies.push({
-        type: 'grammar',
-        weight: 0.5 / Math.max(grammars.length, 1),
-        grammarId: grammar.id
-      });
-    });
-
-    // Add phonotactic strategy if culture has domains
-    if (cultureDomains.length > 0) {
-      strategies.push({
-        type: 'phonotactic',
-        weight: 0.5,
-        domainId: cultureDomains[0].id
-      });
+  // Handle lexemes change at culture level
+  const handleLexemesChange = (newLexemeLists, newLexemeSpecs) => {
+    if (onCultureChange) {
+      const updates = { ...cultureConfig };
+      if (newLexemeLists !== undefined) updates.lexemeLists = newLexemeLists;
+      if (newLexemeSpecs !== undefined) updates.lexemeSpecs = newLexemeSpecs;
+      onCultureChange(updates);
     }
-
-    // Normalize weights
-    const totalWeight = strategies.reduce((sum, s) => sum + s.weight, 0);
-    if (totalWeight > 0) {
-      strategies.forEach(s => {
-        s.weight = s.weight / totalWeight;
-      });
-    }
-
-    // Create profile with strategyGroups format
-    const profile = {
-      id: `${cultureId}_${entityKind}_profile`,
-      strategyGroups: [
-        {
-          name: 'Default',
-          priority: 0,
-          conditions: null,
-          strategies: strategies
-        }
-      ]
-    };
-
-    // Update entity config with new profile
-    const updatedConfig = {
-      ...entityConfig,
-      profile,
-      completionStatus: {
-        ...entityConfig?.completionStatus,
-        profile: true
-      }
-    };
-
-    onConfigChange(updatedConfig);
   };
 
-  // Check if culture has any domains (domains are now culture-level)
-  const hasCultureDomains = () => {
-    return (cultureConfig?.domains?.length || 0) > 0;
+  // Handle grammars change at culture level
+  const handleGrammarsChange = (newGrammars) => {
+    if (onCultureChange) {
+      onCultureChange({
+        ...cultureConfig,
+        grammars: newGrammars
+      });
+    }
+  };
+
+  // Handle profiles change at culture level
+  const handleProfilesChange = (newProfiles) => {
+    if (onCultureChange) {
+      onCultureChange({
+        ...cultureConfig,
+        profiles: newProfiles
+      });
+    }
   };
 
   const getCompletionBadge = (key) => {
-    // Compute status directly from data rather than stored completionStatus
+    // Compute counts from culture-level data
     if (key === 'domain') {
-      // Domains are now at culture level
-      return hasCultureDomains() ? `(${cultureConfig.domains.length})` : '';
+      const count = cultureConfig?.domains?.length || 0;
+      return count > 0 ? `(${count})` : '';
     } else if (key === 'lexemes') {
-      const count = Object.keys(entityConfig?.lexemeLists || {}).length;
+      const count = Object.keys(cultureConfig?.lexemeLists || {}).length;
       return count > 0 ? `(${count})` : '';
     } else if (key === 'grammars') {
-      const count = (entityConfig?.grammars || []).length;
+      const count = (cultureConfig?.grammars || []).length;
       return count > 0 ? `(${count})` : '';
-    } else if (key === 'profile') {
-      return entityConfig?.profile ? '' : '';
+    } else if (key === 'profiles') {
+      const count = (cultureConfig?.profiles || []).length;
+      return count > 0 ? `(${count})` : '';
     }
 
     return '';
@@ -130,15 +95,14 @@ function EntityWorkspace({
           <div>
             <h2 style={{ margin: 0, marginBottom: '0.25rem' }}>
               <span style={{ textTransform: 'capitalize', color: 'var(--gold-accent)' }}>
-                {cultureId}
+                {cultureConfig?.name || cultureId}
               </span>
-              {' '}/{' '}
-              <span style={{ textTransform: 'capitalize' }}>
-                {entityKind}
+              <span style={{ fontWeight: 'normal', fontSize: '0.9rem', color: 'var(--arctic-frost)', marginLeft: '0.5rem' }}>
+                Culture
               </span>
             </h2>
             <div style={{ fontSize: '0.875rem', color: 'var(--arctic-frost)' }}>
-              Configure naming components for this entity type
+              Configure naming resources shared across all entity types
             </div>
           </div>
 
@@ -172,7 +136,7 @@ function EntityWorkspace({
         display: 'flex',
         gap: '0.5rem'
       }}>
-        {['domain', 'lexemes', 'grammars', 'profile'].map((tab) => (
+        {['domain', 'lexemes', 'grammars', 'profiles'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -197,6 +161,7 @@ function EntityWorkspace({
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
         {activeTab === 'domain' && (
           <DomainTab
+            key={cultureId}
             cultureId={cultureId}
             cultureConfig={cultureConfig}
             allCultures={allCultures}
@@ -206,38 +171,30 @@ function EntityWorkspace({
 
         {activeTab === 'lexemes' && (
           <LexemesTab
+            key={cultureId}
             cultureId={cultureId}
-            entityKind={entityKind}
-            entityConfig={entityConfig}
-            onConfigChange={onConfigChange}
-            worldSchema={worldSchema}
             cultureConfig={cultureConfig}
-            allCultures={allCultures}
+            onLexemesChange={handleLexemesChange}
             apiKey={apiKey}
           />
         )}
 
         {activeTab === 'grammars' && (
           <GrammarsTab
-            entityConfig={entityConfig}
-            onConfigChange={onConfigChange}
+            key={cultureId}
             cultureId={cultureId}
-            entityKind={entityKind}
             cultureConfig={cultureConfig}
-            allCultures={allCultures}
-            worldSchema={worldSchema}
+            onGrammarsChange={handleGrammarsChange}
           />
         )}
 
-        {activeTab === 'profile' && (
+        {activeTab === 'profiles' && (
           <ProfileTab
+            key={cultureId}
             cultureId={cultureId}
-            entityKind={entityKind}
-            entityConfig={entityConfig}
-            onConfigChange={onConfigChange}
-            onAutoGenerate={handleAutoGenerateProfile}
             cultureConfig={cultureConfig}
-            allCultures={allCultures}
+            onProfilesChange={handleProfilesChange}
+            worldSchema={worldSchema}
           />
         )}
       </div>

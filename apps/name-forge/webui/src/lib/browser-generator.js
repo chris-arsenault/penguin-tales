@@ -8,6 +8,73 @@
 import { createRNG, pickRandom, pickWeighted } from '@lib/utils/rng.js';
 import { generatePhonotacticName } from '@lib/phonotactic-pipeline.js';
 
+// Markov model cache
+const markovModelCache = new Map();
+
+/**
+ * Load a Markov model from the public directory
+ */
+async function loadMarkovModel(modelId) {
+  if (markovModelCache.has(modelId)) {
+    return markovModelCache.get(modelId);
+  }
+
+  try {
+    const response = await fetch(`/markov-models/${modelId}.json`);
+    if (!response.ok) {
+      console.warn(`Markov model '${modelId}' not found`);
+      return null;
+    }
+    const model = await response.json();
+    markovModelCache.set(modelId, model);
+    return model;
+  } catch (error) {
+    console.warn(`Failed to load Markov model '${modelId}':`, error);
+    return null;
+  }
+}
+
+/**
+ * Generate a name from a Markov model
+ */
+function generateFromMarkov(model, rng, options = {}) {
+  const { minLength = 3, maxLength = 12 } = options;
+
+  // Pick start state using weighted random
+  let state = weightedRandom(model.startStates, rng);
+  let result = '';
+
+  for (let i = 0; i < maxLength + model.order; i++) {
+    const nextProbs = model.transitions[state];
+    if (!nextProbs) break;
+
+    const next = weightedRandom(nextProbs, rng);
+    if (next === '$') { // END token
+      if (result.length >= minLength) break;
+      continue;
+    }
+
+    result += next;
+    state = state.slice(1) + next;
+  }
+
+  // Capitalize first letter
+  return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+/**
+ * Weighted random selection
+ */
+function weightedRandom(probs, rng) {
+  const r = rng();
+  let sum = 0;
+  for (const [item, prob] of Object.entries(probs)) {
+    sum += prob;
+    if (r <= sum) return item;
+  }
+  return Object.keys(probs)[0];
+}
+
 /**
  * Generate test names using a profile
  *
@@ -18,23 +85,28 @@ import { generatePhonotacticName } from '@lib/phonotactic-pipeline.js';
  * @param {Object} options.lexemes - Lexeme lists keyed by ID
  * @param {number} options.count - Number of names to generate
  * @param {string} options.seed - Optional seed for reproducibility
- * @returns {Object} { names: string[], strategyUsage: Record<string, number> }
+ * @param {Object} options.context - Context key-value pairs for context:key slots
+ * @returns {Promise<Object>} { names: string[], strategyUsage: Record<string, number> }
  */
-export function generateTestNames({
+export async function generateTestNames({
   profile,
   domains = [],
   grammars = [],
   lexemes = {},
   count = 10,
-  seed
+  seed,
+  context = {}
 }) {
   if (!profile) {
     throw new Error('Profile required');
   }
 
+  // Pre-load any Markov models referenced in grammars
+  const markovModels = await preloadMarkovModels(grammars);
+
   const rng = createRNG(seed || `test-${Date.now()}`);
   const names = [];
-  const strategyUsage = { grammar: 0, phonotactic: 0, fallback: 0 };
+  const strategyUsage = { grammar: 0, phonotactic: 0, markov: 0, fallback: 0 };
 
   // Get default strategy group (lowest priority / fallback)
   const groups = profile.strategyGroups || [];
@@ -82,8 +154,9 @@ export function generateTestNames({
       const grammar = grammars.find(g => g.id === strategy.grammarId);
 
       if (grammar) {
-        name = expandGrammar(grammar, lexemeLists, domains, rng);
-        strategyUsed = 'grammar';
+        const result = expandGrammar(grammar, lexemeLists, domains, markovModels, rng, context);
+        name = result.name;
+        strategyUsed = result.usedMarkov ? 'markov' : 'grammar';
       } else {
         name = generateFallbackName(lexemes, rng, i);
         strategyUsed = 'fallback';
@@ -117,23 +190,65 @@ export function generateTestNames({
 }
 
 /**
+ * Pre-load Markov models referenced in grammars
+ */
+async function preloadMarkovModels(grammars) {
+  const modelIds = new Set();
+
+  // Scan all grammar rules for markov: references
+  for (const grammar of grammars) {
+    for (const productions of Object.values(grammar.rules || {})) {
+      for (const production of productions) {
+        for (const token of production) {
+          if (token.includes('markov:')) {
+            // Extract model ID (handle suffixes like markov:norse^'s)
+            const match = token.match(/markov:([a-z]+)/);
+            if (match) {
+              modelIds.add(match[1]);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Load all referenced models
+  const models = new Map();
+  await Promise.all(
+    Array.from(modelIds).map(async (id) => {
+      const model = await loadMarkovModel(id);
+      if (model) {
+        models.set(id, model);
+      }
+    })
+  );
+
+  return models;
+}
+
+/**
  * Expand a grammar rule to generate a name
  *
  * Grammar format: { id, start, rules: { symbol: [["token1", "token2"], [...]] } }
  * Token types:
  *   - slot:lexeme_id   → pick from lexeme list
  *   - domain:domain_id → generate phonotactic name from domain
- *   - markov:model_id  → generate from Markov chain (not supported in browser)
+ *   - markov:model_id  → generate from Markov chain
+ *   - context:key      → resolve from context object (empty string if missing)
  *   - other            → literal text or rule reference
+ *
+ * @returns {{ name: string, usedMarkov: boolean }}
  */
-function expandGrammar(grammar, lexemeLists, domains, rng) {
+function expandGrammar(grammar, lexemeLists, domains, markovModels, rng, userContext = {}) {
   const startSymbol = grammar.start || 'name';
   const rules = grammar.rules || {};
+  const expansionContext = { usedMarkov: false, userContext };
 
-  return expandSymbol(startSymbol, rules, lexemeLists, domains, rng, 0);
+  const name = expandSymbol(startSymbol, rules, lexemeLists, domains, markovModels, rng, expansionContext, 0);
+  return { name, usedMarkov: expansionContext.usedMarkov };
 }
 
-function expandSymbol(symbol, rules, lexemeLists, domains, rng, depth) {
+function expandSymbol(symbol, rules, lexemeLists, domains, markovModels, rng, context, depth) {
   if (depth > 10) {
     return symbol; // Prevent infinite recursion
   }
@@ -141,7 +256,7 @@ function expandSymbol(symbol, rules, lexemeLists, domains, rng, depth) {
   const productions = rules[symbol];
   if (!productions || productions.length === 0) {
     // No rule for this symbol - treat as literal/slot
-    return resolveToken(symbol, lexemeLists, domains, rng, depth);
+    return resolveToken(symbol, lexemeLists, domains, markovModels, rng, context, depth);
   }
 
   // Pick random production
@@ -150,17 +265,27 @@ function expandSymbol(symbol, rules, lexemeLists, domains, rng, depth) {
   // Expand each token in the production
   const parts = production.map(token => {
     // Check if token contains multiple references separated by hyphens
-    if (token.includes('-') && (token.includes('slot:') || token.includes('domain:') || token.includes('markov:'))) {
+    if (token.includes('-') && (token.includes('slot:') || token.includes('domain:') || token.includes('markov:') || token.includes('context:'))) {
       const subParts = token.split('-');
-      return subParts.map(part => resolveToken(part.trim(), lexemeLists, domains, rng, depth)).join('-');
+      return subParts.map(part => {
+        // Check if this part is a rule reference
+        if (rules[part.trim()]) {
+          return expandSymbol(part.trim(), rules, lexemeLists, domains, markovModels, rng, context, depth + 1);
+        }
+        return resolveToken(part.trim(), lexemeLists, domains, markovModels, rng, context, depth);
+      }).join('-');
     }
-    return resolveToken(token, lexemeLists, domains, rng, depth);
+    // Check if token is a rule reference (non-terminal)
+    if (rules[token]) {
+      return expandSymbol(token, rules, lexemeLists, domains, markovModels, rng, context, depth + 1);
+    }
+    return resolveToken(token, lexemeLists, domains, markovModels, rng, context, depth);
   });
 
   return parts.join(' ').trim();
 }
 
-function resolveToken(token, lexemeLists, domains, rng, depth = 0) {
+function resolveToken(token, lexemeLists, domains, markovModels, rng, context, depth = 0) {
   // Check for ^ terminator suffix (e.g., "domain:tech^'s" → resolve domain, append "'s")
   let suffix = '';
   let baseToken = token;
@@ -190,15 +315,31 @@ function resolveToken(token, lexemeLists, domains, rng, depth = 0) {
     return domainId + suffix; // Return the ID if domain not found
   }
 
-  // Handle markov:modelId references (not supported in browser without loading models)
+  // Handle markov:modelId references
   if (baseToken.startsWith('markov:')) {
     const modelId = baseToken.substring(7);
-    // Fall back to a simple generated name since Markov models aren't loaded
-    // Generate a pseudo-markov name using available domains
+    const model = markovModels.get(modelId);
+
+    if (model) {
+      context.usedMarkov = true;
+      return generateFromMarkov(model, rng) + suffix;
+    }
+
+    // Fallback to phonotactic if model not loaded
+    console.warn(`Markov model '${modelId}' not available, falling back to phonotactic`);
     if (domains.length > 0) {
       return generatePhonotacticName(rng, domains[0]) + suffix;
     }
     return modelId + suffix;
+  }
+
+  // Handle context:key references (user-provided context values)
+  if (baseToken.startsWith('context:')) {
+    const key = baseToken.substring(8);
+    const userContext = context.userContext || {};
+    // Return the context value or empty string if not found
+    const value = userContext[key];
+    return (value !== undefined && value !== null ? String(value) : '') + suffix;
   }
 
   // Return literal as-is
