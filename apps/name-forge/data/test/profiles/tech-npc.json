@@ -1,0 +1,23 @@
+{
+  "profiles": [
+    {
+      "id": "tech:npc",
+      "cultureId": "tech",
+      "type": "npc",
+      "strategies": [
+        {
+          "id": "tech_npc_grammar",
+          "kind": "grammar",
+          "weight": 0.6,
+          "grammarId": "tech_names"
+        },
+        {
+          "id": "tech_npc_phonotactic",
+          "kind": "phonotactic",
+          "weight": 0.4,
+          "domainId": "tech_domain"
+        }
+      ]
+    }
+  ]
+}
