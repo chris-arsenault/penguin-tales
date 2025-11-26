@@ -13,6 +13,8 @@
     "generate": "tsx server/cli-generate.ts",
     "api": "tsx server/api-server.ts",
     "ui": "concurrently \"npm run api\" \"cd webui && npm run dev\" --names \"api,ui\" --prefix-colors \"blue,magenta\"",
+    "ui:static": "cd webui && npm run static",
+    "ui:serve": "cd webui && npm run serve",
     "reset:test": "rm -rf data/test && cp -r data/seed data/test && echo '✅ Reset test meta-domain from seed'",
     "build": "rm -rf dist && tsc",
     "build:fast": "tsc",

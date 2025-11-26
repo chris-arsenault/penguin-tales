@@ -1,9 +1,6 @@
 import { useState } from 'react';
 
-const API_URL = 'http://localhost:3001';
-
 function CultureSidebar({
-  metaDomain,
   worldSchema,
   cultures,
   selectedCulture,
@@ -17,7 +14,7 @@ function CultureSidebar({
   const [newCultureName, setNewCultureName] = useState('');
   const [error, setError] = useState(null);
 
-  const handleCreateCulture = async () => {
+  const handleCreateCulture = () => {
     if (!newCultureId.trim()) {
       setError('Culture ID is required');
       return;
@@ -28,38 +25,32 @@ function CultureSidebar({
       return;
     }
 
-    try {
-      const response = await fetch(`${API_URL}/api/v2/cultures/${metaDomain}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cultureId: newCultureId,
-          cultureName: newCultureName || newCultureId
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create culture');
-      }
-
-      const data = await response.json();
-
-      // Add new culture to the list
-      const updatedCultures = { ...cultures, [data.culture.id]: data.culture };
-      onCulturesChange(updatedCultures);
-
-      // Select the new culture
-      onSelectCulture(data.culture.id);
-
-      // Reset form
-      setNewCultureId('');
-      setNewCultureName('');
-      setCreatingCulture(false);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
+    if (cultures[newCultureId]) {
+      setError('Culture ID already exists');
+      return;
     }
+
+    const cultureName = newCultureName || newCultureId;
+
+    // Create new culture in cultures object (single source of truth)
+    const newCulture = {
+      id: newCultureId,
+      name: cultureName,
+      domains: [],
+      entityConfigs: {}
+    };
+
+    const updatedCultures = { ...cultures, [newCultureId]: newCulture };
+    onCulturesChange(updatedCultures);
+
+    // Select the new culture
+    onSelectCulture(newCultureId);
+
+    // Reset form
+    setNewCultureId('');
+    setNewCultureName('');
+    setCreatingCulture(false);
+    setError(null);
   };
 
   // Check if any domain in the culture applies to a specific entity kind
@@ -87,7 +78,7 @@ function CultureSidebar({
       const config = culture.entityConfigs[kind];
       const status = config?.completionStatus || {};
 
-      // 3 steps per entity: domain, lexemes, profile (templates removed - use grammars instead)
+      // 3 steps per entity: domain, lexemes, profile
       totalSteps += 3;
 
       // Domain: check direct config OR shared domain

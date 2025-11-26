@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { API_URL, POS_TAGS } from '../constants';
+import { POS_TAGS } from '../constants';
 import { getEffectiveDomain, getSharedLexemeLists } from '../utils';
 
-function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigChange, worldSchema, cultureConfig, allCultures }) {
+function LexemesTab({ cultureId, entityKind, entityConfig, onConfigChange, worldSchema, cultureConfig, allCultures, apiKey }) {
   const [mode, setMode] = useState('view'); // 'view', 'create-spec', 'create-manual', 'generate'
   const [selectedList, setSelectedList] = useState(null);
   const [selectedListSource, setSelectedListSource] = useState(null); // { cultureId, entityKind } or null for local
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [apiKey, setApiKey] = useState('');
 
   // Get all cultures and entity kinds for sharing options
   const allCultureIds = Object.keys(allCultures || {});
@@ -137,44 +136,24 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
   };
 
   const handleGenerate = async (spec) => {
+    // Check if API key is available
+    if (!apiKey) {
+      setError('API key required. Click "Set API Key" in the header to enter your Anthropic API key.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const requestBody = {
-        spec: {
-          ...spec,
-          cultureId,
-          domain: effectiveDomain
-        },
-        metaDomain: metaDomain
-      };
-
-      // Only include apiKey if user provided one (otherwise server uses env var)
-      if (apiKey && apiKey.trim()) {
-        requestBody.apiKey = apiKey.trim();
-      }
-
-      const response = await fetch(`${API_URL}/api/generate/lexeme`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Generation failed');
-      }
-
-      const data = await response.json();
+      // Call Anthropic API directly from browser
+      const entries = await generateLexemesWithAnthropic(spec, effectiveDomain, apiKey);
 
       const newList = {
         id: spec.id,
         description: `Generated ${spec.pos} list: ${spec.style}`,
-        entries: data.result.entries,
+        entries: entries,
         source: 'llm',
-        filtered: data.result.filtered,
-        tokensUsed: data.result.tokensUsed,
         appliesTo: spec.appliesTo || { cultures: [cultureId], entityKinds: [entityKind] }
       };
 
@@ -200,6 +179,71 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
       setLoading(false);
     }
   };
+
+  // Generate lexemes by calling Anthropic API directly
+  async function generateLexemesWithAnthropic(spec, domain, key) {
+    const phonologyHint = domain ? `
+Use these phonological patterns:
+- Consonants: ${domain.phonology?.consonants?.join(', ') || 'b, d, g, k, l, m, n, p, r, s, t'}
+- Vowels: ${domain.phonology?.vowels?.join(', ') || 'a, e, i, o, u'}
+- Syllable patterns: ${domain.phonology?.syllableTemplates?.join(', ') || 'CV, CVC'}
+` : '';
+
+    const prompt = `Generate ${spec.targetCount || 30} unique ${spec.pos || 'noun'} words for a fantasy naming system.
+
+Style: ${spec.style || 'evocative fantasy names'}
+${phonologyHint}
+Requirements:
+- Each word should be ${spec.qualityFilter?.minLength || 3}-${spec.qualityFilter?.maxLength || 15} characters
+- Words should sound natural and pronounceable
+- No real-world words or obvious derivatives
+
+Return ONLY a JSON array of strings, nothing else. Example: ["word1", "word2", "word3"]`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text || '[]';
+
+    // Parse the JSON array from the response
+    try {
+      // Try to extract JSON array from the response
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const entries = JSON.parse(jsonMatch[0]);
+        // Filter by length constraints
+        return entries.filter(e =>
+          typeof e === 'string' &&
+          e.length >= (spec.qualityFilter?.minLength || 3) &&
+          e.length <= (spec.qualityFilter?.maxLength || 15)
+        );
+      }
+      throw new Error('No valid JSON array in response');
+    } catch (parseErr) {
+      throw new Error(`Failed to parse response: ${parseErr.message}`);
+    }
+  }
 
   const handleDeleteList = (listId) => {
     const updatedLists = { ...lexemeLists };
@@ -236,6 +280,11 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
 
         <p className="text-muted" style={{ marginBottom: '1rem' }}>
           Create lexeme specs to generate word lists via LLM, or add manual lists for function words.
+          {!apiKey && (
+            <span style={{ display: 'block', marginTop: '0.5rem', color: 'rgb(251, 191, 36)' }}>
+              Set your API key in the header to enable LLM generation.
+            </span>
+          )}
         </p>
 
         {error && <div className="error" style={{ marginBottom: '1rem' }}>{error}</div>}
@@ -527,25 +576,6 @@ function LexemesTab({ metaDomain, cultureId, entityKind, entityConfig, onConfigC
           )}
         </div>
 
-        {/* API Key Section (collapsed by default) */}
-        {lexemeSpecs.length > 0 && (
-          <div style={{ marginTop: '1.5rem' }}>
-            <details>
-              <summary style={{ cursor: 'pointer', color: 'var(--arctic-frost)' }}>
-                API Key Settings
-              </summary>
-              <div style={{ marginTop: '0.5rem' }}>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-ant-... (required if not set in server environment)"
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </details>
-          </div>
-        )}
       </div>
     );
   }

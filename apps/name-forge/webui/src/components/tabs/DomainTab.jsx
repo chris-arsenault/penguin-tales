@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { API_URL } from '../constants';
 import { getAllDomains } from '../utils';
 
-function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
+function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
   const [editing, setEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState(-1); // -1 = new domain, >= 0 = editing existing
   const [expandedSections, setExpandedSections] = useState({
@@ -19,6 +18,11 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
   const defaultDomain = {
     id: `${cultureId}_domain_${cultureDomains.length + 1}`,
     cultureId: cultureId,
+    appliesTo: {
+      kind: ['npc'],  // Default to NPC, user can change
+      subKind: [],
+      tags: []
+    },
     phonology: {
       consonants: [], vowels: [], syllableTemplates: ['CV', 'CVC'], lengthRange: [2, 4],
       favoredClusters: [], forbiddenClusters: [], favoredClusterBoost: 1.0
@@ -37,7 +41,7 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
   };
 
   // Save domain to culture-level domains array
-  const handleSave = async () => {
+  const handleSave = () => {
     let newDomains;
     if (editingIndex >= 0) {
       // Update existing domain
@@ -48,31 +52,13 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
       newDomains = [...cultureDomains, formData];
     }
 
-    // Save via API
-    try {
-      const response = await fetch(
-        `${API_URL}/api/v2/cultures/${metaDomain}/${cultureId}/domains`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domains: newDomains })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save domains');
-      }
-
-      setEditing(false);
-      setEditingIndex(-1);
-
-      // Force page refresh to reload culture data
-      window.location.reload();
-    } catch (err) {
-      console.error('Save domains error:', err);
-      alert(`Failed to save: ${err.message}`);
+    // Save via callback
+    if (onDomainsChange) {
+      onDomainsChange(newDomains);
     }
+
+    setEditing(false);
+    setEditingIndex(-1);
   };
 
   const handleCreateNew = () => {
@@ -90,31 +76,14 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
     setEditing(true);
   };
 
-  const handleDeleteDomain = async (index) => {
+  const handleDeleteDomain = (index) => {
     if (!window.confirm('Delete this domain? This cannot be undone.')) return;
 
     const newDomains = cultureDomains.filter((_, i) => i !== index);
 
-    try {
-      const response = await fetch(
-        `${API_URL}/api/v2/cultures/${metaDomain}/${cultureId}/domains`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domains: newDomains })
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete domain');
-      }
-
-      // Force page refresh to reload culture data
-      window.location.reload();
-    } catch (err) {
-      console.error('Delete domain error:', err);
-      alert(`Failed to delete: ${err.message}`);
+    // Save via callback
+    if (onDomainsChange) {
+      onDomainsChange(newDomains);
     }
   };
 
@@ -161,6 +130,10 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
                 <div>
                   <strong style={{ color: 'rgb(134, 239, 172)' }}>{domain.id}</strong>
                   <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.25rem' }}>
+                    Applies to: {domain.appliesTo?.kind?.join(', ') || 'all'}
+                    {domain.appliesTo?.subKind?.length > 0 && ` (${domain.appliesTo.subKind.join(', ')})`}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.1rem' }}>
                     Use in grammars: <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.3rem', borderRadius: '3px' }}>domain:{domain.id}</code>
                   </div>
                 </div>
@@ -291,6 +264,83 @@ function DomainTab({ metaDomain, cultureId, cultureConfig, allCultures }) {
           placeholder={`${cultureId}_domain`}
         />
         <small className="text-muted">Unique identifier for this domain. Use in grammars as <code>domain:{formData.id || 'domain_id'}</code></small>
+      </div>
+
+      {/* Applies To Section */}
+      <div style={{
+        padding: '1rem',
+        background: 'rgba(59, 130, 246, 0.1)',
+        borderRadius: '6px',
+        marginBottom: '1rem',
+        border: '1px solid rgba(59, 130, 246, 0.3)'
+      }}>
+        <h4 style={{ margin: '0 0 0.75rem 0' }}>Applies To</h4>
+        <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+          Select which entity kinds this domain generates names for.
+        </p>
+        <div className="form-group">
+          <label>Entity Kinds (select multiple)</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+            {['npc', 'location', 'faction', 'artifact', 'creature'].map((kind) => (
+              <label key={kind} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                background: formData.appliesTo?.kind?.includes(kind) ? 'rgba(34, 197, 94, 0.2)' : 'rgba(30, 58, 95, 0.3)',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                border: formData.appliesTo?.kind?.includes(kind) ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid transparent'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={formData.appliesTo?.kind?.includes(kind) || false}
+                  onChange={(e) => {
+                    const currentKinds = formData.appliesTo?.kind || [];
+                    const newKinds = e.target.checked
+                      ? [...currentKinds, kind]
+                      : currentKinds.filter(k => k !== kind);
+                    setFormData({
+                      ...formData,
+                      appliesTo: { ...formData.appliesTo, kind: newKinds }
+                    });
+                  }}
+                />
+                <span style={{ textTransform: 'capitalize' }}>{kind}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="form-group" style={{ marginTop: '0.75rem' }}>
+          <label>Subtypes (comma-separated, optional)</label>
+          <input
+            value={formData.appliesTo?.subKind?.join(', ') || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              appliesTo: {
+                ...formData.appliesTo,
+                subKind: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+              }
+            })}
+            placeholder="merchant, warrior, mage"
+          />
+          <small className="text-muted">Leave empty to apply to all subtypes</small>
+        </div>
+        <div className="form-group" style={{ marginTop: '0.75rem' }}>
+          <label>Tags (comma-separated, optional)</label>
+          <input
+            value={formData.appliesTo?.tags?.join(', ') || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              appliesTo: {
+                ...formData.appliesTo,
+                tags: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+              }
+            })}
+            placeholder="noble, ancient, mystical"
+          />
+          <small className="text-muted">Match entities with specific tags</small>
+        </div>
       </div>
 
       {/* Phonology Section */}
