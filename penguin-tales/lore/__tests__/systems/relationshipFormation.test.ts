@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { relationshipFormation } from '../../systems/relationshipFormation';
-import { Graph } from '../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import * as helpers from '../../../../apps/lore-weave/lib/utils/helpers';
+import { Graph } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
+import * as helpers from '@lore-weave/core/utils/helpers';
 
 describe('relationshipFormation', () => {
   let mockGraph: Graph;

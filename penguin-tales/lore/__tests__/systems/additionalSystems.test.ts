@@ -5,9 +5,9 @@ import { prominenceEvolution } from '../../systems/prominenceEvolution';
 import { culturalDrift } from '../../systems/culturalDrift';
 import { allianceFormation } from '../../systems/allianceFormation';
 import { thermalCascade } from '../../systems/thermalCascade';
-import { Graph, Era } from '../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { GraphModifier } from '../../../../apps/lore-weave/lib/types/engine';
+import { Graph, Era } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
+import { GraphModifier } from '@lore-weave/core/types/engine';
 
 describe('Additional Systems', () => {
   let mockGraph: Graph;

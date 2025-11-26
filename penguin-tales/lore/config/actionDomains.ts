@@ -5,9 +5,9 @@
  * The framework's universal catalyst system calls these handlers.
  */
 
-import { Graph } from '../../../apps/lore-weave/lib/types/engine';
-import { HardState, Relationship } from '../../../apps/lore-weave/lib/types/worldTypes';
-import { generateId } from '../../../apps/lore-weave/lib/utils/helpers';
+import { Graph } from '@lore-weave/core/types/engine';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { generateId } from '@lore-weave/core/utils/helpers';
 
 // ===========================
 // ACTION DOMAIN DEFINITIONS

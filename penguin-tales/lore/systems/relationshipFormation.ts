@@ -1,5 +1,5 @@
-import { SimulationSystem, SystemResult, Graph } from '../../../apps/lore-weave/lib/types/engine';
-import { Relationship } from '../../../apps/lore-weave/lib/types/worldTypes';
+import { SimulationSystem, SystemResult, Graph } from '@lore-weave/core/types/engine';
+import { Relationship } from '@lore-weave/core/types/worldTypes';
 import {
   findEntities,
   getRelated,
@@ -11,7 +11,7 @@ import {
   areRelationshipsCompatible,
   getConnectionWeight,
   getFactionRelationship
-} from '../../../apps/lore-weave/lib/utils/helpers';
+} from '@lore-weave/core/utils/helpers';
 
 /**
  * Relationship Formation System

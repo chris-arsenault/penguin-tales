@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { generateId } from '../../../../apps/lore-weave/lib/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { generateId } from '@lore-weave/core/utils/helpers';
 
 /**
  * Magical Site Discovery Template

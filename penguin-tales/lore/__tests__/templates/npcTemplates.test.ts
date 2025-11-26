@@ -6,9 +6,9 @@ import { heroEmergence } from '../../domain/penguin/templates/npc/heroEmergence'
 import { succession } from '../../domain/penguin/templates/npc/succession';
 import { outlawRecruitment } from '../../domain/penguin/templates/npc/outlawRecruitment';
 import { kinshipConstellation } from '../../domain/penguin/templates/npc/kinshipConstellation';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { Graph, Era } from '../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../apps/lore-weave/lib/types/worldTypes';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { Graph, Era } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 
 describe('NPC Templates', () => {
   let mockGraph: Graph;

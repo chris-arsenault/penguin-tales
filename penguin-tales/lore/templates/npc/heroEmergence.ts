@@ -1,8 +1,8 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { generateName, pickRandom, slugifyName } from '../../../../apps/lore-weave/lib/utils/helpers';
-import { EntityClusterBuilder } from '../../../../apps/lore-weave/lib/utils/entityClusterBuilder';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { generateName, pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { EntityClusterBuilder } from '@lore-weave/core/utils/entityClusterBuilder';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',

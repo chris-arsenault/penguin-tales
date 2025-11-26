@@ -10,10 +10,10 @@
  * Uses emergent discovery logic to generate thematically appropriate locations.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { pickRandom, generateName, findEntities } from '../../../../apps/lore-weave/lib/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { pickRandom, generateName, findEntities } from '@lore-weave/core/utils/helpers';
 
 export const emergentLocationDiscovery: GrowthTemplate = {
   id: 'emergent_location_discovery',

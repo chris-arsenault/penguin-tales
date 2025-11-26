@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { outlawRecruitment } from '../../../../../domain/penguin/templates/npc/outlawRecruitment';
-import { TemplateGraphView } from '../../../../../apps/lore-weave/lib/services/templateGraphView';
-import { TargetSelector } from '../../../../../apps/lore-weave/lib/services/targetSelector';
-import { Graph, Era } from '../../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../../apps/lore-weave/lib/types/worldTypes';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { Graph, Era } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 
 describe('outlawRecruitment template', () => {
   let mockGraph: Graph;

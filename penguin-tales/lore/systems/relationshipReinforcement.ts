@@ -1,5 +1,5 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../apps/lore-weave/lib/types/engine';
-import { getLocation, getRelated, modifyRelationshipStrength } from '../../../apps/lore-weave/lib/utils/helpers';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { getLocation, getRelated, modifyRelationshipStrength } from '@lore-weave/core/utils/helpers';
 
 /**
  * Relationship Reinforcement System

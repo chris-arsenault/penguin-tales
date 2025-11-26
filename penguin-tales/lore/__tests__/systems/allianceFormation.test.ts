@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { allianceFormation } from '../../../../domain/penguin/systems/allianceFormation';
-import { Graph, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../apps/lore-weave/lib/types/worldTypes';
+import { Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 
 describe('allianceFormation System', () => {
   let mockGraph: Graph;

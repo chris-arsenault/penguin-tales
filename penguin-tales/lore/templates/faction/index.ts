@@ -4,7 +4,7 @@
  * Templates for creating and evolving faction entities.
  */
 
-import { GrowthTemplate } from '../../../../apps/lore-weave/lib/types/engine';
+import { GrowthTemplate } from '@lore-weave/core/types/engine';
 
 export { factionSplinter } from './factionSplinter';
 export { guildEstablishment } from './guildEstablishment';

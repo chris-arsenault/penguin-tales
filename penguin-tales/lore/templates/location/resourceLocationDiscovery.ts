@@ -6,16 +6,16 @@
  * appropriate resource sites.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { pickRandom, generateName } from '../../../../apps/lore-weave/lib/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { pickRandom, generateName } from '@lore-weave/core/utils/helpers';
 import {
   analyzeResourceDeficit,
   generateResourceTheme,
   shouldDiscoverLocation,
   findNearbyLocations
-} from '../../../../apps/lore-weave/lib/utils/emergentDiscovery';
+} from '@lore-weave/core/utils/emergentDiscovery';
 
 export const resourceLocationDiscovery: GrowthTemplate = {
   id: 'resource_location_discovery',
@@ -138,7 +138,15 @@ export const resourceLocationDiscovery: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE theme based on world state
-    const theme = generateResourceTheme(deficit, graphView.currentEra.id);
+    const discoveryConfig = graphView.config?.domain?.emergentDiscoveryConfig;
+    if (!discoveryConfig) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'No emergent discovery config available'
+      };
+    }
+    const theme = generateResourceTheme(deficit, graphView.currentEra.id, discoveryConfig);
 
     // Generate penguin-style name with themeString as descriptor
     const locationName = generateName('location');

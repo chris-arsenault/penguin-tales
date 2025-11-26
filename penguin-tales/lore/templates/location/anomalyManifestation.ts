@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { pickRandom } from '../../../../apps/lore-weave/lib/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState } from '@lore-weave/core/types/worldTypes';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 
 /**
  * Anomaly Manifestation Template

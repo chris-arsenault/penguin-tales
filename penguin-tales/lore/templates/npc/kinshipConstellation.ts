@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '../../../../apps/lore-weave/lib/types/engine';
-import { TemplateGraphView } from '../../../../apps/lore-weave/lib/services/templateGraphView';
-import { HardState, Relationship } from '../../../../apps/lore-weave/lib/types/worldTypes';
-import { pickRandom, generateName, pickMultiple } from '../../../../apps/lore-weave/lib/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { pickRandom, generateName, pickMultiple } from '@lore-weave/core/utils/helpers';
 
 /**
  * Kinship Constellation Template

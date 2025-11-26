@@ -8,26 +8,26 @@
  *         10 NPCs × 1 school = rich history
  */
 
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../apps/lore-weave/lib/types/engine';
-import { HardState, Relationship } from '../../../apps/lore-weave/lib/types/worldTypes';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import {
   pickRandom,
   addEntity,
   generateId
-} from '../../../apps/lore-weave/lib/utils/helpers';
+} from '@lore-weave/core/utils/helpers';
 import {
   detectClusters,
   filterClusterableEntities,
   ClusterConfig
-} from '../../../apps/lore-weave/lib/utils/clusteringUtils';
+} from '@lore-weave/core/utils/clusteringUtils';
 import {
   archiveEntities,
   transferRelationships,
   createPartOfRelationships
-} from '../../../apps/lore-weave/lib/utils/entityArchival';
-import { TemplateGraphView } from '../../../apps/lore-weave/lib/services/templateGraphView';
-import { TargetSelector } from '../../../apps/lore-weave/lib/services/targetSelector';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '../../../apps/lore-weave/lib/types/frameworkPrimitives';
+} from '@lore-weave/core/utils/entityArchival';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPrimitives';
 
 /**
  * Clustering configuration for magic schools
@@ -214,7 +214,7 @@ export const magicSchoolFormation: SimulationSystem = {
     }
 
     // Create graph view for clustering
-    const targetSelector = new TargetSelector(graph);
+    const targetSelector = new TargetSelector();
     const graphView = new TemplateGraphView(graph, targetSelector);
 
     // Find magic abilities eligible for clustering (exclude combat subtypes for combat system)

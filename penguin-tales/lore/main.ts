@@ -18,13 +18,13 @@ import {
   validateWorld,
   applyParameterOverrides,
   relationshipCulling
-} from '../../apps/lore-weave/lib/index.js';
+} from '@lore-weave/core/index.js';
 
 import type {
   EngineConfig,
   HardState,
   DistributionTargets
-} from '../../apps/lore-weave/lib/index.js';
+} from '@lore-weave/core/index.js';
 
 // Domain imports (penguin-specific)
 import {
@@ -40,7 +40,7 @@ import {
 import { penguinLoreProvider } from './config/loreProvider.js';
 
 // Import setNameGenerator to configure the framework with penguin name generator
-import { setNameGenerator } from '../../apps/lore-weave/lib/utils/helpers.js';
+import { setNameGenerator } from '@lore-weave/core/utils/helpers.js';
 
 // Configure the name generator for this domain
 setNameGenerator(penguinDomain.nameGenerator);

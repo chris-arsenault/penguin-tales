@@ -18,8 +18,8 @@ import {
   NameGenerator,
   SnapshotConfig,
   EmergentDiscoveryConfig
-} from '../../apps/lore-weave/lib/types/domainSchema';
-import { pickRandom } from '../../apps/lore-weave/lib/utils/helpers';
+} from '@lore-weave/core/types/domainSchema';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   getActionDomains,
   getActionDomainsForEntity,

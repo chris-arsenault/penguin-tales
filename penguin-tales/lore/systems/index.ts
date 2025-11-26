@@ -8,13 +8,13 @@
  * and should be added separately in the engine configuration.
  */
 
-import { SimulationSystem } from '../../../apps/lore-weave/lib/types/engine';
+import { SimulationSystem } from '@lore-weave/core/types/engine';
 
 // Import framework systems (NEW)
-import { eraSpawner } from '../../../apps/lore-weave/lib/systems/eraSpawner';
-import { universalCatalyst } from '../../../apps/lore-weave/lib/systems/universalCatalyst';
-import { occurrenceCreation } from '../../../apps/lore-weave/lib/systems/occurrenceCreation';
-import { eraTransition } from '../../../apps/lore-weave/lib/systems/eraTransition';
+import { eraSpawner } from '@lore-weave/core/systems/eraSpawner';
+import { universalCatalyst } from '@lore-weave/core/systems/universalCatalyst';
+import { occurrenceCreation } from '@lore-weave/core/systems/occurrenceCreation';
+import { eraTransition } from '@lore-weave/core/systems/eraTransition';
 
 // Import all penguin-specific systems
 export { relationshipFormation } from './relationshipFormation';

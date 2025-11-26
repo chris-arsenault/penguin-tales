@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { guildEstablishment } from '../../../../../domain/penguin/templates/faction/guildEstablishment';
-import { TemplateGraphView } from '../../../../../apps/lore-weave/lib/services/templateGraphView';
-import { TargetSelector } from '../../../../../apps/lore-weave/lib/services/targetSelector';
-import { Graph } from '../../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../../apps/lore-weave/lib/types/worldTypes';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { Graph } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 
 describe('guildEstablishment Template', () => {
   let mockGraph: Graph;

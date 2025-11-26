@@ -4,7 +4,7 @@
  * Templates for creating laws, edicts, taboos, and social norms.
  */
 
-import { GrowthTemplate } from '../../../../apps/lore-weave/lib/types/engine';
+import { GrowthTemplate } from '@lore-weave/core/types/engine';
 
 export { crisisLegislation } from './crisisLegislation';
 export { greatFestival } from './greatFestival';

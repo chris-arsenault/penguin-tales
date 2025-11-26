@@ -16,3 +16,15 @@ artifacts/
 tsconfig.tsbuildinfo
 /.beads/beads.left.jsonl
 /.beads/beads.left.meta.json
+
+# TypeScript build artifacts (should only be in dist/)
+*.js.map
+*.d.ts.map
+# Exclude .js and .d.ts in source folders but not in dist/
+**/lib/**/*.js
+**/lib/**/*.d.ts
+**/src/**/*.js
+**/src/**/*.d.ts
+# Allow config files
+!*.config.js
+!eslint.config.js

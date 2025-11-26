@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { succession } from '../../../../../domain/penguin/templates/npc/succession';
-import { TemplateGraphView } from '../../../../../apps/lore-weave/lib/services/templateGraphView';
-import { Graph, Era, ComponentPurpose } from '../../../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../../../apps/lore-weave/lib/types/worldTypes';
+import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { Graph, Era, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 
 describe('succession template', () => {
   let mockGraph: Graph;

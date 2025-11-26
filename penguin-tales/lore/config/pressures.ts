@@ -1,5 +1,5 @@
-import { Pressure, ComponentPurpose } from '../../../apps/lore-weave/lib/types/engine';
-import { findEntities, getRelated } from '../../../apps/lore-weave/lib/utils/helpers';
+import { Pressure, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { findEntities, getRelated } from '@lore-weave/core/utils/helpers';
 
 export const pressures: Pressure[] = [
   {

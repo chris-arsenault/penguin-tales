@@ -1,11 +1,11 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../../../apps/lore-weave/lib/types/engine';
-import { HardState } from '../../../apps/lore-weave/lib/types/worldTypes';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 import {
   findEntities,
   hasRelationship,
   pickRandom,
   rollProbability
-} from '../../../apps/lore-weave/lib/utils/helpers';
+} from '@lore-weave/core/utils/helpers';
 
 /**
  * Cultural Drift System
