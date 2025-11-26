@@ -1,0 +1,134 @@
+{
+  "domains": [
+    {
+      "id": "goauld_domain",
+      "cultureId": "goauld",
+      "appliesTo": {
+        "kind": [
+          "npc",
+          "location",
+          "faction",
+          "rules",
+          "abilities"
+        ],
+        "subKind": [],
+        "tags": []
+      },
+      "phonology": {
+        "consonants": [
+          "k",
+          "r",
+          "s",
+          "t",
+          "n",
+          "m",
+          "p",
+          "sh",
+          "kh",
+          "j"
+        ],
+        "vowels": [
+          "a",
+          "e",
+          "i",
+          "o",
+          "u",
+          "aa",
+          "ai",
+          "au"
+        ],
+        "syllableTemplates": [
+          "CV",
+          "CVC",
+          "CVV",
+          "CVVC"
+        ],
+        "lengthRange": [
+          3,
+          3
+        ],
+        "favoredClusters": [
+          "kh",
+          "sh",
+          "ra",
+          "aa"
+        ],
+        "forbiddenClusters": [
+          "th",
+          "ae"
+        ],
+        "favoredClusterBoost": 4.326642430866483,
+        "consonantWeights": [
+          0.0963396102210234,
+          0.13309558374379077,
+          0.09775393960216419,
+          0.08866485833910222,
+          0.10632395793768917,
+          0.11581675405491722,
+          0.08264434393977665,
+          0.09831086155711599,
+          0.09146393694124952,
+          0.08958615366317098
+        ],
+        "vowelWeights": [
+          0.10580314348485857,
+          0.14345781961912107,
+          0.1432008970992983,
+          0.15422622221664797,
+          0.11628402040416783,
+          0.09916811403077495,
+          0.11630595810478331,
+          0.12155382504034808
+        ],
+        "templateWeights": [
+          0.33832089939697635,
+          0.17057871282713416,
+          0.25739171784865544,
+          0.233708669927234
+        ]
+      },
+      "morphology": {
+        "prefixes": [
+          "Ra",
+          "Kha",
+          "Anub",
+          "Seth",
+          "Baal"
+        ],
+        "suffixes": [
+          "os",
+          "is",
+          "us",
+          "ak",
+          "ar",
+          "ek"
+        ],
+        "structure": [
+          "prefix-root",
+          "root-suffix",
+          "prefix-root-suffix"
+        ],
+        "structureWeights": [
+          0.46956383172414445,
+          0.2974779188242651,
+          0.23295824945159038
+        ]
+      },
+      "style": {
+        "capitalization": "title",
+        "apostropheRate": 0.8952461398434344,
+        "hyphenRate": 0.9999999999003754,
+        "preferredEndings": [
+          "os",
+          "is",
+          "us",
+          "ak",
+          "ar"
+        ],
+        "preferredEndingBoost": 1.3,
+        "rhythmBias": "staccato"
+      },
+      "sourceCulture": "goauld"
+    }
+  ]
+}

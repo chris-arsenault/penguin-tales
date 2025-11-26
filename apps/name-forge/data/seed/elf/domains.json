@@ -1,0 +1,128 @@
+{
+  "domains": [
+    {
+      "id": "elf_domain",
+      "cultureId": "elf",
+      "appliesTo": {
+        "kind": [
+          "npc",
+          "location",
+          "faction",
+          "rules",
+          "abilities"
+        ],
+        "subKind": [],
+        "tags": []
+      },
+      "phonology": {
+        "consonants": [
+          "l",
+          "r",
+          "n",
+          "m"
+        ],
+        "vowels": [
+          "a",
+          "e",
+          "i",
+          "o",
+          "ae",
+          "ai",
+          "ia",
+          "ie",
+          "ea"
+        ],
+        "syllableTemplates": [
+          "CV",
+          "CVV",
+          "CVC",
+          "VCV"
+        ],
+        "lengthRange": [
+          3,
+          4
+        ],
+        "favoredClusters": [
+          "th",
+          "ae",
+          "ia",
+          "el",
+          "ar"
+        ],
+        "forbiddenClusters": [
+          "gg",
+          "kk",
+          "ck"
+        ],
+        "favoredClusterBoost": 3.2218373501160515,
+        "consonantWeights": [
+          0.2819285925164146,
+          0.20819413087100785,
+          0.31030431920398077,
+          0.19957295740859685
+        ],
+        "vowelWeights": [
+          0.1152922122309888,
+          0.09248731307902117,
+          0.11530169799460524,
+          0.22163317671089253,
+          0.0835138440464147,
+          0.08345305575905386,
+          0.09479607237956626,
+          0.08850931757320527,
+          0.10501331022625222
+        ],
+        "templateWeights": [
+          0.43750128562165486,
+          0.15888231531829874,
+          0.23021463610482212,
+          0.17340176295522416
+        ]
+      },
+      "morphology": {
+        "prefixes": [
+          "Ael",
+          "Cel",
+          "Gal",
+          "Lir",
+          "Tha"
+        ],
+        "suffixes": [
+          "iel",
+          "wen",
+          "riel",
+          "ion",
+          "ath",
+          "oth",
+          "iel"
+        ],
+        "structure": [
+          "root",
+          "root-suffix",
+          "prefix-root-suffix"
+        ],
+        "structureWeights": [
+          0.14715389444520843,
+          0.5661767611473347,
+          0.28666934440745684
+        ]
+      },
+      "style": {
+        "capitalization": "title",
+        "apostropheRate": 0.6261227818414241,
+        "hyphenRate": 1.0216084692431887e-10,
+        "preferredEndings": [
+          "iel",
+          "wen",
+          "ion",
+          "ath",
+          "a",
+          "e"
+        ],
+        "preferredEndingBoost": 1.4,
+        "rhythmBias": "flowing"
+      },
+      "sourceCulture": "elf"
+    }
+  ]
+}

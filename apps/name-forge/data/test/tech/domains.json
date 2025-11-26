@@ -1,0 +1,144 @@
+{
+  "domains": [
+    {
+      "id": "tech_domain",
+      "cultureId": "tech",
+      "appliesTo": {
+        "kind": [
+          "npc",
+          "location",
+          "faction",
+          "rules",
+          "abilities"
+        ],
+        "subKind": [],
+        "tags": []
+      },
+      "phonology": {
+        "consonants": [
+          "m",
+          "k",
+          "f",
+          "t",
+          "s",
+          "ɾ",
+          "ŋ",
+          "θ",
+          "zh",
+          "j",
+          "ɲ"
+        ],
+        "vowels": [
+          "a",
+          "e",
+          "ä",
+          "o",
+          "æ",
+          "oi",
+          "ö",
+          "uu",
+          "ü",
+          "ai",
+          "u"
+        ],
+        "syllableTemplates": [
+          "CV",
+          "CCV",
+          "CVCV",
+          "VCVCV",
+          "VCV",
+          "V",
+          "VV"
+        ],
+        "lengthRange": [
+          5,
+          5
+        ],
+        "favoredClusters": [
+          "ex",
+          "tr",
+          "pr",
+          "zr",
+          "sp"
+        ],
+        "forbiddenClusters": [
+          "ae",
+          "th"
+        ],
+        "favoredClusterBoost": 1.4,
+        "consonantWeights": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "vowelWeights": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "templateWeights": [
+          1,
+          1,
+          1
+        ]
+      },
+      "morphology": {
+        "prefixes": [
+          "Nex",
+          "Vex",
+          "Zyr",
+          "Kron",
+          "Plex"
+        ],
+        "suffixes": [
+          "ix",
+          "ex",
+          "on",
+          "ax",
+          "or",
+          "us"
+        ],
+        "structure": [
+          "prefix-root",
+          "root-suffix",
+          "root"
+        ],
+        "structureWeights": [
+          0.3,
+          0.4,
+          0.3
+        ]
+      },
+      "style": {
+        "capitalization": "title",
+        "apostropheRate": 1,
+        "hyphenRate": 0.9485357343162286,
+        "preferredEndings": [
+          "ix",
+          "ex",
+          "on",
+          "ax"
+        ],
+        "preferredEndingBoost": 1.5,
+        "rhythmBias": "neutral"
+      },
+      "cultureName": "tech"
+    }
+  ]
+}

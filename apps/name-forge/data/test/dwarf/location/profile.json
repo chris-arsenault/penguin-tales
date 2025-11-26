@@ -1,0 +1,13 @@
+{
+  "id": "dwarf:location",
+  "cultureId": "dwarf",
+  "entityType": "location",
+  "strategies": [
+    {
+      "id": "dwarf_location_phonotactic",
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "dwarf_domain"
+    }
+  ]
+}

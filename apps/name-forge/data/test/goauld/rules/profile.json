@@ -1,0 +1,12 @@
+{
+  "id": "goauld:rules",
+  "cultureId": "goauld",
+  "entityType": "rules",
+  "strategies": [
+    {
+      "type": "phonotactic",
+      "weight": 1,
+      "domainId": "goauld_domain"
+    }
+  ]
+}

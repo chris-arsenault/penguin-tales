@@ -1,0 +1,24 @@
+{
+  "id": "elven_natural_nouns",
+  "cultureId": "elven",
+  "pos": "noun",
+  "style": "ethereal, nature-focused, flowing, elvish. Think Tolkien-esque: stars, trees, light, ancient natural phenomena",
+  "targetCount": 40,
+  "sourceMode": "llm",
+  "description": "Natural nouns for Elven names and phrases",
+  "qualityFilter": {
+    "minLength": 3,
+    "maxLength": 15,
+    "allowedPattern": "^[A-Z][a-z]+$",
+    "requireCapitalized": true,
+    "llmCritic": true
+  },
+  "examples": [
+    "Stars",
+    "Moon",
+    "Dawn",
+    "Forest",
+    "River",
+    "Light"
+  ]
+}

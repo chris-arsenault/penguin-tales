@@ -1,0 +1,19 @@
+{
+  "id": "tech:npc",
+  "cultureId": "tech",
+  "entityType": "npc",
+  "strategyGroups": [
+    {
+      "name": "New Group",
+      "priority": 0,
+      "conditions": null,
+      "strategies": [
+        {
+          "type": "grammar",
+          "weight": 1,
+          "grammarId": "tech_names"
+        }
+      ]
+    }
+  ]
+}

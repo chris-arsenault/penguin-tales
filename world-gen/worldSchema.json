@@ -88,7 +88,6 @@
       "values": ["crisis", "emergency", "legislation", "succession", "vanishing", "mystery", "leadership-change"]
     }
   },
-
   "hardState": [{
     "kind": "npc",
     "subtype": [

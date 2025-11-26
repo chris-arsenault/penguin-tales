@@ -1,0 +1,131 @@
+{
+  "name": "penguin_imperial_complete",
+  "description": "Complete Imperial Penguin culture naming system (titles, laws, military ranks)",
+  "lexemeSpecs": [
+    {
+      "id": "imperial_titles",
+      "cultureId": "imperial",
+      "pos": "noun",
+      "style": "formal, Latinate, imperial Roman-style. Titles of authority and nobility for a penguin empire.",
+      "targetCount": 30,
+      "sourceMode": "llm",
+      "description": "Noble and official titles for Imperial penguins",
+      "qualityFilter": {
+        "minLength": 4,
+        "maxLength": 20,
+        "requireCapitalized": true,
+        "llmCritic": true
+      },
+      "examples": [
+        "Consul",
+        "Tribune",
+        "Legate",
+        "Praetor"
+      ]
+    },
+    {
+      "id": "imperial_virtues",
+      "cultureId": "imperial",
+      "pos": "noun_abstract",
+      "style": "formal, Latinate, Roman virtues and concepts. Abstract nouns representing ideals.",
+      "targetCount": 25,
+      "sourceMode": "llm",
+      "description": "Abstract virtues and ideals for law names",
+      "qualityFilter": {
+        "minLength": 5,
+        "maxLength": 18,
+        "requireCapitalized": true
+      },
+      "examples": [
+        "Honor",
+        "Justice",
+        "Dignity",
+        "Order"
+      ]
+    },
+    {
+      "id": "imperial_ordinals",
+      "cultureId": "imperial",
+      "pos": "ordinal",
+      "style": "formal, traditional English ordinals for numbering acts and edicts",
+      "targetCount": 20,
+      "sourceMode": "llm",
+      "description": "Ordinal numbers for Imperial acts",
+      "qualityFilter": {
+        "minLength": 3,
+        "maxLength": 10,
+        "requireCapitalized": true
+      },
+      "examples": [
+        "First",
+        "Second",
+        "Third",
+        "Fourth"
+      ]
+    }
+  ],
+  "templateSpecs": [
+    {
+      "id": "imperial_person_names",
+      "cultureId": "imperial",
+      "type": "person",
+      "style": "formal, Roman-style with title + name or name + epithet structure",
+      "targetCount": 6,
+      "sourceMode": "llm",
+      "description": "Templates for Imperial penguin person names",
+      "slotHints": [
+        {
+          "name": "TITLE",
+          "kind": "lexemeList",
+          "description": "Noble or official title",
+          "listId": "imperial_titles"
+        },
+        {
+          "name": "NAME",
+          "kind": "phonotactic",
+          "description": "Generated Latin-style name",
+          "domainId": "latin_style"
+        },
+        {
+          "name": "VIRTUE",
+          "kind": "lexemeList",
+          "description": "Virtue or ideal",
+          "listId": "imperial_virtues"
+        }
+      ],
+      "examples": [
+        "{{TITLE}} {{NAME}}",
+        "{{NAME}} the {{VIRTUE}}"
+      ]
+    },
+    {
+      "id": "imperial_law_names",
+      "cultureId": "imperial",
+      "type": "law",
+      "style": "formal, bureaucratic, Roman law style. Acts, edicts, and decrees.",
+      "targetCount": 8,
+      "sourceMode": "llm",
+      "description": "Templates for Imperial law and edict names",
+      "slotHints": [
+        {
+          "name": "ORDINAL",
+          "kind": "lexemeList",
+          "description": "Ordinal number",
+          "listId": "imperial_ordinals"
+        },
+        {
+          "name": "VIRTUE",
+          "kind": "lexemeList",
+          "description": "Virtue or concept",
+          "listId": "imperial_virtues"
+        }
+      ],
+      "examples": [
+        "The {{ORDINAL}} {{VIRTUE}} Act",
+        "Edict of {{VIRTUE}}",
+        "The {{VIRTUE}} Proclamation"
+      ]
+    }
+  ],
+  "profileSpecs": []
+}
