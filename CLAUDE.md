@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs. See AGENTS.md for workflow details.
+**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs or plan files. When working on multi-step tasks, create a bead with `bd create` to track progress rather than writing implementation plans to markdown files. See AGENTS.md for workflow details.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -190,6 +190,24 @@ Framework changes go in `apps/lore-weave/lib/`:
 3. **Backwards compatibility is not an excuse**: In this codebase, prefer breaking changes over accumulating cruft.
 
 4. **Complete the refactor in one session**: If you start consolidating code, finish it.
+
+## Framework/Domain Design Principles
+
+**Domain should only import from framework.** The domain should never directly depend on external libraries that the framework wraps. This prevents dependency proliferation and keeps domain code simple.
+
+**When facades are appropriate:**
+- **YES**: Facade around external library (e.g., name-forge) - Framework wraps external dependencies so domain only interacts with framework APIs
+- **NO**: Facade around deprecated internal code - Don't create compatibility layers; delete old code and update all callers
+
+**Framework should handle complexity:**
+- Extract reusable services into framework to prevent implementation errors in domain
+- Provide high-level APIs (e.g., `createEntity(settings)` handles naming automatically)
+- Domain passes configuration/data, framework handles mechanics
+
+**No fallbacks that hide misconfiguration:**
+- Errors should bubble up with clear, actionable messages
+- Fail fast, fail loud - don't silently use defaults when config is wrong
+- Domain misconfiguration should be obvious immediately, not hidden by framework workarounds
 
 ## Debugging Tips
 

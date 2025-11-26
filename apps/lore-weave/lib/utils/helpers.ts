@@ -1,37 +1,7 @@
 import { Graph, EngineConfig } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
-import { NameGenerator } from '../types/domainSchema';
 import * as fs from 'fs';
 import * as path from 'path';
-
-// Default name generator for when no domain-specific generator is available
-const defaultNameGenerator: NameGenerator = {
-  generate(type: string = 'default'): string {
-    const prefixes = ['Swift', 'Bold', 'Wise', 'Storm', 'Ice', 'Frost', 'Dawn', 'Dusk'];
-    const suffixes = ['walker', 'keeper', 'watcher', 'seeker', 'finder', 'bringer'];
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-    return `${prefix}${suffix}`;
-  }
-};
-
-// Current name generator - set by domain at initialization
-let currentNameGenerator: NameGenerator = defaultNameGenerator;
-
-/**
- * Set the name generator to use for generating entity names.
- * Should be called during domain initialization.
- */
-export function setNameGenerator(generator: NameGenerator): void {
-  currentNameGenerator = generator;
-}
-
-/**
- * Generate a name using the current name generator.
- */
-export function generateName(type: string = 'default'): string {
-  return currentNameGenerator.generate(type);
-}
 
 // ID generation
 let idCounter = 1000;
@@ -212,35 +182,62 @@ export function upsertNameTag(entity: HardState, sourceName: string): void {
 
 // Initial state normalization
 export function normalizeInitialState(entities: any[]): HardState[] {
-  return entities.map(entity => ({
-    id: entity.id || entity.name || generateId(entity.kind || 'unknown'),
-    kind: entity.kind as HardState['kind'] || 'npc',
-    subtype: entity.subtype || 'merchant',
-    name: entity.name || generateName(),
-    description: entity.description || '',
-    status: entity.status || 'alive',
-    prominence: entity.prominence as HardState['prominence'] || 'marginal',
-    culture: entity.culture || 'world',  // Domain-defined cultural affiliation, defaults to 'world'
-    tags: entity.tags || [],
-    links: entity.links || [],
-    createdAt: 0,  // Initial entities created at tick 0
-    updatedAt: 0
-  }));
+  return entities.map((entity, index) => {
+    if (!entity.name) {
+      throw new Error(
+        `normalizeInitialState: entity at index ${index} has no name. ` +
+        `Initial state entities must have names defined in JSON.`
+      );
+    }
+    return {
+      id: entity.id || entity.name || generateId(entity.kind || 'unknown'),
+      kind: entity.kind as HardState['kind'] || 'npc',
+      subtype: entity.subtype || 'default',
+      name: entity.name,
+      description: entity.description || '',
+      status: entity.status || 'alive',
+      prominence: entity.prominence as HardState['prominence'] || 'marginal',
+      culture: entity.culture || 'world',
+      tags: entity.tags || [],
+      links: entity.links || [],
+      createdAt: 0,
+      updatedAt: 0
+    };
+  });
 }
 
 // Graph modification helpers
 export function addEntity(graph: Graph, entity: Partial<HardState>): string {
   const id = generateId(entity.kind || 'unknown');
 
+  // Auto-generate name if not provided
+  let name = entity.name;
+  if (!name) {
+    const nameForge = graph.config?.nameForgeService;
+    if (!nameForge) {
+      throw new Error(
+        `addEntity: name not provided and no NameForgeService configured. ` +
+        `Either provide a name or configure nameForgeService in EngineConfig.`
+      );
+    }
+    name = nameForge.generate(
+      entity.kind || 'npc',
+      entity.subtype || 'default',
+      entity.prominence || 'marginal',
+      entity.tags || [],
+      entity.culture || 'world'
+    );
+  }
+
   const fullEntity: HardState = {
     id,
     kind: entity.kind || 'npc',
-    subtype: entity.subtype || 'merchant',
-    name: entity.name || generateName(),
+    subtype: entity.subtype || 'default',
+    name,
     description: entity.description || '',
     status: entity.status || 'alive',
     prominence: entity.prominence || 'marginal',
-    culture: entity.culture || 'world',  // Domain-defined cultural affiliation, defaults to 'world'
+    culture: entity.culture || 'world',
     tags: entity.tags || [],
     links: entity.links || [],
     createdAt: entity.createdAt || graph.tick,

@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
 
 /**
  * Kinship Constellation Template
@@ -238,8 +238,6 @@ export const kinshipConstellation: GrowthTemplate = {
     const familyName = generateFamilyName();
 
     familyMembers.forEach((member, i) => {
-      const npcName = `${generateName('npc')} ${familyName}`;
-
       // Determine tags based on trait
       const tags: string[] = ['family', familyName.toLowerCase()];
       if (member.trait > 0) {
@@ -254,7 +252,6 @@ export const kinshipConstellation: GrowthTemplate = {
       entities.push({
         kind: 'npc',
         subtype: member.subtype,
-        name: npcName,
         description: `A ${member.role} of the ${familyName} family, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
         status: 'alive',
         prominence: member.role === 'prodigy' ? 'recognized' : 'marginal',

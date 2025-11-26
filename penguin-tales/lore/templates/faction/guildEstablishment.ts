@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom, findEntities, slugifyName } from '@lore-weave/core/utils/helpers';
+import { pickRandom, findEntities, slugifyName } from '@lore-weave/core/utils/helpers';
 import { buildRelationships } from '@lore-weave/core/utils/relationshipBuilder';
 
 /**
@@ -125,7 +125,6 @@ export const guildEstablishment: GrowthTemplate = {
           factory: (gv, ctx) => ({
             kind: 'npc',
             subtype: 'merchant',
-            name: generateName('npc'),
             description: `An independent merchant seeking guild membership`,
             status: 'alive',
             prominence: 'marginal',

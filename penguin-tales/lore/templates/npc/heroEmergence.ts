@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateName, pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
 import { EntityClusterBuilder } from '@lore-weave/core/utils/entityClusterBuilder';
 
 export const heroEmergence: GrowthTemplate = {
@@ -103,7 +103,6 @@ export const heroEmergence: GrowthTemplate = {
     const hero: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
-      name: generateName('hero'),
       description: `A brave penguin who emerged during troubled times in ${colony.name}`,
       status: 'alive',
       prominence: 'marginal', // Heroes start marginal, must earn prominence

@@ -9,7 +9,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, generateName } from '@lore-weave/core/utils/helpers';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   analyzeConflictPatterns,
   generateStrategicTheme,
@@ -136,8 +136,6 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     // PROCEDURALLY GENERATE theme based on conflict state
     const theme = generateStrategicTheme(conflict, graphView.currentEra.id);
 
-    // Generate penguin-style name with themeString as descriptor
-    const locationName = generateName('location');
     const formattedTheme = theme.themeString.split('_').map(w =>
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
@@ -146,7 +144,6 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: theme.subtype,
-      name: `${locationName} ${formattedTheme}`,
       description: `A strategic ${formattedTheme.toLowerCase()} providing tactical advantage in the ${conflict.type} conflict`,
       status: 'unspoiled',
       prominence: 'recognized',  // Strategic locations are notable

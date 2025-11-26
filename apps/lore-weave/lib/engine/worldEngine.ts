@@ -1713,10 +1713,10 @@ export class WorldEngine {
 
     const context = this.buildEnrichmentContext();
     const enrichmentPromise = (async () => {
+      // Names are now generated at entity creation time via name-forge
       const records = await this.enrichmentService!.enrichEntities(
         initialEntities,
-        context,
-        { preserveNames: true } // Keep canonical names
+        context
       );
       this.graph.loreRecords.push(...records);
     })().catch(error => console.warn('Initial entity enrichment failed:', error));

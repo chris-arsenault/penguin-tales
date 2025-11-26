@@ -15,7 +15,6 @@ import {
   RelationshipConfig,
   RelationshipLimits,
   CultureDefinition,
-  NameGenerator,
   SnapshotConfig,
   EmergentDiscoveryConfig
 } from '@lore-weave/core/types/domainSchema';
@@ -98,43 +97,6 @@ const npcSnapshotConfig: SnapshotConfig = {
   ],
   enrichmentCooldown: 20,
   enrichmentPriority: 3
-};
-
-// ===========================
-// NAME GENERATION
-// ===========================
-
-const penguinFirstNames = [
-  'Frost', 'Ice', 'Snow', 'Crystal', 'Aurora', 'Storm', 'Tide', 'Wave',
-  'Glacier', 'Floe', 'Drift', 'Chill', 'Blizzard', 'Shimmer', 'Glint'
-];
-
-const penguinLastNames = [
-  'beak', 'wing', 'diver', 'slider', 'walker', 'swimmer', 'fisher',
-  'hunter', 'watcher', 'keeper', 'breaker', 'caller', 'singer'
-];
-
-const titles: Record<string, string[]> = {
-  hero: ['Brave', 'Bold', 'Swift', 'Mighty'],
-  mayor: ['Elder', 'Wise', 'High', 'Chief'],
-  merchant: ['Trader', 'Dealer', 'Master', 'Guild'],
-  outlaw: ['Shadow', 'Silent', 'Quick', 'Sly'],
-  leader: ['Lord', 'Commander', 'Captain', 'Chief'],
-  mystic: ['Seer', 'Oracle', 'Prophet', 'Mystic']
-};
-
-const penguinNameGenerator: NameGenerator = {
-  generate(type: string = 'default'): string {
-    const first = pickRandom(penguinFirstNames);
-    const last = pickRandom(penguinLastNames);
-
-    if (type in titles) {
-      const title = pickRandom(titles[type]);
-      return `${title} ${first}${last}`;
-    }
-
-    return `${first}${last}`;
-  }
 };
 
 // ===========================
@@ -812,7 +774,6 @@ const baseDomain = new BaseDomainSchema({
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
   cultures: penguinCultures,
-  nameGenerator: penguinNameGenerator,
   relationshipConfig: penguinRelationshipConfig
 });
 
