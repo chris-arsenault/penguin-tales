@@ -182,6 +182,26 @@ export const techBreakthrough: GrowthTemplate = {
     const techName = techNames[Math.floor(Math.random() * techNames.length)];
     const techDesc = techDescriptions[Math.floor(Math.random() * techDescriptions.length)];
 
+    // Derive coordinates - reference the faction and origin location
+    const referenceEntities = [target, originLocation];
+    if (parentTech) {
+      referenceEntities.push(parentTech);
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'abilities',
+      'physical',
+      { maxDistance: parentTech ? 0.3 : 0.5, minDistance: 0.1 }
+    );
+
+    if (!conceptualCoords) {
+      throw new Error(
+        `tech_breakthrough: Failed to derive coordinates for technology developed by ${target.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
     const newTech: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'technology',
@@ -191,6 +211,7 @@ export const techBreakthrough: GrowthTemplate = {
       prominence: 'recognized',
       culture: target.culture,  // Inherit culture from developing faction
       tags: { technology: true, innovation: true, [target.subtype]: true },
+      coordinates: { physical: conceptualCoords },
       links: []
     };
 

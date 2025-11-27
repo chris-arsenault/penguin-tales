@@ -119,7 +119,7 @@ export const crisisLegislation: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'rules',
-      'conceptual',
+      'physical',
       { maxDistance: relatedRule ? 0.3 : 0.5, minDistance: 0.1 }
     );
 
@@ -172,7 +172,7 @@ export const crisisLegislation: GrowthTemplate = {
         prominence: 'recognized',
         culture: colony.culture,  // Inherit culture from enacting colony
         tags: { crisis: true, emergency: true },
-        coordinates: { conceptual: conceptualCoords }
+        coordinates: { physical: conceptualCoords }
       }],
       relationships,
       description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`

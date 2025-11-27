@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
 
 /**
  * Krill Bloom Migration Template
@@ -154,7 +154,7 @@ export const krillBloomMigration: GrowthTemplate = {
     const scarcity = graphView.getPressure('resource_scarcity') || 0;
     const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     const existingBlooms = graphView.findEntities({ kind: 'location', subtype: 'geographic_feature' })
-      .filter(gf => gf.tags.includes('krill') || gf.tags.includes('bloom'));
+      .filter(gf => hasTag(gf.tags, 'krill') || hasTag(gf.tags, 'bloom'));
 
     // Triggered by high scarcity or random chance
     const triggered = scarcity > 60 || Math.random() < activationChance;
@@ -194,11 +194,12 @@ export const krillBloomMigration: GrowthTemplate = {
 
     // === STEP 1: Find Frontier Locations ===
     // Score existing geographic features by distance from nearest colony
+
     const allLocations = graphView.findEntities({ kind: 'location' });
     const candidates = allLocations.filter(loc =>
       loc.subtype === 'geographic_feature' &&
-      !loc.tags.includes('krill') &&
-      !loc.tags.includes('bloom')
+      !hasTag(loc.tags, 'krill') &&
+      !hasTag(loc.tags, 'bloom')
     );
 
     // Score each candidate by minimum distance to any colony
@@ -271,7 +272,7 @@ export const krillBloomMigration: GrowthTemplate = {
           status: 'thriving',
           prominence: 'recognized',
           culture: selectedColonies[0]?.culture || 'aurora-stack',  // Inherit culture from nearest colony
-          tags: ['krill', 'bloom', 'resource'].slice(0, 10)
+          tags: { krill: true, bloom: true, resource: true }
         });
 
         selectedColonies.forEach(colony => {
@@ -303,7 +304,7 @@ export const krillBloomMigration: GrowthTemplate = {
         status: 'alive',
         prominence: 'marginal', // Discoverers start marginal
         culture: homeColony.culture,  // Inherit culture from home colony
-        tags: ['explorer', 'merchant', 'krill'].slice(0, 10)
+        tags: { explorer: true, merchant: true, krill: true }
       });
 
       const npcIndex = entities.length - 1;

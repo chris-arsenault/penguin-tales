@@ -3,7 +3,8 @@ import { HardState } from '@lore-weave/core/types/worldTypes';
 import {
   findEntities,
   getRelated,
-  adjustProminence
+  adjustProminence,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 
 /**
@@ -61,7 +62,7 @@ export const resourceFlow: SimulationSystem = {
     colonies.forEach(colony => {
       // Count resources and consumers
       const resources = getRelated(graph, colony.id, 'adjacent_to')
-        .filter(loc => loc.tags.includes('resource'));
+        .filter(loc => hasTag(loc.tags, 'resource'));
       const residents = getRelated(graph, colony.id, 'resident_of', 'dst');
 
       const ratio = resources.length / Math.max(1, residents.length);

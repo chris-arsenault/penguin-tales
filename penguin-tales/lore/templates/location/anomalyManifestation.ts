@@ -96,137 +96,45 @@ export const anomalyManifestation: GrowthTemplate = {
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const anomalyName = `${pickRandom(['Shimmering', 'Frozen', 'Dark', 'Whispering', 'Void'])} ${pickRandom(['Rift', 'Vortex', 'Echo', 'Fissure', 'Gate'])}`;
 
-    // Check if region system is available
-    if (graphView.hasRegionSystem()) {
-      const params = anomalyManifestation.metadata?.parameters || {};
-      const minDistance = (params.minDistanceFromColonies?.value as number) ?? 8;
-      const maxDistance = (params.maxDistanceFromColonies?.value as number) ?? 25;
+    // Find reference locations (colonies, other anomalies, or geographic features)
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    const existingAnomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
+    const geographicFeatures = graphView.findEntities({ kind: 'location', subtype: 'geographic_feature' });
 
-      // Get colony positions
-      // Need to cast through unknown due to Coordinate vs Point type difference
-      const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
-      const colonyPoints = colonies
-        .map(c => c.coordinates?.region)
-        .filter(p => p != null) as unknown as Array<{ x: number; y: number; z: number }>;
+    // Build reference entities - prefer placing near existing mystical sites or remote locations
+    const referenceEntities: HardState[] = [];
+    if (existingAnomalies.length > 0) {
+      referenceEntities.push(pickRandom(existingAnomalies));
+    }
+    if (geographicFeatures.length > 0) {
+      referenceEntities.push(pickRandom(geographicFeatures));
+    }
+    if (colonies.length > 0) {
+      referenceEntities.push(pickRandom(colonies));
+    }
 
-      if (colonyPoints.length === 0) {
-        throw new Error(
-          `anomaly_manifestation: No colonies have region coordinates configured. ` +
-          `Cannot place anomaly without spatial reference points.`
-        );
-      }
+    // Use target if provided
+    if (target && !referenceEntities.includes(target)) {
+      referenceEntities.push(target);
+    }
 
-      // Try to find a wilderness position between colonies
-      const maxAttempts = 20;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        // Generate point in wilderness (low z for caverns/underwater mystical feel)
-        const referencePoint = {
-          x: 15 + Math.random() * 70,  // 15-85 range
-          y: 20 + Math.random() * 60,  // 20-80 range
-          z: 5 + Math.random() * 25    // Cavern level: 5-30
-        };
+    if (referenceEntities.length === 0) {
+      return {
+        entities: [],
+        relationships: [],
+        description: `Magical energies dissipate - no anchor points for anomaly`
+      };
+    }
 
-        // Check distance constraints from all colonies
-        const distances = colonyPoints.map(p => {
-          const dx = referencePoint.x - p.x;
-          const dy = referencePoint.y - p.y;
-          return Math.sqrt(dx * dx + dy * dy);
-        });
+    // Derive coordinates for the anomaly (place away from civilization)
+    const coords = graphView.deriveCoordinates(
+      referenceEntities,
+      'location',
+      'physical',
+      { maxDistance: 0.5, minDistance: 0.2 }  // Further away than normal for wilderness feel
+    );
 
-        const minDist = Math.min(...distances);
-        const maxDist = Math.max(...distances);
-
-        // Anomaly should be in wilderness (min from colonies) but not too remote (max)
-        if (minDist >= minDistance && minDist <= maxDistance) {
-          // Check we're not inside a colony region
-          const lookup = graphView.lookupRegion(referencePoint);
-          const inColonyRegion = lookup?.all.some(r =>
-            r.metadata?.subtype === 'colony'
-          );
-
-          if (!inColonyRegion) {
-            // Create emergent region for the anomaly
-            const regionResult = graphView.createEmergentRegion(
-              referencePoint,
-              anomalyName,
-              `A mysterious phenomenon in the deep ice`
-            );
-
-            if (regionResult.success && regionResult.region) {
-              // Find nearest colony for culture inheritance
-              const nearestColony = colonies.reduce((nearest, colony) => {
-                const p = colony.coordinates?.region as { x: number; y: number; z: number } | undefined;
-                if (!p) return nearest;
-                const d = Math.sqrt(
-                  Math.pow(referencePoint.x - p.x, 2) +
-                  Math.pow(referencePoint.y - p.y, 2)
-                );
-                if (!nearest || d < nearest.distance) {
-                  return { colony, distance: d };
-                }
-                return nearest;
-              }, null as { colony: HardState; distance: number } | null);
-
-              // Place the anomaly
-              const entityId = graphView.addEntityInRegion(
-                {
-                  kind: 'location',
-                  subtype: 'anomaly',
-                  name: anomalyName,
-                  description: `A mysterious phenomenon deep in the ice, ${nearestColony ? `near ${nearestColony.colony.name}` : 'in the remote wastes'}`,
-                  status: 'unspoiled',
-                  prominence: 'recognized',
-                  culture: nearestColony?.colony.culture,
-                  tags: { anomaly: true, mystical: true, caverns: true }
-                },
-                regionResult.region.id,
-                { minDistance: 2 }
-              );
-
-              if (entityId) {
-                const relationships: any[] = [];
-
-                // Add adjacent_to relationship to nearest colony
-                if (nearestColony) {
-                  relationships.push({
-                    kind: 'adjacent_to',
-                    src: entityId,
-                    dst: nearestColony.colony.id
-                  });
-                  relationships.push({
-                    kind: 'adjacent_to',
-                    src: nearestColony.colony.id,
-                    dst: entityId
-                  });
-                }
-
-                // Maybe discovered by a magic user
-                const magicUsers = graphView.findEntities({}).filter(
-                  e => (e.kind === 'npc' && hasTag(e.tags, 'magic')) ||
-                       (e.kind === 'npc' && e.links.some(l => l.kind === 'practitioner_of'))
-                );
-
-                if (magicUsers.length > 0 && Math.random() < 0.7) {
-                  const discoverer = pickRandom(magicUsers);
-                  relationships.push({
-                    kind: 'discovered_by',
-                    src: entityId,
-                    dst: discoverer.id
-                  });
-                }
-
-                return {
-                  entities: [],  // Already added
-                  relationships,
-                  description: `${anomalyName} manifests in the wilderness between settlements`
-                };
-              }
-            }
-          }
-        }
-      }
-
-      // Couldn't find valid placement
+    if (!coords) {
       return {
         entities: [],
         relationships: [],
@@ -234,10 +142,57 @@ export const anomalyManifestation: GrowthTemplate = {
       };
     }
 
-    // Region system is REQUIRED for anomaly placement
-    throw new Error(
-      `anomaly_manifestation: Region system is not configured. ` +
-      `Cannot place anomaly without spatial coordinates.`
+    // Find nearest colony for culture inheritance
+    const nearestColony = colonies.length > 0 ? pickRandom(colonies) : null;
+
+    const anomaly: Partial<HardState> = {
+      kind: 'location',
+      subtype: 'anomaly',
+      name: anomalyName,
+      description: `A mysterious phenomenon deep in the ice, ${nearestColony ? `near ${nearestColony.name}` : 'in the remote wastes'}`,
+      status: 'unspoiled',
+      prominence: 'recognized',
+      culture: nearestColony?.culture || 'world',
+      tags: { anomaly: true, mystical: true, caverns: true },
+      coordinates: { physical: coords }
+    };
+
+    const relationships: any[] = [];
+
+    // Add adjacent_to relationship to nearest reference location
+    if (referenceEntities.length > 0) {
+      const nearestRef = referenceEntities[0];
+      relationships.push({
+        kind: 'adjacent_to',
+        src: 'will-be-assigned-0',
+        dst: nearestRef.id
+      });
+      relationships.push({
+        kind: 'adjacent_to',
+        src: nearestRef.id,
+        dst: 'will-be-assigned-0'
+      });
+    }
+
+    // Maybe discovered by a magic user
+    const magicUsers = graphView.findEntities({}).filter(
+      e => (e.kind === 'npc' && hasTag(e.tags, 'magic')) ||
+           (e.kind === 'npc' && e.links.some(l => l.kind === 'practitioner_of'))
     );
+
+    if (magicUsers.length > 0 && Math.random() < 0.7) {
+      const discoverer = pickRandom(magicUsers);
+      relationships.push({
+        kind: 'discovered_by',
+        src: 'will-be-assigned-0',
+        dst: discoverer.id
+      });
+    }
+
+    return {
+      entities: [anomaly],
+      relationships,
+      description: `${anomalyName} manifests in the wilderness between settlements`
+    };
   }
 };

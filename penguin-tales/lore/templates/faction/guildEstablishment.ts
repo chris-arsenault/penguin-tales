@@ -106,7 +106,7 @@ export const guildEstablishment: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'faction',
-      'conceptual',
+      'physical',
       { maxDistance: 0.3, minDistance: 0.1 }  // Trade guilds cluster together conceptually
     );
 
@@ -126,14 +126,14 @@ export const guildEstablishment: GrowthTemplate = {
       prominence: 'recognized',
       culture: colony.culture,  // Inherit culture from colony
       tags: { trade: true, guild: true, organized: true },
-      coordinates: { conceptual: conceptualCoords }
+      coordinates: { physical: conceptualCoords }
     };
 
     // Pre-compute coordinates for potential new merchants (factory receives Graph, not TemplateGraphView)
     const newMerchantCoords = graphView.deriveCoordinates(
       [colony],
       'npc',
-      'conceptual',
+      'physical',
       { maxDistance: 0.3, minDistance: 0.1 }
     );
 
@@ -170,7 +170,7 @@ export const guildEstablishment: GrowthTemplate = {
             prominence: 'marginal',
             culture: colony.culture,  // Inherit culture from colony
             tags: { trader: true, 'guild-founder': true },
-            coordinates: { conceptual: newMerchantCoords }
+            coordinates: { physical: newMerchantCoords }
           }),
           maxCreated: 2 // Max 2 new merchants per guild
         },

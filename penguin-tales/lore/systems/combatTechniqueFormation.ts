@@ -9,7 +9,8 @@ import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-w
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import {
   pickRandom,
-  addEntity
+  addEntity,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 import {
   detectClusters,
@@ -70,7 +71,7 @@ function generateStyleName(majoritySubtype: string, clusterSize: number): string
 /**
  * Create a combat style entity from a cluster
  */
-function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createStyleEntity(cluster: HardState[], graph: Graph, graphView: TemplateGraphView): Partial<HardState> {
   // Filter to only combat-type abilities
   const combatAbilities = cluster.filter(a =>
     a.subtype === 'combat' || a.subtype === 'physical'
@@ -101,9 +102,9 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
   // Aggregate tags from cluster
   const allTags = new Set<string>();
   effectiveCluster.forEach(ability => {
-    (ability.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const techniqueNames = effectiveCluster.map(a => a.name).join(', ');
@@ -134,6 +135,21 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+  tags['combat-style'] = true;
+
+  // Derive coordinates from cluster entities
+  const coords = graphView.deriveCoordinates(effectiveCluster, 'abilities', 'physical', { maxDistance: 0.3, minDistance: 0.1 });
+  if (!coords) {
+    throw new Error(
+      `combat_technique_formation: Failed to derive coordinates for combat style "${styleName}". ` +
+      `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    );
+  }
+
   return {
     kind: 'abilities',
     subtype: majoritySubtype,
@@ -142,7 +158,8 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
     status: 'active',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity', 'combat-style']
+    tags,
+    coordinates: { physical: coords }
   };
 }
 
@@ -243,7 +260,7 @@ export const combatTechniqueFormation: SimulationSystem = {
       if (cluster.score < COMBAT_TECHNIQUE_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the style entity
-      const stylePartial = createStyleEntity(cluster.entities, graph);
+      const stylePartial = createStyleEntity(cluster.entities, graph, graphView);
       const styleId = addEntity(graph, stylePartial);
       entitiesCreated.push(styleId);
 

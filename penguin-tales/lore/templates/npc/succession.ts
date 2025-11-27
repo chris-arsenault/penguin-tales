@@ -95,6 +95,22 @@ export const succession: GrowthTemplate = {
     const graph = graphView.getInternalGraph();
     archiveRelationship(graph, oldLeader.id, colony.id, 'leader_of');
 
+    // Derive coordinates from colony (new leader will live there)
+    const coords = graphView.deriveCoordinates(
+      [colony],
+      'npc',
+      'physical',
+      { maxDistance: 0.2, minDistance: 0.05 }
+    );
+
+    if (!coords) {
+      return {
+        entities: [],
+        relationships: [],
+        description: `Cannot place successor - ${colony.name} has no coordinates`
+      };
+    }
+
     const newLeader: Partial<HardState> = {
       kind: 'npc',
       subtype: 'mayor',
@@ -102,7 +118,8 @@ export const succession: GrowthTemplate = {
       status: 'alive',
       prominence: 'marginal', // New leaders start marginal, must earn respect
       culture: colony.culture,  // Inherit culture from colony
-      tags: ['successor']
+      tags: { successor: true },
+      coordinates: { physical: coords }
     };
 
     const relationships: Relationship[] = [

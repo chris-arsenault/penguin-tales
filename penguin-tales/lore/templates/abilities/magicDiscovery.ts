@@ -176,7 +176,7 @@ export const magicDiscovery: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'abilities',
-      'conceptual',
+      'physical',
       { maxDistance: relatedMagic ? 0.3 : 0.6, minDistance: 0.1 }  // Closer if related lineage
     );
 
@@ -196,7 +196,7 @@ export const magicDiscovery: GrowthTemplate = {
       prominence: 'recognized',
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
       tags: { magic: true, mystical: true },
-      coordinates: { conceptual: conceptualCoords }
+      coordinates: { physical: conceptualCoords }
     };
 
     return {

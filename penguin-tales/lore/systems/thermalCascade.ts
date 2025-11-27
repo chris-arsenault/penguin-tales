@@ -9,7 +9,8 @@ import {
   areRelationshipsCompatible,
   hasRelationship,
   pickRandom,
-  pickMultiple
+  pickMultiple,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 
 /**
@@ -38,18 +39,31 @@ import {
 
 // Extend Location entities with temperature state (stored in tags for persistence)
 function getTemperature(location: HardState): number {
-  const tempTag = location.tags.find(t => t.startsWith('temp:'));
+  const tagKeys = Object.keys(location.tags || {});
+  const tempTag = tagKeys.find(t => t.startsWith('temp:'));
   return tempTag ? parseFloat(tempTag.split(':')[1]) : 0.5; // Default to moderate
 }
 
 function setTemperature(location: HardState, temp: number): void {
   // Remove old temp tag and add new one
-  location.tags = location.tags.filter(t => !t.startsWith('temp:'));
-  location.tags.push(`temp:${temp.toFixed(3)}`);
+  const newTags: Record<string, boolean> = {};
+  Object.keys(location.tags || {}).forEach(tag => {
+    if (!tag.startsWith('temp:')) {
+      newTags[tag] = true;
+    }
+  });
+  newTags[`temp:${temp.toFixed(3)}`] = true;
+
   // Ensure tags stay <= 10
-  if (location.tags.length > 10) {
-    location.tags = location.tags.slice(-10);
+  const tagKeys = Object.keys(newTags);
+  if (tagKeys.length > 10) {
+    const excessCount = tagKeys.length - 10;
+    for (let i = 0; i < excessCount; i++) {
+      delete newTags[tagKeys[i]];
+    }
   }
+
+  location.tags = newTags;
 }
 
 export const thermalCascade: SimulationSystem = {
@@ -203,7 +217,7 @@ export const thermalCascade: SimulationSystem = {
     const significantChanges: Array<{ location: HardState; oldTemp: number; newTemp: number }> = [];
 
     temperatureUpdates.forEach((newTemp, locationId) => {
-      const location = graph.entities.get(locationId);
+      const location = graph.getEntity(locationId);
       if (!location) return;
 
       const oldTemp = getTemperature(location);

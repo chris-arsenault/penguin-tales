@@ -6,7 +6,8 @@ import {
   getLocation,
   rollProbability,
   pickRandom,
-  generateId
+  generateId,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 
 /**
@@ -175,6 +176,12 @@ export const legendCrystallization: SimulationSystem = {
       const ruleId = generateId('rule');
       const ruleName = `${archetype.verb} ${npc.name}`;
 
+      const tags: Record<string, boolean> = {
+        memorial: true
+      };
+      tags[npc.subtype] = true;
+      tags[archetype.theme] = true;
+
       newEntities.push({
         id: ruleId,
         entity: {
@@ -184,7 +191,7 @@ export const legendCrystallization: SimulationSystem = {
           description: `A memorial tradition honoring ${npc.name}, who embodied ${archetype.theme} in life and legend.`,
           status: 'enacted',
           prominence: 'renowned',
-          tags: ['memorial', npc.subtype, archetype.theme].slice(0, 10),
+          tags,
           createdAt: graph.tick,
           updatedAt: graph.tick
         }
@@ -224,7 +231,10 @@ export const legendCrystallization: SimulationSystem = {
         updatedAt: entity.updatedAt!,
         coordinates: entity.coordinates || {}
       };
-      graph.entities.set(id, fullEntity);
+
+      // Use the Graph API to add entity
+      const entities = graph.getEntities();
+      entities.push(fullEntity);
     });
 
     // Note: This system doesn't use pressure changes because crystallization is

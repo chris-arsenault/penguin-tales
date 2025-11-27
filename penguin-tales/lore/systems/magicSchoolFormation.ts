@@ -13,7 +13,8 @@ import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import {
   pickRandom,
   addEntity,
-  generateId
+  generateId,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 import {
   detectClusters,
@@ -77,7 +78,7 @@ function generateSchoolName(majoritySubtype: string, clusterSize: number): strin
 /**
  * Create a meta-entity ability from a cluster
  */
-function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createSchoolEntity(cluster: HardState[], graph: Graph, graphView: TemplateGraphView): Partial<HardState> {
   // Determine school subtype from cluster majority
   const subtypeCounts = new Map<string, number>();
   cluster.forEach(ability => {
@@ -101,9 +102,9 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
   // Aggregate tags from cluster (top 4 to leave room for meta-entity tag)
   const allTags = new Set<string>();
   cluster.forEach(ability => {
-    (ability.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const abilityNames = cluster.map(a => a.name).join(', ');
@@ -134,6 +135,20 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+
+  // Derive coordinates from cluster entities
+  const coords = graphView.deriveCoordinates(cluster, 'abilities', 'physical', { maxDistance: 0.3, minDistance: 0.1 });
+  if (!coords) {
+    throw new Error(
+      `magic_school_formation: Failed to derive coordinates for magic school "${schoolName}". ` +
+      `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    );
+  }
+
   return {
     kind: 'abilities',
     subtype: majoritySubtype,
@@ -142,7 +157,8 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
     status: 'active',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity']
+    tags,
+    coordinates: { physical: coords }
   };
 }
 
@@ -243,7 +259,7 @@ export const magicSchoolFormation: SimulationSystem = {
       if (cluster.score < MAGIC_SCHOOL_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the school entity
-      const schoolPartial = createSchoolEntity(cluster.entities, graph);
+      const schoolPartial = createSchoolEntity(cluster.entities, graph, graphView);
       const schoolId = addEntity(graph, schoolPartial);
       entitiesCreated.push(schoolId);
 

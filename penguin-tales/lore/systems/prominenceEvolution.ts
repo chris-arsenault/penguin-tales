@@ -128,7 +128,7 @@ export const prominenceEvolution: SimulationSystem = {
     const npcs = findEntities(graph, { kind: 'npc' });
 
     npcs.forEach(npc => {
-      const relationships = graph.relationships.filter(r =>
+      const relationships = graph.getRelationships().filter(r =>
         r.src === npc.id || r.dst === npc.id
       );
 
@@ -197,7 +197,7 @@ export const prominenceEvolution: SimulationSystem = {
     const locations = findEntities(graph, { kind: 'location' });
 
     locations.forEach(location => {
-      const relationships = graph.relationships.filter(r =>
+      const relationships = graph.getRelationships().filter(r =>
         r.src === location.id || r.dst === location.id
       );
       const connectionScore = relationships.length;
@@ -229,7 +229,7 @@ export const prominenceEvolution: SimulationSystem = {
     const abilities = findEntities(graph, { kind: 'abilities' });
 
     abilities.forEach(ability => {
-      const practitioners = graph.relationships.filter(r =>
+      const practitioners = graph.getRelationships().filter(r =>
         r.kind === 'practitioner_of' && r.dst === ability.id
       );
       const currentProminence = getProminenceValue(ability.prominence);
@@ -255,7 +255,7 @@ export const prominenceEvolution: SimulationSystem = {
     const rules = findEntities(graph, { kind: 'rules' });
 
     rules.forEach(rule => {
-      const connections = graph.relationships.filter(r =>
+      const connections = graph.getRelationships().filter(r =>
         r.src === rule.id || r.dst === rule.id
       );
       const currentProminence = getProminenceValue(rule.prominence);

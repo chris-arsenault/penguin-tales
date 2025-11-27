@@ -152,6 +152,23 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       'Spectral Basin'
     ];
 
+    // Derive coordinates - reference the magical ability and catalyst
+    const referenceEntities = [target, catalyst];
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'location',
+      'physical',
+      { maxDistance: 0.4, minDistance: 0.1 }
+    );
+
+    if (!conceptualCoords) {
+      throw new Error(
+        `magical_site_discovery: Failed to derive coordinates for magical site discovered by ${catalyst.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'location' entities.`
+      );
+    }
+
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: 'anomaly',
@@ -161,6 +178,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       prominence: 'recognized',
       culture: catalyst.culture,  // Inherit culture from discovering practitioner
       tags: { anomaly: true, magical: true, [target.name.toLowerCase().split(' ')[0]]: true },
+      coordinates: { physical: conceptualCoords },
       links: []
     };
 

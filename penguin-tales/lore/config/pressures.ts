@@ -1,5 +1,5 @@
 import { Pressure, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { findEntities, getRelated } from '@lore-weave/core/utils/helpers';
+import { findEntities, hasTag } from '@lore-weave/core/utils/helpers';
 
 export const pressures: Pressure[] = [
   {
@@ -87,11 +87,11 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Measure conflict as RATIO of hostile vs friendly relationships
-      const hostileRelations = graph.relationships.filter(r =>
+      const hostileRelations = graph.getRelationships().filter(r =>
         r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
       );
 
-      const friendlyRelations = graph.relationships.filter(r =>
+      const friendlyRelations = graph.getRelationships().filter(r =>
         r.kind === 'allied_with' || r.kind === 'trades_with' || r.kind === 'member_of'
       );
 
@@ -102,7 +102,7 @@ export const pressures: Pressure[] = [
       const hostileRatio = hostileRelations.length / totalSocialBonds;
 
       // Active wars add extra tension
-      const factionWars = graph.relationships.filter(r => r.kind === 'at_war_with');
+      const factionWars = graph.getRelationships().filter(r => r.kind === 'at_war_with');
       const warBonus = Math.min(factionWars.length * 2, 5); // Cap war bonus at 5
 
       // FEEDBACK LOOP: Heroes reduce conflict
@@ -148,7 +148,7 @@ export const pressures: Pressure[] = [
       const magicAbilities = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
       const techAbilities = findEntities(graph, { kind: 'abilities', subtype: 'technology' });
       const allAbilities = findEntities(graph, { kind: 'abilities' });
-      const totalEntities = graph.entities.size;
+      const totalEntities = graph.getEntityCount();
 
       if (totalEntities === 0) return 0;
 
@@ -208,7 +208,7 @@ export const pressures: Pressure[] = [
       // Measure cultural fragmentation as RATIO
       const allFactions = findEntities(graph, { kind: 'faction' });
       const politicalFactions = findEntities(graph, { kind: 'faction', subtype: 'political' });
-      const splinterFactions = graph.relationships.filter(r => r.kind === 'splinter_of');
+      const splinterFactions = graph.getRelationships().filter(r => r.kind === 'splinter_of');
 
       if (allFactions.length === 0) return 0;
 
@@ -218,7 +218,7 @@ export const pressures: Pressure[] = [
       // Isolated colonies add to tension
       const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
       const isolatedColonies = colonies.filter(c =>
-        c.tags.includes('isolated') || c.tags.includes('divergent')
+        hasTag(c.tags, 'isolated') || hasTag(c.tags, 'divergent')
       );
 
       const isolationRatio = colonies.length > 0
@@ -229,7 +229,7 @@ export const pressures: Pressure[] = [
       const factionPressure = politicalFactions.length * 0.4;
 
       // FEEDBACK LOOP: Alliances reduce tension (negative feedback)
-      const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
+      const alliances = graph.getRelationships().filter(r => r.kind === 'allied_with');
       const allianceReduction = alliances.length * 0.3;
 
       // FEEDBACK LOOP: Social rules reduce tension (negative feedback)
@@ -272,8 +272,8 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Measure stability indicators as ratios
-      const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
-      const conflicts = graph.relationships.filter(r =>
+      const alliances = graph.getRelationships().filter(r => r.kind === 'allied_with');
+      const conflicts = graph.getRelationships().filter(r =>
         r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
       );
 
@@ -290,7 +290,7 @@ export const pressures: Pressure[] = [
         : 1; // No leaders = stable (not tracked yet)
 
       // FEEDBACK LOOP: Leader count increases stability (positive feedback coefficient 0.3)
-      const leadershipRelations = graph.relationships.filter(r => r.kind === 'leader_of');
+      const leadershipRelations = graph.getRelationships().filter(r => r.kind === 'leader_of');
       const leadershipBonus = leadershipRelations.length * 0.3;
 
       // FEEDBACK LOOP: Mayor count (succession events) can reduce stability over time
@@ -331,8 +331,8 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Increases during invasion era or when entities marked as external appear
-      const externalTags = Array.from(graph.entities.values())
-        .filter(e => e.tags.includes('external') || e.tags.includes('invader'));
+      const externalTags = graph.getEntities()
+        .filter(e => hasTag(e.tags, 'external') || hasTag(e.tags, 'invader'));
 
       // FEEDBACK LOOP: Orca count drives external threat (positive feedback coefficient 0.8)
       const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });

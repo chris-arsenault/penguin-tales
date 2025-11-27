@@ -4,7 +4,8 @@ import {
   findEntities,
   hasRelationship,
   pickRandom,
-  rollProbability
+  rollProbability,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 
 /**
@@ -91,14 +92,18 @@ export const culturalDrift: SimulationSystem = {
 
         if (connected) {
           // Connected colonies influence each other (reduce drift)
-          const sharedTags = colony.tags.filter(t => otherColony.tags.includes(t));
+          const colonyTagKeys = Object.keys(colony.tags || {});
+          const otherColonyTagKeys = Object.keys(otherColony.tags || {});
+          const sharedTags = colonyTagKeys.filter(t => hasTag(otherColony.tags, t));
           if (sharedTags.length < 2 && Math.random() < convergenceChance / modifier) {
             // Add a shared cultural tag
             const newTag = pickRandom(['unified', 'trading', 'peaceful']);
-            if (!colony.tags.includes(newTag) && colony.tags.length < 10) {
+            if (!hasTag(colony.tags, newTag) && colonyTagKeys.length < 10) {
+              const newTags = { ...colony.tags };
+              newTags[newTag] = true;
               modifications.push({
                 id: colony.id,
-                changes: { tags: [...colony.tags, newTag] }
+                changes: { tags: newTags }
               });
             }
           }
@@ -106,10 +111,12 @@ export const culturalDrift: SimulationSystem = {
           // Disconnected colonies diverge
           if (rollProbability(divergenceChance, modifier)) {
             const divergentTag = pickRandom(['isolated', 'unique', 'divergent']);
-            if (!colony.tags.includes(divergentTag) && colony.tags.length < 10) {
+            if (!hasTag(colony.tags, divergentTag) && Object.keys(colony.tags || {}).length < 10) {
+              const newTags = { ...colony.tags };
+              newTags[divergentTag] = true;
               modifications.push({
                 id: colony.id,
-                changes: { tags: [...colony.tags, divergentTag] }
+                changes: { tags: newTags }
               });
             }
           }
@@ -119,7 +126,7 @@ export const culturalDrift: SimulationSystem = {
 
     // Factions in divergent colonies may splinter
     const divergentColonies = colonies.filter(c =>
-      c.tags.includes('isolated') || c.tags.includes('divergent')
+      hasTag(c.tags, 'isolated') || hasTag(c.tags, 'divergent')
     );
 
     const splinterPressure = divergentColonies.length > 1 ? 10 : 0;

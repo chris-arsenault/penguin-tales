@@ -156,6 +156,34 @@ export const geographicExploration: GrowthTemplate = {
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
+    // Convert theme tags array to KVP
+    const themeTags = Array.isArray(theme.tags)
+      ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
+      : theme.tags;
+
+    // Find nearby locations for coordinate derivation
+    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const referenceEntities: HardState[] = [discoverer];
+    if (nearbyLocations.length > 0) {
+      referenceEntities.push(nearbyLocations[0]);
+    }
+
+    // Derive coordinates from discoverer and nearby locations
+    const coords = graphView.deriveCoordinates(
+      referenceEntities,
+      'location',
+      'physical',
+      { maxDistance: 0.4, minDistance: 0.1 }
+    );
+
+    if (!coords) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Unable to place discovered location in world'
+      };
+    }
+
     // Create the discovered location (name will be auto-generated)
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -164,7 +192,8 @@ export const geographicExploration: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'marginal',
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: theme.tags,
+      tags: themeTags,
+      coordinates: { physical: coords },
       links: []
     };
 
@@ -183,8 +212,7 @@ export const geographicExploration: GrowthTemplate = {
       dst: discoverer.id
     });
 
-    // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    // Make adjacent to nearby locations (reuse nearbyLocations from coordinate derivation)
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

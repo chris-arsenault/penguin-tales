@@ -105,14 +105,14 @@ export const relationshipReinforcement: SimulationSystem = {
 
     let modificationsCount = 0;
 
-    graph.relationships.forEach(rel => {
+    graph.getRelationships().forEach(rel => {
       const currentStrength = rel.strength ?? 0.5;
 
       // Skip if already at cap
       if (currentStrength >= reinforcementCap) return;
 
-      const srcEntity = graph.entities.get(rel.src);
-      const dstEntity = graph.entities.get(rel.dst);
+      const srcEntity = graph.getEntity(rel.src);
+      const dstEntity = graph.getEntity(rel.dst);
 
       if (!srcEntity || !dstEntity) return;
 

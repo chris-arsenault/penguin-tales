@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
 
 /**
  * Kinship Constellation Template
@@ -193,7 +193,7 @@ export const kinshipConstellation: GrowthTemplate = {
     // Metropolis algorithm to minimize energy (maximize drama)
     const TEMPERATURE = isingTemperature;
     const J = isingCouplingStrength;
-    const h = faction.tags.includes('traditional') ? isingExternalField : -isingExternalField;
+    const h = hasTag(faction.tags, 'traditional') ? isingExternalField : -isingExternalField;
 
     for (let iteration = 0; iteration < 50; iteration++) {
       const memberIndex = Math.floor(Math.random() * familyMembers.length);
@@ -239,15 +239,19 @@ export const kinshipConstellation: GrowthTemplate = {
 
     familyMembers.forEach((member, i) => {
       // Determine tags based on trait
-      const tags: string[] = ['family', familyName.toLowerCase()];
+      const tags: Record<string, boolean> = {
+        family: true,
+        [familyName.toLowerCase()]: true
+      };
+
       if (member.trait > 0) {
-        tags.push('traditional');
+        tags.traditional = true;
       } else {
-        tags.push('radical');
+        tags.radical = true;
       }
 
-      if (member.role === 'prodigy') tags.push('talented');
-      if (member.role === 'blacksheep') tags.push('rebellious');
+      if (member.role === 'prodigy') tags.talented = true;
+      if (member.role === 'blacksheep') tags.rebellious = true;
 
       entities.push({
         kind: 'npc',
@@ -256,7 +260,7 @@ export const kinshipConstellation: GrowthTemplate = {
         status: 'alive',
         prominence: member.role === 'prodigy' ? 'recognized' : 'marginal',
         culture: location.culture,  // Inherit culture from settlement location
-        tags: tags.slice(0, 10)
+        tags
       });
 
       // REQUIRED: Add resident_of for all NPCs

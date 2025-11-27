@@ -277,7 +277,7 @@ export const ideologyEmergence: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'rules',
-      'conceptual',
+      'physical',
       { maxDistance: relatedRule ? 0.4 : 0.6, minDistance: 0.1 }
     );
 
@@ -298,7 +298,7 @@ export const ideologyEmergence: GrowthTemplate = {
         prominence: 'marginal', // Will grow with adoption
         culture: champion.culture,  // Inherit culture from champion
         tags: { [ideologyTheme]: true, ideology: true, cultural: true },
-        coordinates: { conceptual: conceptualCoords }
+        coordinates: { physical: conceptualCoords }
       }],
       relationships,
       description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`

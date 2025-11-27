@@ -801,7 +801,7 @@ const penguinPhysicalSpace: CoordinateSpaceDefinition = {
   description: 'Geographic coordinates on and around Aurora Berg',
 
   // Which entity kinds participate in this space
-  entityKinds: ['location', 'npc', 'faction', 'abilities', 'occurrence'],
+  entityKinds: ['location', 'npc', 'faction', 'abilities', 'occurrence', 'rules'],
 
   axes: {
     plane: {

@@ -140,6 +140,11 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
+    // Convert theme tags array to KVP
+    const themeTags = Array.isArray(theme.tags)
+      ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
+      : theme.tags;
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -148,7 +153,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'recognized',  // Strategic locations are notable
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: theme.tags,
+      tags: themeTags,
       links: []
     };
 

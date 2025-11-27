@@ -102,7 +102,7 @@ export const conflictContagion: SimulationSystem = {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
 
     // Find existing conflicts
-    const conflicts = graph.relationships.filter(r =>
+    const conflicts = graph.getRelationships().filter(r =>
       r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
     );
 

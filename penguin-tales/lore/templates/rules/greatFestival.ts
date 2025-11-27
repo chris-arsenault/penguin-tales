@@ -194,7 +194,7 @@ export const greatFestival: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       [colony],
       'rules',
-      'conceptual',
+      'physical',
       { maxDistance: 0.3, minDistance: 0.1 }
     );
 
@@ -215,7 +215,7 @@ export const greatFestival: GrowthTemplate = {
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
         culture: colony.culture,  // Inherit culture from hosting colony
         tags: { festival: true, [festivalType]: true, cultural: true },
-        coordinates: { conceptual: conceptualCoords }
+        coordinates: { physical: conceptualCoords }
       }],
       relationships,
       description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`

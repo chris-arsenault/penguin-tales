@@ -151,7 +151,7 @@ export const cultFormation: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'faction',
-      'conceptual',
+      'physical',
       { maxDistance: existingCults.length > 0 ? 0.5 : 0.3, minDistance: 0.2 }  // Farther if other cults exist
     );
 
@@ -171,14 +171,14 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal',
       culture: location.culture,  // Inherit culture from location
       tags: { mystical: true, secretive: true, cult: true },
-      coordinates: { conceptual: conceptualCoords }
+      coordinates: { physical: conceptualCoords }
     };
 
     // Derive coordinates for prophet (NPC near cult location)
     const prophetCoords = graphView.deriveCoordinates(
       [location],
       'npc',
-      'conceptual',
+      'physical',
       { maxDistance: 0.2, minDistance: 0.05 }
     );
 
@@ -197,14 +197,14 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal', // Prophets start marginal
       culture: location.culture,  // Inherit culture from location
       tags: { prophet: true, mystical: true },
-      coordinates: { conceptual: prophetCoords }
+      coordinates: { physical: prophetCoords }
     };
 
     // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
     const newCultistCoords = graphView.deriveCoordinates(
       [location],
       'npc',
-      'conceptual',
+      'physical',
       { maxDistance: 0.3, minDistance: 0.1 }
     );
 
@@ -241,7 +241,7 @@ export const cultFormation: GrowthTemplate = {
             prominence: 'marginal',
             culture: location.culture,  // Inherit culture from cult location
             tags: { cultist: true },
-            coordinates: { conceptual: newCultistCoords }
+            coordinates: { physical: newCultistCoords }
           }),
           maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
         },

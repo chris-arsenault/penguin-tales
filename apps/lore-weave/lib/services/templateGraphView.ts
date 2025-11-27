@@ -436,7 +436,14 @@ export class TemplateGraphView {
     }
 
     // Multiple references - compute centroid
-    return this.placementService.computeCentroid(coords, newEntityKind, spaceId) ?? undefined;
+    const centroid = this.placementService.computeCentroid(coords, newEntityKind, spaceId);
+    if (centroid) {
+      return centroid;
+    }
+
+    // Centroid failed (likely cross-plane entities) - fall back to placeNear first reference
+    const fallbackResult = this.placementService.placeNear(coords[0], newEntityKind, spaceId, options);
+    return fallbackResult?.coordinates;
   }
 
   // ============================================================================

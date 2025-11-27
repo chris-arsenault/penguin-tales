@@ -214,7 +214,7 @@ export const mysteriousVanishing: GrowthTemplate = {
         description: `A strange glow lingers where ${victim.name} was last seen. The ice here seems different, colder, almost aware.`,
         status: 'thriving',
         prominence: 'recognized',
-        tags: ['mystery', 'vanishing', 'anomaly']
+        tags: { mystery: true, vanishing: true, anomaly: true }
       });
 
       anomalyId = 'will-be-assigned-0';
@@ -242,7 +242,7 @@ export const mysteriousVanishing: GrowthTemplate = {
     // Archive all relationships of the vanishing NPC
     // This marks them as historical rather than deleting them
     const graph = graphView.getInternalGraph();
-    const victimRelationships = graph.relationships.filter(r =>
+    const victimRelationships = graph.getRelationships().filter(r =>
       (r.src === victim.id || r.dst === victim.id) && r.status !== 'historical'
     );
 

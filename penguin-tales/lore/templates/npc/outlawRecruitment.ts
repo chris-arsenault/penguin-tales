@@ -92,7 +92,7 @@ export const outlawRecruitment: GrowthTemplate = {
           status: 'alive',
           prominence: 'marginal',
           culture: faction.culture,  // Inherit culture from recruiting faction
-          tags: ['criminal', 'recruit']
+          tags: { criminal: true, recruit: true }
         }),
         maxCreated: Math.ceil(numOutlaws * 0.7) // Max 70% new
       },

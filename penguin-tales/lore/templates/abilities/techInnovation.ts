@@ -135,7 +135,7 @@ export const techInnovation: GrowthTemplate = {
     const conceptualCoords = graphView.deriveCoordinates(
       referenceEntities,
       'abilities',
-      'conceptual',
+      'physical',
       { maxDistance: existingTech.length > 0 ? 0.25 : 0.5, minDistance: 0.1 }  // Closer if building on existing tech
     );
 
@@ -156,7 +156,7 @@ export const techInnovation: GrowthTemplate = {
         prominence: 'marginal',
         culture: faction.culture,  // Inherit culture from developing faction
         tags: { technology: true, innovation: true },
-        coordinates: { conceptual: conceptualCoords }
+        coordinates: { physical: conceptualCoords }
       }],
       relationships,
       description: `${faction.name} develops new technology`

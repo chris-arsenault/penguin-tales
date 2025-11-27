@@ -3,7 +3,8 @@ import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import {
   findEntities,
   getRelated,
-  rollProbability
+  rollProbability,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 
 /**
@@ -36,7 +37,7 @@ import {
 // Infection state tracking (stored in relationships only - no tags)
 // Check if NPC has believer_of relationship to rule
 function hasAdoptedBelief(graph: Graph, npcId: string, ruleId: string): boolean {
-  return graph.relationships.some(r =>
+  return graph.getRelationships().some(r =>
     r.kind === 'believer_of' && r.src === npcId && r.dst === ruleId
   );
 }
@@ -64,11 +65,11 @@ function rejectBelief(relationships: Relationship[], modifications: Array<{ id: 
 function isImmune(graph: Graph, npcId: string, ruleId: string): boolean {
   // Check if NPC previously rejected this ideology
   // Use archived relationships to track immunity
-  const npc = graph.entities.get(npcId);
+  const npc = graph.getEntity(npcId);
   if (!npc) return false;
 
   // Check for immune:* tag (legacy immunity tracking)
-  return npc.tags.some(tag => tag === `immune:${ruleId}`);
+  return hasTag(npc.tags, `immune:${ruleId}`);
 }
 
 export const beliefContagion: SimulationSystem = {
@@ -216,10 +217,10 @@ export const beliefContagion: SimulationSystem = {
 
         // Calculate resistance based on NPC traits
         let resistance = 0;
-        if (npc.tags.includes('traditional') || npc.tags.includes('conservative')) {
+        if (hasTag(npc.tags, 'traditional') || hasTag(npc.tags, 'conservative')) {
           resistance = RESISTANCE_WEIGHT;
         }
-        if (npc.tags.includes('radical') || npc.tags.includes('innovator')) {
+        if (hasTag(npc.tags, 'radical') || hasTag(npc.tags, 'innovator')) {
           resistance = -0.2; // More susceptible
         }
 
@@ -236,7 +237,7 @@ export const beliefContagion: SimulationSystem = {
       // Infected NPCs may reject the belief based on traditional traits
       carriers.forEach(npc => {
         let traditionBonus = 0;
-        if (npc.tags.includes('traditional') || npc.tags.includes('conservative')) {
+        if (hasTag(npc.tags, 'traditional') || hasTag(npc.tags, 'conservative')) {
           traditionBonus = TRADITION_WEIGHT;
         }
 
@@ -249,14 +250,22 @@ export const beliefContagion: SimulationSystem = {
           rejectBelief(relationships, modifications, npc.id, rule.id);
 
           // Add immune tag to track rejection
-          if (!npc.tags.some(tag => tag === `immune:${rule.id}`)) {
-            npc.tags.push(`immune:${rule.id}`);
-            if (npc.tags.length > 10) {
-              npc.tags = npc.tags.slice(-10);
+          if (!hasTag(npc.tags, `immune:${rule.id}`)) {
+            const newTags = { ...npc.tags };
+            newTags[`immune:${rule.id}`] = true;
+
+            // Keep only the most recent 10 tags
+            const tagKeys = Object.keys(newTags);
+            if (tagKeys.length > 10) {
+              const excessCount = tagKeys.length - 10;
+              for (let i = 0; i < excessCount; i++) {
+                delete newTags[tagKeys[i]];
+              }
             }
+
             modifications.push({
               id: npc.id,
-              changes: { tags: npc.tags }
+              changes: { tags: newTags }
             });
           }
         }

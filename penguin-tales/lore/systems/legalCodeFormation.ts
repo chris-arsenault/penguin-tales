@@ -13,7 +13,8 @@ import {
   pickRandom,
   addEntity,
   addRelationship,
-  generateId
+  generateId,
+  hasTag
 } from '@lore-weave/core/utils/helpers';
 import {
   detectClusters,
@@ -91,7 +92,7 @@ function generateCodeName(majoritySubtype: string, clusterSize: number): string 
 /**
  * Create a meta-entity rule from a cluster
  */
-function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createCodeEntity(cluster: HardState[], graph: Graph, graphView: TemplateGraphView): Partial<HardState> {
   // Determine code subtype from cluster majority
   const subtypeCounts = new Map<string, number>();
   cluster.forEach(rule => {
@@ -115,9 +116,9 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
   // Aggregate tags from cluster
   const allTags = new Set<string>();
   cluster.forEach(rule => {
-    (rule.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(rule.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const ruleNames = cluster.map(r => r.name).join(', ');
@@ -148,6 +149,20 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+
+  // Derive coordinates from cluster entities
+  const coords = graphView.deriveCoordinates(cluster, 'rules', 'physical', { maxDistance: 0.3, minDistance: 0.1 });
+  if (!coords) {
+    throw new Error(
+      `legal_code_formation: Failed to derive coordinates for legal code "${codeName}". ` +
+      `This indicates the coordinate system is not properly configured for 'rules' entities.`
+    );
+  }
+
   return {
     kind: 'rules',
     subtype: majoritySubtype,
@@ -156,7 +171,8 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
     status: 'enacted',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity']
+    tags,
+    coordinates: { physical: coords }
   };
 }
 
@@ -165,15 +181,16 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
  */
 function createGovernanceFaction(
   graph: Graph,
+  graphView: TemplateGraphView,
   legalCode: HardState,
   originalRules: HardState[]
 ): { faction: HardState | null; relationships: Relationship[] } {
   const relationships: Relationship[] = [];
 
   // Find locations where this code applies
-  const codeLocations = graph.relationships
+  const codeLocations = graph.getRelationships()
     .filter(r => r.kind === 'applies_in' && r.src === legalCode.id)
-    .map(r => graph.entities.get(r.dst))
+    .map(r => graph.getEntity(r.dst))
     .filter((l): l is HardState => l !== undefined);
 
   // If no location, don't create faction
@@ -184,10 +201,10 @@ function createGovernanceFaction(
   const primaryLocation = codeLocations[0];
 
   // Check if a political faction already governs this location
-  const existingGoverningFaction = Array.from(graph.entities.values()).find(e =>
+  const existingGoverningFaction = graph.getEntities().find(e =>
     e.kind === 'faction' &&
     e.subtype === 'political' &&
-    graph.relationships.some(r =>
+    graph.getRelationships().some(r =>
       r.kind === 'controls' &&
       r.src === e.id &&
       r.dst === primaryLocation.id
@@ -211,6 +228,14 @@ function createGovernanceFaction(
     ? legalCode.name.replace('Code', 'Council')
     : `Council of ${primaryLocation.name}`;
 
+  // Derive coordinates from location and legal code
+  const referenceEntities = [primaryLocation, legalCode];
+  const coords = graphView.deriveCoordinates(referenceEntities, 'faction', 'physical', { maxDistance: 0.2, minDistance: 0.05 });
+  if (!coords) {
+    // Can't place faction without coordinates - skip creation
+    return { faction: null, relationships: [] };
+  }
+
   // Create political faction
   const factionPartial: Partial<HardState> = {
     kind: 'faction',
@@ -220,11 +245,12 @@ function createGovernanceFaction(
     status: 'active',
     prominence: legalCode.prominence,
     culture: primaryLocation.culture,
-    tags: ['governance', 'legislative', 'political']
+    tags: { governance: true, legislative: true, political: true },
+    coordinates: { physical: coords }
   };
 
   const factionId = addEntity(graph, factionPartial);
-  const faction = graph.entities.get(factionId)!;
+  const faction = graph.getEntity(factionId)!;
 
   // Link faction to legal code
   addRelationship(graph, 'weaponized_by', factionId, legalCode.id);
@@ -347,9 +373,9 @@ export const legalCodeFormation: SimulationSystem = {
       if (cluster.score < LEGAL_CODE_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the legal code entity
-      const codePartial = createCodeEntity(cluster.entities, graph);
+      const codePartial = createCodeEntity(cluster.entities, graph, graphView);
       const codeId = addEntity(graph, codePartial);
-      const codeEntity = graph.entities.get(codeId)!;
+      const codeEntity = graph.getEntity(codeId)!;
       codesCreated.push(codeId);
 
       // Get cluster entity IDs
@@ -383,6 +409,7 @@ export const legalCodeFormation: SimulationSystem = {
       if (shouldCreateGovernance) {
         const { faction, relationships } = createGovernanceFaction(
           graph,
+          graphView,
           codeEntity,
           cluster.entities
         );

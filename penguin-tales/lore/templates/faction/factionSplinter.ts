@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, FactionSubtype, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, archiveRelationship, addRelationshipWithDistance } from '@lore-weave/core/utils/helpers';
+import { pickRandom, archiveRelationship } from '@lore-weave/core/utils/helpers';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -133,6 +133,10 @@ export const factionSplinter: GrowthTemplate = {
       ? { min: 0.6, max: 0.8 }  // Revolutionary change
       : { min: 0.15, max: 0.35 };  // Incremental difference
 
+    const parentTags = Object.keys(parentFaction.tags || {}).slice(0, 2);
+    const splinterTags: Record<string, boolean> = { splinter: true };
+    parentTags.forEach(tag => { splinterTags[tag] = true; });
+
     const splinter: Partial<HardState> = {
       kind: 'faction',
       subtype: splinterType,
@@ -141,7 +145,7 @@ export const factionSplinter: GrowthTemplate = {
       status: 'waning',
       prominence: 'marginal',
       culture: parentFaction.culture,  // Inherit culture from parent faction
-      tags: ['splinter', ...parentFaction.tags.slice(0, 2)]
+      tags: splinterTags
     };
 
     // Use targetSelector to find NPCs from the parent faction to lead the splinter
@@ -149,11 +153,12 @@ export const factionSplinter: GrowthTemplate = {
     let leaderEntity: HardState | undefined = undefined;
 
     const members = graphView.getRelatedEntities(parentFaction.id, 'member_of', 'dst');
+    const graph = graphView.getInternalGraph();
 
     if (members.length > 0) {
       // Select a member from the parent faction to lead the splinter
       // Prefer non-leaders
-      const nonLeaders = members.filter(m => !graphView.getRelationships(m.id, 'leader_of').length);
+      const nonLeaders = members.filter(m => !graph.getRelationships().filter(r => r.src === m.id && r.kind === 'leader_of').length);
       leaderEntity = nonLeaders.length > 0 ? pickRandom(nonLeaders) : pickRandom(members);
     }
 
@@ -166,7 +171,7 @@ export const factionSplinter: GrowthTemplate = {
         status: 'alive',
         prominence: 'recognized',
         culture: parentFaction.culture,  // Inherit culture from parent faction
-        tags: ['rebel', 'charismatic']
+        tags: { rebel: true, charismatic: true }
       };
 
     }
@@ -211,7 +216,6 @@ export const factionSplinter: GrowthTemplate = {
     // Add leader relationships (either existing or new)
     if (leaderEntity) {
       // Use existing NPC as leader - archive their old faction membership (full defection)
-      const graph = graphView.getInternalGraph();
       archiveRelationship(graph, leaderEntity.id, parentFaction.id, 'member_of');
 
       relationships.push(

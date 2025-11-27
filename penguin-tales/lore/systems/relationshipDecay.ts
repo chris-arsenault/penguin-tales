@@ -124,7 +124,7 @@ export const relationshipDecay: SimulationSystem = {
 
     let modificationsCount = 0;
 
-    graph.relationships.forEach(rel => {
+    graph.getRelationships().forEach(rel => {
       const currentStrength = rel.strength ?? 0.5;
 
       // Skip if already at floor
@@ -167,7 +167,7 @@ export const relationshipDecay: SimulationSystem = {
         rel.strength = newStrength;
 
         // Update entity links
-        const srcEntity = graph.entities.get(rel.src);
+        const srcEntity = graph.getEntity(rel.src);
         if (srcEntity) {
           const link = srcEntity.links.find(l =>
             l.kind === rel.kind && l.src === rel.src && l.dst === rel.dst
