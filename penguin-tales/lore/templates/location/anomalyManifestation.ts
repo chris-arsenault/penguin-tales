@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { pickRandom, hasTag } from '@lore-weave/core/utils/helpers';
 
 /**
  * Anomaly Manifestation Template
@@ -110,8 +110,10 @@ export const anomalyManifestation: GrowthTemplate = {
         .filter(p => p != null) as unknown as Array<{ x: number; y: number; z: number }>;
 
       if (colonyPoints.length === 0) {
-        // No colonies with region coords - fallback
-        return createFallbackResult(graphView, target, anomalyName);
+        throw new Error(
+          `anomaly_manifestation: No colonies have region coordinates configured. ` +
+          `Cannot place anomaly without spatial reference points.`
+        );
       }
 
       // Try to find a wilderness position between colonies
@@ -175,7 +177,7 @@ export const anomalyManifestation: GrowthTemplate = {
                   status: 'unspoiled',
                   prominence: 'recognized',
                   culture: nearestColony?.colony.culture,
-                  tags: ['anomaly', 'mystical', 'caverns']
+                  tags: { anomaly: true, mystical: true, caverns: true }
                 },
                 regionResult.region.id,
                 { minDistance: 2 }
@@ -200,7 +202,7 @@ export const anomalyManifestation: GrowthTemplate = {
 
                 // Maybe discovered by a magic user
                 const magicUsers = graphView.findEntities({}).filter(
-                  e => (e.kind === 'npc' && e.tags.includes('magic')) ||
+                  e => (e.kind === 'npc' && hasTag(e.tags, 'magic')) ||
                        (e.kind === 'npc' && e.links.some(l => l.kind === 'practitioner_of'))
                 );
 
@@ -232,71 +234,10 @@ export const anomalyManifestation: GrowthTemplate = {
       };
     }
 
-    // Fallback for domains without region system
-    return createFallbackResult(graphView, target, anomalyName);
+    // Region system is REQUIRED for anomaly placement
+    throw new Error(
+      `anomaly_manifestation: Region system is not configured. ` +
+      `Cannot place anomaly without spatial coordinates.`
+    );
   }
 };
-
-/**
- * Fallback result for domains without region system.
- */
-function createFallbackResult(
-  graphView: TemplateGraphView,
-  target: HardState | undefined,
-  anomalyName: string
-): TemplateResult {
-  const locations = graphView.findEntities({ kind: 'location' });
-  const nearbyLocation = target || pickRandom(locations);
-
-  if (!nearbyLocation) {
-    return {
-      entities: [],
-      relationships: [],
-      description: 'Cannot manifest anomaly - no locations exist'
-    };
-  }
-
-  const relationships: any[] = [];
-
-  if (nearbyLocation) {
-    relationships.push({
-      kind: 'adjacent_to',
-      src: 'will-be-assigned-0',
-      dst: nearbyLocation.id
-    });
-    relationships.push({
-      kind: 'adjacent_to',
-      src: nearbyLocation.id,
-      dst: 'will-be-assigned-0'
-    });
-  }
-
-  const magicUsers = graphView.findEntities({}).filter(
-    e => (e.kind === 'npc' && e.tags.includes('magic')) ||
-         (e.kind === 'npc' && e.links.some(l => l.kind === 'practitioner_of'))
-  );
-
-  if (magicUsers.length > 0) {
-    const discoverer = pickRandom(magicUsers);
-    relationships.push({
-      kind: 'discovered_by',
-      src: 'will-be-assigned-0',
-      dst: discoverer.id
-    });
-  }
-
-  return {
-    entities: [{
-      kind: 'location',
-      subtype: 'anomaly',
-      name: anomalyName,
-      description: `A mysterious phenomenon near ${nearbyLocation?.name || 'the wastes'}`,
-      status: 'unspoiled',
-      prominence: 'recognized',
-      culture: nearbyLocation?.culture,
-      tags: ['anomaly', 'mystical']
-    }],
-    relationships,
-    description: `${anomalyName} manifests near ${nearbyLocation?.name || 'the wastes'}`
-  };
-}

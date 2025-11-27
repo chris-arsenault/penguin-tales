@@ -134,7 +134,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
       status: 'active',
       prominence,
       culture: 'orca',  // Orca combat techniques belong to orca culture
-      tags: ['combat', 'orca', 'offensive', 'external']
+      tags: { combat: true, orca: true, offensive: true, external: true }
     };
 
     const relationships: Relationship[] = [

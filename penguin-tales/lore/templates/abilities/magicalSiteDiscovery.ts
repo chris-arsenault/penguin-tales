@@ -160,7 +160,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       status: 'thriving',
       prominence: 'recognized',
       culture: catalyst.culture,  // Inherit culture from discovering practitioner
-      tags: ['anomaly', 'magical', target.name.toLowerCase().split(' ')[0]],
+      tags: { anomaly: true, magical: true, [target.name.toLowerCase().split(' ')[0]]: true },
       links: []
     };
 

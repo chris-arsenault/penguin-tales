@@ -110,6 +110,13 @@ export const guildEstablishment: GrowthTemplate = {
       { maxDistance: 0.3, minDistance: 0.1 }  // Trade guilds cluster together conceptually
     );
 
+    if (!conceptualCoords) {
+      throw new Error(
+        `guild_establishment: Failed to derive coordinates for guild in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'faction' entities.`
+      );
+    }
+
     const guild: Partial<HardState> = {
       kind: 'faction',
       subtype: 'company',
@@ -118,9 +125,24 @@ export const guildEstablishment: GrowthTemplate = {
       status: 'state_sanctioned',
       prominence: 'recognized',
       culture: colony.culture,  // Inherit culture from colony
-      tags: ['trade', 'guild', 'organized'],
-      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
+      tags: { trade: true, guild: true, organized: true },
+      coordinates: { conceptual: conceptualCoords }
     };
+
+    // Pre-compute coordinates for potential new merchants (factory receives Graph, not TemplateGraphView)
+    const newMerchantCoords = graphView.deriveCoordinates(
+      [colony],
+      'npc',
+      'conceptual',
+      { maxDistance: 0.3, minDistance: 0.1 }
+    );
+
+    if (!newMerchantCoords) {
+      throw new Error(
+        `guild_establishment: Failed to derive coordinates for potential new merchants in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'npc' entities.`
+      );
+    }
 
     // Use targetSelector to intelligently select merchants (prevents super-hubs)
     let merchantsToRecruit: HardState[] = [];
@@ -140,14 +162,15 @@ export const guildEstablishment: GrowthTemplate = {
         },
         createIfSaturated: {
           threshold: 0.2, // If best score < 0.2, create new merchant
-          factory: (gv, ctx) => ({
+          factory: () => ({
             kind: 'npc',
             subtype: 'merchant',
             description: `An independent merchant seeking guild membership`,
             status: 'alive',
             prominence: 'marginal',
             culture: colony.culture,  // Inherit culture from colony
-            tags: ['trader', 'guild-founder']
+            tags: { trader: true, 'guild-founder': true },
+            coordinates: { conceptual: newMerchantCoords }
           }),
           maxCreated: 2 // Max 2 new merchants per guild
         },

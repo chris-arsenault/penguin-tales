@@ -1,8 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
-import { EntityClusterBuilder } from '@lore-weave/core/utils/entityClusterBuilder';
+import { HardState } from '@lore-weave/core/types/worldTypes';
+import { pickRandom } from '@lore-weave/core/utils/helpers';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -100,72 +99,62 @@ export const heroEmergence: GrowthTemplate = {
       };
     }
 
-    // Try region-based placement within colony's region
-    if (graphView.hasRegionSystem()) {
-      const colonyRegion = graphView.getEntityRegion(colony);
-
-      if (colonyRegion) {
-        // Place hero within the colony's region
-        const entityId = graphView.addEntityInRegion(
-          {
-            kind: 'npc',
-            subtype: 'hero',
-            description: `A brave penguin who emerged during troubled times in ${colony.name}`,
-            status: 'alive',
-            prominence: 'marginal',
-            culture: colony.culture,
-            tags: ['brave', 'emergent']
-          },
-          colonyRegion.id,
-          { minDistance: 1 }
-        );
-
-        if (entityId) {
-          const relationships: any[] = [
-            { kind: 'resident_of', src: entityId, dst: colony.id }
-          ];
-
-          // Add ability practice relationship if abilities exist
-          const abilities = graphView.findEntities({ kind: 'abilities' });
-          if (abilities.length > 0) {
-            relationships.push({
-              kind: 'practitioner_of',
-              src: entityId,
-              dst: pickRandom(abilities).id
-            });
-          }
-
-          return {
-            entities: [],  // Already added via addEntityInRegion
-            relationships,
-            description: `A new hero emerges in ${colony.name}`
-          };
-        }
-      }
+    // Region-based placement within colony's region is REQUIRED
+    if (!graphView.hasRegionSystem()) {
+      throw new Error(
+        `hero_emergence: Region system is not configured. ` +
+        `Cannot place hero without spatial coordinates.`
+      );
     }
 
-    // Fallback: non-region-aware placement
-    const hero: Partial<HardState> = {
-      kind: 'npc',
-      subtype: 'hero',
-      description: `A brave penguin who emerged during troubled times in ${colony.name}`,
-      status: 'alive',
-      prominence: 'marginal', // Heroes start marginal, must earn prominence
-      culture: colony.culture,  // Inherit culture from home colony
-      tags: ['brave', 'emergent']
-    };
+    const colonyRegion = graphView.getEntityRegion(colony);
+    if (!colonyRegion) {
+      throw new Error(
+        `hero_emergence: Colony "${colony.name}" (${colony.id}) has no associated region. ` +
+        `Ensure colony coordinates are properly set.`
+      );
+    }
 
-    // Use EntityClusterBuilder for cleaner relationship creation
-    const cluster = new EntityClusterBuilder()
-      .addEntity(hero)
-      .relateToExisting(0, colony.id, 'resident_of');
+    // Place hero within the colony's region
+    const entityId = graphView.addEntityInRegion(
+      {
+        kind: 'npc',
+        subtype: 'hero',
+        description: `A brave penguin who emerged during troubled times in ${colony.name}`,
+        status: 'alive',
+        prominence: 'marginal',
+        culture: colony.culture,
+        tags: { brave: true, emergent: true }
+      },
+      colonyRegion.id,
+      { minDistance: 1 }
+    );
+
+    if (!entityId) {
+      throw new Error(
+        `hero_emergence: Failed to place hero in region "${colonyRegion.id}". ` +
+        `Region may be saturated or coordinate placement failed.`
+      );
+    }
+
+    const relationships: any[] = [
+      { kind: 'resident_of', src: entityId, dst: colony.id }
+    ];
 
     // Add ability practice relationship if abilities exist
     const abilities = graphView.findEntities({ kind: 'abilities' });
     if (abilities.length > 0) {
-      cluster.relateToExisting(0, pickRandom(abilities).id, 'practitioner_of');
+      relationships.push({
+        kind: 'practitioner_of',
+        src: entityId,
+        dst: pickRandom(abilities).id
+      });
     }
 
-    return cluster.buildWithDescription(`A new hero emerges in ${colony.name}`);
+    return {
+      entities: [],  // Already added via addEntityInRegion
+      relationships,
+      description: `A new hero emerges in ${colony.name}`
+    };
   }
 };

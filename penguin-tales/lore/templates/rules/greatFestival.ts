@@ -190,6 +190,21 @@ export const greatFestival: GrowthTemplate = {
       }
     }
 
+    // Derive coordinates in conceptual space - festivals exist near the hosting colony
+    const conceptualCoords = graphView.deriveCoordinates(
+      [colony],
+      'rules',
+      'conceptual',
+      { maxDistance: 0.3, minDistance: 0.1 }
+    );
+
+    if (!conceptualCoords) {
+      throw new Error(
+        `great_festival: Failed to derive coordinates for festival in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'rules' entities.`
+      );
+    }
+
     return {
       entities: [{
         kind: 'rules',
@@ -199,7 +214,8 @@ export const greatFestival: GrowthTemplate = {
         status: 'enacted',
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
         culture: colony.culture,  // Inherit culture from hosting colony
-        tags: ['festival', festivalType, 'cultural']
+        tags: { festival: true, [festivalType]: true, cultural: true },
+        coordinates: { conceptual: conceptualCoords }
       }],
       relationships,
       description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`

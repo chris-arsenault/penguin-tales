@@ -133,7 +133,7 @@ export const colonyFounding: GrowthTemplate = {
               status: 'thriving',
               prominence: 'marginal',
               culture,
-              tags: ['new', 'colony']
+              tags: { new: true, colony: true }
             },
             regionResult.region.id,
             { minDistance: 3 }
@@ -160,22 +160,10 @@ export const colonyFounding: GrowthTemplate = {
       };
     }
 
-    // Fallback for domains without region system - use original behavior
-    return {
-      entities: [{
-        kind: 'location',
-        subtype: 'colony',
-        name: colonyName,
-        description: `New colony established on ${iceberg.name}`,
-        status: 'thriving',
-        prominence: 'marginal',
-        culture,
-        tags: ['new', 'colony']
-      }],
-      relationships: [
-        { kind: 'contained_by', src: 'will-be-assigned-0', dst: iceberg.id }
-      ],
-      description: `New colony founded on ${iceberg.name}`
-    };
+    // Region system is REQUIRED for colony placement
+    throw new Error(
+      `colony_founding: Region system is not configured. ` +
+      `Cannot place colony without spatial coordinates.`
+    );
   }
 };

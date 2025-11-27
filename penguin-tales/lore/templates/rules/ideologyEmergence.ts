@@ -1,7 +1,7 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { pickRandom, hasTag } from '@lore-weave/core/utils/helpers';
 
 /**
  * Ideology Emergence Template
@@ -107,8 +107,8 @@ export const ideologyEmergence: GrowthTemplate = {
     const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
     const charismatic = npcs.filter(npc =>
       npc.subtype === 'hero' ||
-      npc.tags.includes('charismatic') ||
-      npc.tags.includes('mystical')
+      hasTag(npc.tags, 'charismatic') ||
+      hasTag(npc.tags, 'mystical')
     );
 
     return charismatic.length > 0 ? charismatic : npcs;
@@ -227,10 +227,10 @@ export const ideologyEmergence: GrowthTemplate = {
 
     // Find existing ideologies/rules to establish lineage
     const existingIdeologies = graphView.findEntities({ kind: 'rules' })
-      .filter(r => r.status !== 'repealed' && r.tags?.includes('ideology'));
+      .filter(r => r.status !== 'repealed' && hasTag(r.tags, 'ideology'));
 
     const existingRules = graphView.findEntities({ kind: 'rules' })
-      .filter(r => r.status !== 'repealed' && !r.tags?.includes('ideology'));
+      .filter(r => r.status !== 'repealed' && !hasTag(r.tags, 'ideology'));
 
     // New ideologies can be:
     // - Derived from existing ideologies (reform movements)
@@ -268,6 +268,26 @@ export const ideologyEmergence: GrowthTemplate = {
 
     const lineageDesc = relatedRule ? ` (related to ${relatedRule.name})` : '';
 
+    // Derive coordinates in conceptual space - ideologies exist near the champion
+    const referenceEntities: HardState[] = [champion];
+    if (relatedRule) {
+      referenceEntities.push(relatedRule);
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'rules',
+      'conceptual',
+      { maxDistance: relatedRule ? 0.4 : 0.6, minDistance: 0.1 }
+    );
+
+    if (!conceptualCoords) {
+      throw new Error(
+        `ideology_emergence: Failed to derive coordinates for ideology championed by ${champion.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'rules' entities.`
+      );
+    }
+
     return {
       entities: [{
         kind: 'rules',
@@ -277,7 +297,8 @@ export const ideologyEmergence: GrowthTemplate = {
         status: 'proposed', // Key: starts as proposed, will become enacted if adopted widely
         prominence: 'marginal', // Will grow with adoption
         culture: champion.culture,  // Inherit culture from champion
-        tags: [ideologyTheme, 'ideology', 'cultural']
+        tags: { [ideologyTheme]: true, ideology: true, cultural: true },
+        coordinates: { conceptual: conceptualCoords }
       }],
       relationships,
       description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`

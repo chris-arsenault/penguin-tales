@@ -180,6 +180,13 @@ export const magicDiscovery: GrowthTemplate = {
       { maxDistance: relatedMagic ? 0.3 : 0.6, minDistance: 0.1 }  // Closer if related lineage
     );
 
+    if (!conceptualCoords) {
+      throw new Error(
+        `magic_discovery: Failed to derive coordinates for magic discovered by ${hero.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
     const magicAbility: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'magic',
@@ -188,8 +195,8 @@ export const magicDiscovery: GrowthTemplate = {
       status: 'emergent',
       prominence: 'recognized',
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
-      tags: ['magic', 'mystical'],
-      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
+      tags: { magic: true, mystical: true },
+      coordinates: { conceptual: conceptualCoords }
     };
 
     return {

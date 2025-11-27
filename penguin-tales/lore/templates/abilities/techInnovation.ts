@@ -139,6 +139,13 @@ export const techInnovation: GrowthTemplate = {
       { maxDistance: existingTech.length > 0 ? 0.25 : 0.5, minDistance: 0.1 }  // Closer if building on existing tech
     );
 
+    if (!conceptualCoords) {
+      throw new Error(
+        `tech_innovation: Failed to derive coordinates for technology from ${faction.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
     return {
       entities: [{
         kind: 'abilities',
@@ -148,8 +155,8 @@ export const techInnovation: GrowthTemplate = {
         status: 'discovered',
         prominence: 'marginal',
         culture: faction.culture,  // Inherit culture from developing faction
-        tags: ['technology', 'innovation'],
-        coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
+        tags: { technology: true, innovation: true },
+        coordinates: { conceptual: conceptualCoords }
       }],
       relationships,
       description: `${faction.name} develops new technology`

@@ -1,4 +1,16 @@
 World Generation Warnings Log
-Started: 2025-11-27T19:44:56.436Z
+Started: 2025-11-27T19:46:50.659Z
 ================================================================================
+
+[2025-11-27T19:46:50.741Z] [Tick 0]
+⚠️  RELATIONSHIP WARNING (NPC):
+   Entity: Tide-Splitter Rukan (Tide-Splitter Rukan)
+   Kind: npc
+   Relationship Type: practitioner_of
+   Current count: 5
+   Warning threshold: 5
+   Target: Improved Ice Tech
+   Tick: 0
+   Era: The Great Thaw
+   ℹ️  This is a WARNING only - relationship will still be added
 

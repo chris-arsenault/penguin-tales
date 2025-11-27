@@ -155,6 +155,13 @@ export const cultFormation: GrowthTemplate = {
       { maxDistance: existingCults.length > 0 ? 0.5 : 0.3, minDistance: 0.2 }  // Farther if other cults exist
     );
 
+    if (!conceptualCoords) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for cult near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'faction' entities.`
+      );
+    }
+
     const cult: Partial<HardState> = {
       kind: 'faction',
       subtype: 'cult',
@@ -163,9 +170,24 @@ export const cultFormation: GrowthTemplate = {
       status: 'illegal',
       prominence: 'marginal',
       culture: location.culture,  // Inherit culture from location
-      tags: ['mystical', 'secretive', 'cult'],
-      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
+      tags: { mystical: true, secretive: true, cult: true },
+      coordinates: { conceptual: conceptualCoords }
     };
+
+    // Derive coordinates for prophet (NPC near cult location)
+    const prophetCoords = graphView.deriveCoordinates(
+      [location],
+      'npc',
+      'conceptual',
+      { maxDistance: 0.2, minDistance: 0.05 }
+    );
+
+    if (!prophetCoords) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for prophet near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'npc' entities.`
+      );
+    }
 
     const prophet: Partial<HardState> = {
       kind: 'npc',
@@ -174,8 +196,24 @@ export const cultFormation: GrowthTemplate = {
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
       culture: location.culture,  // Inherit culture from location
-      tags: ['prophet', 'mystical']
+      tags: { prophet: true, mystical: true },
+      coordinates: { conceptual: prophetCoords }
     };
+
+    // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
+    const newCultistCoords = graphView.deriveCoordinates(
+      [location],
+      'npc',
+      'conceptual',
+      { maxDistance: 0.3, minDistance: 0.1 }
+    );
+
+    if (!newCultistCoords) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for potential new cultists near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'npc' entities.`
+      );
+    }
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)
     let cultists: HardState[] = [];
@@ -195,14 +233,15 @@ export const cultFormation: GrowthTemplate = {
         },
         createIfSaturated: {
           threshold: 0.15, // If best score < 0.15, create new NPC
-          factory: (gv, ctx) => ({
+          factory: () => ({
             kind: 'npc',
             subtype: pickRandom(['merchant', 'outlaw']),
             description: `A convert drawn to the cult's mystical teachings`,
             status: 'alive',
             prominence: 'marginal',
             culture: location.culture,  // Inherit culture from cult location
-            tags: ['cultist']
+            tags: { cultist: true },
+            coordinates: { conceptual: newCultistCoords }
           }),
           maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
         },

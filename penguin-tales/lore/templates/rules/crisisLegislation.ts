@@ -71,6 +71,15 @@ export const crisisLegislation: GrowthTemplate = {
   
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'colony' }));
+
+    if (!colony) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot enact crisis legislation - no colonies exist'
+      };
+    }
+
     const ruleType = pickRandom(['edict', 'taboo', 'social']);
 
     // Find existing rules in same location to establish lineage
@@ -99,6 +108,26 @@ export const crisisLegislation: GrowthTemplate = {
         relatedRule = pickRandom(existingRules);
         isSuperseding = false;
       }
+    }
+
+    // Derive coordinates in conceptual space - rules exist near the colony they apply to
+    const referenceEntities: HardState[] = [colony];
+    if (relatedRule) {
+      referenceEntities.push(relatedRule);
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'rules',
+      'conceptual',
+      { maxDistance: relatedRule ? 0.3 : 0.5, minDistance: 0.1 }
+    );
+
+    if (!conceptualCoords) {
+      throw new Error(
+        `crisis_legislation: Failed to derive coordinates for rule in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'rules' entities.`
+      );
     }
 
     const ruleName = `${colony.name} ${pickRandom(['Protection', 'Rationing', 'Defense'])} ${ruleType}`;
@@ -142,7 +171,8 @@ export const crisisLegislation: GrowthTemplate = {
         status: 'enacted',
         prominence: 'recognized',
         culture: colony.culture,  // Inherit culture from enacting colony
-        tags: ['crisis', 'emergency']
+        tags: { crisis: true, emergency: true },
+        coordinates: { conceptual: conceptualCoords }
       }],
       relationships,
       description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`
