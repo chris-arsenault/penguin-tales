@@ -2,15 +2,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eraSpawner } from '../../systems/eraSpawner';
 import { Graph } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { HardState, Relationship } from '../../types/worldTypes';
 
 describe('eraSpawner', () => {
   let graph: Graph;
 
   beforeEach(() => {
+    const _entities = new Map();
+    let _relationships: Relationship[] = [];
+
     graph = {
-      entities: new Map(),
-      relationships: [],
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
       tick: 0,
       currentEra: { id: 'test', name: 'Test', description: 'Test', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
       pressures: new Map(),
@@ -31,6 +34,19 @@ describe('eraSpawner', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      }
     };
   });
 

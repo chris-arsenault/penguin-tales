@@ -5,7 +5,7 @@ import { DomainLoreProvider } from '../types/domainLore';
 import { LLMClient } from './llmClient';
 import { LoreValidator } from './loreValidator';
 import { NameLogger } from './nameLogger';
-import { upsertNameTag, parseJsonSafe, chunk, generateLoreId } from '../utils/helpers';
+import { upsertNameTag, parseJsonSafe, chunk, generateLoreId, hasTag } from '../utils/helpers';
 
 export class EnrichmentService {
   private llm: LLMClient;
@@ -103,7 +103,7 @@ export class EnrichmentService {
         }
 
         // Detect meta-entities
-        const isMetaEntity = e.tags?.includes('meta-entity');
+        const isMetaEntity = hasTag(e.tags, 'meta-entity');
         const clusterInfo: any = {};
         if (isMetaEntity) {
           // Find part_of relationships (components of this meta-entity)

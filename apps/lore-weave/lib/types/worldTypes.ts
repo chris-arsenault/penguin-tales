@@ -1,3 +1,5 @@
+import type { EntityCoordinates } from './coordinates';
+
 // Core types from your specification
 export type Prominence =
     | 'forgotten'
@@ -5,6 +7,22 @@ export type Prominence =
     | 'recognized'
     | 'renowned'
     | 'mythic';
+
+/**
+ * Entity tags as key-value pairs.
+ *
+ * Keys are semantic categories, values are either:
+ * - `true` for boolean flags (e.g., { mystical: true })
+ * - strings for categorized attributes (e.g., { region: 'aurora_stack' })
+ *
+ * Common keys:
+ * - `region`: Region ID where entity is located
+ * - `culture`: Cultural affiliation
+ * - `terrain`: Physical environment type
+ * - `name`: Slugified entity name (system-generated)
+ * - Domain-specific flags: anomaly, strategic, resource, etc.
+ */
+export type EntityTags = Record<string, string | boolean>;
 
 export interface HardState {
     id: string;              // stable ID in the graph
@@ -15,7 +33,7 @@ export interface HardState {
     status: string;
     prominence: Prominence;
     culture: string;  // Domain-defined cultural affiliation (e.g., 'aurora-stack', 'nightshelf', 'orca', 'world')
-    tags: string[];          // <= 10
+    tags: EntityTags;        // Key-value pairs for semantic tagging
     links: Relationship[];
     createdAt: number;       // tick or epoch index
     updatedAt: number;
@@ -28,6 +46,9 @@ export interface HardState {
         startTick: number;
         endTick: number | null;
     };
+
+    // Coordinates across multiple spaces (physical, political, social, etc.)
+    coordinates: EntityCoordinates;
 }
 
 // Catalyst system types

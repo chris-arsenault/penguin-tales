@@ -1,5 +1,5 @@
 import { SimulationSystem, SystemResult, Graph } from '@lore-weave/core/types/engine';
-import { Relationship } from '@lore-weave/core/types/worldTypes';
+import { Relationship, HardState } from '@lore-weave/core/types/worldTypes';
 import {
   findEntities,
   getRelated,
@@ -12,6 +12,23 @@ import {
   getConnectionWeight,
   getFactionRelationship
 } from '@lore-weave/core/utils/helpers';
+
+/**
+ * Check if two entities are in the same region based on their coordinates.
+ */
+function areInSameRegion(entity1: HardState, entity2: HardState): boolean {
+  const p1 = entity1.coordinates?.region as { x: number; y: number; z: number } | undefined;
+  const p2 = entity2.coordinates?.region as { x: number; y: number; z: number } | undefined;
+
+  if (!p1 || !p2) return false;
+
+  // Consider entities in same region if within ~15 units (colony radius)
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  return distance <= 15;
+}
 
 /**
  * Relationship Formation System
@@ -142,6 +159,18 @@ export const relationshipFormation: SimulationSystem = {
         max: 50,
         description: 'Ticks before same NPC can form another romance (should be rare)',
       },
+      regionProximityEnabled: {
+        value: 1,
+        min: 0,
+        max: 1,
+        description: 'Enable region-based relationship formation (1=enabled, 0=disabled)',
+      },
+      regionProximityMultiplier: {
+        value: 0.3,
+        min: 0.1,
+        max: 0.8,
+        description: 'Relationship chance multiplier for same-region but different-location NPCs',
+      },
     },
     triggers: {
       graphConditions: ['Same location', 'Faction membership'],
@@ -190,19 +219,31 @@ export const relationshipFormation: SimulationSystem = {
       lover_of: params.cooldownLover?.value ?? 15
     };
 
+    // Region proximity parameters
+    const regionProximityEnabled = (params.regionProximityEnabled?.value ?? 1) === 1;
+    const regionProximityMult = params.regionProximityMultiplier?.value ?? 0.3;
+
     // Form relationships based on proximity and shared attributes
     // Process each pair only once using ID comparison to avoid double-counting
     npcs.forEach((npc, i) => {
       const location = getLocation(graph, npc.id);
-      if (!location) return;
 
       // Connection-aware weighting to balance network density
       const npcWeight = getConnectionWeight(npc);
 
       // Only process NPCs that come after this one to avoid double processing
       npcs.slice(i + 1).forEach(neighbor => {
-        // Verify same location
-        if (getLocation(graph, neighbor.id)?.id !== location.id) return;
+        const neighborLocation = getLocation(graph, neighbor.id);
+
+        // Determine proximity type: same location (full chance) or same region (reduced chance)
+        const sameLocation = location && neighborLocation && location.id === neighborLocation.id;
+        const sameRegion = !sameLocation && regionProximityEnabled && areInSameRegion(npc, neighbor);
+
+        // Skip if neither same location nor same region
+        if (!sameLocation && !sameRegion) return;
+
+        // Apply region proximity multiplier if only in same region (not same location)
+        const proximityMultiplier = sameRegion ? regionProximityMult : 1.0;
 
         // Connection-aware weighting for neighbor
         const neighborWeight = getConnectionWeight(neighbor);
@@ -222,7 +263,7 @@ export const relationshipFormation: SimulationSystem = {
         // Same faction or allied factions can form friendships/rivalries
         if (sharedFaction || factionRel === 'allied') {
           const friendshipMultiplier = sharedFaction ? sameFactionFriendshipMult : alliedFactionFriendshipMult;
-          const friendshipChance = Math.min(0.95, friendshipBaseChance * friendshipMultiplier * balancingFactor);
+          const friendshipChance = Math.min(0.95, friendshipBaseChance * friendshipMultiplier * balancingFactor * proximityMultiplier);
 
           if (rollProbability(friendshipChance, modifier)) {
             // Use friendshipRivalRatio parameter
@@ -250,7 +291,7 @@ export const relationshipFormation: SimulationSystem = {
           else if (factionRel === 'allied') conflictMultiplier = 0.0; // Allied = no conflicts
           else conflictMultiplier = neutralConflictMult;
 
-          const conflictChance = Math.min(0.95, conflictBaseChance * conflictMultiplier * balancingFactor);
+          const conflictChance = Math.min(0.95, conflictBaseChance * conflictMultiplier * balancingFactor * proximityMultiplier);
 
           if (rollProbability(conflictChance, modifier)) {
             // Check: no existing enemy_of, not on cooldown, no contradictions
@@ -275,7 +316,7 @@ export const relationshipFormation: SimulationSystem = {
         else if (factionRel === 'neutral') romanceMultiplier = neutralRomanceMult;
         else if (factionRel === 'enemy') romanceMultiplier = starCrossedLoversMult;  // Star-crossed lovers!
 
-        const romanceChance = Math.min(0.95, romanceBaseChance * romanceMultiplier * balancingFactor);
+        const romanceChance = Math.min(0.95, romanceBaseChance * romanceMultiplier * balancingFactor * proximityMultiplier);
 
         if (rollProbability(romanceChance, modifier)) {
           // Check: no existing lover_of, not on cooldown, no contradictions

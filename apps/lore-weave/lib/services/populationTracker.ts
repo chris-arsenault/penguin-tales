@@ -108,7 +108,7 @@ export class PopulationTracker {
       });
     } else {
       // Fallback: count entities manually
-      Array.from(graph.entities.values()).forEach(entity => {
+      graph.forEachEntity(entity => {
         const key = `${entity.kind}:${entity.subtype}`;
         entityCounts.set(key, (entityCounts.get(key) || 0) + 1);
       });
@@ -168,7 +168,7 @@ export class PopulationTracker {
     // Group relationships by kind
     const relationshipCounts = new Map<string, number>();
 
-    graph.relationships.forEach(rel => {
+    graph.getRelationships().forEach(rel => {
       relationshipCounts.set(rel.kind, (relationshipCounts.get(rel.kind) || 0) + 1);
     });
 

@@ -119,17 +119,92 @@ export const familyExpansion: GrowthTemplate = {
 
     // Generate children
     const numChildren = Math.floor(Math.random() * (numChildrenMax - numChildrenMin + 1)) + numChildrenMin;
-    const children: Partial<HardState>[] = [];
     const relationships: any[] = [];
 
     // Inherit subtype from parents with variation
     const subtypes: NPCSubtype[] = ['merchant', 'hero', 'mayor', 'outlaw'];
     const parentSubtype = target.subtype as NPCSubtype;
 
+    // Try region-based placement within parent's colony region
+    if (graphView.hasRegionSystem()) {
+      const colonyRegion = graphView.getEntityRegion(colony);
+
+      if (colonyRegion) {
+        const createdChildIds: string[] = [];
+
+        for (let i = 0; i < numChildren; i++) {
+          const childSubtype = Math.random() > inheritSubtypeChance
+            ? pickRandom(subtypes)
+            : parentSubtype;
+
+          // Place child within colony region, near parent
+          const entityId = graphView.addEntityNearEntity(
+            {
+              kind: 'npc',
+              subtype: childSubtype,
+              description: `Child of ${target.name}, raised in ${colony.name}`,
+              status: 'alive',
+              prominence: 'marginal',
+              culture: target.culture,
+              tags: ['second_generation']
+            },
+            target,  // Place near parent entity
+            { maxSearchRadius: 5, minDistance: 1 }
+          );
+
+          if (entityId) {
+            createdChildIds.push(entityId);
+
+            // Create relationships for this child
+            relationships.push({
+              kind: 'mentor_of',
+              src: target.id,
+              dst: entityId
+            });
+
+            relationships.push({
+              kind: 'resident_of',
+              src: entityId,
+              dst: colony.id
+            });
+
+            // If parent is in a faction, children might join
+            const parentFactions = graphView.getRelatedEntities(target.id, 'member_of', 'src');
+            if (parentFactions.length > 0 && Math.random() < joinParentFactionChance) {
+              relationships.push({
+                kind: 'member_of',
+                src: entityId,
+                dst: parentFactions[0].id
+              });
+            }
+          }
+        }
+
+        if (createdChildIds.length > 0) {
+          return {
+            entities: [],  // Already added via addEntityNearEntity
+            relationships,
+            description: `${target.name} raises ${createdChildIds.length} ${createdChildIds.length === 1 ? 'child' : 'children'} in ${colony.name}`
+          };
+        }
+      }
+    }
+
+    // Fallback: non-region-aware placement with physical coordinates
+    const children: Partial<HardState>[] = [];
+
     for (let i = 0; i < numChildren; i++) {
       const childSubtype = Math.random() > inheritSubtypeChance
         ? pickRandom(subtypes)
         : parentSubtype;
+
+      // Derive coordinates from parent and colony (places child near family)
+      const childCoords = graphView.deriveCoordinates(
+        [target, colony],  // Reference entities: parent and colony
+        'npc',             // Entity kind for coordinate lookup
+        'physical',        // Space ID
+        { maxDistance: 0.5, minDistance: 0.1 }  // Place nearby
+      );
 
       children.push({
         kind: 'npc',
@@ -139,7 +214,8 @@ export const familyExpansion: GrowthTemplate = {
         status: 'alive',
         prominence: 'marginal',
         culture: target.culture,  // Inherit parent's culture
-        tags: ['second_generation']
+        tags: ['second_generation'],
+        coordinates: childCoords ? { physical: childCoords } : {}
       });
 
       // Create relationships for each child

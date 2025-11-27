@@ -74,7 +74,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
   const strugglingStatuses = requireConfigValue(config, 'strugglingStatuses');
   const foodResources = requireConfigValue(config, 'foodResources');
 
-  const colonies = Array.from(graph.entities.values()).filter(
+  const colonies = graph.getEntities().filter(
     e => e.kind === 'location' && settlementSubtypes.includes(e.subtype)
   );
 
@@ -95,7 +95,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
   }
 
   // Water scarcity if high population but low resources
-  const npcs = Array.from(graph.entities.values()).filter(e => e.kind === 'npc');
+  const npcs = graph.getEntities().filter(e => e.kind === 'npc');
   const locationsPerNPC = colonies.length / Math.max(npcs.length, 1);
   if (locationsPerNPC < 0.1 && colonies.length > 2) {
     return {
@@ -135,8 +135,8 @@ export function analyzeConflictPatterns(graph: Graph): ConflictAnalysis | null {
   if (conflictPressure < 30) return null;
 
   // Find active conflicts
-  const enemies = graph.relationships.filter(r => r.kind === 'enemy_of' || r.kind === 'at_war_with');
-  const conflicts = graph.relationships.filter(r => r.kind === 'attacking');
+  const enemies = graph.getRelationships().filter(r => r.kind === 'enemy_of' || r.kind === 'at_war_with');
+  const conflicts = graph.getRelationships().filter(r => r.kind === 'attacking');
 
   if (enemies.length === 0) return null;
 
@@ -156,8 +156,8 @@ export function analyzeConflictPatterns(graph: Graph): ConflictAnalysis | null {
   // Find involved factions
   const factionIds = new Set<string>();
   enemies.forEach(e => {
-    const srcEntity = graph.entities.get(e.src);
-    const dstEntity = graph.entities.get(e.dst);
+    const srcEntity = graph.getEntity(e.src);
+    const dstEntity = graph.getEntity(e.dst);
     if (srcEntity?.kind === 'faction') factionIds.add(e.src);
     if (dstEntity?.kind === 'faction') factionIds.add(e.dst);
   });
@@ -185,10 +185,10 @@ export function analyzeMagicPresence(graph: Graph): MagicAnalysis | null {
   if (instability < 25) return null;
 
   // Find existing magic
-  const magicAbilities = Array.from(graph.entities.values()).filter(
+  const magicAbilities = graph.getEntities().filter(
     e => e.kind === 'abilities' && e.subtype === 'magic'
   );
-  const anomalies = Array.from(graph.entities.values()).filter(
+  const anomalies = graph.getEntities().filter(
     e => e.kind === 'location' && e.subtype === 'anomaly'
   );
 
@@ -362,7 +362,7 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
   const explorerActiveStatus = requireConfigValue(config, 'explorerActiveStatus');
   const eraDiscoveryModifiers = config.eraDiscoveryModifiers ?? {};
 
-  const locationCount = Array.from(graph.entities.values()).filter(
+  const locationCount = graph.getEntities().filter(
     e => e.kind === 'location'
   ).length;
 
@@ -376,7 +376,7 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
   if (graph.discoveryState.discoveriesThisEpoch >= maxDiscoveriesPerEpoch) return false;
 
   // Must have explorers
-  const explorers = Array.from(graph.entities.values()).filter(
+  const explorers = graph.getEntities().filter(
     e => e.kind === 'npc' &&
          explorerSubtypes.includes(e.subtype) &&
          e.status === explorerActiveStatus
@@ -393,7 +393,7 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
  * Calculate theme similarity for chain discoveries
  */
 export function calculateThemeSimilarity(location1: HardState, theme2: string): number {
-  const tags1 = location1.tags || [];
+  const tags1 = Object.keys(location1.tags || {});
   const theme2Parts = theme2.split('_');
 
   // Count overlapping tags
@@ -419,7 +419,7 @@ export function findNearbyLocations(explorer: HardState, graph: Graph): HardStat
 
   if (!residenceRel) return [];
 
-  const explorerLocation = graph.entities.get(residenceRel.dst);
+  const explorerLocation = graph.getEntity(residenceRel.dst);
   if (!explorerLocation) return [];
 
   // Find adjacent locations
@@ -428,6 +428,6 @@ export function findNearbyLocations(explorer: HardState, graph: Graph): HardStat
     .map(r => r.dst);
 
   return adjacentIds
-    .map(id => graph.entities.get(id))
+    .map(id => graph.getEntity(id))
     .filter((e): e is HardState => e !== undefined && e.kind === 'location');
 }

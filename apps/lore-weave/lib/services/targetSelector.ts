@@ -13,7 +13,7 @@
 
 import { Graph } from '../types/engine';
 import { HardState, Relationship, Prominence } from '../types/worldTypes';
-import { findEntities } from '../utils/helpers';
+import { findEntities, hasTag } from '../utils/helpers';
 
 /**
  * Selection bias configuration - defines preferences and penalties
@@ -164,7 +164,7 @@ export class TargetSelector {
     bias: SelectionBias = {}
   ): SelectionResult {
     // Find all candidate entities
-    const candidates = Array.from(graph.entities.values())
+    const candidates = graph.getEntities()
       .filter(e => e.kind === kind);
 
     if (candidates.length === 0) {
@@ -242,7 +242,7 @@ export class TargetSelector {
       }
 
       // Tag preference
-      if (bias.prefer.tags?.some(tag => entity.tags.includes(tag))) {
+      if (bias.prefer.tags?.some(tag => hasTag(entity.tags, tag))) {
         score *= boost;
       }
 
@@ -255,7 +255,7 @@ export class TargetSelector {
       if (bias.prefer.sameLocationAs) {
         const sameLocation = entity.links.some(
           l => l.kind === 'resident_of' &&
-               graph.entities.get(bias.prefer!.sameLocationAs!)?.links.some(
+               graph.getEntity(bias.prefer!.sameLocationAs!)?.links.some(
                  rl => rl.kind === 'resident_of' && rl.dst === l.dst
                )
         );
@@ -327,7 +327,7 @@ export class TargetSelector {
     if (bias.avoid?.excludeRelatedTo) {
       const { entityId, relationshipKind } = bias.avoid.excludeRelatedTo;
       filtered = filtered.filter(s => {
-        const hasRelationship = graph.relationships.some(r =>
+        const hasRelationship = graph.getRelationships().some(r =>
           (r.src === s.entity.id && r.dst === entityId ||
            r.src === entityId && r.dst === s.entity.id) &&
           (!relationshipKind || r.kind === relationshipKind)

@@ -134,6 +134,27 @@ export const cultFormation: GrowthTemplate = {
       };
     }
 
+    // Find existing cults to place new cult in conceptual space
+    const existingCults = graphView.findEntities({ kind: 'faction', subtype: 'cult' });
+    const nearbyMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
+
+    // Derive conceptual coordinates - place cult near location and any related magic
+    const referenceEntities: HardState[] = [location];
+    if (nearbyMagic.length > 0) {
+      referenceEntities.push(pickRandom(nearbyMagic));
+    }
+    if (existingCults.length > 0) {
+      // Place moderately far from existing cults (diverse mystical traditions)
+      referenceEntities.push(pickRandom(existingCults));
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'faction',
+      'conceptual',
+      { maxDistance: existingCults.length > 0 ? 0.5 : 0.3, minDistance: 0.2 }  // Farther if other cults exist
+    );
+
     const cult: Partial<HardState> = {
       kind: 'faction',
       subtype: 'cult',
@@ -142,7 +163,8 @@ export const cultFormation: GrowthTemplate = {
       status: 'illegal',
       prominence: 'marginal',
       culture: location.culture,  // Inherit culture from location
-      tags: ['mystical', 'secretive', 'cult']
+      tags: ['mystical', 'secretive', 'cult'],
+      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
     };
 
     const prophet: Partial<HardState> = {

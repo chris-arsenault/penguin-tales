@@ -11,7 +11,7 @@
  */
 
 import { Graph, TagHealthReport } from '../types/engine';
-import { HardState } from '../types/worldTypes';
+import { HardState, EntityTags } from '../types/worldTypes';
 import {
   tagRegistry,
   getTagMetadata,
@@ -19,6 +19,17 @@ import {
   validateEntityTags,
   getConsolidationSuggestions
 } from '../config/tagRegistry';
+
+/** Helper to get tag keys from EntityTags, normalizing 'name' to 'name:*' for analysis */
+function getTagKeys(tags: EntityTags | undefined): string[] {
+  if (!tags) return [];
+  return Object.keys(tags).map(key => key === 'name' ? 'name:*' : key);
+}
+
+/** Helper to get tag key count */
+function getTagCount(tags: EntityTags | undefined): number {
+  return tags ? Object.keys(tags).length : 0;
+}
 
 /**
  * Tag Health Analyzer Service
@@ -28,7 +39,7 @@ export class TagHealthAnalyzer {
    * Analyze all tag usage in the graph and generate comprehensive health report
    */
   public analyzeGraph(graph: Graph): TagHealthReport {
-    const entities = Array.from(graph.entities.values());
+    const entities = graph.getEntities();
 
     // Calculate coverage metrics
     const coverage = this.calculateCoverage(entities);
@@ -60,8 +71,11 @@ export class TagHealthAnalyzer {
    */
   public calculateCoverage(entities: HardState[]): TagHealthReport['coverage'] {
     const totalEntities = entities.length;
-    const entitiesWithTags = entities.filter(e => e.tags.length > 0).length;
-    const entitiesWithOptimalTags = entities.filter(e => e.tags.length >= 3 && e.tags.length <= 5).length;
+    const entitiesWithTags = entities.filter(e => getTagCount(e.tags) > 0).length;
+    const entitiesWithOptimalTags = entities.filter(e => {
+      const count = getTagCount(e.tags);
+      return count >= 3 && count <= 5;
+    }).length;
 
     return {
       totalEntities,
@@ -83,10 +97,8 @@ export class TagHealthAnalyzer {
     let totalTagInstances = 0;
 
     for (const entity of entities) {
-      for (const tag of entity.tags) {
-        // Handle dynamic location tags
-        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+      for (const tag of getTagKeys(entity.tags)) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
         totalTagInstances++;
       }
     }
@@ -121,9 +133,8 @@ export class TagHealthAnalyzer {
     const tagCounts = new Map<string, number>();
 
     for (const entity of entities) {
-      for (const tag of entity.tags) {
-        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+      for (const tag of getTagKeys(entity.tags)) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       }
     }
 
@@ -152,9 +163,8 @@ export class TagHealthAnalyzer {
     const tagCounts = new Map<string, number>();
 
     for (const entity of entities) {
-      for (const tag of entity.tags) {
-        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+      for (const tag of getTagKeys(entity.tags)) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       }
     }
 
@@ -174,8 +184,8 @@ export class TagHealthAnalyzer {
   /**
    * Get entities with conflicting tags
    */
-  public getConflicts(entities: HardState[]): Array<{ entityId: string; tags: string[]; conflict: string }> {
-    const conflicts: Array<{ entityId: string; tags: string[]; conflict: string }> = [];
+  public getConflicts(entities: HardState[]): Array<{ entityId: string; tags: EntityTags; conflict: string }> {
+    const conflicts: Array<{ entityId: string; tags: EntityTags; conflict: string }> = [];
 
     for (const entity of entities) {
       const validation = validateEntityTags(entity.tags);
@@ -208,9 +218,8 @@ export class TagHealthAnalyzer {
     // Count actual usage of tags marked for consolidation
     const tagCounts = new Map<string, number>();
     for (const entity of entities) {
-      for (const tag of entity.tags) {
-        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+      for (const tag of getTagKeys(entity.tags)) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       }
     }
 
@@ -236,9 +245,10 @@ export class TagHealthAnalyzer {
     const overtagged: string[] = [];
 
     for (const entity of entities) {
-      if (entity.tags.length < 3) {
+      const count = getTagCount(entity.tags);
+      if (count < 3) {
         undertagged.push(entity.id);
-      } else if (entity.tags.length > 5) {
+      } else if (count > 5) {
         // This shouldn't happen due to the 5-tag constraint, but check anyway
         overtagged.push(entity.id);
       }
@@ -418,10 +428,9 @@ export class TagHealthAnalyzer {
   ): { saturated: boolean; oversaturatedTags: string[] } {
     // Count current tag usage
     const tagCounts = new Map<string, number>();
-    for (const entity of graph.entities.values()) {
-      for (const tag of entity.tags) {
-        const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-        tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) || 0) + 1);
+    for (const entity of graph.getEntities()) {
+      for (const tag of getTagKeys(entity.tags)) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       }
     }
 
@@ -467,10 +476,16 @@ export class TagHealthAnalyzer {
   public validateTagTaxonomy(entity: HardState): Array<{ tag1: string; tag2: string; reason: string }> {
     const conflicts: Array<{ tag1: string; tag2: string; reason: string }> = [];
 
-    for (let i = 0; i < entity.tags.length; i++) {
-      for (let j = i + 1; j < entity.tags.length; j++) {
-        const tag1 = entity.tags[i];
-        const tag2 = entity.tags[j];
+    if (!entity.tags) {
+      return conflicts;
+    }
+
+    const tagKeys = Object.keys(entity.tags);
+
+    for (let i = 0; i < tagKeys.length; i++) {
+      for (let j = i + 1; j < tagKeys.length; j++) {
+        const tag1 = tagKeys[i];
+        const tag2 = tagKeys[j];
 
         if (tagsConflict(tag1, tag2)) {
           conflicts.push({

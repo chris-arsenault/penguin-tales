@@ -25,12 +25,12 @@ export function getEntitiesByRelationship(
   relationshipKind: string,
   direction: 'src' | 'dst'
 ): HardState[] {
-  const relatedIds = graph.relationships
+  const relatedIds = graph.getRelationships()
     .filter(r => r.kind === relationshipKind && r[direction] === entityId)
     .map(r => direction === 'src' ? r.dst : r.src);
 
   return relatedIds
-    .map(id => graph.entities.get(id))
+    .map(id => graph.getEntity(id))
     .filter((e): e is HardState => e !== undefined);
 }
 
@@ -50,7 +50,7 @@ export function getRelationshipIdSet(
   direction?: 'src' | 'dst'
 ): Set<string> {
   return new Set(
-    graph.relationships
+    graph.getRelationships()
       .filter(r => {
         if (!relationshipKinds.includes(r.kind)) return false;
         if (!direction) return r.src === entityId || r.dst === entityId;
@@ -75,7 +75,7 @@ export function countRelationships(
   relationshipKind: string,
   direction?: 'src' | 'dst'
 ): number {
-  return graph.relationships.filter(r => {
+  return graph.getRelationships().filter(r => {
     if (r.kind !== relationshipKind) return false;
     if (!direction) return r.src === entityId || r.dst === entityId;
     return r[direction] === entityId;
@@ -97,7 +97,7 @@ export function findRelationship(
   relationshipKind: string,
   direction: 'src' | 'dst'
 ): Relationship | undefined {
-  return graph.relationships.find(r =>
+  return graph.getRelationships().find(r =>
     r.kind === relationshipKind && r[direction] === entityId
   );
 }
@@ -117,5 +117,5 @@ export function getRelatedEntity(
 ): HardState | undefined {
   if (!relationship) return undefined;
   const targetId = relationship.src === fromEntityId ? relationship.dst : relationship.src;
-  return graph.entities.get(targetId);
+  return graph.getEntity(targetId);
 }

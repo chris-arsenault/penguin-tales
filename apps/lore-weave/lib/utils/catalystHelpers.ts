@@ -18,7 +18,7 @@ export function getAgentsByCategory(
   graph: Graph,
   category: 'first-order' | 'second-order' | 'all' = 'all'
 ): HardState[] {
-  const agents = Array.from(graph.entities.values())
+  const agents = graph.getEntities()
     .filter(e => e.catalyst?.canAct === true);
 
   if (category === 'all') {
@@ -113,14 +113,14 @@ export function getCatalyzedEvents(
   const results: (Relationship | HardState)[] = [];
 
   // Find relationships catalyzed by this entity
-  graph.relationships.forEach(rel => {
+  graph.getRelationships().forEach(rel => {
     if (rel.catalyzedBy === entityId) {
       results.push(rel);
     }
   });
 
   // Find entities catalyzed by this entity (e.g., occurrences triggered by NPCs)
-  graph.entities.forEach(entity => {
+  graph.forEachEntity(entity => {
     const triggeredByRel = entity.links.find(
       link => link.kind === 'triggered_by' && link.dst === entityId
     );
@@ -143,7 +143,7 @@ export function getCatalyzedEventCount(
   graph: Graph,
   entityId: string
 ): number {
-  const entity = graph.entities.get(entityId);
+  const entity = graph.getEntity(entityId);
   if (!entity?.catalyst) {
     return 0;
   }

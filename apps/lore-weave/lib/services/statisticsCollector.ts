@@ -52,7 +52,7 @@ export class StatisticsCollector {
     const entitiesByKind: Record<string, number> = {};
     const entitiesBySubtype: Record<string, number> = {};
 
-    for (const entity of graph.entities.values()) {
+    for (const entity of graph.getEntities()) {
       entitiesByKind[entity.kind] = (entitiesByKind[entity.kind] || 0) + 1;
       const subtypeKey = `${entity.kind}:${entity.subtype}`;
       entitiesBySubtype[subtypeKey] = (entitiesBySubtype[subtypeKey] || 0) + 1;
@@ -69,7 +69,7 @@ export class StatisticsCollector {
 
     // Count relationships by type
     const relationshipsByType: Record<string, number> = {};
-    for (const rel of graph.relationships) {
+    for (const rel of graph.getRelationships()) {
       relationshipsByType[rel.kind] = (relationshipsByType[rel.kind] || 0) + 1;
     }
 
@@ -88,11 +88,11 @@ export class StatisticsCollector {
       epoch,
       tick: graph.tick,
       era: graph.currentEra.name,
-      totalEntities: graph.entities.size,
+      totalEntities: graph.getEntityCount(),
       entitiesByKind,
       entitiesBySubtype,
       entitiesCreated,
-      totalRelationships: graph.relationships.length,
+      totalRelationships: graph.getRelationshipCount(),
       relationshipsByType,
       relationshipsCreated,
       pressures: Object.fromEntries(graph.pressures),
@@ -147,7 +147,7 @@ export class StatisticsCollector {
     graph: Graph,
     config: EngineConfig
   ): DistributionStats {
-    const entities = Array.from(graph.entities.values());
+    const entities = graph.getEntities();
     const totalEntities = entities.length;
 
     // Entity kind distribution
@@ -177,7 +177,7 @@ export class StatisticsCollector {
       visited.add(nodeId);
       let size = 1;
 
-      graph.relationships.forEach(r => {
+      graph.getRelationships().forEach(r => {
         if (r.src === nodeId && !visited.has(r.dst)) {
           size += dfs(r.dst);
         } else if (r.dst === nodeId && !visited.has(r.src)) {
@@ -188,7 +188,8 @@ export class StatisticsCollector {
       return size;
     };
 
-    graph.entities.forEach((_, id) => {
+    graph.forEachEntity((entity) => {
+      const id = entity.id;
       if (!visited.has(id)) {
         const clusterSize = dfs(id);
         clusters++;
@@ -200,7 +201,7 @@ export class StatisticsCollector {
       ? clusterSizes.reduce((a, b) => a + b, 0) / clusterSizes.length
       : 0;
 
-    const totalRelationships = graph.relationships.length;
+    const totalRelationships = graph.getRelationshipCount();
     const avgDegree = totalEntities > 0 ? (totalRelationships * 2) / totalEntities : 0;
 
     // Calculate deviations (if distribution targets exist)
@@ -399,10 +400,10 @@ export class StatisticsCollector {
       ticksPerEpoch: config.epochLength,
       erasVisited: Array.from(this.erasVisited),
       ticksPerEra: Object.fromEntries(this.ticksPerEra),
-      entitiesPerTick: graph.entities.size / graph.tick,
-      relationshipsPerTick: graph.relationships.length / graph.tick,
-      entitiesPerEpoch: graph.entities.size / this.epochStats.length,
-      relationshipsPerEpoch: graph.relationships.length / this.epochStats.length
+      entitiesPerTick: graph.getEntityCount() / graph.tick,
+      relationshipsPerTick: graph.getRelationshipCount() / graph.tick,
+      entitiesPerEpoch: graph.getEntityCount() / this.epochStats.length,
+      relationshipsPerEpoch: graph.getRelationshipCount() / this.epochStats.length
     };
 
     return {
@@ -410,8 +411,8 @@ export class StatisticsCollector {
       totalTicks: graph.tick,
       totalEpochs: this.epochStats.length,
       generationTimeMs,
-      finalEntityCount: graph.entities.size,
-      finalRelationshipCount: graph.relationships.length,
+      finalEntityCount: graph.getEntityCount(),
+      finalRelationshipCount: graph.getRelationshipCount(),
       finalHistoryEventCount: graph.history.length,
       epochStats: this.epochStats,
       distributionStats,

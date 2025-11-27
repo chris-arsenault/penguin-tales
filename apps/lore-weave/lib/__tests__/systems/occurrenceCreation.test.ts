@@ -2,16 +2,21 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { occurrenceCreation } from '../../systems/occurrenceCreation';
 import { Graph, ComponentPurpose } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { HardState, Relationship } from '../../types/worldTypes';
 
 describe('occurrenceCreation', () => {
   let mockGraph: Graph;
   let mockModifier: any;
 
   beforeEach(() => {
+    const _entities = new Map<string, HardState>();
+    let _relationships: Relationship[] = [];
+
     mockGraph = {
-      entities: new Map<string, HardState>(),
-      relationships: [],
+      get entities() { return _entities; },
+      set entities(val: Map<string, HardState>) { _entities = val; },
+      get relationships() { return _relationships; },
+      set relationships(val: Relationship[]) { _relationships = val; },
       tick: 10,
       currentEra: {
         id: 'test-era',
@@ -27,6 +32,19 @@ describe('occurrenceCreation', () => {
         domain: {
           getOccurrenceTriggers: () => []
         }
+      },
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
       }
     } as any;
 

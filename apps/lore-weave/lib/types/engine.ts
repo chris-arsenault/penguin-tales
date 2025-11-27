@@ -1,4 +1,4 @@
-import { HardState, Relationship } from './worldTypes';
+import { HardState, Relationship, EntityTags } from './worldTypes';
 import { LoreIndex, LoreRecord } from './lore';
 import { TemplateMetadata, SystemMetadata, DistributionTargets } from './distribution';
 import { DomainSchema } from './domainSchema';
@@ -40,38 +40,137 @@ export interface Era {
   specialRules?: (graph: Graph) => void;
 }
 
-// Graph representation
+/**
+ * Entity creation settings
+ * Framework enforces: coordinates → tags → name ordering
+ */
+export interface CreateEntitySettings {
+  kind: string;
+  subtype: string;
+  coordinates: import('./coordinates').ExtendedEntityCoordinates;  // REQUIRED - no silent defaults
+  tags?: EntityTags;  // Optional - defaults to {}
+  name?: string;  // Optional - auto-generated from tags if not provided
+  description?: string;
+  status?: string;
+  prominence?: import('./worldTypes').Prominence;
+  culture?: string;
+  temporal?: { startTick: number; endTick: number | null };
+}
+
+// Graph representation with controlled access
+// Entity and relationship data is private - access only through methods
 export interface Graph {
-  entities: Map<string, HardState>;
-  relationships: Relationship[];
+  // =============================================================================
+  // ENTITY READ METHODS (return clones to prevent external modification)
+  // =============================================================================
+  getEntity(id: string): HardState | undefined;
+  hasEntity(id: string): boolean;
+  getEntityCount(): number;
+  getEntities(): HardState[];  // Returns array of all entities
+  getEntityIds(): string[];
+  forEachEntity(callback: (entity: HardState, id: string) => void): void;
+
+  // Query methods
+  findEntities(criteria: EntityCriteria): HardState[];
+  getEntitiesByKind(kind: string): HardState[];
+  getConnectedEntities(entityId: string, relationKind?: string): HardState[];
+
+  // =============================================================================
+  // ENTITY MUTATION METHODS (framework-aware)
+  // =============================================================================
+  /**
+   * Create a new entity with contract enforcement.
+   * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
+   * @returns The created entity's ID
+   */
+  createEntity(settings: CreateEntitySettings): string;
+
+  /**
+   * Update an existing entity's properties
+   */
+  updateEntity(id: string, changes: Partial<HardState>): boolean;
+
+  /**
+   * Delete an entity from the graph
+   */
+  deleteEntity(id: string): boolean;
+
+  /**
+   * Load a pre-existing entity (from seed data or serialized state)
+   * @internal Should only be used by WorldEngine for loading initial state
+   */
+  _loadEntity(id: string, entity: HardState): void;
+
+  // =============================================================================
+  // RELATIONSHIP READ METHODS
+  // =============================================================================
+  getRelationships(): Relationship[];
+  getRelationshipCount(): number;
+  findRelationships(criteria: RelationshipCriteria): Relationship[];
+  getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[];
+  hasRelationship(srcId: string, dstId: string, kind?: string): boolean;
+
+  // =============================================================================
+  // RELATIONSHIP MUTATION METHODS (framework-aware)
+  // =============================================================================
+  /**
+   * Add a relationship between two entities with validation
+   * @returns true if relationship was added, false if duplicate or invalid
+   */
+  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean;
+
+  /**
+   * Remove a specific relationship
+   */
+  removeRelationship(srcId: string, dstId: string, kind: string): boolean;
+
+  /**
+   * Bulk replace relationships (used by culling system)
+   * @internal Should only be used by framework systems, not templates
+   */
+  _setRelationships(relationships: Relationship[]): void;
+
+  // =============================================================================
+  // OTHER GRAPH STATE (non-private, direct access ok)
+  // =============================================================================
   tick: number;
   currentEra: Era;
   pressures: Map<string, number>;
   history: HistoryEvent[];
-  config: EngineConfig;  // Reference to engine configuration
-  relationshipCooldowns: Map<string, Map<string, number>>;  // entityId → (relationshipType → lastFormationTick)
+  config: EngineConfig;
+  relationshipCooldowns: Map<string, Map<string, number>>;
   loreIndex?: LoreIndex;
   loreRecords: LoreRecord[];
-
-  // Discovery tracking (emergent system)
   discoveryState: import('./worldTypes').DiscoveryState;
-
-  // Relationship growth monitoring
   growthMetrics: {
-    relationshipsPerTick: number[];  // Rolling window of last 20 ticks
-    averageGrowthRate: number;       // Average relationships added per tick
+    relationshipsPerTick: number[];
+    averageGrowthRate: number;
   };
-
-  // Subtype metrics tracking (for feedback loop validation)
-  subtypeMetrics?: Map<string, number>;  // 'kind:subtype' → count
-
-  // Protected relationship violation tracking (for genetic algorithm fitness)
+  subtypeMetrics?: Map<string, number>;
   protectedRelationshipViolations?: Array<{
     tick: number;
     violations: Array<{ kind: string; strength: number }>;
   }>;
+}
 
-  // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
+// Criteria for finding entities
+export interface EntityCriteria {
+  kind?: string;
+  subtype?: string;
+  status?: string;
+  prominence?: string;
+  culture?: string;
+  tag?: string;  // Check if entity has this tag key
+  exclude?: string[];  // Entity IDs to exclude
+}
+
+// Criteria for finding relationships
+export interface RelationshipCriteria {
+  kind?: string;
+  src?: string;
+  dst?: string;
+  category?: string;
+  minStrength?: number;
 }
 
 // History tracking
@@ -380,7 +479,7 @@ export interface TagHealthReport {
   issues: {
     orphanTags: Array<{ tag: string; count: number }>;           // Used 1-2 times
     overusedTags: Array<{ tag: string; count: number; max: number }>;
-    conflicts: Array<{ entityId: string; tags: string[]; conflict: string }>;
+    conflicts: Array<{ entityId: string; tags: EntityTags; conflict: string }>;
     consolidationOpportunities: Array<{ from: string; to: string; count: number }>;
   };
 
@@ -392,4 +491,339 @@ export interface TagHealthReport {
 
   // Recommendations
   recommendations: string[];
+}
+
+/**
+ * GraphStore - Concrete implementation of Graph with truly private storage
+ *
+ * Uses JavaScript private fields (#) for compile-time AND runtime enforcement.
+ * External code cannot access #entities or #relationships directly.
+ *
+ * All read methods return clones to prevent external modification of internal state.
+ * All mutations must go through designated methods.
+ */
+export class GraphStore implements Graph {
+  // Truly private fields - not accessible outside this class
+  #entities: Map<string, HardState> = new Map();
+  #relationships: Relationship[] = [];
+
+  // Public state
+  tick: number = 0;
+  currentEra!: Era;
+  pressures: Map<string, number> = new Map();
+  history: HistoryEvent[] = [];
+  config!: EngineConfig;
+  relationshipCooldowns: Map<string, Map<string, number>> = new Map();
+  loreIndex?: LoreIndex;
+  loreRecords: LoreRecord[] = [];
+  discoveryState: import('./worldTypes').DiscoveryState = {
+    currentThreshold: 0.5,
+    lastDiscoveryTick: 0,
+    discoveriesThisEpoch: 0
+  };
+  growthMetrics: { relationshipsPerTick: number[]; averageGrowthRate: number } = {
+    relationshipsPerTick: [],
+    averageGrowthRate: 0
+  };
+  subtypeMetrics?: Map<string, number>;
+  protectedRelationshipViolations?: Array<{
+    tick: number;
+    violations: Array<{ kind: string; strength: number }>;
+  }>;
+
+  // ===========================================================================
+  // ENTITY READ METHODS
+  // ===========================================================================
+
+  getEntity(id: string): HardState | undefined {
+    const entity = this.#entities.get(id);
+    return entity ? { ...entity, tags: { ...entity.tags }, links: [...entity.links] } : undefined;
+  }
+
+  hasEntity(id: string): boolean {
+    return this.#entities.has(id);
+  }
+
+  getEntityCount(): number {
+    return this.#entities.size;
+  }
+
+  getEntities(): HardState[] {
+    return Array.from(this.#entities.values()).map(e => ({
+      ...e,
+      tags: { ...e.tags },
+      links: [...e.links]
+    }));
+  }
+
+  getEntityIds(): string[] {
+    return Array.from(this.#entities.keys());
+  }
+
+  forEachEntity(callback: (entity: HardState, id: string) => void): void {
+    this.#entities.forEach((entity, id) => {
+      // Pass clone to callback
+      callback({ ...entity, tags: { ...entity.tags }, links: [...entity.links] }, id);
+    });
+  }
+
+  findEntities(criteria: EntityCriteria): HardState[] {
+    const results: HardState[] = [];
+    for (const [id, entity] of this.#entities) {
+      if (criteria.exclude?.includes(id)) continue;
+      if (criteria.kind && entity.kind !== criteria.kind) continue;
+      if (criteria.subtype && entity.subtype !== criteria.subtype) continue;
+      if (criteria.status && entity.status !== criteria.status) continue;
+      if (criteria.prominence && entity.prominence !== criteria.prominence) continue;
+      if (criteria.culture && entity.culture !== criteria.culture) continue;
+      if (criteria.tag && !(criteria.tag in entity.tags)) continue;
+      results.push({ ...entity, tags: { ...entity.tags }, links: [...entity.links] });
+    }
+    return results;
+  }
+
+  getEntitiesByKind(kind: string): HardState[] {
+    return this.findEntities({ kind });
+  }
+
+  getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+    const connectedIds = new Set<string>();
+    for (const rel of this.#relationships) {
+      if (relationKind && rel.kind !== relationKind) continue;
+      if (rel.src === entityId) connectedIds.add(rel.dst);
+      if (rel.dst === entityId) connectedIds.add(rel.src);
+    }
+    return Array.from(connectedIds)
+      .map(id => this.getEntity(id))
+      .filter((e): e is HardState => e !== undefined);
+  }
+
+  // ===========================================================================
+  // ENTITY MUTATION METHODS (framework-aware)
+  // ===========================================================================
+
+  /**
+   * Create a new entity with contract enforcement.
+   * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
+   */
+  createEntity(settings: CreateEntitySettings): string {
+    // Generate unique ID
+    const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // COORDINATES are REQUIRED - no silent defaults
+    if (!settings.coordinates) {
+      throw new Error(
+        `createEntity: coordinates are required for all entities. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}. ` +
+        `Provide coordinates explicitly.`
+      );
+    }
+
+    // Tags default to empty object
+    const tags: EntityTags = settings.tags || {};
+
+    // Auto-generate name if not provided (uses tags, so tags must be set first)
+    let name = settings.name;
+    if (!name) {
+      const nameForge = this.config?.nameForgeService;
+      if (!nameForge) {
+        throw new Error(
+          `createEntity: name not provided and no NameForgeService configured. ` +
+          `Either provide a name or configure nameForgeService in EngineConfig.`
+        );
+      }
+      // Convert KVP tags to array for name-forge compatibility
+      const tagArray = Object.keys(tags);
+      name = nameForge.generate(
+        settings.kind,
+        settings.subtype,
+        settings.prominence || 'marginal',
+        tagArray,
+        settings.culture || 'world'
+      );
+    }
+
+    // Add slugified name to tags for tracking
+    const slugifiedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    tags.name = slugifiedName;
+
+    // Build the full entity
+    const entity: HardState = {
+      id,
+      kind: settings.kind,
+      subtype: settings.subtype,
+      name,
+      description: settings.description || '',
+      status: settings.status || 'active',
+      prominence: settings.prominence || 'marginal',
+      culture: settings.culture || 'world',
+      tags,
+      links: [],
+      coordinates: settings.coordinates,
+      temporal: settings.temporal,
+      createdAt: this.tick,
+      updatedAt: this.tick
+    };
+
+    this.#entities.set(id, entity);
+    return id;
+  }
+
+  updateEntity(id: string, changes: Partial<HardState>): boolean {
+    const entity = this.#entities.get(id);
+    if (!entity) return false;
+    Object.assign(entity, changes, { updatedAt: this.tick });
+    return true;
+  }
+
+  deleteEntity(id: string): boolean {
+    return this.#entities.delete(id);
+  }
+
+  /**
+   * Load a pre-existing entity (from seed data or serialized state)
+   * @internal Should only be used by WorldEngine for loading initial state
+   */
+  _loadEntity(id: string, entity: HardState): void {
+    this.#entities.set(id, entity);
+  }
+
+  // ===========================================================================
+  // RELATIONSHIP READ METHODS
+  // ===========================================================================
+
+  getRelationships(): Relationship[] {
+    return this.#relationships.map(r => ({ ...r }));
+  }
+
+  getRelationshipCount(): number {
+    return this.#relationships.length;
+  }
+
+  findRelationships(criteria: RelationshipCriteria): Relationship[] {
+    return this.#relationships.filter(rel => {
+      if (criteria.kind && rel.kind !== criteria.kind) return false;
+      if (criteria.src && rel.src !== criteria.src) return false;
+      if (criteria.dst && rel.dst !== criteria.dst) return false;
+      if (criteria.category && rel.category !== criteria.category) return false;
+      if (criteria.minStrength !== undefined && (rel.strength ?? 0) < criteria.minStrength) return false;
+      return true;
+    }).map(r => ({ ...r }));
+  }
+
+  getEntityRelationships(entityId: string, direction: 'src' | 'dst' | 'both' = 'both'): Relationship[] {
+    return this.#relationships.filter(rel => {
+      if (direction === 'src') return rel.src === entityId;
+      if (direction === 'dst') return rel.dst === entityId;
+      return rel.src === entityId || rel.dst === entityId;
+    }).map(r => ({ ...r }));
+  }
+
+  hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+    return this.#relationships.some(rel =>
+      rel.src === srcId && rel.dst === dstId && (kind === undefined || rel.kind === kind)
+    );
+  }
+
+  // ===========================================================================
+  // RELATIONSHIP MUTATION METHODS (framework-aware)
+  // ===========================================================================
+
+  /**
+   * Add a relationship with validation.
+   * Checks for duplicates and validates that both entities exist.
+   * @returns true if relationship was added, false if duplicate or invalid
+   */
+  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
+    // Validate entities exist
+    if (!this.#entities.has(srcId)) {
+      console.warn(`addRelationship: source entity ${srcId} does not exist`);
+      return false;
+    }
+    if (!this.#entities.has(dstId)) {
+      console.warn(`addRelationship: destination entity ${dstId} does not exist`);
+      return false;
+    }
+
+    // Check for duplicate
+    const exists = this.#relationships.some(
+      r => r.src === srcId && r.dst === dstId && r.kind === kind
+    );
+    if (exists) {
+      return false;  // Duplicate - silently skip
+    }
+
+    // Build relationship
+    const relationship: Relationship = {
+      kind,
+      src: srcId,
+      dst: dstId,
+      strength: strength ?? 0.5,
+      distance,
+      category,
+      status: 'active'
+    };
+
+    this.#relationships.push(relationship);
+
+    // Update entity links (denormalized cache)
+    const srcEntity = this.#entities.get(srcId);
+    if (srcEntity) {
+      srcEntity.links.push({ ...relationship });
+      srcEntity.updatedAt = this.tick;
+    }
+    const dstEntity = this.#entities.get(dstId);
+    if (dstEntity) {
+      dstEntity.updatedAt = this.tick;
+    }
+
+    return true;
+  }
+
+  removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+    const index = this.#relationships.findIndex(
+      r => r.src === srcId && r.dst === dstId && r.kind === kind
+    );
+    if (index === -1) return false;
+    this.#relationships.splice(index, 1);
+
+    // Also remove from entity links
+    const srcEntity = this.#entities.get(srcId);
+    if (srcEntity) {
+      srcEntity.links = srcEntity.links.filter(
+        l => !(l.src === srcId && l.dst === dstId && l.kind === kind)
+      );
+      srcEntity.updatedAt = this.tick;
+    }
+    const dstEntity = this.#entities.get(dstId);
+    if (dstEntity) {
+      dstEntity.updatedAt = this.tick;
+    }
+    return true;
+  }
+
+  /**
+   * Bulk replace relationships (used by culling system)
+   * @internal Should only be used by framework systems, not templates
+   */
+  _setRelationships(relationships: Relationship[]): void {
+    this.#relationships = relationships;
+    // Note: This doesn't update entity links - caller should rebuild if needed
+  }
+
+  /**
+   * Create a new GraphStore with initial configuration
+   */
+  static create(config: EngineConfig, initialEra: Era): GraphStore {
+    const store = new GraphStore();
+    store.config = config;
+    store.currentEra = initialEra;
+
+    // Initialize pressures from config
+    for (const pressure of config.pressures) {
+      store.pressures.set(pressure.id, pressure.value);
+    }
+
+    return store;
+  }
 }

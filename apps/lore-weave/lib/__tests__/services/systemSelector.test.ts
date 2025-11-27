@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { SystemSelector } from '../../services/systemSelector';
 import { Graph, SimulationSystem } from '../../types/engine';
 import { DistributionTargets, SystemMetadata } from '../../types/distribution';
-import { HardState } from '../../types/worldTypes';
+import { HardState, Relationship } from '../../types/worldTypes';
 
 describe('SystemSelector', () => {
   let selector: SystemSelector;
@@ -119,22 +119,22 @@ describe('SystemSelector', () => {
     selector = new SystemSelector(mockTargets);
 
     // Create mock graph with some entities and relationships
-    const entities = new Map<string, HardState>();
-    entities.set('npc1', createEntity('npc1', 'npc', 'merchant'));
-    entities.set('npc2', createEntity('npc2', 'npc', 'hero'));
-    entities.set('npc3', createEntity('npc3', 'npc', 'warrior'));
-    entities.set('loc1', createEntity('loc1', 'location', 'colony'));
-    entities.set('faction1', createEntity('faction1', 'faction', 'guild'));
+    const _entities = new Map<string, HardState>();
+    _entities.set('npc1', createEntity('npc1', 'npc', 'merchant'));
+    _entities.set('npc2', createEntity('npc2', 'npc', 'hero'));
+    _entities.set('npc3', createEntity('npc3', 'npc', 'warrior'));
+    _entities.set('loc1', createEntity('loc1', 'location', 'colony'));
+    _entities.set('faction1', createEntity('faction1', 'faction', 'guild'));
+
+    let _relationships: Relationship[] = [
+      { kind: 'resident_of', src: 'npc1', dst: 'loc1' },
+      { kind: 'resident_of', src: 'npc2', dst: 'loc1' },
+      { kind: 'member_of', src: 'npc1', dst: 'faction1' },
+      { kind: 'allies', src: 'npc1', dst: 'npc2' },
+      { kind: 'leader_of', src: 'npc3', dst: 'faction1' }
+    ];
 
     mockGraph = {
-      entities,
-      relationships: [
-        { kind: 'resident_of', src: 'npc1', dst: 'loc1' },
-        { kind: 'resident_of', src: 'npc2', dst: 'loc1' },
-        { kind: 'member_of', src: 'npc1', dst: 'faction1' },
-        { kind: 'allies', src: 'npc1', dst: 'npc2' },
-        { kind: 'leader_of', src: 'npc3', dst: 'faction1' }
-      ],
       tick: 100,
       currentEra: {
         id: 'expansion',
@@ -155,6 +155,134 @@ describe('SystemSelector', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
+
+      // Entity read methods
+      getEntity(id: string): HardState | undefined {
+        const entity = _entities.get(id);
+        return entity ? { ...entity, tags: [...entity.tags], links: [...entity.links] } : undefined;
+      },
+      hasEntity(id: string): boolean {
+        return _entities.has(id);
+      },
+      getEntityCount(): number {
+        return _entities.size;
+      },
+      getEntities(): HardState[] {
+        return Array.from(_entities.values()).map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntityIds(): string[] {
+        return Array.from(_entities.keys());
+      },
+      forEachEntity(callback: (entity: HardState, id: string) => void): void {
+        _entities.forEach((entity, id) => {
+          callback({ ...entity, tags: [...entity.tags], links: [...entity.links] }, id);
+        });
+      },
+      findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => {
+            if (criteria.kind && e.kind !== criteria.kind) return false;
+            if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+            if (criteria.status && e.status !== criteria.status) return false;
+            if (criteria.prominence && e.prominence !== criteria.prominence) return false;
+            if (criteria.culture && e.culture !== criteria.culture) return false;
+            if (criteria.tag && !e.tags.includes(criteria.tag)) return false;
+            if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
+            return true;
+          })
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntitiesByKind(kind: string): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => e.kind === kind)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+        const connectedIds = new Set<string>();
+        _relationships.forEach(r => {
+          if (relationKind && r.kind !== relationKind) return;
+          if (r.src === entityId) connectedIds.add(r.dst);
+          if (r.dst === entityId) connectedIds.add(r.src);
+        });
+        return Array.from(connectedIds)
+          .map(id => _entities.get(id))
+          .filter((e): e is HardState => e !== undefined)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+
+      // Entity mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      updateEntity(id: string, changes: Partial<HardState>): boolean {
+        const entity = _entities.get(id);
+        if (!entity) return false;
+        Object.assign(entity, changes);
+        entity.updatedAt = this.tick;
+        return true;
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+
+      // Relationship read methods
+      getRelationships(): Relationship[] {
+        return [..._relationships];
+      },
+      getRelationshipCount(): number {
+        return _relationships.length;
+      },
+      findRelationships(criteria: { kind?: string; src?: string; dst?: string; category?: string; minStrength?: number }): Relationship[] {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          if (criteria.minStrength !== undefined && (r.strength ?? 0.5) < criteria.minStrength) return false;
+          return true;
+        });
+      },
+      getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[] {
+        return _relationships.filter(r => {
+          if (direction === 'src') return r.src === entityId;
+          if (direction === 'dst') return r.dst === entityId;
+          return r.src === entityId || r.dst === entityId;
+        });
+      },
+      hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+        return _relationships.some(r =>
+          r.src === srcId && r.dst === dstId && (!kind || r.kind === kind)
+        );
+      },
+
+      // Relationship mutation methods
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+        const srcEntity = _entities.get(relationship.src);
+        if (srcEntity) {
+          srcEntity.links.push({ ...relationship });
+          srcEntity.updatedAt = this.tick;
+        }
+        const dstEntity = _entities.get(relationship.dst);
+        if (dstEntity) {
+          dstEntity.updatedAt = this.tick;
+        }
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+        const idx = _relationships.findIndex(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+        if (idx >= 0) {
+          _relationships.splice(idx, 1);
+          const srcEntity = _entities.get(srcId);
+          if (srcEntity) {
+            srcEntity.links = srcEntity.links.filter(l => !(l.src === srcId && l.dst === dstId && l.kind === kind));
+            srcEntity.updatedAt = this.tick;
+          }
+          return true;
+        }
+        return false;
+      }
     };
 
     // Create mock systems

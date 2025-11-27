@@ -12,31 +12,30 @@ import {
 import { Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
 
-// Helper function to create a mock graph
+// Helper function to create a mock graph with the new Graph API methods
 function createMockGraph(overrides: Partial<Graph> = {}): Graph {
+  const _entities = new Map<string, HardState>();
+  let _relationships: Relationship[] = [];
+
   return {
-    entities: new Map<string, HardState>(),
-    relationships: [],
-    tick: 10,
-    currentEra: {
+    tick: overrides.tick ?? 10,
+    currentEra: overrides.currentEra ?? {
       id: 'test-era',
       name: 'Test Era',
       description: 'Test',
       templateWeights: {},
       systemModifiers: {},
     },
-    pressures: new Map<string, number>(),
-    history: [],
-    relationshipCooldowns: new Map(),
-    loreRecords: [],
-    discoveryState: {
-      discoveredLocations: new Set(),
-      discoveredAbilities: new Set(),
+    pressures: overrides.pressures ?? new Map<string, number>(),
+    history: overrides.history ?? [],
+    relationshipCooldowns: overrides.relationshipCooldowns ?? new Map(),
+    loreRecords: overrides.loreRecords ?? [],
+    discoveryState: overrides.discoveryState ?? {
       currentThreshold: 1.0,
       lastDiscoveryTick: 0,
       discoveriesThisEpoch: 0
     },
-    config: {
+    config: overrides.config ?? {
       domain: {
         schema: {},
         templates: [],
@@ -58,14 +57,88 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
         mode: 'off' as const
       }
     } as any,
-    growthMetrics: {
-      totalApplications: 0,
-      successfulApplications: 0,
-      entitiesCreated: 0,
-      relationshipsCreated: 0,
-      byTemplate: new Map()
+    growthMetrics: overrides.growthMetrics ?? {
+      relationshipsPerTick: [],
+      averageGrowthRate: 0
     },
-    ...overrides
+    subtypeMetrics: overrides.subtypeMetrics,
+    protectedRelationshipViolations: overrides.protectedRelationshipViolations,
+    loreIndex: overrides.loreIndex,
+
+    // Entity read methods
+    getEntity(id: string) { return _entities.get(id); },
+    hasEntity(id: string) { return _entities.has(id); },
+    getEntityCount() { return _entities.size; },
+    getEntities() { return Array.from(_entities.values()); },
+    getEntityIds() { return Array.from(_entities.keys()); },
+    forEachEntity(cb: (e: HardState, id: string) => void) { _entities.forEach(cb); },
+    findEntities(criteria: any) {
+      return Array.from(_entities.values()).filter(e => {
+        if (criteria.kind && e.kind !== criteria.kind) return false;
+        if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+        if (criteria.status && e.status !== criteria.status) return false;
+        return true;
+      });
+    },
+    getEntitiesByKind(kind: string) { return Array.from(_entities.values()).filter(e => e.kind === kind); },
+    getConnectedEntities(id: string) { return []; },
+
+    // Entity mutation (framework-aware)
+    createEntity(settings: any): string {
+      const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const tags = settings.tags || {};
+      const name = settings.name || `Test ${settings.kind}`;
+      tags.name = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const entity: HardState = {
+        id, kind: settings.kind, subtype: settings.subtype, name,
+        description: settings.description || '', status: settings.status || 'active',
+        prominence: settings.prominence || 'marginal', culture: settings.culture || 'world',
+        tags, links: [], coordinates: settings.coordinates, createdAt: 10, updatedAt: 10
+      };
+      _entities.set(id, entity);
+      return id;
+    },
+    updateEntity(id: string, changes: Partial<HardState>) { const e = _entities.get(id); if(e) Object.assign(e, changes); return !!e; },
+    deleteEntity(id: string) { return _entities.delete(id); },
+    _loadEntity(id: string, entity: HardState) { _entities.set(id, entity); },
+
+    // Relationship read methods
+    getRelationships() { return _relationships; },
+    getRelationshipCount() { return _relationships.length; },
+    findRelationships(criteria: any) {
+      return _relationships.filter(r => {
+        if (criteria.kind && r.kind !== criteria.kind) return false;
+        if (criteria.src && r.src !== criteria.src) return false;
+        if (criteria.dst && r.dst !== criteria.dst) return false;
+        return true;
+      });
+    },
+    getEntityRelationships(id: string, direction?: 'src' | 'dst' | 'both') {
+      return _relationships.filter(r => {
+        if (direction === 'src') return r.src === id;
+        if (direction === 'dst') return r.dst === id;
+        return r.src === id || r.dst === id;
+      });
+    },
+    hasRelationship(src: string, dst: string, kind?: string) {
+      return _relationships.some(r => r.src === src && r.dst === dst && (!kind || r.kind === kind));
+    },
+
+    // Relationship mutation (framework-aware)
+    addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
+      const exists = _relationships.some(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+      if (exists) return false;
+      _relationships.push({ kind, src: srcId, dst: dstId, strength: strength ?? 0.5, distance, category, status: 'active' });
+      return true;
+    },
+    removeRelationship(src: string, dst: string, kind: string) {
+      const idx = _relationships.findIndex(r => r.src === src && r.dst === dst && r.kind === kind);
+      if(idx >= 0) { _relationships.splice(idx, 1); return true; }
+      return false;
+    },
+    _setRelationships(rels: Relationship[]) { _relationships = rels; },
+    // Test helper: load relationship directly without validation
+    _loadRelationship(rel: Relationship) { _relationships.push(rel); }
   } as Graph;
 }
 
@@ -95,12 +168,12 @@ describe('Connected Entities Validation', () => {
       const entity1 = createMockEntity({ id: 'e1', links: [] });
       const entity2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       // Add relationships
       const rel: Relationship = { kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 };
-      graph.relationships.push(rel);
+      graph._loadRelationship(rel);
       entity1.links.push(rel);
 
       const result = validateConnectedEntities(graph);
@@ -114,8 +187,8 @@ describe('Connected Entities Validation', () => {
       const isolated1 = createMockEntity({ id: 'e1', name: 'Isolated 1', links: [] });
       const isolated2 = createMockEntity({ id: 'e2', name: 'Isolated 2', links: [] });
 
-      graph.entities.set(isolated1.id, isolated1);
-      graph.entities.set(isolated2.id, isolated2);
+      graph._loadEntity(isolated1.id, isolated1);
+      graph._loadEntity(isolated2.id, isolated2);
 
       const result = validateConnectedEntities(graph);
       expect(result.passed).toBe(false);
@@ -129,12 +202,12 @@ describe('Connected Entities Validation', () => {
       const entity1 = createMockEntity({ id: 'e1', links: [] });
       const entity2 = createMockEntity({ id: 'e2', links: [] }); // No outgoing, but has incoming
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       // entity2 has incoming relationship
       const rel: Relationship = { kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 };
-      graph.relationships.push(rel);
+      graph._loadRelationship(rel);
       entity1.links.push(rel);
 
       const result = validateConnectedEntities(graph);
@@ -147,9 +220,9 @@ describe('Connected Entities Validation', () => {
       const npc2 = createMockEntity({ id: 'e2', kind: 'npc', subtype: 'merchant', links: [] });
       const location1 = createMockEntity({ id: 'e3', kind: 'location', subtype: 'colony', links: [] });
 
-      graph.entities.set(npc1.id, npc1);
-      graph.entities.set(npc2.id, npc2);
-      graph.entities.set(location1.id, location1);
+      graph._loadEntity(npc1.id, npc1);
+      graph._loadEntity(npc2.id, npc2);
+      graph._loadEntity(location1.id, location1);
 
       const result = validateConnectedEntities(graph);
       expect(result.details).toContain('npc:merchant: 2');
@@ -159,7 +232,7 @@ describe('Connected Entities Validation', () => {
     it('should include sample unconnected entities', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1', name: 'Lonely Entity', links: [], createdAt: 50 });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       const result = validateConnectedEntities(graph);
       expect(result.details).toContain('Sample unconnected entities');
@@ -186,7 +259,7 @@ describe('NPC Structure Validation', () => {
       });
 
       const entity = createMockEntity({ id: 'e1' });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       const result = validateNPCStructure(graph);
       expect(result.passed).toBe(true);
@@ -202,7 +275,7 @@ describe('NPC Structure Validation', () => {
       });
 
       const entity = createMockEntity({ id: 'e1', kind: 'npc', subtype: 'merchant' });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       const result = validateNPCStructure(graph);
       expect(result.passed).toBe(false);
@@ -218,7 +291,7 @@ describe('NPC Structure Validation', () => {
       // No validateEntityStructure function
 
       const entity = createMockEntity({ id: 'e1' });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       const result = validateNPCStructure(graph);
       expect(result.passed).toBe(true);
@@ -235,8 +308,8 @@ describe('NPC Structure Validation', () => {
       const npc1 = createMockEntity({ id: 'e1', kind: 'npc', subtype: 'merchant' });
       const npc2 = createMockEntity({ id: 'e2', kind: 'npc', subtype: 'merchant' });
 
-      graph.entities.set(npc1.id, npc1);
-      graph.entities.set(npc2.id, npc2);
+      graph._loadEntity(npc1.id, npc1);
+      graph._loadEntity(npc2.id, npc2);
 
       const result = validateNPCStructure(graph);
       expect(result.details).toContain('npc:merchant');
@@ -256,8 +329,8 @@ describe('NPC Structure Validation', () => {
       const npc = createMockEntity({ id: 'e1', kind: 'npc', subtype: 'merchant' });
       const location = createMockEntity({ id: 'e2', kind: 'location', subtype: 'colony' });
 
-      graph.entities.set(npc.id, npc);
-      graph.entities.set(location.id, location);
+      graph._loadEntity(npc.id, npc);
+      graph._loadEntity(location.id, location);
 
       const result = validateNPCStructure(graph);
       expect(result.failureCount).toBe(1);
@@ -273,10 +346,10 @@ describe('Relationship Integrity Validation', () => {
       const entity1 = createMockEntity({ id: 'e1' });
       const entity2 = createMockEntity({ id: 'e2' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e2',
@@ -293,9 +366,9 @@ describe('Relationship Integrity Validation', () => {
       const graph = createMockGraph();
       const entity2 = createMockEntity({ id: 'e2', name: 'Existing' });
 
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity2.id, entity2);
 
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'missing-e1',
         dst: 'e2',
@@ -313,9 +386,9 @@ describe('Relationship Integrity Validation', () => {
       const graph = createMockGraph();
       const entity1 = createMockEntity({ id: 'e1', name: 'Existing' });
 
-      graph.entities.set(entity1.id, entity1);
+      graph._loadEntity(entity1.id, entity1);
 
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'missing-e2',
@@ -331,7 +404,7 @@ describe('Relationship Integrity Validation', () => {
     it('should fail when both entities are missing', () => {
       const graph = createMockGraph();
 
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'missing-e1',
         dst: 'missing-e2',
@@ -349,7 +422,7 @@ describe('Relationship Integrity Validation', () => {
 
       // Add 15 broken relationships
       for (let i = 0; i < 15; i++) {
-        graph.relationships.push({
+        graph._loadRelationship({
           kind: 'friend_of',
           src: `missing-${i}`,
           dst: `missing-${i + 1}`,
@@ -366,7 +439,7 @@ describe('Relationship Integrity Validation', () => {
     it('should include relationship index and kind', () => {
       const graph = createMockGraph();
 
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'enemy_of',
         src: 'missing-e1',
         dst: 'missing-e2',
@@ -393,11 +466,11 @@ describe('Link Synchronization Validation', () => {
       const entity1 = createMockEntity({ id: 'e1', links: [] });
       const entity2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       const rel: Relationship = { kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 };
-      graph.relationships.push(rel);
+      graph._loadRelationship(rel);
       entity1.links.push(rel);
 
       const result = validateLinkSync(graph);
@@ -417,10 +490,10 @@ describe('Link Synchronization Validation', () => {
         ]
       });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       // Only one actual relationship
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e2',
@@ -443,16 +516,16 @@ describe('Link Synchronization Validation', () => {
         links: []
       });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       // Two actual relationships
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e2',
         strength: 0.5
       });
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e3',
@@ -474,7 +547,7 @@ describe('Link Synchronization Validation', () => {
           name: `Entity ${i}`,
           links: [{ kind: 'friend_of', src: `e${i}`, dst: 'other', strength: 0.5 }]
         });
-        graph.entities.set(entity.id, entity);
+        graph._loadEntity(entity.id, entity);
         // No relationships added, so all will mismatch
       }
 
@@ -488,11 +561,11 @@ describe('Link Synchronization Validation', () => {
       const entity1 = createMockEntity({ id: 'e1', links: [] });
       const entity2 = createMockEntity({ id: 'e2', links: [] }); // dst only
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       const rel: Relationship = { kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 };
-      graph.relationships.push(rel);
+      graph._loadRelationship(rel);
       entity1.links.push(rel);
 
       const result = validateLinkSync(graph);
@@ -512,7 +585,7 @@ describe('Lore Presence Validation', () => {
     it('should skip when LLM is disabled', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1', createdAt: 10 });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       // No lore records
       graph.loreRecords = [];
@@ -525,7 +598,7 @@ describe('Lore Presence Validation', () => {
     it('should pass when all enrichable entities have lore', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1', createdAt: 10 });
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       graph.loreRecords = [
         {
@@ -559,8 +632,8 @@ describe('Lore Presence Validation', () => {
         createdAt: 15
       });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       // Only e1 has lore
       graph.loreRecords = [
@@ -589,7 +662,7 @@ describe('Lore Presence Validation', () => {
         createdAt: 10
       });
 
-      graph.entities.set(ability.id, ability);
+      graph._loadEntity(ability.id, ability);
 
       // Need at least one lore record to trigger the check
       graph.loreRecords = [
@@ -612,8 +685,8 @@ describe('Lore Presence Validation', () => {
       const initial = createMockEntity({ id: 'e1', createdAt: 0 });
       const created = createMockEntity({ id: 'e2', createdAt: 10 });
 
-      graph.entities.set(initial.id, initial);
-      graph.entities.set(created.id, created);
+      graph._loadEntity(initial.id, initial);
+      graph._loadEntity(created.id, created);
 
       // Need at least one lore record to trigger the check
       graph.loreRecords = [
@@ -653,9 +726,9 @@ describe('Lore Presence Validation', () => {
         createdAt: 20
       });
 
-      graph.entities.set(npc1.id, npc1);
-      graph.entities.set(npc2.id, npc2);
-      graph.entities.set(location.id, location);
+      graph._loadEntity(npc1.id, npc1);
+      graph._loadEntity(npc2.id, npc2);
+      graph._loadEntity(location.id, location);
 
       // Need at least one lore record to trigger the check (but not all)
       graph.loreRecords = [
@@ -683,7 +756,7 @@ describe('Lore Presence Validation', () => {
         createdAt: 50
       });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       // Need at least one lore record to trigger the check
       graph.loreRecords = [
@@ -725,11 +798,11 @@ describe('Complete World Validation', () => {
       // Add valid entity with connections
       const entity1 = createMockEntity({ id: 'e1', links: [] });
       const entity2 = createMockEntity({ id: 'e2', links: [] });
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       const rel: Relationship = { kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 };
-      graph.relationships.push(rel);
+      graph._loadRelationship(rel);
       entity1.links.push(rel);
 
       const report = validateWorld(graph);
@@ -743,7 +816,7 @@ describe('Complete World Validation', () => {
       const graph = createMockGraph();
 
       // Add broken relationship
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'missing-e1',
         dst: 'missing-e2',

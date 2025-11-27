@@ -29,18 +29,148 @@ describe('ContractEnforcer', () => {
       maxTicks: 500
     };
 
-    // Setup mock graph
+    // Setup mock graph with mutation methods
+    const _entities = new Map<string, HardState>();
+    let _relationships: Relationship[] = [];
+
     mockGraph = {
-      entities: new Map<string, HardState>(),
-      relationships: [],
       tick: 0,
       epoch: 0,
       currentEra: { id: 'expansion', name: 'Expansion Era' } as any,
       pressures: new Map<string, number>(),
       history: [],
       tagIndex: new Map(),
-      relationshipIndex: new Map()
-    };
+      relationshipIndex: new Map(),
+      config: {} as any,
+
+      // Entity read methods
+      getEntity(id: string): HardState | undefined {
+        const entity = _entities.get(id);
+        return entity ? { ...entity, tags: [...entity.tags], links: [...entity.links] } : undefined;
+      },
+      hasEntity(id: string): boolean {
+        return _entities.has(id);
+      },
+      getEntityCount(): number {
+        return _entities.size;
+      },
+      getEntities(): HardState[] {
+        return Array.from(_entities.values()).map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntityIds(): string[] {
+        return Array.from(_entities.keys());
+      },
+      forEachEntity(callback: (entity: HardState, id: string) => void): void {
+        _entities.forEach((entity, id) => {
+          callback({ ...entity, tags: [...entity.tags], links: [...entity.links] }, id);
+        });
+      },
+      findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => {
+            if (criteria.kind && e.kind !== criteria.kind) return false;
+            if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+            if (criteria.status && e.status !== criteria.status) return false;
+            if (criteria.prominence && e.prominence !== criteria.prominence) return false;
+            if (criteria.culture && e.culture !== criteria.culture) return false;
+            if (criteria.tag && !e.tags.includes(criteria.tag)) return false;
+            if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
+            return true;
+          })
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntitiesByKind(kind: string): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => e.kind === kind)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+        const connectedIds = new Set<string>();
+        _relationships.forEach(r => {
+          if (relationKind && r.kind !== relationKind) return;
+          if (r.src === entityId) connectedIds.add(r.dst);
+          if (r.dst === entityId) connectedIds.add(r.src);
+        });
+        return Array.from(connectedIds)
+          .map(id => _entities.get(id))
+          .filter((e): e is HardState => e !== undefined)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+
+      // Entity mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      updateEntity(id: string, changes: Partial<HardState>): boolean {
+        const entity = _entities.get(id);
+        if (!entity) return false;
+        Object.assign(entity, changes);
+        entity.updatedAt = this.tick;
+        return true;
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+
+      // Relationship read methods
+      getRelationships(): Relationship[] {
+        return [..._relationships];
+      },
+      getRelationshipCount(): number {
+        return _relationships.length;
+      },
+      findRelationships(criteria: { kind?: string; src?: string; dst?: string; category?: string; minStrength?: number }): Relationship[] {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          if (criteria.minStrength !== undefined && (r.strength ?? 0.5) < criteria.minStrength) return false;
+          return true;
+        });
+      },
+      getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[] {
+        return _relationships.filter(r => {
+          if (direction === 'src') return r.src === entityId;
+          if (direction === 'dst') return r.dst === entityId;
+          return r.src === entityId || r.dst === entityId;
+        });
+      },
+      hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+        return _relationships.some(r =>
+          r.src === srcId && r.dst === dstId && (!kind || r.kind === kind)
+        );
+      },
+
+      // Relationship mutation methods
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+        const srcEntity = _entities.get(relationship.src);
+        if (srcEntity) {
+          srcEntity.links.push({ ...relationship });
+          srcEntity.updatedAt = this.tick;
+        }
+        const dstEntity = _entities.get(relationship.dst);
+        if (dstEntity) {
+          dstEntity.updatedAt = this.tick;
+        }
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+        const idx = _relationships.findIndex(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+        if (idx >= 0) {
+          _relationships.splice(idx, 1);
+          const srcEntity = _entities.get(srcId);
+          if (srcEntity) {
+            srcEntity.links = srcEntity.links.filter(l => !(l.src === srcId && l.dst === dstId && l.kind === kind));
+            srcEntity.updatedAt = this.tick;
+          }
+          return true;
+        }
+        return false;
+      }
+    } as Graph;
 
     // Setup mock graph view
     mockGraphView = {
@@ -119,8 +249,8 @@ describe('ContractEnforcer', () => {
 
     it('should check entity count requirements - minimum', () => {
       // Add 2 NPCs to graph
-      mockGraph.entities.set('npc1', { id: 'npc1', kind: 'npc' } as HardState);
-      mockGraph.entities.set('npc2', { id: 'npc2', kind: 'npc' } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', tags: [], links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',
@@ -142,7 +272,7 @@ describe('ContractEnforcer', () => {
     it('should check entity count requirements - maximum', () => {
       // Add 10 NPCs to graph
       for (let i = 0; i < 10; i++) {
-        mockGraph.entities.set(`npc${i}`, { id: `npc${i}`, kind: 'npc' } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
       }
 
       const template: GrowthTemplate = {
@@ -163,8 +293,8 @@ describe('ContractEnforcer', () => {
     });
 
     it('should check entity subtype requirements', () => {
-      mockGraph.entities.set('npc1', { id: 'npc1', kind: 'npc', subtype: 'merchant' } as HardState);
-      mockGraph.entities.set('npc2', { id: 'npc2', kind: 'npc', subtype: 'warrior' } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', subtype: 'merchant', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', subtype: 'warrior', tags: [], links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',
@@ -260,7 +390,7 @@ describe('ContractEnforcer', () => {
 
     it('should check multiple conditions (all must pass)', () => {
       mockGraph.pressures.set('conflict', 60);
-      mockGraph.entities.set('npc1', { id: 'npc1', kind: 'npc' } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
       mockGraph.currentEra = { id: 'conflict', name: 'Conflict Era' } as any;
 
       const template: GrowthTemplate = {
@@ -305,7 +435,7 @@ describe('ContractEnforcer', () => {
     });
 
     it('should add lineage relationship when ancestor found', () => {
-      const ancestor: HardState = { id: 'ancestor1', kind: 'npc' } as HardState;
+      const ancestor: HardState = { id: 'ancestor1', kind: 'npc', tags: [], links: [] } as HardState;
 
       mockConfig.entityRegistries = [
         {
@@ -435,7 +565,7 @@ describe('ContractEnforcer', () => {
     it('should return saturated when entity count exceeds 2x target', () => {
       // Add 20 NPCs (target is 10, threshold is 20)
       for (let i = 0; i < 20; i++) {
-        mockGraph.entities.set(`npc${i}`, { id: `npc${i}`, kind: 'npc' } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
       }
 
       mockConfig.entityRegistries = [
@@ -465,7 +595,7 @@ describe('ContractEnforcer', () => {
     it('should return not saturated when count is below 2x target', () => {
       // Add 15 NPCs (target is 10, threshold is 20)
       for (let i = 0; i < 15; i++) {
-        mockGraph.entities.set(`npc${i}`, { id: `npc${i}`, kind: 'npc' } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
       }
 
       mockConfig.entityRegistries = [
@@ -493,7 +623,7 @@ describe('ContractEnforcer', () => {
     it('should check subtype-specific saturation', () => {
       // Add 30 merchant NPCs
       for (let i = 0; i < 30; i++) {
-        mockGraph.entities.set(`npc${i}`, {
+        mockGraph.setEntity(`npc${i}`, {
           id: `npc${i}`,
           kind: 'npc',
           subtype: 'merchant'
@@ -527,11 +657,11 @@ describe('ContractEnforcer', () => {
     it('should allow template if at least one kind is unsaturated', () => {
       // Add 20 NPCs (saturated)
       for (let i = 0; i < 20; i++) {
-        mockGraph.entities.set(`npc${i}`, { id: `npc${i}`, kind: 'npc' } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
       }
       // Add 5 factions (not saturated)
       for (let i = 0; i < 5; i++) {
-        mockGraph.entities.set(`faction${i}`, { id: `faction${i}`, kind: 'faction' } as HardState);
+        mockGraph.setEntity(`faction${i}`, { id: `faction${i}`, kind: 'faction' } as HardState);
       }
 
       mockConfig.entityRegistries = [
@@ -692,7 +822,7 @@ describe('ContractEnforcer', () => {
   describe('getDiagnostic', () => {
     it('should provide comprehensive diagnostic output', () => {
       mockGraph.pressures.set('conflict', 30);
-      mockGraph.entities.set('npc1', { id: 'npc1', kind: 'npc' } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',

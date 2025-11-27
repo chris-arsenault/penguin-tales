@@ -1,7 +1,7 @@
 import { Graph, MetaEntityConfig, Cluster } from '../types/engine';
 import { HardState, Relationship } from '../types/worldTypes';
 import { TemplateGraphView } from './templateGraphView';
-import { generateId, addEntity, addRelationship, archiveRelationship } from '../utils/helpers';
+import { generateId, addEntity, addRelationship, archiveRelationship, hasTag } from '../utils/helpers';
 
 /**
  * Meta-Entity Formation Service
@@ -37,7 +37,7 @@ export class MetaEntityFormation {
     // CRITICAL: Exclude meta-entities to prevent recursive clustering
     const entities = graphView.findEntities({ kind: sourceKind })
       .filter(e => e.status !== 'historical')
-      .filter(e => !e.tags?.includes('meta-entity'));  // Don't cluster meta-entities
+      .filter(e => !hasTag(e.tags, 'meta-entity'));  // Don't cluster meta-entities
 
     if (entities.length < config.clustering.minSize) {
       return [];
@@ -110,7 +110,7 @@ export class MetaEntityFormation {
 
     // Add meta-entity to graph
     const metaId = addEntity(graph, metaEntityPartial);
-    const metaEntity = graph.entities.get(metaId)!;
+    const metaEntity = graph.getEntity(metaId)!;
 
     // Transfer relationships FIRST (before archiving)
     if (config.transformation.transferRelationships) {
@@ -136,7 +136,7 @@ export class MetaEntityFormation {
         entity.status = 'historical';
 
         // Archive all relationships of the original entity
-        const entityRelationships = graph.relationships.filter(r =>
+        const entityRelationships = graph.getRelationships().filter(r =>
           (r.src === entity.id || r.dst === entity.id) &&
           r.status !== 'historical' &&
           r.kind !== 'part_of'  // Don't archive part_of (we just created it)
@@ -156,9 +156,9 @@ export class MetaEntityFormation {
    */
   private createGovernanceFaction(graph: Graph, legalCode: HardState, originalRules: HardState[]): void {
     // Check if a governance faction already exists for this location
-    const codeLocations = graph.relationships
+    const codeLocations = graph.getRelationships()
       .filter(r => r.kind === 'applies_in' && r.src === legalCode.id)
-      .map(r => graph.entities.get(r.dst))
+      .map(r => graph.getEntity(r.dst))
       .filter(Boolean) as HardState[];
 
     // If no location, don't create faction
@@ -167,10 +167,10 @@ export class MetaEntityFormation {
     const primaryLocation = codeLocations[0];
 
     // Check if a political faction already governs this location
-    const existingGoverningFaction = Array.from(graph.entities.values()).find(e =>
+    const existingGoverningFaction = graph.getEntities().find(e =>
       e.kind === 'faction' &&
       e.subtype === 'political' &&
-      graph.relationships.some(r =>
+      graph.getRelationships().some(r =>
         r.kind === 'controls' &&
         r.src === e.id &&
         r.dst === primaryLocation.id
@@ -200,13 +200,14 @@ export class MetaEntityFormation {
       status: 'active',
       prominence: legalCode.prominence, // Match prominence of the legal code
       culture: primaryLocation.culture,  // Inherit culture from primary location
-      tags: ['governance', 'legislative', 'political'],
+      tags: { governance: true, legislative: true, political: true },
       links: [],
       createdAt: graph.tick,
-      updatedAt: graph.tick
+      updatedAt: graph.tick,
+      coordinates: primaryLocation.coordinates  // Inherit coordinates from primary location
     };
 
-    graph.entities.set(factionId, faction);
+    graph._loadEntity(factionId, faction);
 
     // Link faction to legal code
     addRelationship(graph, 'weaponized_by', factionId, legalCode.id);
@@ -236,7 +237,7 @@ export class MetaEntityFormation {
     const clusterIds = new Set(cluster.map(e => e.id));
 
     // Find all relationships involving cluster entities
-    const toTransfer = graph.relationships.filter(r =>
+    const toTransfer = graph.getRelationships().filter(r =>
       (clusterIds.has(r.src) || clusterIds.has(r.dst)) &&
       r.status !== 'historical' &&
       r.kind !== 'part_of'  // Don't transfer part_of relationships
@@ -327,8 +328,8 @@ export class MetaEntityFormation {
 
         case 'shared_tags':
           // Check tag overlap (Jaccard similarity)
-          const e1Tags = new Set(e1.tags || []);
-          const e2Tags = new Set(e2.tags || []);
+          const e1Tags = new Set(Object.keys(e1.tags || {}));
+          const e2Tags = new Set(Object.keys(e2.tags || {}));
           const intersection = Array.from(e1Tags).filter(t => e2Tags.has(t)).length;
           const union = new Set([...e1Tags, ...e2Tags]).size;
           const jaccard = union > 0 ? intersection / union : 0;

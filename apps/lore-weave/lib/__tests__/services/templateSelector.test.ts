@@ -172,19 +172,23 @@ describe('TemplateSelector', () => {
     selector = new TemplateSelector(mockTargets, mockTemplates);
 
     // Create mock graph
-    const entities = new Map<string, HardState>();
-    entities.set('npc1', createEntity('npc1', 'npc', 'merchant', 'marginal'));
-    entities.set('npc2', createEntity('npc2', 'npc', 'hero', 'renowned'));
-    entities.set('loc1', createEntity('loc1', 'location', 'colony', 'recognized'));
-    entities.set('faction1', createEntity('faction1', 'faction', 'guild', 'mythic'));
+    let _entities = new Map<string, HardState>();
+    _entities.set('npc1', createEntity('npc1', 'npc', 'merchant', 'marginal'));
+    _entities.set('npc2', createEntity('npc2', 'npc', 'hero', 'renowned'));
+    _entities.set('loc1', createEntity('loc1', 'location', 'colony', 'recognized'));
+    _entities.set('faction1', createEntity('faction1', 'faction', 'guild', 'mythic'));
+
+    let _relationships = [
+      { kind: 'member_of', src: 'npc1', dst: 'faction1' },
+      { kind: 'resident_of', src: 'npc1', dst: 'loc1' },
+      { kind: 'allies', src: 'npc1', dst: 'npc2' },
+    ];
 
     mockGraph = {
-      entities,
-      relationships: [
-        { kind: 'member_of', src: 'npc1', dst: 'faction1' },
-        { kind: 'resident_of', src: 'npc1', dst: 'loc1' },
-        { kind: 'allies', src: 'npc1', dst: 'npc2' },
-      ],
+      get entities() { return _entities; },
+      set entities(val: Map<string, HardState>) { _entities = val; },
+      get relationships() { return _relationships; },
+      set relationships(val: Relationship[]) { _relationships = val; },
       tick: 100,
       currentEra: {
         id: 'test-era',
@@ -203,6 +207,19 @@ describe('TemplateSelector', () => {
         averageGrowthRate: 0,
       },
       loreRecords: [],
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      }
     };
   });
 

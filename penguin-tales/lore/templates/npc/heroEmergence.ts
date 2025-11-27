@@ -100,6 +100,51 @@ export const heroEmergence: GrowthTemplate = {
       };
     }
 
+    // Try region-based placement within colony's region
+    if (graphView.hasRegionSystem()) {
+      const colonyRegion = graphView.getEntityRegion(colony);
+
+      if (colonyRegion) {
+        // Place hero within the colony's region
+        const entityId = graphView.addEntityInRegion(
+          {
+            kind: 'npc',
+            subtype: 'hero',
+            description: `A brave penguin who emerged during troubled times in ${colony.name}`,
+            status: 'alive',
+            prominence: 'marginal',
+            culture: colony.culture,
+            tags: ['brave', 'emergent']
+          },
+          colonyRegion.id,
+          { minDistance: 1 }
+        );
+
+        if (entityId) {
+          const relationships: any[] = [
+            { kind: 'resident_of', src: entityId, dst: colony.id }
+          ];
+
+          // Add ability practice relationship if abilities exist
+          const abilities = graphView.findEntities({ kind: 'abilities' });
+          if (abilities.length > 0) {
+            relationships.push({
+              kind: 'practitioner_of',
+              src: entityId,
+              dst: pickRandom(abilities).id
+            });
+          }
+
+          return {
+            entities: [],  // Already added via addEntityInRegion
+            relationships,
+            description: `A new hero emerges in ${colony.name}`
+          };
+        }
+      }
+    }
+
+    // Fallback: non-region-aware placement
     const hero: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',

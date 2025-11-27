@@ -77,7 +77,7 @@ export class RelationshipBuilder {
    * @param strength - Optional relationship strength
    */
   addIfNotExists(graph: Graph, kind: string, src: string, dst: string, strength?: number): this {
-    const exists = graph.relationships.some(
+    const exists = graph.getRelationships().some(
       r => r.kind === kind && r.src === src && r.dst === dst
     );
     if (!exists) {

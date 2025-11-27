@@ -168,6 +168,18 @@ export const magicDiscovery: GrowthTemplate = {
     const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
     const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
 
+    // Derive conceptual coordinates - place magic near related magic/anomaly in concept space
+    const referenceEntities = [hero];
+    if (relatedMagic) referenceEntities.push(relatedMagic);
+    if (anomaly) referenceEntities.push(anomaly);
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'abilities',
+      'conceptual',
+      { maxDistance: relatedMagic ? 0.3 : 0.6, minDistance: 0.1 }  // Closer if related lineage
+    );
+
     const magicAbility: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'magic',
@@ -176,7 +188,8 @@ export const magicDiscovery: GrowthTemplate = {
       status: 'emergent',
       prominence: 'recognized',
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
-      tags: ['magic', 'mystical']
+      tags: ['magic', 'mystical'],
+      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
     };
 
     return {

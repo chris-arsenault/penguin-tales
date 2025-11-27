@@ -1,7 +1,102 @@
 import { Graph, EngineConfig } from '../types/engine';
-import { HardState, Relationship } from '../types/worldTypes';
+import { HardState, Relationship, EntityTags } from '../types/worldTypes';
 import * as fs from 'fs';
 import * as path from 'path';
+
+// =============================================================================
+// TAG UTILITIES - For working with EntityTags (KVP format)
+// =============================================================================
+
+/**
+ * Merge multiple tag objects. Later tags override earlier ones.
+ */
+export function mergeTags(...tagSets: (EntityTags | undefined)[]): EntityTags {
+  const result: EntityTags = {};
+  for (const tags of tagSets) {
+    if (tags) {
+      Object.assign(result, tags);
+    }
+  }
+  return result;
+}
+
+/**
+ * Check if an entity has a specific tag.
+ * @param tags - The entity's tags
+ * @param key - The tag key to check
+ * @param value - Optional: specific value to match (if not provided, checks key existence)
+ */
+export function hasTag(tags: EntityTags | undefined, key: string, value?: string | boolean): boolean {
+  if (!tags) return false;
+  if (!(key in tags)) return false;
+  if (value === undefined) return true;
+  return tags[key] === value;
+}
+
+/**
+ * Get a tag's value, with optional default.
+ */
+export function getTagValue<T extends string | boolean>(
+  tags: EntityTags | undefined,
+  key: string,
+  defaultValue?: T
+): T | undefined {
+  if (!tags || !(key in tags)) return defaultValue;
+  return tags[key] as T;
+}
+
+/**
+ * Get all tag keys that have truthy values.
+ */
+export function getTrueTagKeys(tags: EntityTags | undefined): string[] {
+  if (!tags) return [];
+  return Object.entries(tags)
+    .filter(([_, value]) => value === true)
+    .map(([key]) => key);
+}
+
+/**
+ * Get all string-valued tags as key-value entries.
+ */
+export function getStringTags(tags: EntityTags | undefined): Array<[string, string]> {
+  if (!tags) return [];
+  return Object.entries(tags)
+    .filter(([_, value]) => typeof value === 'string')
+    .map(([key, value]) => [key, value as string]);
+}
+
+/**
+ * Convert EntityTags (KVP) to array format for backward compatibility.
+ * Boolean tags become just the key, string tags become "key:value".
+ */
+export function tagsToArray(tags: EntityTags | undefined): string[] {
+  if (!tags) return [];
+  return Object.entries(tags).map(([key, value]) => {
+    if (value === true) return key;
+    if (value === false) return `!${key}`; // Negated tag
+    return `${key}:${value}`;
+  });
+}
+
+/**
+ * Convert array tags to EntityTags (KVP) format.
+ * Plain strings become boolean true, "key:value" becomes string value.
+ */
+export function arrayToTags(arr: string[] | undefined): EntityTags {
+  if (!arr) return {};
+  const result: EntityTags = {};
+  for (const tag of arr) {
+    if (tag.startsWith('!')) {
+      result[tag.slice(1)] = false;
+    } else if (tag.includes(':')) {
+      const [key, ...valueParts] = tag.split(':');
+      result[key] = valueParts.join(':');
+    } else {
+      result[tag] = true;
+    }
+  }
+  return result;
+}
 
 // ID generation
 let idCounter = 1000;
@@ -25,22 +120,22 @@ export function findEntities(
   criteria: Partial<HardState>
 ): HardState[] {
   const results: HardState[] = [];
-  
-  graph.entities.forEach(entity => {
+
+  graph.forEachEntity(entity => {
     let matches = true;
-    
+
     for (const [key, value] of Object.entries(criteria)) {
       if (entity[key as keyof HardState] !== value) {
         matches = false;
         break;
       }
     }
-    
+
     if (matches) {
       results.push(entity);
     }
   });
-  
+
   return results;
 }
 
@@ -62,7 +157,7 @@ export function getRelated(
   const related: Array<{ entity: HardState; strength: number }> = [];
   const opts = options || {};
 
-  graph.relationships.forEach(rel => {
+  graph.getRelationships().forEach(rel => {
     if (relationshipKind && rel.kind !== relationshipKind) return;
 
     // Strength filtering
@@ -71,12 +166,12 @@ export function getRelated(
     if (opts.maxStrength !== undefined && strength > opts.maxStrength) return;
 
     if ((direction === 'src' || direction === 'both') && rel.src === entityId) {
-      const entity = graph.entities.get(rel.dst);
+      const entity = graph.getEntity(rel.dst);
       if (entity) related.push({ entity, strength });
     }
 
     if ((direction === 'dst' || direction === 'both') && rel.dst === entityId) {
-      const entity = graph.entities.get(rel.src);
+      const entity = graph.getEntity(rel.src);
       if (entity) related.push({ entity, strength });
     }
   });
@@ -95,9 +190,9 @@ export function hasRelationship(
   dstId: string,
   kind?: string
 ): boolean {
-  return graph.relationships.some(rel =>
-    rel.src === srcId && 
-    rel.dst === dstId && 
+  return graph.getRelationships().some(rel =>
+    rel.src === srcId &&
+    rel.dst === dstId &&
     (!kind || rel.kind === kind)
   );
 }
@@ -132,7 +227,7 @@ export function getStrongAllies(graph: Graph, entityId: string): HardState[] {
 }
 
 export function getWeakRelationships(graph: Graph, entityId: string): Relationship[] {
-  return graph.relationships.filter(r =>
+  return graph.getRelationships().filter(r =>
     (r.src === entityId || r.dst === entityId) &&
     (r.strength ?? 0.5) < 0.3
   );
@@ -175,9 +270,11 @@ export function slugifyName(name: string): string {
 
 export function upsertNameTag(entity: HardState, sourceName: string): void {
   const slug = slugifyName(sourceName);
-  const withoutNameTags = (entity.tags || []).filter(tag => !tag.startsWith('name:'));
-  const base = withoutNameTags.slice(0, 4); // reserve space for name tag
-  entity.tags = [...base, `name:${slug}`];
+  if (!entity.tags) {
+    entity.tags = {};
+  }
+  // With KVP format, just set the name key directly
+  entity.tags.name = slug;
 }
 
 // Initial state normalization
@@ -189,6 +286,21 @@ export function normalizeInitialState(entities: any[]): HardState[] {
         `Initial state entities must have names defined in JSON.`
       );
     }
+    if (!entity.coordinates) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no coordinates. ` +
+        `Initial state entities must have coordinates defined in JSON.`
+      );
+    }
+
+    // Handle both old array format and new KVP format for tags
+    let tags: EntityTags;
+    if (Array.isArray(entity.tags)) {
+      tags = arrayToTags(entity.tags);
+    } else {
+      tags = entity.tags || {};
+    }
+
     return {
       id: entity.id || entity.name || generateId(entity.kind || 'unknown'),
       kind: entity.kind as HardState['kind'] || 'npc',
@@ -198,54 +310,48 @@ export function normalizeInitialState(entities: any[]): HardState[] {
       status: entity.status || 'alive',
       prominence: entity.prominence as HardState['prominence'] || 'marginal',
       culture: entity.culture || 'world',
-      tags: entity.tags || [],
+      tags,
       links: entity.links || [],
       createdAt: 0,
-      updatedAt: 0
+      updatedAt: 0,
+      coordinates: entity.coordinates
     };
   });
 }
 
 // Graph modification helpers
 export function addEntity(graph: Graph, entity: Partial<HardState>): string {
-  const id = generateId(entity.kind || 'unknown');
-
-  // Auto-generate name if not provided
-  let name = entity.name;
-  if (!name) {
-    const nameForge = graph.config?.nameForgeService;
-    if (!nameForge) {
-      throw new Error(
-        `addEntity: name not provided and no NameForgeService configured. ` +
-        `Either provide a name or configure nameForgeService in EngineConfig.`
-      );
-    }
-    name = nameForge.generate(
-      entity.kind || 'npc',
-      entity.subtype || 'default',
-      entity.prominence || 'marginal',
-      entity.tags || [],
-      entity.culture || 'world'
+  // Coordinates are required - fail loudly
+  if (!entity.coordinates) {
+    throw new Error(
+      `addEntity: coordinates are required for all entities. ` +
+      `Entity kind: ${entity.kind || 'unknown'}, name: ${entity.name || 'unnamed'}. ` +
+      `Use addEntityInRegion() or provide coordinates explicitly.`
     );
   }
 
-  const fullEntity: HardState = {
-    id,
+  // Normalize tags: handle both old array format and new KVP format
+  let tags: EntityTags;
+  if (Array.isArray(entity.tags)) {
+    tags = arrayToTags(entity.tags);
+  } else {
+    tags = entity.tags || {};
+  }
+
+  // Delegate to Graph.createEntity() which enforces the contract:
+  // coordinates (required) → tags → name (auto-generated if not provided)
+  return graph.createEntity({
     kind: entity.kind || 'npc',
     subtype: entity.subtype || 'default',
-    name,
-    description: entity.description || '',
-    status: entity.status || 'alive',
-    prominence: entity.prominence || 'marginal',
-    culture: entity.culture || 'world',
-    tags: entity.tags || [],
-    links: entity.links || [],
-    createdAt: entity.createdAt || graph.tick,
-    updatedAt: entity.updatedAt || graph.tick
-  };
-
-  graph.entities.set(id, fullEntity);
-  return id;
+    coordinates: entity.coordinates,
+    tags,
+    name: entity.name,  // May be undefined - createEntity will auto-generate
+    description: entity.description,
+    status: entity.status,
+    prominence: entity.prominence,
+    culture: entity.culture,
+    temporal: entity.temporal
+  });
 }
 
 // ===========================
@@ -315,11 +421,6 @@ export function addRelationship(
   strengthOverride?: number,
   distance?: number
 ): void {
-  // Check if relationship already exists
-  if (hasRelationship(graph, srcId, dstId, kind)) {
-    return;
-  }
-
   // Get domain schema for configuration lookup
   const domain = graph.config?.domain;
 
@@ -345,7 +446,7 @@ export function addRelationship(
   }
 
   // Check relationship warning thresholds (per-kind, non-blocking)
-  const srcEntity = graph.entities.get(srcId);
+  const srcEntity = graph.getEntity(srcId);
   if (srcEntity) {
     const existingOfType = srcEntity.links.filter(link => link.kind === kind).length;
 
@@ -361,7 +462,7 @@ export function addRelationship(
         `   Relationship Type: ${kind}\n` +
         `   Current count: ${existingOfType}\n` +
         `   Warning threshold: ${threshold}\n` +
-        `   Target: ${graph.entities.get(dstId)?.name || dstId}\n` +
+        `   Target: ${graph.getEntity(dstId)?.name || dstId}\n` +
         `   Tick: ${graph.tick}\n` +
         `   Era: ${graph.currentEra.name}\n` +
         `   ℹ️  This is a WARNING only - relationship will still be added\n`;
@@ -377,20 +478,11 @@ export function addRelationship(
     }
   }
 
-  // Add relationship (always, no hard limit) with strength, distance, and category
-  graph.relationships.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
-
-  // Update entity links
-  const dstEntity = graph.entities.get(dstId);
-
-  if (srcEntity) {
-    srcEntity.links.push({ kind, src: srcId, dst: dstId, strength, distance: finalDistance, category });
-    srcEntity.updatedAt = graph.tick;
-  }
-
-  if (dstEntity) {
-    dstEntity.updatedAt = graph.tick;
-  }
+  // Delegate to Graph.addRelationship() which handles:
+  // - Entity existence validation
+  // - Duplicate checking
+  // - Entity links update
+  graph.addRelationship(kind, srcId, dstId, strength, finalDistance, category);
 }
 
 export function updateEntity(
@@ -398,7 +490,7 @@ export function updateEntity(
   entityId: string,
   changes: Partial<HardState>
 ): void {
-  const entity = graph.entities.get(entityId);
+  const entity = graph.getEntity(entityId);
   if (entity) {
     Object.assign(entity, changes, { updatedAt: graph.tick });
   }
@@ -460,7 +552,7 @@ export function archiveRelationship(
   kind: string
 ): void {
   // Find matching active relationship in graph
-  const rel = graph.relationships.find(r =>
+  const rel = graph.getRelationships().find(r =>
     r.src === src &&
     r.dst === dst &&
     r.kind === kind &&
@@ -473,7 +565,7 @@ export function archiveRelationship(
   }
 
   // Update entity links for source entity
-  const srcEntity = graph.entities.get(src);
+  const srcEntity = graph.getEntity(src);
   if (srcEntity) {
     const link = srcEntity.links.find(l =>
       l.src === src &&
@@ -489,7 +581,7 @@ export function archiveRelationship(
   }
 
   // Update destination entity's updatedAt
-  const dstEntity = graph.entities.get(dst);
+  const dstEntity = graph.getEntity(dst);
   if (dstEntity) {
     dstEntity.updatedAt = graph.tick;
   }
@@ -508,7 +600,7 @@ export function modifyRelationshipStrength(
   delta: number
 ): boolean {
   // Find relationship in graph
-  const rel = graph.relationships.find(r =>
+  const rel = graph.getRelationships().find(r =>
     r.src === srcId && r.dst === dstId && r.kind === kind
   );
 
@@ -519,8 +611,8 @@ export function modifyRelationshipStrength(
   rel.strength = Math.max(0.0, Math.min(1.0, currentStrength + delta));
 
   // Also update in entity links
-  const srcEntity = graph.entities.get(srcId);
-  const dstEntity = graph.entities.get(dstId);
+  const srcEntity = graph.getEntity(srcId);
+  const dstEntity = graph.getEntity(dstId);
 
   if (srcEntity) {
     const link = srcEntity.links.find(l =>
@@ -660,7 +752,7 @@ export function areRelationshipsCompatible(
   newKind: string
 ): boolean {
   // Get existing relationship kinds between these entities
-  const existingRelationships = graph.relationships.filter(
+  const existingRelationships = graph.getRelationships().filter(
     r => r.src === srcId && r.dst === dstId
   );
   const existingKinds = existingRelationships.map(r => r.kind);

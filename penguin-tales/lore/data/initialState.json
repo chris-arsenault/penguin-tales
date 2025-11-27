@@ -9,6 +9,16 @@
       "prominence": "recognized",
       "culture": "aurora-stack",
       "tags": ["icy", "landmark", "multilevel"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 50,
+          "sector_y": 50,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "links": [
         { "kind": "contains", "src": "Aurora Berg", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.1 },
         { "kind": "contains", "src": "Aurora Berg", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.12 },
@@ -27,6 +37,16 @@
       "prominence": "recognized",
       "culture": "aurora-stack",
       "tags": ["colony", "trade", "organized"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 60,
+          "sector_y": 60,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "links": [
         { "kind": "contained_by", "src": "Aurora Stack", "dst": "Aurora Berg", "strength": 0.2, "distance": 0.1 },
         { "kind": "adjacent_to", "src": "Aurora Stack", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.15 },
@@ -44,6 +64,16 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["colony", "criminal", "secretive"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 30,
+          "sector_y": 40,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "links": [
         { "kind": "contained_by", "src": "Nightfall Shelf", "dst": "Aurora Berg", "strength": 0.2, "distance": 0.12 },
         { "kind": "adjacent_to", "src": "Nightfall Shelf", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.15 },
@@ -61,6 +91,16 @@
       "prominence": "marginal",
       "culture": "aurora-stack",
       "tags": ["krill", "food", "resource"],
+      "coordinates": {
+        "physical": {
+          "plane": "underwater",
+          "sector_x": 60,
+          "sector_y": 55,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "shallow_water"
+        }
+      },
       "links": [
         { "kind": "adjacent_to", "src": "Krill Shoals", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.25 }
       ]
@@ -75,6 +115,16 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["anomaly", "mystical", "glowing"],
+      "coordinates": {
+        "physical": {
+          "plane": "ice_caverns",
+          "sector_x": 30,
+          "sector_y": 35,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "ice_caverns"
+        }
+      },
       "links": [
         { "kind": "adjacent_to", "src": "The Glow-Fissure", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.05 }
       ]
@@ -89,6 +139,16 @@
       "prominence": "marginal",
       "culture": "aurora-stack",
       "tags": ["strategic", "windy", "vantage"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 50,
+          "sector_y": 70,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "sky"
+        }
+      },
       "links": [
         { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Aurora Stack", "strength": 0.2, "distance": 0.3 },
         { "kind": "adjacent_to", "src": "Windward Ridge", "dst": "Nightfall Shelf", "strength": 0.2, "distance": 0.35 }
@@ -104,6 +164,16 @@
       "prominence": "recognized",
       "culture": "aurora-stack",
       "tags": ["merchant", "trade", "organized"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 60,
+          "sector_y": 62,
+          "cell_x": 6,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "economic", "cultural"],
@@ -125,6 +195,16 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["criminal", "secretive", "organized"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 28,
+          "sector_y": 42,
+          "cell_x": 4,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "economic", "cultural", "military"],
@@ -147,6 +227,16 @@
       "prominence": "recognized",
       "culture": "aurora-stack",
       "tags": ["leader", "organized", "trade"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 61,
+          "sector_y": 61,
+          "cell_x": 5,
+          "cell_y": 6,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "economic"],
@@ -170,6 +260,16 @@
       "prominence": "renowned",
       "culture": "aurora-stack",
       "tags": ["brave", "explorer", "fishing"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 62,
+          "sector_y": 58,
+          "cell_x": 7,
+          "cell_y": 4,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "military", "cultural"],
@@ -192,6 +292,16 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["leader", "secretive", "charismatic"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 29,
+          "sector_y": 41,
+          "cell_x": 5,
+          "cell_y": 4,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "economic"],
@@ -214,6 +324,16 @@
       "prominence": "renowned",
       "culture": "nightshelf",
       "tags": ["brave", "mystical", "explorer"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 31,
+          "sector_y": 38,
+          "cell_x": 3,
+          "cell_y": 6,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["political", "military", "cultural"],
@@ -236,6 +356,16 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["magic", "mystical", "glowing"],
+      "coordinates": {
+        "physical": {
+          "plane": "ice_caverns",
+          "sector_x": 30,
+          "sector_y": 36,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "ice_caverns"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["magical"],
@@ -257,6 +387,16 @@
       "prominence": "recognized",
       "culture": "aurora-stack",
       "tags": ["technology", "fishing", "offensive"],
+      "coordinates": {
+        "physical": {
+          "plane": "surface",
+          "sector_x": 61,
+          "sector_y": 56,
+          "cell_x": 5,
+          "cell_y": 5,
+          "z_band": "surface"
+        }
+      },
       "catalyst": {
         "canAct": true,
         "actionDomains": ["technological"],

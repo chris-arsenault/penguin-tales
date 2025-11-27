@@ -1,12 +1,17 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { HardState } from '@lore-weave/core/types/worldTypes';
 import { pickRandom } from '@lore-weave/core/utils/helpers';
 
 /**
  * Colony Founding Template
  *
- * New colonies are established on icebergs as population expands.
+ * New colonies are established in the wilderness, away from existing colonies.
+ * Uses region-based placement to ensure realistic spacing:
+ * - Minimum 20 units from existing colonies
+ * - Placed in wilderness (not in existing colony regions)
+ * - Creates emergent region for the new colony
+ *
  * Limited to 5 colonies maximum to prevent overcrowding.
  */
 export const colonyFounding: GrowthTemplate = {
@@ -26,7 +31,7 @@ export const colonyFounding: GrowthTemplate = {
         { kind: 'location', operation: 'create', count: { min: 1, max: 1 } }
       ],
       relationships: [
-        { kind: 'contained_by', operation: 'create', count: { min: 1, max: 2 } }  // FIXED: May create adjacent_to relationships too
+        { kind: 'contained_by', operation: 'create', count: { min: 1, max: 2 } }
       ]
     }
   },
@@ -49,38 +54,122 @@ export const colonyFounding: GrowthTemplate = {
       graphDensity: 0.1,
       clusterFormation: 0.3,
       diversityImpact: 0.3,
-      comment: 'Adds new colony nodes for population expansion',
+      comment: 'Adds new colony nodes with realistic spatial placement',
     },
-    tags: ['expansion', 'colony-formation'],
+    parameters: {
+      minDistanceFromColonies: {
+        value: 20,
+        min: 10,
+        max: 40,
+        description: 'Minimum distance from existing colonies'
+      }
+    },
+    tags: ['expansion', 'colony-formation', 'region-aware'],
   },
 
   canApply: (graphView: TemplateGraphView) => {
     const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     return colonies.length < 5 && graphView.getEntityCount() > 20;
   },
-  
+
   findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'iceberg' }),
-  
+
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const iceberg = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'iceberg' }));
 
     // Determine culture based on existing colonies on this iceberg
-    // or from the majority culture of nearby colonies
     const existingColonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     const colonyOnIceberg = existingColonies.find(c =>
       graphView.hasRelationship(c.id, iceberg.id, 'contained_by')
     );
-    const culture = colonyOnIceberg?.culture || 'aurora-stack';  // Inherit from existing colony or default to aurora-stack
+    const culture = colonyOnIceberg?.culture || 'aurora-stack';
 
+    // Generate colony name
+    const colonyName = `${pickRandom(['North', 'South', 'East', 'West', 'Far', 'New'])} ${pickRandom(['Haven', 'Roost', 'Perch', 'Colony', 'Shelf'])}`;
+
+    // Check if region system is available
+    if (graphView.hasRegionSystem()) {
+      // Use region-based placement for realistic colony spacing
+      const params = colonyFounding.metadata?.parameters || {};
+      const minDistance = (params.minDistanceFromColonies?.value as number) ?? 20;
+
+      // Get all existing colony region points
+      // Need to cast through unknown due to Coordinate vs Point type difference
+      const existingColonyPoints = existingColonies
+        .map(c => c.coordinates?.region)
+        .filter(p => p != null) as unknown as Array<{ x: number; y: number; z: number }>;
+
+      // Try to create an emergent region in the wilderness
+      // Pick a random reference point away from existing colonies
+      const referencePoint = {
+        x: 20 + Math.random() * 60,  // 20-80 range to stay within Aurora Berg
+        y: 25 + Math.random() * 55,  // 25-80 range
+        z: 45 + Math.random() * 10   // Surface level: 45-55
+      };
+
+      // Check distance from all existing colonies
+      const isFarEnough = existingColonyPoints.every(p => {
+        const dx = referencePoint.x - p.x;
+        const dy = referencePoint.y - p.y;
+        return Math.sqrt(dx * dx + dy * dy) >= minDistance;
+      });
+
+      if (isFarEnough) {
+        // Create emergent region for the new colony
+        const regionResult = graphView.createEmergentRegion(
+          referencePoint,
+          colonyName,
+          `A new colony founded on ${iceberg.name}`
+        );
+
+        if (regionResult.success && regionResult.region) {
+          // Place the colony within the new region
+          const entityId = graphView.addEntityInRegion(
+            {
+              kind: 'location',
+              subtype: 'colony',
+              name: colonyName,
+              description: `New colony established on ${iceberg.name} in the ${pickRandom(['northern', 'southern', 'eastern', 'western'])} reaches.`,
+              status: 'thriving',
+              prominence: 'marginal',
+              culture,
+              tags: ['new', 'colony']
+            },
+            regionResult.region.id,
+            { minDistance: 3 }
+          );
+
+          if (entityId) {
+            // Return minimal result - entity already added via graphView
+            return {
+              entities: [],  // Already added
+              relationships: [
+                { kind: 'contained_by', src: entityId, dst: iceberg.id }
+              ],
+              description: `${colonyName} founded on ${iceberg.name} at region ${regionResult.region.label}`
+            };
+          }
+        }
+      }
+
+      // Fallback: couldn't find valid placement, skip this tick
+      return {
+        entities: [],
+        relationships: [],
+        description: `Could not find suitable location for new colony - all areas too close to existing settlements`
+      };
+    }
+
+    // Fallback for domains without region system - use original behavior
     return {
       entities: [{
         kind: 'location',
         subtype: 'colony',
-        name: `${pickRandom(['North', 'South', 'East', 'West'])} ${pickRandom(['Haven', 'Roost', 'Perch'])}`,
+        name: colonyName,
         description: `New colony established on ${iceberg.name}`,
         status: 'thriving',
         prominence: 'marginal',
-        culture,  // Inherit culture from nearby colony or null for new cultural territory
+        culture,
         tags: ['new', 'colony']
       }],
       relationships: [

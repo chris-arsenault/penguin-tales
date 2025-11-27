@@ -19,7 +19,8 @@ export type {
   HardState,
   Relationship,
   Prominence,
-  EntityKind
+  EntityKind,
+  EntityTags
 } from './types/worldTypes';
 
 export type {
@@ -37,7 +38,7 @@ export type {
   NameGenerationService
 } from './types/engine';
 
-export { ComponentPurpose } from './types/engine';
+export { ComponentPurpose, GraphStore } from './types/engine';
 
 // =============================================================================
 // DOMAIN SCHEMA TYPES - For implementing domain schemas
@@ -64,6 +65,57 @@ export type {
 export type {
   DistributionTargets
 } from './types/distribution';
+
+// =============================================================================
+// COORDINATE SYSTEM TYPES - For coordinate-based entity placement and queries
+// =============================================================================
+
+export type {
+  Coordinate,
+  EntityCoordinates,
+  CoordinateSpaceId,
+  CoordinateSpaceDefinition,
+  AxisDefinition,
+  AxisValue,
+  PlaceNearOptions,
+  PlaceWithinOptions,
+  PlaceAvoidingOptions,
+  FindNearestOptions,
+  CoordinateBounds,
+  NearestResult,
+  PlacementResult,
+  // Placement scheme types
+  PlacementSchemeKind,
+  PlacementSchemeBase,
+  PoissonDiskPlacement,
+  HaltonSequencePlacement,
+  JitteredGridPlacement,
+  GaussianClusterPlacement,
+  AnchorColocatedPlacement,
+  CentroidColocatedPlacement,
+  AttractionRepulsionPlacement,
+  ExclusionAwarePlacement,
+  AnyPlacementScheme,
+  EntityPlacementOptions,
+  BatchPlacementOptions,
+  BatchPlacementResult,
+  DefaultPlacementSchemes,
+  // 6D cross-plane placement types
+  PlaneHierarchy,
+  ManifoldConfig,
+  NormalizedCoordinate,
+  AxisWeights,
+  CrossPlanePoissonPlacement,
+  SaturationCascadePlacement,
+  CascadeEvent,
+  CrossPlaneBatchPlacementResult
+} from './types/coordinates';
+
+export { DEFAULT_AXIS_WEIGHTS } from './types/coordinates';
+
+export { CoordinateService } from './services/coordinateService';
+export { CoordinatePlacementService } from './services/coordinatePlacementService';
+export { PlacementAlgorithms } from './services/placementAlgorithms';
 
 // =============================================================================
 // SERVICES - For domain templates and systems
@@ -96,7 +148,15 @@ export {
   archiveRelationship,
   addRelationshipWithDistance,
   modifyRelationshipStrength,
-  areRelationshipsCompatible
+  areRelationshipsCompatible,
+  // Tag utilities
+  mergeTags,
+  hasTag,
+  getTagValue,
+  getTrueTagKeys,
+  getStringTags,
+  tagsToArray,
+  arrayToTags
 } from './utils/helpers';
 
 // Name generation service (wraps name-forge)
@@ -191,3 +251,36 @@ export {
 export type {
   FrameworkRelationshipKind
 } from './types/frameworkPrimitives';
+
+// =============================================================================
+// REGION-BASED COORDINATE SYSTEM
+// =============================================================================
+
+export type {
+  Point,
+  Region,
+  RegionShape,
+  RegionBounds,
+  CircleBounds,
+  RectBounds,
+  PolygonBounds,
+  RegionMapperConfig,
+  RegionLookupResult,
+  SampleRegionOptions,
+  EmergentRegionConfig,
+  EmergentRegionResult,
+  RegionCreatedEvent,
+  EntityPlacedInRegionEvent
+} from './types/regions';
+
+export { SPACE_BOUNDS } from './types/regions';
+
+export { RegionMapper } from './services/regionMapper';
+
+export { RegionPlacementService } from './services/regionPlacement';
+export type {
+  PlacementOptions as RegionPlacementOptions,
+  PlacementResult as RegionPlacementResult,
+  BatchPlacementOptions as RegionBatchPlacementOptions,
+  BatchPlacementResult as RegionBatchPlacementResult
+} from './services/regionPlacement';

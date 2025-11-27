@@ -1,4 +1,4 @@
-import { Graph, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
 import { LoreRecord } from '../types/lore';
 import { HardState, Relationship } from '../types/worldTypes';
 import {
@@ -10,7 +10,8 @@ import {
   weightedRandom,
   findEntities,
   getProminenceValue,
-  upsertNameTag
+  upsertNameTag,
+  hasTag
 } from '../utils/helpers';
 import { initializeCatalystSmart } from '../utils/catalystHelpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../utils/eraUtils';
@@ -76,21 +77,20 @@ function detectLocationChanges(
   const changes: string[] = [];
 
   // Population changes (track as dst of resident_of)
-  const currentResidents = graph.relationships.filter(r =>
-    r.kind === 'resident_of' && r.dst === location.id
-  );
+  const currentResidents = graph.findRelationships({ kind: 'resident_of', dst: location.id });
   const residentDelta = currentResidents.length - (snapshot.residentCount || 0);
   if (Math.abs(residentDelta) >= 3) {
     changes.push(`population: ${residentDelta > 0 ? '+' : ''}${residentDelta} residents`);
   }
 
   // Control changes (track as dst of stronghold_of or controls)
-  const currentController = graph.relationships.find(r =>
-    (r.kind === 'stronghold_of' || r.kind === 'controls') && r.dst === location.id
+  const controlRelations = graph.getEntityRelationships(location.id, 'dst');
+  const currentController = controlRelations.find(r =>
+    r.kind === 'stronghold_of' || r.kind === 'controls'
   );
   const currentControllerId = currentController?.src;
   if (currentControllerId !== snapshot.controllerId) {
-    const controller = graph.entities.get(currentControllerId || '');
+    const controller = graph.getEntity(currentControllerId || '');
     changes.push(`control: now controlled by ${controller?.name || 'none'}`);
   }
 
@@ -118,18 +118,18 @@ function detectFactionChanges(
   const changes: string[] = [];
 
   // Leadership changes (track as dst of leader_of)
-  const currentLeader = graph.relationships.find(r =>
-    r.kind === 'leader_of' && r.dst === faction.id
-  );
+  const leaderRelations = graph.findRelationships({ kind: 'leader_of', dst: faction.id });
+  const currentLeader = leaderRelations[0];
   const currentLeaderId = currentLeader?.src;
   if (currentLeaderId !== snapshot.leaderId) {
-    const leader = graph.entities.get(currentLeaderId || '');
+    const leader = graph.getEntity(currentLeaderId || '');
     changes.push(`leadership: ${leader?.name || 'none'} took power`);
   }
 
   // Territory changes (track as src of stronghold_of or controls)
-  const currentTerritories = graph.relationships.filter(r =>
-    (r.kind === 'stronghold_of' || r.kind === 'controls') && r.src === faction.id
+  const factionRels = graph.getEntityRelationships(faction.id, 'src');
+  const currentTerritories = factionRels.filter(r =>
+    r.kind === 'stronghold_of' || r.kind === 'controls'
   );
   const territoryDelta = currentTerritories.length - (snapshot.territoryCount || 0);
   if (territoryDelta > 0) {
@@ -140,27 +140,25 @@ function detectFactionChanges(
 
   // Alliance changes (track as src of allied_with)
   const currentAllies = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'allied_with' && r.src === faction.id)
+    graph.findRelationships({ kind: 'allied_with', src: faction.id })
       .map(r => r.dst)
   );
   const previousAllies = snapshot.allyIds || new Set();
   const newAllies = Array.from(currentAllies).filter(id => !previousAllies.has(id));
   newAllies.forEach(allyId => {
-    const ally = graph.entities.get(allyId);
+    const ally = graph.getEntity(allyId);
     if (ally) changes.push(`alliance: allied with ${ally.name}`);
   });
 
   // War changes (track as src of at_war_with)
   const currentEnemies = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'at_war_with' && r.src === faction.id)
+    graph.findRelationships({ kind: 'at_war_with', src: faction.id })
       .map(r => r.dst)
   );
   const previousEnemies = snapshot.enemyIds || new Set();
   const newWars = Array.from(currentEnemies).filter(id => !previousEnemies.has(id));
   newWars.forEach(enemyId => {
-    const enemy = graph.entities.get(enemyId);
+    const enemy = graph.getEntity(enemyId);
     if (enemy) changes.push(`war: declared war on ${enemy.name}`);
   });
 
@@ -195,15 +193,16 @@ function detectRuleChanges(
   }
 
   // Enforcement by factions (track as dst of weaponized_by or kept_secret_by)
+  const enforcementRels = graph.getEntityRelationships(rule.id, 'dst');
   const currentEnforcers = new Set(
-    graph.relationships
-      .filter(r => (r.kind === 'weaponized_by' || r.kind === 'kept_secret_by') && r.dst === rule.id)
+    enforcementRels
+      .filter(r => r.kind === 'weaponized_by' || r.kind === 'kept_secret_by')
       .map(r => r.src)
   );
   const previousEnforcers = snapshot.enforcerIds || new Set();
   const newEnforcers = Array.from(currentEnforcers).filter(id => !previousEnforcers.has(id));
   newEnforcers.forEach(enforcerId => {
-    const faction = graph.entities.get(enforcerId);
+    const faction = graph.getEntity(enforcerId);
     if (faction) changes.push(`enforcement: ${faction.name} began enforcing this`);
   });
 
@@ -226,9 +225,7 @@ function detectAbilityChanges(
   const changes: string[] = [];
 
   // Practitioner count changes (track as dst of practitioner_of)
-  const currentPractitioners = graph.relationships.filter(r =>
-    r.kind === 'practitioner_of' && r.dst === ability.id
-  );
+  const currentPractitioners = graph.findRelationships({ kind: 'practitioner_of', dst: ability.id });
   const practitionerDelta = currentPractitioners.length - (snapshot.practitionerCount || 0);
   if (Math.abs(practitionerDelta) >= 3) {
     changes.push(`practitioners: ${practitionerDelta > 0 ? '+' : ''}${practitionerDelta}`);
@@ -236,14 +233,13 @@ function detectAbilityChanges(
 
   // Spread to new locations (track as src of manifests_at)
   const currentLocations = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'manifests_at' && r.src === ability.id)
+    graph.findRelationships({ kind: 'manifests_at', src: ability.id })
       .map(r => r.dst)
   );
   const previousLocations = snapshot.locationIds || new Set();
   const newLocations = Array.from(currentLocations).filter(id => !previousLocations.has(id));
   newLocations.forEach(locId => {
-    const location = graph.entities.get(locId);
+    const location = graph.getEntity(locId);
     if (location) changes.push(`spread: now manifests at ${location.name}`);
   });
 
@@ -279,7 +275,7 @@ function detectNPCChanges(
   const previousLeaderships = snapshot.leadershipIds || new Set();
   const newLeaderships = Array.from(currentLeaderships).filter(id => !previousLeaderships.has(id));
   newLeaderships.forEach(factionId => {
-    const faction = graph.entities.get(factionId);
+    const faction = graph.getEntity(factionId);
     if (faction) changes.push(`leadership: became leader of ${faction.name}`);
   });
 
@@ -453,31 +449,14 @@ export class WorldEngine {
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
 
-    // Initialize graph from initial state
-    this.graph = {
-      entities: new Map(),
-      relationships: [],
-      tick: 0,
-      currentEra: config.eras[0],
-      pressures: new Map(config.pressures.map(p => [p.id, p.value])),
-      history: [],
-      config: config,
-      relationshipCooldowns: new Map(),
-      loreRecords: [],
-      loreIndex: config.loreIndex,
-
-      // Discovery tracking (emergent system)
-      discoveryState: {
-        currentThreshold: 0.3,  // Base threshold
-        lastDiscoveryTick: -999,  // Start far in past so first discovery can happen
-        discoveriesThisEpoch: 0
-      },
-
-      // Relationship growth monitoring
-      growthMetrics: {
-        relationshipsPerTick: [],
-        averageGrowthRate: 0
-      }
+    // Initialize graph from initial state using GraphStore
+    this.graph = GraphStore.create(config, config.eras[0]);
+    this.graph.loreIndex = config.loreIndex;
+    // Override discovery state defaults
+    this.graph.discoveryState = {
+      currentThreshold: 0.3,  // Base threshold
+      lastDiscoveryTick: -999,  // Start far in past so first discovery can happen
+      discoveriesThisEpoch: 0
     };
     
     // Load initial entities and initialize catalysts
@@ -494,9 +473,9 @@ export class WorldEngine {
       // Pass graph for domain-specific action domain mapping
       initializeCatalystSmart(loadedEntity, this.graph);
 
-      this.graph.entities.set(id, loadedEntity);
+      this.graph._loadEntity(id, loadedEntity);
     });
-    
+
     // Extract relationships from entity links
     initialState.forEach(entity => {
       entity.links?.forEach(link => {
@@ -505,20 +484,20 @@ export class WorldEngine {
         const dstEntity = this.findEntityByName(link.dst);
 
         if (srcEntity && dstEntity) {
-          this.graph.relationships.push({
-            kind: link.kind,
-            src: srcEntity.id,
-            dst: dstEntity.id,
-            strength: link.strength,
-            distance: link.distance  // Preserve lineage distance from seed data
-          });
+          this.graph.addRelationship(
+            link.kind,
+            srcEntity.id,
+            dstEntity.id,
+            link.strength,
+            link.distance  // Preserve lineage distance from seed data
+          );
         }
       });
     });
 
     // Record initial state as first history event
-    const initialEntityIds = Array.from(this.graph.entities.keys());
-    const initialRelationships = [...this.graph.relationships];
+    const initialEntityIds = this.graph.getEntityIds();
+    const initialRelationships = this.graph.getRelationships();
     this.graph.history.push({
       tick: 0,
       era: config.eras[0].id,
@@ -529,9 +508,10 @@ export class WorldEngine {
       entitiesModified: []
     });
   }
-  
+
   private findEntityByName(name: string): HardState | undefined {
-    for (const entity of this.graph.entities.values()) {
+    const entities = this.graph.getEntities();
+    for (const entity of entities) {
       if (entity.name === name || entity.id === name) {
         return entity;
       }
@@ -568,7 +548,7 @@ export class WorldEngine {
   // Main execution loop
   public run(): Graph {
     console.log('Starting world generation...');
-    console.log(`Initial state: ${this.graph.entities.size} entities`);
+    console.log(`Initial state: ${this.graph.getEntityCount()} entities`);
 
     // Enrich initial entities (descriptions only, preserve canonical names)
     this.enrichInitialEntities();
@@ -582,7 +562,7 @@ export class WorldEngine {
     this.linkFinalEra();
 
     console.log(`\nGeneration complete!`);
-    console.log(`Final state: ${this.graph.entities.size} entities, ${this.graph.relationships.length} relationships`);
+    console.log(`Final state: ${this.graph.getEntityCount()} entities, ${this.graph.getRelationshipCount()} relationships`);
 
     // Report enrichment analytics
     const totalTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
@@ -628,7 +608,7 @@ export class WorldEngine {
     // PRIORITY 3: Excessive growth safety valve (only if WAY over target AND all eras done)
     const scale = this.config.scaleFactor || 1.0;
     const safetyLimit = this.config.targetEntitiesPerKind * 10 * scale; // 10x target (scaled)
-    const excessiveGrowth = this.graph.entities.size >= safetyLimit;
+    const excessiveGrowth = this.graph.getEntityCount() >= safetyLimit;
 
     // Stop only if:
     // - Hit tick limit, OR
@@ -640,7 +620,7 @@ export class WorldEngine {
 
     if (allErasCompleted) {
       if (excessiveGrowth) {
-        console.log(`\n⚠️  Stopped: All eras complete + excessive growth (${this.graph.entities.size} entities)`);
+        console.log(`\n⚠️  Stopped: All eras complete + excessive growth (${this.graph.getEntityCount()} entities)`);
         return false;
       }
       console.log(`\n✓ All eras completed at epoch ${this.currentEpoch}`);
@@ -656,16 +636,16 @@ export class WorldEngine {
    */
   private linkFinalEra(): void {
     // Find current era entity
-    const currentEra = Array.from(this.graph.entities.values()).find(e =>
-      e.kind === 'era' && e.status === 'current'
-    );
+    const eraEntities = this.graph.findEntities({ kind: 'era', status: 'current' });
+    const currentEra = eraEntities[0];
 
     if (!currentEra || !currentEra.temporal) return;
 
     const eraStartTick = currentEra.temporal.startTick;
 
     // Find prominent entities created during this era (include 'recognized' for better coverage)
-    const prominentEntities = Array.from(this.graph.entities.values()).filter(e =>
+    const allEntities = this.graph.getEntities();
+    const prominentEntities = allEntities.filter(e =>
       (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
       e.kind !== 'era' &&
       e.createdAt >= eraStartTick
@@ -674,7 +654,7 @@ export class WorldEngine {
     // If no prominent entities from this era, link to most prominent entities from any time
     const entitiesToLink = prominentEntities.length > 0
       ? prominentEntities
-      : Array.from(this.graph.entities.values())
+      : allEntities
           .filter(e => (e.prominence === 'renowned' || e.prominence === 'mythic') && e.kind !== 'era')
           .sort((a, b) => {
             const prominenceOrder = { mythic: 3, renowned: 2, recognized: 1, marginal: 0, forgotten: 0 };
@@ -705,8 +685,8 @@ export class WorldEngine {
     this.graph.discoveryState.discoveriesThisEpoch = 0;
 
     // Track initial counts for statistics
-    const initialEntityCount = this.graph.entities.size;
-    const initialRelationshipCount = this.graph.relationships.length;
+    const initialEntityCount = this.graph.getEntityCount();
+    const initialRelationshipCount = this.graph.getRelationshipCount();
 
     // Growth phase
     const growthTargets = this.calculateGrowthTarget();
@@ -732,8 +712,8 @@ export class WorldEngine {
     this.pruneAndConsolidate();
 
     // Record epoch statistics
-    const entitiesCreated = this.graph.entities.size - initialEntityCount;
-    const relationshipsCreated = this.graph.relationships.length - initialRelationshipCount;
+    const entitiesCreated = this.graph.getEntityCount() - initialEntityCount;
+    const relationshipsCreated = this.graph.getRelationshipCount() - initialRelationshipCount;
     this.statisticsCollector.recordEpoch(
       this.graph,
       this.currentEpoch,
@@ -1011,8 +991,8 @@ export class WorldEngine {
         const result = template.expand(graphView, target);
 
         // ENFORCEMENT: Check tag saturation before creating entities
-        // Collect all tags that would be added
-        const allTagsToAdd = result.entities.flatMap(e => e.tags || []);
+        // Collect all tags that would be added (convert EntityTags to array of keys)
+        const allTagsToAdd = result.entities.flatMap(e => Object.keys(e.tags || {}));
         const tagSaturationCheck = this.contractEnforcer.checkTagSaturation(this.graph, allTagsToAdd);
 
         if (tagSaturationCheck.saturated) {
@@ -1038,7 +1018,7 @@ export class WorldEngine {
         result.entities.forEach((entity, i) => {
           const id = addEntity(this.graph, entity);
           newIds.push(id);
-          const ref = this.graph.entities.get(id);
+          const ref = this.graph.getEntity(id);
           if (ref) {
             createdEntities.push(ref);
             clusterEntities.push(ref);
@@ -1218,9 +1198,9 @@ export class WorldEngine {
     const currentCounts = new Map<string, number>();
 
     // Count current entities by kind
-    for (const entity of this.graph.entities.values()) {
+    this.graph.forEachEntity((entity) => {
       currentCounts.set(entity.kind, (currentCounts.get(entity.kind) || 0) + 1);
-    }
+    });
 
     // Calculate total remaining entities needed
     let totalRemaining = 0;
@@ -1236,7 +1216,7 @@ export class WorldEngine {
 
     // Calculate epochs remaining (rough estimate)
     const totalTarget = this.config.targetEntitiesPerKind * entityKinds.length;
-    const currentTotal = this.graph.entities.size;
+    const currentTotal = this.graph.getEntityCount();
     const progressRatio = currentTotal / totalTarget;
     const epochsRemaining = Math.max(1, this.config.eras.length * 2 - this.currentEpoch);
 
@@ -1261,9 +1241,9 @@ export class WorldEngine {
 
     // Count current entities by kind
     const currentCounts = new Map<string, number>();
-    for (const entity of this.graph.entities.values()) {
+    this.graph.forEachEntity((entity) => {
       currentCounts.set(entity.kind, (currentCounts.get(entity.kind) || 0) + 1);
-    }
+    });
 
     // Calculate deficit for each kind
     for (const kind of entityKinds) {
@@ -1393,9 +1373,9 @@ export class WorldEngine {
             break;
           }
 
-          const before = this.graph.relationships.length;
+          const before = this.graph.getRelationshipCount();
           addRelationship(this.graph, rel.kind, rel.src, rel.dst);
-          const after = this.graph.relationships.length;
+          const after = this.graph.getRelationshipCount();
 
           if (after > before) {
             relationshipsThisTick.push(rel);
@@ -1560,7 +1540,7 @@ export class WorldEngine {
   }
 
   private monitorRelationshipGrowth(): void {
-    const currentCount = this.graph.relationships.length;
+    const currentCount = this.graph.getRelationshipCount();
     const growth = currentCount - this.lastRelationshipCount;
 
     // Update rolling window
@@ -1586,17 +1566,15 @@ export class WorldEngine {
 
   private pruneAndConsolidate(): void {
     // Mark very old, unconnected entities as 'forgotten'
-    for (const entity of this.graph.entities.values()) {
+    const allEntities = this.graph.getEntities();
+    for (const entity of allEntities) {
       if (entity.prominence === 'forgotten') continue;
-      
+
       const age = this.graph.tick - entity.createdAt;
-      const connections = this.graph.relationships.filter(r => 
-        r.src === entity.id || r.dst === entity.id
-      ).length;
-      
+      const connections = this.graph.getEntityRelationships(entity.id).length;
+
       if (age > 50 && connections < 2) {
-        entity.prominence = 'forgotten';
-        entity.updatedAt = this.graph.tick;
+        this.graph.updateEntity(entity.id, { prominence: 'forgotten' });
       }
     }
     
@@ -1605,24 +1583,23 @@ export class WorldEngine {
     npcs.forEach(npc => {
       const age = this.graph.tick - npc.createdAt;
       if (age > 80 && Math.random() > 0.7) {
-        npc.status = 'dead';
-        npc.updatedAt = this.graph.tick;
+        this.graph.updateEntity(npc.id, { status: 'dead' });
       }
     });
   }
-  
+
   private reportEpochStats(): void {
     const byKind = new Map<string, number>();
     const bySubtype = new Map<string, number>();
 
-    for (const entity of this.graph.entities.values()) {
+    this.graph.forEachEntity((entity) => {
       byKind.set(entity.kind, (byKind.get(entity.kind) || 0) + 1);
       const key = `${entity.kind}:${entity.subtype}`;
       bySubtype.set(key, (bySubtype.get(key) || 0) + 1);
-    }
+    });
 
     console.log(`  Entities by kind:`, Object.fromEntries(byKind));
-    console.log(`  Relationships: ${this.graph.relationships.length}`);
+    console.log(`  Relationships: ${this.graph.getRelationshipCount()}`);
     console.log(`  Pressures:`, Object.fromEntries(this.graph.pressures));
 
     // Report distribution statistics if using TemplateSelector
@@ -1672,7 +1649,7 @@ export class WorldEngine {
     });
 
     // Graph metrics
-    const avgDegree = (this.graph.relationships.length * 2) / state.totalEntities; // Each relationship connects 2 entities
+    const avgDegree = (this.graph.getRelationshipCount() * 2) / state.totalEntities; // Each relationship connects 2 entities
     console.log(`  Graph Connectivity:`);
     console.log(`    Clusters: ${state.graphMetrics.clusters} (target: ${this.config.distributionTargets?.global.graphConnectivity.targetClusters.preferred || 5})`);
     console.log(`    Avg cluster size: ${state.graphMetrics.avgClusterSize.toFixed(1)}`);
@@ -1696,17 +1673,18 @@ export class WorldEngine {
   }
   
   private syncNameTags(): void {
-    this.graph.entities.forEach(entity => {
-      const hasNameTag = (entity.tags || []).some(t => t.startsWith('name:'));
+    this.graph.forEachEntity((entity) => {
+      const hasNameTag = entity.tags?.name !== undefined;
       if (!hasNameTag) return;
-      upsertNameTag(entity, entity.name);
+      // Note: This modifies a clone, need to use updateEntity
+      this.graph.updateEntity(entity.id, { tags: { ...entity.tags, name: entity.name } });
     });
   }
-  
+
   private enrichInitialEntities(): void {
     if (!this.enrichmentService?.isEnabled()) return;
 
-    const initialEntities = Array.from(this.graph.entities.values()).filter(e => e.createdAt === 0);
+    const initialEntities = this.graph.getEntities().filter(e => e.createdAt === 0);
     if (initialEntities.length === 0) return;
 
     console.log(`Enriching ${initialEntities.length} initial entities (descriptions only)...`);
@@ -1820,19 +1798,19 @@ export class WorldEngine {
     if (!this.enrichmentService?.isEnabled()) return;
     
     const notable = newRelationships.filter(rel => {
-      const a = this.graph.entities.get(rel.src);
-      const b = this.graph.entities.get(rel.dst);
+      const a = this.graph.getEntity(rel.src);
+      const b = this.graph.getEntity(rel.dst);
       if (!a || !b) return false;
-      
+
       return getProminenceValue(a.prominence) >= 3 && getProminenceValue(b.prominence) >= 3;
     }).slice(0, 3); // keep batches small for quality
-    
+
     if (notable.length === 0) return;
-    
+
     const actors: Record<string, HardState> = {};
     notable.forEach(rel => {
-      const a = this.graph.entities.get(rel.src);
-      const b = this.graph.entities.get(rel.dst);
+      const a = this.graph.getEntity(rel.src);
+      const b = this.graph.getEntity(rel.dst);
       if (a) actors[a.id] = a;
       if (b) actors[b.id] = b;
     });
@@ -1911,7 +1889,7 @@ export class WorldEngine {
     const changedEntities: Array<{ entity: HardState; changes: string[] }> = [];
 
     // Check all entities for significant changes using kind-specific detection
-    this.graph.entities.forEach(entity => {
+    this.graph.forEachEntity((entity) => {
       const snapshot = this.entitySnapshots.get(entity.id);
 
       // Skip if no snapshot (newly created entities already enriched)
@@ -2013,63 +1991,58 @@ export class WorldEngine {
     switch (entity.kind) {
       case 'location':
         // Population (count of resident_of relationships pointing to this location)
-        snapshot.residentCount = this.graph.relationships.filter(r =>
-          r.kind === 'resident_of' && r.dst === entity.id
-        ).length;
+        snapshot.residentCount = this.graph.findRelationships({ kind: 'resident_of', dst: entity.id }).length;
 
         // Controller (faction with stronghold_of or controls pointing to this location)
-        const controller = this.graph.relationships.find(r =>
-          (r.kind === 'stronghold_of' || r.kind === 'controls') && r.dst === entity.id
+        const locationRels = this.graph.getEntityRelationships(entity.id, 'dst');
+        const controller = locationRels.find(r =>
+          r.kind === 'stronghold_of' || r.kind === 'controls'
         );
         snapshot.controllerId = controller?.src;
         break;
 
       case 'faction':
         // Leader (who has leader_of pointing to this faction)
-        const leader = this.graph.relationships.find(r =>
-          r.kind === 'leader_of' && r.dst === entity.id
-        );
+        const leaderRels = this.graph.findRelationships({ kind: 'leader_of', dst: entity.id });
+        const leader = leaderRels[0];
         snapshot.leaderId = leader?.src;
 
         // Territory count (stronghold_of or controls from this faction)
-        snapshot.territoryCount = this.graph.relationships.filter(r =>
-          (r.kind === 'stronghold_of' || r.kind === 'controls') && r.src === entity.id
+        const factionRels = this.graph.getEntityRelationships(entity.id, 'src');
+        snapshot.territoryCount = factionRels.filter(r =>
+          r.kind === 'stronghold_of' || r.kind === 'controls'
         ).length;
 
         // Allies (allied_with from this faction)
         snapshot.allyIds = new Set(
-          this.graph.relationships
-            .filter(r => r.kind === 'allied_with' && r.src === entity.id)
+          this.graph.findRelationships({ kind: 'allied_with', src: entity.id })
             .map(r => r.dst)
         );
 
         // Enemies (at_war_with from this faction)
         snapshot.enemyIds = new Set(
-          this.graph.relationships
-            .filter(r => r.kind === 'at_war_with' && r.src === entity.id)
+          this.graph.findRelationships({ kind: 'at_war_with', src: entity.id })
             .map(r => r.dst)
         );
         break;
 
       case 'rules':
         // Enforcers (factions with weaponized_by or kept_secret_by pointing to this rule)
+        const ruleRels = this.graph.getEntityRelationships(entity.id, 'dst');
         snapshot.enforcerIds = new Set(
-          this.graph.relationships
-            .filter(r => (r.kind === 'weaponized_by' || r.kind === 'kept_secret_by') && r.dst === entity.id)
+          ruleRels
+            .filter(r => r.kind === 'weaponized_by' || r.kind === 'kept_secret_by')
             .map(r => r.src)
         );
         break;
 
       case 'abilities':
         // Practitioner count (practitioner_of relationships pointing to this ability)
-        snapshot.practitionerCount = this.graph.relationships.filter(r =>
-          r.kind === 'practitioner_of' && r.dst === entity.id
-        ).length;
+        snapshot.practitionerCount = this.graph.findRelationships({ kind: 'practitioner_of', dst: entity.id }).length;
 
         // Locations where it manifests (manifests_at from this ability)
         snapshot.locationIds = new Set(
-          this.graph.relationships
-            .filter(r => r.kind === 'manifests_at' && r.src === entity.id)
+          this.graph.findRelationships({ kind: 'manifests_at', src: entity.id })
             .map(r => r.dst)
         );
         break;
@@ -2098,7 +2071,7 @@ export class WorldEngine {
       this.eraNarrativesUsed += 1;
     }
 
-    const actors = Array.from(this.graph.entities.values())
+    const actors = this.graph.getEntities()
       .filter(e => getProminenceValue(e.prominence) >= 3)
       .slice(0, 5);
 
@@ -2140,7 +2113,8 @@ export class WorldEngine {
 
     discoveries.forEach(location => {
       // Find the explorer via discovered_by or explorer_of relationships
-      const discoveryRel = this.graph.relationships.find(r =>
+      const locationRels = this.graph.getEntityRelationships(location.id);
+      const discoveryRel = locationRels.find(r =>
         (r.kind === 'discovered_by' && r.src === location.id) ||
         (r.kind === 'explorer_of' && r.dst === location.id)
       );
@@ -2148,7 +2122,7 @@ export class WorldEngine {
       if (!discoveryRel) return;
 
       const explorerId = discoveryRel.kind === 'discovered_by' ? discoveryRel.dst : discoveryRel.src;
-      const explorer = this.graph.entities.get(explorerId);
+      const explorer = this.graph.getEntity(explorerId);
       if (!explorer || explorer.kind !== 'npc') return;
 
       // Capture tick at time of discovery
@@ -2159,21 +2133,20 @@ export class WorldEngine {
       let triggerContext: { pressure?: string; chainSource?: HardState } = {};
 
       // Check if pressure-driven (resource, strategic, mystical locations)
-      if (location.subtype === 'geographic_feature' && location.tags.includes('resource')) {
+      if (location.subtype === 'geographic_feature' && hasTag(location.tags, 'resource')) {
         discoveryType = 'pressure';
         triggerContext.pressure = 'resource_scarcity';
-      } else if (location.tags.includes('strategic')) {
+      } else if (hasTag(location.tags, 'strategic')) {
         discoveryType = 'pressure';
         triggerContext.pressure = 'conflict';
-      } else if (location.subtype === 'anomaly' || location.tags.includes('mystical')) {
+      } else if (location.subtype === 'anomaly' || hasTag(location.tags, 'mystical')) {
         discoveryType = 'pressure';
         triggerContext.pressure = 'magical_instability';
       }
 
       // Check for chain discoveries (adjacent to other discovered locations)
-      const adjacentLocations = this.graph.relationships
-        .filter(r => r.kind === 'adjacent_to' && r.src === location.id)
-        .map(r => this.graph.entities.get(r.dst))
+      const adjacentLocations = this.graph.findRelationships({ kind: 'adjacent_to', src: location.id })
+        .map(r => this.graph.getEntity(r.dst))
         .filter((e): e is HardState => e !== undefined && e.kind === 'location');
 
       if (adjacentLocations.length > 0) {
@@ -2226,15 +2199,22 @@ export class WorldEngine {
 
   private buildEnrichmentContext() {
     // Separate active and historical relationships for lore generation
-    const activeRelationships = this.graph.relationships.filter(r => r.status !== 'historical');
-    const historicalRelationships = this.graph.relationships.filter(r => r.status === 'historical');
+    const allRelationships = this.graph.getRelationships();
+    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
+    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
+
+    // Build entities map for enrichment context
+    const entitiesMap = new Map<string, HardState>();
+    this.graph.forEachEntity((entity, id) => {
+      entitiesMap.set(id, entity);
+    });
 
     return {
       graphSnapshot: {
         tick: this.graph.tick,
         era: this.graph.currentEra.name,
         pressures: Object.fromEntries(this.graph.pressures),
-        entities: this.graph.entities,
+        entities: entitiesMap,
         relationships: activeRelationships,  // Current state
         historicalRelationships: historicalRelationships  // Past state for context
       },
@@ -2251,7 +2231,7 @@ export class WorldEngine {
       return;
     }
 
-    const entities = Array.from(this.graph.entities.values());
+    const entities = this.graph.getEntities();
     const context = this.buildEnrichmentContext();
 
     console.log(`\n=== Generating Images for Mythic Entities ===`);
@@ -2318,16 +2298,17 @@ export class WorldEngine {
   }
   
   public exportState(): any {
-    const entities = Array.from(this.graph.entities.values());
+    const entities = this.graph.getEntities();
     const totalEnrichmentTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
 
     // Filter historical relationships for day 0 coherence
     // Exported state represents the current moment, not accumulated history
-    const activeRelationships = this.graph.relationships.filter(r => r.status !== 'historical');
-    const historicalRelationships = this.graph.relationships.filter(r => r.status === 'historical');
+    const allRelationships = this.graph.getRelationships();
+    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
+    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
 
     // Extract meta-entities for visibility
-    const metaEntities = entities.filter(e => e.tags?.includes('meta-entity'));
+    const metaEntities = entities.filter(e => hasTag(e.tags, 'meta-entity'));
 
     const exportData: any = {
       metadata: {

@@ -752,22 +752,26 @@ const disasterSpreadDomain: ActionDomain = {
             tags: ['corruption', 'magic'],
             links: [],
             createdAt: graph.tick,
-            updatedAt: graph.tick
+            updatedAt: graph.tick,
+            coordinates: {}  // World-level phenomenon, no specific coordinates
           };
           graph.entities.set(abilityId, corruptionAbility as HardState);
         }
+
+        // corruptionAbility is now definitely defined
+        const ability = corruptionAbility;
 
         return {
           success: true,
           relationships: [{
             kind: 'corrupted_by',
             src: target.id,
-            dst: corruptionAbility.id,
+            dst: ability.id,
             strength: 0.8
           }],
           description: `spread corruption to ${target.name}`,
           entitiesModified: [target.id],
-          entitiesCreated: corruptionAbility.createdAt === graph.tick ? [corruptionAbility.id] : []
+          entitiesCreated: ability.createdAt === graph.tick ? [ability.id] : []
         };
       }
     }

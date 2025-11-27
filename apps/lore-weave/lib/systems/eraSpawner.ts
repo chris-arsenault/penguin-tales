@@ -83,7 +83,7 @@ export const eraSpawner: SimulationSystem = {
     const ticksPerEra = params.ticksPerEra?.value ?? 30;
 
     // Check if era entities already exist
-    const existingEras = Array.from(graph.entities.values()).filter(e => e.kind === 'era');
+    const existingEras = graph.getEntities().filter(e => e.kind === 'era');
 
     if (existingEras.length > 0) {
       // Eras already spawned - skip
@@ -124,10 +124,11 @@ export const eraSpawner: SimulationSystem = {
         status: isFirst ? 'current' : 'future',
         prominence: 'mythic',  // Eras are always mythic (world-defining)
         culture: 'world',  // Eras are world-level entities
-        tags: ['temporal', 'era', configEra.id],
+        tags: { temporal: true, era: true, eraId: configEra.id },
         links: [],
         createdAt: graph.tick,
         updatedAt: graph.tick,
+        coordinates: {},  // Eras exist in temporal space, not physical
         temporal: isFirst ? {
           startTick: graph.tick,
           endTick: null
@@ -158,7 +159,7 @@ export const eraSpawner: SimulationSystem = {
 
     // Add entities to graph
     entitiesCreated.forEach(entity => {
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
     });
 
     // Set currentEra reference to first era

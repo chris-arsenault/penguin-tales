@@ -79,11 +79,11 @@ export function calculateRelationshipDistribution(graph: Graph): {
   diversity: number;
 } {
   const counts: Record<string, number> = {};
-  graph.relationships.forEach(r => {
+  graph.getRelationships().forEach(r => {
     counts[r.kind] = (counts[r.kind] || 0) + 1;
   });
 
-  const ratios = calculateRatios(counts, graph.relationships.length);
+  const ratios = calculateRatios(counts, graph.getRelationshipCount());
 
   // Shannon entropy for diversity
   let diversity = 0;
@@ -107,13 +107,13 @@ export function calculateConnectivityMetrics(graph: Graph): {
 } {
   const connectionCounts = new Map<string, number>();
 
-  graph.relationships.forEach(r => {
+  graph.getRelationships().forEach(r => {
     connectionCounts.set(r.src, (connectionCounts.get(r.src) || 0) + 1);
     connectionCounts.set(r.dst, (connectionCounts.get(r.dst) || 0) + 1);
   });
 
-  const isolatedNodes = Array.from(graph.entities.keys()).filter(id =>
-    !connectionCounts.has(id)
+  const isolatedNodes = graph.getEntities().filter(entity =>
+    !connectionCounts.has(entity.id)
   ).length;
 
   const connectionValues = Array.from(connectionCounts.values());

@@ -54,7 +54,7 @@ export function archiveEntity(
   entityId: string,
   options: ArchiveEntityOptions = {}
 ): void {
-  const entity = graph.entities.get(entityId);
+  const entity = graph.getEntity(entityId);
   if (!entity) return;
 
   const {
@@ -69,7 +69,7 @@ export function archiveEntity(
 
   // Archive relationships if requested
   if (shouldArchiveRels) {
-    const entityRelationships = graph.relationships.filter(r =>
+    const entityRelationships = graph.getRelationships().filter(r =>
       (r.src === entityId || r.dst === entityId) &&
       r.status !== FRAMEWORK_STATUS.HISTORICAL &&
       !excludeRelationshipKinds.includes(r.kind)
@@ -123,7 +123,7 @@ export function transferRelationships(
   const transferred = new Set<string>();
 
   // Find all relationships involving source entities
-  const toTransfer = graph.relationships.filter(r =>
+  const toTransfer = graph.getRelationships().filter(r =>
     (sourceIdSet.has(r.src) || sourceIdSet.has(r.dst)) &&
     r.status !== FRAMEWORK_STATUS.HISTORICAL &&
     !excludeKinds.includes(r.kind)
@@ -181,7 +181,7 @@ export function createPartOfRelationships(
 
   memberIds.forEach(memberId => {
     // Check if relationship already exists
-    const exists = graph.relationships.some(r =>
+    const exists = graph.getRelationships().some(r =>
       r.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF &&
       r.src === memberId &&
       r.dst === containerId &&
@@ -210,7 +210,7 @@ export function getActiveRelationships(
   entityId: string,
   direction: 'src' | 'dst' | 'both' = 'both'
 ): Relationship[] {
-  return graph.relationships.filter(r => {
+  return graph.getRelationships().filter(r => {
     if (r.status === FRAMEWORK_STATUS.HISTORICAL) return false;
 
     switch (direction) {
@@ -235,7 +235,7 @@ export function getHistoricalRelationships(
   graph: Graph,
   entityId: string
 ): Relationship[] {
-  return graph.relationships.filter(r =>
+  return graph.getRelationships().filter(r =>
     r.status === FRAMEWORK_STATUS.HISTORICAL &&
     (r.src === entityId || r.dst === entityId)
   );
@@ -262,7 +262,7 @@ export function getPartOfMembers(
   graph: Graph,
   containerId: string
 ): HardState[] {
-  const memberIds = graph.relationships
+  const memberIds = graph.getRelationships()
     .filter(r =>
       r.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF &&
       r.dst === containerId &&
@@ -271,7 +271,7 @@ export function getPartOfMembers(
     .map(r => r.src);
 
   return memberIds
-    .map(id => graph.entities.get(id))
+    .map(id => graph.getEntity(id))
     .filter((e): e is HardState => e !== undefined);
 }
 

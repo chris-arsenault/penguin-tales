@@ -120,7 +120,7 @@ function detectSetChanges(
   const changes: string[] = [];
   const added = Array.from(current).filter(id => !previous.has(id));
   added.forEach(id => {
-    const entity = graph.entities.get(id);
+    const entity = graph.getEntity(id);
     if (entity) changes.push(addMessage(entity.name));
   });
   return changes;
@@ -169,9 +169,7 @@ export function detectLocationChanges(
   const changes: string[] = [];
 
   // Population changes (track as dst of resident_of)
-  const currentResidents = graph.relationships.filter(r =>
-    r.kind === 'resident_of' && r.dst === location.id
-  );
+  const currentResidents = graph.findRelationships({ kind: 'resident_of', dst: location.id });
   const change = detectCountChange(
     currentResidents.length,
     snapshot.residentCount || 0,
@@ -182,12 +180,13 @@ export function detectLocationChanges(
   if (change) changes.push(change);
 
   // Control changes (track as dst of stronghold_of or controls)
-  const currentController = graph.relationships.find(r =>
-    (r.kind === 'stronghold_of' || r.kind === 'controls') && r.dst === location.id
+  const locationRels = graph.getEntityRelationships(location.id, 'dst');
+  const currentController = locationRels.find(r =>
+    r.kind === 'stronghold_of' || r.kind === 'controls'
   );
   const currentControllerId = currentController?.src;
   if (currentControllerId !== snapshot.controllerId) {
-    const controller = graph.entities.get(currentControllerId || '');
+    const controller = graph.getEntity(currentControllerId || '');
     changes.push(`control: now controlled by ${controller?.name || 'none'}`);
   }
 
@@ -212,18 +211,18 @@ export function detectFactionChanges(
   const changes: string[] = [];
 
   // Leadership changes (track as dst of leader_of)
-  const currentLeader = graph.relationships.find(r =>
-    r.kind === 'leader_of' && r.dst === faction.id
-  );
+  const leaderRels = graph.findRelationships({ kind: 'leader_of', dst: faction.id });
+  const currentLeader = leaderRels[0];
   const currentLeaderId = currentLeader?.src;
   if (currentLeaderId !== snapshot.leaderId) {
-    const leader = graph.entities.get(currentLeaderId || '');
+    const leader = graph.getEntity(currentLeaderId || '');
     changes.push(`leadership: ${leader?.name || 'none'} took power`);
   }
 
   // Territory changes (track as src of stronghold_of or controls)
-  const currentTerritories = graph.relationships.filter(r =>
-    (r.kind === 'stronghold_of' || r.kind === 'controls') && r.src === faction.id
+  const factionRels = graph.getEntityRelationships(faction.id, 'src');
+  const currentTerritories = factionRels.filter(r =>
+    r.kind === 'stronghold_of' || r.kind === 'controls'
   );
   const territoryDelta = currentTerritories.length - (snapshot.territoryCount || 0);
   if (territoryDelta > 0) {
@@ -234,8 +233,7 @@ export function detectFactionChanges(
 
   // Alliance changes (track as src of allied_with)
   const currentAllies = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'allied_with' && r.src === faction.id)
+    graph.findRelationships({ kind: 'allied_with', src: faction.id })
       .map(r => r.dst)
   );
   changes.push(...detectSetChanges(
@@ -247,8 +245,7 @@ export function detectFactionChanges(
 
   // War changes (track as src of at_war_with)
   const currentEnemies = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'at_war_with' && r.src === faction.id)
+    graph.findRelationships({ kind: 'at_war_with', src: faction.id })
       .map(r => r.dst)
   );
   changes.push(...detectSetChanges(
@@ -287,9 +284,10 @@ export function detectRuleChanges(
   if (statusChange) changes.push(statusChange);
 
   // Enforcement by factions (track as dst of weaponized_by or kept_secret_by)
+  const ruleRels = graph.getEntityRelationships(rule.id, 'dst');
   const currentEnforcers = new Set(
-    graph.relationships
-      .filter(r => (r.kind === 'weaponized_by' || r.kind === 'kept_secret_by') && r.dst === rule.id)
+    ruleRels
+      .filter(r => r.kind === 'weaponized_by' || r.kind === 'kept_secret_by')
       .map(r => r.src)
   );
   changes.push(...detectSetChanges(
@@ -317,9 +315,7 @@ export function detectAbilityChanges(
   const changes: string[] = [];
 
   // Practitioner count changes (track as dst of practitioner_of)
-  const currentPractitioners = graph.relationships.filter(r =>
-    r.kind === 'practitioner_of' && r.dst === ability.id
-  );
+  const currentPractitioners = graph.findRelationships({ kind: 'practitioner_of', dst: ability.id });
   const change = detectCountChange(
     currentPractitioners.length,
     snapshot.practitionerCount || 0,
@@ -330,8 +326,7 @@ export function detectAbilityChanges(
 
   // Spread to new locations (track as src of manifests_at)
   const currentLocations = new Set(
-    graph.relationships
-      .filter(r => r.kind === 'manifests_at' && r.src === ability.id)
+    graph.findRelationships({ kind: 'manifests_at', src: ability.id })
       .map(r => r.dst)
   );
   changes.push(...detectSetChanges(

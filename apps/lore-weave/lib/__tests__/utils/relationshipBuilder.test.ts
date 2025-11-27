@@ -182,12 +182,13 @@ describe('RelationshipBuilder', () => {
     let mockGraph: Graph;
 
     beforeEach(() => {
+      const _entities = new Map();
+      let _relationships: Relationship[] = [
+        { kind: 'trades_with', src: 'a', dst: 'b' },
+        { kind: 'allied_with', src: 'c', dst: 'd', strength: 0.5 },
+      ];
+
       mockGraph = {
-        entities: new Map(),
-        relationships: [
-          { kind: 'trades_with', src: 'a', dst: 'b' },
-          { kind: 'allied_with', src: 'c', dst: 'd', strength: 0.5 },
-        ],
         tick: 0,
         currentEra: { id: 'era1', name: 'Era 1' } as any,
         pressures: new Map(),
@@ -197,6 +198,42 @@ describe('RelationshipBuilder', () => {
         discoveryState: { currentThreshold: 0, lastDiscoveryTick: 0, discoveriesThisEpoch: 0 },
         loreRecords: [],
         growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
+
+        // Entity read methods
+        getEntity(id: string) { return _entities.get(id); },
+        hasEntity(id: string) { return _entities.has(id); },
+        getEntityCount() { return _entities.size; },
+        getEntities() { return Array.from(_entities.values()); },
+        getEntityIds() { return Array.from(_entities.keys()); },
+        forEachEntity(cb: (e: any, id: string) => void) { _entities.forEach(cb); },
+        findEntities() { return []; },
+        getEntitiesByKind() { return []; },
+        getConnectedEntities() { return []; },
+
+        // Entity mutation
+        setEntity(id: string, entity: any): void {
+          _entities.set(id, entity);
+        },
+        updateEntity() { return false; },
+        deleteEntity(id: string): boolean {
+          return _entities.delete(id);
+        },
+
+        // Relationship read methods
+        getRelationships() { return _relationships; },
+        getRelationshipCount() { return _relationships.length; },
+        findRelationships() { return []; },
+        getEntityRelationships() { return []; },
+        hasRelationship() { return false; },
+
+        // Relationship mutation
+        pushRelationship(relationship: Relationship): void {
+          _relationships.push(relationship);
+        },
+        setRelationships(rels: Relationship[]): void {
+          _relationships = rels;
+        },
+        removeRelationship() { return false; }
       };
     });
 
@@ -255,7 +292,7 @@ describe('RelationshipBuilder', () => {
     });
 
     it('should work with empty graph', () => {
-      mockGraph.relationships = [];
+      mockGraph.setRelationships([]);
       builder.addIfNotExists(mockGraph, 'trades_with', 'a', 'b');
       const result = builder.build();
 
@@ -425,9 +462,10 @@ describe('Integration scenarios', () => {
   });
 
   it('should handle conditional relationship creation', () => {
+    const _entities = new Map();
+    let _relationships: Relationship[] = [{ kind: 'trades_with', src: 'a', dst: 'b' }];
+
     const graph: Graph = {
-      entities: new Map(),
-      relationships: [{ kind: 'trades_with', src: 'a', dst: 'b' }],
       tick: 0,
       currentEra: { id: 'era1', name: 'Era 1' } as any,
       pressures: new Map(),
@@ -437,6 +475,42 @@ describe('Integration scenarios', () => {
       discoveryState: { currentThreshold: 0, lastDiscoveryTick: 0, discoveriesThisEpoch: 0 },
       loreRecords: [],
       growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
+
+      // Entity read methods
+      getEntity(id: string) { return _entities.get(id); },
+      hasEntity(id: string) { return _entities.has(id); },
+      getEntityCount() { return _entities.size; },
+      getEntities() { return Array.from(_entities.values()); },
+      getEntityIds() { return Array.from(_entities.keys()); },
+      forEachEntity(cb: (e: any, id: string) => void) { _entities.forEach(cb); },
+      findEntities() { return []; },
+      getEntitiesByKind() { return []; },
+      getConnectedEntities() { return []; },
+
+      // Entity mutation
+      setEntity(id: string, entity: any): void {
+        _entities.set(id, entity);
+      },
+      updateEntity() { return false; },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+
+      // Relationship read methods
+      getRelationships() { return _relationships; },
+      getRelationshipCount() { return _relationships.length; },
+      findRelationships() { return []; },
+      getEntityRelationships() { return []; },
+      hasRelationship() { return false; },
+
+      // Relationship mutation
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      removeRelationship() { return false; }
     };
 
     const builder = buildRelationships();

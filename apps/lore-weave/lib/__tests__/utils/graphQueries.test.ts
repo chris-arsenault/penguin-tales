@@ -73,20 +73,25 @@ describe('graphQueries', () => {
       updatedAt: 0
     };
 
+    const _entities = new Map([
+      ['e1', entity1],
+      ['e2', entity2],
+      ['e3', entity3],
+      ['e4', entity4]
+    ]);
+    let _relationships: Relationship[] = [
+      { kind: 'allied_with', src: 'e1', dst: 'e2' },
+      { kind: 'member_of', src: 'e1', dst: 'e3' },
+      { kind: 'located_at', src: 'e1', dst: 'e4' },
+      { kind: 'allied_with', src: 'e2', dst: 'e3' },
+      { kind: 'located_at', src: 'e3', dst: 'e4' }
+    ];
+
     mockGraph = {
-      entities: new Map([
-        ['e1', entity1],
-        ['e2', entity2],
-        ['e3', entity3],
-        ['e4', entity4]
-      ]),
-      relationships: [
-        { kind: 'allied_with', src: 'e1', dst: 'e2' },
-        { kind: 'member_of', src: 'e1', dst: 'e3' },
-        { kind: 'located_at', src: 'e1', dst: 'e4' },
-        { kind: 'allied_with', src: 'e2', dst: 'e3' },
-        { kind: 'located_at', src: 'e3', dst: 'e4' }
-      ],
+      get entities() { return _entities; },
+      set entities(val: Map<string, HardState>) { _entities = val; },
+      get relationships() { return _relationships; },
+      set relationships(val: Relationship[]) { _relationships = val; },
       tick: 0,
       currentEra: {} as any,
       pressures: new Map(),
@@ -102,6 +107,19 @@ describe('graphQueries', () => {
       growthMetrics: {
         relationshipsPerTick: [],
         averageGrowthRate: 0
+      },
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
       }
     };
   });

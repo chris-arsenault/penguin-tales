@@ -22,7 +22,7 @@ export class DistributionTracker {
    * Measure current state of the world
    */
   public measureState(graph: Graph): DistributionState {
-    const entities = Array.from(graph.entities.values());
+    const entities = graph.getEntities();
     const totalEntities = entities.length;
 
     // Entity kind distribution
@@ -86,12 +86,13 @@ export class DistributionTracker {
     });
 
     // Relationship distribution
+    const allRelationships = graph.getRelationships();
     const relationshipTypeCounts: Record<string, number> = {};
-    graph.relationships.forEach((r) => {
+    allRelationships.forEach((r) => {
       relationshipTypeCounts[r.kind] = (relationshipTypeCounts[r.kind] || 0) + 1;
     });
 
-    const totalRelationships = graph.relationships.length;
+    const totalRelationships = allRelationships.length;
     const relationshipTypeRatios: Record<string, number> = {};
     Object.keys(relationshipTypeCounts).forEach((kind) => {
       relationshipTypeRatios[kind] = relationshipTypeCounts[kind] / totalRelationships;
@@ -235,7 +236,7 @@ export class DistributionTracker {
    * Calculate graph connectivity metrics
    */
   private calculateGraphMetrics(graph: Graph) {
-    const entities = Array.from(graph.entities.values());
+    const entities = graph.getEntities();
     const totalEntities = entities.length;
 
     if (totalEntities === 0) {
@@ -260,7 +261,8 @@ export class DistributionTracker {
     entities.forEach((e) => {
       adjacency.set(e.id, new Set());
     });
-    graph.relationships.forEach((r) => {
+    const allRelationships = graph.getRelationships();
+    allRelationships.forEach((r) => {
       // Only use relationships with sufficient narrative strength for clustering
       // Strong relationships (member_of, leader_of, etc.) have strength >= 0.6
       // Weak spatial relationships (resident_of, adjacent_to) have strength < 0.6
@@ -305,7 +307,7 @@ export class DistributionTracker {
       clusters.forEach((cluster) => {
         if (cluster.length > 1) {
           const maxEdges = (cluster.length * (cluster.length - 1)) / 2;
-          const actualEdges = graph.relationships.filter(
+          const actualEdges = allRelationships.filter(
             (r) => cluster.includes(r.src) && cluster.includes(r.dst)
           ).length;
           intraClusterDensity += actualEdges / maxEdges;
@@ -315,7 +317,7 @@ export class DistributionTracker {
     }
 
     // Calculate inter-cluster density
-    const interClusterEdges = graph.relationships.filter((r) => {
+    const interClusterEdges = allRelationships.filter((r) => {
       const srcCluster = clusters.find((c) => c.includes(r.src));
       const dstCluster = clusters.find((c) => c.includes(r.dst));
       return srcCluster !== dstCluster;

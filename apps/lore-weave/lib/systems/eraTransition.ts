@@ -83,7 +83,7 @@ export const eraTransition: SimulationSystem = {
     const transitionCooldown = params.transitionCooldown?.value ?? 10;
 
     // Find current era entity
-    const currentEra = Array.from(graph.entities.values()).find(e =>
+    const currentEra = graph.getEntities().find(e =>
       e.kind === 'era' && e.status === 'current'
     );
 
@@ -135,7 +135,7 @@ export const eraTransition: SimulationSystem = {
     }
 
     // Find next era (first entity with status: 'future')
-    const nextEra = Array.from(graph.entities.values()).find(e =>
+    const nextEra = graph.getEntities().find(e =>
       e.kind === 'era' && e.status === 'future'
     );
 
@@ -170,7 +170,7 @@ export const eraTransition: SimulationSystem = {
 
     // Create active_during relationships for prominent entities in the ending era
     const relationshipsAdded: any[] = [];
-    const prominentEntities = Array.from(graph.entities.values()).filter(e =>
+    const prominentEntities = graph.getEntities().filter(e =>
       (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
       e.kind !== 'era' &&
       e.createdAt >= currentEra.temporal!.startTick &&
@@ -219,7 +219,7 @@ export const eraTransition: SimulationSystem = {
  * Activate the first era if no current era exists
  */
 function activateFirstEra(graph: Graph): SystemResult {
-  const firstEra = Array.from(graph.entities.values()).find(e =>
+  const firstEra = graph.getEntities().find(e =>
     e.kind === 'era'
   );
 
@@ -318,7 +318,7 @@ function checkPressureCondition(condition: any, graph: Graph): boolean {
  * Check entity count condition
  */
 function checkEntityCountCondition(condition: any, graph: Graph): boolean {
-  const entities = Array.from(graph.entities.values()).filter(e =>
+  const entities = graph.getEntities().filter(e =>
     e.kind === condition.entityKind &&
     (!condition.subtype || e.subtype === condition.subtype) &&
     (!condition.status || e.status === condition.status)
@@ -338,7 +338,7 @@ function checkEntityCountCondition(condition: any, graph: Graph): boolean {
  * Check occurrence-based condition
  */
 function checkOccurrenceCondition(condition: any, graph: Graph): boolean {
-  const occurrences = Array.from(graph.entities.values()).filter(e =>
+  const occurrences = graph.getEntities().filter(e =>
     e.kind === 'occurrence' &&
     (!condition.subtype || e.subtype === condition.subtype) &&
     e.status === 'active'
@@ -348,7 +348,7 @@ function checkOccurrenceCondition(condition: any, graph: Graph): boolean {
     case 'exists':
       return occurrences.length > 0;
     case 'ended':
-      const endedOccurrences = Array.from(graph.entities.values()).filter(e =>
+      const endedOccurrences = graph.getEntities().filter(e =>
         e.kind === 'occurrence' &&
         e.subtype === condition.subtype &&
         e.status === 'ended'

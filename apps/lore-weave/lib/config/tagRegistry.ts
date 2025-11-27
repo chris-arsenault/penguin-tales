@@ -1,4 +1,5 @@
 import { TagMetadata } from '../types/engine';
+import { EntityTags } from '../types/worldTypes';
 
 /**
  * Tag Registry
@@ -977,15 +978,22 @@ export function tagsConflict(tag1: string, tag2: string): boolean {
 }
 
 /**
- * Validate that an entity's tags don't have conflicts
+ * Validate that an entity's tags don't have conflicts.
+ * Accepts EntityTags (KVP format) and checks tag keys for conflicts.
  */
-export function validateEntityTags(tags: string[]): { valid: boolean; conflicts: string[] } {
+export function validateEntityTags(tags: EntityTags | undefined): { valid: boolean; conflicts: string[] } {
   const conflicts: string[] = [];
 
-  for (let i = 0; i < tags.length; i++) {
-    for (let j = i + 1; j < tags.length; j++) {
-      if (tagsConflict(tags[i], tags[j])) {
-        conflicts.push(`${tags[i]} conflicts with ${tags[j]}`);
+  if (!tags) {
+    return { valid: true, conflicts: [] };
+  }
+
+  const tagKeys = Object.keys(tags);
+
+  for (let i = 0; i < tagKeys.length; i++) {
+    for (let j = i + 1; j < tagKeys.length; j++) {
+      if (tagsConflict(tagKeys[i], tagKeys[j])) {
+        conflicts.push(`${tagKeys[i]} conflicts with ${tagKeys[j]}`);
       }
     }
   }

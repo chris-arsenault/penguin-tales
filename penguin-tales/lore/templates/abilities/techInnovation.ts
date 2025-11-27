@@ -122,6 +122,23 @@ export const techInnovation: GrowthTemplate = {
       });
     });
 
+    // Find existing tech from same faction to place new tech nearby in concept space
+    const existingTech = graphView.findEntities({ kind: 'abilities', subtype: 'technology' })
+      .filter(tech => graphView.hasRelationship(faction.id, tech.id, 'wields'));
+
+    // Derive conceptual coordinates - place tech near faction's other tech
+    const referenceEntities: HardState[] = [faction, ...practitioners];
+    if (existingTech.length > 0) {
+      referenceEntities.push(existingTech[0]);
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'abilities',
+      'conceptual',
+      { maxDistance: existingTech.length > 0 ? 0.25 : 0.5, minDistance: 0.1 }  // Closer if building on existing tech
+    );
+
     return {
       entities: [{
         kind: 'abilities',
@@ -131,7 +148,8 @@ export const techInnovation: GrowthTemplate = {
         status: 'discovered',
         prominence: 'marginal',
         culture: faction.culture,  // Inherit culture from developing faction
-        tags: ['technology', 'innovation']
+        tags: ['technology', 'innovation'],
+        coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
       }],
       relationships,
       description: `${faction.name} develops new technology`

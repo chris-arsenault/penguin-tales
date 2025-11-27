@@ -26,12 +26,12 @@ export interface ValidationReport {
  * Validate that all entities have at least one connection (incoming or outgoing)
  */
 export function validateConnectedEntities(graph: Graph): ValidationResult {
-  const unconnected = Array.from(graph.entities.values()).filter(entity => {
+  const unconnected = graph.getEntities().filter(entity => {
     // Check for outgoing relationships (in entity.links)
     const hasOutgoing = entity.links.length > 0;
 
     // Check for incoming relationships (where entity is dst)
-    const hasIncoming = graph.relationships.some(r => r.dst === entity.id);
+    const hasIncoming = graph.getRelationships().some(r => r.dst === entity.id);
 
     return !hasOutgoing && !hasIncoming;
   });
@@ -79,7 +79,7 @@ export function validateNPCStructure(graph: Graph): ValidationResult {
   const missingByKindSubtype = new Map<string, Map<string, number>>();
 
   // Check all entities against domain schema requirements
-  for (const entity of graph.entities.values()) {
+  for (const entity of graph.getEntities()) {
     if (!graph.config.domain.validateEntityStructure) {
       // Domain doesn't provide validation - skip
       continue;
@@ -133,13 +133,13 @@ export function validateNPCStructure(graph: Graph): ValidationResult {
 export function validateRelationshipIntegrity(graph: Graph): ValidationResult {
   const brokenRelationships: string[] = [];
 
-  graph.relationships.forEach((rel, index) => {
-    const srcExists = graph.entities.has(rel.src);
-    const dstExists = graph.entities.has(rel.dst);
+  graph.getRelationships().forEach((rel, index) => {
+    const srcExists = graph.getEntity(rel.src) !== undefined;
+    const dstExists = graph.getEntity(rel.dst) !== undefined;
 
     if (!srcExists || !dstExists) {
-      const srcName = graph.entities.get(rel.src)?.name || rel.src;
-      const dstName = graph.entities.get(rel.dst)?.name || rel.dst;
+      const srcName = graph.getEntity(rel.src)?.name || rel.src;
+      const dstName = graph.getEntity(rel.dst)?.name || rel.dst;
       brokenRelationships.push(
         `[${index}] ${rel.kind}: ${srcName} → ${dstName} ` +
         `(${!srcExists ? 'src missing' : ''} ${!dstExists ? 'dst missing' : ''})`
@@ -176,9 +176,9 @@ export function validateRelationshipIntegrity(graph: Graph): ValidationResult {
 export function validateLinkSync(graph: Graph): ValidationResult {
   const mismatchedEntities: string[] = [];
 
-  graph.entities.forEach(entity => {
+  graph.forEachEntity(entity => {
     // Count relationships where this entity is src
-    const actualRels = graph.relationships.filter(r => r.src === entity.id);
+    const actualRels = graph.getRelationships().filter(r => r.src === entity.id);
     const linkCount = entity.links.length;
     const actualCount = actualRels.length;
 
@@ -227,7 +227,7 @@ export function validateLorePresence(graph: Graph): ValidationResult {
   }
 
   // Entities that should have lore (created after tick 0, not abilities)
-  const enrichableEntities = Array.from(graph.entities.values()).filter(
+  const enrichableEntities = graph.getEntities().filter(
     e => e.createdAt > 0 && e.kind !== 'abilities'
   );
 

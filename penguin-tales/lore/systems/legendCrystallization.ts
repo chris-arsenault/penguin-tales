@@ -221,7 +221,8 @@ export const legendCrystallization: SimulationSystem = {
         tags: entity.tags!,
         links: [],
         createdAt: entity.createdAt!,
-        updatedAt: entity.updatedAt!
+        updatedAt: entity.updatedAt!,
+        coordinates: entity.coordinates || {}
       };
       graph.entities.set(id, fullEntity);
     });

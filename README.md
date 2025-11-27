@@ -96,6 +96,115 @@ npm run viz
 
 ---
 
+## 🗺️ Coordinate Placement System
+
+Entities exist in a **6-axis coordinate space** that supports both physical locations and abstract concepts. The framework provides mathematically sound placement algorithms for procedural entity distribution.
+
+### Coordinate Axes
+
+| Axis | Physical Meaning | Example Values |
+|------|-----------------|----------------|
+| `plane` | Which "map" layer | `surface`, `underwater`, `ice_caverns` |
+| `sector_x` | Coarse longitude (0-100) | `60` (eastern region) |
+| `sector_y` | Coarse latitude (0-100) | `40` (southern region) |
+| `cell_x` | Fine position within sector (0-10) | `5.2` |
+| `cell_y` | Fine position within sector (0-10) | `7.8` |
+| `z_band` | Vertical layer | `sky`, `surface`, `shallow_water`, `deep_water` |
+
+### Placement Algorithms
+
+| Algorithm | Use Case | Properties |
+|-----------|----------|------------|
+| `poisson_disk` | Location distribution | Blue noise, guaranteed minimum spacing |
+| `gaussian_cluster` | NPCs around settlements | Natural density falloff |
+| `anchor_colocated` | Abilities at locations | Perfect co-location |
+| `halton_sequence` | Deterministic coverage | Reproducible quasi-random |
+| `exclusion_aware` | Avoiding sacred zones | Respects forbidden regions |
+
+### Example: Placing Non-Spatial Entities
+
+Rules and magic systems don't have traditional "locations" but still exist in coordinate space for spatial queries (e.g., "find all magic near the Glow-Fissure"):
+
+```typescript
+// Place a magic system co-located with its origin anomaly
+const magicId = graphView.addEntityWithPlacement(
+  {
+    kind: 'abilities',
+    subtype: 'magic',
+    name: 'Fissure-Drawn Runes',
+    description: 'Ice-magic drawn from the Glow-Fissure'
+  },
+  {
+    scheme: {
+      kind: 'anchor_colocated',
+      spaceId: 'physical',
+      allowCoLocation: true,
+      anchorEntityId: 'glow_fissure_id'  // Copies anomaly's coordinates
+    }
+  }
+);
+
+// Place a cultural rule with wide geographic influence
+const ruleId = graphView.addEntityWithPlacement(
+  {
+    kind: 'rules',
+    subtype: 'taboo',
+    name: 'The Silence of the Deep',
+    description: 'Ancient taboo against speaking in ice caverns'
+  },
+  {
+    scheme: {
+      kind: 'gaussian_cluster',
+      spaceId: 'physical',
+      allowCoLocation: true,
+      center: nightfallShelfCoords,
+      sigma: 0.3  // Wide spread - rule applies broadly
+    }
+  }
+);
+```
+
+### Example: Cluster of Locations (Full 6-Axis Output)
+
+Using Poisson disk sampling to place 5 colonies with natural spacing:
+
+```typescript
+const result = graphView.addEntitiesWithPlacement(
+  [
+    { kind: 'location', subtype: 'colony', name: 'Frostpeak Hold' },
+    { kind: 'location', subtype: 'colony', name: 'Shimmer Bay' },
+    { kind: 'location', subtype: 'colony', name: 'Glacier Point' },
+    { kind: 'location', subtype: 'colony', name: 'Icewind Perch' },
+    { kind: 'location', subtype: 'colony', name: 'Deepchill Warren' }
+  ],
+  {
+    scheme: {
+      kind: 'poisson_disk',
+      spaceId: 'physical',
+      allowCoLocation: false,
+      minDistance: 0.15,  // 15% of map minimum separation
+      constrainPlane: 'surface'
+    }
+  }
+);
+
+// Result coordinates (all 6 axes):
+// ┌─────────────────┬─────────┬──────────┬──────────┬────────┬────────┬─────────┐
+// │ Entity          │ plane   │ sector_x │ sector_y │ cell_x │ cell_y │ z_band  │
+// ├─────────────────┼─────────┼──────────┼──────────┼────────┼────────┼─────────┤
+// │ Frostpeak Hold  │ surface │    23.4  │    67.2  │   4.1  │   8.3  │ surface │
+// │ Shimmer Bay     │ surface │    71.8  │    45.6  │   7.2  │   2.9  │ surface │
+// │ Glacier Point   │ surface │    48.2  │    12.9  │   1.8  │   5.4  │ surface │
+// │ Icewind Perch   │ surface │    89.1  │    78.4  │   9.0  │   6.1  │ surface │
+// │ Deepchill Warren│ surface │    15.7  │    31.5  │   3.3  │   0.7  │ surface │
+// └─────────────────┴─────────┴──────────┴──────────┴────────┴────────┴─────────┘
+//
+// Note: Poisson disk guarantees minimum 15% separation between any two colonies.
+// Batch placement uses incremental exclusion - each new placement respects prior ones.
+```
+
+---
+
 ## 📚 Documentation
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system design and implementation guide

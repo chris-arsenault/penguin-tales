@@ -6,9 +6,10 @@
  * (e.g., meta-entity formation, faction consolidation).
  */
 
-import { HardState } from '../types/worldTypes';
+import { HardState, EntityTags } from '../types/worldTypes';
 import { TemplateGraphView } from '../services/templateGraphView';
 import { FRAMEWORK_STATUS } from '../types/frameworkPrimitives';
+import { hasTag } from './helpers';
 
 /**
  * Result of clustering operation
@@ -104,8 +105,8 @@ export function calculateSimilarity(
       }
 
       case 'shared_tags': {
-        const e1Tags = new Set(e1.tags || []);
-        const e2Tags = new Set(e2.tags || []);
+        const e1Tags = new Set(Object.keys(e1.tags || {}));
+        const e2Tags = new Set(Object.keys(e2.tags || {}));
         const intersection = Array.from(e1Tags).filter(t => e2Tags.has(t)).length;
         const union = new Set([...e1Tags, ...e2Tags]).size;
         const jaccard = union > 0 ? intersection / union : 0;
@@ -246,7 +247,7 @@ export function detectClusters(
 export function filterClusterableEntities(entities: HardState[]): HardState[] {
   return entities.filter(e =>
     e.status !== FRAMEWORK_STATUS.HISTORICAL &&
-    !e.tags?.includes('meta-entity')
+    !hasTag(e.tags, 'meta-entity')
   );
 }
 

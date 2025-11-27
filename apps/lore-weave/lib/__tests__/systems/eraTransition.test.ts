@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eraTransition } from '../../systems/eraTransition';
 import { Graph } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { HardState, Relationship } from '../../types/worldTypes';
 
 describe('eraTransition', () => {
   let graph: Graph;
@@ -22,14 +22,16 @@ describe('eraTransition', () => {
   });
 
   beforeEach(() => {
-    const entities = new Map<string, HardState>();
-    entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
-    entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
-    entities.set('era3', createEraEntity('era3', 'Late Age', 'future', 0));
+    const _entities = new Map<string, HardState>();
+    _entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
+    _entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
+    _entities.set('era3', createEraEntity('era3', 'Late Age', 'future', 0));
+
+    let _relationships: Relationship[] = [];
 
     graph = {
-      entities,
-      relationships: [],
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
       tick: 100,
       currentEra: { id: 'era1', name: 'Early Age', description: 'Test', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
       pressures: new Map(),
@@ -53,6 +55,19 @@ describe('eraTransition', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      }
     };
   });
 

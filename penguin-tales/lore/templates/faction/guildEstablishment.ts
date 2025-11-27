@@ -93,6 +93,23 @@ export const guildEstablishment: GrowthTemplate = {
       };
     }
 
+    // Find existing companies to place new guild in conceptual space
+    const existingCompanies = graphView.findEntities({ kind: 'faction', subtype: 'company' });
+
+    // Derive conceptual coordinates - place guild near colony and other guilds
+    const referenceEntities: HardState[] = [colony];
+    if (existingCompanies.length > 0) {
+      // Place near existing companies (economic proximity)
+      referenceEntities.push(...existingCompanies.slice(0, 2));
+    }
+
+    const conceptualCoords = graphView.deriveCoordinates(
+      referenceEntities,
+      'faction',
+      'conceptual',
+      { maxDistance: 0.3, minDistance: 0.1 }  // Trade guilds cluster together conceptually
+    );
+
     const guild: Partial<HardState> = {
       kind: 'faction',
       subtype: 'company',
@@ -101,7 +118,8 @@ export const guildEstablishment: GrowthTemplate = {
       status: 'state_sanctioned',
       prominence: 'recognized',
       culture: colony.culture,  // Inherit culture from colony
-      tags: ['trade', 'guild', 'organized']
+      tags: ['trade', 'guild', 'organized'],
+      coordinates: conceptualCoords ? { conceptual: conceptualCoords } : {}
     };
 
     // Use targetSelector to intelligently select merchants (prevents super-hubs)

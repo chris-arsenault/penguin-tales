@@ -94,9 +94,10 @@ export const relationshipCulling: SimulationSystem = {
 
     const removed: Relationship[] = [];
     const protectedBelowThreshold: { kind: string; strength: number }[] = [];
-    const originalCount = graph.relationships.length;
+    const originalCount = graph.getRelationshipCount();
 
-    graph.relationships = graph.relationships.filter(rel => {
+    // Filter relationships and collect kept ones
+    const keptRelationships = graph.getRelationships().filter(rel => {
       // Protected kinds never get culled, but track if they're weak
       if (protectedKinds.has(rel.kind)) {
         const strength = rel.strength ?? 0.5;
@@ -107,8 +108,8 @@ export const relationshipCulling: SimulationSystem = {
       }
 
       // Calculate relationship age (minimum age of both entities)
-      const srcEntity = graph.entities.get(rel.src);
-      const dstEntity = graph.entities.get(rel.dst);
+      const srcEntity = graph.getEntity(rel.src);
+      const dstEntity = graph.getEntity(rel.dst);
 
       if (!srcEntity || !dstEntity) {
         // Remove relationships to non-existent entities
@@ -130,14 +131,16 @@ export const relationshipCulling: SimulationSystem = {
         removed.push(rel);
 
         // Remove from entity links
-        if (srcEntity) {
-          srcEntity.links = srcEntity.links.filter(l =>
+        const srcEntityToUpdate = graph.getEntity(rel.src);
+        const dstEntityToUpdate = graph.getEntity(rel.dst);
+        if (srcEntityToUpdate) {
+          srcEntityToUpdate.links = srcEntityToUpdate.links.filter(l =>
             !(l.kind === rel.kind && l.src === rel.src && l.dst === rel.dst)
           );
-          srcEntity.updatedAt = graph.tick;
+          srcEntityToUpdate.updatedAt = graph.tick;
         }
-        if (dstEntity) {
-          dstEntity.updatedAt = graph.tick;
+        if (dstEntityToUpdate) {
+          dstEntityToUpdate.updatedAt = graph.tick;
         }
 
         return false; // Remove from graph
@@ -145,6 +148,9 @@ export const relationshipCulling: SimulationSystem = {
 
       return true; // Keep
     });
+
+    // Update graph with filtered relationships
+    graph._setRelationships([...keptRelationships]);
 
     const culledCount = removed.length;
 

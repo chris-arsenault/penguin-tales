@@ -18,12 +18,23 @@ import {
   SnapshotConfig,
   EmergentDiscoveryConfig
 } from '@lore-weave/core/types/domainSchema';
+import type {
+  CoordinateSpaceDefinition,
+  CoordinateSpaceId,
+  DefaultPlacementSchemes,
+  PoissonDiskPlacement,
+  GaussianClusterPlacement,
+  AnchorColocatedPlacement,
+  ManifoldConfig,
+  AxisWeights
+} from '@lore-weave/core/types/coordinates';
 import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   getActionDomains,
   getActionDomainsForEntity,
   getPressureDomainMappings
 } from './config/actionDomains';
+import { penguinRegionConfig } from './config/regions';
 
 // ===========================
 // SNAPSHOT CONFIGURATIONS
@@ -763,6 +774,266 @@ const penguinDiscoveryConfig: EmergentDiscoveryConfig = {
 };
 
 // ===========================
+// COORDINATE SPACE DEFINITIONS
+// ===========================
+
+/**
+ * Physical coordinate space for the penguin world.
+ *
+ * The penguin world exists on and around a massive iceberg (Aurora Berg).
+ * This space maps the 6-axis template to penguin geography:
+ *
+ * - plane: Ice surface types (surface, underwater, ice_caverns)
+ * - sector_x, sector_y: Iceberg regions (0-100 grid)
+ * - cell_x, cell_y: Fine-grained position within sector (0-10)
+ * - z_band: Altitude/depth bands (sky, surface, shallow, deep, caverns)
+ */
+const penguinPhysicalSpace: CoordinateSpaceDefinition = {
+  id: 'physical',
+  name: 'Physical Space',
+  description: 'Geographic coordinates on and around Aurora Berg',
+
+  // Which entity kinds participate in this space
+  entityKinds: ['location', 'npc', 'faction', 'abilities', 'occurrence'],
+
+  axes: {
+    plane: {
+      name: 'Surface Type',
+      description: 'The ice/water layer this entity exists on',
+      valueType: 'enum',
+      enumValues: [
+        { id: 'surface', label: 'Ice Surface', numericValue: 0.5 },
+        { id: 'underwater', label: 'Underwater', numericValue: 0.3 },
+        { id: 'ice_caverns', label: 'Ice Caverns', numericValue: 0.7 }
+      ],
+      defaultValue: 'surface',
+      distanceWeight: 1.0
+    },
+    sector_x: {
+      name: 'Longitude Sector',
+      description: 'East-West position on Aurora Berg (0=West, 100=East)',
+      valueType: 'numeric',
+      numericRange: { min: 0, max: 100 },
+      defaultValue: 50,
+      distanceWeight: 1.0
+    },
+    sector_y: {
+      name: 'Latitude Sector',
+      description: 'North-South position on Aurora Berg (0=South, 100=North)',
+      valueType: 'numeric',
+      numericRange: { min: 0, max: 100 },
+      defaultValue: 50,
+      distanceWeight: 1.0
+    },
+    cell_x: {
+      name: 'Local X',
+      description: 'Fine-grained X position within sector',
+      valueType: 'numeric',
+      numericRange: { min: 0, max: 10 },
+      defaultValue: 5,
+      distanceWeight: 0.1
+    },
+    cell_y: {
+      name: 'Local Y',
+      description: 'Fine-grained Y position within sector',
+      valueType: 'numeric',
+      numericRange: { min: 0, max: 10 },
+      defaultValue: 5,
+      distanceWeight: 0.1
+    },
+    z_band: {
+      name: 'Altitude Band',
+      description: 'Vertical position (sky, surface, underwater depths)',
+      valueType: 'enum',
+      enumValues: [
+        { id: 'sky', label: 'Sky/Air', numericValue: 1.0 },
+        { id: 'surface', label: 'Surface', numericValue: 0.7 },
+        { id: 'shallow_water', label: 'Shallow Water', numericValue: 0.5 },
+        { id: 'deep_water', label: 'Deep Water', numericValue: 0.3 },
+        { id: 'ice_caverns', label: 'Ice Caverns', numericValue: 0.1 }
+      ],
+      defaultValue: 'surface',
+      distanceWeight: 0.5
+    }
+  },
+
+  // Cross-plane distance: how far apart are different planes?
+  crossPlaneDistance: (plane1: string, plane2: string): number => {
+    // Same plane = 1.0 (no multiplier)
+    if (plane1 === plane2) return 1.0;
+
+    // Surface <-> Underwater = 2.0 (moderate distance)
+    if ((plane1 === 'surface' && plane2 === 'underwater') ||
+        (plane1 === 'underwater' && plane2 === 'surface')) {
+      return 2.0;
+    }
+
+    // Surface <-> Ice Caverns = 3.0 (must travel down through ice)
+    if ((plane1 === 'surface' && plane2 === 'ice_caverns') ||
+        (plane1 === 'ice_caverns' && plane2 === 'surface')) {
+      return 3.0;
+    }
+
+    // Underwater <-> Ice Caverns = 4.0 (very difficult traversal)
+    if ((plane1 === 'underwater' && plane2 === 'ice_caverns') ||
+        (plane1 === 'ice_caverns' && plane2 === 'underwater')) {
+      return 4.0;
+    }
+
+    // Unknown planes = Infinity (cannot traverse)
+    return Infinity;
+  }
+};
+
+/**
+ * All coordinate spaces for the penguin domain.
+ */
+const penguinCoordinateSpaces: CoordinateSpaceDefinition[] = [
+  penguinPhysicalSpace
+];
+
+// ===========================
+// 6D CROSS-PLANE PLACEMENT CONFIG
+// ===========================
+
+/**
+ * Manifold configuration for cross-plane placement.
+ *
+ * Defines the plane hierarchy for the penguin domain:
+ * - Surface is the primary plane (filled first)
+ * - When surface is saturated, entities cascade to underwater or ice caverns
+ * - Underwater and ice caverns can cascade to each other
+ */
+const penguinManifoldConfig: ManifoldConfig = {
+  planeHierarchy: [
+    {
+      planeId: 'surface',
+      children: ['underwater', 'ice_caverns'],
+      saturationThreshold: 0.7,  // Cascade when 70% saturated
+      priority: 1                 // Fill surface first
+    },
+    {
+      planeId: 'underwater',
+      children: ['ice_caverns'],
+      saturationThreshold: 0.8,  // Underwater can hold more before cascading
+      priority: 2
+    },
+    {
+      planeId: 'ice_caverns',
+      children: [],              // No cascade target - final frontier
+      saturationThreshold: 0.9,
+      priority: 3
+    }
+  ],
+  saturationStrategy: 'density',
+  densityThreshold: 0.7
+};
+
+/**
+ * Default axis weights for 6D distance calculations.
+ *
+ * Penguin domain weights:
+ * - Plane changes are expensive (10.0) - different environments
+ * - Sector position has standard weight (1.0)
+ * - Cell position matters less (0.1) - fine positioning
+ * - Z-band (depth) moderately weighted (2.0) - vertical movement costs
+ */
+const penguinDefaultAxisWeights: Partial<AxisWeights> = {
+  plane: 10.0,      // Changing planes is very expensive (different biome)
+  sector_x: 1.0,    // Standard horizontal distance
+  sector_y: 1.0,    // Standard horizontal distance
+  cell_x: 0.1,      // Fine position matters less for placement
+  cell_y: 0.1,      // Fine position matters less for placement
+  z_band: 2.0       // Vertical movement moderately expensive
+};
+
+// ===========================
+// DEFAULT PLACEMENT SCHEMES
+// ===========================
+
+/**
+ * Default placement schemes for each entity kind in the penguin domain.
+ *
+ * These define how entities are automatically placed when using
+ * addEntityWithPlacement without explicit scheme configuration.
+ */
+const penguinDefaultPlacementSchemes: DefaultPlacementSchemes = {
+  /**
+   * Locations use Poisson disk sampling for natural spacing.
+   * Colonies, icebergs, and geographic features should be well-distributed.
+   */
+  location: {
+    kind: 'poisson_disk',
+    spaceId: 'physical',
+    allowCoLocation: false,
+    minDistance: 0.15,  // ~15% of map - good colony separation
+    maxSamplesPerPoint: 30,
+    constrainPlane: 'surface'
+  } as PoissonDiskPlacement,
+
+  /**
+   * NPCs cluster around their home locations using Gaussian distribution.
+   * This creates natural population density around settlements.
+   */
+  npc: {
+    kind: 'gaussian_cluster',
+    spaceId: 'physical',
+    allowCoLocation: false,
+    center: { plane: 'surface', sector_x: 50, sector_y: 50, cell_x: 5, cell_y: 5, z_band: 'surface' },
+    sigma: 0.1,  // Tight clustering around colony centers
+    maxDistance: 0.3
+  } as GaussianClusterPlacement,
+
+  /**
+   * Factions use Poisson disk sampling with larger minimum distance.
+   * Faction headquarters should be more spread out than individual NPCs.
+   */
+  faction: {
+    kind: 'poisson_disk',
+    spaceId: 'physical',
+    allowCoLocation: false,
+    minDistance: 0.2,  // ~20% of map between faction strongholds
+    maxSamplesPerPoint: 30
+  } as PoissonDiskPlacement,
+
+  /**
+   * Abilities/technologies co-locate with their origin location.
+   * Magic systems manifest at anomalies, tech at workshops, etc.
+   */
+  abilities: {
+    kind: 'anchor_colocated',
+    spaceId: 'physical',
+    allowCoLocation: true,
+    anchorEntityId: ''  // Must be overridden with actual anchor
+  } as AnchorColocatedPlacement,
+
+  /**
+   * Rules/laws don't have specific physical location by default.
+   * They're conceptual entities that apply to regions or factions.
+   * Using Gaussian cluster centered on world midpoint.
+   */
+  rules: {
+    kind: 'gaussian_cluster',
+    spaceId: 'physical',
+    allowCoLocation: true,
+    center: { plane: 'surface', sector_x: 50, sector_y: 50, cell_x: 5, cell_y: 5, z_band: 'surface' },
+    sigma: 0.3  // Wide spread - rules apply broadly
+  } as GaussianClusterPlacement,
+
+  /**
+   * Occurrences (events) use Gaussian clustering around epicenter.
+   * Wars, disasters, booms happen in specific regions.
+   */
+  occurrence: {
+    kind: 'gaussian_cluster',
+    spaceId: 'physical',
+    allowCoLocation: true,
+    center: { plane: 'surface', sector_x: 50, sector_y: 50, cell_x: 5, cell_y: 5, z_band: 'surface' },
+    sigma: 0.15
+  } as GaussianClusterPlacement
+};
+
+// ===========================
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
@@ -774,11 +1045,19 @@ const baseDomain = new BaseDomainSchema({
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
   cultures: penguinCultures,
-  relationshipConfig: penguinRelationshipConfig
+  relationshipConfig: penguinRelationshipConfig,
+  coordinateSpaces: penguinCoordinateSpaces,
+  defaultPlacementSchemes: penguinDefaultPlacementSchemes,
+  manifoldConfig: penguinManifoldConfig,
+  defaultAxisWeights: penguinDefaultAxisWeights,
+  crossPlaneDistance: penguinPhysicalSpace.crossPlaneDistance
 });
 
 // Extend with catalyst system methods and discovery config
 export const penguinDomain = Object.assign(baseDomain, {
+  // Region-based coordinate system configuration
+  regionConfig: penguinRegionConfig,
+
   // Emergent discovery configuration
   emergentDiscoveryConfig: penguinDiscoveryConfig,
 
@@ -830,6 +1109,20 @@ export const penguinDomain = Object.assign(baseDomain, {
     return {
       pressureChanges: {}
     };
+  },
+
+  // Coordinate space lookup for a specific entity kind and space
+  getCoordinateSpace(entityKind: string, spaceId: CoordinateSpaceId): CoordinateSpaceDefinition | undefined {
+    return penguinCoordinateSpaces.find(space =>
+      space.id === spaceId && space.entityKinds.includes(entityKind)
+    );
+  },
+
+  // Get all spaces supported by an entity kind
+  getSupportedSpaces(entityKind: string): CoordinateSpaceId[] {
+    return penguinCoordinateSpaces
+      .filter(space => space.entityKinds.includes(entityKind))
+      .map(space => space.id);
   }
 });
 
