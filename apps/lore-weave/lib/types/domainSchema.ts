@@ -265,6 +265,18 @@ export interface SnapshotConfig {
 }
 
 /**
+ * UI styling configuration for entity kinds
+ */
+export interface EntityKindStyle {
+  /** Display name for UI (defaults to capitalized kind) */
+  displayName?: string;
+  /** Hex color for visualization (e.g., '#6FB1FC') */
+  color?: string;
+  /** Shape for graph visualization (e.g., 'ellipse', 'diamond', 'hexagon') */
+  shape?: string;
+}
+
+/**
  * Definition of an entity kind in the domain
  */
 export interface EntityKindDefinition {
@@ -291,6 +303,9 @@ export interface EntityKindDefinition {
    * Used by the enrichment system to decide when to re-enrich entities.
    */
   snapshotConfig?: SnapshotConfig;
+
+  /** UI styling configuration for visualization */
+  style?: EntityKindStyle;
 }
 
 /**
@@ -319,6 +334,18 @@ export interface CultureDefinition {
 }
 
 /**
+ * UI configuration for domain visualization
+ */
+export interface DomainUIConfig {
+  /** Icon/emoji for the world (e.g., '🐧') */
+  worldIcon?: string;
+  /** Ordered list of prominence levels (lowest to highest) */
+  prominenceLevels?: string[];
+  /** Colors for prominence levels (keyed by level name) */
+  prominenceColors?: Record<string, string>;
+}
+
+/**
  * Complete domain schema definition
  */
 export interface DomainSchema {
@@ -339,6 +366,9 @@ export interface DomainSchema {
 
   /** All cultures defined in this domain */
   cultures: CultureDefinition[];
+
+  /** UI configuration for visualization */
+  uiConfig?: DomainUIConfig;
 
   /** Name generation service (deprecated - use NameForgeService instead) */
   nameGenerator?: NameGenerator;
@@ -490,6 +520,7 @@ export class BaseDomainSchema implements DomainSchema {
   entityKinds: EntityKindDefinition[];
   relationshipKinds: RelationshipKindDefinition[];
   cultures: CultureDefinition[];
+  uiConfig?: DomainUIConfig;
   nameGenerator?: NameGenerator;
   relationshipConfig?: RelationshipConfig;
   coordinateSpaces?: CoordinateSpaceDefinition[];
@@ -505,6 +536,7 @@ export class BaseDomainSchema implements DomainSchema {
     entityKinds: EntityKindDefinition[];
     relationshipKinds: RelationshipKindDefinition[];
     cultures: CultureDefinition[];
+    uiConfig?: DomainUIConfig;
     nameGenerator?: NameGenerator;
     relationshipConfig?: RelationshipConfig;
     coordinateSpaces?: CoordinateSpaceDefinition[];
@@ -519,6 +551,7 @@ export class BaseDomainSchema implements DomainSchema {
     this.entityKinds = config.entityKinds;
     this.relationshipKinds = config.relationshipKinds;
     this.cultures = config.cultures;
+    this.uiConfig = config.uiConfig;
     this.nameGenerator = config.nameGenerator;
     this.relationshipConfig = config.relationshipConfig;
     this.coordinateSpaces = config.coordinateSpaces;

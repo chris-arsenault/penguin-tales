@@ -1,25 +1,33 @@
-import type { HardState, Prominence, WorldState, Filters } from '../types/world.ts';
+import type { HardState, Prominence, WorldState, Filters, UISchema } from '../types/world.ts';
 
-export function prominenceToNumber(prominence: Prominence): number {
-  const map: Record<Prominence, number> = {
-    forgotten: 0,
-    marginal: 1,
-    recognized: 2,
-    renowned: 3,
-    mythic: 4
-  };
-  return map[prominence] || 0;
+// Default prominence levels (fallback when uiSchema not present)
+const DEFAULT_PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+
+// Get prominence levels from uiSchema or use defaults
+export function getProminenceLevels(uiSchema?: UISchema): string[] {
+  return uiSchema?.prominenceLevels ?? DEFAULT_PROMINENCE_LEVELS;
 }
 
-export function getKindColor(kind: string): string {
-  const colors: Record<string, string> = {
+export function prominenceToNumber(prominence: Prominence, uiSchema?: UISchema): number {
+  const levels = getProminenceLevels(uiSchema);
+  const index = levels.indexOf(prominence);
+  return index >= 0 ? index : 0;
+}
+
+export function getKindColor(kind: string, uiSchema?: UISchema): string {
+  if (uiSchema?.entityKinds) {
+    const entityKind = uiSchema.entityKinds.find(ek => ek.kind === kind);
+    if (entityKind) return entityKind.color;
+  }
+  // Fallback defaults
+  const defaultColors: Record<string, string> = {
     npc: '#6FB1FC',
     faction: '#FC6B6B',
     location: '#6BFC9C',
     rules: '#FCA86B',
     abilities: '#C76BFC'
   };
-  return colors[kind] || '#999';
+  return defaultColors[kind] || '#999';
 }
 
 export function transformWorldData(worldState: WorldState, showCatalyzedBy: boolean = false) {
@@ -29,7 +37,7 @@ export function transformWorldData(worldState: WorldState, showCatalyzedBy: bool
       name: entity.name,
       kind: entity.kind,
       subtype: entity.subtype,
-      prominence: prominenceToNumber(entity.prominence),
+      prominence: prominenceToNumber(entity.prominence, worldState.uiSchema),
       prominenceLabel: entity.prominence,
       status: entity.status,
       tags: entity.tags,
@@ -68,7 +76,7 @@ export function transformWorldData(worldState: WorldState, showCatalyzedBy: bool
 }
 
 export function applyFilters(worldState: WorldState, filters: Filters): WorldState {
-  const prominenceOrder: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+  const prominenceOrder = getProminenceLevels(worldState.uiSchema);
   const minProminenceIndex = prominenceOrder.indexOf(filters.minProminence);
 
   let filtered = worldState.hardState.filter(entity => {

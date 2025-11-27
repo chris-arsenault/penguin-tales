@@ -128,7 +128,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
         description: 'Living non-orca NPCs must have a location'
       }
     ],
-    snapshotConfig: npcSnapshotConfig
+    snapshotConfig: npcSnapshotConfig,
+    style: { displayName: 'NPCs', color: '#6FB1FC', shape: 'ellipse' }
   },
   {
     kind: 'location',
@@ -136,7 +137,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['iceberg', 'colony', 'igloo', 'geographic_feature', 'anomaly'],
     statusValues: ['thriving', 'waning', 'abandoned'],
     defaultStatus: 'thriving',
-    snapshotConfig: locationSnapshotConfig
+    snapshotConfig: locationSnapshotConfig,
+    style: { displayName: 'Locations', color: '#6BFC9C', shape: 'hexagon' }
   },
   {
     kind: 'faction',
@@ -144,7 +146,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['political', 'criminal', 'cult', 'company'],
     statusValues: ['active', 'disbanded', 'waning'],
     defaultStatus: 'active',
-    snapshotConfig: factionSnapshotConfig
+    snapshotConfig: factionSnapshotConfig,
+    style: { displayName: 'Factions', color: '#FC6B6B', shape: 'diamond' }
   },
   {
     kind: 'rules',
@@ -152,7 +155,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['edict', 'taboo', 'social', 'natural'],
     statusValues: ['active', 'forgotten', 'proposed', 'enacted', 'repealed'],
     defaultStatus: 'enacted',
-    snapshotConfig: rulesSnapshotConfig
+    snapshotConfig: rulesSnapshotConfig,
+    style: { displayName: 'Rules', color: '#FCA86B', shape: 'rectangle' }
   },
   {
     kind: 'abilities',
@@ -160,21 +164,24 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['magic', 'faith', 'technology', 'physical', 'combat'],
     statusValues: ['active', 'lost', 'emergent'],
     defaultStatus: 'active',
-    snapshotConfig: abilitiesSnapshotConfig
+    snapshotConfig: abilitiesSnapshotConfig,
+    style: { displayName: 'Abilities', color: '#C76BFC', shape: 'star' }
   },
   {
     kind: 'era',
     description: 'Temporal contexts that modify action probabilities and template weights',
     subtypes: ['expansion', 'conflict', 'innovation', 'invasion', 'reconstruction'],
     statusValues: ['past', 'current', 'future'],
-    defaultStatus: 'future'
+    defaultStatus: 'future',
+    style: { displayName: 'Eras', color: '#FFD700', shape: 'octagon' }
   },
   {
     kind: 'occurrence',
     description: 'Major happenings with their own momentum (second-order agents)',
     subtypes: ['war', 'magical_disaster', 'cultural_movement', 'economic_boom'],
     statusValues: ['brewing', 'active', 'waning', 'ended', 'legendary'],
-    defaultStatus: 'brewing'
+    defaultStatus: 'brewing',
+    style: { displayName: 'Occurrences', color: '#FF69B4', shape: 'triangle' }
   }
 ];
 
@@ -1050,7 +1057,11 @@ const baseDomain = new BaseDomainSchema({
   defaultPlacementSchemes: penguinDefaultPlacementSchemes,
   manifoldConfig: penguinManifoldConfig,
   defaultAxisWeights: penguinDefaultAxisWeights,
-  crossPlaneDistance: penguinPhysicalSpace.crossPlaneDistance
+  crossPlaneDistance: penguinPhysicalSpace.crossPlaneDistance,
+  uiConfig: {
+    worldIcon: '🐧',
+    prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']
+  }
 });
 
 // Extend with catalyst system methods and discovery config

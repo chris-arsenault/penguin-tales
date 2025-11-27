@@ -53,6 +53,8 @@ export type {
   RelationshipCategory,
   SnapshotConfig,
   EntityKindDefinition,
+  EntityKindStyle,
+  DomainUIConfig,
   EmergentDiscoveryConfig,
   CultureDefinition,
   NameGenerator

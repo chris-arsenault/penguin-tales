@@ -2,17 +2,18 @@ import { useState, useRef, useEffect } from 'react';
 import './HeaderMenu.css';
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
+export type ViewMode = 'graph3d' | 'graph2d' | 'map';
 
 interface HeaderMenuProps {
-  is3DView: boolean;
+  viewMode: ViewMode;
   edgeMetric: EdgeMetric;
-  onToggle3D: () => void;
+  onViewModeChange: (mode: ViewMode) => void;
   onEdgeMetricChange: (metric: EdgeMetric) => void;
   onRecalculateLayout: () => void;
   onToggleStats: () => void;
 }
 
-export default function HeaderMenu({ is3DView, edgeMetric, onToggle3D, onEdgeMetricChange, onRecalculateLayout, onToggleStats }: HeaderMenuProps) {
+export default function HeaderMenu({ viewMode, edgeMetric, onViewModeChange, onEdgeMetricChange, onRecalculateLayout, onToggleStats }: HeaderMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,13 +48,30 @@ export default function HeaderMenu({ is3DView, edgeMetric, onToggle3D, onEdgeMet
 
       {isOpen && (
         <div className="header-menu-dropdown">
-          <button
-            onClick={() => handleMenuItemClick(onToggle3D)}
-            className="header-menu-item"
-          >
-            <span className="header-menu-item-icon">{is3DView ? '📊' : '🌐'}</span>
-            <span>{is3DView ? '2D View' : '3D View'}</span>
-          </button>
+          <div className="header-menu-section">
+            <div className="header-menu-section-title">View Mode</div>
+            <button
+              onClick={() => handleMenuItemClick(() => onViewModeChange('graph3d'))}
+              className={`header-menu-item ${viewMode === 'graph3d' ? 'active' : ''}`}
+            >
+              <span className="header-menu-item-icon">{viewMode === 'graph3d' ? '✓' : '○'}</span>
+              <span>3D Graph</span>
+            </button>
+            <button
+              onClick={() => handleMenuItemClick(() => onViewModeChange('graph2d'))}
+              className={`header-menu-item ${viewMode === 'graph2d' ? 'active' : ''}`}
+            >
+              <span className="header-menu-item-icon">{viewMode === 'graph2d' ? '✓' : '○'}</span>
+              <span>2D Graph</span>
+            </button>
+            <button
+              onClick={() => handleMenuItemClick(() => onViewModeChange('map'))}
+              className={`header-menu-item ${viewMode === 'map' ? 'active' : ''}`}
+            >
+              <span className="header-menu-item-icon">{viewMode === 'map' ? '✓' : '○'}</span>
+              <span>Coordinate Map</span>
+            </button>
+          </div>
 
           <div className="header-menu-section">
             <div className="header-menu-section-title">Edge Spring Metric</div>

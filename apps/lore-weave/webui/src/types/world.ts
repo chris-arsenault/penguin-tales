@@ -1,6 +1,94 @@
-export type Prominence = 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic';
+// Prominence is now dynamic from uiSchema, but we keep a type alias for compatibility
+export type Prominence = string;
 
-export type EntityKind = 'npc' | 'location' | 'faction' | 'rules' | 'abilities' | 'era' | 'occurrence';
+// EntityKind is now dynamic from uiSchema
+export type EntityKind = string;
+
+// UI Schema types - populated from domain configuration
+export interface EntityKindSchema {
+  kind: string;
+  displayName: string;
+  color: string;
+  shape: string;
+  subtypes: string[];
+  statusValues: string[];
+}
+
+export interface RelationshipKindSchema {
+  kind: string;
+  description?: string;
+  srcKinds: string[];
+  dstKinds: string[];
+  category: string;
+}
+
+export interface CultureSchema {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+// Region types for coordinate map visualization
+export interface CircleBounds {
+  shape: 'circle';
+  center: { x: number; y: number };
+  radius: number;
+}
+
+export interface RectBounds {
+  shape: 'rect';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface PolygonBounds {
+  shape: 'polygon';
+  points: Array<{ x: number; y: number }>;
+}
+
+export type RegionBounds = CircleBounds | RectBounds | PolygonBounds;
+
+export interface RegionSchema {
+  id: string;
+  label: string;
+  description: string;
+  bounds: RegionBounds;
+  zRange?: { min: number; max: number };
+  parentRegion?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Entity coordinate types
+export interface Point {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface EntityCoordinates {
+  region?: Point;
+  physical?: {
+    plane: string | number;
+    sector_x: string | number;
+    sector_y: string | number;
+    cell_x: string | number;
+    cell_y: string | number;
+    z_band: string | number;
+  };
+}
+
+export interface UISchema {
+  worldName: string;
+  worldIcon: string;
+  entityKinds: EntityKindSchema[];
+  relationshipKinds: RelationshipKindSchema[];
+  prominenceLevels: string[];
+  cultures: CultureSchema[];
+  regions?: RegionSchema[];
+  coordinateBounds?: { min: number; max: number };
+}
 
 export interface Relationship {
   kind: string;
@@ -20,8 +108,10 @@ export interface HardState {
   description: string;
   status: string;
   prominence: Prominence;
-  tags: string[];
+  culture?: string;
+  tags: Record<string, string | boolean> | string[];
   links: Relationship[];
+  coordinates?: EntityCoordinates;
   createdAt: number;
   updatedAt: number;
 }
@@ -96,6 +186,7 @@ export interface WorldState {
   relationships: Relationship[];
   pressures: Record<string, number>;
   history: HistoryEvent[];
+  uiSchema?: UISchema;
   distributionMetrics?: DistributionMetrics;
   validation?: Validation;
 }

@@ -40,6 +40,7 @@ import {
 } from './index.js';
 
 import { penguinLoreProvider } from './config/loreProvider.js';
+import { penguinRegionConfig } from './config/regions.js';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -399,9 +400,48 @@ async function generateWorld() {
     console.log(`📁 Output directory: ${outputDir}`);
   }
 
-  // Add validation results to export
+  // Extract UI schema from domain for webui consumption
+  const uiSchema = {
+    worldName: penguinDomain.name,
+    worldIcon: penguinDomain.uiConfig?.worldIcon ?? '🌍',
+    entityKinds: penguinDomain.entityKinds.map(ek => ({
+      kind: ek.kind,
+      displayName: ek.style?.displayName ?? ek.kind.charAt(0).toUpperCase() + ek.kind.slice(1),
+      color: ek.style?.color ?? '#999',
+      shape: ek.style?.shape ?? 'ellipse',
+      subtypes: ek.subtypes,
+      statusValues: ek.statusValues
+    })),
+    relationshipKinds: penguinDomain.relationshipKinds.map(rk => ({
+      kind: rk.kind,
+      description: rk.description,
+      srcKinds: rk.srcKinds,
+      dstKinds: rk.dstKinds,
+      category: rk.category ?? 'social'
+    })),
+    prominenceLevels: penguinDomain.uiConfig?.prominenceLevels ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
+    cultures: penguinDomain.cultures.map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description
+    })),
+    // Region configuration for coordinate map visualization
+    regions: penguinRegionConfig.regions.map(r => ({
+      id: r.id,
+      label: r.label,
+      description: r.description,
+      bounds: r.bounds,
+      zRange: r.zRange,
+      parentRegion: r.parentRegion,
+      metadata: r.metadata
+    })),
+    coordinateBounds: { min: 0, max: 100 }
+  };
+
+  // Add validation results and UI schema to export
   const exportData = {
     ...worldState,
+    uiSchema,
     validation: {
       totalChecks: validationReport.totalChecks,
       passed: validationReport.passed,
