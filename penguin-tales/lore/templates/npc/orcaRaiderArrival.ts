@@ -116,7 +116,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
 
     // Try region-based placement in underwater area near colony
     if (graphView.hasRegionSystem()) {
-      const colonyRegion = colony.coordinates?.region as { x: number; y: number; z: number } | undefined;
+      const colonyRegion = colony.coordinates as { x: number; y: number; z: number } | undefined;
 
       if (colonyRegion) {
         const createdOrcaIds: string[] = [];

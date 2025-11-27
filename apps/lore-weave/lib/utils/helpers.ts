@@ -322,11 +322,14 @@ export function normalizeInitialState(entities: any[]): HardState[] {
 // Graph modification helpers
 export function addEntity(graph: Graph, entity: Partial<HardState>): string {
   // Coordinates are required - fail loudly
-  if (!entity.coordinates) {
+  // Check for valid numeric values, not just object existence
+  const coords = entity.coordinates;
+  if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') {
     throw new Error(
-      `addEntity: coordinates are required for all entities. ` +
+      `addEntity: valid coordinates {x: number, y: number, z?: number} are required. ` +
       `Entity kind: ${entity.kind || 'unknown'}, name: ${entity.name || 'unnamed'}. ` +
-      `Use addEntityInRegion() or provide coordinates explicitly.`
+      `Received: ${JSON.stringify(coords)}. ` +
+      `Use addEntityInRegion() or provide valid coordinates explicitly.`
     );
   }
 
@@ -340,10 +343,13 @@ export function addEntity(graph: Graph, entity: Partial<HardState>): string {
 
   // Delegate to Graph.createEntity() which enforces the contract:
   // coordinates (required) → tags → name (auto-generated if not provided)
+  // Use validated coords to satisfy TypeScript (already validated above)
+  const validCoords = { x: coords.x, y: coords.y, z: coords.z ?? 50 };
+
   return graph.createEntity({
     kind: entity.kind || 'npc',
     subtype: entity.subtype || 'default',
-    coordinates: entity.coordinates,
+    coordinates: validCoords,
     tags,
     name: entity.name,  // May be undefined - createEntity will auto-generate
     description: entity.description,
@@ -490,10 +496,8 @@ export function updateEntity(
   entityId: string,
   changes: Partial<HardState>
 ): void {
-  const entity = graph.getEntity(entityId);
-  if (entity) {
-    Object.assign(entity, changes, { updatedAt: graph.tick });
-  }
+  // Use Graph's updateEntity method to modify the actual entity, not a clone
+  graph.updateEntity(entityId, changes);
 }
 
 /**

@@ -156,7 +156,7 @@ export const techInnovation: GrowthTemplate = {
         prominence: 'marginal',
         culture: faction.culture,  // Inherit culture from developing faction
         tags: { technology: true, innovation: true },
-        coordinates: { physical: conceptualCoords }
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `${faction.name} develops new technology`

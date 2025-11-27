@@ -193,7 +193,7 @@ export const geographicExploration: GrowthTemplate = {
       prominence: 'marginal',
       culture: discoverer.culture,  // Inherit culture from discoverer
       tags: themeTags,
-      coordinates: { physical: coords },
+      coordinates: coords,
       links: []
     };
 

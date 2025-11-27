@@ -40,7 +40,7 @@ import {
 } from './index.js';
 
 import { penguinLoreProvider } from './config/loreProvider.js';
-import { penguinRegionConfig } from './config/regions.js';
+import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -425,7 +425,7 @@ async function generateWorld() {
       name: c.name,
       description: c.description
     })),
-    // Region configuration for coordinate map visualization
+    // Legacy global regions (for backward compatibility)
     regions: penguinRegionConfig.regions.map(r => ({
       id: r.id,
       label: r.label,
@@ -435,7 +435,36 @@ async function generateWorld() {
       parentRegion: r.parentRegion,
       metadata: r.metadata
     })),
-    coordinateBounds: { min: 0, max: 100 }
+    coordinateBounds: { min: 0, max: 100 },
+    // Per-entity-kind map configurations
+    perKindMaps: Object.fromEntries(
+      Object.entries(penguinKindMaps).map(([kind, config]) => [
+        kind,
+        {
+          entityKind: config.entityKind,
+          name: config.name,
+          description: config.description,
+          bounds: { min: 0, max: 100 },  // Flatten to simple bounds for UI
+          hasZAxis: config.hasZAxis,
+          zAxisLabel: config.zAxisLabel
+        }
+      ])
+    ),
+    // Per-entity-kind region lists
+    perKindRegions: Object.fromEntries(
+      Object.entries(penguinKindMaps).map(([kind, config]) => [
+        kind,
+        (config.seedRegions ?? []).map(r => ({
+          id: r.id,
+          label: r.label,
+          description: r.description,
+          bounds: r.bounds,
+          zRange: r.zRange,
+          parentRegion: r.parentRegion,
+          metadata: r.metadata
+        }))
+      ])
+    )
   };
 
   // Add validation results and UI schema to export

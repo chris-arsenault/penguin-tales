@@ -1,18 +1,29 @@
 /**
  * Region Configuration for Penguin Domain
  *
- * Defines named regions on the 2D coordinate grid (0-100 x,y with z for depth).
- * Regions provide narrative meaning to mechanical coordinates.
+ * Each entity kind has its own independent 2D coordinate map with its own regions.
+ * This allows physical entities (locations, NPCs) to share geographic regions,
+ * while conceptual entities (rules, abilities) have abstract coordinate spaces.
  *
  * Key design principles:
- * - Colonies are circular regions with radius ~10-15 units
- * - Wilderness is everything not in a named region
- * - Anomalies and geographic features spawn in wilderness between colonies
- * - NPCs spawn within their home colony region
+ * - Each entity kind has its own coordinate map with its own regions
+ * - Regions are mostly emergent (created when entities are placed)
+ * - Some seed regions exist for initial entities (colonies)
  * - z coordinate represents depth: 0-30 = underwater, 30-70 = surface, 70-100 = elevated
  */
 
-import type { Region, RegionMapperConfig, EmergentRegionConfig } from '@lore-weave/core';
+import type {
+  Region,
+  RegionMapperConfig,
+  EmergentRegionConfig,
+  EntityKindMapConfig,
+  EntityKindMaps
+} from '@lore-weave/core';
+import {
+  createKindMapConfig,
+  createDefaultEmergentConfig,
+  KindRegionServiceConfig
+} from '@lore-weave/core';
 
 // =============================================================================
 // COLONY REGIONS
@@ -245,3 +256,129 @@ export function getWildernessPlacementOptions(): {
     preferredZRange: { min: 40, max: 60 }
   };
 }
+
+// =============================================================================
+// PER-KIND REGION CONFIGURATIONS
+// =============================================================================
+
+/**
+ * Location map - geographic regions on Aurora Berg.
+ * Seed regions include the initial colonies, geographic features, and anomalies.
+ */
+const locationMapConfig: EntityKindMapConfig = {
+  entityKind: 'location',
+  name: 'Aurora Berg Map',
+  description: 'Geographic regions on and around Aurora Berg iceberg',
+  bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 }, z: { min: 0, max: 100 } },
+  hasZAxis: true,
+  zAxisLabel: 'Depth/Elevation',
+  emergentConfig: {
+    ...emergentConfig,
+    minDistanceFromExisting: 15,
+    defaultRadius: 10
+  },
+  seedRegions: [
+    auroraBergRegion,
+    auroraStackRegion,
+    nightfallShelfRegion,
+    windwardRidgeRegion,
+    krillShoalsRegion,
+    glowFissureRegion
+  ]
+};
+
+/**
+ * NPC map - where NPCs are located.
+ * NPCs inherit location regions, so no seed regions needed.
+ * Emergent regions form when NPC groups cluster in new areas.
+ */
+const npcMapConfig: EntityKindMapConfig = {
+  entityKind: 'npc',
+  name: 'Character Locations',
+  description: 'Where characters live and congregate',
+  bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 }, z: { min: 0, max: 100 } },
+  hasZAxis: true,
+  zAxisLabel: 'Depth/Elevation',
+  emergentConfig: {
+    ...emergentConfig,
+    minDistanceFromExisting: 8,
+    defaultRadius: 8
+  },
+  // NPCs use the same geographic space as locations but track their own clusters
+  seedRegions: []
+};
+
+/**
+ * Faction map - spheres of influence.
+ * No seed regions - factions create emergent influence zones.
+ */
+const factionMapConfig: EntityKindMapConfig = {
+  entityKind: 'faction',
+  name: 'Influence Map',
+  description: 'Faction spheres of influence and territory',
+  bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } },
+  hasZAxis: false,
+  emergentConfig: {
+    minDistanceFromExisting: 10,
+    defaultRadius: 15,
+    maxAttempts: 30
+  },
+  seedRegions: []
+};
+
+/**
+ * Rules map - abstract domains of governance.
+ * Represents conceptual domains like "trade", "justice", "tradition".
+ */
+const rulesMapConfig: EntityKindMapConfig = {
+  entityKind: 'rules',
+  name: 'Governance Domains',
+  description: 'Abstract domains of laws and customs',
+  bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } },
+  hasZAxis: true,
+  zAxisLabel: 'Authority Level',
+  emergentConfig: {
+    minDistanceFromExisting: 5,
+    defaultRadius: 12,
+    maxAttempts: 20
+  },
+  seedRegions: []
+};
+
+/**
+ * Abilities map - conceptual space of powers.
+ * Represents domains like "ice magic", "navigation", "combat".
+ */
+const abilitiesMapConfig: EntityKindMapConfig = {
+  entityKind: 'abilities',
+  name: 'Power Domains',
+  description: 'Conceptual space of abilities and powers',
+  bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } },
+  hasZAxis: true,
+  zAxisLabel: 'Power Level',
+  emergentConfig: {
+    minDistanceFromExisting: 5,
+    defaultRadius: 10,
+    maxAttempts: 20
+  },
+  seedRegions: []
+};
+
+/**
+ * All entity kind map configurations.
+ */
+export const penguinKindMaps: EntityKindMaps = {
+  location: locationMapConfig,
+  npc: npcMapConfig,
+  faction: factionMapConfig,
+  rules: rulesMapConfig,
+  abilities: abilitiesMapConfig
+};
+
+/**
+ * Complete kind region service configuration for penguin domain.
+ */
+export const penguinKindRegionConfig: KindRegionServiceConfig = {
+  kindMaps: penguinKindMaps,
+  defaultEmergentConfig: emergentConfig
+};

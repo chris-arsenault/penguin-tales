@@ -157,6 +157,14 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
       : theme.tags;
 
+    // Derive coordinates for new location - place near discoverer's location
+    const locationCoords = graphView.deriveCoordinates(
+      [discoverer],
+      'location',
+      undefined,
+      { maxDistance: 20 }  // Larger distance - discoveries are further away
+    );
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -166,6 +174,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       prominence: 'recognized',  // Mystical places are notable
       culture: discoverer.culture,  // Inherit culture from discoverer
       tags: themeTags,
+      coordinates: locationCoords,
       links: []
     };
 

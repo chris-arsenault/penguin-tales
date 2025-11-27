@@ -154,7 +154,7 @@ export const anomalyManifestation: GrowthTemplate = {
       prominence: 'recognized',
       culture: nearestColony?.culture || 'world',
       tags: { anomaly: true, mystical: true, caverns: true },
-      coordinates: { physical: coords }
+      coordinates: coords
     };
 
     const relationships: any[] = [];

@@ -172,7 +172,7 @@ export const crisisLegislation: GrowthTemplate = {
         prominence: 'recognized',
         culture: colony.culture,  // Inherit culture from enacting colony
         tags: { crisis: true, emergency: true },
-        coordinates: { physical: conceptualCoords }
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`

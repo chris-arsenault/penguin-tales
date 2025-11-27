@@ -192,7 +192,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       prominence: 'recognized',
       culture: discoverer.culture,  // Inherit culture from discoverer
       tags: locationTags,
-      coordinates: { physical: conceptualCoords },
+      coordinates: conceptualCoords,
       links: []
     };
 

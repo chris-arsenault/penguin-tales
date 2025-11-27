@@ -172,7 +172,7 @@ function createCodeEntity(cluster: HardState[], graph: Graph, graphView: Templat
     prominence,
     culture: majorityCulture,
     tags,
-    coordinates: { physical: coords }
+    coordinates: coords
   };
 }
 
@@ -246,7 +246,7 @@ function createGovernanceFaction(
     prominence: legalCode.prominence,
     culture: primaryLocation.culture,
     tags: { governance: true, legislative: true, political: true },
-    coordinates: { physical: coords }
+    coordinates: coords
   };
 
   const factionId = addEntity(graph, factionPartial);

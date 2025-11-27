@@ -1,5 +1,13 @@
 import type { HardState, Prominence, WorldState, Filters, UISchema } from '../types/world.ts';
 
+// Helper to get tags as array (handles both KVP and array formats)
+export function getTagsArray(tags: Record<string, string | boolean> | string[]): string[] {
+  if (Array.isArray(tags)) {
+    return tags;
+  }
+  return Object.keys(tags);
+}
+
 // Default prominence levels (fallback when uiSchema not present)
 const DEFAULT_PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
@@ -94,17 +102,19 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
 
     // Filter by tags
     if (filters.tags.length > 0) {
-      const hasMatchingTag = filters.tags.some(tag => entity.tags.includes(tag));
+      const entityTags = getTagsArray(entity.tags);
+      const hasMatchingTag = filters.tags.some(tag => entityTags.includes(tag));
       if (!hasMatchingTag) return false;
     }
 
     // Filter by search query
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
+      const entityTags = getTagsArray(entity.tags);
       const matches =
         entity.name.toLowerCase().includes(query) ||
         entity.description.toLowerCase().includes(query) ||
-        entity.tags.some(tag => tag.toLowerCase().includes(query));
+        entityTags.some(tag => tag.toLowerCase().includes(query));
       if (!matches) return false;
     }
 
@@ -162,7 +172,7 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
 export function getAllTags(worldState: WorldState): string[] {
   const tagSet = new Set<string>();
   worldState.hardState.forEach(entity => {
-    entity.tags.forEach(tag => tagSet.add(tag));
+    getTagsArray(entity.tags).forEach(tag => tagSet.add(tag));
   });
   return Array.from(tagSet).sort();
 }

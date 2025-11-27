@@ -284,7 +284,7 @@ function checkForWar(
     links: [],
     createdAt: graph.tick,
     updatedAt: graph.tick,
-    coordinates: {},  // Occurrences exist in temporal space, not physical
+    coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
       startTick: graph.tick,
       endTick: null
@@ -375,7 +375,7 @@ function checkForMagicalDisaster(
     links: [],
     createdAt: graph.tick,
     updatedAt: graph.tick,
-    coordinates: {},  // Occurrences exist in temporal space, not physical
+    coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
       startTick: graph.tick,
       endTick: null
@@ -489,7 +489,7 @@ function checkForCulturalMovement(
     links: [],
     createdAt: graph.tick,
     updatedAt: graph.tick,
-    coordinates: {},  // Occurrences exist in temporal space, not physical
+    coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
       startTick: graph.tick,
       endTick: null
@@ -561,7 +561,7 @@ function checkForEconomicBoom(
     links: [],
     createdAt: graph.tick,
     updatedAt: graph.tick,
-    coordinates: {},  // Occurrences exist in temporal space, not physical
+    coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
       startTick: graph.tick,
       endTick: null

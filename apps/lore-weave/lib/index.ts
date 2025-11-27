@@ -69,57 +69,6 @@ export type {
 } from './types/distribution';
 
 // =============================================================================
-// COORDINATE SYSTEM TYPES - For coordinate-based entity placement and queries
-// =============================================================================
-
-export type {
-  Coordinate,
-  EntityCoordinates,
-  CoordinateSpaceId,
-  CoordinateSpaceDefinition,
-  AxisDefinition,
-  AxisValue,
-  PlaceNearOptions,
-  PlaceWithinOptions,
-  PlaceAvoidingOptions,
-  FindNearestOptions,
-  CoordinateBounds,
-  NearestResult,
-  PlacementResult,
-  // Placement scheme types
-  PlacementSchemeKind,
-  PlacementSchemeBase,
-  PoissonDiskPlacement,
-  HaltonSequencePlacement,
-  JitteredGridPlacement,
-  GaussianClusterPlacement,
-  AnchorColocatedPlacement,
-  CentroidColocatedPlacement,
-  AttractionRepulsionPlacement,
-  ExclusionAwarePlacement,
-  AnyPlacementScheme,
-  EntityPlacementOptions,
-  BatchPlacementOptions,
-  BatchPlacementResult,
-  DefaultPlacementSchemes,
-  // 6D cross-plane placement types
-  PlaneHierarchy,
-  ManifoldConfig,
-  NormalizedCoordinate,
-  AxisWeights,
-  CrossPlanePoissonPlacement,
-  SaturationCascadePlacement,
-  CascadeEvent,
-  CrossPlaneBatchPlacementResult
-} from './types/coordinates';
-
-export { DEFAULT_AXIS_WEIGHTS } from './types/coordinates';
-
-export { CoordinateService } from './services/coordinateService';
-export { CoordinatePlacementService } from './services/coordinatePlacementService';
-export { PlacementAlgorithms } from './services/placementAlgorithms';
-
-// =============================================================================
 // SERVICES - For domain templates and systems
 // =============================================================================
 
@@ -272,7 +221,13 @@ export type {
   EmergentRegionConfig,
   EmergentRegionResult,
   RegionCreatedEvent,
-  EntityPlacedInRegionEvent
+  EntityPlacedInRegionEvent,
+  // Per-kind coordinate maps
+  MapBounds,
+  EntityKindMapConfig,
+  EntityKindMapState,
+  EntityKindMaps,
+  EntityKindMapsState
 } from './types/regions';
 
 export { SPACE_BOUNDS } from './types/regions';
@@ -286,3 +241,11 @@ export type {
   BatchPlacementOptions as RegionBatchPlacementOptions,
   BatchPlacementResult as RegionBatchPlacementResult
 } from './services/regionPlacement';
+
+// Per-kind region management
+export {
+  KindRegionService,
+  createDefaultEmergentConfig,
+  createKindMapConfig
+} from './services/kindRegionService';
+export type { KindRegionServiceConfig } from './services/kindRegionService';

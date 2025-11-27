@@ -265,6 +265,14 @@ export const krillBloomMigration: GrowthTemplate = {
         // (In a real Voronoi implementation, we'd place at cell boundaries)
         const selectedColonies = pickMultiple(colonies, Math.min(2, colonies.length));
 
+        // Derive coordinates for new bloom - place between selected colonies
+        const bloomCoords = graphView.deriveCoordinates(
+          selectedColonies,
+          'location',
+          undefined,
+          { maxDistance: 15 }  // Add some randomness to spread blooms out
+        );
+
         entities.push({
           kind: 'location',
           subtype: 'geographic_feature',
@@ -272,7 +280,8 @@ export const krillBloomMigration: GrowthTemplate = {
           status: 'thriving',
           prominence: 'recognized',
           culture: selectedColonies[0]?.culture || 'aurora-stack',  // Inherit culture from nearest colony
-          tags: { krill: true, bloom: true, resource: true }
+          tags: { krill: true, bloom: true, resource: true },
+          coordinates: bloomCoords
         });
 
         selectedColonies.forEach(colony => {
@@ -297,6 +306,14 @@ export const krillBloomMigration: GrowthTemplate = {
 
       if (!faction || !homeColony) continue;
 
+      // Derive coordinates for NPC near their home colony
+      const npcCoords = graphView.deriveCoordinates(
+        [homeColony],
+        'npc',
+        undefined,
+        { maxDistance: 5 }
+      );
+
       entities.push({
         kind: 'npc',
         subtype: 'merchant',
@@ -304,7 +321,8 @@ export const krillBloomMigration: GrowthTemplate = {
         status: 'alive',
         prominence: 'marginal', // Discoverers start marginal
         culture: homeColony.culture,  // Inherit culture from home colony
-        tags: { explorer: true, merchant: true, krill: true }
+        tags: { explorer: true, merchant: true, krill: true },
+        coordinates: npcCoords
       });
 
       const npcIndex = entities.length - 1;

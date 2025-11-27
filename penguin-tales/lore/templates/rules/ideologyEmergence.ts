@@ -298,7 +298,7 @@ export const ideologyEmergence: GrowthTemplate = {
         prominence: 'marginal', // Will grow with adoption
         culture: champion.culture,  // Inherit culture from champion
         tags: { [ideologyTheme]: true, ideology: true, cultural: true },
-        coordinates: { physical: conceptualCoords }
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`

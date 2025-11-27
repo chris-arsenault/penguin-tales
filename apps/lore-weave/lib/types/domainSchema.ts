@@ -6,7 +6,6 @@
  */
 
 import { HardState, Relationship } from './worldTypes';
-import type { CoordinateSpaceDefinition, CoordinateSpaceId, DefaultPlacementSchemes, ManifoldConfig, AxisWeights } from './coordinates';
 
 /**
  * Relationship mutability classification
@@ -463,51 +462,6 @@ export interface DomainSchema {
   /** Optional: Configuration for emergent location discovery system */
   emergentDiscoveryConfig?: EmergentDiscoveryConfig;
 
-  // ===========================
-  // COORDINATE SYSTEM CONFIG
-  // ===========================
-
-  /** Coordinate space definitions for entity kinds */
-  coordinateSpaces?: CoordinateSpaceDefinition[];
-
-  /** Get coordinate space definition for an entity kind and space */
-  getCoordinateSpace?(entityKind: string, spaceId: CoordinateSpaceId): CoordinateSpaceDefinition | undefined;
-
-  /** Get all supported coordinate spaces for an entity kind */
-  getSupportedSpaces?(entityKind: string): CoordinateSpaceId[];
-
-  // ===========================
-  // PLACEMENT SCHEME CONFIG
-  // ===========================
-
-  /**
-   * Default placement schemes per entity kind.
-   * Used when addEntityWithPlacement is called without explicit scheme.
-   */
-  defaultPlacementSchemes?: DefaultPlacementSchemes;
-
-  // ===========================
-  // CROSS-PLANE PLACEMENT CONFIG
-  // ===========================
-
-  /**
-   * Manifold configuration for cross-plane placement.
-   * Defines plane hierarchy and saturation thresholds.
-   */
-  manifoldConfig?: ManifoldConfig;
-
-  /**
-   * Default axis weights for 6D distance calculations.
-   * Per-axis weights control how much each dimension contributes to distance.
-   */
-  defaultAxisWeights?: Partial<AxisWeights>;
-
-  /**
-   * Cross-plane distance function for physical space.
-   * Defines how to measure distance between different planes.
-   * Returns a multiplier (1.0 = adjacent planes, Infinity = unreachable).
-   */
-  crossPlaneDistance?: (plane1: string, plane2: string) => number;
 }
 
 /**
@@ -523,11 +477,6 @@ export class BaseDomainSchema implements DomainSchema {
   uiConfig?: DomainUIConfig;
   nameGenerator?: NameGenerator;
   relationshipConfig?: RelationshipConfig;
-  coordinateSpaces?: CoordinateSpaceDefinition[];
-  defaultPlacementSchemes?: DefaultPlacementSchemes;
-  manifoldConfig?: ManifoldConfig;
-  defaultAxisWeights?: Partial<AxisWeights>;
-  crossPlaneDistance?: (plane1: string, plane2: string) => number;
 
   constructor(config: {
     id: string;
@@ -539,11 +488,6 @@ export class BaseDomainSchema implements DomainSchema {
     uiConfig?: DomainUIConfig;
     nameGenerator?: NameGenerator;
     relationshipConfig?: RelationshipConfig;
-    coordinateSpaces?: CoordinateSpaceDefinition[];
-    defaultPlacementSchemes?: DefaultPlacementSchemes;
-    manifoldConfig?: ManifoldConfig;
-    defaultAxisWeights?: Partial<AxisWeights>;
-    crossPlaneDistance?: (plane1: string, plane2: string) => number;
   }) {
     this.id = config.id;
     this.name = config.name;
@@ -554,11 +498,6 @@ export class BaseDomainSchema implements DomainSchema {
     this.uiConfig = config.uiConfig;
     this.nameGenerator = config.nameGenerator;
     this.relationshipConfig = config.relationshipConfig;
-    this.coordinateSpaces = config.coordinateSpaces;
-    this.defaultPlacementSchemes = config.defaultPlacementSchemes;
-    this.manifoldConfig = config.manifoldConfig;
-    this.defaultAxisWeights = config.defaultAxisWeights;
-    this.crossPlaneDistance = config.crossPlaneDistance;
   }
 
   getRelationshipKind(kind: string): RelationshipKindDefinition | undefined {
@@ -716,27 +655,5 @@ export class BaseDomainSchema implements DomainSchema {
     return this.relationshipKinds
       .filter(rk => rk.isLineage === true)
       .map(rk => rk.kind);
-  }
-
-  // ===========================
-  // COORDINATE SYSTEM METHODS
-  // ===========================
-
-  /**
-   * Get coordinate space definition for an entity kind and space
-   */
-  getCoordinateSpace(entityKind: string, spaceId: CoordinateSpaceId): CoordinateSpaceDefinition | undefined {
-    return this.coordinateSpaces?.find(
-      cs => cs.id === spaceId && cs.entityKinds.includes(entityKind)
-    );
-  }
-
-  /**
-   * Get all supported coordinate spaces for an entity kind
-   */
-  getSupportedSpaces(entityKind: string): CoordinateSpaceId[] {
-    return this.coordinateSpaces
-      ?.filter(cs => cs.entityKinds.includes(entityKind))
-      .map(cs => cs.id) ?? [];
   }
 }

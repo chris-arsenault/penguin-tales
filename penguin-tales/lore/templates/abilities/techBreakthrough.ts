@@ -211,7 +211,7 @@ export const techBreakthrough: GrowthTemplate = {
       prominence: 'recognized',
       culture: target.culture,  // Inherit culture from developing faction
       tags: { technology: true, innovation: true, [target.subtype]: true },
-      coordinates: { physical: conceptualCoords },
+      coordinates: conceptualCoords,
       links: []
     };
 

@@ -60,23 +60,21 @@ export interface RegionSchema {
   metadata?: Record<string, unknown>;
 }
 
-// Entity coordinate types
+// Entity coordinate types - simple Point per entity kind
 export interface Point {
   x: number;
   y: number;
   z: number;
 }
 
-export interface EntityCoordinates {
-  region?: Point;
-  physical?: {
-    plane: string | number;
-    sector_x: string | number;
-    sector_y: string | number;
-    cell_x: string | number;
-    cell_y: string | number;
-    z_band: string | number;
-  };
+// Each entity kind has its own coordinate space with its own regions
+export interface EntityKindMapConfig {
+  entityKind: string;
+  name: string;
+  description: string;
+  bounds: { min: number; max: number };
+  hasZAxis: boolean;
+  zAxisLabel?: string;
 }
 
 export interface UISchema {
@@ -86,8 +84,10 @@ export interface UISchema {
   relationshipKinds: RelationshipKindSchema[];
   prominenceLevels: string[];
   cultures: CultureSchema[];
-  regions?: RegionSchema[];
-  coordinateBounds?: { min: number; max: number };
+  regions?: RegionSchema[];  // Global regions (deprecated - use perKindMaps)
+  coordinateBounds?: { min: number; max: number };  // Global bounds (deprecated - use perKindMaps)
+  perKindMaps?: Record<string, EntityKindMapConfig>;  // Per-entity-kind map configurations
+  perKindRegions?: Record<string, RegionSchema[]>;  // Per-entity-kind region lists
 }
 
 export interface Relationship {
@@ -111,7 +111,7 @@ export interface HardState {
   culture?: string;
   tags: Record<string, string | boolean> | string[];
   links: Relationship[];
-  coordinates?: EntityCoordinates;
+  coordinates?: Point;  // Simple {x, y, z} - each entity kind has its own coordinate space
   createdAt: number;
   updatedAt: number;
 }

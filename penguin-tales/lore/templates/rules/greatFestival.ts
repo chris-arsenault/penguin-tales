@@ -215,7 +215,7 @@ export const greatFestival: GrowthTemplate = {
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
         culture: colony.culture,  // Inherit culture from hosting colony
         tags: { festival: true, [festivalType]: true, cultural: true },
-        coordinates: { physical: conceptualCoords }
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`

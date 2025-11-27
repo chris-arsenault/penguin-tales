@@ -1,4 +1,4 @@
-import type { EntityCoordinates } from './coordinates';
+import type { Point } from './regions';
 
 // Core types from your specification
 export type Prominence =
@@ -47,8 +47,8 @@ export interface HardState {
         endTick: number | null;
     };
 
-    // Coordinates across multiple spaces (physical, political, social, etc.)
-    coordinates: EntityCoordinates;
+    // Coordinates in this entity's kind-specific map (simple 2D + optional z)
+    coordinates: Point;
 }
 
 // Catalyst system types

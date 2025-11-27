@@ -171,7 +171,7 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal',
       culture: location.culture,  // Inherit culture from location
       tags: { mystical: true, secretive: true, cult: true },
-      coordinates: { physical: conceptualCoords }
+      coordinates: conceptualCoords
     };
 
     // Derive coordinates for prophet (NPC near cult location)
@@ -197,7 +197,7 @@ export const cultFormation: GrowthTemplate = {
       prominence: 'marginal', // Prophets start marginal
       culture: location.culture,  // Inherit culture from location
       tags: { prophet: true, mystical: true },
-      coordinates: { physical: prophetCoords }
+      coordinates: prophetCoords
     };
 
     // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
@@ -241,7 +241,7 @@ export const cultFormation: GrowthTemplate = {
             prominence: 'marginal',
             culture: location.culture,  // Inherit culture from cult location
             tags: { cultist: true },
-            coordinates: { physical: newCultistCoords }
+            coordinates: newCultistCoords
           }),
           maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
         },

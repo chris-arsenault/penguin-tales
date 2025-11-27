@@ -1,30 +1,9 @@
 import { Graph } from '../types/engine';
 import { HardState, Relationship, EntityTags } from '../types/worldTypes';
 import { TargetSelector } from './targetSelector';
-import { CoordinateService } from './coordinateService';
-import { CoordinatePlacementService } from './coordinatePlacementService';
-import { PlacementAlgorithms } from './placementAlgorithms';
 import { RegionMapper } from './regionMapper';
 import { RegionPlacementService } from './regionPlacement';
 import { addEntity, mergeTags, hasTag } from '../utils/helpers';
-import type {
-  Coordinate,
-  CoordinateSpaceId,
-  EntityCoordinates,
-  PlaceNearOptions,
-  FindNearestOptions,
-  NearestResult,
-  PlacementResult,
-  EntityPlacementOptions,
-  BatchPlacementOptions,
-  BatchPlacementResult,
-  AnyPlacementScheme,
-  CrossPlanePoissonPlacement,
-  SaturationCascadePlacement,
-  CascadeEvent,
-  CrossPlaneBatchPlacementResult,
-  ManifoldConfig
-} from '../types/coordinates';
 import type {
   Point,
   Region,
@@ -53,26 +32,14 @@ import type {
 export class TemplateGraphView {
   private graph: Graph;
   public readonly targetSelector: TargetSelector;
-  public readonly coordinateService: CoordinateService;
-  public readonly placementService: CoordinatePlacementService;
-  private readonly placementAlgorithms: PlacementAlgorithms;
 
-  // Region-based coordinate system (optional - initialized if domain provides regionConfig)
+  // Region-based coordinate system (initialized if domain provides regionConfig)
   private regionMapper: RegionMapper | null = null;
   private regionPlacement: RegionPlacementService | null = null;
 
   constructor(graph: Graph, targetSelector: TargetSelector) {
     this.graph = graph;
     this.targetSelector = targetSelector;
-    // Initialize coordinate services using domain from config
-    this.coordinateService = new CoordinateService(graph.config.domain);
-    this.placementService = new CoordinatePlacementService(graph.config.domain);
-    this.placementAlgorithms = new PlacementAlgorithms(
-      graph,
-      graph.config.domain,
-      this.coordinateService,
-      this.placementService
-    );
 
     // Initialize region system if domain provides configuration
     const regionConfig = (graph.config.domain as { regionConfig?: RegionMapperConfig }).regionConfig;
@@ -345,47 +312,51 @@ export class TemplateGraphView {
   }
 
   // ============================================================================
-  // COORDINATE OPERATIONS
+  // COORDINATE OPERATIONS (Simple Point-based)
   // ============================================================================
 
   /**
-   * Calculate distance between two entities in a coordinate space.
-   * Returns undefined if either entity lacks coordinates in that space.
+   * Calculate Euclidean distance between two entities.
+   * Returns undefined if either entity lacks coordinates.
    */
-  getDistance(entity1: HardState, entity2: HardState, spaceId: CoordinateSpaceId): number | undefined {
-    return this.coordinateService.calculateDistance(entity1, entity2, spaceId);
-  }
-
-  /**
-   * Place a new entity near a reference entity's coordinates.
-   * Useful for spawning entities near existing ones.
-   */
-  placeNearEntity(
-    referenceEntity: HardState,
-    newEntityKind: string,
-    spaceId: CoordinateSpaceId,
-    options?: PlaceNearOptions
-  ): PlacementResult | null {
-    const refCoord = referenceEntity.coordinates?.[spaceId];
-    if (!refCoord) return null;
-
-    return this.placementService.placeNear(refCoord, newEntityKind, spaceId, options);
+  getDistance(entity1: HardState, entity2: HardState): number | undefined {
+    const c1 = entity1.coordinates;
+    const c2 = entity2.coordinates;
+    if (!c1 || !c2 || typeof c1.x !== 'number' || typeof c2.x !== 'number') {
+      return undefined;
+    }
+    const dx = c1.x - c2.x;
+    const dy = c1.y - c2.y;
+    const dz = (c1.z ?? 50) - (c2.z ?? 50);
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
   }
 
   /**
    * Find entities nearest to a reference entity.
-   * Filters by kind, status, and other criteria.
+   * Filters by kind.
    */
   findNearestEntities(
     referenceEntity: HardState,
     targetKind: string,
-    spaceId: CoordinateSpaceId,
-    options?: FindNearestOptions
-  ): NearestResult[] {
-    const refCoord = referenceEntity.coordinates?.[spaceId];
-    if (!refCoord) return [];
+    limit?: number
+  ): Array<{ entity: HardState; distance: number }> {
+    const refCoord = referenceEntity.coordinates;
+    if (!refCoord || typeof refCoord.x !== 'number') return [];
 
-    return this.placementService.findNearest(this.graph, refCoord, targetKind, spaceId, options);
+    const results: Array<{ entity: HardState; distance: number }> = [];
+
+    for (const entity of this.graph.getEntities()) {
+      if (entity.kind !== targetKind) continue;
+      if (entity.id === referenceEntity.id) continue;
+
+      const dist = this.getDistance(referenceEntity, entity);
+      if (dist !== undefined) {
+        results.push({ entity, distance: dist });
+      }
+    }
+
+    results.sort((a, b) => a.distance - b.distance);
+    return limit ? results.slice(0, limit) : results;
   }
 
   /**
@@ -394,468 +365,99 @@ export class TemplateGraphView {
   findEntitiesInRadius(
     referenceEntity: HardState,
     radius: number,
-    targetKind: string,
-    spaceId: CoordinateSpaceId,
-    filter?: FindNearestOptions['filter']
-  ): NearestResult[] {
-    const refCoord = referenceEntity.coordinates?.[spaceId];
-    if (!refCoord) return [];
+    targetKind?: string
+  ): Array<{ entity: HardState; distance: number }> {
+    const refCoord = referenceEntity.coordinates;
+    if (!refCoord || typeof refCoord.x !== 'number') return [];
 
-    return this.placementService.findWithinRadius(this.graph, refCoord, radius, targetKind, spaceId, filter);
+    const results: Array<{ entity: HardState; distance: number }> = [];
+
+    for (const entity of this.graph.getEntities()) {
+      if (targetKind && entity.kind !== targetKind) continue;
+      if (entity.id === referenceEntity.id) continue;
+
+      const dist = this.getDistance(referenceEntity, entity);
+      if (dist !== undefined && dist <= radius) {
+        results.push({ entity, distance: dist });
+      }
+    }
+
+    results.sort((a, b) => a.distance - b.distance);
+    return results;
   }
 
   /**
    * Get coordinates for a new entity based on related entities.
    * Computes centroid if multiple references, or places near if one.
+   *
+   * Each entity kind has its own 2D coordinate map. Coordinates are simple
+   * Point {x, y, z} values within that kind's map.
+   *
+   * @param referenceEntities - Entities to derive position from
+   * @param _newEntityKind - (deprecated, unused) Entity kind for the new entity
+   * @param _spaceId - (deprecated, unused) Coordinate space ID
+   * @param options - Placement options (maxDistance, minDistance)
+   * @returns Point coordinates or undefined if placement fails
    */
   deriveCoordinates(
     referenceEntities: HardState[],
-    newEntityKind: string,
-    spaceId: CoordinateSpaceId,
-    options?: PlaceNearOptions
-  ): Coordinate | undefined {
+    _newEntityKind?: string,
+    _spaceId?: string,
+    options?: { maxDistance?: number; minDistance?: number }
+  ): Point | undefined {
+    // No references - return center of map
     if (referenceEntities.length === 0) {
-      return this.coordinateService.getDefaultCoordinates(newEntityKind, spaceId);
+      return { x: 50, y: 50, z: 50 };
     }
 
-    // Collect coordinates from reference entities
-    const coords: Coordinate[] = [];
+    // Collect coordinates from reference entities - only valid numeric coordinates
+    const points: Point[] = [];
     for (const ref of referenceEntities) {
-      const coord = ref.coordinates?.[spaceId];
-      if (coord) coords.push(coord);
-    }
-
-    if (coords.length === 0) {
-      return this.coordinateService.getDefaultCoordinates(newEntityKind, spaceId);
-    }
-
-    if (coords.length === 1) {
-      // Place near the single reference
-      const result = this.placementService.placeNear(coords[0], newEntityKind, spaceId, options);
-      return result?.coordinates;
-    }
-
-    // Multiple references - compute centroid
-    const centroid = this.placementService.computeCentroid(coords, newEntityKind, spaceId);
-    if (centroid) {
-      return centroid;
-    }
-
-    // Centroid failed (likely cross-plane entities) - fall back to placeNear first reference
-    const fallbackResult = this.placementService.placeNear(coords[0], newEntityKind, spaceId, options);
-    return fallbackResult?.coordinates;
-  }
-
-  // ============================================================================
-  // PLACEMENT-BASED ENTITY CREATION
-  // ============================================================================
-
-  /**
-   * Add an entity to the graph using a placement scheme to generate coordinates.
-   *
-   * This is the recommended way to create entities when you need automatic
-   * coordinate placement using mathematically sound algorithms.
-   *
-   * @param entity - Entity data (coordinates will be generated, don't provide them)
-   * @param placement - Placement options with scheme configuration
-   * @returns Entity ID if successful, null if placement failed
-   *
-   * @example
-   * ```typescript
-   * // Place a new colony using Poisson disk sampling
-   * const colonyId = graphView.addEntityWithPlacement(
-   *   { kind: 'location', subtype: 'colony', name: 'New Colony' },
-   *   {
-   *     scheme: {
-   *       kind: 'poisson_disk',
-   *       spaceId: 'physical',
-   *       allowCoLocation: false,
-   *       minDistance: 0.2
-   *     }
-   *   }
-   * );
-   *
-   * // Place an ability co-located with its origin location
-   * const abilityId = graphView.addEntityWithPlacement(
-   *   { kind: 'abilities', subtype: 'magic', name: 'Frost Runes' },
-   *   {
-   *     scheme: {
-   *       kind: 'anchor_colocated',
-   *       spaceId: 'physical',
-   *       allowCoLocation: true,
-   *       anchorEntityId: 'loc_glow_fissure'
-   *     }
-   *   }
-   * );
-   * ```
-   */
-  addEntityWithPlacement(
-    entity: Omit<Partial<HardState>, 'coordinates'>,
-    placement: EntityPlacementOptions
-  ): string | null {
-    const entityKind = entity.kind ?? 'npc';
-
-    // Try primary scheme
-    let result = this.placementAlgorithms.execute(placement.scheme, entityKind, []);
-
-    // Try fallback if primary failed
-    if (!result && placement.fallbackScheme) {
-      result = this.placementAlgorithms.execute(placement.fallbackScheme, entityKind, []);
-    }
-
-    if (!result) {
-      return null; // Placement failed
-    }
-
-    // Validate placement if custom validator provided
-    if (placement.validatePlacement && !placement.validatePlacement(result.coordinates)) {
-      return null; // Validation failed
-    }
-
-    // Create entity with generated coordinates
-    const entityWithCoords: Partial<HardState> = {
-      ...entity,
-      coordinates: { [placement.scheme.spaceId]: result.coordinates }
-    };
-
-    return addEntity(this.graph, entityWithCoords);
-  }
-
-  /**
-   * Add multiple entities using a placement scheme.
-   *
-   * Entities are placed sequentially with each placement respecting
-   * previously placed entities (incremental exclusion). This ensures
-   * batch placements don't overlap when using non-co-located schemes.
-   *
-   * @param entities - Array of entity data (coordinates will be generated)
-   * @param placement - Placement options (same scheme used for all entities)
-   * @returns BatchPlacementResult with placed IDs and any failures
-   *
-   * @example
-   * ```typescript
-   * // Place 5 NPCs around a colony using Gaussian clustering
-   * const npcs = Array(5).fill(null).map((_, i) => ({
-   *   kind: 'npc' as const,
-   *   subtype: 'merchant',
-   *   name: `Merchant ${i + 1}`
-   * }));
-   *
-   * const result = graphView.addEntitiesWithPlacement(npcs, {
-   *   scheme: {
-   *     kind: 'gaussian_cluster',
-   *     spaceId: 'physical',
-   *     allowCoLocation: false,
-   *     center: 'aurora_stack_id',
-   *     sigma: 0.1
-   *   }
-   * });
-   *
-   * console.log(`Placed ${result.placedEntityIds.length} NPCs`);
-   * ```
-   */
-  addEntitiesWithPlacement(
-    entities: Array<Omit<Partial<HardState>, 'coordinates'>>,
-    placement: BatchPlacementOptions
-  ): BatchPlacementResult {
-    const placedEntityIds: string[] = [];
-    const failures: Array<{ entityIndex: number; reason: string }> = [];
-    const batchCoordinates: Coordinate[] = [];
-    let totalAttempts = 0;
-
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      const entityKind = entity.kind ?? 'npc';
-
-      // Try primary scheme with incremental exclusion
-      let result = this.placementAlgorithms.execute(
-        placement.scheme,
-        entityKind,
-        batchCoordinates // Pass already-placed coordinates for exclusion
-      );
-      totalAttempts += result?.diagnostics?.attemptsUsed ?? 1;
-
-      // Try fallback if primary failed
-      if (!result && placement.fallbackScheme) {
-        result = this.placementAlgorithms.execute(
-          placement.fallbackScheme,
-          entityKind,
-          batchCoordinates
-        );
-        totalAttempts += result?.diagnostics?.attemptsUsed ?? 1;
-      }
-
-      if (!result) {
-        failures.push({ entityIndex: i, reason: 'Placement algorithm failed to find valid position' });
-        continue;
-      }
-
-      // Validate placement if custom validator provided
-      if (placement.validatePlacement && !placement.validatePlacement(result.coordinates)) {
-        failures.push({ entityIndex: i, reason: 'Custom validation rejected placement' });
-        continue;
-      }
-
-      // Create entity with generated coordinates
-      const entityWithCoords: Partial<HardState> = {
-        ...entity,
-        coordinates: { [placement.scheme.spaceId]: result.coordinates }
-      };
-
-      const id = addEntity(this.graph, entityWithCoords);
-      placedEntityIds.push(id);
-
-      // Track placed coordinates for incremental exclusion
-      batchCoordinates.push(result.coordinates);
-    }
-
-    return {
-      placedEntityIds,
-      failures,
-      diagnostics: {
-        totalAttempts,
-        successCount: placedEntityIds.length,
-        failureCount: failures.length
-      }
-    };
-  }
-
-  /**
-   * Get the default placement scheme for an entity kind from the domain schema.
-   * Returns undefined if no default is configured.
-   */
-  getDefaultPlacementScheme(entityKind: string): AnyPlacementScheme | undefined {
-    return this.graph.config.domain.defaultPlacementSchemes?.[entityKind];
-  }
-
-  // ============================================================================
-  // CROSS-PLANE PLACEMENT (6D)
-  // ============================================================================
-
-  /**
-   * Add an entity with automatic cross-plane cascade when planes become saturated.
-   *
-   * Uses 6D placement algorithms that can place entities on different planes
-   * when the preferred plane is saturated. The domain's manifold configuration
-   * defines the plane hierarchy and saturation thresholds.
-   *
-   * @param entity - Entity data (coordinates will be generated)
-   * @param placement - Placement options with cross-plane scheme
-   * @returns Object with entity ID and coordinate, plus cascade info if applicable
-   *
-   * @example
-   * ```typescript
-   * // Place colony with cross-plane support
-   * const result = graphView.addEntityWithCrossPlane(
-   *   { kind: 'location', subtype: 'colony', name: 'New Colony' },
-   *   {
-   *     scheme: {
-   *       kind: 'cross_plane_poisson',
-   *       spaceId: 'physical',
-   *       allowCoLocation: false,
-   *       allowCrossPlane: true,
-   *       minDistance: 0.15,
-   *       preferredPlane: 'surface'
-   *     }
-   *   }
-   * );
-   *
-   * if (result?.cascadedToPlane) {
-   *   console.log(`Colony placed on ${result.cascadedToPlane} due to saturation`);
-   * }
-   * ```
-   */
-  addEntityWithCrossPlane(
-    entity: Omit<Partial<HardState>, 'coordinates'>,
-    placement: EntityPlacementOptions & { scheme: CrossPlanePoissonPlacement | SaturationCascadePlacement }
-  ): { id: string; coordinate: Coordinate; cascadedToPlane?: string } | null {
-    const entityKind = entity.kind ?? 'npc';
-
-    // Execute cross-plane placement
-    const result = this.placementAlgorithms.execute(placement.scheme, entityKind, []);
-
-    if (!result) {
-      return null;
-    }
-
-    // Validate placement if custom validator provided
-    if (placement.validatePlacement && !placement.validatePlacement(result.coordinates)) {
-      return null;
-    }
-
-    // Create entity with generated coordinates
-    const entityWithCoords: Partial<HardState> = {
-      ...entity,
-      coordinates: { [placement.scheme.spaceId]: result.coordinates }
-    };
-
-    const id = addEntity(this.graph, entityWithCoords);
-
-    // Extract cascade info from diagnostics
-    const cascadedToPlane = (result.diagnostics as { cascadedFrom?: string })?.cascadedFrom
-      ? result.coordinates.plane as string
-      : undefined;
-
-    return {
-      id,
-      coordinate: result.coordinates,
-      cascadedToPlane
-    };
-  }
-
-  /**
-   * Add multiple entities with automatic cross-plane cascade.
-   *
-   * Entities are placed sequentially with incremental exclusion.
-   * When a plane becomes saturated, subsequent entities cascade to child planes.
-   *
-   * @param entities - Array of entity data
-   * @param placement - Placement options with cross-plane scheme
-   * @returns Extended BatchPlacementResult with cascade events
-   *
-   * @example
-   * ```typescript
-   * // Place 20 colonies with automatic cross-plane distribution
-   * const colonies = Array(20).fill(null).map((_, i) => ({
-   *   kind: 'location' as const,
-   *   subtype: 'colony',
-   *   name: `Colony ${i + 1}`
-   * }));
-   *
-   * const result = graphView.addEntitiesWithCrossPlane(colonies, {
-   *   scheme: {
-   *     kind: 'saturation_cascade',
-   *     spaceId: 'physical',
-   *     allowCoLocation: false,
-   *     allowCrossPlane: true,
-   *     basePlacementScheme: {
-   *       kind: 'poisson_disk',
-   *       spaceId: 'physical',
-   *       allowCoLocation: false,
-   *       minDistance: 0.1
-   *     },
-   *     preferredPlane: 'surface'
-   *   }
-   * });
-   *
-   * console.log(`Placed ${result.successCount} colonies`);
-   * console.log(`Cascade events: ${result.cascadeEvents.length}`);
-   * ```
-   */
-  addEntitiesWithCrossPlane(
-    entities: Array<Omit<Partial<HardState>, 'coordinates'>>,
-    placement: BatchPlacementOptions & { scheme: CrossPlanePoissonPlacement | SaturationCascadePlacement }
-  ): CrossPlaneBatchPlacementResult {
-    const placedEntityIds: string[] = [];
-    const failures: Array<{ entityIndex: number; reason: string }> = [];
-    const cascadeEvents: CascadeEvent[] = [];
-    const batchCoordinates: Coordinate[] = [];
-    let totalAttempts = 0;
-
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
-      const entityKind = entity.kind ?? 'npc';
-
-      // Execute with incremental exclusion
-      const result = this.placementAlgorithms.execute(
-        placement.scheme,
-        entityKind,
-        batchCoordinates
-      );
-      totalAttempts += result?.diagnostics?.attemptsUsed ?? 1;
-
-      if (!result) {
-        failures.push({ entityIndex: i, reason: 'Placement algorithm failed to find valid position' });
-        continue;
-      }
-
-      // Validate placement if custom validator provided
-      if (placement.validatePlacement && !placement.validatePlacement(result.coordinates)) {
-        failures.push({ entityIndex: i, reason: 'Custom validation rejected placement' });
-        continue;
-      }
-
-      // Create entity with generated coordinates
-      const entityWithCoords: Partial<HardState> = {
-        ...entity,
-        coordinates: { [placement.scheme.spaceId]: result.coordinates }
-      };
-
-      const id = addEntity(this.graph, entityWithCoords);
-      placedEntityIds.push(id);
-
-      // Track cascade events
-      const diagnostics = result.diagnostics as { cascadedFrom?: string };
-      if (diagnostics?.cascadedFrom) {
-        cascadeEvents.push({
-          entityId: id,
-          fromPlane: diagnostics.cascadedFrom,
-          toPlane: result.coordinates.plane as string,
-          reason: 'saturation'
+      const coords = ref.coordinates;
+      if (coords && typeof coords.x === 'number' && typeof coords.y === 'number') {
+        points.push({
+          x: coords.x,
+          y: coords.y,
+          z: typeof coords.z === 'number' ? coords.z : 50
         });
       }
-
-      // Track placed coordinates for incremental exclusion
-      batchCoordinates.push(result.coordinates);
     }
 
-    return {
-      placedEntityIds,
-      failures,
-      diagnostics: {
-        totalAttempts,
-        successCount: placedEntityIds.length,
-        failureCount: failures.length
-      },
-      cascadeEvents
+    if (points.length === 0) {
+      return { x: 50, y: 50, z: 50 };
+    }
+
+    // Compute centroid of all reference points
+    const centroid: Point = {
+      x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+      y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+      z: points.reduce((sum, p) => sum + p.z, 0) / points.length
     };
-  }
 
-  /**
-   * Get the manifold configuration for cross-plane placement.
-   * Returns undefined if not configured in the domain.
-   */
-  getManifoldConfig(): ManifoldConfig | undefined {
-    return (this.graph.config.domain as unknown as { manifoldConfig?: ManifoldConfig }).manifoldConfig;
-  }
+    // If regionPlacement is available, use it to place near centroid with spacing
+    if (this.regionPlacement) {
+      const maxDistance = (options?.maxDistance ?? 0.3) * 100; // Convert to coordinate units
+      const minDistance = (options?.minDistance ?? 0.05) * 100;
 
-  /**
-   * Check if a plane is saturated based on the manifold configuration.
-   */
-  isPlaneSaturated(plane: string, spaceId: CoordinateSpaceId): boolean {
-    const manifoldConfig = this.getManifoldConfig();
-    if (!manifoldConfig) return false;
+      const result = this.regionPlacement.placeNear(
+        centroid,
+        [], // No existing points to avoid for now
+        minDistance,
+        maxDistance
+      );
 
-    const entities = this.graph.getEntities();
-    return this.coordinateService.isPlaneSaturated(plane, entities, manifoldConfig, spaceId);
-  }
-
-  /**
-   * Get the next available plane when the current plane is saturated.
-   */
-  getNextAvailablePlane(currentPlane: string, spaceId: CoordinateSpaceId): string | null {
-    const manifoldConfig = this.getManifoldConfig();
-    if (!manifoldConfig) return null;
-
-    const entities = this.graph.getEntities();
-    return this.coordinateService.getNextAvailablePlane(currentPlane, entities, manifoldConfig, spaceId);
-  }
-
-  /**
-   * Get entity count by plane for diagnostics.
-   */
-  getEntityCountByPlane(spaceId: CoordinateSpaceId): Map<string, number> {
-    const counts = new Map<string, number>();
-
-    for (const entity of this.graph.getEntities()) {
-      const coord = entity.coordinates?.[spaceId];
-      if (coord) {
-        const plane = coord.plane as string;
-        counts.set(plane, (counts.get(plane) ?? 0) + 1);
+      if (result.success && result.point) {
+        return result.point;
       }
     }
 
-    return counts;
+    // Fallback: add small random offset to centroid
+    const offset = (options?.minDistance ?? 0.05) * 100;
+    return {
+      x: Math.max(0, Math.min(100, centroid.x + (Math.random() - 0.5) * offset * 2)),
+      y: Math.max(0, Math.min(100, centroid.y + (Math.random() - 0.5) * offset * 2)),
+      z: Math.max(0, Math.min(100, centroid.z + (Math.random() - 0.5) * offset * 2))
+    };
   }
 
   // ============================================================================
@@ -904,12 +506,11 @@ export class TemplateGraphView {
    * Returns the primary (most specific) region, or null if not in any region.
    */
   getEntityRegion(entity: HardState): Region | null {
-    if (!this.regionMapper || !entity.coordinates?.region) {
+    if (!this.regionMapper || !entity.coordinates) {
       return null;
     }
-    // Type assertion needed since EntityCoordinates uses Coordinate type for all keys
-    const point = entity.coordinates.region as unknown as Point;
-    const result = this.regionMapper.lookup(point);
+    // Coordinates are now simple Point
+    const result = this.regionMapper.lookup(entity.coordinates);
     return result.primary;
   }
 
@@ -926,8 +527,8 @@ export class TemplateGraphView {
     for (const entity of this.graph.getEntities()) {
       if (kind && entity.kind !== kind) continue;
 
-      const point = entity.coordinates?.region as Point | undefined;
-      if (point && this.regionMapper.containsPoint(region, point)) {
+      // Coordinates are now simple Point
+      if (entity.coordinates && this.regionMapper.containsPoint(region, entity.coordinates)) {
         results.push(entity);
       }
     }
@@ -994,12 +595,11 @@ export class TemplateGraphView {
     // Merge entity tags with region tags
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
 
-    // Create entity with region coordinates
-    // Use type assertion since region coordinates use Point, not Coordinate
+    // Create entity with coordinates (simple Point)
     const entityWithCoords: Partial<HardState> = {
       ...entity,
       tags: mergedTags,
-      coordinates: { region: result.point } as unknown as EntityCoordinates
+      coordinates: result.point
     };
 
     return addEntity(this.graph, entityWithCoords);
@@ -1034,10 +634,9 @@ export class TemplateGraphView {
       );
     }
 
-    const refPoint = referenceEntity.coordinates?.region as Point | undefined;
-    if (!refPoint) {
+    if (!referenceEntity.coordinates) {
       throw new Error(
-        `addEntityNearEntity: Reference entity "${referenceEntity.name}" has no region coordinates. ` +
+        `addEntityNearEntity: Reference entity "${referenceEntity.name}" has no coordinates. ` +
         `Entity kind: ${referenceEntity.kind}, id: ${referenceEntity.id}`
       );
     }
@@ -1046,7 +645,7 @@ export class TemplateGraphView {
     const existingPoints = this.getAllRegionPoints();
 
     const result = this.regionPlacement.placeNear(
-      refPoint,
+      referenceEntity.coordinates,
       existingPoints,
       options?.minDistance ?? 5,
       options?.maxSearchRadius ?? 20
@@ -1065,11 +664,11 @@ export class TemplateGraphView {
     // Merge entity tags with region tags
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
 
-    // Use type assertion since region coordinates use Point, not Coordinate
+    // Create entity with coordinates (simple Point)
     const entityWithCoords: Partial<HardState> = {
       ...entity,
       tags: mergedTags,
-      coordinates: { region: result.point } as unknown as EntityCoordinates
+      coordinates: result.point
     };
 
     return addEntity(this.graph, entityWithCoords);
@@ -1141,11 +740,11 @@ export class TemplateGraphView {
       // Merge entity tags with region tags
       const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
 
-      // Use type assertion since region coordinates use Point, not Coordinate
+      // Create entity with coordinates (simple Point)
       const entityWithCoords: Partial<HardState> = {
         ...entity,
         tags: mergedTags,
-        coordinates: { region: placement.point } as unknown as EntityCoordinates
+        coordinates: placement.point
       };
 
       const id = addEntity(this.graph, entityWithCoords);
@@ -1171,7 +770,7 @@ export class TemplateGraphView {
    * @example
    * ```typescript
    * const result = view.createEmergentRegion(
-   *   existingEntity.coordinates.region,
+   *   existingEntity.coordinates,
    *   'New Settlement',
    *   'A freshly established outpost on the ice'
    * );
@@ -1245,23 +844,23 @@ export class TemplateGraphView {
 
     const points: Point[] = [];
     for (const entity of this.graph.getEntities()) {
-      const point = entity.coordinates?.region as Point | undefined;
-      if (point && this.regionMapper.containsPoint(region, point)) {
-        points.push(point);
+      // Coordinates are now simple Point
+      if (entity.coordinates && this.regionMapper.containsPoint(region, entity.coordinates)) {
+        points.push(entity.coordinates);
       }
     }
     return points;
   }
 
   /**
-   * Get all region coordinates from all entities.
+   * Get all coordinates from all entities.
    */
   private getAllRegionPoints(): Point[] {
     const points: Point[] = [];
     for (const entity of this.graph.getEntities()) {
-      const point = entity.coordinates?.region as Point | undefined;
-      if (point) {
-        points.push(point);
+      // Coordinates are now simple Point
+      if (entity.coordinates) {
+        points.push(entity.coordinates);
       }
     }
     return points;

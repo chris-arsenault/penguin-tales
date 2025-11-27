@@ -462,9 +462,33 @@ export class WorldEngine {
     // Load initial entities and initialize catalysts
     initialState.forEach(entity => {
       const id = entity.id || generateId(entity.kind);
+
+      // Convert legacy 6D coordinates to simple Point format
+      let coordinates = entity.coordinates;
+      if (coordinates && !('x' in coordinates && typeof (coordinates as any).x === 'number')) {
+        // Legacy format - convert to Point
+        const physical = (coordinates as any).physical;
+        if (physical) {
+          const zBandValues: Record<string, number> = {
+            'sky': 90, 'surface': 70, 'shallow_water': 50,
+            'deep_water': 30, 'ice_caverns': 10
+          };
+          coordinates = {
+            x: typeof physical.sector_x === 'number' ? physical.sector_x : 50,
+            y: typeof physical.sector_y === 'number' ? physical.sector_y : 50,
+            z: typeof physical.z_band === 'string' ? (zBandValues[physical.z_band] ?? 50) : 50
+          };
+        } else {
+          // No valid coordinates - use default
+          console.warn(`Entity "${entity.name}" (${entity.kind}) has invalid coordinates format, using default`);
+          coordinates = { x: 50, y: 50, z: 50 };
+        }
+      }
+
       const loadedEntity: HardState = {
         ...entity,
         id,
+        coordinates,
         createdAt: 0,
         updatedAt: 0
       };

@@ -128,7 +128,7 @@ export const eraSpawner: SimulationSystem = {
         links: [],
         createdAt: graph.tick,
         updatedAt: graph.tick,
-        coordinates: {},  // Eras exist in temporal space, not physical
+        coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map
         temporal: isFirst ? {
           startTick: graph.tick,
           endTick: null

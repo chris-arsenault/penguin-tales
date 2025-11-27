@@ -159,7 +159,7 @@ function createStyleEntity(cluster: HardState[], graph: Graph, graphView: Templa
     prominence,
     culture: majorityCulture,
     tags,
-    coordinates: { physical: coords }
+    coordinates: coords
   };
 }
 

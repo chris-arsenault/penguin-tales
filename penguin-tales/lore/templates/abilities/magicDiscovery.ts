@@ -196,7 +196,7 @@ export const magicDiscovery: GrowthTemplate = {
       prominence: 'recognized',
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
       tags: { magic: true, mystical: true },
-      coordinates: { physical: conceptualCoords }
+      coordinates: conceptualCoords
     };
 
     return {

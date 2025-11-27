@@ -126,7 +126,7 @@ export const guildEstablishment: GrowthTemplate = {
       prominence: 'recognized',
       culture: colony.culture,  // Inherit culture from colony
       tags: { trade: true, guild: true, organized: true },
-      coordinates: { physical: conceptualCoords }
+      coordinates: conceptualCoords
     };
 
     // Pre-compute coordinates for potential new merchants (factory receives Graph, not TemplateGraphView)
@@ -170,7 +170,7 @@ export const guildEstablishment: GrowthTemplate = {
             prominence: 'marginal',
             culture: colony.culture,  // Inherit culture from colony
             tags: { trader: true, 'guild-founder': true },
-            coordinates: { physical: newMerchantCoords }
+            coordinates: newMerchantCoords
           }),
           maxCreated: 2 // Max 2 new merchants per guild
         },

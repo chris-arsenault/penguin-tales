@@ -62,6 +62,13 @@
   color: white;
 }
 
+.control-description {
+  font-size: 10px;
+  color: rgba(147, 197, 253, 0.6);
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .layer-toggles {
   display: flex;
   flex-direction: column;

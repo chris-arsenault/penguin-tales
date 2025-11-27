@@ -126,6 +126,14 @@ export const orcaCombatTechnique: GrowthTemplate = {
     const techniqueName = pickRandom(techniqueNames);
     const prominence = Math.random() < 0.4 ? 'renowned' : 'recognized';
 
+    // Derive coordinates for ability in conceptual space (near the orca practitioner)
+    const abilityCoords = graphView.deriveCoordinates(
+      [orca],
+      'abilities',
+      undefined,
+      { maxDistance: 10 }
+    );
+
     const technique: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'combat',
@@ -134,7 +142,8 @@ export const orcaCombatTechnique: GrowthTemplate = {
       status: 'active',
       prominence,
       culture: 'orca',  // Orca combat techniques belong to orca culture
-      tags: { combat: true, orca: true, offensive: true, external: true }
+      tags: { combat: true, orca: true, offensive: true, external: true },
+      coordinates: abilityCoords
     };
 
     const relationships: Relationship[] = [

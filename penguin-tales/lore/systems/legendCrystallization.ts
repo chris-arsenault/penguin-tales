@@ -229,7 +229,7 @@ export const legendCrystallization: SimulationSystem = {
         links: [],
         createdAt: entity.createdAt!,
         updatedAt: entity.updatedAt!,
-        coordinates: entity.coordinates || {}
+        coordinates: entity.coordinates || { x: 50, y: 50, z: 50 }
       };
 
       // Use the Graph API to add entity

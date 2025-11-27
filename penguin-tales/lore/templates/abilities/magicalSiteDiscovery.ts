@@ -178,7 +178,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
       prominence: 'recognized',
       culture: catalyst.culture,  // Inherit culture from discovering practitioner
       tags: { anomaly: true, magical: true, [target.name.toLowerCase().split(' ')[0]]: true },
-      coordinates: { physical: conceptualCoords },
+      coordinates: conceptualCoords,
       links: []
     };
 

@@ -119,7 +119,7 @@ export const succession: GrowthTemplate = {
       prominence: 'marginal', // New leaders start marginal, must earn respect
       culture: colony.culture,  // Inherit culture from colony
       tags: { successor: true },
-      coordinates: { physical: coords }
+      coordinates: coords
     };
 
     const relationships: Relationship[] = [

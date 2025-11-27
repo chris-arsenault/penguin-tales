@@ -17,8 +17,9 @@ import {
  * Check if two entities are in the same region based on their coordinates.
  */
 function areInSameRegion(entity1: HardState, entity2: HardState): boolean {
-  const p1 = entity1.coordinates?.region as { x: number; y: number; z: number } | undefined;
-  const p2 = entity2.coordinates?.region as { x: number; y: number; z: number } | undefined;
+  // Coordinates are now simple Point {x, y, z}
+  const p1 = entity1.coordinates;
+  const p2 = entity2.coordinates;
 
   if (!p1 || !p2) return false;
 

@@ -47,7 +47,7 @@ export interface Era {
 export interface CreateEntitySettings {
   kind: string;
   subtype: string;
-  coordinates: import('./coordinates').ExtendedEntityCoordinates;  // REQUIRED - no silent defaults
+  coordinates: import('./regions').Point;  // REQUIRED - simple 2D+z coordinates
   tags?: EntityTags;  // Optional - defaults to {}
   name?: string;  // Optional - auto-generated from tags if not provided
   description?: string;

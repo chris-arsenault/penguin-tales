@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import type { WorldState, HardState, RegionSchema, Point, EntityKindSchema } from '../types/world.ts';
+import type { WorldState, HardState, RegionSchema, Point, EntityKindSchema, EntityKindMapConfig } from '../types/world.ts';
 import './CoordinateMapView.css';
 
 interface CoordinateMapViewProps {
@@ -17,6 +17,18 @@ const DEFAULT_ENTITY_STYLES: EntityKindSchema[] = [
   { kind: 'abilities', displayName: 'Abilities', color: '#C76BFC', shape: 'star', subtypes: [], statusValues: [] },
 ];
 
+// Generate a default map config for any entity kind
+function getDefaultMapConfig(kind: string): EntityKindMapConfig {
+  return {
+    entityKind: kind,
+    name: `${kind.charAt(0).toUpperCase() + kind.slice(1)} Map`,
+    description: `Coordinate space for ${kind} entities`,
+    bounds: { min: 0, max: 100 },
+    hasZAxis: true,
+    zAxisLabel: 'Z'
+  };
+}
+
 // Region colors by type
 const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
   colony: { fill: 'rgba(111, 177, 252, 0.15)', stroke: 'rgba(111, 177, 252, 0.6)' },
@@ -32,12 +44,28 @@ function getRegionColor(region: RegionSchema): { fill: string; stroke: string } 
   return REGION_COLORS[subtype] || REGION_COLORS.default;
 }
 
-// Get entity coordinates (prefer region coordinates)
-function getEntityCoords(entity: HardState): Point | null {
-  if (entity.coordinates?.region) {
-    return entity.coordinates.region;
+// Get entity coordinates (now directly on entity as Point)
+// Returns {x: 0, y: 0, z: 0, invalid: true} if coordinates are missing or have null values
+// This makes invalid coordinates visible instead of hiding them
+interface EntityPoint extends Point {
+  invalid?: boolean;
+}
+
+function getEntityCoords(entity: HardState): EntityPoint {
+  const coords = entity.coordinates;
+
+  // Check if we have valid numeric values (not null/undefined)
+  if (coords && typeof coords.x === 'number' && typeof coords.y === 'number') {
+    return {
+      x: coords.x,
+      y: coords.y,
+      z: typeof coords.z === 'number' ? coords.z : 50
+    };
   }
-  return null;
+
+  // Invalid coordinates - place at origin with flag
+  console.warn(`Entity "${entity.name}" (${entity.kind}/${entity.id}) has invalid coordinates:`, coords);
+  return { x: 0, y: 0, z: 0, invalid: true };
 }
 
 // Simple force-directed layout for floating entities
@@ -118,7 +146,8 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [anchorKind, setAnchorKind] = useState<string>('location');
+  const [mapKind, setMapKind] = useState<string>('location');  // Which entity kind's map to show
+  const [showRelatedKinds, setShowRelatedKinds] = useState<boolean>(true);  // Show related entities from other kinds
   const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['regions', 'entities', 'relationships']));
   const [hoveredEntity, setHoveredEntity] = useState<HardState | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -126,8 +155,35 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   // Get entity kind schemas
   const entityKindSchemas = data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
   const entityKinds = entityKindSchemas.map(ek => ek.kind);
-  const regions = data.uiSchema?.regions ?? [];
-  const bounds = data.uiSchema?.coordinateBounds ?? { min: 0, max: 100 };
+
+  // Get per-kind map config and regions
+  const mapConfig = data.uiSchema?.perKindMaps?.[mapKind] ?? getDefaultMapConfig(mapKind);
+  const regions = data.uiSchema?.perKindRegions?.[mapKind] ?? data.uiSchema?.regions ?? [];
+  const bounds = mapConfig.bounds ?? { min: 0, max: 100 };
+
+  // Filter entities for the current map - primary kind always shown, related kinds optionally
+  const mapEntities = useMemo(() => {
+    const primaryEntities = data.hardState.filter(e => e.kind === mapKind);
+
+    if (!showRelatedKinds) {
+      return primaryEntities;
+    }
+
+    // Find entities related to primary entities
+    const primaryIds = new Set(primaryEntities.map(e => e.id));
+    const relatedIds = new Set<string>();
+
+    data.relationships.forEach(rel => {
+      if (primaryIds.has(rel.src)) relatedIds.add(rel.dst);
+      if (primaryIds.has(rel.dst)) relatedIds.add(rel.src);
+    });
+
+    const relatedEntities = data.hardState.filter(e =>
+      relatedIds.has(e.id) && !primaryIds.has(e.id)
+    );
+
+    return [...primaryEntities, ...relatedEntities];
+  }, [data.hardState, data.relationships, mapKind, showRelatedKinds]);
 
   // Build entity color map
   const entityColorMap = useMemo(() => {
@@ -139,75 +195,37 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   // Calculate entity positions with force layout
   const entityPositions = useMemo(() => {
     const nodes: LayoutNode[] = [];
-    const entitiesWithCoords: HardState[] = [];
-    const entitiesWithoutCoords: HardState[] = [];
 
-    // Separate entities by whether they have coordinates
-    data.hardState.forEach(entity => {
+    // All entities get coordinates - invalid ones are placed at origin
+    mapEntities.forEach(entity => {
       const coords = getEntityCoords(entity);
-      if (coords) {
-        entitiesWithCoords.push(entity);
-      } else {
-        entitiesWithoutCoords.push(entity);
-      }
-    });
+      const isValidCoords = !coords.invalid;
 
-    // Create nodes for entities with coordinates
-    entitiesWithCoords.forEach(entity => {
-      const coords = getEntityCoords(entity)!;
       nodes.push({
         id: entity.id,
         x: coords.x,
         y: coords.y,
         vx: 0,
         vy: 0,
-        anchored: entity.kind === anchorKind,
+        // Only anchor if valid coords AND primary kind
+        anchored: isValidCoords && entity.kind === mapKind,
         entity
       });
     });
 
-    // Create nodes for entities without coordinates
-    // Position them near related entities with coordinates
-    entitiesWithoutCoords.forEach(entity => {
-      // Find a related entity with coordinates
-      let baseX = 50, baseY = 50;
-      const relatedWithCoords = entity.links.find(link => {
-        const relatedId = link.src === entity.id ? link.dst : link.src;
-        const related = data.hardState.find(e => e.id === relatedId);
-        return related && getEntityCoords(related);
-      });
-
-      if (relatedWithCoords) {
-        const relatedId = relatedWithCoords.src === entity.id ? relatedWithCoords.dst : relatedWithCoords.src;
-        const related = data.hardState.find(e => e.id === relatedId);
-        if (related) {
-          const coords = getEntityCoords(related)!;
-          baseX = coords.x + (Math.random() - 0.5) * 10;
-          baseY = coords.y + (Math.random() - 0.5) * 10;
-        }
-      }
-
-      nodes.push({
-        id: entity.id,
-        x: Math.max(0, Math.min(100, baseX)),
-        y: Math.max(0, Math.min(100, baseY)),
-        vx: 0,
-        vy: 0,
-        anchored: false,
-        entity
-      });
-    });
-
-    // Run force layout
-    const relationships = data.relationships.map(r => ({
-      src: r.src,
-      dst: r.dst,
-      strength: r.strength
-    }));
+    // Run force layout - only include relationships between visible entities
+    const visibleIds = new Set(mapEntities.map(e => e.id));
+    const relationships = data.relationships
+      .filter(r => visibleIds.has(r.src) && visibleIds.has(r.dst))
+      .map(r => ({
+        src: r.src,
+        dst: r.dst,
+        strength: r.strength
+      }));
     runForceLayout(nodes, relationships);
 
     return new Map(nodes.map(n => [n.id, { x: n.x, y: n.y, anchored: n.anchored }]));
-  }, [data.hardState, data.relationships, anchorKind]);
+  }, [mapEntities, data.relationships, mapKind]);
 
   // Convert world coordinates to canvas coordinates
   const worldToCanvas = (x: number, y: number): { x: number; y: number } => {
@@ -370,25 +388,39 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
     // Draw entities if layer is visible
     if (visibleLayers.has('entities')) {
-      data.hardState.forEach(entity => {
+      mapEntities.forEach(entity => {
         const pos = entityPositions.get(entity.id);
         if (!pos) return;
 
         const canvasPos = worldToCanvas(pos.x, pos.y);
         const color = entityColorMap.get(entity.kind) || '#999';
-        const isAnchored = entity.kind === anchorKind;
+        const isPrimaryKind = entity.kind === mapKind;
         const isSelected = entity.id === selectedNodeId;
         const isHovered = entity.id === hoveredEntity?.id;
 
-        // Draw entity
-        const radius = isAnchored ? 8 : 5;
+        // Check if coordinates are invalid
+        const entityCoords = getEntityCoords(entity);
+        const hasInvalidCoords = entityCoords.invalid;
+
+        // Draw entity - primary kind entities are larger
+        const radius = isPrimaryKind ? 8 : 5;
         ctx.beginPath();
         ctx.arc(canvasPos.x, canvasPos.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = color;
+        ctx.fillStyle = hasInvalidCoords ? '#666' : color;  // Gray out invalid coords
         ctx.fill();
 
-        // Draw anchor indicator
-        if (isAnchored) {
+        // Draw invalid coordinates indicator (red dashed border)
+        if (hasInvalidCoords) {
+          ctx.strokeStyle = '#FF4444';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.arc(canvasPos.x, canvasPos.y, radius + 3, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);  // Reset dash
+        }
+        // Draw primary kind indicator (white border)
+        else if (isPrimaryKind) {
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = 2;
           ctx.stroke();
@@ -403,9 +435,9 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
           ctx.stroke();
         }
 
-        // Draw label for anchored entities
-        if (isAnchored || isSelected || isHovered) {
-          ctx.fillStyle = '#fff';
+        // Draw label for primary kind or selected/hovered entities
+        if (isPrimaryKind || isSelected || isHovered) {
+          ctx.fillStyle = hasInvalidCoords ? '#FF4444' : '#fff';
           ctx.font = '10px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(entity.name, canvasPos.x, canvasPos.y - radius - 5);
@@ -413,7 +445,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       });
     }
 
-  }, [data, dimensions, anchorKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity]);
+  }, [data, dimensions, mapKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity, mapEntities]);
 
   // Handle mouse events
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -426,11 +458,11 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     const worldPos = canvasToWorld(canvasX, canvasY);
     setMousePos(worldPos);
 
-    // Find entity under cursor
+    // Find entity under cursor (only from visible entities)
     let foundEntity: HardState | null = null;
     let minDist = 10; // Threshold in world units
 
-    data.hardState.forEach(entity => {
+    mapEntities.forEach(entity => {
       const pos = entityPositions.get(entity.id);
       if (!pos) return;
 
@@ -481,10 +513,10 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       {/* Controls */}
       <div className="coordinate-map-controls">
         <div className="control-section">
-          <div className="control-label">Anchor Layer</div>
+          <div className="control-label">Entity Map</div>
           <select
-            value={anchorKind}
-            onChange={e => setAnchorKind(e.target.value)}
+            value={mapKind}
+            onChange={e => setMapKind(e.target.value)}
             className="control-select"
           >
             {entityKinds.map(kind => (
@@ -493,6 +525,18 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
               </option>
             ))}
           </select>
+          <div className="control-description">{mapConfig.description}</div>
+        </div>
+
+        <div className="control-section">
+          <label className="layer-toggle">
+            <input
+              type="checkbox"
+              checked={showRelatedKinds}
+              onChange={() => setShowRelatedKinds(!showRelatedKinds)}
+            />
+            <span>Show related entities</span>
+          </label>
         </div>
 
         <div className="control-section">
@@ -521,44 +565,55 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
               className="legend-dot"
               style={{
                 backgroundColor: ek.color,
-                border: ek.kind === anchorKind ? '2px solid white' : 'none'
+                border: ek.kind === mapKind ? '2px solid white' : 'none'
               }}
             />
             <span>{ek.displayName}</span>
-            {ek.kind === anchorKind && <span className="anchor-badge">anchored</span>}
+            {ek.kind === mapKind && <span className="anchor-badge">primary</span>}
           </div>
         ))}
-        <div className="legend-divider" />
-        <div className="legend-title">Regions</div>
-        {Object.entries(REGION_COLORS).filter(([k]) => k !== 'default').map(([type, colors]) => (
-          <div key={type} className="legend-item">
-            <div
-              className="legend-dot"
-              style={{ backgroundColor: colors.stroke }}
-            />
-            <span>{type.replace('_', ' ')}</span>
-          </div>
-        ))}
+        {regions.length > 0 && (
+          <>
+            <div className="legend-divider" />
+            <div className="legend-title">Regions ({regions.length})</div>
+            {Object.entries(REGION_COLORS).filter(([k]) => k !== 'default').map(([type, colors]) => (
+              <div key={type} className="legend-item">
+                <div
+                  className="legend-dot"
+                  style={{ backgroundColor: colors.stroke }}
+                />
+                <span>{type.replace('_', ' ')}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Hover tooltip */}
-      {hoveredEntity && mousePos && (
-        <div className="coordinate-map-tooltip" style={{
-          left: worldToCanvas(mousePos.x, mousePos.y).x + 15,
-          top: worldToCanvas(mousePos.x, mousePos.y).y - 15
-        }}>
-          <div className="tooltip-name">{hoveredEntity.name}</div>
-          <div className="tooltip-info">{hoveredEntity.kind} / {hoveredEntity.subtype}</div>
-          <div className="tooltip-info">{hoveredEntity.status}</div>
-          {getEntityCoords(hoveredEntity) && (
-            <div className="tooltip-coords">
-              x: {getEntityCoords(hoveredEntity)!.x.toFixed(1)},
-              y: {getEntityCoords(hoveredEntity)!.y.toFixed(1)},
-              z: {getEntityCoords(hoveredEntity)!.z.toFixed(1)}
-            </div>
-          )}
-        </div>
-      )}
+      {hoveredEntity && mousePos && (() => {
+        const coords = getEntityCoords(hoveredEntity);
+        return (
+          <div className="coordinate-map-tooltip" style={{
+            left: worldToCanvas(mousePos.x, mousePos.y).x + 15,
+            top: worldToCanvas(mousePos.x, mousePos.y).y - 15
+          }}>
+            <div className="tooltip-name">{hoveredEntity.name}</div>
+            <div className="tooltip-info">{hoveredEntity.kind} / {hoveredEntity.subtype}</div>
+            <div className="tooltip-info">{hoveredEntity.status}</div>
+            {coords.invalid ? (
+              <div className="tooltip-coords" style={{ color: '#FF4444' }}>
+                ⚠️ INVALID COORDINATES
+              </div>
+            ) : (
+              <div className="tooltip-coords">
+                x: {coords.x.toFixed(1)},
+                y: {coords.y.toFixed(1)},
+                z: {coords.z.toFixed(1)}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Coordinate display */}
       {mousePos && (

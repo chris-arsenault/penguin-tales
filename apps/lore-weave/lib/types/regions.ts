@@ -1,8 +1,14 @@
 /**
  * Region-Based Coordinate System
  *
- * Pure mechanical coordinates (x, y, z) with narrative meaning provided
- * by domain-defined regions. Framework handles math, domain handles meaning.
+ * Each entity kind has its own independent 2D coordinate map with optional z.
+ * This supports both physical entities (locations, NPCs) and conceptual entities
+ * (rules, abilities) that have no physical location analog.
+ *
+ * Key concepts:
+ * - EntityKindMap: A 2D coordinate space for a single entity kind
+ * - Region: A named area within a kind's map with narrative meaning
+ * - Point: Simple {x, y, z?} coordinate within a kind's map
  */
 
 // ============================================================================
@@ -219,3 +225,74 @@ export interface EntityPlacedInRegionEvent {
   region: Region | null;
   appliedTags: string[];
 }
+
+// ============================================================================
+// PER-KIND COORDINATE MAPS
+// ============================================================================
+
+/**
+ * Bounds for a coordinate map.
+ */
+export interface MapBounds {
+  x: { min: number; max: number };
+  y: { min: number; max: number };
+  z?: { min: number; max: number };
+}
+
+/**
+ * Configuration for a single entity kind's coordinate map.
+ *
+ * Each entity kind has its own independent 2D (or 3D) coordinate space.
+ * This allows physical entities (locations) and conceptual entities (rules)
+ * to have completely separate spatial models.
+ */
+export interface EntityKindMapConfig {
+  /** Entity kind this map is for */
+  entityKind: string;
+
+  /** Human-readable name for this map */
+  name: string;
+
+  /** Description of what this coordinate space represents */
+  description: string;
+
+  /** Coordinate bounds (default 0-100 for each axis) */
+  bounds: MapBounds;
+
+  /** Whether z-coordinate is used */
+  hasZAxis: boolean;
+
+  /** Label for the z-axis if used (e.g., "Depth", "Power Level", "Abstraction") */
+  zAxisLabel?: string;
+
+  /** Configuration for emergent region creation */
+  emergentConfig: EmergentRegionConfig;
+
+  /** Initial seed regions (optional - most regions should be emergent) */
+  seedRegions?: Region[];
+}
+
+/**
+ * Runtime state for a kind's coordinate map.
+ * Includes both config and dynamically created regions.
+ */
+export interface EntityKindMapState {
+  /** The configuration */
+  config: EntityKindMapConfig;
+
+  /** All regions (seed + emergent) */
+  regions: Region[];
+
+  /** Tick when last region was created */
+  lastRegionCreatedAt?: number;
+}
+
+/**
+ * Collection of all entity kind maps.
+ */
+export type EntityKindMaps = Record<string, EntityKindMapConfig>;
+
+/**
+ * Runtime state for all kind maps.
+ */
+export type EntityKindMapsState = Record<string, EntityKindMapState>;

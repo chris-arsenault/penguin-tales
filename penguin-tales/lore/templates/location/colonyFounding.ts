@@ -93,11 +93,10 @@ export const colonyFounding: GrowthTemplate = {
       const params = colonyFounding.metadata?.parameters || {};
       const minDistance = (params.minDistanceFromColonies?.value as number) ?? 20;
 
-      // Get all existing colony region points
-      // Need to cast through unknown due to Coordinate vs Point type difference
+      // Get all existing colony coordinate points
       const existingColonyPoints = existingColonies
-        .map(c => c.coordinates?.region)
-        .filter(p => p != null) as unknown as Array<{ x: number; y: number; z: number }>;
+        .map(c => c.coordinates)
+        .filter((p): p is { x: number; y: number; z: number } => p != null && 'x' in p);
 
       // Try to create an emergent region in the wilderness
       // Pick a random reference point away from existing colonies

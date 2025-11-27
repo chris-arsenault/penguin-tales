@@ -158,7 +158,7 @@ function createSchoolEntity(cluster: HardState[], graph: Graph, graphView: Templ
     prominence,
     culture: majorityCulture,
     tags,
-    coordinates: { physical: coords }
+    coordinates: coords
   };
 }
 
