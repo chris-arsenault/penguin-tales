@@ -75,3 +75,10 @@ The repo is moving to **culture as a first-class attribute for all entities** (b
 - When defining new semantic axes or regions, **include culture-driven buckets and region templates in config**, not code. The framework only sees opaque tags/weights.
 - Placement helpers should accept a `context` object (culture ID, seed region IDs, preferred axes) that flows through `KindRegionService` and `RegionPlacementService` to bias sampling and emergent creation.
 - Migration path: retrofit existing templates to pass culture context; culture-neutral templates continue to work because the framework treats culture data as optional metadata.
+
+## 6) Cosmographer UI builder intent (domain-facing)
+To reduce reliance on hand-edited JSON and make domain wiring auditable, add a **Cosmographer** UI builder as the canonical entry point for Lore Weave domain data. The UI should:
+- Let domain authors construct and edit plane/semantic mappings (axes, weights, buckets) and seed regions visually, persisting to the same configs consumed by the framework.
+- Manage region/culture mappings and per-kind emergent defaults, emitting configuration artifacts rather than embedding logic in UI code.
+- Provide affordances to create and update culture-aligned regions (including the culture-first flows above) and export/import them through the existing persistence paths.
+- Keep framework code untouched: the UI outputs domain-specific config/state that flows into the generic coordinate services.
