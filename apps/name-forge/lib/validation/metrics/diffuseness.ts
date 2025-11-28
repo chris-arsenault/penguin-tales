@@ -1,10 +1,10 @@
-import type { NamingDomain } from "../../lib/types/domain.js";
-import { testDomain } from "../../lib/generate.js";
+import type { NamingDomain } from "../../types/domain.js";
+import { testDomain } from "../../generate.js";
 import type {
   DiffusenessReport,
   ValidationConfig,
   NearestNeighborStats,
-} from "../types/validation.js";
+} from "../validation.js";
 import {
   findNearestNeighbors,
   normalizedLevenshtein,

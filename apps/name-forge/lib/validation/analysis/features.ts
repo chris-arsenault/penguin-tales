@@ -1,4 +1,4 @@
-import type { FeatureVector } from "../types/validation.js";
+import type { FeatureVector } from "../validation.js";
 
 /**
  * Estimate syllable count based on vowel groups

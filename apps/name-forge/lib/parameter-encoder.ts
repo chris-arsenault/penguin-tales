@@ -9,7 +9,7 @@
  */
 
 import type { NamingDomain } from "./types/domain.js";
-import type { ParameterVector, ParameterBounds } from "../validation/optimization.js";
+import type { ParameterVector, ParameterBounds } from "./optimizer/optimization.js";
 
 /**
  * Transform weight to log space (for optimization)

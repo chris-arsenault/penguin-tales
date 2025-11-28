@@ -5,6 +5,24 @@
   "type": "module",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    },
+    "./generate": {
+      "types": "./dist/lib/generate.d.ts",
+      "import": "./dist/lib/generate.js"
+    },
+    "./validation": {
+      "types": "./dist/lib/validation/index.d.ts",
+      "import": "./dist/lib/validation/index.js"
+    },
+    "./optimizer": {
+      "types": "./dist/lib/optimizer/index.d.ts",
+      "import": "./dist/lib/optimizer/index.js"
+    }
+  },
   "scripts": {
     "ui": "cd webui && npm run dev",
     "ui:static": "cd webui && npm run static",

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { hillclimb } from "./hillclimb.js";
-import type { NamingDomain } from "../../lib/types/domain.js";
+import type { NamingDomain } from "../types/domain.js";
 
 describe("Hill-Climbing Optimizer", () => {
   // Create a simple test domain that can be improved

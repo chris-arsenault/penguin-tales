@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import type { NamingDomain } from "../lib/types/domain.js";
+import type { NamingDomain } from "../types/domain.js";
 
 /**
  * Settings for validation during optimization

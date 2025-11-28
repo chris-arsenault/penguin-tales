@@ -5,15 +5,15 @@
  * and accepts improvements.
  */
 
-import { createRNG } from "../../lib/utils/rng.js";
+import { createRNG } from "../utils/rng.js";
 import {
   encodeParameters,
   decodeParameters,
   perturbParameters,
   parameterDistance,
-} from "../../lib/parameter-encoder.js";
-import { computeFitness, computeFitnessLight } from "../fitness.js";
-import type { NamingDomain } from "../../lib/types/domain.js";
+} from "../parameter-encoder.js";
+import { computeFitness, computeFitnessLight } from "./fitness.js";
+import type { NamingDomain } from "../types/domain.js";
 import type {
   OptimizationSettings,
   ValidationSettings,
@@ -21,8 +21,8 @@ import type {
   ParameterBounds,
   OptimizationResult,
   EvaluationResult,
-} from "../optimization.js";
-import { DEFAULT_BOUNDS } from "../optimization.js";
+} from "./optimization.js";
+import { DEFAULT_BOUNDS } from "./optimization.js";
 
 /**
  * Run hill-climbing optimization

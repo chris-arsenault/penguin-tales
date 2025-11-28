@@ -5,22 +5,22 @@
  * the probability of good vs bad configurations.
  */
 
-import { createRNG } from "../../lib/utils/rng.js";
-import { computeFitness } from "../fitness.js";
+import { createRNG } from "../utils/rng.js";
+import { computeFitness } from "./fitness.js";
 import {
   getAllConsonants,
   getAllVowels,
   getAllTemplates,
   getAllClusters,
-} from "../../lib/phoneme-library.js";
-import type { NamingDomain } from "../../lib/types/domain.js";
+} from "../phoneme-library.js";
+import type { NamingDomain } from "../types/domain.js";
 import type {
   OptimizationSettings,
   ValidationSettings,
   FitnessWeights,
   OptimizationResult,
   EvaluationResult,
-} from "../optimization.js";
+} from "./optimization.js";
 
 /**
  * Configuration point in the search space

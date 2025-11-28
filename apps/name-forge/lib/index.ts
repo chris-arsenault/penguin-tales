@@ -93,3 +93,75 @@ export {
   StyleRulesSchema,
   DomainCollectionSchema,
 } from "./types/schema.js";
+
+// ============================================================================
+// Validation (import from 'name-forge/validation' for tree-shaking)
+// ============================================================================
+
+export {
+  // Metrics
+  validateCapacity,
+  validateDiffuseness,
+  validateSeparation,
+  calculateEntropy,
+  estimateRequiredSamples,
+  theoreticalCapacity,
+  findSimilarClusters,
+  analyzeDiversity,
+  // Analysis
+  extractFeatures,
+  levenshtein,
+  normalizedLevenshtein,
+  euclideanDistance,
+  cosineSimilarity,
+  NearestCentroidClassifier,
+  crossValidate,
+  // Types
+  type ValidationConfig,
+  type CapacityReport,
+  type DiffusenessReport,
+  type SeparationReport,
+} from "./validation/index.js";
+
+// ============================================================================
+// Optimizer (import from 'name-forge/optimizer' for tree-shaking)
+// ============================================================================
+
+export {
+  // High-level API
+  optimizeDomain,
+  // Algorithms
+  hillclimb,
+  simulatedAnnealing,
+  geneticAlgorithm,
+  bayesianOptimization,
+  analyzePhonemeImportance,
+  // Fitness
+  computeFitness,
+  computeFitnessLight,
+  // Parameter encoding
+  encodeParameters,
+  decodeParameters,
+  perturbParameters,
+  parameterDistance,
+  // Mutations
+  MUTATIONS,
+  MUTATION_WEIGHTS,
+  applyRandomMutation,
+  applyMultipleMutations,
+  applyWeightedMutation,
+  // Settings and types
+  ValidationSettingsSchema,
+  FitnessWeightsSchema,
+  OptimizationSettingsSchema,
+  DEFAULT_BOUNDS,
+  type ValidationSettings,
+  type FitnessWeights,
+  type OptimizationAlgorithm,
+  type OptimizationSettings,
+  type ParameterVector,
+  type EvaluationResult,
+  type OptimizationResult,
+  type ParameterBounds,
+  type MutationType,
+} from "./optimizer/index.js";

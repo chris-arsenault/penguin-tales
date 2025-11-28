@@ -1,11 +1,11 @@
-import type { NamingDomain } from "../../lib/types/domain.js";
-import { testDomain } from "../../lib/generate.js";
+import type { NamingDomain } from "../../types/domain.js";
+import { testDomain } from "../../generate.js";
 import type {
   SeparationReport,
   ValidationConfig,
   FeatureVector,
   Centroid,
-} from "../types/validation.js";
+} from "../validation.js";
 import { extractFeatures, calculateCentroid, buildVocabulary } from "../analysis/features.js";
 import {
   NearestCentroidClassifier,

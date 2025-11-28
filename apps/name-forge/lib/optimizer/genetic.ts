@@ -5,22 +5,56 @@
  * Particularly effective for optimizing discrete properties like phoneme sets.
  */
 
-import { createRNG } from "../../lib/utils/rng.js";
-import { computeFitness } from "../fitness.js";
-import { evaluateBatch, getPoolStats } from "./fitness-pool.js";
+import { createRNG } from "../utils/rng.js";
+import { computeFitness } from "./fitness.js";
 import {
   applyMultipleMutations,
   applyWeightedMutation,
   MUTATION_WEIGHTS,
 } from "./mutations.js";
-import type { NamingDomain } from "../../lib/types/domain.js";
+import type { NamingDomain } from "../types/domain.js";
 import type {
   OptimizationSettings,
   ValidationSettings,
   FitnessWeights,
   OptimizationResult,
   EvaluationResult,
-} from "../optimization.js";
+} from "./optimization.js";
+
+/**
+ * Evaluate a batch of configs sequentially
+ */
+async function evaluateBatch(
+  configs: NamingDomain[],
+  validationSettings: ValidationSettings,
+  fitnessWeights: FitnessWeights,
+  siblingDomains: NamingDomain[],
+  generation: number
+): Promise<EvaluationResult[]> {
+  const results: EvaluationResult[] = [];
+  for (let i = 0; i < configs.length; i++) {
+    const result = await computeFitness(
+      configs[i],
+      {
+        consonantWeights: [],
+        vowelWeights: [],
+        templateWeights: [],
+        structureWeights: [],
+        apostropheRate: 0,
+        hyphenRate: 0,
+        lengthMin: 0,
+        lengthMax: 0,
+      },
+      validationSettings,
+      fitnessWeights,
+      siblingDomains,
+      generation * 1000 + i,
+      false
+    );
+    results.push(result);
+  }
+  return results;
+}
 
 /**
  * Individual in the population
@@ -228,9 +262,8 @@ export async function geneticAlgorithm(
     genomes.push(applyMultipleMutations(initialDomain, mutationCount, rng));
   }
 
-  // Evaluate all in parallel
-  const poolStats = getPoolStats();
-  console.log(`  Evaluating ${genomes.length} individuals${poolStats ? ` using ${poolStats.threads} workers` : ' (single-threaded)'}...`);
+  // Evaluate all individuals
+  console.log(`  Evaluating ${genomes.length} individuals...`);
 
   const evalResults = await evaluateBatch(
     genomes,

@@ -1,6 +1,6 @@
-import type { NamingDomain } from "../../lib/types/domain.js";
-import { testDomain } from "../../lib/generate.js";
-import type { CapacityReport, ValidationConfig } from "../types/validation.js";
+import type { NamingDomain } from "../../types/domain.js";
+import { testDomain } from "../../generate.js";
+import type { CapacityReport, ValidationConfig } from "../validation.js";
 
 /**
  * Calculate Shannon entropy for a set of names

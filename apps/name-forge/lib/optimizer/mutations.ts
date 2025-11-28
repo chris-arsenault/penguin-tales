@@ -7,7 +7,7 @@
  * - Cluster discovery and mutation
  */
 
-import type { NamingDomain } from "../../lib/types/domain.js";
+import type { NamingDomain } from "../types/domain.js";
 import {
   getAllConsonants,
   getAllVowels,
@@ -17,7 +17,7 @@ import {
   getAvailableVowels,
   getAvailableTemplates,
   getAvailableClusters,
-} from "../../lib/phoneme-library.js";
+} from "../phoneme-library.js";
 
 /**
  * Random number generator type

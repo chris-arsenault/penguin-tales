@@ -1,4 +1,4 @@
-import type { FeatureVector, Centroid, ClassificationResult } from "../types/validation.js";
+import type { FeatureVector, Centroid, ClassificationResult } from "../validation.js";
 import {
   featureVectorToArray,
   buildVocabulary,

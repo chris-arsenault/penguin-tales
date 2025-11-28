@@ -4,9 +4,9 @@
  * Integrates validation metrics into a single scalar fitness score.
  */
 
-import { generateFromDomain } from "../lib/generate.js";
-import { batchScorePronounceability } from "../lib/pronounceability.js";
-import type { NamingDomain } from "../lib/types/domain.js";
+import { generateFromDomain } from "../generate.js";
+import { batchScorePronounceability } from "../pronounceability.js";
+import type { NamingDomain } from "../types/domain.js";
 import type {
   FitnessWeights,
   ValidationSettings,
@@ -14,10 +14,10 @@ import type {
   ParameterVector,
 } from "./optimization.js";
 
-// Import validation metrics from local metrics folder
-import { validateCapacity } from "./metrics/capacity.js";
-import { validateDiffuseness } from "./metrics/diffuseness.js";
-import { validateSeparation } from "./metrics/separation.js";
+// Import validation metrics
+import { validateCapacity } from "../validation/metrics/capacity.js";
+import { validateDiffuseness } from "../validation/metrics/diffuseness.js";
+import { validateSeparation } from "../validation/metrics/separation.js";
 
 // No longer need dynamic imports - metrics are now local
 async function loadValidationMetrics() {

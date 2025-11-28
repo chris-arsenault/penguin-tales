@@ -5,9 +5,9 @@
  * and proposes new clusters based on patterns in high-fitness domains.
  */
 
-import { createRNG } from "../../lib/utils/rng.js";
-import { generateWordWithDebug } from "../../lib/phonology.js";
-import type { NamingDomain } from "../../lib/types/domain.js";
+import { createRNG } from "../utils/rng.js";
+import { generateWordWithDebug } from "../phonology.js";
+import type { NamingDomain } from "../types/domain.js";
 
 /**
  * Cluster frequency data
