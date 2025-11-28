@@ -164,7 +164,8 @@ const imageGenConfig = {
   apiKey: sanitize(process.env.OPENAI_API_KEY),
   model: sanitize(process.env.IMAGE_MODEL) || 'dall-e-3',
   size: (sanitize(process.env.IMAGE_SIZE) || '1024x1024') as '1024x1024' | '1792x1024' | '1024x1792',
-  quality: (sanitize(process.env.IMAGE_QUALITY) || 'standard') as 'standard' | 'hd'
+  quality: (sanitize(process.env.IMAGE_QUALITY) || 'standard') as 'standard' | 'hd',
+  promptConfig: penguinDomain.imageGenerationConfig
 };
 const imageGenerationService = imageGenEnabled
   ? new ImageGenerationService(imageGenConfig)

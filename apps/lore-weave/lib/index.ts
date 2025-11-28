@@ -58,7 +58,9 @@ export type {
   DomainUIConfig,
   EmergentDiscoveryConfig,
   CultureDefinition,
-  NameGenerator
+  NameGenerator,
+  ImageGenerationPromptConfig,
+  CultureImageConfig
 } from './types/domainSchema';
 
 export type {

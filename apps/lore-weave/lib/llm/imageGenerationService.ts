@@ -4,6 +4,7 @@ import https from 'https';
 import OpenAI from 'openai';
 import { HardState } from '../types/worldTypes';
 import { EnrichmentContext } from '../types/lore';
+import { ImageGenerationPromptConfig } from '../types/domainSchema';
 
 export interface ImageGenerationConfig {
   enabled: boolean;
@@ -11,6 +12,8 @@ export interface ImageGenerationConfig {
   model?: string;
   size?: '1024x1024' | '1792x1024' | '1024x1792';
   quality?: 'standard' | 'hd';
+  /** Domain-specific prompt configuration */
+  promptConfig?: ImageGenerationPromptConfig;
 }
 
 export interface ImageGenerationResult {
@@ -31,6 +34,7 @@ export interface ImageGenerationResult {
 export class ImageGenerationService {
   private client?: OpenAI;
   private config: ImageGenerationConfig;
+  private promptConfig?: ImageGenerationPromptConfig;
   private outputDir: string;
   private logFilePath: string;
   private imagesGenerated = 0;
@@ -43,6 +47,7 @@ export class ImageGenerationService {
       size: config.size || '1024x1024',
       quality: config.quality || 'standard'
     };
+    this.promptConfig = config.promptConfig;
 
     if (this.config.enabled && this.config.apiKey) {
       this.client = new OpenAI({ apiKey: this.config.apiKey });
@@ -191,19 +196,28 @@ export class ImageGenerationService {
 
   /**
    * Get world-building context for prompt
+   * Culture is first-class: visual identity flows from culture, then kind builds on that.
    */
   private getWorldContext(entity: HardState): string {
-    const baseWorld = 'Geographic atlas illustration from a frozen Antarctic world inhabited by super-intelligent penguins dwelling upon colossal ice formations.';
+    if (!this.promptConfig) {
+      return `Illustration of a ${entity.kind} entity.`;
+    }
 
-    const kindContext: Record<string, string> = {
-      npc: 'Field guide portrait: anthropomorphic penguin specimen displaying remarkable intelligence and distinct character.',
-      location: 'Cartographic vista: dramatic ice formation within the vast Antarctic seascape surrounding the towering Aurora Berg.',
-      faction: 'Symbolic heraldry: visual representation of a penguin collective through emblematic imagery and compositional elements.',
-      abilities: 'Phenomenon illustration: mystical or technological forces manifesting through visual energy and environmental effects.',
-      rules: 'Cultural iconography: symbolic visualization representing societal customs and traditions through allegorical imagery.'
-    };
+    const baseWorld = this.promptConfig.worldContext;
 
-    return `${baseWorld} ${kindContext[entity.kind] || ''}`;
+    // Culture is first-class - get the culture's visual identity and kind context
+    const cultureConfig = this.promptConfig.cultures[entity.culture];
+    if (!cultureConfig) {
+      return `${baseWorld} Illustration of a ${entity.kind}.`;
+    }
+
+    // Culture defines visual identity (species/appearance)
+    const visualIdentity = cultureConfig.visualIdentity;
+
+    // Kind-specific context within this culture
+    const kindContext = cultureConfig.kindContexts[entity.kind] || '';
+
+    return `${baseWorld} ${visualIdentity} ${kindContext}`.trim();
   }
 
   /**
@@ -212,39 +226,12 @@ export class ImageGenerationService {
   private getEntityDescription(entity: HardState): string {
     let description = `${entity.name}: ${entity.description}`;
 
-    // Add subtype context
-    const subtypeContext: Record<string, string> = {
-      // NPCs
-      hero: 'A legendary penguin hero, depicted in a heroic, larger-than-life pose.',
-      mayor: 'A respected colony leader, shown with symbols of authority.',
-      merchant: 'A savvy trader penguin, surrounded by trade goods and commerce.',
-      outlaw: 'A rebellious penguin, shown in a defiant or secretive manner.',
-
-      // Locations
-      colony: 'A bustling penguin settlement carved into ice, with architectural details.',
-      anomaly: 'A mysterious, otherworldly location with strange phenomena.',
-      geographic_feature: 'A dramatic natural ice formation in the Antarctic landscape.',
-      iceberg: 'A massive floating ice mountain, home to penguin colonies.',
-
-      // Factions
-      company: 'A merchant organization, shown through trade symbols and prosperity.',
-      criminal: 'A shadowy syndicate, depicted through darkness and secrecy.',
-      cult: 'A mystical group, shown with magical or spiritual symbolism.',
-      political: 'A governing body, depicted with symbols of power and order.',
-
-      // Abilities
-      magic: 'Magical energy manifesting as glowing ice or mystical light.',
-      technology: 'Advanced penguin technology, shown as ice-carved devices or tools.',
-
-      // Rules
-      edict: 'A formal law or decree, represented symbolically.',
-      taboo: 'A forbidden practice, shown through ominous or warning imagery.',
-      social: 'A cultural norm or tradition, depicted through community imagery.'
-    };
-
-    const subtypeDesc = subtypeContext[entity.subtype];
-    if (subtypeDesc) {
-      description += ` ${subtypeDesc}`;
+    // Add subtype context from domain config if available
+    if (this.promptConfig) {
+      const subtypeDesc = this.promptConfig.subtypeContexts[entity.subtype];
+      if (subtypeDesc) {
+        description += ` ${subtypeDesc}`;
+      }
     }
 
     return description;
@@ -252,23 +239,25 @@ export class ImageGenerationService {
 
   /**
    * Get style guidance for consistent art direction
+   * Culture-specific style modifiers layer on top of base style.
    */
   private getStyleGuidance(entity: HardState): string {
-    // Geographic atlas style guidance with explicit no-text instruction
-    const baseStyle = 'Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration.';
+    // Default no-text instruction if not provided by domain
+    const defaultNoText = 'IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.';
 
-    const kindStyle: Record<string, string> = {
-      npc: 'Character portrait in naturalist field guide style, detailed feather texture, expressive pose, scientific illustration quality.',
-      location: 'Cartographic landscape illustration, wide establishing view, atmospheric depth, topographic detail, sense of scale and grandeur.',
-      faction: 'Symbolic heraldry or group composition, emblematic design, visual identity through imagery alone.',
-      abilities: 'Abstract phenomenon illustration, ethereal effects, mystical energy visualization, scientific diagram aesthetic.',
-      rules: 'Allegorical or symbolic imagery, cultural iconography, metaphorical visual representation.'
-    };
+    if (!this.promptConfig) {
+      return defaultNoText;
+    }
 
-    // CRITICAL: Explicit instructions to prevent text generation
-    const noTextInstruction = 'IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.';
+    const baseStyle = this.promptConfig.styleGuidance;
 
-    return `${baseStyle} ${kindStyle[entity.kind] || ''}\n\n${noTextInstruction}`;
+    // Get culture-specific style modifiers
+    const cultureConfig = this.promptConfig.cultures[entity.culture];
+    const cultureStyle = cultureConfig?.styleModifiers || '';
+
+    const noTextInstruction = this.promptConfig.noTextInstruction || defaultNoText;
+
+    return `${baseStyle} ${cultureStyle}\n\n${noTextInstruction}`.trim();
   }
 
   /**

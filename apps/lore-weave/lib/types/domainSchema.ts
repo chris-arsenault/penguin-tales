@@ -499,6 +499,80 @@ export interface DomainSchema {
    */
   leadershipRelationshipKinds?: string[];
 
+  // ===========================
+  // IMAGE GENERATION CONFIG
+  // ===========================
+
+  /** Optional: Configuration for image generation prompts */
+  imageGenerationConfig?: ImageGenerationPromptConfig;
+}
+
+// ===========================
+// IMAGE GENERATION CONFIG
+// ===========================
+
+/**
+ * Culture-specific image generation configuration.
+ * Culture is first-class - it defines the visual identity (species/appearance),
+ * and kind-specific prompts build on that foundation.
+ */
+export interface CultureImageConfig {
+  /**
+   * Base visual identity for this culture (species, environment, aesthetic).
+   * Example: "Anthropomorphic emperor penguin from the Aurora Stack colony"
+   */
+  visualIdentity: string;
+
+  /**
+   * Color palette and artistic style for this culture.
+   * Example: "Warm golden aurora tones, organized composition"
+   */
+  styleModifiers: string;
+
+  /**
+   * Kind-specific prompts within this culture's visual identity.
+   * These build ON TOP of the culture's visual identity.
+   */
+  kindContexts: Record<string, string>;
+}
+
+/**
+ * Configuration for image generation prompts.
+ * Allows domains to customize DALL-E prompts for entity visualization.
+ *
+ * Architecture: Culture is first-class. The visual identity flows from culture,
+ * then kind-specific details layer on top. This matches how name-forge works.
+ */
+export interface ImageGenerationPromptConfig {
+  /**
+   * Base world context describing the setting.
+   * Example: "Geographic atlas illustration from a frozen Antarctic world"
+   */
+  worldContext: string;
+
+  /**
+   * Culture-specific configurations. Culture defines the visual identity.
+   * Each culture specifies its species/appearance and kind-specific prompts.
+   */
+  cultures: Record<string, CultureImageConfig>;
+
+  /**
+   * Per-subtype context for more specific descriptions.
+   * These are additive details regardless of culture.
+   */
+  subtypeContexts: Record<string, string>;
+
+  /**
+   * Base style guidance for consistent art direction across all cultures.
+   * Example: "Illustrated geographic atlas style, watercolor and ink aesthetic"
+   */
+  styleGuidance: string;
+
+  /**
+   * Instructions to prevent text in generated images.
+   * Default provided if not specified.
+   */
+  noTextInstruction?: string;
 }
 
 /**
