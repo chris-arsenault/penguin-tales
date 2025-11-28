@@ -113,7 +113,7 @@ export {
 
 // Name generation service (wraps name-forge)
 export { NameForgeService } from './naming/nameForgeService';
-export type { NameForgeConfig, NameForgeCultureConfig } from './naming/nameForgeService';
+export type { NameForgeConfig, NameForgeProjectFile, CultureConfig } from './naming/nameForgeService';
 
 // Validation
 export { validateWorld } from './utils/validators';

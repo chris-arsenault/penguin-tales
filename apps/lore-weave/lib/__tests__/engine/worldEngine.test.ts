@@ -393,7 +393,7 @@ describe('WorldEngine', () => {
         description: 'A detailed hero',
         status: 'active',
         prominence: 'renowned',
-        tags: ['brave', 'strong'],
+        tags: { brave: 'true', strong: 'true' },
         links: []
       }];
 
@@ -407,7 +407,7 @@ describe('WorldEngine', () => {
       expect(entity.kind).toBe('npc');
       expect(entity.subtype).toBe('hero');
       expect(entity.prominence).toBe('renowned');
-      expect(entity.tags).toContain('brave');
+      expect('brave' in entity.tags).toBe(true);
     });
   });
 
@@ -741,7 +741,7 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       graph.getEntities().forEach(entity => {
-        expect(entity.tags.length).toBeLessThanOrEqual(5);
+        expect(Object.keys(entity.tags).length).toBeLessThanOrEqual(5);
       });
     });
   });
@@ -777,8 +777,8 @@ describe('WorldEngine', () => {
       const largeGraph = largeEngine.run();
 
       // Both should have at least the initial entities
-      expect(largeGraph.entities.size).toBeGreaterThanOrEqual(initialState.length);
-      expect(smallGraph.entities.size).toBeGreaterThanOrEqual(initialState.length);
+      expect(largeGraph.getEntityCount()).toBeGreaterThanOrEqual(initialState.length);
+      expect(smallGraph.getEntityCount()).toBeGreaterThanOrEqual(initialState.length);
       // Large config should allow for more ticks
       expect(largeConfig.maxTicks).toBeGreaterThan(smallConfig.maxTicks);
     });

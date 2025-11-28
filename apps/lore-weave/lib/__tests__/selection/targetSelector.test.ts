@@ -337,7 +337,7 @@ describe('TargetSelector', () => {
       const bias: SelectionBias = {
         prefer: {
           subtypes: ['merchant'],
-          tags: { trader: 'true' },
+          tags: ['trader'],
           prominence: ['marginal']
         }
       };
@@ -599,7 +599,7 @@ describe('TargetSelector', () => {
       const bias: SelectionBias = {
         prefer: {
           subtypes: ['merchant'],
-          tags: { trader: 'true' }
+          tags: ['trader']
         },
         avoid: {
           relationshipKinds: ['allies'],
@@ -628,7 +628,7 @@ describe('TargetSelector', () => {
       const bias: SelectionBias = {
         prefer: {
           subtypes: ['wizard'],
-          tags: { magical: 'true' },
+          tags: ['magical'],
           prominence: ['mythic'],
           preferenceBoost: 3.0
         },
@@ -656,11 +656,30 @@ describe('TargetSelector', () => {
 
   describe('edge cases and error handling', () => {
     it('should handle empty graph', () => {
+      // Create a truly empty graph with proper interface
+      const _emptyEntities = new Map<string, HardState>();
+      const _emptyRelationships: Relationship[] = [];
       const emptyGraph: Graph = {
-        ...graph,
-        entities: new Map(),
-        relationships: []
-      };
+        tick: 0,
+        currentEra: graph.currentEra,
+        pressures: new Map(),
+        history: [],
+        config: graph.config,
+        relationshipCooldowns: new Map(),
+        get entities() { return _emptyEntities; },
+        get relationships() { return _emptyRelationships; },
+        getEntity(id: string) { return _emptyEntities.get(id); },
+        hasEntity(id: string) { return _emptyEntities.has(id); },
+        getEntityCount() { return _emptyEntities.size; },
+        getEntities() { return Array.from(_emptyEntities.values()); },
+        getEntityIds() { return Array.from(_emptyEntities.keys()); },
+        findEntities() { return []; },
+        getEntitiesByKind() { return []; },
+        getRelationships() { return _emptyRelationships; },
+        getRelationshipCount() { return 0; },
+        findRelationships() { return []; },
+        getEntityRelationships() { return []; },
+      } as Graph;
 
       const result = selector.selectTargets(emptyGraph, 'npc', 2, {});
       expect(result.existing).toEqual([]);
@@ -842,7 +861,7 @@ describe('TargetSelector', () => {
       const bias: SelectionBias = {
         prefer: {
           subtypes: ['merchant'],
-          tags: { trader: 'true', wealthy: 'true' },
+          tags: ['trader', 'wealthy'],
           prominence: ['marginal'],
           preferenceBoost: 10.0 // Very high boost to ensure preference
         }

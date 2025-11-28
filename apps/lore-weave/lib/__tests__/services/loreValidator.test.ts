@@ -31,7 +31,11 @@ describe('LoreValidator', () => {
       getEntityEnrichmentPrompt: vi.fn().mockReturnValue(null),
       getRelationshipEnrichmentPrompt: vi.fn().mockReturnValue(null),
       getOccurrenceEnrichmentPrompt: vi.fn().mockReturnValue(null),
-      getEraEnrichmentPrompt: vi.fn().mockReturnValue(null)
+      getEraEnrichmentPrompt: vi.fn().mockReturnValue(null),
+      // Validation-specific methods
+      getGeographicTerms: vi.fn().mockReturnValue(['shelf', 'ridge', 'hollow', 'stack', 'pools', 'reach', 'pass', 'peak']),
+      getMysticalTerms: vi.fn().mockReturnValue(['glow', 'aurora', 'singing', 'echo', 'frozen', 'ancient', 'crystal', 'mirror', 'shadow', 'lost']),
+      getLoreCues: vi.fn().mockReturnValue(['ice', 'berg', 'aurora', 'penguin', 'colony', 'frost', 'krill', 'fissure', 'current', 'glow', 'coin', 'sing'])
     };
 
     validator = new LoreValidator(mockLoreProvider);

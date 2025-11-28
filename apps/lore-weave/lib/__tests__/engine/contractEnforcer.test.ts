@@ -640,7 +640,9 @@ describe('ContractEnforcer', () => {
         mockGraph.setEntity(`npc${i}`, {
           id: `npc${i}`,
           kind: 'npc',
-          subtype: 'merchant'
+          subtype: 'merchant',
+          tags: {},
+          links: []
         } as HardState);
       }
 
@@ -675,7 +677,7 @@ describe('ContractEnforcer', () => {
       }
       // Add 5 factions (not saturated)
       for (let i = 0; i < 5; i++) {
-        mockGraph.setEntity(`faction${i}`, { id: `faction${i}`, kind: 'faction' } as HardState);
+        mockGraph.setEntity(`faction${i}`, { id: `faction${i}`, kind: 'faction', tags: {}, links: [] } as HardState);
       }
 
       mockConfig.entityRegistries = [

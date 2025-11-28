@@ -17,6 +17,8 @@ export * from "./phonology.js";
 export * from "./morphology.js";
 export * from "./style.js";
 export * from "./domain-selector.js";
+export * from "./phonotactic-pipeline.js";
+export * from "./markov.js";
 
 // Phase 4: Profile-based generation
 export * from "./profile-executor.js";

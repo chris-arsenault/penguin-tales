@@ -83,9 +83,9 @@ describe('relationshipCulling', () => {
       enrichmentService: {} as any,
 
       // Entity read methods
+      // Returns actual entity reference (not a copy) so mutations persist
       getEntity(id: string): HardState | undefined {
-        const entity = _entities.get(id);
-        return entity ? { ...entity, tags: [...entity.tags], links: [...entity.links] } : undefined;
+        return _entities.get(id);
       },
       hasEntity(id: string): boolean {
         return _entities.has(id);

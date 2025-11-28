@@ -94,23 +94,23 @@ describe('RegionMapper', () => {
   describe('getTagsForPoint', () => {
     it('returns region auto-tags for point in region', () => {
       const tags = mapper.getTagsForPoint({ x: 30, y: 80, z: 50 });
-      expect(tags).toContain('cold');
-      expect(tags).toContain('ice');
-      expect(tags).toContain('region:northern_ice');
+      expect(tags.cold).toBeTruthy();
+      expect(tags.ice).toBeTruthy();
+      expect(tags.region).toBe('northern_ice');
     });
 
     it('returns default tags for point outside all regions', () => {
       const tags = mapper.getTagsForPoint({ x: 90, y: 90, z: 50 });
-      expect(tags).toContain('wilderness');
-      expect(tags).toContain('region:unassigned');
+      expect(tags.wilderness).toBeTruthy();
+      expect(tags.region).toBe('unassigned');
     });
 
     it('returns combined tags for nested regions', () => {
       const tags = mapper.getTagsForPoint({ x: 35, y: 20, z: 10 });
-      expect(tags).toContain('sacred');
-      expect(tags).toContain('underground');
-      expect(tags).toContain('coastal');
-      expect(tags).toContain('fishing');
+      expect(tags.sacred).toBeTruthy();
+      expect(tags.underground).toBeTruthy();
+      expect(tags.coastal).toBeTruthy();
+      expect(tags.fishing).toBeTruthy();
     });
   });
 
@@ -193,7 +193,7 @@ describe('RegionMapper', () => {
 
       const tags = mapper.processEntityPlacement('entity-1', { x: 30, y: 80, z: 50 });
 
-      expect(tags).toContain('region:northern_ice');
+      expect(tags.region).toBe('northern_ice');
       expect(emittedEvent).not.toBeNull();
       expect(emittedEvent.entityId).toBe('entity-1');
       expect(emittedEvent.region?.id).toBe('northern_ice');

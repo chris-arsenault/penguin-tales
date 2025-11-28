@@ -388,13 +388,22 @@ describe('SystemSelector', () => {
     describe('relationship diversity adjustments', () => {
       it('should penalize systems creating over-represented relationship types', () => {
         // Create a graph with skewed relationship distribution
-        const skewedGraph = { ...mockGraph };
+        const baseRels = mockGraph.getRelationships();
         const overRepresentedRels = Array(50).fill(null).map((_, i) => ({
           kind: 'allies',
           src: `npc${i}`,
           dst: `npc${i + 1}`
         }));
-        skewedGraph.relationships = [...mockGraph.relationships, ...overRepresentedRels];
+        const skewedRels = [...baseRels, ...overRepresentedRels];
+        const skewedGraph = {
+          ...mockGraph,
+          getRelationships: () => skewedRels,
+          getRelationshipCount: () => skewedRels.length,
+          findRelationships: (criteria: any) => skewedRels.filter((r: any) => {
+            if (criteria.kind && r.kind !== criteria.kind) return false;
+            return true;
+          })
+        };
 
         const systemWithAllies = createMockSystem('allies_system', {
           produces: {

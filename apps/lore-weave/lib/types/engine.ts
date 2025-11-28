@@ -640,6 +640,7 @@ export class GraphStore implements Graph {
       }
       // Convert KVP tags to array for name-forge compatibility
       const tagArray = Object.keys(tags);
+
       name = nameForge.generate(
         settings.kind,
         settings.subtype,
@@ -647,6 +648,13 @@ export class GraphStore implements Graph {
         tagArray,
         settings.culture || 'world'
       );
+
+      if (!name) {
+        throw new Error(
+          `NameForge returned empty name for ${settings.kind}:${settings.subtype}. ` +
+          `Tags: [${tagArray.join(', ')}], Culture: ${settings.culture || 'world'}`
+        );
+      }
     }
 
     // Add slugified name to tags for tracking

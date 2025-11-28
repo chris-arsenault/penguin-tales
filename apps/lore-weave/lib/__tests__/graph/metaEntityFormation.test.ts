@@ -71,7 +71,7 @@ describe('MetaEntityFormation', () => {
             if (criteria.status && e.status !== criteria.status) return false;
             if (criteria.prominence && e.prominence !== criteria.prominence) return false;
             if (criteria.culture && e.culture !== criteria.culture) return false;
-            if (criteria.tag && !e.tags.includes(criteria.tag)) return false;
+            if (criteria.tag && !(criteria.tag in e.tags)) return false;
             if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
             return true;
           })
@@ -167,6 +167,37 @@ describe('MetaEntityFormation', () => {
           return true;
         }
         return false;
+      },
+      addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): void {
+        const relationship: Relationship = { kind, src: srcId, dst: dstId, strength, distance, category };
+        _relationships.push(relationship);
+        const srcEntity = _entities.get(srcId);
+        if (srcEntity) {
+          srcEntity.links.push({ ...relationship });
+          srcEntity.updatedAt = this.tick;
+        }
+      },
+
+      // Entity creation
+      createEntity(settings: { kind: string; subtype: string; coordinates: { x: number; y: number; z?: number }; tags?: Record<string, string>; name?: string; description?: string; status?: string; prominence?: string; culture?: string }): string {
+        const id = `${settings.kind}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const entity: HardState = {
+          id,
+          kind: settings.kind as HardState['kind'],
+          subtype: settings.subtype,
+          name: settings.name || `${settings.kind}_${settings.subtype}`,
+          description: settings.description || '',
+          status: settings.status || 'active',
+          prominence: (settings.prominence || 'marginal') as any,
+          culture: settings.culture || 'world',
+          tags: settings.tags || {},
+          links: [],
+          createdAt: this.tick,
+          updatedAt: this.tick,
+          coordinates: settings.coordinates
+        };
+        _entities.set(id, entity);
+        return id;
       },
 
       // Keep backward compatibility for tests
@@ -682,19 +713,20 @@ describe('MetaEntityFormation', () => {
           description: 'A fire magic school',
           status: 'active',
           prominence: 'recognized', culture: 'world',
-          tags: ['meta-entity', 'fire', 'school'],
-          links: []
+          tags: { 'meta-entity': 'true', fire: 'true', school: 'true' },
+          links: [],
+          coordinates: { x: 0, y: 0 }
         })
       };
 
       const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
 
       // Meta-entity should exist in graph
-      expect(mockGraph.entities.has(metaEntity.id)).toBe(true);
+      expect(mockGraph.hasEntity(metaEntity.id)).toBe(true);
       expect(metaEntity.kind).toBe('abilities');
       expect(metaEntity.subtype).toBe('school');
       expect(metaEntity.name).toContain('School of Fire');
-      expect(metaEntity.tags).toContain('meta-entity');
+      expect('meta-entity' in metaEntity.tags).toBe(true);
     });
 
     it('should create part_of relationships when preserveOriginalLinks is true', () => {
@@ -753,15 +785,16 @@ describe('MetaEntityFormation', () => {
           description: 'School',
           status: 'active',
           prominence: 'recognized', culture: 'world',
-          tags: ['meta-entity'],
-          links: []
+          tags: { 'meta-entity': 'true' },
+          links: [],
+          coordinates: { x: 0, y: 0 }
         })
       };
 
       const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
 
       // Should have part_of relationships
-      const partOfRels = mockGraph.relationships.filter(r =>
+      const partOfRels = mockGraph.getRelationships().filter(r =>
         r.kind === 'part_of' && r.dst === metaEntity.id
       );
       expect(partOfRels.length).toBe(2);
@@ -811,15 +844,16 @@ describe('MetaEntityFormation', () => {
           description: 'School',
           status: 'active',
           prominence: 'recognized', culture: 'world',
-          tags: ['meta-entity'],
-          links: []
+          tags: { 'meta-entity': 'true' },
+          links: [],
+          coordinates: { x: 0, y: 0 }
         })
       };
 
       formation.formMetaEntity(mockGraph, cluster, config);
 
       // Original entity should be marked historical
-      const ability1 = mockGraph.entities.get('ability1');
+      const ability1 = mockGraph.getEntity('ability1');
       expect(ability1?.status).toBe('historical');
     });
 
@@ -884,15 +918,16 @@ describe('MetaEntityFormation', () => {
           description: 'School',
           status: 'active',
           prominence: 'recognized', culture: 'world',
-          tags: ['meta-entity'],
-          links: []
+          tags: { 'meta-entity': 'true' },
+          links: [],
+          coordinates: { x: 0, y: 0 }
         })
       };
 
       const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
 
       // Relationship should be transferred to meta-entity
-      const transferredRel = mockGraph.relationships.find(r =>
+      const transferredRel = mockGraph.getRelationships().find(r =>
         r.kind === 'practiced_by' && r.src === metaEntity.id && r.dst === 'npc1'
       );
       expect(transferredRel).toBeDefined();

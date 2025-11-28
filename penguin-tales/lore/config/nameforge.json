@@ -1,251 +1,489 @@
 {
+  "id": "penguin_tales",
+  "name": "Penguin Tales",
+  "version": "1.0",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "worldSchema": {
+    "hardState": [
+      {
+        "kind": "npc",
+        "subtype": ["merchant", "mayor", "hero", "outlaw", "orca"],
+        "status": ["alive", "dead", "fictional", "missing"]
+      },
+      {
+        "kind": "location",
+        "subtype": ["iceberg", "colony", "igloo", "geographic_feature", "anomaly"],
+        "status": ["thriving", "waning", "abandoned"]
+      },
+      {
+        "kind": "faction",
+        "subtype": ["political", "criminal", "cult", "company"],
+        "status": ["active", "disbanded", "waning"]
+      },
+      {
+        "kind": "rules",
+        "subtype": ["edict", "taboo", "social", "natural"],
+        "status": ["active", "forgotten", "proposed", "enacted", "repealed"]
+      },
+      {
+        "kind": "abilities",
+        "subtype": ["magic", "faith", "technology", "physical", "combat"],
+        "status": ["active", "lost", "emergent"]
+      }
+    ],
+    "relationships": {
+      "npc": {
+        "npc": ["ally_of", "enemy_of", "mentor_of", "rival_of", "kin_of"],
+        "location": ["resident_of", "exile_from", "guardian_of"],
+        "faction": ["leader_of", "member_of", "spy_for", "hunted_by"],
+        "rules": ["author_of", "enforcer_of", "violator_of", "believer_of"],
+        "abilities": ["practitioner_of", "student_of", "creator_of"]
+      },
+      "location": {
+        "npc": ["birthplace_of", "tomb_of", "sanctuary_for"],
+        "location": ["adjacent_to", "contains", "contained_by"],
+        "faction": ["stronghold_of", "contested_by", "sacred_to"],
+        "rules": ["governed_by", "exempt_from"],
+        "abilities": ["manifests_at", "source_of", "amplifies"]
+      },
+      "faction": {
+        "npc": ["commands", "protects", "hunts"],
+        "location": ["controls", "raids", "defends"],
+        "faction": ["allied_with", "at_war_with", "splinter_of"],
+        "rules": ["enforces", "defies", "created"],
+        "abilities": ["wields", "seeks", "forbids"]
+      },
+      "rules": {
+        "npc": ["binds", "empowers", "condemns"],
+        "location": ["applies_in", "originated_at"],
+        "faction": ["governs", "opposed_by"],
+        "rules": ["supersedes", "derives_from", "related_to"],
+        "abilities": ["regulates", "enables"]
+      },
+      "abilities": {
+        "npc": ["bestowed_upon", "awakened_in"],
+        "location": ["manifests_at", "dormant_in"],
+        "faction": ["monopolized_by", "feared_by"],
+        "rules": ["constrained_by", "transcends"],
+        "abilities": ["evolved_from", "counters"]
+      }
+    }
+  },
   "cultures": {
     "world": {
       "id": "world",
-      "name": "World",
-      "domains": [],
+      "name": "World Default",
+      "description": "Default naming conventions for the penguin world",
+      "domains": [
+        {
+          "id": "penguin_domain",
+          "phonology": {
+            "consonants": ["f", "s", "w", "r", "n", "m", "k", "p", "t", "l", "sh", "ch"],
+            "vowels": ["a", "e", "i", "o", "u", "ai", "ee", "oo", "au"],
+            "syllableTemplates": ["CV", "CVC", "VCV", "CVCV"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["fl", "fr", "sl", "sw", "sn", "gl", "cr"],
+            "forbiddenClusters": ["gg", "kk", "xx"],
+            "favoredClusterBoost": 1.4,
+            "consonantWeights": [1.3, 1.2, 1.2, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1.2, 1, 1.2, 1, 1, 1, 1, 1, 1],
+            "templateWeights": [1, 1.2, 1, 0.8]
+          },
+          "morphology": {
+            "prefixes": ["Frost", "Ice", "Snow", "Crystal", "Aurora", "Storm", "Tide", "Wave", "Glacier", "Drift"],
+            "suffixes": ["beak", "wing", "diver", "slider", "walker", "swimmer", "watcher", "keeper"],
+            "structure": ["root", "prefix-root", "root-suffix", "prefix-root-suffix"],
+            "structureWeights": [0.3, 0.3, 0.3, 0.1]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.1,
+            "preferredEndings": ["er", "or", "en", "an", "in"],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "flowing"
+          }
+        }
+      ],
       "lexemeLists": {
-        "firstNames": {
-          "id": "world_firstNames",
-          "entries": ["Frost", "Ice", "Snow", "Crystal", "Aurora", "Storm", "Tide", "Wave", "Glacier", "Floe", "Drift", "Chill", "Blizzard", "Shimmer", "Glint"]
+        "penguin_names": {
+          "id": "penguin_names",
+          "description": "First names for penguins",
+          "entries": ["Frost", "Ice", "Snow", "Crystal", "Aurora", "Storm", "Tide", "Wave", "Glacier", "Floe", "Drift", "Chill", "Blizzard", "Shimmer", "Glint", "Sleet", "Hail", "Rime", "Powder", "Brisk"],
+          "source": "manual"
         },
-        "lastNames": {
-          "id": "world_lastNames",
-          "entries": ["beak", "wing", "diver", "slider", "walker", "swimmer", "fisher", "hunter", "watcher", "keeper", "breaker", "caller", "singer"]
+        "penguin_surnames": {
+          "id": "penguin_surnames",
+          "description": "Surnames for penguins",
+          "entries": ["beak", "wing", "diver", "slider", "walker", "swimmer", "fisher", "hunter", "watcher", "keeper", "breaker", "caller", "singer", "glider", "flipper", "waddler", "drifter"],
+          "source": "manual"
         },
-        "heroTitles": {
-          "id": "world_heroTitles",
-          "entries": ["Brave", "Bold", "Swift", "Mighty"]
+        "hero_titles": {
+          "id": "hero_titles",
+          "description": "Titles for heroic penguins",
+          "entries": ["Brave", "Bold", "Swift", "Mighty", "Valiant", "Noble", "Steadfast", "Fearless"],
+          "source": "manual"
         },
-        "mayorTitles": {
-          "id": "world_mayorTitles",
-          "entries": ["Elder", "Wise", "High", "Chief"]
+        "mayor_titles": {
+          "id": "mayor_titles",
+          "description": "Titles for mayor penguins",
+          "entries": ["Elder", "Wise", "High", "Chief", "Grand", "Premier", "Honored", "Venerable"],
+          "source": "manual"
         },
-        "merchantTitles": {
-          "id": "world_merchantTitles",
-          "entries": ["Trader", "Dealer", "Master", "Guild"]
+        "merchant_titles": {
+          "id": "merchant_titles",
+          "description": "Titles for merchant penguins",
+          "entries": ["Trader", "Dealer", "Master", "Guild", "Merchant", "Bargainer", "Peddler", "Vendor"],
+          "source": "manual"
         },
-        "outlawTitles": {
-          "id": "world_outlawTitles",
-          "entries": ["Shadow", "Silent", "Quick", "Sly"]
+        "outlaw_titles": {
+          "id": "outlaw_titles",
+          "description": "Titles for outlaw penguins",
+          "entries": ["Shadow", "Silent", "Quick", "Sly", "Cunning", "Rogue", "Ghost", "Phantom"],
+          "source": "manual"
         },
-        "orcaTitles": {
-          "id": "world_orcaTitles",
-          "entries": ["Warlord", "Chieftain", "Ravager", "Hunter"]
+        "orca_titles": {
+          "id": "orca_titles",
+          "description": "Titles for orca enemies",
+          "entries": ["Warlord", "Chieftain", "Ravager", "Hunter", "Reaver", "Marauder", "Bloodfin", "Deathwave"],
+          "source": "manual"
         },
-        "locationPrefixes": {
-          "id": "world_locationPrefixes",
-          "entries": ["Northern", "Southern", "Eastern", "Western", "Deep", "High", "Low", "Ancient", "Frozen", "Windswept", "Crystal", "Hidden", "Sacred", "Lost"]
+        "location_prefixes": {
+          "id": "location_prefixes",
+          "description": "Prefixes for locations",
+          "entries": ["Northern", "Southern", "Eastern", "Western", "Deep", "High", "Low", "Ancient", "Frozen", "Windswept", "Crystal", "Hidden", "Sacred", "Lost", "Dark", "Bright", "Whispering", "Silent", "Shimmering", "Ethereal"],
+          "source": "manual"
         },
-        "locationSuffixes": {
-          "id": "world_locationSuffixes",
-          "entries": ["Haven", "Bay", "Point", "Ridge", "Hollow", "Peak", "Cove", "Reach", "Depths", "Heights", "Falls", "Shoals", "Shelf", "Wastes"]
+        "location_suffixes": {
+          "id": "location_suffixes",
+          "description": "Suffixes for locations",
+          "entries": ["Haven", "Bay", "Point", "Ridge", "Hollow", "Peak", "Cove", "Reach", "Depths", "Heights", "Falls", "Shoals", "Shelf", "Wastes", "Grotto", "Chasm", "Vortex", "Basin", "Rift", "Fissure", "Gate", "Lair", "Sanctum", "Hall", "Crypt"],
+          "source": "manual"
         },
-        "factionAdjectives": {
-          "id": "world_factionAdjectives",
-          "entries": ["United", "Ancient", "Imperial", "Free", "Shadow", "Iron", "Silver", "Golden"]
+        "faction_adjectives": {
+          "id": "faction_adjectives",
+          "description": "Adjectives for factions",
+          "entries": ["United", "Ancient", "Imperial", "Free", "Shadow", "Iron", "Silver", "Golden", "Frozen", "Eternal"],
+          "source": "manual"
         },
-        "factionNouns": {
-          "id": "world_factionNouns",
-          "entries": ["League", "Brotherhood", "Council", "Order", "Guild", "Syndicate", "Covenant", "Circle"]
+        "faction_nouns": {
+          "id": "faction_nouns",
+          "description": "Nouns for factions",
+          "entries": ["League", "Brotherhood", "Council", "Order", "Guild", "Syndicate", "Covenant", "Circle", "Flippers", "Watchers"],
+          "source": "manual"
         },
-        "ruleAspects": {
-          "id": "world_ruleAspects",
-          "entries": ["Justice", "Trade", "Honor", "Faith", "Duty", "Tradition"]
+        "rule_aspects": {
+          "id": "rule_aspects",
+          "description": "Rule aspects",
+          "entries": ["Justice", "Trade", "Honor", "Faith", "Duty", "Tradition", "Protection", "Commerce", "Defense", "Peace", "Unity", "Harmony"],
+          "source": "manual"
         },
-        "ruleSuffixes": {
-          "id": "world_ruleSuffixes",
-          "entries": ["Code", "Edict", "Law", "Decree"]
+        "rule_types": {
+          "id": "rule_types",
+          "description": "Rule types",
+          "entries": ["Code", "Edict", "Law", "Decree", "Doctrine", "Accord", "Pact", "Covenant"],
+          "source": "manual"
         },
-        "abilityElements": {
-          "id": "world_abilityElements",
-          "entries": ["Ice", "Wind", "Storm", "Tide", "Aurora", "Frost"]
+        "ability_elements": {
+          "id": "ability_elements",
+          "description": "Elemental themes for abilities",
+          "entries": ["Ice", "Frost", "Wind", "Storm", "Tide", "Aurora", "Glow", "Crystal", "Snow", "Chill"],
+          "source": "manual"
         },
-        "abilityForms": {
-          "id": "world_abilityForms",
-          "entries": ["Strike", "Shield", "Call", "Dance", "Whisper", "Fury"]
+        "ability_forms": {
+          "id": "ability_forms",
+          "description": "Forms for abilities",
+          "entries": ["Strike", "Shield", "Call", "Dance", "Whisper", "Fury", "Ward", "Bond", "Sight", "Touch"],
+          "source": "manual"
         }
       },
+      "lexemeSpecs": {},
       "grammars": [
         {
-          "id": "world_npc_hero",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "world_heroTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_hero_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:hero_titles", "slot:penguin_names", "slot:penguin_surnames"],
+              ["slot:hero_titles", "domain:penguin_domain"],
+              ["markov:norse"]
+            ]
           }
         },
         {
-          "id": "world_npc_mayor",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "world_mayorTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_mayor_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:mayor_titles", "slot:penguin_names", "slot:penguin_surnames"],
+              ["slot:mayor_titles", "domain:penguin_domain"],
+              ["markov:germanic"]
+            ]
           }
         },
         {
-          "id": "world_npc_merchant",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "world_merchantTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_merchant_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:merchant_titles", "slot:penguin_names", "slot:penguin_surnames"],
+              ["slot:merchant_titles", "domain:penguin_domain"],
+              ["markov:latin"]
+            ]
           }
         },
         {
-          "id": "world_npc_outlaw",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "world_outlawTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_outlaw_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:outlaw_titles", "slot:penguin_names", "slot:penguin_surnames"],
+              ["slot:outlaw_titles", "domain:penguin_domain"],
+              ["markov:celtic"]
+            ]
           }
         },
         {
-          "id": "world_npc_orca",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "world_orcaTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_orca_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:orca_titles", "domain:penguin_domain"],
+              ["markov:slavic"]
+            ]
           }
         },
         {
-          "id": "world_npc_default",
-          "pattern": "FIRST LAST",
-          "symbolSources": {
-            "FIRST": { "kind": "lexemeList", "listId": "world_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "world_lastNames" }
+          "id": "npc_default_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:penguin_names", "slot:penguin_surnames"],
+              ["domain:penguin_domain"],
+              ["markov:finnish"],
+              ["markov:norse"]
+            ]
           }
         },
         {
-          "id": "world_location",
-          "pattern": "PREFIX SUFFIX",
-          "symbolSources": {
-            "PREFIX": { "kind": "lexemeList", "listId": "world_locationPrefixes" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "world_locationSuffixes" }
+          "id": "location_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:location_prefixes", "slot:location_suffixes"],
+              ["The", "slot:location_prefixes", "slot:location_suffixes"],
+              ["domain:penguin_domain", "slot:location_suffixes"],
+              ["slot:location_prefixes", "domain:penguin_domain"]
+            ]
           }
         },
         {
-          "id": "world_faction",
-          "pattern": "The ADJ NOUN",
-          "symbolSources": {
-            "ADJ": { "kind": "lexemeList", "listId": "world_factionAdjectives" },
-            "NOUN": { "kind": "lexemeList", "listId": "world_factionNouns" }
+          "id": "faction_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:faction_adjectives", "slot:faction_nouns"],
+              ["slot:faction_adjectives", "slot:faction_nouns", "of the Ice"],
+              ["Order of the", "slot:location_prefixes"]
+            ]
           }
         },
         {
-          "id": "world_rules",
-          "pattern": "The ASPECT SUFFIX",
-          "symbolSources": {
-            "ASPECT": { "kind": "lexemeList", "listId": "world_ruleAspects" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "world_ruleSuffixes" }
+          "id": "rules_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:rule_aspects", "slot:rule_types"],
+              ["slot:rule_aspects", "slot:rule_types"],
+              ["The Path of", "slot:rule_aspects"]
+            ]
           }
         },
         {
-          "id": "world_abilities",
-          "pattern": "ELEMENT FORM",
-          "symbolSources": {
-            "ELEMENT": { "kind": "lexemeList", "listId": "world_abilityElements" },
-            "FORM": { "kind": "lexemeList", "listId": "world_abilityForms" }
+          "id": "abilities_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:ability_elements", "slot:ability_forms"],
+              ["domain:penguin_domain", "slot:ability_forms"],
+              ["slot:ability_elements", "domain:penguin_domain"]
+            ]
           }
         }
       ],
       "profiles": [
         {
-          "id": "world:npc",
-          "cultureId": "world",
-          "type": "npc",
+          "id": "world_default",
+          "name": "World Default Profile",
           "strategyGroups": [
             {
-              "name": "Hero names",
-              "priority": 10,
-              "conditions": { "subtype": ["hero"] },
-              "strategies": [{ "id": "hero_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_hero" }] }]
+              "name": "Hero NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["hero"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_hero_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             },
             {
-              "name": "Mayor names",
-              "priority": 10,
-              "conditions": { "subtype": ["mayor"] },
-              "strategies": [{ "id": "mayor_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_mayor" }] }]
+              "name": "Mayor NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["mayor"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_mayor_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             },
             {
-              "name": "Merchant names",
-              "priority": 10,
-              "conditions": { "subtype": ["merchant"] },
-              "strategies": [{ "id": "merchant_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_merchant" }] }]
+              "name": "Merchant NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["merchant"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_merchant_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             },
             {
-              "name": "Outlaw names",
-              "priority": 10,
-              "conditions": { "subtype": ["outlaw"] },
-              "strategies": [{ "id": "outlaw_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_outlaw" }] }]
+              "name": "Outlaw NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["outlaw"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_outlaw_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             },
             {
-              "name": "Orca names",
-              "priority": 10,
-              "conditions": { "subtype": ["orca"] },
-              "strategies": [{ "id": "orca_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_orca" }] }]
+              "name": "Orca NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": ["orca"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_orca_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             },
             {
-              "name": "Default NPC names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "default_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_npc_default" }] }]
-            }
-          ]
-        },
-        {
-          "id": "world:location",
-          "cultureId": "world",
-          "type": "location",
-          "strategyGroups": [
+              "name": "Default NPC Names",
+              "priority": 10,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "npc_default_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
+            },
             {
-              "name": "Location names",
+              "name": "Location Names",
               "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "location_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_location" }] }]
-            }
-          ]
-        },
-        {
-          "id": "world:faction",
-          "cultureId": "world",
-          "type": "faction",
-          "strategyGroups": [
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "location_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
+            },
             {
-              "name": "Faction names",
+              "name": "Faction Names",
               "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "faction_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_faction" }] }]
-            }
-          ]
-        },
-        {
-          "id": "world:rules",
-          "cultureId": "world",
-          "type": "rules",
-          "strategyGroups": [
+              "conditions": {
+                "entityKinds": ["faction"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "faction_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
+            },
             {
-              "name": "Rules names",
+              "name": "Rules Names",
               "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "rules_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_rules" }] }]
-            }
-          ]
-        },
-        {
-          "id": "world:abilities",
-          "cultureId": "world",
-          "type": "abilities",
-          "strategyGroups": [
+              "conditions": {
+                "entityKinds": ["rules"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "rules_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
+            },
             {
-              "name": "Abilities names",
+              "name": "Abilities Names",
               "priority": 0,
+              "conditions": {
+                "entityKinds": ["abilities"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "abilities_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
+            },
+            {
+              "name": "Universal Fallback",
+              "priority": 100,
               "conditions": null,
-              "strategies": [{ "id": "abilities_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "world_abilities" }] }]
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "penguin_domain" }
+              ]
             }
           ]
         }
@@ -254,230 +492,133 @@
     "aurora-stack": {
       "id": "aurora-stack",
       "name": "Aurora Stack",
-      "domains": [],
+      "description": "The prosperous trading colony, known for commerce and diplomacy",
+      "domains": [
+        {
+          "id": "aurora_domain",
+          "phonology": {
+            "consonants": ["l", "r", "n", "m", "s", "t", "d", "g", "b"],
+            "vowels": ["a", "e", "i", "o", "ai", "ea", "au"],
+            "syllableTemplates": ["CV", "CVC", "VCV", "CVV"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["gl", "br", "tr", "st"],
+            "forbiddenClusters": ["gg", "kk"],
+            "favoredClusterBoost": 1.3,
+            "consonantWeights": [1.3, 1.2, 1, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1.2, 1.2, 1, 1, 1, 1, 1],
+            "templateWeights": [1, 1, 1, 0.8]
+          },
+          "morphology": {
+            "prefixes": ["Bright", "Golden", "Sun", "Dawn", "Gleam", "Radiant", "Clear", "High"],
+            "suffixes": ["trader", "keeper", "counter", "ledger", "scale", "banner", "coin", "beam"],
+            "structure": ["root", "prefix-root", "root-suffix"],
+            "structureWeights": [0.3, 0.35, 0.35]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.02,
+            "hyphenRate": 0.05,
+            "preferredEndings": ["er", "or", "an", "en"],
+            "preferredEndingBoost": 1.2,
+            "rhythmBias": "neutral"
+          }
+        }
+      ],
       "lexemeLists": {
-        "firstNames": {
-          "id": "aurora_firstNames",
-          "entries": ["Bright", "Golden", "Sun", "Dawn", "Gleam", "Radiant", "Clear", "High"]
+        "aurora_names": {
+          "id": "aurora_names",
+          "description": "First names for Aurora Stack penguins",
+          "entries": ["Bright", "Golden", "Sun", "Dawn", "Gleam", "Radiant", "Clear", "High", "Light", "Amber", "Gilt", "Shine"],
+          "source": "manual"
         },
-        "lastNames": {
-          "id": "aurora_lastNames",
-          "entries": ["trader", "keeper", "counter", "ledger", "scale", "banner", "coin", "beam"]
+        "aurora_surnames": {
+          "id": "aurora_surnames",
+          "description": "Surnames for Aurora Stack penguins",
+          "entries": ["trader", "keeper", "counter", "ledger", "scale", "banner", "coin", "beam", "merchant", "dealer"],
+          "source": "manual"
         },
-        "heroTitles": {
-          "id": "aurora_heroTitles",
-          "entries": ["Stalwart", "Valiant", "Noble", "Proud"]
+        "aurora_titles": {
+          "id": "aurora_titles",
+          "description": "Titles for Aurora Stack",
+          "entries": ["Wealthy", "Trade", "Guild", "Master", "Honored", "Prosperous", "Esteemed"],
+          "source": "manual"
         },
-        "mayorTitles": {
-          "id": "aurora_mayorTitles",
-          "entries": ["High", "Grand", "Chief", "Premier"]
-        },
-        "merchantTitles": {
-          "id": "aurora_merchantTitles",
-          "entries": ["Master", "Guild", "Trade", "Wealthy"]
-        },
-        "outlawTitles": {
-          "id": "aurora_outlawTitles",
-          "entries": ["Rogue", "Shifty", "Cunning", "Sly"]
-        },
-        "locationPrefixes": {
-          "id": "aurora_locationPrefixes",
-          "entries": ["Bright", "Golden", "Sun", "Trade", "High", "Grand", "Clear", "Open"]
-        },
-        "locationSuffixes": {
-          "id": "aurora_locationSuffixes",
-          "entries": ["Market", "Exchange", "Plaza", "Terrace", "Heights", "Hall", "Square", "Way"]
-        },
-        "factionAdjectives": {
-          "id": "aurora_factionAdjectives",
-          "entries": ["Merchant", "Trading", "Golden", "Prosperous", "United", "Grand"]
-        },
-        "factionNouns": {
-          "id": "aurora_factionNouns",
-          "entries": ["Company", "Exchange", "Guild", "Consortium", "League", "House"]
-        },
-        "ruleAspects": {
-          "id": "aurora_ruleAspects",
-          "entries": ["Commerce", "Trade", "Exchange", "Profit", "Contract", "Order"]
-        },
-        "ruleSuffixes": {
-          "id": "aurora_ruleSuffixes",
-          "entries": ["Code", "Edict", "Law", "Decree"]
-        },
-        "abilityElements": {
-          "id": "aurora_abilityElements",
-          "entries": ["Light", "Sun", "Gold", "Crystal", "Radiance", "Brilliance"]
-        },
-        "abilityForms": {
-          "id": "aurora_abilityForms",
-          "entries": ["Strike", "Shield", "Call", "Dance", "Whisper", "Fury"]
+        "aurora_locations": {
+          "id": "aurora_locations",
+          "description": "Location words for Aurora Stack",
+          "entries": ["Market", "Exchange", "Plaza", "Terrace", "Heights", "Hall", "Square", "Way", "Bazaar", "Emporium"],
+          "source": "manual"
         }
       },
+      "lexemeSpecs": {},
       "grammars": [
         {
-          "id": "aurora_npc_hero",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "aurora_heroTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "aurora_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "aurora_lastNames" }
+          "id": "aurora_npc_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:aurora_titles", "slot:aurora_names", "slot:aurora_surnames"],
+              ["domain:aurora_domain"],
+              ["markov:latin"]
+            ]
           }
         },
         {
-          "id": "aurora_npc_mayor",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "aurora_mayorTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "aurora_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "aurora_lastNames" }
-          }
-        },
-        {
-          "id": "aurora_npc_merchant",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "aurora_merchantTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "aurora_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "aurora_lastNames" }
-          }
-        },
-        {
-          "id": "aurora_npc_outlaw",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "aurora_outlawTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "aurora_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "aurora_lastNames" }
-          }
-        },
-        {
-          "id": "aurora_npc_default",
-          "pattern": "FIRST LAST",
-          "symbolSources": {
-            "FIRST": { "kind": "lexemeList", "listId": "aurora_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "aurora_lastNames" }
-          }
-        },
-        {
-          "id": "aurora_location",
-          "pattern": "PREFIX SUFFIX",
-          "symbolSources": {
-            "PREFIX": { "kind": "lexemeList", "listId": "aurora_locationPrefixes" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "aurora_locationSuffixes" }
-          }
-        },
-        {
-          "id": "aurora_faction",
-          "pattern": "The ADJ NOUN",
-          "symbolSources": {
-            "ADJ": { "kind": "lexemeList", "listId": "aurora_factionAdjectives" },
-            "NOUN": { "kind": "lexemeList", "listId": "aurora_factionNouns" }
-          }
-        },
-        {
-          "id": "aurora_rules",
-          "pattern": "The ASPECT SUFFIX",
-          "symbolSources": {
-            "ASPECT": { "kind": "lexemeList", "listId": "aurora_ruleAspects" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "aurora_ruleSuffixes" }
-          }
-        },
-        {
-          "id": "aurora_abilities",
-          "pattern": "ELEMENT FORM",
-          "symbolSources": {
-            "ELEMENT": { "kind": "lexemeList", "listId": "aurora_abilityElements" },
-            "FORM": { "kind": "lexemeList", "listId": "aurora_abilityForms" }
+          "id": "aurora_location_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:aurora_names", "slot:aurora_locations"],
+              ["The", "slot:aurora_names", "slot:aurora_locations"],
+              ["domain:aurora_domain", "slot:aurora_locations"]
+            ]
           }
         }
       ],
       "profiles": [
         {
-          "id": "aurora-stack:npc",
-          "cultureId": "aurora-stack",
-          "type": "npc",
+          "id": "aurora_default",
+          "name": "Aurora Stack Default",
           "strategyGroups": [
             {
-              "name": "Hero names",
-              "priority": 10,
-              "conditions": { "subtype": ["hero"] },
-              "strategies": [{ "id": "hero_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_npc_hero" }] }]
+              "name": "Aurora NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "aurora_npc_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
             },
             {
-              "name": "Mayor names",
-              "priority": 10,
-              "conditions": { "subtype": ["mayor"] },
-              "strategies": [{ "id": "mayor_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_npc_mayor" }] }]
+              "name": "Aurora Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "aurora_location_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
             },
             {
-              "name": "Merchant names",
-              "priority": 10,
-              "conditions": { "subtype": ["merchant"] },
-              "strategies": [{ "id": "merchant_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_npc_merchant" }] }]
-            },
-            {
-              "name": "Outlaw names",
-              "priority": 10,
-              "conditions": { "subtype": ["outlaw"] },
-              "strategies": [{ "id": "outlaw_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_npc_outlaw" }] }]
-            },
-            {
-              "name": "Default NPC names",
-              "priority": 0,
+              "name": "Aurora Fallback",
+              "priority": 100,
               "conditions": null,
-              "strategies": [{ "id": "default_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_npc_default" }] }]
-            }
-          ]
-        },
-        {
-          "id": "aurora-stack:location",
-          "cultureId": "aurora-stack",
-          "type": "location",
-          "strategyGroups": [
-            {
-              "name": "Location names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "location_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_location" }] }]
-            }
-          ]
-        },
-        {
-          "id": "aurora-stack:faction",
-          "cultureId": "aurora-stack",
-          "type": "faction",
-          "strategyGroups": [
-            {
-              "name": "Faction names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "faction_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_faction" }] }]
-            }
-          ]
-        },
-        {
-          "id": "aurora-stack:rules",
-          "cultureId": "aurora-stack",
-          "type": "rules",
-          "strategyGroups": [
-            {
-              "name": "Rules names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "rules_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_rules" }] }]
-            }
-          ]
-        },
-        {
-          "id": "aurora-stack:abilities",
-          "cultureId": "aurora-stack",
-          "type": "abilities",
-          "strategyGroups": [
-            {
-              "name": "Abilities names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "abilities_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "aurora_abilities" }] }]
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
             }
           ]
         }
@@ -486,230 +627,133 @@
     "nightshelf": {
       "id": "nightshelf",
       "name": "Nightfall Shelf",
-      "domains": [],
+      "description": "The mysterious shadow colony, known for secrecy and intrigue",
+      "domains": [
+        {
+          "id": "nightfall_domain",
+          "phonology": {
+            "consonants": ["sh", "s", "v", "th", "n", "m", "l", "r", "d", "w"],
+            "vowels": ["a", "e", "i", "o", "u", "oo", "ai", "ei"],
+            "syllableTemplates": ["CV", "CVC", "VCV", "VC"],
+            "lengthRange": [1, 3],
+            "favoredClusters": ["sh", "sl", "sw", "sk", "sm"],
+            "forbiddenClusters": ["br", "gr", "kr"],
+            "favoredClusterBoost": 1.4,
+            "consonantWeights": [1.4, 1.3, 1.2, 1.2, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1, 1.2, 1.2, 1, 1, 1.3, 1, 1],
+            "templateWeights": [1, 1.2, 1, 0.9]
+          },
+          "morphology": {
+            "prefixes": ["Shadow", "Dusk", "Mist", "Veil", "Gloom", "Whisper", "Shade", "Murk"],
+            "suffixes": ["walker", "weaver", "caller", "seeker", "finder", "cloaker", "lurker", "stalker"],
+            "structure": ["root", "prefix-root", "root-suffix"],
+            "structureWeights": [0.25, 0.4, 0.35]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.1,
+            "hyphenRate": 0.05,
+            "preferredEndings": ["er", "ar", "en", "in"],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "flowing"
+          }
+        }
+      ],
       "lexemeLists": {
-        "firstNames": {
-          "id": "night_firstNames",
-          "entries": ["Shadow", "Dusk", "Mist", "Veil", "Gloom", "Whisper", "Shade", "Murk"]
+        "nightfall_names": {
+          "id": "nightfall_names",
+          "description": "First names for Nightfall penguins",
+          "entries": ["Shadow", "Dusk", "Mist", "Veil", "Gloom", "Whisper", "Shade", "Murk", "Twilight", "Obscura", "Umbra", "Eclipse"],
+          "source": "manual"
         },
-        "lastNames": {
-          "id": "night_lastNames",
-          "entries": ["walker", "weaver", "caller", "seeker", "finder", "cloaker", "lurker", "stalker"]
+        "nightfall_surnames": {
+          "id": "nightfall_surnames",
+          "description": "Surnames for Nightfall penguins",
+          "entries": ["walker", "weaver", "caller", "seeker", "finder", "cloaker", "lurker", "stalker", "watcher", "listener"],
+          "source": "manual"
         },
-        "heroTitles": {
-          "id": "night_heroTitles",
-          "entries": ["Silent", "Phantom", "Ghost", "Shadow"]
+        "nightfall_titles": {
+          "id": "nightfall_titles",
+          "description": "Titles for Nightfall",
+          "entries": ["Silent", "Phantom", "Ghost", "Shadow", "Veiled", "Hidden", "Secret", "Unseen"],
+          "source": "manual"
         },
-        "mayorTitles": {
-          "id": "night_mayorTitles",
-          "entries": ["Veiled", "Hidden", "Secret", "Dark"]
-        },
-        "merchantTitles": {
-          "id": "night_merchantTitles",
-          "entries": ["Shadow", "Night", "Covert", "Hushed"]
-        },
-        "outlawTitles": {
-          "id": "night_outlawTitles",
-          "entries": ["Shadow", "Silent", "Ghost", "Phantom"]
-        },
-        "locationPrefixes": {
-          "id": "night_locationPrefixes",
-          "entries": ["Shadow", "Dark", "Hidden", "Secret", "Veiled", "Night", "Deep", "Lost"]
-        },
-        "locationSuffixes": {
-          "id": "night_locationSuffixes",
-          "entries": ["Hollow", "Depths", "Vault", "Crypt", "Sanctum", "Lair", "Den", "Grotto"]
-        },
-        "factionAdjectives": {
-          "id": "night_factionAdjectives",
-          "entries": ["Shadow", "Secret", "Hidden", "Veiled", "Dark", "Silent"]
-        },
-        "factionNouns": {
-          "id": "night_factionNouns",
-          "entries": ["Syndicate", "Circle", "Cabal", "Covenant", "Order", "Brotherhood"]
-        },
-        "ruleAspects": {
-          "id": "night_ruleAspects",
-          "entries": ["Shadow", "Silence", "Secrecy", "Mystery", "Veil", "Darkness"]
-        },
-        "ruleSuffixes": {
-          "id": "night_ruleSuffixes",
-          "entries": ["Code", "Edict", "Law", "Decree"]
-        },
-        "abilityElements": {
-          "id": "night_abilityElements",
-          "entries": ["Shadow", "Void", "Mist", "Gloom", "Darkness", "Eclipse"]
-        },
-        "abilityForms": {
-          "id": "night_abilityForms",
-          "entries": ["Strike", "Shield", "Call", "Dance", "Whisper", "Fury"]
+        "nightfall_locations": {
+          "id": "nightfall_locations",
+          "description": "Location words for Nightfall",
+          "entries": ["Depths", "Hollow", "Cavern", "Grotto", "Abyss", "Void", "Rift", "Chasm", "Den", "Sanctum"],
+          "source": "manual"
         }
       },
+      "lexemeSpecs": {},
       "grammars": [
         {
-          "id": "night_npc_hero",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "night_heroTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "night_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "night_lastNames" }
+          "id": "nightfall_npc_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:nightfall_titles", "slot:nightfall_names", "slot:nightfall_surnames"],
+              ["domain:nightfall_domain"],
+              ["markov:celtic"]
+            ]
           }
         },
         {
-          "id": "night_npc_mayor",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "night_mayorTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "night_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "night_lastNames" }
-          }
-        },
-        {
-          "id": "night_npc_merchant",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "night_merchantTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "night_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "night_lastNames" }
-          }
-        },
-        {
-          "id": "night_npc_outlaw",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "night_outlawTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "night_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "night_lastNames" }
-          }
-        },
-        {
-          "id": "night_npc_default",
-          "pattern": "FIRST LAST",
-          "symbolSources": {
-            "FIRST": { "kind": "lexemeList", "listId": "night_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "night_lastNames" }
-          }
-        },
-        {
-          "id": "night_location",
-          "pattern": "PREFIX SUFFIX",
-          "symbolSources": {
-            "PREFIX": { "kind": "lexemeList", "listId": "night_locationPrefixes" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "night_locationSuffixes" }
-          }
-        },
-        {
-          "id": "night_faction",
-          "pattern": "The ADJ NOUN",
-          "symbolSources": {
-            "ADJ": { "kind": "lexemeList", "listId": "night_factionAdjectives" },
-            "NOUN": { "kind": "lexemeList", "listId": "night_factionNouns" }
-          }
-        },
-        {
-          "id": "night_rules",
-          "pattern": "The ASPECT SUFFIX",
-          "symbolSources": {
-            "ASPECT": { "kind": "lexemeList", "listId": "night_ruleAspects" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "night_ruleSuffixes" }
-          }
-        },
-        {
-          "id": "night_abilities",
-          "pattern": "ELEMENT FORM",
-          "symbolSources": {
-            "ELEMENT": { "kind": "lexemeList", "listId": "night_abilityElements" },
-            "FORM": { "kind": "lexemeList", "listId": "night_abilityForms" }
+          "id": "nightfall_location_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:nightfall_names", "slot:nightfall_locations"],
+              ["The", "slot:nightfall_names", "slot:nightfall_locations"],
+              ["domain:nightfall_domain", "slot:nightfall_locations"]
+            ]
           }
         }
       ],
       "profiles": [
         {
-          "id": "nightshelf:npc",
-          "cultureId": "nightshelf",
-          "type": "npc",
+          "id": "nightfall_default",
+          "name": "Nightfall Default",
           "strategyGroups": [
             {
-              "name": "Hero names",
-              "priority": 10,
-              "conditions": { "subtype": ["hero"] },
-              "strategies": [{ "id": "hero_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_npc_hero" }] }]
+              "name": "Nightfall NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "nightfall_npc_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "nightfall_domain" }
+              ]
             },
             {
-              "name": "Mayor names",
-              "priority": 10,
-              "conditions": { "subtype": ["mayor"] },
-              "strategies": [{ "id": "mayor_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_npc_mayor" }] }]
+              "name": "Nightfall Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "nightfall_location_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "nightfall_domain" }
+              ]
             },
             {
-              "name": "Merchant names",
-              "priority": 10,
-              "conditions": { "subtype": ["merchant"] },
-              "strategies": [{ "id": "merchant_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_npc_merchant" }] }]
-            },
-            {
-              "name": "Outlaw names",
-              "priority": 10,
-              "conditions": { "subtype": ["outlaw"] },
-              "strategies": [{ "id": "outlaw_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_npc_outlaw" }] }]
-            },
-            {
-              "name": "Default NPC names",
-              "priority": 0,
+              "name": "Nightfall Fallback",
+              "priority": 100,
               "conditions": null,
-              "strategies": [{ "id": "default_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_npc_default" }] }]
-            }
-          ]
-        },
-        {
-          "id": "nightshelf:location",
-          "cultureId": "nightshelf",
-          "type": "location",
-          "strategyGroups": [
-            {
-              "name": "Location names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "location_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_location" }] }]
-            }
-          ]
-        },
-        {
-          "id": "nightshelf:faction",
-          "cultureId": "nightshelf",
-          "type": "faction",
-          "strategyGroups": [
-            {
-              "name": "Faction names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "faction_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_faction" }] }]
-            }
-          ]
-        },
-        {
-          "id": "nightshelf:rules",
-          "cultureId": "nightshelf",
-          "type": "rules",
-          "strategyGroups": [
-            {
-              "name": "Rules names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "rules_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_rules" }] }]
-            }
-          ]
-        },
-        {
-          "id": "nightshelf:abilities",
-          "cultureId": "nightshelf",
-          "type": "abilities",
-          "strategyGroups": [
-            {
-              "name": "Abilities names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "abilities_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "night_abilities" }] }]
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "nightfall_domain" }
+              ]
             }
           ]
         }
@@ -718,249 +762,127 @@
     "orca": {
       "id": "orca",
       "name": "Orca Raiders",
-      "domains": [],
+      "description": "The feared orca raiders from the deep waters",
+      "domains": [
+        {
+          "id": "orca_domain",
+          "phonology": {
+            "consonants": ["k", "g", "r", "d", "th", "v", "z", "n", "m", "b"],
+            "vowels": ["a", "o", "u", "ar", "or", "ur"],
+            "syllableTemplates": ["CVC", "CV", "CVCC", "CCV"],
+            "lengthRange": [1, 2],
+            "favoredClusters": ["kr", "gr", "dr", "th", "zr"],
+            "forbiddenClusters": ["ee", "ii"],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [1.4, 1.3, 1.3, 1.2, 1.2, 1.1, 1.1, 1, 1, 1],
+            "vowelWeights": [1.3, 1.2, 1.2, 1.1, 1, 1],
+            "templateWeights": [1.3, 1, 1, 0.8]
+          },
+          "morphology": {
+            "prefixes": ["Blood", "Death", "Dark", "Dread", "Doom", "Fang", "Claw", "Bone"],
+            "suffixes": ["ripper", "crusher", "slayer", "hunter", "breaker", "render", "biter", "stalker"],
+            "structure": ["root", "prefix-root", "root-suffix"],
+            "structureWeights": [0.3, 0.35, 0.35]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.1,
+            "preferredEndings": ["ak", "or", "ar", "ok"],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "harsh"
+          }
+        }
+      ],
       "lexemeLists": {
-        "firstNames": {
-          "id": "orca_firstNames",
-          "entries": ["Fang", "Blood", "Storm", "Rage", "Fury", "Tooth", "Claw", "Wave"]
+        "orca_names": {
+          "id": "orca_names",
+          "description": "Names for orca raiders",
+          "entries": ["Krag", "Thork", "Grum", "Vrak", "Zorn", "Drak", "Grath", "Brok", "Murg", "Kror"],
+          "source": "manual"
         },
-        "lastNames": {
-          "id": "orca_lastNames",
-          "entries": ["breaker", "crusher", "hunter", "slayer", "render", "striker", "ripper", "biter"]
+        "orca_titles": {
+          "id": "orca_titles",
+          "description": "Titles for orca leaders",
+          "entries": ["Warlord", "Chieftain", "Ravager", "Hunter", "Reaver", "Marauder", "Bloodfin", "Deathwave"],
+          "source": "manual"
         },
-        "heroTitles": {
-          "id": "orca_heroTitles",
-          "entries": ["Mighty", "Fierce", "Brutal", "Savage"]
-        },
-        "mayorTitles": {
-          "id": "orca_mayorTitles",
-          "entries": ["War", "Blood", "Iron", "Storm"]
-        },
-        "merchantTitles": {
-          "id": "orca_merchantTitles",
-          "entries": ["Raid", "Plunder", "Pillage", "Loot"]
-        },
-        "outlawTitles": {
-          "id": "orca_outlawTitles",
-          "entries": ["Savage", "Wild", "Feral", "Brutal"]
-        },
-        "orcaTitles": {
-          "id": "orca_orcaTitles",
-          "entries": ["Warlord", "Chieftain", "Overlord", "Ravager"]
-        },
-        "locationPrefixes": {
-          "id": "orca_locationPrefixes",
-          "entries": ["Blood", "Bone", "Storm", "War", "Death", "Iron", "Rage", "Fury"]
-        },
-        "locationSuffixes": {
-          "id": "orca_locationSuffixes",
-          "entries": ["Maw", "Fang", "Pit", "Reef", "Shoal", "Wake", "Trench", "Abyss"]
-        },
-        "factionAdjectives": {
-          "id": "orca_factionAdjectives",
-          "entries": ["Blood", "Iron", "Storm", "War", "Savage", "Fierce"]
-        },
-        "factionNouns": {
-          "id": "orca_factionNouns",
-          "entries": ["Horde", "Pack", "Warband", "Clan", "Raiders", "Hunters"]
-        },
-        "ruleAspects": {
-          "id": "orca_ruleAspects",
-          "entries": ["Blood", "Conquest", "Strength", "Dominance", "War", "Tribute"]
-        },
-        "ruleSuffixes": {
-          "id": "orca_ruleSuffixes",
-          "entries": ["Code", "Edict", "Law", "Decree"]
-        },
-        "abilityElements": {
-          "id": "orca_abilityElements",
-          "entries": ["Blood", "Storm", "Thunder", "Fury", "Rage", "Rend"]
-        },
-        "abilityForms": {
-          "id": "orca_abilityForms",
-          "entries": ["Strike", "Shield", "Call", "Dance", "Whisper", "Fury"]
+        "orca_abilities": {
+          "id": "orca_abilities",
+          "description": "Orca combat technique names",
+          "entries": ["Rending", "Crushing", "Tearing", "Ripping", "Breaking", "Shattering", "Devouring", "Annihilating"],
+          "source": "manual"
         }
       },
+      "lexemeSpecs": {},
       "grammars": [
         {
-          "id": "orca_npc_hero",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "orca_heroTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
+          "id": "orca_npc_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:orca_titles", "slot:orca_names"],
+              ["domain:orca_domain"],
+              ["markov:slavic"]
+            ]
           }
         },
         {
-          "id": "orca_npc_mayor",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "orca_mayorTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
-          }
-        },
-        {
-          "id": "orca_npc_merchant",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "orca_merchantTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
-          }
-        },
-        {
-          "id": "orca_npc_outlaw",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "orca_outlawTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
-          }
-        },
-        {
-          "id": "orca_npc_orca",
-          "pattern": "TITLE FIRST LAST",
-          "symbolSources": {
-            "TITLE": { "kind": "lexemeList", "listId": "orca_orcaTitles" },
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
-          }
-        },
-        {
-          "id": "orca_npc_default",
-          "pattern": "FIRST LAST",
-          "symbolSources": {
-            "FIRST": { "kind": "lexemeList", "listId": "orca_firstNames" },
-            "LAST": { "kind": "lexemeList", "listId": "orca_lastNames" }
-          }
-        },
-        {
-          "id": "orca_location",
-          "pattern": "PREFIX SUFFIX",
-          "symbolSources": {
-            "PREFIX": { "kind": "lexemeList", "listId": "orca_locationPrefixes" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "orca_locationSuffixes" }
-          }
-        },
-        {
-          "id": "orca_faction",
-          "pattern": "The ADJ NOUN",
-          "symbolSources": {
-            "ADJ": { "kind": "lexemeList", "listId": "orca_factionAdjectives" },
-            "NOUN": { "kind": "lexemeList", "listId": "orca_factionNouns" }
-          }
-        },
-        {
-          "id": "orca_rules",
-          "pattern": "The ASPECT SUFFIX",
-          "symbolSources": {
-            "ASPECT": { "kind": "lexemeList", "listId": "orca_ruleAspects" },
-            "SUFFIX": { "kind": "lexemeList", "listId": "orca_ruleSuffixes" }
-          }
-        },
-        {
-          "id": "orca_abilities",
-          "pattern": "ELEMENT FORM",
-          "symbolSources": {
-            "ELEMENT": { "kind": "lexemeList", "listId": "orca_abilityElements" },
-            "FORM": { "kind": "lexemeList", "listId": "orca_abilityForms" }
+          "id": "orca_abilities_grammar",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:orca_abilities", "Strike"],
+              ["slot:orca_abilities", "Technique"],
+              ["The", "slot:orca_abilities", "Art"]
+            ]
           }
         }
       ],
       "profiles": [
         {
-          "id": "orca:npc",
-          "cultureId": "orca",
-          "type": "npc",
+          "id": "orca_default",
+          "name": "Orca Default",
           "strategyGroups": [
             {
-              "name": "Hero names",
-              "priority": 10,
-              "conditions": { "subtype": ["hero"] },
-              "strategies": [{ "id": "hero_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_hero" }] }]
+              "name": "Orca NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "orca_npc_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "orca_domain" }
+              ]
             },
             {
-              "name": "Mayor names",
-              "priority": 10,
-              "conditions": { "subtype": ["mayor"] },
-              "strategies": [{ "id": "mayor_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_mayor" }] }]
+              "name": "Orca Abilities",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["abilities"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "orca_abilities_grammar" },
+                { "type": "phonotactic", "weight": 1, "domainId": "orca_domain" }
+              ]
             },
             {
-              "name": "Merchant names",
-              "priority": 10,
-              "conditions": { "subtype": ["merchant"] },
-              "strategies": [{ "id": "merchant_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_merchant" }] }]
-            },
-            {
-              "name": "Outlaw names",
-              "priority": 10,
-              "conditions": { "subtype": ["outlaw"] },
-              "strategies": [{ "id": "outlaw_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_outlaw" }] }]
-            },
-            {
-              "name": "Orca names",
-              "priority": 10,
-              "conditions": { "subtype": ["orca"] },
-              "strategies": [{ "id": "orca_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_orca" }] }]
-            },
-            {
-              "name": "Default NPC names",
-              "priority": 0,
+              "name": "Orca Fallback",
+              "priority": 100,
               "conditions": null,
-              "strategies": [{ "id": "default_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_npc_default" }] }]
-            }
-          ]
-        },
-        {
-          "id": "orca:location",
-          "cultureId": "orca",
-          "type": "location",
-          "strategyGroups": [
-            {
-              "name": "Location names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "location_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_location" }] }]
-            }
-          ]
-        },
-        {
-          "id": "orca:faction",
-          "cultureId": "orca",
-          "type": "faction",
-          "strategyGroups": [
-            {
-              "name": "Faction names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "faction_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_faction" }] }]
-            }
-          ]
-        },
-        {
-          "id": "orca:rules",
-          "cultureId": "orca",
-          "type": "rules",
-          "strategyGroups": [
-            {
-              "name": "Rules names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "rules_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_rules" }] }]
-            }
-          ]
-        },
-        {
-          "id": "orca:abilities",
-          "cultureId": "orca",
-          "type": "abilities",
-          "strategyGroups": [
-            {
-              "name": "Abilities names",
-              "priority": 0,
-              "conditions": null,
-              "strategies": [{ "id": "abilities_grammar", "kind": "compound", "weight": 1, "parts": [{ "kind": "grammar", "grammarId": "orca_abilities" }] }]
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "orca_domain" }
+              ]
             }
           ]
         }
