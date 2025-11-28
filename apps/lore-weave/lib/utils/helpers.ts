@@ -335,7 +335,7 @@ export function normalizeInitialState(entities: any[]): HardState[] {
 }
 
 // Graph modification helpers
-export function addEntity(graph: Graph, entity: Partial<HardState>): string {
+export async function addEntity(graph: Graph, entity: Partial<HardState>): Promise<string> {
   // Coordinates are required - fail loudly
   // Check for valid numeric values, not just object existence
   const coords = entity.coordinates;

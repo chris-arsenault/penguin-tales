@@ -160,16 +160,6 @@ export const techBreakthrough: GrowthTemplate = {
 
     // Create new technology
     const techId = 'will-be-assigned-0';
-    const techNames = [
-      'Advanced Ice Drilling',
-      'Thermal Preservation Arrays',
-      'Echo-Location Nets',
-      'Frost-Hardened Tools',
-      'Glacial Navigation System',
-      'Ice-Melt Refinement',
-      'Sonic Fish Herding',
-      'Crystalline Storage Vaults'
-    ];
 
     const techDescriptions = [
       'breakthrough in ice manipulation',
@@ -179,7 +169,6 @@ export const techBreakthrough: GrowthTemplate = {
       'discovery in materials science'
     ];
 
-    const techName = techNames[Math.floor(Math.random() * techNames.length)];
     const techDesc = techDescriptions[Math.floor(Math.random() * techDescriptions.length)];
 
     // Derive coordinates - reference the faction and origin location
@@ -205,7 +194,6 @@ export const techBreakthrough: GrowthTemplate = {
     const newTech: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'technology',
-      name: techName,
       description: `A ${techDesc} developed by ${target.name} at ${originLocation.name}`,
       status: 'active',
       prominence: 'recognized',
@@ -257,7 +245,7 @@ export const techBreakthrough: GrowthTemplate = {
     return {
       entities: [newTech],
       relationships,
-      description: `${catalyst.name} develops ${techName} for ${target.name} at ${originLocation.name}${lineageDesc}`
+      description: `${catalyst.name} develops new technology for ${target.name} at ${originLocation.name}${lineageDesc}`
     };
   }
 };

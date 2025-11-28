@@ -130,7 +130,6 @@ export const crisisLegislation: GrowthTemplate = {
       );
     }
 
-    const ruleName = `${colony.name} ${pickRandom(['Protection', 'Rationing', 'Defense'])} ${ruleType}`;
     const relationships: Relationship[] = [
       { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }
     ];
@@ -166,7 +165,6 @@ export const crisisLegislation: GrowthTemplate = {
       entities: [{
         kind: 'rules',
         subtype: ruleType,
-        name: ruleName,
         description: `Emergency measure enacted in ${colony.name}${lineageDesc}`,
         status: 'enacted',
         prominence: 'recognized',

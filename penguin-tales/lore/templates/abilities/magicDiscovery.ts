@@ -144,7 +144,6 @@ export const magicDiscovery: GrowthTemplate = {
       }
     }
 
-    const magicName = `${pickRandom(['Frost', 'Ice', 'Glow'])} ${pickRandom(['Ward', 'Sight', 'Bond'])}`;
     const relationships: Relationship[] = [
       { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' }
     ];
@@ -190,7 +189,6 @@ export const magicDiscovery: GrowthTemplate = {
     const magicAbility: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'magic',
-      name: magicName,
       description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
       status: 'emergent',
       prominence: 'recognized',
@@ -202,7 +200,7 @@ export const magicDiscovery: GrowthTemplate = {
     return {
       entities: [magicAbility],
       relationships,
-      description: `${hero.name} discovers ${magicName}${locationDesc}${lineageDesc}`
+      description: `${hero.name} discovers a mystical ability${locationDesc}${lineageDesc}`
     };
   }
 };

@@ -88,18 +88,6 @@ export const orcaCombatTechnique: GrowthTemplate = {
       };
     }
 
-    // Orca combat technique names
-    const techniqueNames = [
-      'Crushing Dive',
-      'Sonic Stun',
-      'Pack Coordination',
-      'Echolocation Strike',
-      'Tail Slam',
-      'Ice Breaker Rush',
-      'Deep Ambush',
-      'Thermal Shock'
-    ];
-
     // Find existing combat techniques to establish lineage
     const existingCombat = graphView.findEntities({ kind: 'abilities', subtype: 'combat' })
       .filter(c => c.status === 'active');
@@ -123,7 +111,6 @@ export const orcaCombatTechnique: GrowthTemplate = {
       }
     }
 
-    const techniqueName = pickRandom(techniqueNames);
     const prominence = Math.random() < 0.4 ? 'renowned' : 'recognized';
 
     // Derive coordinates for ability in conceptual space (near the orca practitioner)
@@ -137,7 +124,6 @@ export const orcaCombatTechnique: GrowthTemplate = {
     const technique: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'combat',
-      name: techniqueName,
       description: `A devastating combat technique used by orca raiders, witnessed when ${orca.name} attacked`,
       status: 'active',
       prominence,
@@ -193,7 +179,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
     return {
       entities: [technique],
       relationships,
-      description: `Orcas demonstrate the fearsome technique: ${techniqueName}${lineageDesc}`
+      description: `Orcas demonstrate a fearsome combat technique${lineageDesc}`
     };
   }
 };

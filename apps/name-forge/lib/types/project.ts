@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import type { NamingDomain } from "./domain.js";
+import type { Capitalization } from "../utils/helpers.js";
 
 // ============================================================================
 // Lexeme Types
@@ -57,13 +58,24 @@ export interface Grammar {
   description?: string;
   start: string;
   rules: Record<string, string[][]>;
+  /** Capitalization style to apply to final output */
+  capitalization?: Capitalization;
 }
+
+export const CapitalizationSchema = z.enum([
+  "title",
+  "titleWords",
+  "allcaps",
+  "lowercase",
+  "mixed",
+]);
 
 export const GrammarSchema = z.object({
   id: z.string(),
   description: z.string().optional(),
   start: z.string(),
   rules: z.record(z.array(z.array(z.string()))),
+  capitalization: CapitalizationSchema.optional(),
 });
 
 // ============================================================================

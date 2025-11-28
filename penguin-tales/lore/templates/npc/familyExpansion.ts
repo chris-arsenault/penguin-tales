@@ -87,7 +87,7 @@ export const familyExpansion: GrowthTemplate = {
     return validTargets;
   },
 
-  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+  expand: async (graphView: TemplateGraphView, target?: HardState): Promise<TemplateResult> => {
     if (!target) throw new Error('Family expansion requires a target NPC');
 
     // Find parent's location
@@ -138,7 +138,7 @@ export const familyExpansion: GrowthTemplate = {
             : parentSubtype;
 
           // Place child within colony region, near parent
-          const entityId = graphView.addEntityNearEntity(
+          const entityId = await graphView.addEntityNearEntity(
             {
               kind: 'npc',
               subtype: childSubtype,

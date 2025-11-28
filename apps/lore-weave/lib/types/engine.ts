@@ -17,7 +17,15 @@ export interface LLMConfig {
  * Implemented by NameForgeService, but defined here to avoid circular imports.
  */
 export interface NameGenerationService {
-  generate(kind: string, subtype: string, prominence: string, tags: string[], culture: string): string;
+  generate(
+    kind: string,
+    subtype: string,
+    prominence: string,
+    tags: string[],
+    culture: string,
+    context?: Record<string, string>
+  ): Promise<string>;
+  printStats(): void;
 }
 
 export type EnrichmentMode = 'off' | 'partial' | 'full';
@@ -84,7 +92,7 @@ export interface Graph {
    * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
    * @returns The created entity's ID
    */
-  createEntity(settings: CreateEntitySettings): string;
+  createEntity(settings: CreateEntitySettings): Promise<string>;
 
   /**
    * Update an existing entity's properties
@@ -203,7 +211,8 @@ export interface GrowthTemplate {
 
   // Execute the template on a target
   // Uses TemplateGraphView which includes targetSelector for entity selection
-  expand: (graphView: import('../graph/templateGraphView').TemplateGraphView, target?: HardState) => TemplateResult;
+  // Returns Promise to support async operations (e.g., name generation)
+  expand: (graphView: import('../graph/templateGraphView').TemplateGraphView, target?: HardState) => Promise<TemplateResult> | TemplateResult;
 }
 
 export interface TemplateResult {
@@ -220,7 +229,8 @@ export interface SimulationSystem {
   contract?: ComponentContract;
 
   // Run one tick of this system
-  apply: (graph: Graph, modifier: number) => SystemResult;
+  // Returns Promise to support async operations (e.g., name generation)
+  apply: (graph: Graph, modifier: number) => Promise<SystemResult> | SystemResult;
 }
 
 export interface SystemResult {
@@ -612,7 +622,7 @@ export class GraphStore implements Graph {
    * Create a new entity with contract enforcement.
    * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
    */
-  createEntity(settings: CreateEntitySettings): string {
+  async createEntity(settings: CreateEntitySettings): Promise<string> {
     // Generate unique ID
     const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -641,20 +651,13 @@ export class GraphStore implements Graph {
       // Convert KVP tags to array for name-forge compatibility
       const tagArray = Object.keys(tags);
 
-      name = nameForge.generate(
+      name = await nameForge.generate(
         settings.kind,
         settings.subtype,
         settings.prominence || 'marginal',
         tagArray,
         settings.culture || 'world'
       );
-
-      if (!name) {
-        throw new Error(
-          `NameForge returned empty name for ${settings.kind}:${settings.subtype}. ` +
-          `Tags: [${tagArray.join(', ')}], Culture: ${settings.culture || 'world'}`
-        );
-      }
     }
 
     // Add slugified name to tags for tracking

@@ -217,7 +217,7 @@ export const magicSchoolFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graph: Graph, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
     const epochLength = graph.config.epochLength || 20;
     if (graph.tick % epochLength !== 0) {
@@ -260,7 +260,7 @@ export const magicSchoolFormation: SimulationSystem = {
 
       // Create the school entity
       const schoolPartial = createSchoolEntity(cluster.entities, graph, graphView);
-      const schoolId = addEntity(graph, schoolPartial);
+      const schoolId = await addEntity(graph, schoolPartial);
       entitiesCreated.push(schoolId);
 
       // Get cluster entity IDs

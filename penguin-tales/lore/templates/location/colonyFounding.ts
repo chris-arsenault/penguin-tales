@@ -74,7 +74,7 @@ export const colonyFounding: GrowthTemplate = {
 
   findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location', subtype: 'iceberg' }),
 
-  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+  expand: async (graphView: TemplateGraphView, target?: HardState): Promise<TemplateResult> => {
     const iceberg = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'iceberg' }));
 
     // Determine culture based on existing colonies on this iceberg
@@ -83,9 +83,6 @@ export const colonyFounding: GrowthTemplate = {
       graphView.hasRelationship(c.id, iceberg.id, 'contained_by')
     );
     const culture = colonyOnIceberg?.culture || 'aurora-stack';
-
-    // Generate colony name
-    const colonyName = `${pickRandom(['North', 'South', 'East', 'West', 'Far', 'New'])} ${pickRandom(['Haven', 'Roost', 'Perch', 'Colony', 'Shelf'])}`;
 
     // Check if region system is available
     if (graphView.hasRegionSystem()) {
@@ -117,17 +114,16 @@ export const colonyFounding: GrowthTemplate = {
         // Create emergent region for the new colony
         const regionResult = graphView.createEmergentRegion(
           referencePoint,
-          colonyName,
+          'New Colony',
           `A new colony founded on ${iceberg.name}`
         );
 
         if (regionResult.success && regionResult.region) {
           // Place the colony within the new region
-          const entityId = graphView.addEntityInRegion(
+          const entityId = await graphView.addEntityInRegion(
             {
               kind: 'location',
               subtype: 'colony',
-              name: colonyName,
               description: `New colony established on ${iceberg.name} in the ${pickRandom(['northern', 'southern', 'eastern', 'western'])} reaches.`,
               status: 'thriving',
               prominence: 'marginal',
@@ -145,7 +141,7 @@ export const colonyFounding: GrowthTemplate = {
               relationships: [
                 { kind: 'contained_by', src: entityId, dst: iceberg.id }
               ],
-              description: `${colonyName} founded on ${iceberg.name} at region ${regionResult.region.label}`
+              description: `A new colony founded on ${iceberg.name} at region ${regionResult.region.label}`
             };
           }
         }

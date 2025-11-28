@@ -671,11 +671,11 @@ export class TemplateGraphView {
    * );
    * ```
    */
-  addEntityInRegion(
+  async addEntityInRegion(
     entity: Omit<Partial<HardState>, 'coordinates'>,
     regionId: string,
     options?: { minDistance?: number; existingPoints?: Point[] }
-  ): string | null {
+  ): Promise<string | null> {
     if (!this.regionMapper || !this.regionPlacement) {
       throw new Error(
         `addEntityInRegion: Region system not configured. ` +
@@ -712,7 +712,7 @@ export class TemplateGraphView {
       coordinates: result.point
     };
 
-    return addEntity(this.graph, entityWithCoords);
+    return await addEntity(this.graph, entityWithCoords);
   }
 
   /**
@@ -732,11 +732,11 @@ export class TemplateGraphView {
    * );
    * ```
    */
-  addEntityNearEntity(
+  async addEntityNearEntity(
     entity: Omit<Partial<HardState>, 'coordinates'>,
     referenceEntity: HardState,
     options?: { minDistance?: number; maxSearchRadius?: number }
-  ): string | null {
+  ): Promise<string | null> {
     if (!this.regionMapper || !this.regionPlacement) {
       throw new Error(
         `addEntityNearEntity: Region system not configured. ` +
@@ -781,7 +781,7 @@ export class TemplateGraphView {
       coordinates: result.point
     };
 
-    return addEntity(this.graph, entityWithCoords);
+    return await addEntity(this.graph, entityWithCoords);
   }
 
   /**
@@ -806,7 +806,7 @@ export class TemplateGraphView {
    * });
    * ```
    */
-  addEntitiesInRegion(
+  async addEntitiesInRegion(
     entities: Array<Omit<Partial<HardState>, 'coordinates'>>,
     regionId: string,
     options?: {
@@ -814,7 +814,7 @@ export class TemplateGraphView {
       allowEmergentExpansion?: boolean;
       emergentRegionLabel?: string;
     }
-  ): { placedIds: string[]; failed: number; emergentRegionsCreated: string[] } {
+  ): Promise<{ placedIds: string[]; failed: number; emergentRegionsCreated: string[] }> {
     if (!this.regionMapper || !this.regionPlacement) {
       throw new Error(
         `addEntitiesInRegion: Region system not configured. ` +
@@ -857,7 +857,7 @@ export class TemplateGraphView {
         coordinates: placement.point
       };
 
-      const id = addEntity(this.graph, entityWithCoords);
+      const id = await addEntity(this.graph, entityWithCoords);
       placedIds.push(id);
     }
 

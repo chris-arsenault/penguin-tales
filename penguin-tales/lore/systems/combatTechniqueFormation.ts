@@ -218,7 +218,7 @@ export const combatTechniqueFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graph: Graph, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
     const epochLength = graph.config.epochLength || 20;
     if (graph.tick % epochLength !== 0) {
@@ -261,7 +261,7 @@ export const combatTechniqueFormation: SimulationSystem = {
 
       // Create the style entity
       const stylePartial = createStyleEntity(cluster.entities, graph, graphView);
-      const styleId = addEntity(graph, stylePartial);
+      const styleId = await addEntity(graph, stylePartial);
       entitiesCreated.push(styleId);
 
       // Get cluster entity IDs

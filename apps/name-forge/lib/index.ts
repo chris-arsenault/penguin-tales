@@ -43,6 +43,7 @@ export {
   // Zod schemas for validation
   LexemeListSchema,
   GrammarSchema,
+  CapitalizationSchema,
   StrategySchema,
   StrategyGroupSchema,
   GroupConditionsSchema,
@@ -86,6 +87,13 @@ export { setMarkovBaseUrl } from "./markov-loader.js";
 
 // Utilities
 export { createRNG, pickRandom, pickWeighted } from "./utils/rng.js";
+export {
+  type Capitalization,
+  applyCapitalization,
+  capitalize,
+  capitalizeWords,
+  mixedCase,
+} from "./utils/helpers.js";
 
 // Validation schemas
 export {

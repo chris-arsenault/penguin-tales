@@ -109,12 +109,6 @@ export const orcaRaiderArrival: GrowthTemplate = {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    // Orca name patterns
-    const orcaNames = [
-      'Blackfin', 'Razortooth', 'Deepdive', 'Sharpfin', 'Coldwater',
-      'Riptide', 'Icebane', 'Frostbite', 'Shadowcrest', 'Tidehunter'
-    ];
-
     // Find existing orcas to establish lineage
     const existingOrcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' });
     let relatedOrca: HardState | undefined;
@@ -148,7 +142,6 @@ export const orcaRaiderArrival: GrowthTemplate = {
       entities.push({
         kind: 'npc',
         subtype: 'orca',
-        name: pickRandom(orcaNames),
         description: `A fearsome orca raider threatening ${colony.name} from the depths`,
         status: 'alive',
         prominence,

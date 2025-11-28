@@ -104,12 +104,12 @@ export class MetaEntityFormation {
   /**
    * Form a meta-entity from a cluster
    */
-  formMetaEntity(graph: Graph, cluster: HardState[], config: MetaEntityConfig): HardState {
+  async formMetaEntity(graph: Graph, cluster: HardState[], config: MetaEntityConfig): Promise<HardState> {
     // Call factory to create meta-entity
     const metaEntityPartial = config.factory(cluster, graph);
 
     // Add meta-entity to graph
-    const metaId = addEntity(graph, metaEntityPartial);
+    const metaId = await addEntity(graph, metaEntityPartial);
     const metaEntity = graph.getEntity(metaId)!;
 
     // Transfer relationships FIRST (before archiving)

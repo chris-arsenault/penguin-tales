@@ -94,8 +94,6 @@ export const anomalyManifestation: GrowthTemplate = {
   findTargets: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'location' }),
 
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    const anomalyName = `${pickRandom(['Shimmering', 'Frozen', 'Dark', 'Whispering', 'Void'])} ${pickRandom(['Rift', 'Vortex', 'Echo', 'Fissure', 'Gate'])}`;
-
     // Find reference locations (colonies, other anomalies, or geographic features)
     const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
     const existingAnomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
@@ -148,7 +146,6 @@ export const anomalyManifestation: GrowthTemplate = {
     const anomaly: Partial<HardState> = {
       kind: 'location',
       subtype: 'anomaly',
-      name: anomalyName,
       description: `A mysterious phenomenon deep in the ice, ${nearestColony ? `near ${nearestColony.name}` : 'in the remote wastes'}`,
       status: 'unspoiled',
       prominence: 'recognized',
@@ -192,7 +189,7 @@ export const anomalyManifestation: GrowthTemplate = {
     return {
       entities: [anomaly],
       relationships,
-      description: `${anomalyName} manifests in the wilderness between settlements`
+      description: `A mysterious anomaly manifests in the wilderness between settlements`
     };
   }
 };

@@ -235,13 +235,10 @@ export const kinshipConstellation: GrowthTemplate = {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    const familyName = generateFamilyName();
-
     familyMembers.forEach((member, i) => {
       // Determine tags based on trait
       const tags: Record<string, boolean> = {
-        family: true,
-        [familyName.toLowerCase()]: true
+        family: true
       };
 
       if (member.trait > 0) {
@@ -256,7 +253,7 @@ export const kinshipConstellation: GrowthTemplate = {
       entities.push({
         kind: 'npc',
         subtype: member.subtype,
-        description: `A ${member.role} of the ${familyName} family, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
+        description: `A ${member.role} in a family at ${location.name}, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
         status: 'alive',
         prominence: member.role === 'prodigy' ? 'recognized' : 'marginal',
         culture: location.culture,  // Inherit culture from settlement location
@@ -328,7 +325,7 @@ export const kinshipConstellation: GrowthTemplate = {
     return {
       entities,
       relationships,
-      description: `The ${familyName} family emerges in ${location.name}, ${familySize} members strong with complex internal dynamics`
+      description: `An extended family emerges in ${location.name}, ${familySize} members strong with complex internal dynamics`
     };
   }
 };
@@ -349,10 +346,3 @@ function calculateEnergy(members: FamilyMember[], index: number, J: number, h: n
   return energy;
 }
 
-// Helper: Generate family name
-function generateFamilyName(): string {
-  const prefixes = ['Frost', 'Ice', 'Snow', 'Tide', 'Wave', 'Storm', 'Aurora', 'Drift', 'Chill', 'Crystal'];
-  const suffixes = ['Walker', 'Singer', 'Diver', 'Seeker', 'Keeper', 'Bearer', 'Caller', 'Watcher', 'Runner', 'Glider'];
-
-  return `${pickRandom(prefixes)}-${pickRandom(suffixes)}`;
-}

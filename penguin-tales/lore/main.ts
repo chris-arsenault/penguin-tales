@@ -273,7 +273,7 @@ async function generateWorld() {
   const engine = new WorldEngine(config, initialState, enrichmentService, imageGenerationService);
 
   console.time('Generation Time');
-  const finalGraph = engine.run();
+  const finalGraph = await engine.run();
   console.timeEnd('Generation Time');
   await engine.finalizeEnrichments();
 

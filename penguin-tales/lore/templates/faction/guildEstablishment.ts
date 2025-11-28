@@ -120,7 +120,6 @@ export const guildEstablishment: GrowthTemplate = {
     const guild: Partial<HardState> = {
       kind: 'faction',
       subtype: 'company',
-      name: `${colony.name} ${pickRandom(['Traders', 'Merchants', 'Exchange'])}`,
       description: `A merchant guild controlling trade in ${colony.name}`,
       status: 'state_sanctioned',
       prominence: 'recognized',
@@ -214,7 +213,7 @@ export const guildEstablishment: GrowthTemplate = {
     return {
       entities: [guild, ...newMerchants], // Include new merchants
       relationships,
-      description: `${totalMerchants} merchants organize into ${guild.name}${creationNote}`
+      description: `${totalMerchants} merchants organize into a trade guild in ${colony.name}${creationNote}`
     };
   }
 };

@@ -140,7 +140,6 @@ export const factionSplinter: GrowthTemplate = {
     const splinter: Partial<HardState> = {
       kind: 'faction',
       subtype: splinterType,
-      name: `${parentFaction.name} ${pickRandom(['Reformists', 'Radicals', 'Purists'])}`,
       description: `A splinter group that broke away from ${parentFaction.name}`,
       status: 'waning',
       prominence: 'marginal',
@@ -167,13 +166,12 @@ export const factionSplinter: GrowthTemplate = {
       leader = {
         kind: 'npc',
         subtype: Math.random() < leaderHeroChance ? 'hero' : 'outlaw',
-        description: `Charismatic leader of the ${splinter.name}`,
+        description: `Charismatic leader of a splinter faction that broke away from ${parentFaction.name}`,
         status: 'alive',
         prominence: 'recognized',
         culture: parentFaction.culture,  // Inherit culture from parent faction
         tags: { rebel: true, charismatic: true }
       };
-
     }
 
     // Find parent faction's location
@@ -233,12 +231,12 @@ export const factionSplinter: GrowthTemplate = {
     }
 
     const entities = leader ? [splinter, leader] : [splinter];
-    const leaderName = leaderEntity ? leaderEntity.name : (leader ? leader.name : 'unknown leader');
+    const leaderDesc = leaderEntity ? leaderEntity.name : 'a new leader';
 
     return {
       entities,
       relationships,
-      description: `${leaderName} leads ${splinter.name} in breaking away from ${parentFaction.name}`
+      description: `${leaderDesc} leads a splinter faction in breaking away from ${parentFaction.name}`
     };
   }
 };

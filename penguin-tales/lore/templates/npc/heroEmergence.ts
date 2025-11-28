@@ -85,7 +85,7 @@ export const heroEmergence: GrowthTemplate = {
     return colonies.filter(c => c.status === 'thriving' || c.status === 'waning');
   },
 
-  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+  expand: async (graphView: TemplateGraphView, target?: HardState): Promise<TemplateResult> => {
     const colony = target || pickRandom(
       graphView.findEntities({ kind: 'location', subtype: 'colony' })
     );
@@ -116,7 +116,7 @@ export const heroEmergence: GrowthTemplate = {
     }
 
     // Place hero within the colony's region
-    const entityId = graphView.addEntityInRegion(
+    const entityId = await graphView.addEntityInRegion(
       {
         kind: 'npc',
         subtype: 'hero',

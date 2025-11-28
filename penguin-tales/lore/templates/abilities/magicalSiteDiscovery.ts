@@ -141,16 +141,6 @@ export const magicalSiteDiscovery: GrowthTemplate = {
 
     // Create new magical anomaly location
     const locationId = 'will-be-assigned-0';
-    const locationNames = [
-      'The Shimmering Chasm',
-      'Frost-Light Grotto',
-      'The Whispering Ice',
-      'Ethereal Shelf',
-      'The Glowing Depths',
-      'Mystic Ice Cavern',
-      'The Frozen Aurora',
-      'Spectral Basin'
-    ];
 
     // Derive coordinates - reference the magical ability and catalyst
     const referenceEntities = [target, catalyst];
@@ -172,7 +162,6 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: 'anomaly',
-      name: locationNames[Math.floor(Math.random() * locationNames.length)],
       description: `A mystical site where ${target.name} manifests with unusual intensity`,
       status: 'thriving',
       prominence: 'recognized',
@@ -202,7 +191,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     return {
       entities: [newLocation],
       relationships,
-      description: `${catalyst.name} discovers ${newLocation.name}, where ${target.name} manifests`
+      description: `${catalyst.name} discovers a mystical site where ${target.name} manifests`
     };
   }
 };

@@ -571,7 +571,7 @@ export class WorldEngine {
   }
   
   // Main execution loop
-  public run(): Graph {
+  public async run(): Promise<Graph> {
     console.log('Starting world generation...');
     console.log(`Initial state: ${this.graph.getEntityCount()} entities`);
 
@@ -579,7 +579,7 @@ export class WorldEngine {
     this.enrichInitialEntities();
 
     while (this.shouldContinue()) {
-      this.runEpoch();
+      await this.runEpoch();
       this.currentEpoch++;
     }
 
@@ -698,7 +698,7 @@ export class WorldEngine {
     }
   }
 
-  private runEpoch(): void {
+  private async runEpoch(): Promise<void> {
     // Era progression is handled by eraTransition system, not selectEra()
     // The eraTransition system manages era entity status and updates graph.currentEra
     const previousEra = this.graph.currentEra;
@@ -715,11 +715,11 @@ export class WorldEngine {
 
     // Growth phase
     const growthTargets = this.calculateGrowthTarget();
-    this.runGrowthPhase(era, growthTargets);
+    await this.runGrowthPhase(era, growthTargets);
 
     // Simulation phase
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
-      this.runSimulationTick(era);
+      await this.runSimulationTick(era);
       this.graph.tick++;
     }
 
@@ -937,7 +937,7 @@ export class WorldEngine {
     console.log('='.repeat(80));
   }
 
-  private runGrowthPhase(era: Era, growthTargets?: number): void {
+  private async runGrowthPhase(era: Era, growthTargets?: number): Promise<void> {
     // Use provided growth targets or calculate new ones
     const targets = growthTargets ?? this.calculateGrowthTarget();
     let entitiesCreated = 0;
@@ -1013,7 +1013,7 @@ export class WorldEngine {
       const target = pickRandom(templateTargets);
       try {
         // Execute template with restricted graph view
-        const result = template.expand(graphView, target);
+        const result = await template.expand(graphView, target);
 
         // ENFORCEMENT: Check tag saturation before creating entities
         // Collect all tags that would be added (convert EntityTags to array of keys)
@@ -1040,15 +1040,15 @@ export class WorldEngine {
         // Add entities to graph
         const newIds: string[] = [];
         const clusterEntities: HardState[] = [];
-        result.entities.forEach((entity, i) => {
-          const id = addEntity(this.graph, entity);
+        for (const entity of result.entities) {
+          const id = await addEntity(this.graph, entity);
           newIds.push(id);
           const ref = this.graph.getEntity(id);
           if (ref) {
             createdEntities.push(ref);
             clusterEntities.push(ref);
           }
-        });
+        }
 
         // Auto-initialize catalysts for newly created entities
         // This ensures consistent catalyst initialization for all entities,
@@ -1358,7 +1358,7 @@ export class WorldEngine {
     return selected;
   }
   
-  private runSimulationTick(era: Era): void {
+  private async runSimulationTick(era: Era): Promise<void> {
     let totalRelationships = 0;
     let totalModifications = 0;
     const relationshipsThisTick: Relationship[] = [];
@@ -1381,7 +1381,7 @@ export class WorldEngine {
       const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
-        const result = system.apply(this.graph, modifier);
+        const result = await system.apply(this.graph, modifier);
 
         // Record system execution
         this.statisticsCollector.recordSystemExecution(system.id);
@@ -2300,6 +2300,12 @@ export class WorldEngine {
   }
 
   public finalizeNameLogging(): void {
+    // Print name-forge generation stats
+    if (this.config?.nameForgeService) {
+      this.config.nameForgeService.printStats();
+    }
+
+    // Print enrichment name change stats
     if (this.enrichmentService?.isEnabled()) {
       this.enrichmentService.getNameLogger().writeFinalReport();
     }

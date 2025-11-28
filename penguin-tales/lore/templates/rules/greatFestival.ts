@@ -129,33 +129,11 @@ export const greatFestival: GrowthTemplate = {
 
     // Select festival type based on trigger
     let festivalType: 'harvest' | 'memorial' | 'treaty' | 'celestial';
-    let festivalName: string;
 
     if (conflict > 80) {
       festivalType = 'treaty';
-      festivalName = pickRandom([
-        'Peace Accord Festival',
-        'Truce Celebration',
-        'Unity Gathering',
-        'Reconciliation Feast'
-      ]);
     } else {
       festivalType = pickRandom(['harvest', 'memorial', 'celestial']);
-      festivalName = pickRandom(
-        festivalType === 'harvest' ? [
-          'First Catch Festival',
-          'Ice Harvest Celebration',
-          'Krill Bloom Feast'
-        ] : festivalType === 'memorial' ? [
-          'The Long Swim Remembrance',
-          'Fallen Heroes Day',
-          'Founders Festival'
-        ] : [
-          'Aurora Peak Celebration',
-          'Fissure Light Dance',
-          'The Quiet Tide'
-        ]
-      );
     }
 
     const relationships: Relationship[] = [];
@@ -209,7 +187,6 @@ export const greatFestival: GrowthTemplate = {
       entities: [{
         kind: 'rules',
         subtype: 'social',
-        name: festivalName,
         description: `A great festival celebrating ${festivalType === 'harvest' ? 'abundance and prosperity' : festivalType === 'memorial' ? 'shared history and fallen heroes' : festivalType === 'treaty' ? 'peace and unity between factions' : 'the aurora and celestial wonders'}, held in ${colony.name}`,
         status: 'enacted',
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
@@ -218,7 +195,7 @@ export const greatFestival: GrowthTemplate = {
         coordinates: conceptualCoords
       }],
       relationships,
-      description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`
+      description: `A great ${festivalType} festival established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`
     };
   }
 };

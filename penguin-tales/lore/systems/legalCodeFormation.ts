@@ -73,23 +73,6 @@ const LEGAL_CODE_CLUSTER_CONFIG: ClusterConfig = {
 };
 
 /**
- * Generate a legal code name based on subtype
- */
-function generateCodeName(majoritySubtype: string, clusterSize: number): string {
-  const nameFragments: Record<string, string[]> = {
-    edict: ['Statutory', 'Administrative', 'Governmental', 'Official', 'Imperial'],
-    taboo: ['Sacred', 'Divine', 'Ecclesiastical', 'Forbidden', 'Holy'],
-    social: ['Traditional', 'Ancestral', 'Cultural', 'Folk', 'Common'],
-    natural: ['Natural', 'Universal', 'Fundamental', 'Eternal', 'Immutable']
-  };
-
-  const descriptor = pickRandom(
-    nameFragments[majoritySubtype] || nameFragments.edict
-  );
-  return `${descriptor} Code of ${clusterSize} Laws`;
-}
-
-/**
  * Create a meta-entity rule from a cluster
  */
 function createCodeEntity(cluster: HardState[], graph: Graph, graphView: TemplateGraphView): Partial<HardState> {
@@ -109,9 +92,6 @@ function createCodeEntity(cluster: HardState[], graph: Graph, graphView: Templat
       majoritySubtype = subtype;
     }
   });
-
-  // Generate code name
-  const codeName = generateCodeName(majoritySubtype, cluster.length);
 
   // Aggregate tags from cluster
   const allTags = new Set<string>();
@@ -158,7 +138,7 @@ function createCodeEntity(cluster: HardState[], graph: Graph, graphView: Templat
   const coords = graphView.deriveCoordinates(cluster, 'rules', 'physical', { maxDistance: 0.3, minDistance: 0.1 });
   if (!coords) {
     throw new Error(
-      `legal_code_formation: Failed to derive coordinates for legal code "${codeName}". ` +
+      `legal_code_formation: Failed to derive coordinates for legal code. ` +
       `This indicates the coordinate system is not properly configured for 'rules' entities.`
     );
   }
@@ -166,7 +146,6 @@ function createCodeEntity(cluster: HardState[], graph: Graph, graphView: Templat
   return {
     kind: 'rules',
     subtype: majoritySubtype,
-    name: codeName,
     description,
     status: 'enacted',
     prominence,
@@ -179,12 +158,12 @@ function createCodeEntity(cluster: HardState[], graph: Graph, graphView: Templat
 /**
  * Create a governance faction for a legal code
  */
-function createGovernanceFaction(
+async function createGovernanceFaction(
   graph: Graph,
   graphView: TemplateGraphView,
   legalCode: HardState,
   originalRules: HardState[]
-): { faction: HardState | null; relationships: Relationship[] } {
+): Promise<{ faction: HardState | null; relationships: Relationship[] }> {
   const relationships: Relationship[] = [];
 
   // Find locations where this code applies
@@ -223,11 +202,6 @@ function createGovernanceFaction(
     return { faction: null, relationships };
   }
 
-  // Generate faction name based on legal code
-  const factionName = legalCode.name.includes('Code')
-    ? legalCode.name.replace('Code', 'Council')
-    : `Council of ${primaryLocation.name}`;
-
   // Derive coordinates from location and legal code
   const referenceEntities = [primaryLocation, legalCode];
   const coords = graphView.deriveCoordinates(referenceEntities, 'faction', 'physical', { maxDistance: 0.2, minDistance: 0.05 });
@@ -240,7 +214,6 @@ function createGovernanceFaction(
   const factionPartial: Partial<HardState> = {
     kind: 'faction',
     subtype: 'political',
-    name: factionName,
     description: `A legislative body formed to administer ${legalCode.name}. Emerged from the consolidation of ${originalRules.length} laws.`,
     status: 'active',
     prominence: legalCode.prominence,
@@ -249,7 +222,7 @@ function createGovernanceFaction(
     coordinates: coords
   };
 
-  const factionId = addEntity(graph, factionPartial);
+  const factionId = await addEntity(graph, factionPartial);
   const faction = graph.getEntity(factionId)!;
 
   // Link faction to legal code
@@ -331,7 +304,7 @@ export const legalCodeFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graph: Graph, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
     const epochLength = graph.config.epochLength || 20;
     if (graph.tick % epochLength !== 0) {
@@ -374,7 +347,7 @@ export const legalCodeFormation: SimulationSystem = {
 
       // Create the legal code entity
       const codePartial = createCodeEntity(cluster.entities, graph, graphView);
-      const codeId = addEntity(graph, codePartial);
+      const codeId = await addEntity(graph, codePartial);
       const codeEntity = graph.getEntity(codeId)!;
       codesCreated.push(codeId);
 
@@ -407,7 +380,7 @@ export const legalCodeFormation: SimulationSystem = {
       const shouldCreateGovernance = (params.createGovernance?.value ?? 1) === 1;
 
       if (shouldCreateGovernance) {
-        const { faction, relationships } = createGovernanceFaction(
+        const { faction, relationships } = await createGovernanceFaction(
           graph,
           graphView,
           codeEntity,

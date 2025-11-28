@@ -850,9 +850,9 @@ describe('Initial State Normalization', () => {
 
 describe('Graph Modification', () => {
   describe('addEntity', () => {
-    it('should add entity to graph', () => {
+    it('should add entity to graph', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, {
+      const id = await addEntity(graph, {
         kind: 'npc',
         name: 'Test NPC',
         coordinates: { x: 10, y: 20 }
@@ -863,15 +863,15 @@ describe('Graph Modification', () => {
       expect(entity?.name).toBe('Test NPC');
     });
 
-    it('should generate ID', () => {
+    it('should generate ID', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
+      const id = await addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
       expect(id).toMatch(/^npc-\d+-[a-z0-9]+$/);
     });
 
-    it('should set defaults', () => {
+    it('should set defaults', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
+      const id = await addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
       const entity = graph.getEntity(id);
 
       expect(entity?.prominence).toBe('marginal');

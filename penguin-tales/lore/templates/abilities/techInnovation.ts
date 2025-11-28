@@ -150,7 +150,6 @@ export const techInnovation: GrowthTemplate = {
       entities: [{
         kind: 'abilities',
         subtype: 'technology',
-        name: `${pickRandom(['Advanced', 'Improved', 'Enhanced'])} ${pickRandom(['Fishing', 'Ice', 'Navigation'])} Tech`,
         description: `Innovation developed by ${faction.name}`,
         status: 'discovered',
         prominence: 'marginal',

@@ -84,17 +84,17 @@ describe('WorldEngine', () => {
   });
 
   describe('constructor', () => {
-    it('should initialize with valid config and initial state', () => {
+    it('should initialize with valid config and initial state', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
       expect(engine).toBeDefined();
     });
 
-    it('should throw error on invalid config', () => {
+    it('should throw error on invalid config', async () => {
       const invalidConfig = { ...mockConfig, templates: undefined };
       expect(() => new WorldEngine(invalidConfig as any, initialState)).toThrow();
     });
 
-    it('should initialize with enrichment service if provided', () => {
+    it('should initialize with enrichment service if provided', async () => {
       const mockEnrichmentService = {
         isEnabled: () => true,
         enrichEntity: vi.fn(),
@@ -104,7 +104,7 @@ describe('WorldEngine', () => {
       expect(engine).toBeDefined();
     });
 
-    it('should initialize statistical systems when distributionTargets provided', () => {
+    it('should initialize statistical systems when distributionTargets provided', async () => {
       const configWithTargets = {
         ...mockConfig,
         distributionTargets: {
@@ -125,22 +125,22 @@ describe('WorldEngine', () => {
       expect(engine).toBeDefined();
     });
 
-    it('should respect scaleFactor in config', () => {
+    it('should respect scaleFactor in config', async () => {
       const configWithScale = { ...mockConfig, scaleFactor: 2.0 };
       const engine = new WorldEngine(configWithScale, initialState);
       expect(engine).toBeDefined();
     });
 
-    it('should initialize with empty initial state', () => {
+    it('should initialize with empty initial state', async () => {
       const engine = new WorldEngine(mockConfig, []);
       expect(engine).toBeDefined();
     });
   });
 
   describe('run', () => {
-    it('should complete generation and return graph', () => {
+    it('should complete generation and return graph', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
       expect(graph.getEntities).toBeDefined();
@@ -148,15 +148,15 @@ describe('WorldEngine', () => {
       expect(graph.tick).toBeGreaterThan(0);
     });
 
-    it('should stop at maxTicks', () => {
+    it('should stop at maxTicks', async () => {
       const shortConfig = { ...mockConfig, maxTicks: 20 };
       const engine = new WorldEngine(shortConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph.tick).toBeLessThanOrEqual(20);
     });
 
-    it('should complete all eras', () => {
+    it('should complete all eras', async () => {
       const multiEraConfig = {
         ...mockConfig,
         eras: [mockEra, { ...mockEra, id: 'era2' }],
@@ -164,15 +164,15 @@ describe('WorldEngine', () => {
         maxTicks: 200
       };
       const engine = new WorldEngine(multiEraConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should run at least 2 epochs per era
       expect(graph.tick).toBeGreaterThan(5);
     });
 
-    it('should initialize initial entities with IDs and timestamps', () => {
+    it('should initialize initial entities with IDs and timestamps', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const entities = graph.getEntities();
       expect(entities.length).toBeGreaterThan(0);
@@ -184,15 +184,15 @@ describe('WorldEngine', () => {
       });
     });
 
-    it('should track entity creation over time', () => {
+    it('should track entity creation over time', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const initialCount = initialState.length;
       expect(graph.getEntityCount()).toBeGreaterThanOrEqual(initialCount);
     });
 
-    it('should create relationships during simulation', () => {
+    it('should create relationships during simulation', async () => {
       const relationshipSystem: SimulationSystem = {
         id: 'rel-system',
         purpose: 'creation',
@@ -212,13 +212,13 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(configWithRelSystem, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // System should have been called
       expect(relationshipSystem.apply).toHaveBeenCalled();
     });
 
-    it('should apply templates during growth phase', () => {
+    it('should apply templates during growth phase', async () => {
       const creationTemplate: GrowthTemplate = {
         id: 'creation-template',
         purpose: 'creation',
@@ -252,22 +252,22 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(configWithCreation, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Template should have been called
       expect(creationTemplate.canApply).toHaveBeenCalled();
     });
 
-    it('should respect epoch length', () => {
+    it('should respect epoch length', async () => {
       const shortEpochConfig = { ...mockConfig, epochLength: 5 };
       const engine = new WorldEngine(shortEpochConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should have run multiple epochs
       expect(graph.tick).toBeGreaterThan(5);
     });
 
-    it('should alternate between growth and simulation phases', () => {
+    it('should alternate between growth and simulation phases', async () => {
       const templateCallTracker: number[] = [];
       const systemCallTracker: number[] = [];
 
@@ -307,31 +307,31 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(trackedConfig, initialState);
-      engine.run();
+      await engine.run();
 
       // Both phases should have been called
       expect(templateCallTracker.length).toBeGreaterThan(0);
       expect(systemCallTracker.length).toBeGreaterThan(0);
     });
 
-    it('should handle empty template list gracefully', () => {
+    it('should handle empty template list gracefully', async () => {
       const noTemplateConfig = { ...mockConfig, templates: [] };
       const engine = new WorldEngine(noTemplateConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
       expect(graph.getEntityCount()).toBe(initialState.length);
     });
 
-    it('should handle empty system list gracefully', () => {
+    it('should handle empty system list gracefully', async () => {
       const noSystemConfig = { ...mockConfig, systems: [] };
       const engine = new WorldEngine(noSystemConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
     });
 
-    it('should stop on excessive growth safety valve', () => {
+    it('should stop on excessive growth safety valve', async () => {
       const tinyTargetConfig = {
         ...mockConfig,
         targetEntitiesPerKind: 1,
@@ -339,7 +339,7 @@ describe('WorldEngine', () => {
         maxTicks: 1000
       };
       const engine = new WorldEngine(tinyTargetConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should stop before maxTicks due to safety valve
       expect(graph.tick).toBeLessThan(1000);
@@ -347,7 +347,7 @@ describe('WorldEngine', () => {
   });
 
   describe('initialization', () => {
-    it('should assign unique IDs to all initial entities', () => {
+    it('should assign unique IDs to all initial entities', async () => {
       const multipleInitial = [
         { ...initialState[0], name: 'Entity 1' },
         { ...initialState[0], name: 'Entity 2' },
@@ -355,29 +355,29 @@ describe('WorldEngine', () => {
       ];
 
       const engine = new WorldEngine(mockConfig, multipleInitial);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const ids = graph.getEntityIds();
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it('should set createdAt to 0 for initial entities', () => {
+    it('should set createdAt to 0 for initial entities', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const initialEntity = graph.getEntities()[0];
       expect(initialEntity.createdAt).toBe(0);
     });
 
-    it('should preserve names from initial state', () => {
+    it('should preserve names from initial state', async () => {
       const namedInitial = [{
         ...initialState[0],
         name: 'Preserved Name Colony'
       }];
 
       const engine = new WorldEngine(mockConfig, namedInitial);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const entity = graph.getEntities().find(e =>
         e.name === 'Preserved Name Colony'
@@ -385,7 +385,7 @@ describe('WorldEngine', () => {
       expect(entity).toBeDefined();
     });
 
-    it('should preserve all initial entity properties', () => {
+    it('should preserve all initial entity properties', async () => {
       const detailedInitial = [{
         kind: 'npc',
         subtype: 'hero',
@@ -398,7 +398,7 @@ describe('WorldEngine', () => {
       }];
 
       const engine = new WorldEngine(mockConfig, detailedInitial);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const entity = graph.getEntities().find(e =>
         e.name === 'Test Hero'
@@ -412,7 +412,7 @@ describe('WorldEngine', () => {
   });
 
   describe('era progression', () => {
-    it('should progress through eras over epochs', () => {
+    it('should progress through eras over epochs', async () => {
       const era1: Era = {
         id: 'era1',
         name: 'Era One',
@@ -434,13 +434,13 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(multiEraConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should have progressed through eras
       expect(graph.currentEra).toBeDefined();
     });
 
-    it('should apply era template weights', () => {
+    it('should apply era template weights', async () => {
       const weightedTemplate: GrowthTemplate = {
         id: 'weighted-template',
         purpose: 'creation',
@@ -467,13 +467,13 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(weightedConfig, initialState);
-      engine.run();
+      await engine.run();
 
       // Template should have been considered (even if not always applied)
       expect(weightedTemplate.canApply).toHaveBeenCalled();
     });
 
-    it('should apply era system modifiers', () => {
+    it('should apply era system modifiers', async () => {
       const modifiedSystem: SimulationSystem = {
         id: 'modified-system',
         purpose: 'creation',
@@ -499,7 +499,7 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(modifierConfig, initialState);
-      engine.run();
+      await engine.run();
 
       // System should have been called
       expect(modifiedSystem.apply).toHaveBeenCalled();
@@ -507,7 +507,7 @@ describe('WorldEngine', () => {
   });
 
   describe('pressure system', () => {
-    it('should track pressures over time', () => {
+    it('should track pressures over time', async () => {
       const testPressure = {
         id: 'test-pressure',
         name: 'Test Pressure',
@@ -523,12 +523,12 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(pressureConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph.pressures).toBeDefined();
     });
 
-    it('should update pressures based on graph state', () => {
+    it('should update pressures based on graph state', async () => {
       const dynamicPressure = {
         id: 'dynamic-pressure',
         name: 'Dynamic Pressure',
@@ -546,7 +546,7 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(pressureConfig, initialState);
-      engine.run();
+      await engine.run();
 
       // Growth function should have been called
       expect(dynamicPressure.growth).toHaveBeenCalled();
@@ -554,32 +554,32 @@ describe('WorldEngine', () => {
   });
 
   describe('statistics and tracking', () => {
-    it('should track history events', () => {
+    it('should track history events', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph.history).toBeDefined();
       expect(Array.isArray(graph.history)).toBe(true);
     });
 
-    it('should increment tick counter', () => {
+    it('should increment tick counter', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph.tick).toBeGreaterThan(0);
     });
 
-    it('should track entity counts over time', () => {
+    it('should track entity counts over time', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const finalCount = graph.getEntityCount();
       expect(finalCount).toBeGreaterThanOrEqual(initialState.length);
     });
 
-    it('should track relationship counts', () => {
+    it('should track relationship counts', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph.getRelationships()).toBeDefined();
       expect(Array.isArray(graph.getRelationships())).toBe(true);
@@ -587,7 +587,7 @@ describe('WorldEngine', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle minimal config with single era', () => {
+    it('should handle minimal config with single era', async () => {
       const minimalConfig = {
         ...mockConfig,
         eras: [mockEra],
@@ -597,12 +597,12 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(minimalConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
     });
 
-    it('should handle templates that never apply', () => {
+    it('should handle templates that never apply', async () => {
       const neverAppliesTemplate: GrowthTemplate = {
         id: 'never-applies',
         purpose: 'creation',
@@ -621,13 +621,13 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(neverConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
       expect(neverAppliesTemplate.expand).not.toHaveBeenCalled();
     });
 
-    it('should handle systems that return empty results', () => {
+    it('should handle systems that return empty results', async () => {
       const emptySystem: SimulationSystem = {
         id: 'empty-system',
         purpose: 'creation',
@@ -645,35 +645,35 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(emptyConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
       expect(emptySystem.apply).toHaveBeenCalled();
     });
 
-    it('should handle zero epochLength gracefully', () => {
+    it('should handle zero epochLength gracefully', async () => {
       // This should be caught by validation, but test defensive behavior
       const zeroEpochConfig = { ...mockConfig, epochLength: 0, maxTicks: 5 };
       const engine = new WorldEngine(zeroEpochConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should stop quickly due to maxTicks
       expect(graph).toBeDefined();
     });
 
-    it('should handle very small targetEntitiesPerKind', () => {
+    it('should handle very small targetEntitiesPerKind', async () => {
       const smallTargetConfig = {
         ...mockConfig,
         targetEntitiesPerKind: 1
       };
 
       const engine = new WorldEngine(smallTargetConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       expect(graph).toBeDefined();
     });
 
-    it('should handle very large maxTicks without hanging', () => {
+    it('should handle very large maxTicks without hanging', async () => {
       const largeTickConfig = {
         ...mockConfig,
         maxTicks: 10000,
@@ -681,7 +681,7 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(largeTickConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Should stop due to era completion, not maxTicks
       expect(graph.tick).toBeLessThan(10000);
@@ -689,9 +689,9 @@ describe('WorldEngine', () => {
   });
 
   describe('graph consistency', () => {
-    it('should maintain entity-relationship consistency', () => {
+    it('should maintain entity-relationship consistency', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // All relationships should reference existing entities
       graph.getRelationships().forEach(rel => {
@@ -700,18 +700,18 @@ describe('WorldEngine', () => {
       });
     });
 
-    it('should not create duplicate entity IDs', () => {
+    it('should not create duplicate entity IDs', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const ids = graph.getEntityIds();
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it('should maintain entity links consistency with relationships', () => {
+    it('should maintain entity links consistency with relationships', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       // Sample a few entities and check their links
       const entities = graph.getEntities().slice(0, 5);
@@ -726,9 +726,9 @@ describe('WorldEngine', () => {
       });
     });
 
-    it('should maintain valid prominence values', () => {
+    it('should maintain valid prominence values', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       const validProminences = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
       graph.getEntities().forEach(entity => {
@@ -736,9 +736,9 @@ describe('WorldEngine', () => {
       });
     });
 
-    it('should not exceed max tags limit (5)', () => {
+    it('should not exceed max tags limit (5)', async () => {
       const engine = new WorldEngine(mockConfig, initialState);
-      const graph = engine.run();
+      const graph = await engine.run();
 
       graph.getEntities().forEach(entity => {
         expect(Object.keys(entity.tags).length).toBeLessThanOrEqual(5);
@@ -747,17 +747,17 @@ describe('WorldEngine', () => {
   });
 
   describe('performance characteristics', () => {
-    it('should complete generation in reasonable time', () => {
+    it('should complete generation in reasonable time', async () => {
       const start = Date.now();
       const engine = new WorldEngine(mockConfig, initialState);
-      engine.run();
+      await engine.run();
       const duration = Date.now() - start;
 
       // Should complete in under 10 seconds for small config
       expect(duration).toBeLessThan(10000);
     });
 
-    it('should scale with entity count', () => {
+    it('should scale with entity count', async () => {
       const smallConfig = {
         ...mockConfig,
         targetEntitiesPerKind: 5,
@@ -771,10 +771,10 @@ describe('WorldEngine', () => {
       };
 
       const smallEngine = new WorldEngine(smallConfig, initialState);
-      const smallGraph = smallEngine.run();
+      const smallGraph = await smallEngine.run();
 
       const largeEngine = new WorldEngine(largeConfig, initialState);
-      const largeGraph = largeEngine.run();
+      const largeGraph = await largeEngine.run();
 
       // Both should have at least the initial entities
       expect(largeGraph.getEntityCount()).toBeGreaterThanOrEqual(initialState.length);

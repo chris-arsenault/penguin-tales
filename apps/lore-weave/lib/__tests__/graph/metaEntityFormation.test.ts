@@ -656,7 +656,7 @@ describe('MetaEntityFormation', () => {
   });
 
   describe('formMetaEntity', () => {
-    it('should create meta-entity and add to graph', () => {
+    it('should create meta-entity and add to graph', async () => {
       const cluster: HardState[] = [
         {
           id: 'ability1',
@@ -719,7 +719,7 @@ describe('MetaEntityFormation', () => {
         })
       };
 
-      const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
+      const metaEntity = await formation.formMetaEntity(mockGraph, cluster, config);
 
       // Meta-entity should exist in graph
       expect(mockGraph.hasEntity(metaEntity.id)).toBe(true);
@@ -729,7 +729,7 @@ describe('MetaEntityFormation', () => {
       expect('meta-entity' in metaEntity.tags).toBe(true);
     });
 
-    it('should create part_of relationships when preserveOriginalLinks is true', () => {
+    it('should create part_of relationships when preserveOriginalLinks is true', async () => {
       const cluster: HardState[] = [
         {
           id: 'ability1',
@@ -791,7 +791,7 @@ describe('MetaEntityFormation', () => {
         })
       };
 
-      const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
+      const metaEntity = await formation.formMetaEntity(mockGraph, cluster, config);
 
       // Should have part_of relationships
       const partOfRels = mockGraph.getRelationships().filter(r =>
@@ -801,7 +801,7 @@ describe('MetaEntityFormation', () => {
       expect(partOfRels.map(r => r.src).sort()).toEqual(['ability1', 'ability2']);
     });
 
-    it('should mark originals as historical when markOriginalsHistorical is true', () => {
+    it('should mark originals as historical when markOriginalsHistorical is true', async () => {
       const cluster: HardState[] = [
         {
           id: 'ability1',
@@ -850,14 +850,14 @@ describe('MetaEntityFormation', () => {
         })
       };
 
-      formation.formMetaEntity(mockGraph, cluster, config);
+      await formation.formMetaEntity(mockGraph, cluster, config);
 
       // Original entity should be marked historical
       const ability1 = mockGraph.getEntity('ability1');
       expect(ability1?.status).toBe('historical');
     });
 
-    it('should transfer relationships when transferRelationships is true', () => {
+    it('should transfer relationships when transferRelationships is true', async () => {
       const practitioner: HardState = {
         id: 'npc1',
         kind: 'npc',
@@ -924,7 +924,7 @@ describe('MetaEntityFormation', () => {
         })
       };
 
-      const metaEntity = formation.formMetaEntity(mockGraph, cluster, config);
+      const metaEntity = await formation.formMetaEntity(mockGraph, cluster, config);
 
       // Relationship should be transferred to meta-entity
       const transferredRel = mockGraph.getRelationships().find(r =>

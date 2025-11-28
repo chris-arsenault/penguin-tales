@@ -165,7 +165,6 @@ export const cultFormation: GrowthTemplate = {
     const cult: Partial<HardState> = {
       kind: 'faction',
       subtype: 'cult',
-      name: `${pickRandom(['Order', 'Covenant', 'Circle'])} of the ${pickRandom(['Fissure', 'Depths', 'Ice'])}`,
       description: `A mystical cult drawn to the power near ${location.name}`,
       status: 'illegal',
       prominence: 'marginal',
@@ -192,7 +191,7 @@ export const cultFormation: GrowthTemplate = {
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
-      description: `The enigmatic prophet of ${cult.name}`,
+      description: `The enigmatic prophet of a mystical cult near ${location.name}`,
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
       culture: location.culture,  // Inherit culture from location
@@ -313,7 +312,7 @@ export const cultFormation: GrowthTemplate = {
     return {
       entities: [cult, prophet, ...newCultists], // Include new cultists
       relationships,
-      description: `${cult.name} forms with ${prophet.name} as prophet and ${totalCultists} followers${creationNote}`
+      description: `A mystical cult forms near ${location.name} with ${totalCultists} followers${creationNote}`
     };
   }
 };

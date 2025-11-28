@@ -7,6 +7,7 @@
  */
 
 import { createRNG, pickRandom } from "./utils/rng.js";
+import { applyCapitalization } from "./utils/helpers.js";
 import { generatePhonotacticName } from "./phonotactic-pipeline.js";
 import { preloadModels } from "./markov-loader.js";
 import type { NamingDomain } from "./types/domain.js";
@@ -313,7 +314,13 @@ function expandGrammar(
     userContext: ctx.userContext,
   };
 
-  const name = expandSymbol(startSymbol, rules, ctx, expansionCtx, 0);
+  let name = expandSymbol(startSymbol, rules, ctx, expansionCtx, 0);
+
+  // Apply grammar-level capitalization if specified
+  if (grammar.capitalization) {
+    name = applyCapitalization(name, grammar.capitalization);
+  }
+
   return { name, usedMarkov: expansionCtx.usedMarkov };
 }
 

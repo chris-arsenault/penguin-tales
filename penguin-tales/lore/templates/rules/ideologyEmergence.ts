@@ -131,38 +131,19 @@ export const ideologyEmergence: GrowthTemplate = {
     // Select ideology type based on world state
     let ideologyType: 'edict' | 'taboo' | 'social';
     let ideologyTheme: string;
-    let ideologyName: string;
 
     if (conflict > 60) {
       // War-time ideologies
       ideologyType = pickRandom(['edict', 'social']);
       ideologyTheme = pickRandom(['militarism', 'pacifism', 'unity', 'isolation']);
-      ideologyName = pickRandom([
-        'The Way of the Soldier',
-        'The Path of Peace',
-        'The United Flippers',
-        'The Fortress Doctrine'
-      ]);
     } else if (culturalTension > 50) {
       // Cultural reform movements
       ideologyType = 'social';
       ideologyTheme = pickRandom(['equality', 'tradition', 'innovation', 'hierarchy']);
-      ideologyName = pickRandom([
-        'The Equal Ice Movement',
-        'The Old Ways Revival',
-        'The New Thinkers',
-        'The Natural Order'
-      ]);
     } else {
       // Mystical or philosophical movements
       ideologyType = pickRandom(['taboo', 'social']);
       ideologyTheme = pickRandom(['mysticism', 'rationalism', 'asceticism', 'hedonism']);
-      ideologyName = pickRandom([
-        'The Fissure Watchers',
-        'The Logical Mind',
-        'The Simple Life',
-        'The Joy Seekers'
-      ]);
     }
 
     const relationships: Relationship[] = [];
@@ -292,7 +273,6 @@ export const ideologyEmergence: GrowthTemplate = {
       entities: [{
         kind: 'rules',
         subtype: ideologyType,
-        name: ideologyName,
         description: `A ${ideologyTheme} ideology championed by ${champion.name}. This belief is spreading through whispered conversations and passionate debates${lineageDesc}.`,
         status: 'proposed', // Key: starts as proposed, will become enacted if adopted widely
         prominence: 'marginal', // Will grow with adoption
@@ -301,7 +281,7 @@ export const ideologyEmergence: GrowthTemplate = {
         coordinates: conceptualCoords
       }],
       relationships,
-      description: `${champion.name} champions new ${ideologyTheme} ideology: ${ideologyName}${lineageDesc}`
+      description: `${champion.name} champions a new ${ideologyTheme} ideology${lineageDesc}`
     };
   }
 };
