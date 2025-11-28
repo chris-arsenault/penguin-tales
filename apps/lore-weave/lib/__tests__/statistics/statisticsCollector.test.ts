@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StatisticsCollector } from '../../statistics/statisticsCollector';
-import { Graph, EngineConfig } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
-import { EnrichmentStats, ValidationStats } from '../../types/statistics';
+import { Graph, EngineConfig } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import { EnrichmentStats, ValidationStats } from '../../statistics/types';
 
 describe('StatisticsCollector', () => {
   let collector: StatisticsCollector;

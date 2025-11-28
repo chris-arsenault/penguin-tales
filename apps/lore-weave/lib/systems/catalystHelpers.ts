@@ -5,9 +5,9 @@
  * These are domain-agnostic and work with any entity type.
  */
 
-import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../types/worldTypes';
-import { Graph } from '../types/engine';
-import { FRAMEWORK_ENTITY_KINDS } from '../types/frameworkPrimitives';
+import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../core/worldTypes';
+import { Graph } from '../engine/types';
+import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
 
 /**
  * Get all entities that can act (have catalyst.canAct = true)

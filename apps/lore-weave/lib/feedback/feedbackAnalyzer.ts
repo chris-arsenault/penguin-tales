@@ -5,7 +5,7 @@
  * Detects broken loops and suggests corrections.
  */
 
-import { Graph, EngineConfig } from '../types/engine';
+import { Graph, EngineConfig } from '../engine/types';
 import { PopulationMetrics } from '../statistics/populationTracker';
 
 export interface FeedbackLoop {

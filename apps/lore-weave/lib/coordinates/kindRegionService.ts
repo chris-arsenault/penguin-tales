@@ -23,8 +23,8 @@ import type {
   EmergentRegionConfig,
   EmergentRegionResult,
   RegionLookupResult
-} from '../types/regions';
-import type { EntityTags } from '../types/worldTypes';
+} from '../coordinates/types';
+import type { EntityTags } from '../core/worldTypes';
 import { RegionMapper } from './regionMapper';
 
 /**

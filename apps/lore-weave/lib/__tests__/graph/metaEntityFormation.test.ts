@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MetaEntityFormation } from '../../graph/metaEntityFormation';
 import { TemplateGraphView } from '../../graph/templateGraphView';
 import { TargetSelector } from '../../selection/targetSelector';
-import { Graph, MetaEntityConfig } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
-import * as helpers from '../../utils/helpers';
+import { Graph, MetaEntityConfig } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import * as helpers from '../../utils';
 
 describe('MetaEntityFormation', () => {
   let formation: MetaEntityFormation;

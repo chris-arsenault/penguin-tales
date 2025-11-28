@@ -5,8 +5,8 @@
  * Framework code uses this interface to remain domain-agnostic.
  */
 
-import { HardState, Relationship } from './worldTypes';
-import { SemanticEncoderConfig } from './semanticAxes';
+import { HardState, Relationship } from '../core/worldTypes';
+import { SemanticEncoderConfig } from '../coordinates/types';
 
 /**
  * Relationship mutability classification

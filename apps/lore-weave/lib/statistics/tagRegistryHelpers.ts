@@ -6,8 +6,8 @@
  * allowing domain to provide its own tag registry configuration.
  */
 
-import { TagMetadata } from '../types/engine';
-import { EntityTags } from '../types/worldTypes';
+import { TagMetadata } from '../engine/types';
+import { EntityTags } from '../core/worldTypes';
 
 /**
  * Get tag metadata by tag name

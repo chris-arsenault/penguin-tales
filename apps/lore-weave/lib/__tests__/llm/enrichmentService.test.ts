@@ -2,10 +2,10 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EnrichmentService } from '../../llm/enrichmentService';
-import { LLMConfig, EnrichmentConfig } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
-import { DomainLoreProvider } from '../../types/domainLore';
-import { EnrichmentContext } from '../../types/lore';
+import { LLMConfig, EnrichmentConfig } from '../../engine/types';
+import { HardState } from '../../core/worldTypes';
+import { DomainLoreProvider } from '../../llm/types';
+import { EnrichmentContext } from '../../llm/types';
 
 describe('EnrichmentService', () => {
   let service: EnrichmentService;

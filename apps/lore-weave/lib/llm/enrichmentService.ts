@@ -1,12 +1,12 @@
-import { HardState, Relationship } from '../types/worldTypes';
-import { EnrichmentConfig, LLMConfig } from '../types/engine';
-import { EnrichmentContext, LoreRecord } from '../types/lore';
-import { DomainLoreProvider } from '../types/domainLore';
+import { HardState, Relationship } from '../core/worldTypes';
+import { EnrichmentConfig, LLMConfig } from '../engine/types';
+import { EnrichmentContext, LoreRecord } from '../llm/types';
+import { DomainLoreProvider } from '../llm/types';
 import { LLMClient } from './llmClient';
-import { LoreValidator } from '../services/loreValidator';
+import { LoreValidator } from './loreValidator';
 import { NameLogger } from '../naming/nameLogger';
-import { upsertNameTag, parseJsonSafe, chunk, generateLoreId, hasTag } from '../utils/helpers';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../types/frameworkPrimitives';
+import { upsertNameTag, parseJsonSafe, chunk, generateLoreId, hasTag } from '../utils';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
 
 export class EnrichmentService {
   private llm: LLMClient;

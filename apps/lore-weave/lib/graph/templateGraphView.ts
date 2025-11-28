@@ -1,17 +1,17 @@
-import { Graph } from '../types/engine';
-import { HardState, Relationship, EntityTags } from '../types/worldTypes';
+import { Graph } from '../engine/types';
+import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
 import { RegionMapper } from '../coordinates/regionMapper';
 import { RegionPlacementService } from '../coordinates/regionPlacement';
 import { SemanticEncoder } from '../coordinates/semanticEncoder';
-import { addEntity, mergeTags, hasTag } from '../utils/helpers';
+import { addEntity, mergeTags, hasTag } from '../utils';
 import type {
   Point,
   Region,
   RegionMapperConfig,
   RegionLookupResult,
   EmergentRegionResult
-} from '../types/regions';
+} from '../coordinates/types';
 
 /**
  * TemplateGraphView

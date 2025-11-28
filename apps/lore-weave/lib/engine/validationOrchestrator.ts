@@ -5,7 +5,7 @@
  * Extracted from WorldEngine constructor for Single Responsibility.
  */
 
-import { EngineConfig } from '../types/engine';
+import { EngineConfig } from '../engine/types';
 import { FrameworkValidator } from './frameworkValidator';
 
 /**

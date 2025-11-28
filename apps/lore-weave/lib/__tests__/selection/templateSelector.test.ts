@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TemplateSelector } from '../../selection/templateSelector';
-import { Graph, GrowthTemplate } from '../../types/engine';
-import { HardState, Prominence } from '../../types/worldTypes';
-import { DistributionTargets, TemplateMetadata } from '../../types/distribution';
+import { Graph, GrowthTemplate } from '../../engine/types';
+import { HardState, Prominence } from '../../core/worldTypes';
+import { DistributionTargets, TemplateMetadata } from '../../statistics/types';
 
 describe('TemplateSelector', () => {
   let selector: TemplateSelector;

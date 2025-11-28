@@ -22,12 +22,12 @@ import type {
   EmergentRegionResult,
   RegionCreatedEvent,
   EntityPlacedInRegionEvent
-} from '../types/regions.js';
+} from '../coordinates/types';
 
-import { SPACE_BOUNDS } from '../types/regions.js';
+import { SPACE_BOUNDS } from '../coordinates/types';
 
-import type { EntityTags } from '../types/worldTypes.js';
-import { arrayToTags, mergeTags } from '../utils/helpers.js';
+import type { EntityTags } from '../core/worldTypes';
+import { arrayToTags, mergeTags } from '../utils';
 
 /**
  * Region Mapper - manages regions and coordinate-to-region mapping.

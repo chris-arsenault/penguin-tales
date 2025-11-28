@@ -1,9 +1,9 @@
-import { Graph, SimulationSystem } from '../types/engine';
+import { Graph, SimulationSystem } from '../engine/types';
 import {
   DistributionTargets,
   DistributionState,
   DeviationScore,
-} from '../types/distribution';
+} from '../statistics/types';
 import { DistributionTracker } from '../statistics/distributionTracker';
 
 /**

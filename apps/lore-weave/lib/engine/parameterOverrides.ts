@@ -1,5 +1,5 @@
-import { GrowthTemplate, SimulationSystem } from '../types/engine';
-import { TemplateMetadata, SystemMetadata } from '../types/distribution';
+import { GrowthTemplate, SimulationSystem } from '../engine/types';
+import { TemplateMetadata, SystemMetadata } from '../statistics/types';
 
 /**
  * Parameter override configuration structure

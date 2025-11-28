@@ -1,10 +1,10 @@
-import { Graph, GrowthTemplate } from '../types/engine';
+import { Graph, GrowthTemplate } from '../engine/types';
 import {
   DistributionTargets,
   DistributionState,
   DeviationScore,
   GuidedWeights,
-} from '../types/distribution';
+} from '../statistics/types';
 import { DistributionTracker } from '../statistics/distributionTracker';
 
 /**

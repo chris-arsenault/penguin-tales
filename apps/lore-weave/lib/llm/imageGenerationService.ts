@@ -2,9 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import OpenAI from 'openai';
-import { HardState } from '../types/worldTypes';
-import { EnrichmentContext } from '../types/lore';
-import { ImageGenerationPromptConfig } from '../types/domainSchema';
+import { HardState } from '../core/worldTypes';
+import { EnrichmentContext } from '../llm/types';
+import { ImageGenerationPromptConfig } from '../domainInterface/domainSchema';
 
 export interface ImageGenerationConfig {
   enabled: boolean;

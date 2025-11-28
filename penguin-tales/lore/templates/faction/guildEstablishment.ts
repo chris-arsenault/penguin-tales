@@ -147,17 +147,19 @@ export const guildEstablishment: GrowthTemplate = {
     let merchantsToRecruit: HardState[] = [];
     let newMerchants: Array<Partial<HardState>> = [];
 
-    // Smart selection with aggressive hub penalties (guilds are exclusive)
+    // Smart selection with aggressive hub penalties and cultural cohesion (guilds are exclusive)
     const result = graphView.selectTargets('npc', 3, {
         prefer: {
           subtypes: ['merchant'],
           sameLocationAs: colony.id, // Prefer local merchants
+          sameCultureAs: colony.culture, // Guilds are culturally homogeneous
           preferenceBoost: 3.0 // Strong preference for merchants
         },
         avoid: {
           relationshipKinds: ['member_of', 'leader_of'], // Penalize multi-faction NPCs
           hubPenaltyStrength: 3.0, // Very aggressive penalty (cubic)
-          maxTotalRelationships: 10 // Hard cap on super-hubs
+          maxTotalRelationships: 10, // Hard cap on super-hubs
+          differentCulturePenalty: 0.2 // Cross-culture guild membership is very rare
         },
         createIfSaturated: {
           threshold: 0.2, // If best score < 0.2, create new merchant

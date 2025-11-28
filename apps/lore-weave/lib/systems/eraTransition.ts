@@ -1,10 +1,10 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
-import { HardState } from '../types/worldTypes';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../engine/types';
+import { HardState } from '../core/worldTypes';
 import {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_STATUS,
   FRAMEWORK_RELATIONSHIP_KINDS
-} from '../types/frameworkPrimitives';
+} from '../core/frameworkPrimitives';
 
 /**
  * Era Transition System

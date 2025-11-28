@@ -1,4 +1,4 @@
-import type { Point } from './regions';
+import type { Point } from '../coordinates/types';
 
 // Core types from your specification
 export type Prominence =

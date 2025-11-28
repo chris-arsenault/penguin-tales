@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LoreValidator, ValidationResult } from '../../services/loreValidator';
-import { HardState } from '../../types/worldTypes';
-import { DomainLoreProvider } from '../../types/domainLore';
+import { LoreValidator, ValidationResult } from '../../llm/loreValidator';
+import { HardState } from '../../core/worldTypes';
+import { DomainLoreProvider } from '../../llm/types';
 
 describe('LoreValidator', () => {
   let validator: LoreValidator;

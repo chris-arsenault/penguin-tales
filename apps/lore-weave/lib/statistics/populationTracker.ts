@@ -5,10 +5,10 @@
  * Tracks counts, targets, deviations, and trends to enable homeostatic regulation.
  */
 
-import { Graph } from '../types/engine';
-import { HardState } from '../types/worldTypes';
-import { DistributionTargets } from '../types/distribution';
-import { DomainSchema } from '../types/domainSchema';
+import { Graph } from '../engine/types';
+import { HardState } from '../core/worldTypes';
+import { DistributionTargets } from '../statistics/types';
+import { DomainSchema } from '../domainInterface/domainSchema';
 
 export interface EntityMetric {
   kind: string;

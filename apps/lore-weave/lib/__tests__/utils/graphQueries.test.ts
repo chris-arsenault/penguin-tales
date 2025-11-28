@@ -6,8 +6,8 @@ import {
   findRelationship,
   getRelatedEntity
 } from '../../graph/graphQueries';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('graphQueries', () => {
   let mockGraph: Graph;

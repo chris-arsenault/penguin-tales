@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DynamicWeightCalculator, WeightAdjustment } from '../../selection/dynamicWeightCalculator';
-import { GrowthTemplate } from '../../types/engine';
+import { GrowthTemplate } from '../../engine/types';
 import { PopulationMetrics, EntityMetric } from '../../statistics/populationTracker';
 
 describe('DynamicWeightCalculator', () => {

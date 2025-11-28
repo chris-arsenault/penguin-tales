@@ -8,7 +8,7 @@
  * Domain schemas extend these with their own entity kinds, relationships, etc.
  */
 
-import { HardState, Relationship } from './worldTypes';
+import { HardState, Relationship } from '../core/worldTypes';
 
 // ===========================
 // FRAMEWORK ENTITY KINDS

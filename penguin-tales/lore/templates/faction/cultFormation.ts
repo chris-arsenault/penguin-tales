@@ -218,17 +218,19 @@ export const cultFormation: GrowthTemplate = {
     let cultists: HardState[] = [];
     let newCultists: Array<Partial<HardState>> = [];
 
-    // Smart selection with hub penalties
+    // Smart selection with hub penalties and cultural affinity
     const result = graphView.selectTargets('npc', numCultists, {
         prefer: {
           subtypes: ['merchant', 'outlaw', 'hero'],
           sameLocationAs: location.id, // Prefer local NPCs
+          sameCultureAs: location.culture, // Prefer same-culture recruits
           preferenceBoost: 2.0
         },
         avoid: {
           relationshipKinds: ['member_of'], // Penalize multi-faction NPCs
           hubPenaltyStrength: 2.0, // Quadratic penalty: 1/(1+count^2)
-          maxTotalRelationships: 15 // Hard cap on super-hubs
+          maxTotalRelationships: 15, // Hard cap on super-hubs
+          differentCulturePenalty: 0.3 // Cross-culture recruitment is rare
         },
         createIfSaturated: {
           threshold: 0.15, // If best score < 0.15, create new NPC

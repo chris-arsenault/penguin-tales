@@ -5,7 +5,7 @@
  * These are framework utilities that work with any domain's era definitions.
  */
 
-import { Era } from '../types/engine';
+import { Era } from '../engine/types';
 
 /**
  * Select the appropriate era based on the current epoch.

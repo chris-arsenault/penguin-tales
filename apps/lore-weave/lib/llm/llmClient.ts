@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
-import { LLMConfig } from '../types/engine';
+import { LLMConfig } from '../engine/types';
 
 export interface LLMRequest {
   systemPrompt: string;

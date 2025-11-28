@@ -1,7 +1,7 @@
-import { Graph, MetaEntityConfig, Cluster } from '../types/engine';
-import { HardState, Relationship } from '../types/worldTypes';
+import { Graph, MetaEntityConfig, Cluster } from '../engine/types';
+import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from './templateGraphView';
-import { generateId, addEntity, addRelationship, archiveRelationship, hasTag } from '../utils/helpers';
+import { generateId, addEntity, addRelationship, archiveRelationship, hasTag } from '../utils';
 
 /**
  * Meta-Entity Formation Service

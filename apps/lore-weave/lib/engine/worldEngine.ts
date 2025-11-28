@@ -1,6 +1,6 @@
-import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../types/engine';
-import { LoreRecord } from '../types/lore';
-import { HardState, Relationship } from '../types/worldTypes';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../engine/types';
+import { LoreRecord } from '../llm/types';
+import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
   addEntity,
@@ -12,9 +12,9 @@ import {
   getProminenceValue,
   upsertNameTag,
   hasTag
-} from '../utils/helpers';
-import { initializeCatalystSmart } from '../utils/catalystHelpers';
-import { selectEra, getTemplateWeight, getSystemModifier } from '../utils/eraUtils';
+} from '../utils';
+import { initializeCatalystSmart } from '../systems/catalystHelpers';
+import { selectEra, getTemplateWeight, getSystemModifier } from '../engine/eraUtils';
 import { EnrichmentService } from '../llm/enrichmentService';
 import { ImageGenerationService } from '../llm/imageGenerationService';
 import { TemplateSelector } from '../selection/templateSelector';
@@ -27,10 +27,10 @@ import { FeedbackAnalyzer } from '../feedback/feedbackAnalyzer';
 import { TargetSelector } from '../selection/targetSelector';
 import { TemplateGraphView } from '../graph/templateGraphView';
 // MetaEntityFormation removed - now handled by SimulationSystems (magicSchoolFormation, etc.)
-import { SimulationStatistics, ValidationStats } from '../types/statistics';
+import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../types/frameworkPrimitives';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
 import * as fs from 'fs';
 import * as path from 'path';
 

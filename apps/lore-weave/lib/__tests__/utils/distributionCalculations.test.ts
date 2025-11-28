@@ -6,9 +6,9 @@ import {
   calculateRelationshipDistribution,
   calculateConnectivityMetrics,
   calculateSubtypeDistribution
-} from '../../utils/distributionCalculations';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship, Prominence } from '../../types/worldTypes';
+} from '../../statistics/distributionCalculations';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship, Prominence } from '../../core/worldTypes';
 
 describe('distributionCalculations', () => {
   const createEntity = (id: string, kind: string, subtype: string, prominence: string): HardState => ({

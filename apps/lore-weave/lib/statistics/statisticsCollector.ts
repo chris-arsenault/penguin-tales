@@ -1,6 +1,6 @@
 import { mean, standardDeviation } from 'simple-statistics';
-import { Graph, EngineConfig } from '../types/engine';
-import { HardState } from '../types/worldTypes';
+import { Graph, EngineConfig } from '../engine/types';
+import { HardState } from '../core/worldTypes';
 import {
   SimulationStatistics,
   EpochStats,
@@ -10,8 +10,8 @@ import {
   SystemPerformanceStats,
   TemporalStats,
   FitnessMetrics
-} from '../types/statistics';
-import { getProminenceValue } from '../utils/helpers';
+} from '../statistics/types';
+import { getProminenceValue } from '../utils';
 import {
   calculateEntityKindCounts,
   calculateRatios,
@@ -19,7 +19,7 @@ import {
   calculateRelationshipDistribution,
   calculateConnectivityMetrics,
   calculateSubtypeDistribution
-} from '../utils/distributionCalculations';
+} from './distributionCalculations';
 
 /**
  * Statistics Collector

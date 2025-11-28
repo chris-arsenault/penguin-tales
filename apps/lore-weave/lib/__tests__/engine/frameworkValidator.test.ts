@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FrameworkValidator, ValidationResult } from '../../engine/frameworkValidator';
-import { EngineConfig, ComponentPurpose, Pressure, EntityRegistry, GrowthTemplate, SimulationSystem } from '../../types/engine';
-import { DomainSchema } from '../../types/domainSchema';
+import { EngineConfig, ComponentPurpose, Pressure, EntityRegistry, GrowthTemplate, SimulationSystem } from '../../engine/types';
+import { DomainSchema } from '../../domainInterface/domainSchema';
 
 describe('FrameworkValidator', () => {
   let mockConfig: EngineConfig;

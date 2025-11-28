@@ -1,13 +1,13 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
-import { HardState, Relationship } from '../types/worldTypes';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../engine/types';
+import { HardState, Relationship } from '../core/worldTypes';
 import {
   getAgentsByCategory,
   calculateAttemptChance,
   addCatalyzedEvent,
   updateInfluence,
   getInfluence
-} from '../utils/catalystHelpers';
-import { FRAMEWORK_ENTITY_KINDS } from '../types/frameworkPrimitives';
+} from '../systems/catalystHelpers';
+import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
 
 /**
  * Universal Catalyst System

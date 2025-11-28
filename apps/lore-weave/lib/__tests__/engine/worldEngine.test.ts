@@ -2,9 +2,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorldEngine } from '../../engine/worldEngine';
-import { EngineConfig, GrowthTemplate, SimulationSystem, Era } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
-import { DomainSchema } from '../../types/domainSchema';
+import { EngineConfig, GrowthTemplate, SimulationSystem, Era } from '../../engine/types';
+import { HardState } from '../../core/worldTypes';
+import { DomainSchema } from '../../domainInterface/domainSchema';
 
 describe('WorldEngine', () => {
   let mockConfig: EngineConfig;

@@ -32,6 +32,7 @@ import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPr
 
 /**
  * Clustering configuration for magic schools
+ * Culture is weighted heavily - magic traditions are culturally bound
  */
 const MAGIC_SCHOOL_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 3,
@@ -42,6 +43,10 @@ const MAGIC_SCHOOL_CLUSTER_CONFIG: ClusterConfig = {
       weight: 5.0,
       relationshipKind: 'practitioner_of',
       direction: 'dst'
+    },
+    {
+      type: 'same_culture',
+      weight: 4.0  // Strong cultural affinity - magic traditions are culturally bound
     },
     {
       type: 'shared_tags',

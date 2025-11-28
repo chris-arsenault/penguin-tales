@@ -172,6 +172,24 @@ export const relationshipFormation: SimulationSystem = {
         max: 0.8,
         description: 'Relationship chance multiplier for same-region but different-location NPCs',
       },
+      sameCultureMultiplier: {
+        value: 1.5,
+        min: 1.0,
+        max: 3.0,
+        description: 'Relationship boost for same-culture NPCs (cultural affinity)',
+      },
+      differentCulturePenalty: {
+        value: 0.4,
+        min: 0.1,
+        max: 1.0,
+        description: 'Relationship penalty for different-culture NPCs (cultural friction)',
+      },
+      crossCultureRomancePenalty: {
+        value: 0.2,
+        min: 0.0,
+        max: 0.5,
+        description: 'Extra romance penalty for cross-culture pairs (cultural barriers)',
+      },
     },
     triggers: {
       graphConditions: ['Same location', 'Faction membership'],
@@ -224,6 +242,11 @@ export const relationshipFormation: SimulationSystem = {
     const regionProximityEnabled = (params.regionProximityEnabled?.value ?? 1) === 1;
     const regionProximityMult = params.regionProximityMultiplier?.value ?? 0.3;
 
+    // Cultural affinity parameters
+    const sameCultureMult = params.sameCultureMultiplier?.value ?? 1.5;
+    const differentCulturePenalty = params.differentCulturePenalty?.value ?? 0.4;
+    const crossCultureRomancePenalty = params.crossCultureRomancePenalty?.value ?? 0.2;
+
     // Form relationships based on proximity and shared attributes
     // Process each pair only once using ID comparison to avoid double-counting
     npcs.forEach((npc, i) => {
@@ -246,6 +269,10 @@ export const relationshipFormation: SimulationSystem = {
         // Apply region proximity multiplier if only in same region (not same location)
         const proximityMultiplier = sameRegion ? regionProximityMult : 1.0;
 
+        // Cultural affinity: same culture boosts relationships, different culture penalizes
+        const sameCulture = npc.culture === neighbor.culture;
+        const cultureMultiplier = sameCulture ? sameCultureMult : differentCulturePenalty;
+
         // Connection-aware weighting for neighbor
         const neighborWeight = getConnectionWeight(neighbor);
         const balancingFactor = (npcWeight + neighborWeight) / 2;
@@ -262,9 +289,10 @@ export const relationshipFormation: SimulationSystem = {
 
         // === FRIENDSHIP / RIVALRY ===
         // Same faction or allied factions can form friendships/rivalries
+        // Cultural affinity strongly influences social bond formation
         if (sharedFaction || factionRel === 'allied') {
           const friendshipMultiplier = sharedFaction ? sameFactionFriendshipMult : alliedFactionFriendshipMult;
-          const friendshipChance = Math.min(0.95, friendshipBaseChance * friendshipMultiplier * balancingFactor * proximityMultiplier);
+          const friendshipChance = Math.min(0.95, friendshipBaseChance * friendshipMultiplier * balancingFactor * proximityMultiplier * cultureMultiplier);
 
           if (rollProbability(friendshipChance, modifier)) {
             // Use friendshipRivalRatio parameter
@@ -286,13 +314,16 @@ export const relationshipFormation: SimulationSystem = {
 
         // === ENEMY FORMATION ===
         // Different factions → potential conflict (much higher if at war)
+        // Cultural difference increases conflict probability (inverse of culture multiplier)
         if (!sharedFaction && npcFactions.length > 0 && neighborFactions.length > 0) {
           let conflictMultiplier = 1.0;
           if (factionRel === 'enemy') conflictMultiplier = enemyFactionConflictMult;
           else if (factionRel === 'allied') conflictMultiplier = 0.0; // Allied = no conflicts
           else conflictMultiplier = neutralConflictMult;
 
-          const conflictChance = Math.min(0.95, conflictBaseChance * conflictMultiplier * balancingFactor * proximityMultiplier);
+          // Different cultures are MORE likely to form conflicts (inverse of affinity)
+          const conflictCultureMult = sameCulture ? 0.7 : 1.5;  // Same culture = less conflict
+          const conflictChance = Math.min(0.95, conflictBaseChance * conflictMultiplier * balancingFactor * proximityMultiplier * conflictCultureMult);
 
           if (rollProbability(conflictChance, modifier)) {
             // Check: no existing enemy_of, not on cooldown, no contradictions
@@ -310,14 +341,17 @@ export const relationshipFormation: SimulationSystem = {
         }
 
         // === ROMANCE ===
-        // Romance with strong geographical/factional bias
+        // Romance with strong geographical/factional/cultural bias
+        // Culture has the strongest influence on romance formation
         let romanceMultiplier = 1.0;
         if (sharedFaction) romanceMultiplier = sameFactionRomanceMult;
         else if (factionRel === 'allied') romanceMultiplier = alliedFactionRomanceMult;
         else if (factionRel === 'neutral') romanceMultiplier = neutralRomanceMult;
         else if (factionRel === 'enemy') romanceMultiplier = starCrossedLoversMult;  // Star-crossed lovers!
 
-        const romanceChance = Math.min(0.95, romanceBaseChance * romanceMultiplier * balancingFactor * proximityMultiplier);
+        // Romance is strongly culture-dependent - cross-culture romance is rare
+        const romanceCultureMult = sameCulture ? cultureMultiplier : crossCultureRomancePenalty;
+        const romanceChance = Math.min(0.95, romanceBaseChance * romanceMultiplier * balancingFactor * proximityMultiplier * romanceCultureMult);
 
         if (rollProbability(romanceChance, modifier)) {
           // Check: no existing lover_of, not on cooldown, no contradictions

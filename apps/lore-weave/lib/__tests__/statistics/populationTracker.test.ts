@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PopulationTracker } from '../../statistics/populationTracker';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
-import { DistributionTargets } from '../../types/distribution';
-import { DomainSchema } from '../../types/domainSchema';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import { DistributionTargets } from '../../statistics/types';
+import { DomainSchema } from '../../domainInterface/domainSchema';
 
 describe('PopulationTracker', () => {
   let tracker: PopulationTracker;

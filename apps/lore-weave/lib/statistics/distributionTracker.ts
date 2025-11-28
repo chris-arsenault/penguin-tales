@@ -1,12 +1,12 @@
-import { Graph } from '../types/engine';
+import { Graph } from '../engine/types';
 import {
   DistributionTargets,
   DistributionState,
   DeviationScore,
   GlobalTargets,
   EraTargetOverrides,
-} from '../types/distribution';
-import { Prominence } from '../types/worldTypes';
+} from '../statistics/types';
+import { Prominence } from '../core/worldTypes';
 
 /**
  * Tracks distribution metrics and calculates deviations from targets

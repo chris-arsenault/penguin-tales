@@ -1,9 +1,9 @@
-import { Graph, GrowthTemplate, EngineConfig, ComponentContract, TagMetadata } from '../types/engine';
+import { Graph, GrowthTemplate, EngineConfig, ComponentContract, TagMetadata } from '../engine/types';
 import { TemplateGraphView } from '../graph/templateGraphView';
-import { HardState, Relationship, EntityTags } from '../types/worldTypes';
-import { findEntities, addRelationship } from '../utils/helpers';
+import { HardState, Relationship, EntityTags } from '../core/worldTypes';
+import { findEntities, addRelationship } from '../utils';
 import { TagHealthAnalyzer } from '../statistics/tagHealthAnalyzer';
-import { getTagMetadata } from '../utils/tagRegistryHelpers';
+import { getTagMetadata } from '../statistics/tagRegistryHelpers';
 
 /** Helper to get tag keys from EntityTags, normalizing 'name' to 'name:*' for analysis */
 function getTagKeysNormalized(tags: EntityTags | undefined): string[] {

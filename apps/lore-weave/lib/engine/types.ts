@@ -1,7 +1,7 @@
-import { HardState, Relationship, EntityTags } from './worldTypes';
-import { LoreIndex, LoreRecord } from './lore';
-import { TemplateMetadata, SystemMetadata, DistributionTargets } from './distribution';
-import { DomainSchema } from './domainSchema';
+import { HardState, Relationship, EntityTags } from '../core/worldTypes';
+import { LoreIndex, LoreRecord } from '../llm/types';
+import { TemplateMetadata, SystemMetadata, DistributionTargets } from '../statistics/types';
+import { DomainSchema } from '../domainInterface/domainSchema';
 import { FeedbackLoop } from '../feedback/feedbackAnalyzer';
 
 export interface LLMConfig {
@@ -56,12 +56,12 @@ export interface Era {
 export interface CreateEntitySettings {
   kind: string;
   subtype: string;
-  coordinates: import('./regions').Point;  // REQUIRED - simple 2D+z coordinates
+  coordinates: import('../coordinates/types').Point;  // REQUIRED - simple 2D+z coordinates
   tags?: EntityTags;  // Optional - defaults to {}
   name?: string;  // Optional - auto-generated from tags if not provided
   description?: string;
   status?: string;
-  prominence?: import('./worldTypes').Prominence;
+  prominence?: import('../core/worldTypes').Prominence;
   culture?: string;
   temporal?: { startTick: number; endTick: number | null };
 }
@@ -150,7 +150,7 @@ export interface Graph {
   relationshipCooldowns: Map<string, Map<string, number>>;
   loreIndex?: LoreIndex;
   loreRecords: LoreRecord[];
-  discoveryState: import('./worldTypes').DiscoveryState;
+  discoveryState: import('../core/worldTypes').DiscoveryState;
   growthMetrics: {
     relationshipsPerTick: number[];
     averageGrowthRate: number;
@@ -532,7 +532,7 @@ export class GraphStore implements Graph {
   relationshipCooldowns: Map<string, Map<string, number>> = new Map();
   loreIndex?: LoreIndex;
   loreRecords: LoreRecord[] = [];
-  discoveryState: import('./worldTypes').DiscoveryState = {
+  discoveryState: import('../core/worldTypes').DiscoveryState = {
     currentThreshold: 0.5,
     lastDiscoveryTick: 0,
     discoveriesThisEpoch: 0

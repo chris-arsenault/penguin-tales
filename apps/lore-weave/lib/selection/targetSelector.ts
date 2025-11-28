@@ -11,9 +11,9 @@
  * are oversaturated.
  */
 
-import { Graph } from '../types/engine';
-import { HardState, Relationship, Prominence } from '../types/worldTypes';
-import { findEntities, hasTag } from '../utils/helpers';
+import { Graph } from '../engine/types';
+import { HardState, Relationship, Prominence } from '../core/worldTypes';
+import { findEntities, hasTag } from '../utils';
 
 /**
  * Selection bias configuration - defines preferences and penalties
@@ -32,6 +32,12 @@ export interface SelectionBias {
 
     /** Same location as reference entity (for local recruitment) */
     sameLocationAs?: string; // Entity ID
+
+    /**
+     * Prefer entities matching this culture.
+     * Culture is first-class - use this to create culturally cohesive groups.
+     */
+    sameCultureAs?: string;
 
     /** Boost multiplier for preferred attributes (default: 2.0) */
     preferenceBoost?: number;
@@ -53,6 +59,22 @@ export interface SelectionBias {
       entityId: string;
       relationshipKind?: string; // If specified, only exclude this kind
     };
+
+    /**
+     * Penalty multiplier for entities with different culture than sameCultureAs.
+     * Default: 1.0 (no penalty). Use 0.3-0.5 to make cross-culture selection rare.
+     * Only applies when prefer.sameCultureAs is set.
+     */
+    differentCulturePenalty?: number;
+  };
+
+  /** Hard culture filters - applied before scoring */
+  culture?: {
+    /** Only select entities with this exact culture */
+    require?: string;
+
+    /** Exclude entities with any of these cultures */
+    exclude?: string[];
   };
 
   /** Creation fallback - create new entity when all candidates are oversaturated */
@@ -263,6 +285,17 @@ export class TargetSelector {
           score *= boost;
         }
       }
+
+      // Culture preference (same culture as reference)
+      if (bias.prefer.sameCultureAs) {
+        if (entity.culture === bias.prefer.sameCultureAs) {
+          score *= boost;
+        } else {
+          // Apply cross-culture penalty if configured
+          const crossCulturePenalty = bias.avoid?.differentCulturePenalty ?? 1.0;
+          score *= crossCulturePenalty;
+        }
+      }
     }
 
     // === NEGATIVE PENALTIES ===
@@ -317,6 +350,15 @@ export class TargetSelector {
     bias: SelectionBias
   ): Array<{ entity: HardState; score: number }> {
     let filtered = scored;
+
+    // Culture hard filters (applied first for efficiency)
+    if (bias.culture?.require) {
+      filtered = filtered.filter(s => s.entity.culture === bias.culture!.require);
+    }
+
+    if (bias.culture?.exclude?.length) {
+      filtered = filtered.filter(s => !bias.culture!.exclude!.includes(s.entity.culture));
+    }
 
     if (bias.avoid?.maxTotalRelationships !== undefined) {
       filtered = filtered.filter(

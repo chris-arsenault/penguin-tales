@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContractEnforcer } from '../../engine/contractEnforcer';
-import { Graph, GrowthTemplate, EngineConfig, ComponentContract, EntityRegistry } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph, GrowthTemplate, EngineConfig, ComponentContract, EntityRegistry } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 import { TemplateGraphView } from '../../graph/templateGraphView';
 
 // Mock dependencies

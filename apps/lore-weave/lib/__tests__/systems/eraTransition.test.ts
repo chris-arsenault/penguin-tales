@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eraTransition } from '../../systems/eraTransition';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
-import { FRAMEWORK_STATUS } from '../../types/frameworkPrimitives';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import { FRAMEWORK_STATUS } from '../../core/frameworkPrimitives';
 
 describe('eraTransition', () => {
   let graph: Graph;

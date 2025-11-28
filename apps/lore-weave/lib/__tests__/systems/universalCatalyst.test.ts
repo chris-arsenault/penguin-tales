@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { universalCatalyst } from '../../systems/universalCatalyst';
-import { Graph, ComponentPurpose } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph, ComponentPurpose } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('universalCatalyst', () => {
   let mockGraph: Graph;

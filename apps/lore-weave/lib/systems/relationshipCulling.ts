@@ -1,5 +1,5 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
-import { Relationship } from '../types/worldTypes';
+import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../engine/types';
+import { Relationship } from '../core/worldTypes';
 
 /**
  * Relationship Culling System

@@ -10,14 +10,14 @@
  * - Consolidation opportunities: Tags that should be merged
  */
 
-import { Graph, TagHealthReport, TagMetadata } from '../types/engine';
-import { HardState, EntityTags } from '../types/worldTypes';
+import { Graph, TagHealthReport, TagMetadata } from '../engine/types';
+import { HardState, EntityTags } from '../core/worldTypes';
 import {
   getTagMetadata as getTagMetadataHelper,
   tagsConflict as tagsConflictHelper,
   validateEntityTags as validateEntityTagsHelper,
   getConsolidationSuggestions as getConsolidationSuggestionsHelper
-} from '../utils/tagRegistryHelpers';
+} from '../statistics/tagRegistryHelpers';
 
 /** Helper to get tag keys from EntityTags, normalizing 'name' to 'name:*' for analysis */
 function getTagKeys(tags: EntityTags | undefined): string[] {

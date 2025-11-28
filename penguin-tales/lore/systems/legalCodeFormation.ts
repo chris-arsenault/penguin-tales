@@ -58,11 +58,16 @@ const sharedLocationCriterion: ClusterCriterion = {
 
 /**
  * Clustering configuration for legal codes
+ * Culture is critical - laws are culturally specific
  */
 const LEGAL_CODE_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 4,
   criteria: [
     sharedLocationCriterion,
+    {
+      type: 'same_culture',
+      weight: 5.0  // Very strong cultural affinity - laws are culturally specific
+    },
     {
       type: 'temporal_proximity',
       weight: 2.0,

@@ -5,9 +5,9 @@
  * Places entities in regions with Poisson-like spacing.
  */
 
-import type { Point, Region, SampleRegionOptions } from '../types/regions.js';
+import type { Point, Region, SampleRegionOptions } from '../coordinates/types';
 import type { RegionMapper } from './regionMapper.js';
-import { SPACE_BOUNDS } from '../types/regions.js';
+import { SPACE_BOUNDS } from '../coordinates/types';
 
 /**
  * Options for placing an entity.

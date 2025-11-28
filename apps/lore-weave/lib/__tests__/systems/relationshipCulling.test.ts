@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { relationshipCulling } from '../../systems/relationshipCulling';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('relationshipCulling', () => {
   let graph: Graph;

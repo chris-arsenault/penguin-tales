@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RegionMapper } from '../../coordinates/regionMapper.js';
-import type { Region, RegionMapperConfig } from '../../types/regions.js';
+import type { Region, RegionMapperConfig } from '../../coordinates/types';
 
 describe('RegionMapper', () => {
   let mapper: RegionMapper;

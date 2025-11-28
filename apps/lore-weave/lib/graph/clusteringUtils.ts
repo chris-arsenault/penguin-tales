@@ -6,10 +6,10 @@
  * (e.g., meta-entity formation, faction consolidation).
  */
 
-import { HardState, EntityTags } from '../types/worldTypes';
+import { HardState, EntityTags } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
-import { FRAMEWORK_STATUS } from '../types/frameworkPrimitives';
-import { hasTag } from './helpers';
+import { FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
+import { hasTag } from '../utils';
 
 /**
  * Result of clustering operation

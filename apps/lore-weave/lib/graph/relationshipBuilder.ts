@@ -5,8 +5,8 @@
  * Reduces boilerplate in templates and systems.
  */
 
-import { Relationship } from '../types/worldTypes';
-import { Graph } from '../types/engine';
+import { Relationship } from '../core/worldTypes';
+import { Graph } from '../engine/types';
 
 export class RelationshipBuilder {
   private relationships: Relationship[] = [];

@@ -18,7 +18,7 @@
  * ```
  */
 
-import { TemplateMetadata, SystemMetadata } from '../types/distribution';
+import { TemplateMetadata, SystemMetadata } from '../statistics/types';
 
 // Union type for components that have metadata with parameters
 type ComponentMetadata = TemplateMetadata | SystemMetadata;

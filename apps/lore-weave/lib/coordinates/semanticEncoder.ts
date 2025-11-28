@@ -5,13 +5,13 @@
  * Used by deriveCoordinates to place entities meaningfully in their kind's map.
  */
 
-import { Point } from '../types/regions';
+import { Point } from '../coordinates/types';
 import {
   EntityKindAxes,
   TagSemanticWeights,
   SemanticEncodingResult,
   SemanticEncoderConfig,
-} from '../types/semanticAxes';
+} from '../coordinates/types';
 
 // Track unconfigured tags to avoid repeated warnings
 const warnedTags = new Set<string>();

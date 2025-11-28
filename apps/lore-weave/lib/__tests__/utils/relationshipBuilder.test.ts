@@ -4,8 +4,8 @@ import {
   buildRelationships,
   createRelationship,
 } from '../../graph/relationshipBuilder';
-import { Graph } from '../../types/engine';
-import { Relationship } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { Relationship } from '../../core/worldTypes';
 
 describe('RelationshipBuilder', () => {
   let builder: RelationshipBuilder;

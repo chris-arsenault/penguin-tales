@@ -1,5 +1,5 @@
-import { HardState } from '../types/worldTypes';
-import { DomainLoreProvider } from '../types/domainLore';
+import { HardState } from '../core/worldTypes';
+import { DomainLoreProvider } from '../llm/types';
 
 export interface ValidationResult {
   valid: boolean;

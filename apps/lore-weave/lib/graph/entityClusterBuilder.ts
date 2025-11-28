@@ -14,8 +14,8 @@
  * ```
  */
 
-import { HardState, Relationship } from '../types/worldTypes';
-import { TemplateResult } from '../types/engine';
+import { HardState, Relationship } from '../core/worldTypes';
+import { TemplateResult } from '../engine/types';
 
 export class EntityClusterBuilder {
   private entities: Array<Partial<HardState>> = [];

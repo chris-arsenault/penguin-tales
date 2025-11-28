@@ -28,6 +28,7 @@ import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPr
 
 /**
  * Clustering configuration for combat techniques
+ * Culture is weighted heavily - martial traditions are culturally bound
  */
 const COMBAT_TECHNIQUE_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 3,
@@ -38,6 +39,10 @@ const COMBAT_TECHNIQUE_CLUSTER_CONFIG: ClusterConfig = {
       weight: 5.0,
       relationshipKind: 'practitioner_of',
       direction: 'dst'
+    },
+    {
+      type: 'same_culture',
+      weight: 4.0  // Strong cultural affinity - martial traditions are culturally bound
     },
     {
       type: 'shared_tags',

@@ -7,7 +7,7 @@
  * Runs at startup to catch configuration errors before generation begins.
  */
 
-import { EngineConfig, ComponentPurpose, Pressure, EntityOperatorRegistry } from '../types/engine';
+import { EngineConfig, ComponentPurpose, Pressure, EntityOperatorRegistry } from '../engine/types';
 
 export interface ValidationResult {
   valid: boolean;

@@ -1,5 +1,5 @@
-import { Graph } from '../types/engine';
-import { HardState, Relationship } from '../types/worldTypes';
+import { Graph } from '../engine/types';
+import { HardState, Relationship } from '../core/worldTypes';
 
 /**
  * Graph Query Utilities

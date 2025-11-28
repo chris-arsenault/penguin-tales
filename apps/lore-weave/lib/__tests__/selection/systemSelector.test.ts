@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SystemSelector } from '../../selection/systemSelector';
-import { Graph, SimulationSystem } from '../../types/engine';
-import { DistributionTargets, SystemMetadata } from '../../types/distribution';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph, SimulationSystem } from '../../engine/types';
+import { DistributionTargets, SystemMetadata } from '../../statistics/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('SystemSelector', () => {
   let selector: SystemSelector;

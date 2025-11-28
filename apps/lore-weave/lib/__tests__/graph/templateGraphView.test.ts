@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TemplateGraphView } from '../../graph/templateGraphView';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 import { TargetSelector } from '../../selection/targetSelector';
 
 describe('TemplateGraphView', () => {

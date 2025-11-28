@@ -73,15 +73,18 @@ export const outlawRecruitment: GrowthTemplate = {
     const numOutlaws = Math.floor(Math.random() * (numOutlawsMax - numOutlawsMin + 1)) + numOutlawsMin;
 
     // Use targetSelector to find existing NPCs or create new outlaws
+    // Criminal factions recruit from their own culture (trust networks)
     const result = graphView.selectTargets('npc', numOutlaws, {
       prefer: {
         subtypes: ['merchant', 'hero'], // People turning to crime
+        sameCultureAs: faction.culture, // Criminal networks are culturally bound
         preferenceBoost: 1.5
       },
       avoid: {
         relationshipKinds: ['member_of'], // Prefer NPCs not already in factions
         hubPenaltyStrength: 2.0,
-        maxTotalRelationships: 12
+        maxTotalRelationships: 12,
+        differentCulturePenalty: 0.4 // Cross-culture recruitment is risky
       },
       createIfSaturated: {
         threshold: 0.2,

@@ -1,5 +1,5 @@
-import { Graph } from '../types/engine';
-import { HardState } from '../types/worldTypes';
+import { Graph } from '../engine/types';
+import { HardState } from '../core/worldTypes';
 
 /**
  * Validation result for a single check

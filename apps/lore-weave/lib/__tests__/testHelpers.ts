@@ -2,8 +2,8 @@
  * Shared test helpers for creating mock entities
  */
 
-import { HardState, Relationship, Prominence, EntityTags } from '../types/worldTypes';
-import { Graph, Era, EngineConfig, CreateEntitySettings } from '../types/engine';
+import { HardState, Relationship, Prominence, EntityTags } from '../core/worldTypes';
+import { Graph, Era, EngineConfig, CreateEntitySettings } from '../engine/types';
 
 /**
  * Create a minimal test graph with all Graph interface methods for testing

@@ -6,10 +6,10 @@
  * that need to consolidate or supersede entities.
  */
 
-import { Graph } from '../types/engine';
-import { HardState, Relationship } from '../types/worldTypes';
-import { FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../types/frameworkPrimitives';
-import { archiveRelationship, addRelationship } from './helpers';
+import { Graph } from '../engine/types';
+import { HardState, Relationship } from '../core/worldTypes';
+import { FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
+import { archiveRelationship, addRelationship } from '../utils';
 
 /**
  * Options for archiving an entity

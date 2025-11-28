@@ -6,7 +6,7 @@
  * are above target and boosting weights when below target.
  */
 
-import { GrowthTemplate } from '../types/engine';
+import { GrowthTemplate } from '../engine/types';
 import { PopulationMetrics } from '../statistics/populationTracker';
 
 export interface WeightAdjustment {

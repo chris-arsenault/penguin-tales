@@ -5,9 +5,9 @@
  * Extracted from worldEngine.ts for better separation of concerns.
  */
 
-import { HardState, Relationship } from '../types/worldTypes';
-import { Graph } from '../types/engine';
-import { getProminenceValue } from '../utils/helpers';
+import { HardState, Relationship } from '../core/worldTypes';
+import { Graph } from '../engine/types';
+import { getProminenceValue } from '../utils';
 import {
   countRelationships,
   findRelationship,

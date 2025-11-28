@@ -21,7 +21,7 @@ export type {
   Prominence,
   EntityKind,
   EntityTags
-} from './types/worldTypes';
+} from './core/worldTypes';
 
 export type {
   Graph,
@@ -37,9 +37,9 @@ export type {
   EntityOperatorRegistry,
   NameGenerationService,
   TagMetadata
-} from './types/engine';
+} from './engine/types';
 
-export { ComponentPurpose, GraphStore } from './types/engine';
+export { ComponentPurpose, GraphStore } from './engine/types';
 
 // =============================================================================
 // DOMAIN SCHEMA TYPES - For implementing domain schemas
@@ -61,15 +61,15 @@ export type {
   NameGenerator,
   ImageGenerationPromptConfig,
   CultureImageConfig
-} from './types/domainSchema';
+} from './domainInterface/domainSchema';
 
 export type {
   DomainLoreProvider
-} from './types/domainLore';
+} from './llm/types';
 
 export type {
   DistributionTargets
-} from './types/distribution';
+} from './statistics/types';
 
 // =============================================================================
 // SERVICES - For domain templates and systems
@@ -83,11 +83,15 @@ export type { SelectionBias, SelectionResult } from './selection/targetSelector'
 export { EnrichmentService } from './llm/enrichmentService';
 export { ImageGenerationService } from './llm/imageGenerationService';
 
+// Cultural awareness analysis (debugging/reporting)
+export { CulturalAwarenessAnalyzer } from './statistics/culturalAwarenessAnalyzer';
+export type { CulturalAwarenessReport } from './statistics/culturalAwarenessAnalyzer';
+
 // =============================================================================
 // UTILITY FUNCTIONS - For domain templates and systems
 // =============================================================================
 
-// Core helpers
+// Core helpers (re-exported from utils index)
 export {
   generateId,
   pickRandom,
@@ -111,19 +115,19 @@ export {
   getStringTags,
   tagsToArray,
   arrayToTags
-} from './utils/helpers';
+} from './utils';
 
 // Name generation service (wraps name-forge)
 export { NameForgeService } from './naming/nameForgeService';
 export type { NameForgeConfig, NameForgeProjectFile, Culture } from './naming/nameForgeService';
 
 // Validation
-export { validateWorld } from './utils/validators';
-export type { ValidationResult, ValidationReport } from './utils/validators';
+export { validateWorld } from './engine/validators';
+export type { ValidationResult, ValidationReport } from './engine/validators';
 
 // Parameter configuration
-export { applyParameterOverrides } from './utils/parameterOverrides';
-export { extractParams } from './utils/parameterExtractor';
+export { applyParameterOverrides } from './engine/parameterOverrides';
+export { extractParams } from './engine/parameterExtractor';
 
 // Entity clustering (for meta-entity formation systems)
 export {
@@ -131,14 +135,14 @@ export {
   detectClusters,
   filterClusterableEntities,
   findBestClusterMatch
-} from './utils/clusteringUtils';
+} from './graph/clusteringUtils';
 
 export type {
   Cluster,
   ClusterCriterion,
   ClusterCriterionType,
   ClusterConfig
-} from './utils/clusteringUtils';
+} from './graph/clusteringUtils';
 
 // Entity archival (for entity lifecycle management)
 export {
@@ -151,13 +155,13 @@ export {
   isHistoricalEntity,
   getPartOfMembers,
   supersedeEntity
-} from './utils/entityArchival';
+} from './graph/entityArchival';
 
 export type {
   ArchiveEntityOptions,
   TransferRelationshipsOptions,
   SupersedeEntityOptions
-} from './utils/entityArchival';
+} from './graph/entityArchival';
 
 // Template building utilities
 export { EntityClusterBuilder } from './graph/entityClusterBuilder';
@@ -176,7 +180,7 @@ export {
   addCatalyzedEvent,
   calculateAttemptChance,
   updateInfluence
-} from './utils/catalystHelpers';
+} from './systems/catalystHelpers';
 
 // =============================================================================
 // FRAMEWORK SYSTEMS - Domain registers these with engine config
@@ -195,13 +199,13 @@ export {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_RELATIONSHIP_KINDS,
   FRAMEWORK_STATUS
-} from './types/frameworkPrimitives';
+} from './core/frameworkPrimitives';
 
 export type {
   FrameworkEntityKind,
   FrameworkRelationshipKind,
   FrameworkStatus
-} from './types/frameworkPrimitives';
+} from './core/frameworkPrimitives';
 
 // Feedback loop types (domain provides feedback loop configuration)
 export type { FeedbackLoop } from './feedback/feedbackAnalyzer';
@@ -231,9 +235,9 @@ export type {
   EntityKindMapState,
   EntityKindMaps,
   EntityKindMapsState
-} from './types/regions';
+} from './coordinates/types';
 
-export { SPACE_BOUNDS } from './types/regions';
+export { SPACE_BOUNDS } from './coordinates/types';
 
 export { RegionMapper } from './coordinates/regionMapper';
 
@@ -264,7 +268,7 @@ export type {
   TagSemanticWeights,
   SemanticEncodingResult,
   SemanticEncoderConfig
-} from './types/semanticAxes';
+} from './coordinates/types';
 
 export {
   SemanticEncoder,

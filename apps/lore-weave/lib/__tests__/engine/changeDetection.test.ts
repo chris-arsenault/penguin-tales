@@ -13,8 +13,8 @@ import {
   detectEntityChanges,
   EntitySnapshot
 } from '../../engine/changeDetection';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship, Prominence } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship, Prominence } from '../../core/worldTypes';
 
 // Helper function to create minimal HardState for testing
 function createEntity(

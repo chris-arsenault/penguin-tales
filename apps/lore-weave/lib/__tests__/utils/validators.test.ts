@@ -8,9 +8,9 @@ import {
   validateWorld,
   ValidationResult,
   ValidationReport
-} from '../../utils/validators';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+} from '../../engine/validators';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 // Helper function to create a mock graph with the new Graph API methods
 function createMockGraph(overrides: Partial<Graph> = {}): Graph {
