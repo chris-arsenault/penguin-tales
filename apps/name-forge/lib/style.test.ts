@@ -80,6 +80,56 @@ describe("Style", () => {
       expect(result.transforms).not.toContain("apostrophe");
       expect(result.transforms).not.toContain("hyphen");
     });
+
+    it("should not place apostrophe and hyphen adjacent with 2 syllables", () => {
+      const style: StyleRules = {
+        capitalization: "title",
+        apostropheRate: 1.0,
+        hyphenRate: 1.0,
+      };
+
+      // With only 2 syllables (1 boundary), should only insert one marker
+      for (let i = 0; i < 20; i++) {
+        const rng = createRNG(`test-${i}`);
+        const syllables = ["plex", "oi"];
+        const result = applyStyle(rng, "plexoi", style, syllables);
+
+        // Should not have both markers adjacent
+        expect(result.result).not.toMatch(/-'/);
+        expect(result.result).not.toMatch(/'-/);
+
+        // Should have exactly one marker (apostrophe or hyphen)
+        const hasApostrophe = result.result.includes("'");
+        const hasHyphen = result.result.includes("-");
+        expect(hasApostrophe || hasHyphen).toBe(true);
+        expect(hasApostrophe && hasHyphen).toBe(false);
+      }
+    });
+
+    it("should place both markers at different boundaries with 3+ syllables", () => {
+      const style: StyleRules = {
+        capitalization: "title",
+        apostropheRate: 1.0,
+        hyphenRate: 1.0,
+      };
+
+      // With 3 syllables (2 boundaries), can place both
+      for (let i = 0; i < 20; i++) {
+        const rng = createRNG(`test-${i}`);
+        const syllables = ["ka", "ri", "tha"];
+        const result = applyStyle(rng, "karitha", style, syllables);
+
+        // Should have both markers at different positions
+        const hasApostrophe = result.result.includes("'");
+        const hasHyphen = result.result.includes("-");
+        expect(hasApostrophe).toBe(true);
+        expect(hasHyphen).toBe(true);
+
+        // Should not be adjacent
+        expect(result.result).not.toMatch(/-'/);
+        expect(result.result).not.toMatch(/'-/);
+      }
+    });
   });
 
   describe("hasPreferredEnding", () => {

@@ -11,16 +11,6 @@ export function capitalize(str: string): string {
 }
 
 /**
- * Convert string to title case
- */
-export function titleCase(str: string): string {
-  return str
-    .split(/\s+/)
-    .map((word) => capitalize(word.toLowerCase()))
-    .join(" ");
-}
-
-/**
  * Apply capitalization style
  */
 export function applyCapitalization(
@@ -40,13 +30,6 @@ export function applyCapitalization(
     default:
       return str;
   }
-}
-
-/**
- * Check if a string contains a substring (case-insensitive)
- */
-export function containsIgnoreCase(str: string, substring: string): boolean {
-  return str.toLowerCase().includes(substring.toLowerCase());
 }
 
 /**
@@ -146,13 +129,6 @@ export function normalizeWeights(weights: number[]): number[] {
     return weights.map(() => 1 / weights.length);
   }
   return weights.map((w) => Math.max(0, w) / total);
-}
-
-/**
- * Clamp a number between min and max
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**
