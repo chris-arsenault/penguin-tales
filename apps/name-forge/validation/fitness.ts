@@ -4,7 +4,7 @@
  * Integrates validation metrics into a single scalar fitness score.
  */
 
-import { generateNames } from "../lib/generator.js";
+import { generateFromDomain } from "../lib/generate.js";
 import { batchScorePronounceability } from "../lib/pronounceability.js";
 import type { NamingDomain } from "../lib/types/domain.js";
 import type {
@@ -229,14 +229,7 @@ export async function computeFitness(
   let lengthScore = 1.0;
   if (weights.pronounceability > 0 || weights.length > 0) {
     // Generate sample names for these metrics
-    const results = generateNames([config], {
-      kind: "npc",
-      tags: [],
-      count: sampleSize,
-      seed: `fitness-${iteration}-style`,
-    });
-
-    const names = results.map((r) => r.name);
+    const names = generateFromDomain(config, sampleSize, `fitness-${iteration}-style`);
 
     if (weights.pronounceability > 0) {
       pronounceabilityScore = scorePronounceability(names, config);

@@ -77,26 +77,10 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
   // Prominence levels
   const prominenceLevels = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
-  // Get the profile and resources for generation
-  const getGenerationContext = () => {
+  // Get the culture for generation
+  const getSelectedCulture = () => {
     if (!selectedCulture) return null;
-
-    const culture = cultures[selectedCulture];
-    if (!culture) return null;
-
-    // Find selected profile or use first one
-    const profile = selectedProfile
-      ? culture.profiles?.find(p => p.id === selectedProfile)
-      : culture.profiles?.[0];
-
-    if (!profile) return null;
-
-    // Collect all culture-level resources
-    const domains = culture.domains || [];
-    const grammars = culture.grammars || [];
-    const lexemes = culture.lexemeLists || {};
-
-    return { profile, domains, grammars, lexemes };
+    return cultures[selectedCulture] || null;
   };
 
   // Context pair handlers
@@ -121,15 +105,17 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
     setGenerating(true);
 
     try {
-      const genContext = getGenerationContext();
+      const culture = getSelectedCulture();
 
-      if (!genContext) {
+      if (!culture) {
+        throw new Error('No culture selected.');
+      }
+
+      if (!culture.profiles || culture.profiles.length === 0) {
         throw new Error('No profile found. Create a profile in Workshop → Profiles.');
       }
 
-      const { profile, domains, grammars, lexemes } = genContext;
-
-      // Parse tags for context (used by strategy group condition matching)
+      // Parse tags for condition matching
       const tagList = tags
         .split(',')
         .map(t => t.trim())
@@ -149,15 +135,17 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
       if (prominence) userContext.prominence = prominence;
       if (tagList.length > 0) userContext.tags = tagList.join(',');
 
-      // Generate names (async to allow Markov model loading)
+      // Generate names - pass culture directly
       const result = await generateTestNames({
-        profile,
-        domains,
-        grammars,
-        lexemes,
+        culture,
+        profileId: selectedProfile || undefined,
         count,
         seed: `generate-${Date.now()}`,
-        context: userContext
+        context: userContext,
+        kind: selectedKind || undefined,
+        subtype: selectedSubKind || undefined,
+        prominence: prominence || undefined,
+        tags: tagList
       });
 
       setGeneratedNames(result.names || []);
@@ -180,8 +168,8 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
 
   // Check if we can generate
   const canGenerate = selectedCulture;
-  const context = canGenerate ? getGenerationContext() : null;
-  const hasProfile = !!context?.profile;
+  const culture = canGenerate ? getSelectedCulture() : null;
+  const hasProfile = culture?.profiles?.length > 0;
 
   return (
     <div style={{ padding: '1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -435,16 +423,16 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
             </div>
           )}
 
-          {/* Profile Preview */}
-          {context?.profile && (
+          {/* Culture Preview */}
+          {culture && hasProfile && (
             <div className="card" style={{ marginTop: '1rem' }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Active Profile</h4>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Active Culture</h4>
               <div style={{ fontSize: '0.8rem', color: 'var(--arctic-frost)' }}>
-                <div><strong>ID:</strong> {context.profile.id}</div>
-                <div><strong>Groups:</strong> {context.profile.strategyGroups?.length || 0}</div>
-                <div><strong>Domains:</strong> {context.domains?.length || 0}</div>
-                <div><strong>Grammars:</strong> {context.grammars?.length || 0}</div>
-                <div><strong>Lexeme Lists:</strong> {Object.keys(context.lexemes || {}).length}</div>
+                <div><strong>Profile:</strong> {selectedProfile || culture.profiles[0]?.id}</div>
+                <div><strong>Profiles:</strong> {culture.profiles?.length || 0}</div>
+                <div><strong>Domains:</strong> {culture.domains?.length || 0}</div>
+                <div><strong>Grammars:</strong> {culture.grammars?.length || 0}</div>
+                <div><strong>Lexeme Lists:</strong> {Object.keys(culture.lexemeLists || {}).length}</div>
               </div>
             </div>
           )}

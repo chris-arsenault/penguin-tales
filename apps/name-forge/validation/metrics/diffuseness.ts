@@ -1,5 +1,5 @@
 import type { NamingDomain } from "../../lib/types/domain.js";
-import { testDomain } from "../../lib/generator.js";
+import { testDomain } from "../../lib/generate.js";
 import type {
   DiffusenessReport,
   ValidationConfig,

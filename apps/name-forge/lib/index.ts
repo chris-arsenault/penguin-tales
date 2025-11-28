@@ -1,28 +1,95 @@
 /**
- * World Gen Naming - Domain-aware procedural name generation
+ * Name Forge - Domain-aware procedural name generation
  *
- * Main library exports for programmatic use
+ * Main library exports for programmatic use.
  */
 
-// Types and schemas
-export * from "./types/domain.js";
-export * from "./types/schema.js";
-export * from "./types/kg.js";
-export * from "./types/profile.js"; // Phase 4: Profile system
-export * from "./types/integration.js"; // KG integration interface
+// ============================================================================
+// Core Generation API
+// ============================================================================
 
-// Core generation
-export * from "./generator.js";
-export * from "./phonology.js";
-export * from "./morphology.js";
-export * from "./style.js";
-export * from "./domain-selector.js";
-export * from "./phonotactic-pipeline.js";
-export * from "./markov.js";
+export {
+  generate,
+  generateOne,
+  generateFromDomain,
+  testDomain,
+  type MarkovModel,
+  type TestDomainResult,
+} from "./generate.js";
 
-// Phase 4: Profile-based generation
-export * from "./profile-executor.js";
+// ============================================================================
+// Project Types (canonical schema matching UI)
+// ============================================================================
+
+export type {
+  // Core types
+  Culture,
+  Grammar,
+  Profile,
+  Strategy,
+  StrategyGroup,
+  GroupConditions,
+  LexemeList,
+  // Project structure
+  Project,
+  WorldSchema,
+  EntityKindDefinition,
+  // Generation
+  GenerateRequest,
+  GenerateResult,
+} from "./types/project.js";
+
+export {
+  // Zod schemas for validation
+  LexemeListSchema,
+  GrammarSchema,
+  StrategySchema,
+  StrategyGroupSchema,
+  GroupConditionsSchema,
+  ProfileSchema,
+} from "./types/project.js";
+
+// ============================================================================
+// Domain Types (phonotactic configuration)
+// ============================================================================
+
+export type {
+  NamingDomain,
+  PhonologyProfile,
+  MorphologyProfile,
+  StyleRules,
+  AppliesTo,
+  Prominence,
+} from "./types/domain.js";
+
+// ============================================================================
+// Low-level APIs (for advanced use / optimizer)
+// ============================================================================
+
+// Phonotactic generation
+export { generatePhonotacticName, executePhonotacticPipeline } from "./phonotactic-pipeline.js";
+export { generateWord, generateWords, generateWordWithDebug } from "./phonology.js";
+export { applyMorphology } from "./morphology.js";
+export { applyStyle } from "./style.js";
+
+// Markov generation
+export {
+  generateFromMarkov,
+  generateNamesFromMarkov,
+  loadMarkovModel,
+  getMarkovModel,
+  MARKOV_MODELS,
+  type MarkovModelId,
+} from "./markov.js";
 
 // Utilities
-export * from "./utils/rng.js";
-export * from "./utils/helpers.js";
+export { createRNG, pickRandom, pickWeighted } from "./utils/rng.js";
+
+// Validation schemas
+export {
+  NamingDomainSchema,
+  PhonologyProfileSchema,
+  MorphologyProfileSchema,
+  StyleRulesSchema,
+  DomainCollectionSchema,
+} from "./types/schema.js";
