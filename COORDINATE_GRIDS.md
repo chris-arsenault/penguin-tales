@@ -53,3 +53,25 @@ This plan replaces the earlier generic proposal with a repo-aware path to repair
 - Shared coordinate context with persisted per-kind RegionMapper state (framework responsibility, domain-agnostic).
 - Region-aware placement APIs that can create/update regions and re-derive tags after mutations (framework responsibility).
 - Domain wiring that injects penguin configs into the framework and regression tests that demonstrate stability across runs (domain responsibility).
+
+## 5) Culture-first paradigm impacts
+The repo is moving to **culture as a first-class attribute for all entities** (beyond the initial Name Forge driver). The coordinate work needs to support that without leaking penguin specifics into the framework.
+
+### Framework expectations (remain generic)
+- Treat `culture` as **just another tag/axis input** for placement and semantic encoding. The framework should not hard-code cultures, but it must:
+  - Allow semantic axes/weights to include culture-based buckets (e.g., “protective”, “ice-aligned”, “expansionist”) provided by configuration.
+  - Support culture-specific region defaults supplied via injected kind configs (e.g., emergent regions seeded from a culture’s founding colony) without naming the cultures in code.
+- Ensure `KindRegionService` can parameterize emergent region creation by **caller-supplied context** (e.g., culture ID) so placements can cluster around cultural seeds and expand outward using strategies (far/near/region-bound) that consume those contexts.
+- Preserve per-kind separation: cultures might influence multiple kinds (location, magic, law) but the framework should treat them as independent grids that can be **correlated by shared tags/context** rather than shared state.
+- Keep persistence agnostic: exported region/entity records should carry opaque culture tags/IDs; the framework only serializes what it was given.
+
+### Domain responsibilities (penguin-specific wiring)
+- Define culture taxonomies, their preferred semantic axes, and initial seeds in `penguin-tales/lore/config/` (e.g., culture Y favors protective ice magic and spawns from colony Y’s coordinates). Inject these into the generic services during graph construction.
+- Provide **placement intents** that pass culture context into the framework helpers, selecting strategies that bias toward culture-owned regions (e.g., “spawn location within culture Y influence region” or “select magic tags that align with culture Y’s defensive bent”).
+- Configure Name Forge and other systems to consume the culture tags emitted by placement so naming, law generation, and magic affinity all align with the spatial/cultural layout.
+- Add tests or fixtures that exercise cross-kind cultural coherence: a culture seed should influence nearby locations, adjacent magical regions, and generated laws after export/import.
+
+### Resulting guide adjustments
+- When defining new semantic axes or regions, **include culture-driven buckets and region templates in config**, not code. The framework only sees opaque tags/weights.
+- Placement helpers should accept a `context` object (culture ID, seed region IDs, preferred axes) that flows through `KindRegionService` and `RegionPlacementService` to bias sampling and emergent creation.
+- Migration path: retrofit existing templates to pass culture context; culture-neutral templates continue to work because the framework treats culture data as optional metadata.
