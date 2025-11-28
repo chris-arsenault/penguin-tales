@@ -13,7 +13,6 @@ export {
   generateOne,
   generateFromDomain,
   testDomain,
-  type MarkovModel,
   type TestDomainResult,
 } from "./generate.js";
 
@@ -37,6 +36,7 @@ export type {
   // Generation
   GenerateRequest,
   GenerateResult,
+  // Markov (re-export from generate for backwards compat)
 } from "./types/project.js";
 
 export {
@@ -76,11 +76,13 @@ export { applyStyle } from "./style.js";
 export {
   generateFromMarkov,
   generateNamesFromMarkov,
-  loadMarkovModel,
-  getMarkovModel,
   MARKOV_MODELS,
   type MarkovModelId,
+  type MarkovModel,
 } from "./markov.js";
+
+// Markov model loading (for browser base URL configuration)
+export { setMarkovBaseUrl } from "./markov-loader.js";
 
 // Utilities
 export { createRNG, pickRandom, pickWeighted } from "./utils/rng.js";

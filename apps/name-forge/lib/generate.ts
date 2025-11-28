@@ -8,6 +8,7 @@
 
 import { createRNG, pickRandom } from "./utils/rng.js";
 import { generatePhonotacticName } from "./phonotactic-pipeline.js";
+import { preloadModels } from "./markov-loader.js";
 import type { NamingDomain } from "./types/domain.js";
 import type {
   Culture,
@@ -19,16 +20,7 @@ import type {
   GenerateRequest,
   GenerateResult,
 } from "./types/project.js";
-
-// ============================================================================
-// Markov Types (inline to avoid circular deps with markov.ts)
-// ============================================================================
-
-export interface MarkovModel {
-  order: number;
-  startStates: Record<string, number>;
-  transitions: Record<string, Record<string, number>>;
-}
+import type { MarkovModel } from "./markov.js";
 
 // ============================================================================
 // Generation Context (internal)
@@ -55,16 +47,16 @@ interface GrammarExpansionContext {
 /**
  * Generate names using a culture's configuration.
  *
+ * Automatically preloads any Markov models referenced in grammars.
+ *
  * @param culture - The culture containing domains, grammars, lexemes, profiles
  * @param request - Generation parameters
- * @param markovModels - Optional pre-loaded Markov models (keyed by model ID)
  * @returns Generated names and strategy usage statistics
  */
-export function generate(
+export async function generate(
   culture: Culture,
-  request: GenerateRequest,
-  markovModels?: Map<string, MarkovModel>
-): GenerateResult {
+  request: GenerateRequest
+): Promise<GenerateResult> {
   const {
     profileId,
     kind,
@@ -87,6 +79,9 @@ export function generate(
     );
   }
 
+  // Preload any Markov models referenced in grammars
+  const markovModels = await preloadModels(culture.grammars || []);
+
   // Build generation context
   const rng = createRNG(seed || `gen-${Date.now()}`);
   const genContext: GenerationContext = {
@@ -94,7 +89,7 @@ export function generate(
     domains: culture.domains,
     grammars: culture.grammars,
     lexemeLists: Object.values(culture.lexemeLists),
-    markovModels: markovModels || new Map(),
+    markovModels,
     userContext: context,
   };
 
@@ -135,15 +130,13 @@ export function generate(
  *
  * @param culture - The culture to use
  * @param request - Generation parameters (count is ignored, always returns 1)
- * @param markovModels - Optional pre-loaded Markov models
  * @returns The generated name
  */
-export function generateOne(
+export async function generateOne(
   culture: Culture,
-  request: Omit<GenerateRequest, "count">,
-  markovModels?: Map<string, MarkovModel>
-): string {
-  const result = generate(culture, { ...request, count: 1 }, markovModels);
+  request: Omit<GenerateRequest, "count">
+): Promise<string> {
+  const result = await generate(culture, { ...request, count: 1 });
   return result.names[0];
 }
 

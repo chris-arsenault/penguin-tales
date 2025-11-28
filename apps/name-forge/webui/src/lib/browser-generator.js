@@ -1,72 +1,15 @@
 /**
  * Browser-compatible name generator
  *
- * Thin wrapper around the name-forge lib that handles:
- * 1. Async Markov model loading from public directory
- * 2. Calling the lib's generate() function
+ * Thin wrapper around the name-forge lib.
  */
 
 import { generate, generateFromDomain } from '@lib/generate.js';
+import { setMarkovBaseUrl } from '@lib/markov-loader.js';
 
-// Markov model cache
-const markovModelCache = new Map();
-
-/**
- * Load a Markov model from the public directory
- */
-async function loadMarkovModel(modelId) {
-  if (markovModelCache.has(modelId)) {
-    return markovModelCache.get(modelId);
-  }
-
-  try {
-    const response = await fetch(`${import.meta.env.BASE_URL}markov-models/${modelId}.json`);
-    if (!response.ok) {
-      console.warn(`Markov model '${modelId}' not found`);
-      return null;
-    }
-    const model = await response.json();
-    markovModelCache.set(modelId, model);
-    return model;
-  } catch (error) {
-    console.warn(`Failed to load Markov model '${modelId}':`, error);
-    return null;
-  }
-}
-
-/**
- * Pre-load Markov models referenced in grammars
- */
-async function preloadMarkovModels(grammars) {
-  const modelIds = new Set();
-
-  for (const grammar of grammars) {
-    for (const productions of Object.values(grammar.rules || {})) {
-      for (const production of productions) {
-        for (const token of production) {
-          if (token.includes('markov:')) {
-            const match = token.match(/markov:([a-z]+)/);
-            if (match) {
-              modelIds.add(match[1]);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const models = new Map();
-  await Promise.all(
-    Array.from(modelIds).map(async (id) => {
-      const model = await loadMarkovModel(id);
-      if (model) {
-        models.set(id, model);
-      }
-    })
-  );
-
-  return models;
-}
+// Configure base URL for Markov models in browser
+// Vite serves from public/ directory
+setMarkovBaseUrl(`${import.meta.env.BASE_URL}markov-models`);
 
 /**
  * Generate names using a culture's configuration.
@@ -102,11 +45,8 @@ export async function generateTestNames({
     throw new Error('Culture has no profiles');
   }
 
-  // Pre-load any Markov models referenced in grammars
-  const markovModels = await preloadMarkovModels(culture.grammars || []);
-
-  // Call the lib's generate function directly with the culture
-  const result = generate(culture, {
+  // generate() handles Markov model preloading internally
+  return generate(culture, {
     cultureId: culture.id,
     profileId: profileId,
     context: context,
@@ -116,9 +56,7 @@ export async function generateTestNames({
     subtype: subtype,
     prominence: prominence,
     tags: tags
-  }, markovModels);
-
-  return result;
+  });
 }
 
 /**
