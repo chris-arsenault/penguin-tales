@@ -77,7 +77,7 @@ describe('WorldEngine', () => {
         description: 'A test colony',
         status: 'active',
         prominence: 'recognized',
-        tags: [],
+        tags: {},
         links: []
       }
     ];
@@ -143,8 +143,8 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       expect(graph).toBeDefined();
-      expect(graph.entities).toBeDefined();
-      expect(graph.relationships).toBeDefined();
+      expect(graph.getEntities).toBeDefined();
+      expect(graph.getRelationships).toBeDefined();
       expect(graph.tick).toBeGreaterThan(0);
     });
 
@@ -174,7 +174,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      const entities = Array.from(graph.entities.values());
+      const entities = graph.getEntities();
       expect(entities.length).toBeGreaterThan(0);
 
       entities.forEach(entity => {
@@ -189,7 +189,7 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       const initialCount = initialState.length;
-      expect(graph.entities.size).toBeGreaterThanOrEqual(initialCount);
+      expect(graph.getEntityCount()).toBeGreaterThanOrEqual(initialCount);
     });
 
     it('should create relationships during simulation', () => {
@@ -225,8 +225,8 @@ describe('WorldEngine', () => {
         canApply: vi.fn(() => true),
         findTargets: vi.fn((graph) => {
           // Safely handle graph access
-          if (!graph || !graph.entities) return [];
-          return Array.from(graph.entities.values()).slice(0, 1);
+          if (!graph || !graph.getEntities) return [];
+          return graph.getEntities().slice(0, 1);
         }),
         expand: vi.fn((graph, target) => ({
           newEntities: [
@@ -237,7 +237,7 @@ describe('WorldEngine', () => {
               description: 'A new hero',
               status: 'active',
               prominence: 'marginal',
-              tags: [],
+              tags: {},
               links: []
             }
           ],
@@ -320,7 +320,7 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       expect(graph).toBeDefined();
-      expect(graph.entities.size).toBe(initialState.length);
+      expect(graph.getEntityCount()).toBe(initialState.length);
     });
 
     it('should handle empty system list gracefully', () => {
@@ -357,7 +357,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, multipleInitial);
       const graph = engine.run();
 
-      const ids = Array.from(graph.entities.keys());
+      const ids = graph.getEntityIds();
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
@@ -366,7 +366,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      const initialEntity = Array.from(graph.entities.values())[0];
+      const initialEntity = graph.getEntities()[0];
       expect(initialEntity.createdAt).toBe(0);
     });
 
@@ -379,7 +379,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, namedInitial);
       const graph = engine.run();
 
-      const entity = Array.from(graph.entities.values()).find(e =>
+      const entity = graph.getEntities().find(e =>
         e.name === 'Preserved Name Colony'
       );
       expect(entity).toBeDefined();
@@ -400,7 +400,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, detailedInitial);
       const graph = engine.run();
 
-      const entity = Array.from(graph.entities.values()).find(e =>
+      const entity = graph.getEntities().find(e =>
         e.name === 'Test Hero'
       );
       expect(entity).toBeDefined();
@@ -534,7 +534,7 @@ describe('WorldEngine', () => {
         name: 'Dynamic Pressure',
         value: 10,
         growth: vi.fn((graph) => {
-          return graph.entities.size > 5 ? 10 : -5;
+          return graph.getEntityCount() > 5 ? 10 : -5;
         }),
         decay: 1,
         description: 'Dynamic pressure'
@@ -573,7 +573,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      const finalCount = graph.entities.size;
+      const finalCount = graph.getEntityCount();
       expect(finalCount).toBeGreaterThanOrEqual(initialState.length);
     });
 
@@ -581,8 +581,8 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      expect(graph.relationships).toBeDefined();
-      expect(Array.isArray(graph.relationships)).toBe(true);
+      expect(graph.getRelationships()).toBeDefined();
+      expect(Array.isArray(graph.getRelationships())).toBe(true);
     });
   });
 
@@ -694,9 +694,9 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       // All relationships should reference existing entities
-      graph.relationships.forEach(rel => {
-        expect(graph.entities.has(rel.src)).toBe(true);
-        expect(graph.entities.has(rel.dst)).toBe(true);
+      graph.getRelationships().forEach(rel => {
+        expect(graph.hasEntity(rel.src)).toBe(true);
+        expect(graph.hasEntity(rel.dst)).toBe(true);
       });
     });
 
@@ -704,7 +704,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      const ids = Array.from(graph.entities.keys());
+      const ids = graph.getEntityIds();
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
@@ -714,10 +714,10 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       // Sample a few entities and check their links
-      const entities = Array.from(graph.entities.values()).slice(0, 5);
+      const entities = graph.getEntities().slice(0, 5);
       entities.forEach(entity => {
         entity.links.forEach(link => {
-          const relExists = graph.relationships.some(r =>
+          const relExists = graph.getRelationships().some(r =>
             (r.src === link.src && r.dst === link.dst && r.kind === link.kind) ||
             (r.src === link.dst && r.dst === link.src && r.kind === link.kind)
           );
@@ -731,7 +731,7 @@ describe('WorldEngine', () => {
       const graph = engine.run();
 
       const validProminences = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-      Array.from(graph.entities.values()).forEach(entity => {
+      graph.getEntities().forEach(entity => {
         expect(validProminences).toContain(entity.prominence);
       });
     });
@@ -740,7 +740,7 @@ describe('WorldEngine', () => {
       const engine = new WorldEngine(mockConfig, initialState);
       const graph = engine.run();
 
-      Array.from(graph.entities.values()).forEach(entity => {
+      graph.getEntities().forEach(entity => {
         expect(entity.tags.length).toBeLessThanOrEqual(5);
       });
     });

@@ -41,6 +41,8 @@ import {
 
 import { penguinLoreProvider } from './config/loreProvider.js';
 import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
+import { penguinFeedbackLoops } from './config/feedbackLoops.js';
+import { penguinTagRegistry } from './config/tagRegistry.js';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -241,7 +243,13 @@ const config: EngineConfig = {
   },
 
   // Pass scale factor to engine for internal calculations
-  scaleFactor: SCALE_FACTOR
+  scaleFactor: SCALE_FACTOR,
+
+  // Feedback loops for homeostatic regulation (penguin-specific)
+  feedbackLoops: penguinFeedbackLoops,
+
+  // Tag registry for tag health analysis (penguin-specific)
+  tagRegistry: penguinTagRegistry
 
   // Meta-entity formation is now handled by SimulationSystems:
   // magicSchoolFormation, legalCodeFormation, combatTechniqueFormation

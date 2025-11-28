@@ -1,6 +1,11 @@
 import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { HardState } from '../types/worldTypes';
 import { generateId } from '../utils/helpers';
+import {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_STATUS,
+  FRAMEWORK_RELATIONSHIP_KINDS
+} from '../types/frameworkPrimitives';
 
 /**
  * Era Spawner System
@@ -25,14 +30,14 @@ export const eraSpawner: SimulationSystem = {
     affects: {
       entities: [
         {
-          kind: 'era',
+          kind: FRAMEWORK_ENTITY_KINDS.ERA,
           operation: 'create',
           count: { min: 0, max: 10 }
         }
       ],
       relationships: [
         {
-          kind: 'supersedes',
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
           operation: 'create',
           count: { min: 0, max: 10 }
         }
@@ -83,7 +88,7 @@ export const eraSpawner: SimulationSystem = {
     const ticksPerEra = params.ticksPerEra?.value ?? 30;
 
     // Check if era entities already exist
-    const existingEras = graph.getEntities().filter(e => e.kind === 'era');
+    const existingEras = graph.getEntities().filter(e => e.kind === FRAMEWORK_ENTITY_KINDS.ERA);
 
     if (existingEras.length > 0) {
       // Eras already spawned - skip
@@ -116,12 +121,12 @@ export const eraSpawner: SimulationSystem = {
       const isFirst = i === 0;
 
       const eraEntity: HardState = {
-        id: generateId('era'),
-        kind: 'era',
+        id: generateId(FRAMEWORK_ENTITY_KINDS.ERA),
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
         subtype: configEra.id,
         name: configEra.name,
         description: configEra.description,
-        status: isFirst ? 'current' : 'future',
+        status: isFirst ? FRAMEWORK_STATUS.CURRENT : FRAMEWORK_STATUS.FUTURE,
         prominence: 'mythic',  // Eras are always mythic (world-defining)
         culture: 'world',  // Eras are world-level entities
         tags: { temporal: true, era: true, eraId: configEra.id },
@@ -145,7 +150,7 @@ export const eraSpawner: SimulationSystem = {
         const distance = Math.min(ticksPerEra / maxTicks, 0.5);
 
         relationshipsAdded.push({
-          kind: 'supersedes',
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
           src: eraEntity.id,
           dst: previousEra.id,
           strength: 1.0,

@@ -7,7 +7,7 @@
  */
 
 import { HardState, EntityTags } from '../types/worldTypes';
-import { TemplateGraphView } from '../services/templateGraphView';
+import { TemplateGraphView } from '../graph/templateGraphView';
 import { FRAMEWORK_STATUS } from '../types/frameworkPrimitives';
 import { hasTag } from './helpers';
 

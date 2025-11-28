@@ -13,7 +13,7 @@ import {
   findRelationship,
   getRelatedEntity,
   getRelationshipIdSet
-} from '../utils/graphQueries';
+} from '../graph/graphQueries';
 
 /**
  * Entity snapshot for change detection

@@ -34,7 +34,7 @@ describe('universalCatalyst', () => {
       // Entity read methods
       getEntity(id: string): HardState | undefined {
         const entity = _entities.get(id);
-        return entity ? { ...entity, tags: [...entity.tags], links: [...entity.links] } : undefined;
+        return entity ? { ...entity, tags: { ...entity.tags }, links: [...entity.links] } : undefined;
       },
       hasEntity(id: string): boolean {
         return _entities.has(id);
@@ -50,7 +50,7 @@ describe('universalCatalyst', () => {
       },
       forEachEntity(callback: (entity: HardState, id: string) => void): void {
         _entities.forEach((entity, id) => {
-          callback({ ...entity, tags: [...entity.tags], links: [...entity.links] }, id);
+          callback({ ...entity, tags: { ...entity.tags }, links: [...entity.links] }, id);
         });
       },
       findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
@@ -157,7 +157,12 @@ describe('universalCatalyst', () => {
           return true;
         }
         return false;
-      }
+      },
+
+      // Keep backward compatibility for tests
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
+      set relationships(rels: Relationship[]) { _relationships = rels; }
     } as any;
 
     mockModifier = 1.0;

@@ -1,9 +1,9 @@
-import { Graph, GrowthTemplate, EngineConfig, ComponentContract } from '../types/engine';
-import { TemplateGraphView } from '../services/templateGraphView';
+import { Graph, GrowthTemplate, EngineConfig, ComponentContract, TagMetadata } from '../types/engine';
+import { TemplateGraphView } from '../graph/templateGraphView';
 import { HardState, Relationship, EntityTags } from '../types/worldTypes';
 import { findEntities, addRelationship } from '../utils/helpers';
-import { TagHealthAnalyzer } from '../services/tagHealthAnalyzer';
-import { getTagMetadata } from '../config/tagRegistry';
+import { TagHealthAnalyzer } from '../statistics/tagHealthAnalyzer';
+import { getTagMetadata } from '../utils/tagRegistryHelpers';
 
 /** Helper to get tag keys from EntityTags, normalizing 'name' to 'name:*' for analysis */
 function getTagKeysNormalized(tags: EntityTags | undefined): string[] {
@@ -28,9 +28,11 @@ function getTagKeyCount(tags: EntityTags | undefined): number {
  */
 export class ContractEnforcer {
   private tagAnalyzer: TagHealthAnalyzer;
+  private registry: TagMetadata[];
 
   constructor(private config: EngineConfig) {
-    this.tagAnalyzer = new TagHealthAnalyzer();
+    this.registry = config.tagRegistry || [];
+    this.tagAnalyzer = new TagHealthAnalyzer(this.registry);
   }
 
   /**
@@ -335,7 +337,7 @@ export class ContractEnforcer {
 
     for (const tag of tagsToAdd) {
       const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-      const def = getTagMetadata(normalizedTag);
+      const def = getTagMetadata(this.registry, normalizedTag);
       if (!def || !def.maxUsage) continue;  // Unregistered tags can't be saturated
 
       const currentCount = tagCounts.get(normalizedTag) || 0;
@@ -368,7 +370,7 @@ export class ContractEnforcer {
 
     for (const tag of tagsToAdd) {
       const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-      const def = getTagMetadata(normalizedTag);
+      const def = getTagMetadata(this.registry, normalizedTag);
 
       if (!def) {
         orphanTags.push(tag);

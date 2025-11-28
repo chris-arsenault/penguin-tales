@@ -7,6 +7,7 @@
 
 import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../types/worldTypes';
 import { Graph } from '../types/engine';
+import { FRAMEWORK_ENTITY_KINDS } from '../types/frameworkPrimitives';
 
 /**
  * Get all entities that can act (have catalyst.canAct = true)
@@ -28,9 +29,9 @@ export function getAgentsByCategory(
   // First-order agents: npc, faction, abilities, location (rare)
   // Second-order agents: occurrence
   if (category === 'first-order') {
-    return agents.filter(e => e.kind !== 'occurrence');
+    return agents.filter(e => e.kind !== FRAMEWORK_ENTITY_KINDS.OCCURRENCE);
   } else {
-    return agents.filter(e => e.kind === 'occurrence');
+    return agents.filter(e => e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE);
   }
 }
 

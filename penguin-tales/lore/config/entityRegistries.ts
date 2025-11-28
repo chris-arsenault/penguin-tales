@@ -12,7 +12,7 @@
 
 import type { EntityOperatorRegistry } from '@lore-weave/core/types/engine.js';
 import type { HardState } from '@lore-weave/core/types/worldTypes.js';
-import type { TemplateGraphView } from '@lore-weave/core/services/templateGraphView.js';
+import type { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView.js';
 
 /**
  * NPC Entity Registry

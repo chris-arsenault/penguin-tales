@@ -46,7 +46,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: 'A penguin',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -63,7 +63,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice-Walker',
           description: 'A penguin',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -80,7 +80,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Singlename',
           description: 'A penguin',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -97,7 +97,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: '',
           description: 'A penguin',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -115,7 +115,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker the-Great',
           description: 'A penguin',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -133,7 +133,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: 'A penguin from the ice berg',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -150,7 +150,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: 'A character',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -167,7 +167,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Singlename',
           description: 'Generic description',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -183,7 +183,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Aurora Watcher',
           description: 'Watches the aurora',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -199,7 +199,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'The Fissure',
           description: 'A glowing fissure',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -215,7 +215,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Krill Grounds',
           description: 'Rich fishing',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -231,7 +231,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: 'From ICE BERG',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -249,7 +249,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Frost Magic',
           description: 'Ice magic power',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -265,7 +265,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Harpoon Mastery',
           description: 'Expert with harpoons',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -281,7 +281,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Generic Ability',
           description: 'A generic skill',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -298,7 +298,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: 'A character',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -317,7 +317,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Singlename',
           description: 'Generic',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -340,7 +340,7 @@ describe('LoreValidator', () => {
           description: 'A high ridge on the ice berg',
           status: 'active',
           prominence: 'marginal' as const, culture: 'world',
-          tags: [],
+          tags: {},
           links: [],
           createdAt: 0,
           updatedAt: 0
@@ -358,7 +358,7 @@ describe('LoreValidator', () => {
           subtype: 'geographic_feature',
           name: 'The Place',
           description: 'A place',
-          tags: [],
+          tags: {},
           links: [],
         status: 'active',
           prominence: 'marginal' as const, culture: 'world',
@@ -382,7 +382,7 @@ describe('LoreValidator', () => {
           subtype: 'geographic_feature',
             name: `Crystal ${term}`,
             description: 'A feature on the ice berg',
-            tags: [],
+            tags: {},
             links: [],
         status: "active",
             prominence: "marginal" as const, culture: 'world',
@@ -402,7 +402,7 @@ describe('LoreValidator', () => {
           subtype: 'geographic_feature',
           name: 'Crystal RIDGE',
           description: 'A ridge on the ice',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -418,7 +418,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'The Settlement',
           description: 'A colony',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -436,7 +436,7 @@ describe('LoreValidator', () => {
           subtype: 'anomaly',
           name: 'Glow Cavern',
           description: 'A glowing place',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -452,7 +452,7 @@ describe('LoreValidator', () => {
           subtype: 'anomaly',
           name: 'The Place',
           description: 'A strange place',
-          tags: [],
+          tags: {},
           links: [],
         status: 'active',
           prominence: 'marginal' as const, culture: 'world',
@@ -476,7 +476,7 @@ describe('LoreValidator', () => {
           subtype: 'anomaly',
             name: `${term} Cave`,
             description: 'An anomaly in the ice',
-            tags: [],
+            tags: {},
             links: [],
         status: "active",
             prominence: "marginal" as const, culture: 'world',
@@ -496,7 +496,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'The Settlement',
           description: 'A colony',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -514,7 +514,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'Ice Colony',
           description: 'A colony on the ice berg near the aurora',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -530,7 +530,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'The Settlement',
           description: 'A generic place where people live',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -547,7 +547,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'The Settlement',
           description: '',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -566,7 +566,7 @@ describe('LoreValidator', () => {
           subtype: 'anomaly',
           name: 'Plain Name',
           description: 'Generic description',
-          tags: [],
+          tags: {},
           links: [],
         status: 'active',
           prominence: 'marginal' as const, culture: 'world',
@@ -589,7 +589,7 @@ describe('LoreValidator', () => {
           subtype: 'colony',
           name: 'Ice Colony',
           description: 'A colony on the ice',
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -610,7 +610,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: undefined as any,
         description: 'A penguin',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -626,7 +626,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: 'Ice Walker',
         description: null as any,
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -642,7 +642,7 @@ describe('LoreValidator', () => {
           subtype: undefined as any,
         name: 'Ice Place',
         description: 'A place',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -658,7 +658,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: 'Ice Walker',
         description: 'A penguin',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -675,7 +675,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: 'Ice Walker',
         description: 'A penguin',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -692,7 +692,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: longName,
         description: 'A penguin with ice magic',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -708,7 +708,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: 'Ice@Walker #1',
         description: 'A penguin',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -725,7 +725,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: '❄️ Ice Walker 🐧',
         description: 'A penguin from the ice',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -746,7 +746,7 @@ describe('LoreValidator', () => {
           subtype: "test",
           name: 'Ice Walker',
           description: `Contains ${cue}`,
-          tags: [],
+          tags: {},
           links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -762,7 +762,7 @@ describe('LoreValidator', () => {
           subtype: "test",
         name: 'Ice Walker',
         description: 'From iceberg',
-        tags: [],
+        tags: {},
         links: [],
         status: "active", prominence: "marginal", culture: 'world', createdAt: 0, updatedAt: 0 };
 
@@ -777,7 +777,7 @@ describe('LoreValidator', () => {
         kind: 'npc',
         name: 'Ice Walker',
         description: 'A nice person',
-        tags: [],
+        tags: {},
         links: [],
         subtype: 'explorer',
         status: 'active',

@@ -2,6 +2,7 @@ import { HardState, Relationship, EntityTags } from './worldTypes';
 import { LoreIndex, LoreRecord } from './lore';
 import { TemplateMetadata, SystemMetadata, DistributionTargets } from './distribution';
 import { DomainSchema } from './domainSchema';
+import { FeedbackLoop } from '../feedback/feedbackAnalyzer';
 
 export interface LLMConfig {
   enabled: boolean;
@@ -194,15 +195,15 @@ export interface GrowthTemplate {
 
   // Check if template can be applied
   // Uses TemplateGraphView for safe, restricted graph access
-  canApply: (graphView: import('../services/templateGraphView').TemplateGraphView) => boolean;
+  canApply: (graphView: import('../graph/templateGraphView').TemplateGraphView) => boolean;
 
   // Find valid targets for this template
   // Uses TemplateGraphView for safe, restricted graph access
-  findTargets: (graphView: import('../services/templateGraphView').TemplateGraphView) => HardState[];
+  findTargets: (graphView: import('../graph/templateGraphView').TemplateGraphView) => HardState[];
 
   // Execute the template on a target
   // Uses TemplateGraphView which includes targetSelector for entity selection
-  expand: (graphView: import('../services/templateGraphView').TemplateGraphView, target?: HardState) => TemplateResult;
+  expand: (graphView: import('../graph/templateGraphView').TemplateGraphView, target?: HardState) => TemplateResult;
 }
 
 export interface TemplateResult {
@@ -263,7 +264,7 @@ export interface ComponentContract {
     pressures?: Array<{ name: string; threshold: number }>;
     entityCounts?: Array<{ kind: string; subtype?: string; min: number; max?: number }>;
     era?: string[];
-    custom?: (graphView: import('../services/templateGraphView').TemplateGraphView) => boolean;
+    custom?: (graphView: import('../graph/templateGraphView').TemplateGraphView) => boolean;
   };
 
   // OUTPUT CONTRACT: What this component affects
@@ -349,7 +350,7 @@ export interface EntityOperatorRegistry {
   // Lineage function (called after any creator)
   lineage: {
     relationshipKind: string;  // e.g., 'derived_from', 'related_to'
-    findAncestor: (graphView: import('../services/templateGraphView').TemplateGraphView, newEntity: HardState) => HardState | undefined;
+    findAncestor: (graphView: import('../graph/templateGraphView').TemplateGraphView, newEntity: HardState) => HardState | undefined;
     distanceRange: { min: number; max: number };
   };
 
@@ -399,6 +400,12 @@ export interface EngineConfig {
   loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
 
+  // Feedback loops for homeostatic regulation (domain-specific)
+  feedbackLoops?: FeedbackLoop[];
+
+  // Tag registry for tag health analysis and validation (domain-specific)
+  tagRegistry?: TagMetadata[];
+
   // Name generation service (wraps name-forge)
   nameForgeService?: NameGenerationService;
 }
@@ -425,7 +432,6 @@ export interface MetaEntityConfig {
     transferRelationships: boolean;          // Transfer relationships to meta-entity
     redirectFutureRelationships: boolean;    // Future relationships go to meta-entity
     preserveOriginalLinks: boolean;          // Keep part_of links to originals
-    createGovernanceFaction?: boolean;       // Create faction:political to govern (for legal codes)
   };
 
   // Factory function to create meta-entity from cluster
@@ -664,6 +670,29 @@ export class GraphStore implements Graph {
       createdAt: this.tick,
       updatedAt: this.tick
     };
+
+    // Check for coordinate overlap with existing entities of the same kind
+    const overlapThreshold = 1.0;  // Entities within this distance are "overlapping"
+    const newCoords = settings.coordinates;
+    for (const existing of this.#entities.values()) {
+      if (existing.kind !== settings.kind) continue;
+      if (!existing.coordinates) continue;
+
+      const dx = existing.coordinates.x - newCoords.x;
+      const dy = existing.coordinates.y - newCoords.y;
+      const dz = (existing.coordinates.z ?? 50) - (newCoords.z ?? 50);
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      if (distance < overlapThreshold) {
+        console.warn(
+          `⚠️  Coordinate overlap: ${settings.kind}:${settings.subtype} "${name}" ` +
+          `placed at (${newCoords.x.toFixed(1)}, ${newCoords.y.toFixed(1)}, ${(newCoords.z ?? 50).toFixed(1)}) ` +
+          `overlaps with existing "${existing.name}" at ` +
+          `(${existing.coordinates.x.toFixed(1)}, ${existing.coordinates.y.toFixed(1)}, ${(existing.coordinates.z ?? 50).toFixed(1)}) ` +
+          `[distance: ${distance.toFixed(2)}]`
+        );
+      }
+    }
 
     this.#entities.set(id, entity);
     return id;

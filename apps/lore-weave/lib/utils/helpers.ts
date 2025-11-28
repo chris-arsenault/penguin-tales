@@ -105,12 +105,27 @@ export function generateId(prefix: string): string {
 }
 
 // Random selection
+
+/**
+ * Fisher-Yates shuffle - produces unbiased random permutation.
+ * NOTE: The previous implementation using sort(() => Math.random() - 0.5)
+ * was biased and could produce non-uniform distributions.
+ */
+export function shuffle<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export function pickRandom<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
 export function pickMultiple<T>(array: T[], count: number): T[] {
-  const shuffled = [...array].sort(() => Math.random() - 0.5);
+  const shuffled = shuffle(array);
   return shuffled.slice(0, Math.min(count, array.length));
 }
 

@@ -1,44 +1,44 @@
 World Generation Warnings Log
-Started: 2025-11-27T23:31:33.080Z
+Started: 2025-11-28T12:50:16.205Z
 ================================================================================
 
-[2025-11-27T23:31:33.252Z] [Tick 15]
+[2025-11-28T12:50:16.669Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (NPC):
    Entity: Tide-Splitter Rukan (Tide-Splitter Rukan)
    Kind: npc
    Relationship Type: practitioner_of
    Current count: 5
    Warning threshold: 5
-   Target: Advanced Navigation Tech
-   Tick: 15
+   Target: Improved Fishing Tech
+   Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:33.618Z] [Tick 30]
+[2025-11-28T12:50:16.695Z] [Tick 30]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 10
    Warning threshold: 10
-   Target: Frozen Rift
+   Target: The Frozen Aurora
    Tick: 30
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:33.654Z] [Tick 31]
+[2025-11-28T12:50:16.900Z] [Tick 37]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 11
    Warning threshold: 10
-   Target: Dark Depths
-   Tick: 31
+   Target: Aurora Berg
+   Tick: 37
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:33.689Z] [Tick 32]
+[2025-11-28T12:50:16.949Z] [Tick 39]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
@@ -46,395 +46,587 @@ Started: 2025-11-27T23:31:33.080Z
    Current count: 12
    Warning threshold: 10
    Target: Secret Crypt
-   Tick: 32
+   Tick: 39
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:33.725Z] [Tick 33]
+[2025-11-28T12:50:16.972Z] [Tick 40]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 13
    Warning threshold: 10
-   Target: Bright Market
-   Tick: 33
+   Target: Dark Rift
+   Tick: 40
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:33.989Z] [Tick 40]
+[2025-11-28T12:50:17.250Z] [Tick 45]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 14
    Warning threshold: 10
-   Target: Lost Grotto
-   Tick: 40
+   Target: The Whispering Ice
+   Tick: 45
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:34.275Z] [Tick 45]
+[2025-11-28T12:50:17.400Z] [Tick 45]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 15
    Warning threshold: 10
-   Target: Ethereal Shelf
+   Target: The Shimmering Chasm
    Tick: 45
    Era: The Great Thaw
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:34.333Z] [Tick 45]
+[2025-11-28T12:50:18.064Z] [Tick 55]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 16
    Warning threshold: 10
-   Target: Frost-Light Grotto
-   Tick: 45
-   Era: The Great Thaw
+   Target: Void Vortex
+   Tick: 55
+   Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:34.358Z] [Tick 45]
+[2025-11-28T12:50:18.128Z] [Tick 56]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 17
    Warning threshold: 10
-   Target: The Whispering Ice
-   Tick: 45
-   Era: The Great Thaw
+   Target: Whispering Vortex
+   Tick: 56
+   Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:34.364Z] [Tick 45]
+[2025-11-28T12:50:18.250Z] [Tick 58]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 18
    Warning threshold: 10
-   Target: The Glowing Depths
-   Tick: 45
-   Era: The Great Thaw
+   Target: Dark Rift
+   Tick: 58
+   Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:34.505Z] [Tick 47]
+[2025-11-28T12:50:18.314Z] [Tick 59]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 19
    Warning threshold: 10
-   Target: Dark Depths
-   Tick: 47
-   Era: The Great Thaw
+   Target: Hidden Vault
+   Tick: 59
+   Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:35.097Z] [Tick 54]
+[2025-11-28T12:50:18.417Z] [Tick 60]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 20
    Warning threshold: 10
-   Target: Windward Ridge
-   Tick: 54
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:35.451Z] [Tick 58]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 21
-   Warning threshold: 10
-   Target: Aurora Berg
-   Tick: 58
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:35.754Z] [Tick 60]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 22
-   Warning threshold: 10
-   Target: Void Vortex
+   Target: The Shimmering Chasm
    Tick: 60
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:36.006Z] [Tick 62]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 23
-   Warning threshold: 10
-   Target: Grand Hall
-   Tick: 62
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.252Z] [Tick 64]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 24
-   Warning threshold: 10
-   Target: Void Echo
-   Tick: 64
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.376Z] [Tick 65]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 25
-   Warning threshold: 10
-   Target: Dark Depths
-   Tick: 65
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.505Z] [Tick 66]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 5
-   Warning threshold: 5
-   Target: Dark Depths
-   Tick: 66
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.640Z] [Tick 67]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 6
-   Warning threshold: 5
-   Target: Hidden Vault
-   Tick: 67
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.771Z] [Tick 68]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 7
-   Warning threshold: 5
-   Target: Nightfall Shelf
-   Tick: 68
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:36.899Z] [Tick 69]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 26
-   Warning threshold: 10
-   Target: Void Echo
-   Tick: 69
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.032Z] [Tick 70]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 27
-   Warning threshold: 10
-   Target: Whispering Rift
-   Tick: 70
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.165Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 8
-   Warning threshold: 5
-   Target: Grand Hall
-   Tick: 71
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.165Z] [Tick 71]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 28
-   Warning threshold: 10
-   Target: Frozen Rift
-   Tick: 71
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.430Z] [Tick 73]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 9
-   Warning threshold: 5
-   Target: Lost Grotto
-   Tick: 73
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.430Z] [Tick 73]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 29
-   Warning threshold: 10
-   Target: Shimmering Gate
-   Tick: 73
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:37.568Z] [Tick 74]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 30
-   Warning threshold: 10
-   Target: Frozen Gate
-   Tick: 74
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:38.036Z] [Tick 75]
+[2025-11-28T12:50:18.490Z] [Tick 60]
 ⚠️  RELATIONSHIP WARNING (FACTION):
    Entity: The Midnight Claws (The Midnight Claws)
    Kind: faction
    Relationship Type: controls
    Current count: 20
    Warning threshold: 20
-   Target: Whispering Echo
-   Tick: 75
+   Target: Dark Fissure
+   Tick: 60
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:38.042Z] [Tick 75]
+[2025-11-28T12:50:18.493Z] [Tick 60]
 ⚠️  RELATIONSHIP WARNING (FACTION):
    Entity: The Icebound Exchange (The Icebound Exchange)
    Kind: faction
    Relationship Type: controls
    Current count: 20
    Warning threshold: 20
-   Target: Whispering Echo
+   Target: Dark Fissure
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.498Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Sun Plaza
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.501Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Sun Plaza
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.503Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Sun Plaza
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.505Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Sun Plaza
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.510Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Secret Crypt
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.513Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Secret Crypt
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.516Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Secret Crypt
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.518Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Secret Crypt
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.529Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.534Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.537Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.540Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.562Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 21
+   Warning threshold: 10
+   Target: Frost-Light Grotto
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:18.604Z] [Tick 60]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 22
+   Warning threshold: 10
+   Target: Mystic Ice Cavern
+   Tick: 60
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:19.169Z] [Tick 65]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 23
+   Warning threshold: 10
+   Target: Secret Crypt
+   Tick: 65
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:19.287Z] [Tick 66]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 24
+   Warning threshold: 10
+   Target: Void Rift
+   Tick: 66
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:19.514Z] [Tick 68]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 25
+   Warning threshold: 10
+   Target: Void Fissure
+   Tick: 68
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:19.634Z] [Tick 69]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 26
+   Warning threshold: 10
+   Target: Secret Crypt
+   Tick: 69
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:19.754Z] [Tick 70]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 27
+   Warning threshold: 10
+   Target: Dark Fissure
+   Tick: 70
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.254Z] [Tick 74]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 28
+   Warning threshold: 10
+   Target: Shimmering Echo
+   Tick: 74
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.604Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Deep Den
    Tick: 75
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:38.477Z] [Tick 77]
+[2025-11-28T12:50:20.614Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Secret Crypt
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.638Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Dark Fissure
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.708Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 20
+   Warning threshold: 20
+   Target: Whispering Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.711Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 21
+   Warning threshold: 20
+   Target: Shimmering Echo
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.717Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 22
+   Warning threshold: 20
+   Target: Lost Grotto
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.738Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.746Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.749Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.753Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.757Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:20.764Z] [Tick 75]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 23
+   Warning threshold: 20
+   Target: Void Vortex
+   Tick: 75
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:21.159Z] [Tick 76]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 29
+   Warning threshold: 10
+   Target: Aurora Stack
+   Tick: 76
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:21.339Z] [Tick 77]
+⚠️  RELATIONSHIP WARNING (ABILITIES):
+   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
+   Kind: abilities
+   Relationship Type: manifests_at
+   Current count: 30
+   Warning threshold: 10
+   Target: Shadow Hollow
+   Tick: 77
+   Era: The Faction Wars
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:21.523Z] [Tick 78]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 31
    Warning threshold: 10
-   Target: Secret Crypt
-   Tick: 77
+   Target: Deep Den
+   Tick: 78
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:38.676Z] [Tick 78]
+[2025-11-28T12:50:21.869Z] [Tick 80]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 32
    Warning threshold: 10
-   Target: Whispering Echo
-   Tick: 78
+   Target: Deep Den
+   Tick: 80
    Era: The Faction Wars
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:38.875Z] [Tick 79]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 10
-   Warning threshold: 5
-   Target: Lost Grotto
-   Tick: 79
-   Era: The Faction Wars
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:39.249Z] [Tick 81]
+[2025-11-28T12:50:22.044Z] [Tick 81]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 33
    Warning threshold: 10
-   Target: Nightfall Shelf
+   Target: Krill Shoals
    Tick: 81
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:39.432Z] [Tick 82]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 11
-   Warning threshold: 5
-   Target: Aurora Stack
-   Tick: 82
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:39.802Z] [Tick 84]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 12
-   Warning threshold: 5
-   Target: Secret Crypt
-   Tick: 84
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:39.802Z] [Tick 84]
+[2025-11-28T12:50:23.124Z] [Tick 87]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 34
    Warning threshold: 10
-   Target: Whispering Gate
-   Tick: 84
+   Target: Dark Gate
+   Tick: 87
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:39.986Z] [Tick 85]
+[2025-11-28T12:50:23.307Z] [Tick 88]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
@@ -442,799 +634,403 @@ Started: 2025-11-27T23:31:33.080Z
    Current count: 35
    Warning threshold: 10
    Target: Lost Grotto
-   Tick: 85
+   Tick: 88
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:40.173Z] [Tick 86]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 13
-   Warning threshold: 5
-   Target: Dark Depths
-   Tick: 86
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:40.552Z] [Tick 88]
+[2025-11-28T12:50:23.488Z] [Tick 89]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 36
    Warning threshold: 10
-   Target: Grand Hall
-   Tick: 88
+   Target: Hidden Vault
+   Tick: 89
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:40.745Z] [Tick 89]
+[2025-11-28T12:50:23.976Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:23.979Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:23.994Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:24.025Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:24.029Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 24
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:24.033Z] [Tick 90]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Whispering Gate
+   Tick: 90
+   Era: The Clever Ice Age
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:24.446Z] [Tick 90]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 37
    Warning threshold: 10
-   Target: Aurora Stack
-   Tick: 89
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.196Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shimmering Echo
+   Target: Nightfall Shelf
    Tick: 90
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:41.200Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 90
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.218Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 90
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.225Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 90
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.252Z] [Tick 90]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 20
-   Target: Shimmering Echo
-   Tick: 90
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.343Z] [Tick 90]
+[2025-11-28T12:50:24.698Z] [Tick 91]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 38
    Warning threshold: 10
-   Target: The Whispering Ice
-   Tick: 90
+   Target: West Colony
+   Tick: 91
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:41.375Z] [Tick 90]
+[2025-11-28T12:50:24.953Z] [Tick 92]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 39
    Warning threshold: 10
-   Target: The Shimmering Chasm
-   Tick: 90
+   Target: Secret Crypt
+   Tick: 92
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:41.657Z] [Tick 91]
+[2025-11-28T12:50:25.212Z] [Tick 93]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 40
    Warning threshold: 10
-   Target: Shimmering Echo
-   Tick: 91
+   Target: Whispering Gate
+   Tick: 93
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:41.934Z] [Tick 92]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 14
-   Warning threshold: 5
-   Target: Windward Ridge
-   Tick: 92
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:41.934Z] [Tick 92]
+[2025-11-28T12:50:25.468Z] [Tick 94]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 41
    Warning threshold: 10
-   Target: South Haven
-   Tick: 92
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:42.499Z] [Tick 94]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 15
-   Warning threshold: 5
-   Target: Krill Shoals
+   Target: North Haven
    Tick: 94
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:42.499Z] [Tick 94]
+[2025-11-28T12:50:26.002Z] [Tick 96]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 42
    Warning threshold: 10
-   Target: Far Perch
-   Tick: 94
+   Target: Void Vortex
+   Tick: 96
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:42.805Z] [Tick 95]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 16
-   Warning threshold: 5
-   Target: Bright Market
-   Tick: 95
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:42.805Z] [Tick 95]
+[2025-11-28T12:50:26.282Z] [Tick 97]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 43
    Warning threshold: 10
-   Target: South Haven
-   Tick: 95
+   Target: Frozen Gate
+   Tick: 97
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:45.247Z] [Tick 103]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 17
-   Warning threshold: 5
-   Target: Grand Hall
-   Tick: 103
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.031Z] [Tick 105]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shadow Hollow
-   Tick: 105
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.036Z] [Tick 105]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Shadow Hollow
-   Tick: 105
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.045Z] [Tick 105]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shadow Hollow
-   Tick: 105
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.050Z] [Tick 105]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Shadow Hollow
-   Tick: 105
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.054Z] [Tick 105]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 20
-   Target: Shadow Hollow
-   Tick: 105
-   Era: The Clever Ice Age
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:31:46.810Z] [Tick 106]
+[2025-11-28T12:50:27.747Z] [Tick 102]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 44
    Warning threshold: 10
-   Target: Shadow Hollow
-   Tick: 106
+   Target: Sun Plaza
+   Tick: 102
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:47.213Z] [Tick 107]
+[2025-11-28T12:50:28.040Z] [Tick 103]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 45
    Warning threshold: 10
-   Target: Golden Exchange
-   Tick: 107
+   Target: South Shelf
+   Tick: 103
    Era: The Clever Ice Age
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:47.593Z] [Tick 108]
+[2025-11-28T12:50:35.572Z] [Tick 120]
 ⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
+   Entity: Tidehunter (npc-1764334235424-bw3kfxk42)
    Kind: npc
-   Relationship Type: controls
-   Current count: 18
+   Relationship Type: practitioner_of
+   Current count: 5
    Warning threshold: 5
-   Target: Golden Exchange
-   Tick: 108
-   Era: The Clever Ice Age
+   Target: Crushing Dive
+   Tick: 120
+   Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:31:55.676Z] [Tick 121]
+[2025-11-28T12:50:45.633Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.639Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.644Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.654Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.660Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 25
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.680Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Deep Den
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.744Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (LOCATION):
+   Entity: The Glow-Fissure (The Glow-Fissure)
+   Kind: location
+   Relationship Type: adjacent_to
+   Current count: 10
+   Warning threshold: 10
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.750Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216234-4e4r50bpg)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.756Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Circle of the Depths (faction-1764334216224-6s794rmjo)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.761Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Imperial Council of 5 Laws (faction-1764334218722-2ebk2a42o)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.767Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: Folk Council of 4 Laws (faction-1764334218721-wun0c3c4e)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 26
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.772Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Icebound Exchange (The Icebound Exchange)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 27
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:45.777Z] [Tick 135]
+⚠️  RELATIONSHIP WARNING (FACTION):
+   Entity: The Midnight Claws (The Midnight Claws)
+   Kind: faction
+   Relationship Type: controls
+   Current count: 27
+   Warning threshold: 20
+   Target: Bright Market
+   Tick: 135
+   Era: The Orca Incursion
+   ℹ️  This is a WARNING only - relationship will still be added
+
+[2025-11-28T12:50:50.493Z] [Tick 140]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 46
    Warning threshold: 10
-   Target: Bright Market
-   Tick: 121
+   Target: Deep Den
+   Tick: 140
    Era: The Orca Incursion
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:32:00.364Z] [Tick 129]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 19
-   Warning threshold: 5
-   Target: Shimmering Echo
-   Tick: 129
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:02.738Z] [Tick 133]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 20
-   Warning threshold: 5
-   Target: Frozen Gate
-   Tick: 133
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.812Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Bright Market
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.819Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Bright Market
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.824Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Bright Market
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.829Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Bright Market
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.835Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 20
-   Target: Bright Market
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.932Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.937Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.942Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.947Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 23
-   Warning threshold: 20
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:03.953Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.286Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Dark Depths
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.292Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 25
-   Warning threshold: 20
-   Target: Dark Depths
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.297Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Dark Depths
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.303Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 25
-   Warning threshold: 20
-   Target: Dark Depths
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.321Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 24
-   Warning threshold: 20
-   Target: Dark Depths
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.495Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 25
-   Warning threshold: 20
-   Target: Night Lair
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.507Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 25
-   Warning threshold: 20
-   Target: Night Lair
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.513Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 26
-   Warning threshold: 20
-   Target: Night Lair
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.519Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 26
-   Warning threshold: 20
-   Target: Night Lair
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.525Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 25
-   Warning threshold: 20
-   Target: Night Lair
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.614Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Order of the Fissure (faction-1764286293109-o07abx1zn)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 26
-   Warning threshold: 20
-   Target: Clear Square
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.626Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Icebound Exchange (The Icebound Exchange)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 27
-   Warning threshold: 20
-   Target: Clear Square
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.633Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 27
-   Warning threshold: 20
-   Target: Clear Square
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.639Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293235-tch3xxfv7)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 26
-   Warning threshold: 20
-   Target: Clear Square
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.645Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Common Council of 5 Laws (faction-1764286293357-9sud4u1l3)
-   Kind: faction
-   Relationship Type: controls
-   Current count: 26
-   Warning threshold: 20
-   Target: Clear Square
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:04.671Z] [Tick 135]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 21
-   Warning threshold: 5
-   Target: Grand Hall
-   Tick: 135
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:05.345Z] [Tick 136]
-⚠️  RELATIONSHIP WARNING (NPC):
-   Entity: High-Beak Auditor Selka (High-Beak Auditor Selka)
-   Kind: npc
-   Relationship Type: controls
-   Current count: 22
-   Warning threshold: 5
-   Target: Night Lair
-   Tick: 136
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:06.051Z] [Tick 137]
+[2025-11-28T12:50:54.464Z] [Tick 146]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 47
    Warning threshold: 10
-   Target: Clear Square
-   Tick: 137
-   Era: The Orca Incursion
+   Target: Bright Market
+   Tick: 146
+   Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added
 
-[2025-11-27T23:32:06.742Z] [Tick 138]
+[2025-11-28T12:50:56.082Z] [Tick 148]
 ⚠️  RELATIONSHIP WARNING (ABILITIES):
    Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
    Kind: abilities
    Relationship Type: manifests_at
    Current count: 48
    Warning threshold: 10
-   Target: Dark Depths
-   Tick: 138
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:07.440Z] [Tick 139]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 49
-   Warning threshold: 10
-   Target: Grand Hall
-   Tick: 139
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:08.132Z] [Tick 140]
-⚠️  RELATIONSHIP WARNING (ABILITIES):
-   Entity: Fissure-Drawn Runes (Fissure-Drawn Runes)
-   Kind: abilities
-   Relationship Type: manifests_at
-   Current count: 50
-   Warning threshold: 10
-   Target: Night Lair
-   Tick: 140
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:08.815Z] [Tick 141]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Circle of the Fissure
-   Tick: 141
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:09.474Z] [Tick 142]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Order of the Fissure
-   Tick: 142
-   Era: The Orca Incursion
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:12.875Z] [Tick 146]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Ice (faction-1764286294267-43ua3v6g0)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Sharpfin
-   Tick: 146
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:12.875Z] [Tick 146]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286294221-1fldta8n7)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Deepdive
-   Tick: 146
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:12.875Z] [Tick 146]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: Circle of the Depths (faction-1764286293514-5coklajnu)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Deepdive
-   Tick: 146
-   Era: The Frozen Peace
-   ℹ️  This is a WARNING only - relationship will still be added
-
-[2025-11-27T23:32:13.575Z] [Tick 147]
-⚠️  RELATIONSHIP WARNING (FACTION):
-   Entity: The Midnight Claws (The Midnight Claws)
-   Kind: faction
-   Relationship Type: enemy_of
-   Current count: 8
-   Warning threshold: 8
-   Target: Tidehunter
-   Tick: 147
+   Target: Trade Terrace
+   Tick: 148
    Era: The Frozen Peace
    ℹ️  This is a WARNING only - relationship will still be added
 

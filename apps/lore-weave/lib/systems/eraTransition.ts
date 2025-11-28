@@ -1,5 +1,10 @@
 import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
 import { HardState } from '../types/worldTypes';
+import {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_STATUS,
+  FRAMEWORK_RELATIONSHIP_KINDS
+} from '../types/frameworkPrimitives';
 
 /**
  * Era Transition System
@@ -8,12 +13,12 @@ import { HardState } from '../types/worldTypes';
  * world state and domain-defined transition conditions.
  *
  * Eras are HardState entities (not just config objects) that exist in the graph.
- * They have status: 'past' | 'current' | 'future' and can be referenced in relationships.
+ * They have status: 'historical' | 'current' | 'future' and can be referenced in relationships.
  *
  * Transition Logic:
  * 1. Get current era entity (status: 'current')
  * 2. Check domain-defined transition conditions
- * 3. If met, update current era status to 'past', next era to 'current'
+ * 3. If met, update current era status to 'historical', next era to 'current'
  * 4. Create historical event for era transition
  * 5. Apply era-specific effects (optional)
  */
@@ -26,14 +31,14 @@ export const eraTransition: SimulationSystem = {
     affects: {
       entities: [
         {
-          kind: 'era',
+          kind: FRAMEWORK_ENTITY_KINDS.ERA,
           operation: 'modify',
           count: { min: 2, max: 2 }
         }
       ],
       relationships: [
         {
-          kind: 'active_during',
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
           operation: 'create',
           count: { min: 0, max: 10 }
         }
@@ -84,7 +89,7 @@ export const eraTransition: SimulationSystem = {
 
     // Find current era entity
     const currentEra = graph.getEntities().find(e =>
-      e.kind === 'era' && e.status === 'current'
+      e.kind === FRAMEWORK_ENTITY_KINDS.ERA && e.status === FRAMEWORK_STATUS.CURRENT
     );
 
     if (!currentEra) {
@@ -136,7 +141,7 @@ export const eraTransition: SimulationSystem = {
 
     // Find next era (first entity with status: 'future')
     const nextEra = graph.getEntities().find(e =>
-      e.kind === 'era' && e.status === 'future'
+      e.kind === FRAMEWORK_ENTITY_KINDS.ERA && e.status === FRAMEWORK_STATUS.FUTURE
     );
 
     if (!nextEra) {
@@ -150,11 +155,11 @@ export const eraTransition: SimulationSystem = {
     }
 
     // Perform transition
-    currentEra.status = 'past';
+    currentEra.status = FRAMEWORK_STATUS.HISTORICAL;
     currentEra.temporal!.endTick = graph.tick;
     currentEra.updatedAt = graph.tick;
 
-    nextEra.status = 'current';
+    nextEra.status = FRAMEWORK_STATUS.CURRENT;
     nextEra.temporal = {
       startTick: graph.tick,
       endTick: null
@@ -172,7 +177,7 @@ export const eraTransition: SimulationSystem = {
     const relationshipsAdded: any[] = [];
     const prominentEntities = graph.getEntities().filter(e =>
       (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
-      e.kind !== 'era' &&
+      e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
       e.createdAt >= currentEra.temporal!.startTick &&
       e.createdAt < graph.tick
     );
@@ -180,7 +185,7 @@ export const eraTransition: SimulationSystem = {
     // Link up to 10 most prominent entities to the ending era
     prominentEntities.slice(0, 10).forEach(entity => {
       relationshipsAdded.push({
-        kind: 'active_during',
+        kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
         src: entity.id,
         dst: currentEra.id,
         strength: 1.0,
@@ -206,8 +211,8 @@ export const eraTransition: SimulationSystem = {
     return {
       relationshipsAdded,
       entitiesModified: [
-        { id: currentEra.id, changes: { status: 'past', temporal: currentEra.temporal } },
-        { id: nextEra.id, changes: { status: 'current', temporal: nextEra.temporal } }
+        { id: currentEra.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEra.temporal } },
+        { id: nextEra.id, changes: { status: FRAMEWORK_STATUS.CURRENT, temporal: nextEra.temporal } }
       ],
       pressureChanges: transitionEffects.pressureChanges || {},
       description: `Era transition: ${currentEra.name} → ${nextEra.name} (${prominentEntities.length} entities linked)`
@@ -220,7 +225,7 @@ export const eraTransition: SimulationSystem = {
  */
 function activateFirstEra(graph: Graph): SystemResult {
   const firstEra = graph.getEntities().find(e =>
-    e.kind === 'era'
+    e.kind === FRAMEWORK_ENTITY_KINDS.ERA
   );
 
   if (!firstEra) {
@@ -232,7 +237,7 @@ function activateFirstEra(graph: Graph): SystemResult {
     };
   }
 
-  firstEra.status = 'current';
+  firstEra.status = FRAMEWORK_STATUS.CURRENT;
   firstEra.temporal = {
     startTick: graph.tick,
     endTick: null
@@ -248,7 +253,7 @@ function activateFirstEra(graph: Graph): SystemResult {
   return {
     relationshipsAdded: [],
     entitiesModified: [
-      { id: firstEra.id, changes: { status: 'current', temporal: firstEra.temporal } }
+      { id: firstEra.id, changes: { status: FRAMEWORK_STATUS.CURRENT, temporal: firstEra.temporal } }
     ],
     pressureChanges: {},
     description: `${firstEra.name} begins`
@@ -339,9 +344,9 @@ function checkEntityCountCondition(condition: any, graph: Graph): boolean {
  */
 function checkOccurrenceCondition(condition: any, graph: Graph): boolean {
   const occurrences = graph.getEntities().filter(e =>
-    e.kind === 'occurrence' &&
+    e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE &&
     (!condition.subtype || e.subtype === condition.subtype) &&
-    e.status === 'active'
+    e.status === FRAMEWORK_STATUS.ACTIVE
   );
 
   switch (condition.operator) {
@@ -349,9 +354,9 @@ function checkOccurrenceCondition(condition: any, graph: Graph): boolean {
       return occurrences.length > 0;
     case 'ended':
       const endedOccurrences = graph.getEntities().filter(e =>
-        e.kind === 'occurrence' &&
+        e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE &&
         e.subtype === condition.subtype &&
-        e.status === 'ended'
+        e.status === FRAMEWORK_STATUS.HISTORICAL
       );
       return endedOccurrences.length > 0;
     default:

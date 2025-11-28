@@ -6,6 +6,7 @@
  */
 
 import { HardState, Relationship } from './worldTypes';
+import { SemanticEncoderConfig } from './semanticAxes';
 
 /**
  * Relationship mutability classification
@@ -202,6 +203,12 @@ export interface EmergentDiscoveryConfig {
    * Resource-specific theme words for location naming
    */
   resourceThemeWords?: Record<string, string[]>;
+
+  /**
+   * Location subtype for magical/mystical anomalies
+   * Default: 'anomaly'
+   */
+  anomalySubtype?: string;
 }
 
 /**
@@ -461,6 +468,36 @@ export interface DomainSchema {
 
   /** Optional: Configuration for emergent location discovery system */
   emergentDiscoveryConfig?: EmergentDiscoveryConfig;
+
+  // ===========================
+  // SEMANTIC AXIS CONFIG
+  // ===========================
+
+  /** Optional: Configuration for semantic axis coordinate encoding */
+  semanticConfig?: SemanticEncoderConfig;
+
+  // ===========================
+  // SEMANTIC RELATIONSHIP KINDS
+  // ===========================
+
+  /**
+   * Relationship kinds that indicate "entity is located at location"
+   * Used by framework code to find entity locations without hardcoding kinds.
+   * Example: ['resident_of', 'located_at']
+   */
+  locationRelationshipKinds?: string[];
+
+  /**
+   * Relationship kinds that indicate "entity is member of group"
+   * Example: ['member_of']
+   */
+  membershipRelationshipKinds?: string[];
+
+  /**
+   * Relationship kinds that indicate "entity leads group"
+   * Example: ['leader_of']
+   */
+  leadershipRelationshipKinds?: string[];
 
 }
 

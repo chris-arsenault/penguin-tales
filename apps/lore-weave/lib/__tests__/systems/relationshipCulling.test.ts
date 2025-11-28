@@ -28,7 +28,7 @@ describe('relationshipCulling', () => {
   };
 
   beforeEach(() => {
-    const _entities = new Map<string, HardState>();
+    let _entities = new Map<string, HardState>();
     _entities.set('npc1', createEntity('npc1', 0));
     _entities.set('npc2', createEntity('npc2', 0));
     _entities.set('npc3', createEntity('npc3', 0));
@@ -50,6 +50,12 @@ describe('relationshipCulling', () => {
     });
 
     graph = {
+      // Keep relationships getter/setter for test code compatibility
+      get relationships() { return _relationships; },
+      set relationships(rels: Relationship[]) { _relationships = rels; },
+      // Keep entities getter/setter for test code compatibility
+      get entities() { return _entities; },
+      set entities(ents: Map<string, HardState>) { _entities = ents; },
       tick: 50,
       currentEra: {
         id: 'test',
@@ -189,6 +195,12 @@ describe('relationshipCulling', () => {
       },
       setRelationships(rels: Relationship[]): void {
         _relationships = rels;
+      },
+      _setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      _loadRelationship(rel: Relationship): void {
+        _relationships.push(rel);
       },
       removeRelationship(srcId: string, dstId: string, kind: string): boolean {
         const idx = _relationships.findIndex(r => r.src === srcId && r.dst === dstId && r.kind === kind);

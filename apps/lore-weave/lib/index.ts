@@ -35,7 +35,8 @@ export type {
   TemplateResult,
   MetaEntityConfig,
   EntityOperatorRegistry,
-  NameGenerationService
+  NameGenerationService,
+  TagMetadata
 } from './types/engine';
 
 export { ComponentPurpose, GraphStore } from './types/engine';
@@ -72,13 +73,13 @@ export type {
 // SERVICES - For domain templates and systems
 // =============================================================================
 
-export { TemplateGraphView } from './services/templateGraphView';
-export { TargetSelector } from './services/targetSelector';
-export type { SelectionBias, SelectionResult } from './services/targetSelector';
+export { TemplateGraphView } from './graph/templateGraphView';
+export { TargetSelector } from './selection/targetSelector';
+export type { SelectionBias, SelectionResult } from './selection/targetSelector';
 
 // Services for optional LLM integration (domain configures these)
-export { EnrichmentService } from './services/enrichmentService';
-export { ImageGenerationService } from './services/imageGenerationService';
+export { EnrichmentService } from './llm/enrichmentService';
+export { ImageGenerationService } from './llm/imageGenerationService';
 
 // =============================================================================
 // UTILITY FUNCTIONS - For domain templates and systems
@@ -111,8 +112,8 @@ export {
 } from './utils/helpers';
 
 // Name generation service (wraps name-forge)
-export { NameForgeService } from './services/nameForgeService';
-export type { NameForgeConfig, NameForgeCultureConfig } from './services/nameForgeService';
+export { NameForgeService } from './naming/nameForgeService';
+export type { NameForgeConfig, NameForgeCultureConfig } from './naming/nameForgeService';
 
 // Validation
 export { validateWorld } from './utils/validators';
@@ -156,30 +157,24 @@ export type {
   SupersedeEntityOptions
 } from './utils/entityArchival';
 
-// Emergent discovery (for location discovery templates)
-export {
-  analyzeResourceDeficit,
-  analyzeConflictPatterns,
-  analyzeMagicPresence,
-  generateResourceTheme,
-  generateStrategicTheme,
-  generateMysticalTheme,
-  generateExplorationTheme,
-  shouldDiscoverLocation,
-  calculateThemeSimilarity,
-  findNearbyLocations
-} from './utils/emergentDiscovery';
-
-export type {
-  ResourceAnalysis,
-  ConflictAnalysis,
-  MagicAnalysis,
-  LocationTheme
-} from './utils/emergentDiscovery';
-
 // Template building utilities
-export { EntityClusterBuilder } from './utils/entityClusterBuilder';
-export { buildRelationships } from './utils/relationshipBuilder';
+export { EntityClusterBuilder } from './graph/entityClusterBuilder';
+export { buildRelationships } from './graph/relationshipBuilder';
+
+// Catalyst helpers (for domain occurrence/catalyst systems)
+export {
+  initializeCatalyst,
+  initializeCatalystSmart,
+  getAgentsByCategory,
+  canPerformAction,
+  getInfluence,
+  recordCatalyst,
+  getCatalyzedEvents,
+  getCatalyzedEventCount,
+  addCatalyzedEvent,
+  calculateAttemptChance,
+  updateInfluence
+} from './utils/catalystHelpers';
 
 // =============================================================================
 // FRAMEWORK SYSTEMS - Domain registers these with engine config
@@ -188,7 +183,6 @@ export { buildRelationships } from './utils/relationshipBuilder';
 export { relationshipCulling } from './systems/relationshipCulling';
 export { eraSpawner } from './systems/eraSpawner';
 export { eraTransition } from './systems/eraTransition';
-export { occurrenceCreation } from './systems/occurrenceCreation';
 export { universalCatalyst } from './systems/universalCatalyst';
 
 // =============================================================================
@@ -196,12 +190,19 @@ export { universalCatalyst } from './systems/universalCatalyst';
 // =============================================================================
 
 export {
-  FRAMEWORK_RELATIONSHIP_KINDS
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_STATUS
 } from './types/frameworkPrimitives';
 
 export type {
-  FrameworkRelationshipKind
+  FrameworkEntityKind,
+  FrameworkRelationshipKind,
+  FrameworkStatus
 } from './types/frameworkPrimitives';
+
+// Feedback loop types (domain provides feedback loop configuration)
+export type { FeedbackLoop } from './feedback/feedbackAnalyzer';
 
 // =============================================================================
 // REGION-BASED COORDINATE SYSTEM
@@ -232,20 +233,38 @@ export type {
 
 export { SPACE_BOUNDS } from './types/regions';
 
-export { RegionMapper } from './services/regionMapper';
+export { RegionMapper } from './coordinates/regionMapper';
 
-export { RegionPlacementService } from './services/regionPlacement';
+export { RegionPlacementService } from './coordinates/regionPlacement';
 export type {
   PlacementOptions as RegionPlacementOptions,
   PlacementResult as RegionPlacementResult,
   BatchPlacementOptions as RegionBatchPlacementOptions,
   BatchPlacementResult as RegionBatchPlacementResult
-} from './services/regionPlacement';
+} from './coordinates/regionPlacement';
 
 // Per-kind region management
 export {
   KindRegionService,
   createDefaultEmergentConfig,
   createKindMapConfig
-} from './services/kindRegionService';
-export type { KindRegionServiceConfig } from './services/kindRegionService';
+} from './coordinates/kindRegionService';
+export type { KindRegionServiceConfig } from './coordinates/kindRegionService';
+
+// =============================================================================
+// SEMANTIC AXIS SYSTEM
+// =============================================================================
+
+export type {
+  SemanticAxis,
+  EntityKindAxes,
+  TagSemanticWeight,
+  TagSemanticWeights,
+  SemanticEncodingResult,
+  SemanticEncoderConfig
+} from './types/semanticAxes';
+
+export {
+  SemanticEncoder,
+  createSemanticEncoder
+} from './coordinates/semanticEncoder';

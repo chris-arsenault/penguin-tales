@@ -7,6 +7,7 @@ import {
   updateInfluence,
   getInfluence
 } from '../utils/catalystHelpers';
+import { FRAMEWORK_ENTITY_KINDS } from '../types/frameworkPrimitives';
 
 /**
  * Universal Catalyst System
@@ -52,7 +53,7 @@ export const universalCatalyst: SimulationSystem = {
           count: { min: 0, max: 10 }
         },
         {
-          kind: 'occurrence',
+          kind: FRAMEWORK_ENTITY_KINDS.OCCURRENCE,
           operation: 'modify',
           count: { min: 0, max: 5 }
         }

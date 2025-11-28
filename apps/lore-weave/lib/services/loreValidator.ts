@@ -45,18 +45,22 @@ export class LoreValidator {
   validateLocation(location: HardState, discoveryContext?: any): ValidationResult {
     const warnings: string[] = [];
 
-    // Check if location name uses lore-appropriate geographic terms
-    const geoTerms = ['shelf', 'ridge', 'hollow', 'stack', 'pools', 'reach', 'pass', 'peak', 'bridge', 'valley', 'cavern', 'grotto', 'ledge', 'terrace'];
-    const hasGeoTerm = geoTerms.some(term => location.name.toLowerCase().includes(term));
-    if (!hasGeoTerm && location.subtype === 'geographic_feature') {
-      warnings.push('Geographic feature name lacks typical terrain terminology');
+    // Check if location name uses lore-appropriate geographic terms (from provider or defaults)
+    const geoTerms = this.loreProvider.getGeographicTerms?.() || [];
+    if (geoTerms.length > 0) {
+      const hasGeoTerm = geoTerms.some(term => location.name.toLowerCase().includes(term));
+      if (!hasGeoTerm && location.subtype === 'geographic_feature') {
+        warnings.push('Geographic feature name lacks typical terrain terminology');
+      }
     }
 
-    // Check for mysterious/mystical locations
-    const mysticalTerms = ['glow', 'aurora', 'singing', 'echo', 'frozen', 'ancient', 'crystal', 'mirror', 'shadow', 'lost'];
-    const hasMysticalCue = mysticalTerms.some(term => location.name.toLowerCase().includes(term));
-    if (location.subtype === 'anomaly' && !hasMysticalCue) {
-      warnings.push('Anomaly name lacks mystical framing');
+    // Check for mysterious/mystical locations (from provider or defaults)
+    const mysticalTerms = this.loreProvider.getMysticalTerms?.() || [];
+    if (mysticalTerms.length > 0) {
+      const hasMysticalCue = mysticalTerms.some(term => location.name.toLowerCase().includes(term));
+      if (location.subtype === 'anomaly' && !hasMysticalCue) {
+        warnings.push('Anomaly name lacks mystical framing');
+      }
     }
 
     // Note: Domain lore provider doesn't track known locations for validation
@@ -71,18 +75,11 @@ export class LoreValidator {
   }
 
   private containsLoreCue(text: string): boolean {
-    const cues = [
-      'aurora',
-      'ice',
-      'berg',
-      'fissure',
-      'current',
-      'frost',
-      'glow',
-      'krill',
-      'coin',
-      'sing'
-    ];
+    // Get lore cues from provider, or skip validation if not provided
+    const cues = this.loreProvider.getLoreCues?.() || [];
+    if (cues.length === 0) {
+      return true; // Skip validation if domain doesn't provide lore cues
+    }
 
     return cues.some(cue => text.toLowerCase().includes(cue));
   }

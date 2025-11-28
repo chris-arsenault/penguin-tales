@@ -36,7 +36,7 @@ function createEntity(
     description: '',
     status: 'active',
     prominence, culture: 'world',
-    tags: [],
+    tags: {},
     links: [],
     createdAt: 0,
     updatedAt: 0
@@ -65,7 +65,20 @@ function createGraph(entities: HardState[], relationships: Relationship[] = []):
     currentEra: { id: 'test', name: 'Test Era' } as any,
     pressures: new Map(),
     history: [],
-    config: {} as any,
+    config: {
+      domain: {
+        getActionDomainsForEntity(entity: HardState): string[] {
+          // Mock implementation based on test expectations
+          if (entity.kind === 'faction') return ['political', 'economic'];
+          if (entity.kind === 'abilities' && entity.subtype === 'magic') return ['magical'];
+          if (entity.kind === 'occurrence' && entity.subtype === 'war') return ['conflict_escalation', 'military'];
+          if (entity.kind === 'location' && entity.subtype === 'anomaly') return ['environmental', 'magical'];
+          if (entity.kind === 'npc' && entity.subtype === 'hero') return ['political', 'military'];
+          if (entity.kind === 'npc' && entity.subtype === 'mayor') return ['political', 'economic'];
+          return [];
+        }
+      }
+    } as any,
     relationshipCooldowns: new Map(),
     loreRecords: [],
     discoveryState: {

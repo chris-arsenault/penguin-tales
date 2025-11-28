@@ -1,5 +1,5 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
 

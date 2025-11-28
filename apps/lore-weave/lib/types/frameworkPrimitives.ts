@@ -46,6 +46,12 @@ export const FRAMEWORK_RELATIONSHIP_KINDS = {
   PART_OF: 'part_of',
   /** Temporal association (entity was active during an era) */
   ACTIVE_DURING: 'active_during',
+  /** Entity participates in an occurrence */
+  PARTICIPANT_IN: 'participant_in',
+  /** Occurrence has a location epicenter */
+  EPICENTER_OF: 'epicenter_of',
+  /** Occurrence was triggered by an entity/event */
+  TRIGGERED_BY: 'triggered_by',
 } as const;
 
 /** Type for framework relationship kinds */
@@ -164,6 +170,24 @@ export const FRAMEWORK_RELATIONSHIP_PROPERTIES = {
     protected: false,
     mutability: 'immutable' as const,
     description: 'Temporal association with era',
+  },
+  [FRAMEWORK_RELATIONSHIP_KINDS.PARTICIPANT_IN]: {
+    defaultStrength: 1.0,
+    protected: true,
+    mutability: 'immutable' as const,
+    description: 'Entity participates in an occurrence',
+  },
+  [FRAMEWORK_RELATIONSHIP_KINDS.EPICENTER_OF]: {
+    defaultStrength: 1.0,
+    protected: true,
+    mutability: 'immutable' as const,
+    description: 'Occurrence has a location epicenter',
+  },
+  [FRAMEWORK_RELATIONSHIP_KINDS.TRIGGERED_BY]: {
+    defaultStrength: 0.8,
+    protected: true,
+    mutability: 'immutable' as const,
+    description: 'Occurrence was triggered by entity/event',
   },
 } as const;
 

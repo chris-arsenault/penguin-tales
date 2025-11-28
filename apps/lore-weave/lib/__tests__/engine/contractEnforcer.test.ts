@@ -3,10 +3,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContractEnforcer } from '../../engine/contractEnforcer';
 import { Graph, GrowthTemplate, EngineConfig, ComponentContract, EntityRegistry } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
-import { TemplateGraphView } from '../../services/templateGraphView';
+import { TemplateGraphView } from '../../graph/templateGraphView';
 
 // Mock dependencies
-vi.mock('../../services/tagHealthAnalyzer');
+vi.mock('../../statistics/tagHealthAnalyzer');
 vi.mock('../../config/tagRegistry');
 
 describe('ContractEnforcer', () => {
@@ -46,7 +46,7 @@ describe('ContractEnforcer', () => {
       // Entity read methods
       getEntity(id: string): HardState | undefined {
         const entity = _entities.get(id);
-        return entity ? { ...entity, tags: [...entity.tags], links: [...entity.links] } : undefined;
+        return entity ? { ...entity, tags: { ...entity.tags }, links: [...entity.links] } : undefined;
       },
       hasEntity(id: string): boolean {
         return _entities.has(id);
@@ -55,14 +55,14 @@ describe('ContractEnforcer', () => {
         return _entities.size;
       },
       getEntities(): HardState[] {
-        return Array.from(_entities.values()).map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+        return Array.from(_entities.values()).map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
       },
       getEntityIds(): string[] {
         return Array.from(_entities.keys());
       },
       forEachEntity(callback: (entity: HardState, id: string) => void): void {
         _entities.forEach((entity, id) => {
-          callback({ ...entity, tags: [...entity.tags], links: [...entity.links] }, id);
+          callback({ ...entity, tags: { ...entity.tags }, links: [...entity.links] }, id);
         });
       },
       findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
@@ -73,16 +73,16 @@ describe('ContractEnforcer', () => {
             if (criteria.status && e.status !== criteria.status) return false;
             if (criteria.prominence && e.prominence !== criteria.prominence) return false;
             if (criteria.culture && e.culture !== criteria.culture) return false;
-            if (criteria.tag && !e.tags.includes(criteria.tag)) return false;
+            if (criteria.tag && !(criteria.tag in e.tags)) return false;
             if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
             return true;
           })
-          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+          .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
       },
       getEntitiesByKind(kind: string): HardState[] {
         return Array.from(_entities.values())
           .filter(e => e.kind === kind)
-          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+          .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
       },
       getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
         const connectedIds = new Set<string>();
@@ -94,7 +94,7 @@ describe('ContractEnforcer', () => {
         return Array.from(connectedIds)
           .map(id => _entities.get(id))
           .filter((e): e is HardState => e !== undefined)
-          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+          .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
       },
 
       // Entity mutation methods
@@ -154,6 +154,15 @@ describe('ContractEnforcer', () => {
           dstEntity.updatedAt = this.tick;
         }
       },
+      addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): void {
+        const relationship: Relationship = { kind, src: srcId, dst: dstId, strength, distance, category };
+        _relationships.push(relationship);
+        const srcEntity = _entities.get(srcId);
+        if (srcEntity) {
+          srcEntity.links.push({ ...relationship });
+          srcEntity.updatedAt = this.tick;
+        }
+      },
       setRelationships(rels: Relationship[]): void {
         _relationships = rels;
       },
@@ -169,7 +178,12 @@ describe('ContractEnforcer', () => {
           return true;
         }
         return false;
-      }
+      },
+
+      // Keep backward compatibility for tests
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
+      set relationships(rels: Relationship[]) { _relationships = rels; }
     } as Graph;
 
     // Setup mock graph view
@@ -249,8 +263,8 @@ describe('ContractEnforcer', () => {
 
     it('should check entity count requirements - minimum', () => {
       // Add 2 NPCs to graph
-      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
-      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: {}, links: [] } as HardState);
+      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', tags: {}, links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',
@@ -272,7 +286,7 @@ describe('ContractEnforcer', () => {
     it('should check entity count requirements - maximum', () => {
       // Add 10 NPCs to graph
       for (let i = 0; i < 10; i++) {
-        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: {}, links: [] } as HardState);
       }
 
       const template: GrowthTemplate = {
@@ -293,8 +307,8 @@ describe('ContractEnforcer', () => {
     });
 
     it('should check entity subtype requirements', () => {
-      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', subtype: 'merchant', tags: [], links: [] } as HardState);
-      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', subtype: 'warrior', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', subtype: 'merchant', tags: {}, links: [] } as HardState);
+      mockGraph.setEntity('npc2', { id: 'npc2', kind: 'npc', subtype: 'warrior', tags: {}, links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',
@@ -390,7 +404,7 @@ describe('ContractEnforcer', () => {
 
     it('should check multiple conditions (all must pass)', () => {
       mockGraph.pressures.set('conflict', 60);
-      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: {}, links: [] } as HardState);
       mockGraph.currentEra = { id: 'conflict', name: 'Conflict Era' } as any;
 
       const template: GrowthTemplate = {
@@ -414,7 +428,7 @@ describe('ContractEnforcer', () => {
   describe('enforceLineage', () => {
     it('should return empty array when no registries configured', () => {
       const newEntities: HardState[] = [
-        { id: 'entity1', kind: 'npc', tags: [], links: [] } as HardState
+        { id: 'entity1', kind: 'npc', tags: {}, links: [] } as HardState
       ];
 
       const result = enforcer.enforceLineage(mockGraph, mockGraphView, newEntities);
@@ -427,7 +441,7 @@ describe('ContractEnforcer', () => {
       ];
 
       const newEntities: HardState[] = [
-        { id: 'entity1', kind: 'npc', tags: [], links: [] } as HardState
+        { id: 'entity1', kind: 'npc', tags: {}, links: [] } as HardState
       ];
 
       const result = enforcer.enforceLineage(mockGraph, mockGraphView, newEntities);
@@ -435,7 +449,7 @@ describe('ContractEnforcer', () => {
     });
 
     it('should add lineage relationship when ancestor found', () => {
-      const ancestor: HardState = { id: 'ancestor1', kind: 'npc', tags: [], links: [] } as HardState;
+      const ancestor: HardState = { id: 'ancestor1', kind: 'npc', tags: {}, links: [] } as HardState;
 
       mockConfig.entityRegistries = [
         {
@@ -450,7 +464,7 @@ describe('ContractEnforcer', () => {
       ];
 
       const newEntities: HardState[] = [
-        { id: 'entity1', kind: 'npc', tags: [], links: [] } as HardState
+        { id: 'entity1', kind: 'npc', tags: {}, links: [] } as HardState
       ];
 
       const result = enforcer.enforceLineage(mockGraph, mockGraphView, newEntities);
@@ -477,7 +491,7 @@ describe('ContractEnforcer', () => {
       ];
 
       const newEntities: HardState[] = [
-        { id: 'entity1', kind: 'npc', tags: [], links: [] } as HardState
+        { id: 'entity1', kind: 'npc', tags: {}, links: [] } as HardState
       ];
 
       const result = enforcer.enforceLineage(mockGraph, mockGraphView, newEntities);
@@ -510,8 +524,8 @@ describe('ContractEnforcer', () => {
       ];
 
       const newEntities: HardState[] = [
-        { id: 'entity1', kind: 'npc', tags: [], links: [] } as HardState,
-        { id: 'entity2', kind: 'faction', tags: [], links: [] } as HardState
+        { id: 'entity1', kind: 'npc', tags: {}, links: [] } as HardState,
+        { id: 'entity2', kind: 'faction', tags: {}, links: [] } as HardState
       ];
 
       const result = enforcer.enforceLineage(mockGraph, mockGraphView, newEntities);
@@ -565,7 +579,7 @@ describe('ContractEnforcer', () => {
     it('should return saturated when entity count exceeds 2x target', () => {
       // Add 20 NPCs (target is 10, threshold is 20)
       for (let i = 0; i < 20; i++) {
-        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: {}, links: [] } as HardState);
       }
 
       mockConfig.entityRegistries = [
@@ -595,7 +609,7 @@ describe('ContractEnforcer', () => {
     it('should return not saturated when count is below 2x target', () => {
       // Add 15 NPCs (target is 10, threshold is 20)
       for (let i = 0; i < 15; i++) {
-        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: {}, links: [] } as HardState);
       }
 
       mockConfig.entityRegistries = [
@@ -657,7 +671,7 @@ describe('ContractEnforcer', () => {
     it('should allow template if at least one kind is unsaturated', () => {
       // Add 20 NPCs (saturated)
       for (let i = 0; i < 20; i++) {
-        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: [], links: [] } as HardState);
+        mockGraph.setEntity(`npc${i}`, { id: `npc${i}`, kind: 'npc', tags: {}, links: [] } as HardState);
       }
       // Add 5 factions (not saturated)
       for (let i = 0; i < 5; i++) {
@@ -822,7 +836,7 @@ describe('ContractEnforcer', () => {
   describe('getDiagnostic', () => {
     it('should provide comprehensive diagnostic output', () => {
       mockGraph.pressures.set('conflict', 30);
-      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: [], links: [] } as HardState);
+      mockGraph.setEntity('npc1', { id: 'npc1', kind: 'npc', tags: {}, links: [] } as HardState);
 
       const template: GrowthTemplate = {
         id: 'test_template',
@@ -857,7 +871,7 @@ describe('ContractEnforcer', () => {
       const entity: HardState = {
         id: 'entity1',
         kind: 'npc',
-        tags: ['tag1', 'tag2', 'tag3', 'tag4'],
+        tags: { tag1: 'true', tag2: 'true', tag3: 'true', tag4: 'true' },
         links: []
       } as HardState;
 
@@ -870,7 +884,7 @@ describe('ContractEnforcer', () => {
         id: 'entity1',
         kind: 'npc',
         name: 'Test Entity',
-        tags: ['tag1'],
+        tags: { tag1: 'true' },
         links: []
       } as HardState;
 
@@ -885,7 +899,7 @@ describe('ContractEnforcer', () => {
         id: 'entity1',
         kind: 'npc',
         name: 'Test Entity',
-        tags: ['tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6', 'tag7'],
+        tags: { tag1: 'true', tag2: 'true', tag3: 'true', tag4: 'true', tag5: 'true', tag6: 'true', tag7: 'true' },
         links: []
       } as HardState;
 

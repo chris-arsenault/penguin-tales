@@ -7,7 +7,7 @@
  */
 
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
@@ -15,7 +15,7 @@ import {
   generateStrategicTheme,
   shouldDiscoverLocation,
   findNearbyLocations
-} from '@lore-weave/core/utils/emergentDiscovery';
+} from '../../utils/emergentDiscovery';
 
 export const strategicLocationDiscovery: GrowthTemplate = {
   id: 'strategic_location_discovery',

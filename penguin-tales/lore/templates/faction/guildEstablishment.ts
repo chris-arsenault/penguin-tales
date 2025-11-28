@@ -1,8 +1,8 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import { pickRandom, findEntities, slugifyName } from '@lore-weave/core/utils/helpers';
-import { buildRelationships } from '@lore-weave/core/utils/relationshipBuilder';
+import { buildRelationships } from '@lore-weave/core/graph/relationshipBuilder';
 
 /**
  * Guild Establishment Template

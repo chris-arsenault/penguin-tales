@@ -55,4 +55,9 @@ export interface DomainLoreProvider {
   getRelationshipEnrichmentPrompt(kind: string): string | null;
   getOccurrenceEnrichmentPrompt(subtype: string): string | null;
   getEraEnrichmentPrompt(subtype: string): string | null;
+
+  // Validation terms (optional - for LLM output quality checking)
+  getGeographicTerms?(): string[];    // Terms expected in geographic feature names
+  getMysticalTerms?(): string[];      // Terms expected in anomaly/mystical location names
+  getLoreCues?(): string[];           // General lore cues that should appear in descriptions
 }

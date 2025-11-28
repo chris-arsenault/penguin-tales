@@ -147,8 +147,8 @@ export const legalCodeFormation: MetaEntityConfig = {
     markOriginalsHistorical: true,   // Individual laws become historical when unified into code
     transferRelationships: true,      // Transfer enacted_by, etc. to legal code
     redirectFutureRelationships: true, // Future enforcement targets the code
-    preserveOriginalLinks: true,      // Keep part_of links for lore
-    createGovernanceFaction: true     // NEW: Create faction:political to govern the code
+    preserveOriginalLinks: true       // Keep part_of links for lore
+    // NOTE: Governance faction creation is handled by domain's legalCodeFormation SimulationSystem
   },
 
   factory: (cluster: HardState[], graph: Graph): Partial<HardState> => {

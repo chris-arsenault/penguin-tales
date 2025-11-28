@@ -1,5 +1,5 @@
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
 import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
 import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
 
@@ -106,6 +106,7 @@ export const orcaRaiderArrival: GrowthTemplate = {
 
     // Create 1-2 orca raiders
     const raiderCount = 1 + Math.floor(Math.random() * 2); // 1-2
+    const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
     // Orca name patterns
@@ -114,120 +115,112 @@ export const orcaRaiderArrival: GrowthTemplate = {
       'Riptide', 'Icebane', 'Frostbite', 'Shadowcrest', 'Tidehunter'
     ];
 
-    // Try region-based placement in underwater area near colony
-    if (graphView.hasRegionSystem()) {
-      const colonyRegion = colony.coordinates as { x: number; y: number; z: number } | undefined;
+    // Find existing orcas to establish lineage
+    const existingOrcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' });
+    let relatedOrca: HardState | undefined;
+    if (existingOrcas.length > 0 && Math.random() < 0.5) {
+      relatedOrca = pickRandom(existingOrcas);
+    }
 
-      if (colonyRegion) {
-        const createdOrcaIds: string[] = [];
+    // Orca tags (semantic meaning derived from placement, not placement from tags)
+    const orcaTags = { orca: true, raider: true, 'external-threat': true, predator: true, underwater: true };
 
-        for (let i = 0; i < raiderCount; i++) {
-          const prominence = Math.random() < 0.1 ? 'renowned'
-                           : Math.random() < 0.3 ? 'recognized'
-                           : 'marginal';
+    for (let i = 0; i < raiderCount; i++) {
+      const prominence = Math.random() < 0.1 ? 'renowned'
+                       : Math.random() < 0.3 ? 'recognized'
+                       : 'marginal';
 
-          // Place orcas underwater (z: 10-30) near the target colony
-          const underwaterPoint = {
-            x: colonyRegion.x + (Math.random() - 0.5) * 15,  // Near colony
-            y: colonyRegion.y + (Math.random() - 0.5) * 15,
-            z: 10 + Math.random() * 20  // Underwater: 10-30
-          };
+      // Derive coordinates spatially - place near the target colony
+      const baseCoords = graphView.deriveCoordinates(
+        [colony],
+        'npc',
+        undefined,  // No tags - pure spatial placement
+        { maxDistance: 15, minDistance: 5 }
+      );
 
-          // Create emergent region for orca hunting grounds if first orca
-          let regionId: string | undefined;
-          if (i === 0) {
-            const regionResult = graphView.createEmergentRegion(
-              underwaterPoint,
-              `${pickRandom(orcaNames)}'s Hunting Waters`,
-              `Dangerous waters patrolled by orca raiders near ${colony.name}`
-            );
-            if (regionResult.success && regionResult.region) {
-              regionId = regionResult.region.id;
-            }
-          }
+      // Adjust z to underwater (10-30) instead of surface (70)
+      const orcaCoords = baseCoords ? {
+        x: baseCoords.x,
+        y: baseCoords.y,
+        z: 10 + Math.random() * 20  // Underwater: 10-30
+      } : { x: 50, y: 50, z: 20 };
 
-          const entityId = regionId ? graphView.addEntityInRegion(
-            {
-              kind: 'npc',
-              subtype: 'orca',
-              name: pickRandom(orcaNames),
-              description: `A fearsome orca raider threatening ${colony.name} from the depths`,
-              status: 'alive',
-              prominence,
-              culture: 'orca',
-              tags: { orca: true, raider: true, 'external-threat': true, predator: true, underwater: true }
-            },
-            regionId,
-            { minDistance: 2 }
-          ) : null;
+      entities.push({
+        kind: 'npc',
+        subtype: 'orca',
+        name: pickRandom(orcaNames),
+        description: `A fearsome orca raider threatening ${colony.name} from the depths`,
+        status: 'alive',
+        prominence,
+        culture: 'orca',
+        tags: orcaTags,
+        coordinates: orcaCoords
+      });
 
-          if (entityId) {
-            createdOrcaIds.push(entityId);
-          }
-        }
+      // Add lineage relationship to related orca
+      if (relatedOrca && i === 0) {
+        relationships.push({
+          kind: 'inspired_by',
+          src: 'will-be-assigned-0',
+          dst: relatedOrca.id,
+          distance: 0.2 + Math.random() * 0.2,  // Close lineage (same pod)
+          strength: 0.7
+        });
+      }
+    }
 
-        // If we successfully placed orcas via regions, create relationships
-        if (createdOrcaIds.length > 0) {
-          // Find heroes and leaders to oppose the orcas
-          const heroes = graphView.findEntities({ kind: 'npc', subtype: 'hero' });
-          const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
-          const defenders = [...heroes, ...mayors];
+    // Find heroes and leaders to oppose the orcas
+    const heroes = graphView.findEntities({ kind: 'npc', subtype: 'hero' });
+    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
+    const defenders = [...heroes, ...mayors];
 
-          if (defenders.length > 0) {
-            const defendingPenguins = pickMultiple(defenders, Math.min(createdOrcaIds.length + 1, defenders.length));
-            for (let i = 0; i < createdOrcaIds.length && i < defendingPenguins.length; i++) {
-              relationships.push({
-                kind: 'enemy_of',
-                src: createdOrcaIds[i],
-                dst: defendingPenguins[i].id
-              });
-            }
-          }
+    if (defenders.length > 0) {
+      const defendingPenguins = pickMultiple(defenders, Math.min(raiderCount + 1, defenders.length));
+      for (let i = 0; i < raiderCount && i < defendingPenguins.length; i++) {
+        relationships.push({
+          kind: 'enemy_of',
+          src: `will-be-assigned-${i}`,
+          dst: defendingPenguins[i].id
+        });
+      }
+    }
 
-          // Orcas might also be enemies of factions
-          const factions = graphView.findEntities({ kind: 'faction' });
-          if (factions.length > 0 && Math.random() < 0.5) {
-            relationships.push({
-              kind: 'enemy_of',
-              src: createdOrcaIds[0],
-              dst: pickRandom(factions).id
-            });
-          }
+    // Orcas might also be enemies of factions
+    const factions = graphView.findEntities({ kind: 'faction' });
+    if (factions.length > 0 && Math.random() < 0.5) {
+      relationships.push({
+        kind: 'enemy_of',
+        src: 'will-be-assigned-0',
+        dst: pickRandom(factions).id
+      });
+    }
 
-          // Give orcas combat abilities
-          const combatAbilities = graphView.findEntities({ kind: 'abilities' })
-            .filter(a => hasTag(a.tags, 'combat') || hasTag(a.tags, 'offensive'));
+    // Give orcas combat abilities
+    const combatAbilities = graphView.findEntities({ kind: 'abilities' })
+      .filter(a => hasTag(a.tags, 'combat') || hasTag(a.tags, 'offensive'));
 
-          if (combatAbilities.length > 0) {
-            const ability = pickRandom(combatAbilities);
-            for (const orcaId of createdOrcaIds) {
-              if (Math.random() < 0.7) {
-                relationships.push({
-                  kind: 'practitioner_of',
-                  src: orcaId,
-                  dst: ability.id
-                });
-              }
-            }
-          }
-
-          const description = createdOrcaIds.length === 1
-            ? `An orca raider surfaces near ${colony.name}, threatening the colony from the depths`
-            : `A pod of ${createdOrcaIds.length} orca raiders threatens ${colony.name} from the underwater passages`;
-
-          return {
-            entities: [],  // Already added via addEntityInRegion
-            relationships,
-            description
-          };
+    if (combatAbilities.length > 0) {
+      const ability = pickRandom(combatAbilities);
+      for (let i = 0; i < raiderCount; i++) {
+        if (Math.random() < 0.7) {
+          relationships.push({
+            kind: 'practitioner_of',
+            src: `will-be-assigned-${i}`,
+            dst: ability.id
+          });
         }
       }
     }
 
-    // Region system is REQUIRED for orca placement
-    throw new Error(
-      `orca_raider_arrival: Region system is not configured or colony coordinates not found. ` +
-      `Cannot place orca raiders without spatial coordinates.`
-    );
+    const lineageDesc = relatedOrca ? ` (from ${relatedOrca.name}'s pod)` : '';
+    const description = raiderCount === 1
+      ? `An orca raider surfaces near ${colony.name}, threatening the colony from the depths${lineageDesc}`
+      : `A pod of ${raiderCount} orca raiders threatens ${colony.name} from the underwater passages${lineageDesc}`;
+
+    return {
+      entities,
+      relationships,
+      description
+    };
   }
 };

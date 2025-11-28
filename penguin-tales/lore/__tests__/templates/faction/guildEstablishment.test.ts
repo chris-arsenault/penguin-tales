@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { guildEstablishment } from '../../../../../domain/penguin/templates/faction/guildEstablishment';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/selection/targetSelector';
 import { Graph } from '@lore-weave/core/types/engine';
 import { HardState } from '@lore-weave/core/types/worldTypes';
 

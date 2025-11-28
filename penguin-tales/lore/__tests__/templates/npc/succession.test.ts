@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { succession } from '../../../../../domain/penguin/templates/npc/succession';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
 import { Graph, Era, ComponentPurpose } from '@lore-weave/core/types/engine';
 import { HardState } from '@lore-weave/core/types/worldTypes';
 

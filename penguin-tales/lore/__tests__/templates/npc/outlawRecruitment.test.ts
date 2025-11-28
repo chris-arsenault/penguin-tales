@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { outlawRecruitment } from '../../../../../domain/penguin/templates/npc/outlawRecruitment';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/selection/targetSelector';
 import { Graph, Era } from '@lore-weave/core/types/engine';
 import { HardState } from '@lore-weave/core/types/worldTypes';
 

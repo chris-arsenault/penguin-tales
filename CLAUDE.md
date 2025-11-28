@@ -2,6 +2,11 @@
 
 **Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs or plan files. When working on multi-step tasks, create a bead with `bd create` to track progress rather than writing implementation plans to markdown files. See AGENTS.md for workflow details.
 
+**Bead Guidelines:**
+- **Never create analysis-only tickets.** Analysis is not useful on its own - implementation is. If analysis is needed, do it as part of implementing the ticket, not as a separate task.
+- When closing a ticket, ensure the work is actually done. If implementation remains, create a new implementation ticket before closing.
+- Beads should track actionable work, not research or investigation.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -104,6 +109,27 @@ The system alternates between two phases:
 - Simulation systems (relationship formation, cultural drift, etc.)
 - Domain schema (entity kinds, relationship types)
 - Initial state data
+
+### Framework Primitives
+
+The framework defines a minimal set of entity kinds, relationship kinds, and status values in `apps/lore-weave/lib/types/frameworkPrimitives.ts` that **must be implemented** for the framework to function:
+
+**Entity Kinds:**
+- `era` - Time periods that structure the simulation
+- `occurrence` - Events/happenings during the simulation
+
+**Relationship Kinds:**
+- `supersedes` - Era lineage (newer era supersedes older)
+- `part_of` - Subsumption into meta-entity
+- `active_during` - Temporal association with era
+
+**Status Values:**
+- `active` - Entity is currently active
+- `historical` - Entity has been archived
+- `current` - Era is currently running
+- `future` - Era is queued for the future
+
+**Important:** Domains are free to define additional entity kinds, relationship kinds, and status values beyond these framework primitives. For example, the penguin domain defines occurrence statuses like `'brewing'`, `'waning'`, `'legendary'` in addition to the framework's `'active'` and `'historical'`.
 
 ### Key Files
 

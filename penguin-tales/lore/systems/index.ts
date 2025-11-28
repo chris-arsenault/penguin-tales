@@ -10,11 +10,13 @@
 
 import { SimulationSystem } from '@lore-weave/core/types/engine';
 
-// Import framework systems (NEW)
+// Import framework systems
 import { eraSpawner } from '@lore-weave/core/systems/eraSpawner';
 import { universalCatalyst } from '@lore-weave/core/systems/universalCatalyst';
-import { occurrenceCreation } from '@lore-weave/core/systems/occurrenceCreation';
 import { eraTransition } from '@lore-weave/core/systems/eraTransition';
+
+// Import domain-specific occurrence system (moved from framework)
+import { occurrenceCreation } from './occurrenceCreation';
 
 // Import all penguin-specific systems
 export { relationshipFormation } from './relationshipFormation';

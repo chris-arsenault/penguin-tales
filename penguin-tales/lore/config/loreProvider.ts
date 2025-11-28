@@ -175,5 +175,21 @@ export const penguinLoreProvider: DomainLoreProvider = {
   getEraEnrichmentPrompt: (subtype: string): string | null => {
     // Same as getEntityEnrichmentPrompt for era
     return penguinLoreProvider.getEntityEnrichmentPrompt('era', subtype);
-  }
+  },
+
+  // Validation terms for LLM output quality checking
+  getGeographicTerms: (): string[] => [
+    'shelf', 'ridge', 'hollow', 'stack', 'pools', 'reach', 'pass',
+    'peak', 'bridge', 'valley', 'cavern', 'grotto', 'ledge', 'terrace'
+  ],
+
+  getMysticalTerms: (): string[] => [
+    'glow', 'aurora', 'singing', 'echo', 'frozen', 'ancient',
+    'crystal', 'mirror', 'shadow', 'lost'
+  ],
+
+  getLoreCues: (): string[] => [
+    'aurora', 'ice', 'berg', 'fissure', 'current', 'frost',
+    'glow', 'krill', 'coin', 'sing'
+  ]
 };

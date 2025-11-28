@@ -5,7 +5,7 @@ import {
   countRelationships,
   findRelationship,
   getRelatedEntity
-} from '../../utils/graphQueries';
+} from '../../graph/graphQueries';
 import { Graph } from '../../types/engine';
 import { HardState, Relationship } from '../../types/worldTypes';
 
@@ -88,10 +88,6 @@ describe('graphQueries', () => {
     ];
 
     mockGraph = {
-      get entities() { return _entities; },
-      set entities(val: Map<string, HardState>) { _entities = val; },
-      get relationships() { return _relationships; },
-      set relationships(val: Relationship[]) { _relationships = val; },
       tick: 0,
       currentEra: {} as any,
       pressures: new Map(),
@@ -108,20 +104,93 @@ describe('graphQueries', () => {
         relationshipsPerTick: [],
         averageGrowthRate: 0
       },
-      // Mutation methods
-      setEntity(id: string, entity: HardState): void {
-        _entities.set(id, entity);
+      // New Graph interface methods - entity read
+      getEntity(id: string): HardState | undefined {
+        return _entities.get(id);
+      },
+      hasEntity(id: string): boolean {
+        return _entities.has(id);
+      },
+      getEntityCount(): number {
+        return _entities.size;
+      },
+      getEntities(): HardState[] {
+        return Array.from(_entities.values());
+      },
+      getEntityIds(): string[] {
+        return Array.from(_entities.keys());
+      },
+      forEachEntity(callback: (entity: HardState, id: string) => void): void {
+        _entities.forEach((entity, id) => callback(entity, id));
+      },
+      findEntities(criteria: any): HardState[] {
+        return Array.from(_entities.values()).filter(e => {
+          if (criteria.kind && e.kind !== criteria.kind) return false;
+          if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+          return true;
+        });
+      },
+      getEntitiesByKind(kind: string): HardState[] {
+        return Array.from(_entities.values()).filter(e => e.kind === kind);
+      },
+      getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+        const connectedIds = new Set<string>();
+        _relationships.forEach(r => {
+          if (relationKind && r.kind !== relationKind) return;
+          if (r.src === entityId) connectedIds.add(r.dst);
+          if (r.dst === entityId) connectedIds.add(r.src);
+        });
+        return Array.from(connectedIds)
+          .map(id => _entities.get(id))
+          .filter((e): e is HardState => e !== undefined);
+      },
+      // Entity mutation methods
+      createEntity(settings: any): string {
+        const id = `${settings.kind}-${Date.now()}`;
+        _entities.set(id, { ...settings, id, links: [] } as HardState);
+        return id;
+      },
+      updateEntity(id: string, changes: Partial<HardState>): boolean {
+        const entity = _entities.get(id);
+        if (!entity) return false;
+        Object.assign(entity, changes);
+        return true;
       },
       deleteEntity(id: string): boolean {
         return _entities.delete(id);
       },
-      pushRelationship(relationship: Relationship): void {
-        _relationships.push(relationship);
+      _loadEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
       },
-      setRelationships(rels: Relationship[]): void {
+      // Relationship read methods
+      getRelationships(): Relationship[] {
+        return [..._relationships];
+      },
+      getRelationshipCount(): number {
+        return _relationships.length;
+      },
+      findRelationships(criteria: any): Relationship[] {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          return true;
+        });
+      },
+      getEntityRelationships(entityId: string): Relationship[] {
+        return _relationships.filter(r => r.src === entityId || r.dst === entityId);
+      },
+      // Relationship mutation methods
+      addRelationship(rel: Relationship): void {
+        _relationships.push(rel);
+      },
+      _loadRelationship(rel: Relationship): void {
+        _relationships.push(rel);
+      },
+      _setRelationships(rels: Relationship[]): void {
         _relationships = rels;
       }
-    };
+    } as Graph;
   });
 
   describe('getEntitiesByRelationship', () => {
@@ -156,7 +225,7 @@ describe('graphQueries', () => {
         createdAt: 0,
         updatedAt: 0
       };
-      mockGraph.entities.set('e5', isolatedEntity);
+      mockGraph._loadEntity('e5', isolatedEntity);
 
       const related = getEntitiesByRelationship(mockGraph, 'e5', 'allied_with', 'src');
       expect(related).toHaveLength(0);
@@ -164,7 +233,7 @@ describe('graphQueries', () => {
 
     it('should filter out undefined entities', () => {
       // Add relationship to non-existent entity
-      mockGraph.relationships.push({ kind: 'allied_with', src: 'e1', dst: 'nonexistent' });
+      mockGraph._loadRelationship({ kind: 'allied_with', src: 'e1', dst: 'nonexistent' });
 
       const related = getEntitiesByRelationship(mockGraph, 'e1', 'allied_with', 'src');
       // Should only return e2, filtering out the nonexistent entity
@@ -208,7 +277,7 @@ describe('graphQueries', () => {
 
     it('should return unique IDs (no duplicates)', () => {
       // Add duplicate relationship
-      mockGraph.relationships.push({ kind: 'allied_with', src: 'e1', dst: 'e2' });
+      mockGraph._loadRelationship({ kind: 'allied_with', src: 'e1', dst: 'e2' });
       const relatedIds = getRelationshipIdSet(mockGraph, 'e1', ['allied_with']);
       expect(relatedIds.size).toBe(1);
     });
@@ -241,7 +310,7 @@ describe('graphQueries', () => {
     });
 
     it('should handle entity with no relationships', () => {
-      mockGraph.entities.set('e5', {
+      mockGraph._loadEntity('e5', {
         id: 'e5',
         kind: 'npc',
         subtype: 'merchant',
@@ -284,7 +353,7 @@ describe('graphQueries', () => {
 
     it('should return first matching relationship', () => {
       // Add duplicate relationship
-      mockGraph.relationships.push({ kind: 'allied_with', src: 'e1', dst: 'e3' });
+      mockGraph._loadRelationship({ kind: 'allied_with', src: 'e1', dst: 'e3' });
       const rel = findRelationship(mockGraph, 'e1', 'allied_with', 'src');
       expect(rel).toBeDefined();
       expect(rel?.dst).toBe('e2'); // Should return first match
@@ -298,14 +367,14 @@ describe('graphQueries', () => {
 
   describe('getRelatedEntity', () => {
     it('should get entity at other end when starting from source', () => {
-      const relationship = mockGraph.relationships[0]; // e1 allied_with e2
+      const relationship = mockGraph.getRelationships()[0]; // e1 allied_with e2
       const related = getRelatedEntity(mockGraph, relationship, 'e1');
       expect(related).toBeDefined();
       expect(related?.id).toBe('e2');
     });
 
     it('should get entity at other end when starting from destination', () => {
-      const relationship = mockGraph.relationships[0]; // e1 allied_with e2
+      const relationship = mockGraph.getRelationships()[0]; // e1 allied_with e2
       const related = getRelatedEntity(mockGraph, relationship, 'e2');
       expect(related).toBeDefined();
       expect(related?.id).toBe('e1');
@@ -359,9 +428,10 @@ describe('graphQueries', () => {
     });
 
     it('should handle empty graph', () => {
+      const _entities = new Map<string, HardState>();
+      let _relationships: Relationship[] = [];
+
       const emptyGraph: Graph = {
-        entities: new Map(),
-        relationships: [],
         tick: 0,
         currentEra: {} as any,
         pressures: new Map(),
@@ -377,8 +447,28 @@ describe('graphQueries', () => {
         growthMetrics: {
           relationshipsPerTick: [],
           averageGrowthRate: 0
-        }
-      };
+        },
+        getEntity(id: string) { return _entities.get(id); },
+        hasEntity(id: string) { return _entities.has(id); },
+        getEntityCount() { return _entities.size; },
+        getEntities() { return Array.from(_entities.values()); },
+        getEntityIds() { return Array.from(_entities.keys()); },
+        forEachEntity(cb: any) { _entities.forEach((e, id) => cb(e, id)); },
+        findEntities() { return []; },
+        getEntitiesByKind() { return []; },
+        getConnectedEntities() { return []; },
+        createEntity() { return ''; },
+        updateEntity() { return false; },
+        deleteEntity() { return false; },
+        _loadEntity(id: string, e: HardState) { _entities.set(id, e); },
+        getRelationships() { return [..._relationships]; },
+        getRelationshipCount() { return _relationships.length; },
+        findRelationships() { return []; },
+        getEntityRelationships() { return []; },
+        addRelationship(r: Relationship) { _relationships.push(r); },
+        _loadRelationship(r: Relationship) { _relationships.push(r); },
+        _setRelationships(r: Relationship[]) { _relationships = r; }
+      } as Graph;
 
       const related = getEntitiesByRelationship(emptyGraph, 'e1', 'allied_with', 'src');
       expect(related).toHaveLength(0);

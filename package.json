@@ -17,32 +17,24 @@
     "build:framework": "cd apps/lore-weave && npm run build",
     "build:domain": "cd penguin-tales/lore && npm run build",
     "build:ui": "cd apps/lore-weave/webui && npm run build",
-
     "generate": "cd penguin-tales/lore && npm run dev",
     "generate:llm": "cd penguin-tales/lore && LLM_ENABLED=partial npm run dev",
     "generate:llm:full": "cd penguin-tales/lore && LLM_ENABLED=full npm run dev",
-
     "sync": "cp penguin-tales/lore/output/generated_world.json apps/lore-weave/webui/public/ && cp penguin-tales/lore/output/lore.json apps/lore-weave/webui/public/ 2>/dev/null || true && echo '✅ World data synced to webui'",
-
     "generate:sync": "npm run generate && npm run sync",
     "generate:sync:llm": "npm run generate:llm && npm run sync",
     "generate:sync:llm:full": "npm run generate:llm:full && npm run sync",
-
     "ui": "cd apps/lore-weave/webui && npm run dev",
     "ui:build": "npm run sync && cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
-
     "dev": "npm run generate:sync && npm run ui",
-
     "test": "npm run test:framework && npm run test:domain",
     "test:framework": "cd apps/lore-weave && npm test",
     "test:domain": "cd penguin-tales/lore && npm test",
-
     "clean": "npm run clean:framework && npm run clean:domain && npm run clean:output",
     "clean:framework": "cd apps/lore-weave && npm run clean",
     "clean:domain": "cd penguin-tales/lore && npm run clean",
     "clean:output": "rm -rf penguin-tales/lore/output/*",
-
     "install:all": "npm install && cd apps/lore-weave && npm install && cd ../name-forge && npm install && cd ../../penguin-tales/lore && npm install && cd ../../apps/lore-weave/webui && npm install"
   },
   "keywords": [
@@ -52,5 +44,21 @@
     "visualization",
     "graph",
     "lore"
-  ]
+  ],
+  "devDependencies": {
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-sonarjs": "^3.0.5",
+    "eslint-plugin-unicorn": "^62.0.0"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.3.1",
+    "simple-statistics": "^7.8.8"
+  }
 }

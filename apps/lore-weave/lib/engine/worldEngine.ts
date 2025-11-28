@@ -15,22 +15,22 @@ import {
 } from '../utils/helpers';
 import { initializeCatalystSmart } from '../utils/catalystHelpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../utils/eraUtils';
-import { EnrichmentService } from '../services/enrichmentService';
-import { ImageGenerationService } from '../services/imageGenerationService';
-import { TemplateSelector } from '../services/templateSelector';
-import { SystemSelector } from '../services/systemSelector';
-import { DistributionTracker } from '../services/distributionTracker';
-import { StatisticsCollector } from '../services/statisticsCollector';
-import { PopulationTracker, PopulationMetrics } from '../services/populationTracker';
-import { DynamicWeightCalculator } from '../services/dynamicWeightCalculator';
-import { FeedbackAnalyzer } from '../services/feedbackAnalyzer';
-import { TargetSelector } from '../services/targetSelector';
-import { TemplateGraphView } from '../services/templateGraphView';
+import { EnrichmentService } from '../llm/enrichmentService';
+import { ImageGenerationService } from '../llm/imageGenerationService';
+import { TemplateSelector } from '../selection/templateSelector';
+import { SystemSelector } from '../selection/systemSelector';
+import { DistributionTracker } from '../statistics/distributionTracker';
+import { StatisticsCollector } from '../statistics/statisticsCollector';
+import { PopulationTracker, PopulationMetrics } from '../statistics/populationTracker';
+import { DynamicWeightCalculator } from '../selection/dynamicWeightCalculator';
+import { FeedbackAnalyzer } from '../feedback/feedbackAnalyzer';
+import { TargetSelector } from '../selection/targetSelector';
+import { TemplateGraphView } from '../graph/templateGraphView';
 // MetaEntityFormation removed - now handled by SimulationSystems (magicSchoolFormation, etc.)
-import { feedbackLoops } from '../config/feedbackLoops';
 import { SimulationStatistics, ValidationStats } from '../types/statistics';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../types/frameworkPrimitives';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -430,9 +430,10 @@ export class WorldEngine {
       config.domain
     );
     this.dynamicWeightCalculator = new DynamicWeightCalculator();
-    this.feedbackAnalyzer = new FeedbackAnalyzer(feedbackLoops, config);  // Pass config for contract analysis
+    const loops = config.feedbackLoops || [];
+    this.feedbackAnalyzer = new FeedbackAnalyzer(loops, config);
     console.log('✓ Homeostatic feedback control enabled');
-    console.log(`  - Tracking ${feedbackLoops.length} feedback loops`);
+    console.log(`  - Tracking ${loops.length} feedback loops`);
 
     // Initialize contract enforcement system
     this.contractEnforcer = new ContractEnforcer(config);
@@ -660,7 +661,7 @@ export class WorldEngine {
    */
   private linkFinalEra(): void {
     // Find current era entity
-    const eraEntities = this.graph.findEntities({ kind: 'era', status: 'current' });
+    const eraEntities = this.graph.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA, status: FRAMEWORK_STATUS.CURRENT });
     const currentEra = eraEntities[0];
 
     if (!currentEra || !currentEra.temporal) return;
@@ -671,7 +672,7 @@ export class WorldEngine {
     const allEntities = this.graph.getEntities();
     const prominentEntities = allEntities.filter(e =>
       (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
-      e.kind !== 'era' &&
+      e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
       e.createdAt >= eraStartTick
     );
 
@@ -679,7 +680,7 @@ export class WorldEngine {
     const entitiesToLink = prominentEntities.length > 0
       ? prominentEntities
       : allEntities
-          .filter(e => (e.prominence === 'renowned' || e.prominence === 'mythic') && e.kind !== 'era')
+          .filter(e => (e.prominence === 'renowned' || e.prominence === 'mythic') && e.kind !== FRAMEWORK_ENTITY_KINDS.ERA)
           .sort((a, b) => {
             const prominenceOrder = { mythic: 3, renowned: 2, recognized: 1, marginal: 0, forgotten: 0 };
             return (prominenceOrder[b.prominence] || 0) - (prominenceOrder[a.prominence] || 0);
@@ -1139,7 +1140,7 @@ export class WorldEngine {
 
         // Queue enrichment for this template's cluster immediately
         // Filter out eras - they get enriched separately and shouldn't go through entity enrichment
-        const enrichableEntities = clusterEntities.filter(e => e.kind !== 'era');
+        const enrichableEntities = clusterEntities.filter(e => e.kind !== FRAMEWORK_ENTITY_KINDS.ERA);
         if (enrichableEntities.length > 0) {
           this.queueEntityEnrichment(enrichableEntities);
           this.queueDiscoveryEnrichment(enrichableEntities);
@@ -1755,10 +1756,10 @@ export class WorldEngine {
         case 'npc':
           this.enrichmentAnalytics.npcEnrichments++;
           break;
-        case 'occurrence':
+        case FRAMEWORK_ENTITY_KINDS.OCCURRENCE:
           this.enrichmentAnalytics.occurrenceEnrichments++;
           break;
-        case 'era':
+        case FRAMEWORK_ENTITY_KINDS.ERA:
           this.enrichmentAnalytics.eraEnrichments++;
           break;
       }
@@ -1961,10 +1962,10 @@ export class WorldEngine {
           case 'npc':
             this.enrichmentAnalytics.npcEnrichments++;
             break;
-          case 'occurrence':
+          case FRAMEWORK_ENTITY_KINDS.OCCURRENCE:
             this.enrichmentAnalytics.occurrenceEnrichments++;
             break;
-          case 'era':
+          case FRAMEWORK_ENTITY_KINDS.ERA:
             this.enrichmentAnalytics.eraEnrichments++;
             break;
         }

@@ -18,6 +18,7 @@ import {
   SnapshotConfig,
   EmergentDiscoveryConfig
 } from '@lore-weave/core/types/domainSchema';
+import { SemanticEncoderConfig } from '@lore-weave/core/types/semanticAxes';
 import { pickRandom } from '@lore-weave/core/utils/helpers';
 import {
   getActionDomains,
@@ -25,6 +26,7 @@ import {
   getPressureDomainMappings
 } from './config/actionDomains';
 import { penguinRegionConfig } from './config/regions';
+import { semanticAxes, tagSemanticWeights } from './config/semanticAxes';
 
 // ===========================
 // SNAPSHOT CONFIGURATIONS
@@ -771,6 +773,20 @@ const penguinDiscoveryConfig: EmergentDiscoveryConfig = {
 };
 
 // ===========================
+// SEMANTIC AXIS CONFIG
+// ===========================
+
+/**
+ * Semantic encoder configuration for penguin domain.
+ * Maps tags to positions on meaningful axes for coordinate derivation.
+ */
+const penguinSemanticConfig: SemanticEncoderConfig = {
+  axes: semanticAxes,
+  tagWeights: tagSemanticWeights,
+  warnOnUnconfiguredTags: true  // Enable warnings for unconfigured tags
+};
+
+// ===========================
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
@@ -794,8 +810,16 @@ export const penguinDomain = Object.assign(baseDomain, {
   // Region-based coordinate system configuration
   regionConfig: penguinRegionConfig,
 
+  // Semantic relationship kinds - defines which relationships mean "location", "membership", etc.
+  locationRelationshipKinds: ['resident_of', 'located_at'],
+  membershipRelationshipKinds: ['member_of'],
+  leadershipRelationshipKinds: ['leader_of'],
+
   // Emergent discovery configuration
   emergentDiscoveryConfig: penguinDiscoveryConfig,
+
+  // Semantic axis configuration for coordinate encoding
+  semanticConfig: penguinSemanticConfig,
 
   // Action domains for catalyst system
   getActionDomains() {

@@ -3,7 +3,7 @@ import {
   RelationshipBuilder,
   buildRelationships,
   createRelationship,
-} from '../../utils/relationshipBuilder';
+} from '../../graph/relationshipBuilder';
 import { Graph } from '../../types/engine';
 import { Relationship } from '../../types/worldTypes';
 

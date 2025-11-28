@@ -26,8 +26,8 @@ import {
   transferRelationships,
   createPartOfRelationships
 } from '@lore-weave/core/utils/entityArchival';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
+import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
+import { TargetSelector } from '@lore-weave/core/selection/targetSelector';
 import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPrimitives';
 
 /**
