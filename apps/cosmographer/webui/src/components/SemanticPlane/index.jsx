@@ -342,6 +342,29 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
   };
 
+  const handleResizeRegion = (regionId, newRadius) => {
+    if (!selectedKind) return;
+
+    const updatedRegions = (semanticPlane.regions || []).map(r =>
+      r.id === regionId
+        ? {
+            ...r,
+            bounds: {
+              ...r.bounds,
+              radius: Math.round(newRadius)
+            }
+          }
+        : r
+    );
+
+    const updatedPlane = {
+      ...semanticPlane,
+      regions: updatedRegions
+    };
+
+    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+  };
+
   const getCultureColor = (cultureId) => {
     return cultures.find(c => c.id === cultureId)?.color || '#888';
   };
@@ -405,6 +428,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
             onSelectRegion={setSelectedRegionId}
             onMoveEntity={handleMoveEntity}
             onMoveRegion={handleMoveRegion}
+            onResizeRegion={handleResizeRegion}
           />
         </div>
 
@@ -448,7 +472,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
                   <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
                   <span style={styles.regionLabel}>{region.label}</span>
                   <span style={styles.entityCoords}>
-                    ({Math.round(region.bounds?.center?.x || 0)}, {Math.round(region.bounds?.center?.y || 0)})
+                    ({Math.round(region.bounds?.center?.x || 0)}, {Math.round(region.bounds?.center?.y || 0)}) r:{Math.round(region.bounds?.radius || 0)}
                   </span>
                   <button
                     style={styles.deleteButton}

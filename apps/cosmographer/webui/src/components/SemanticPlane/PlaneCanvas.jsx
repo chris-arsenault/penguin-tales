@@ -20,7 +20,8 @@ export default function PlaneCanvas({
   onSelectEntity,
   onSelectRegion,
   onMoveEntity,
-  onMoveRegion
+  onMoveRegion,
+  onResizeRegion
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -161,8 +162,9 @@ export default function PlaneCanvas({
         ctx.fill();
         ctx.stroke();
 
-        // Draw center handle when selected
+        // Draw handles when selected
         if (isSelected) {
+          // Center handle for moving
           ctx.beginPath();
           ctx.arc(cx, cy, 6, 0, Math.PI * 2);
           ctx.fillStyle = '#fff';
@@ -170,6 +172,23 @@ export default function PlaneCanvas({
           ctx.strokeStyle = region.color || '#0f3460';
           ctx.lineWidth = 2;
           ctx.stroke();
+
+          // Edge handles for resizing (at cardinal points)
+          const handlePositions = [
+            { x: cx + radius, y: cy },     // right
+            { x: cx - radius, y: cy },     // left
+            { x: cx, y: cy - radius },     // top
+            { x: cx, y: cy + radius }      // bottom
+          ];
+          handlePositions.forEach(pos => {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#e94560';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          });
         }
 
         // Label
@@ -271,6 +290,29 @@ export default function PlaneCanvas({
     return null;
   };
 
+  // Check if clicking on the edge of the selected region (for resizing)
+  const findRegionEdgeAt = (cx, cy) => {
+    if (!selectedRegionId) return null;
+
+    const region = regions.find(r => r.id === selectedRegionId);
+    if (!region?.bounds?.center) return null;
+
+    const scale = baseScale * camera.zoom;
+    const { x: rx, y: ry } = worldToCanvas(region.bounds.center.x, region.bounds.center.y);
+    const radius = (region.bounds.radius || 10) * scale;
+
+    // Distance from click to center
+    const distToCenter = Math.sqrt((cx - rx) ** 2 + (cy - ry) ** 2);
+
+    // Check if near the edge (within 8px tolerance of the circle edge)
+    const edgeTolerance = 8;
+    if (Math.abs(distToCenter - radius) < edgeTolerance) {
+      return region;
+    }
+
+    return null;
+  };
+
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = e.clientX - rect.left;
@@ -286,6 +328,21 @@ export default function PlaneCanvas({
         entityId: entity.id,
         startX: cx,
         startY: cy
+      });
+      return;
+    }
+
+    // Check if clicking on the edge of a selected region (for resizing)
+    const edgeRegion = findRegionEdgeAt(cx, cy);
+    if (edgeRegion) {
+      const regionCenter = edgeRegion.bounds?.center || { x: 50, y: 50 };
+      const { x: rx, y: ry } = worldToCanvas(regionCenter.x, regionCenter.y);
+      setInteraction({
+        type: 'resize-region',
+        regionId: edgeRegion.id,
+        centerX: rx,
+        centerY: ry,
+        startRadius: edgeRegion.bounds?.radius || 10
       });
       return;
     }
@@ -343,6 +400,17 @@ export default function PlaneCanvas({
       const clampedX = Math.max(WORLD_MIN, Math.min(WORLD_MAX, newX));
       const clampedY = Math.max(WORLD_MIN, Math.min(WORLD_MAX, newY));
       onMoveRegion?.(interaction.regionId, { x: clampedX, y: clampedY });
+    } else if (interaction.type === 'resize-region') {
+      // Calculate distance from cursor to region center in canvas pixels
+      const distToCenter = Math.sqrt(
+        (cx - interaction.centerX) ** 2 + (cy - interaction.centerY) ** 2
+      );
+      // Convert to world units
+      const scale = baseScale * camera.zoom;
+      const newRadius = distToCenter / scale;
+      // Clamp radius to reasonable bounds (1-50 in world units)
+      const clampedRadius = Math.max(1, Math.min(50, newRadius));
+      onResizeRegion?.(interaction.regionId, clampedRadius);
     } else if (interaction.type === 'pan') {
       // Pan moves in same direction as mouse (natural scrolling)
       const dx = cx - interaction.startX;
@@ -409,6 +477,7 @@ export default function PlaneCanvas({
     if (interaction.type === 'pan') return 'grabbing';
     if (interaction.type === 'drag-entity') return 'move';
     if (interaction.type === 'drag-region') return 'move';
+    if (interaction.type === 'resize-region') return 'nwse-resize';
     return 'grab';
   };
 
