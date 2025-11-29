@@ -11,6 +11,7 @@ import SchemaEditor from './components/SchemaEditor/index.jsx';
 import CultureEditor from './components/CultureEditor/index.jsx';
 import SemanticPlaneEditor from './components/SemanticPlane/index.jsx';
 import EntityEditor from './components/EntityEditor/index.jsx';
+import RelationshipEditor from './components/RelationshipEditor/index.jsx';
 
 const TABS = [
   { id: 'schema', label: 'Schema', icon: '📋' },
@@ -103,13 +104,11 @@ function TabContent({ tab, project, onSave }) {
       return <SemanticPlaneEditor project={project} onSave={onSave} />;
     case 'entities':
       return <EntityEditor project={project} onSave={onSave} />;
+    case 'relationships':
+      return <RelationshipEditor project={project} onSave={onSave} />;
 
     default: {
       const placeholders = {
-        relationships: {
-          title: 'Relationships',
-          desc: 'Define connections between seed entities.'
-        },
         export: {
           title: 'Export',
           desc: 'Preview and download the world seed JSON.'
