@@ -247,7 +247,7 @@ const styles = {
 export default function SemanticPlaneEditor({ project, onSave }) {
   const [selectedKindId, setSelectedKindId] = useState(null);
   const [showNewRegionModal, setShowNewRegionModal] = useState(false);
-  const [newRegion, setNewRegion] = useState({ label: '', x: 50, y: 50, radius: 15 });
+  const [newRegion, setNewRegion] = useState({ label: '', x: 50, y: 50, radius: 15, culture: '' });
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [selectedRegionId, setSelectedRegionId] = useState(null);
 
@@ -277,10 +277,16 @@ export default function SemanticPlaneEditor({ project, onSave }) {
   const addRegion = () => {
     if (!selectedKind || !newRegion.label.trim()) return;
 
+    // Use culture color if culture is selected, otherwise random color
+    const selectedCulture = cultures.find(c => c.id === newRegion.culture);
+    const regionColor = selectedCulture?.color ||
+      '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+
     const region = {
       id: `region_${Date.now()}`,
       label: newRegion.label.trim(),
-      color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
+      color: regionColor,
+      culture: newRegion.culture || null,
       bounds: {
         shape: 'circle',
         center: { x: parseFloat(newRegion.x), y: parseFloat(newRegion.y) },
@@ -295,7 +301,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
 
     updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
     setShowNewRegionModal(false);
-    setNewRegion({ label: '', x: 50, y: 50, radius: 15 });
+    setNewRegion({ label: '', x: 50, y: 50, radius: 15, culture: '' });
   };
 
   const deleteRegion = (regionId) => {
@@ -470,7 +476,14 @@ export default function SemanticPlaneEditor({ project, onSave }) {
                   }}
                 >
                   <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
-                  <span style={styles.regionLabel}>{region.label}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={styles.regionLabel}>{region.label}</span>
+                    {region.culture && (
+                      <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                        {cultures.find(c => c.id === region.culture)?.name || region.culture}
+                      </div>
+                    )}
+                  </div>
                   <span style={styles.entityCoords}>
                     ({Math.round(region.bounds?.center?.x || 0)}, {Math.round(region.bounds?.center?.y || 0)}) r:{Math.round(region.bounds?.radius || 0)}
                   </span>
@@ -584,6 +597,20 @@ export default function SemanticPlaneEditor({ project, onSave }) {
                 value={newRegion.radius}
                 onChange={e => setNewRegion({ ...newRegion, radius: e.target.value })}
               />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Culture Owner (optional)</label>
+              <select
+                style={styles.select}
+                value={newRegion.culture}
+                onChange={e => setNewRegion({ ...newRegion, culture: e.target.value })}
+              >
+                <option value="">None</option>
+                {cultures.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
 
             <div style={styles.modalActions}>
