@@ -403,6 +403,226 @@
       "culture": "nightshelf",
       "tags": ["anomaly", "mystical", "caverns"],
       "coordinates": { "x": 30, "y": 65, "z": 10 }
+    },
+
+    {
+      "id": "npc_mayor_brightflip",
+      "kind": "npc",
+      "subtype": "mayor",
+      "name": "Mayor Brightflip",
+      "description": "The jovial, rotund mayor of Aurora Stack who maintains peace through shrewd trade deals and boisterous feasts.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "aurora-stack",
+      "tags": ["leader", "politician", "jovial"],
+      "coordinates": { "x": 75, "y": 70, "z": 30 }
+    },
+    {
+      "id": "npc_whisper",
+      "kind": "npc",
+      "subtype": "outlaw",
+      "name": "Whisper",
+      "description": "A shadowy figure who runs the information network beneath Nightfall Shelf, trading secrets for favors.",
+      "status": "alive",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["spy", "broker", "mysterious"],
+      "coordinates": { "x": 40, "y": 55, "z": 75 }
+    },
+    {
+      "id": "npc_captain_frostbeak",
+      "kind": "npc",
+      "subtype": "hero",
+      "name": "Captain Frostbeak",
+      "description": "A legendary hunter who once drove off an orca pod single-finned. Now trains the colony's defenders.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "aurora-stack",
+      "tags": ["hero", "warrior", "veteran"],
+      "coordinates": { "x": 65, "y": 80, "z": 20 }
+    },
+    {
+      "id": "npc_madame_glimmer",
+      "kind": "npc",
+      "subtype": "merchant",
+      "name": "Madame Glimmer",
+      "description": "The wealthiest fish merchant in Aurora Stack, her krill-oil lamps light half the colony.",
+      "status": "alive",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["merchant", "wealthy", "influential"],
+      "coordinates": { "x": 80, "y": 45, "z": 25 }
+    },
+    {
+      "id": "npc_elder_deepcall",
+      "kind": "npc",
+      "subtype": "hero",
+      "name": "Elder Deepcall",
+      "description": "An ancient mystic of Nightfall Shelf who communes with the Glow-Fissure and speaks in riddles.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "nightshelf",
+      "tags": ["mystic", "elder", "prophet"],
+      "coordinates": { "x": 35, "y": 65, "z": 85 }
+    },
+    {
+      "id": "npc_razorfin",
+      "kind": "npc",
+      "subtype": "orca",
+      "name": "Razorfin the Dread",
+      "description": "A cunning orca matriarch who leads raids on penguin fishing parties, spoken of in hushed tones.",
+      "status": "alive",
+      "prominence": "renowned",
+      "culture": "orca",
+      "tags": ["predator", "leader", "feared"],
+      "coordinates": { "x": 10, "y": 70, "z": 15 }
+    },
+
+    {
+      "id": "faction_trade_council",
+      "kind": "faction",
+      "subtype": "political",
+      "name": "Aurora Trade Council",
+      "description": "The governing body of Aurora Stack, a council of wealthy merchants who set tariffs and maintain order.",
+      "status": "active",
+      "prominence": "renowned",
+      "culture": "aurora-stack",
+      "tags": ["government", "commerce", "establishment"],
+      "coordinates": { "x": 85, "y": 80, "z": 65 }
+    },
+    {
+      "id": "faction_shadow_fins",
+      "kind": "faction",
+      "subtype": "criminal",
+      "name": "Shadow Fins",
+      "description": "A secretive network of smugglers and spies operating from Nightfall Shelf's darker passages.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["criminal", "underground", "spies"],
+      "coordinates": { "x": 25, "y": 35, "z": 45 }
+    },
+    {
+      "id": "faction_fissure_cult",
+      "kind": "faction",
+      "subtype": "cult",
+      "name": "Witnesses of the Glow",
+      "description": "A mystical order that studies the Glow-Fissure, believing it to be a portal to ancestral realms.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["religious", "mystical", "secretive"],
+      "coordinates": { "x": 35, "y": 55, "z": 70 }
+    },
+    {
+      "id": "faction_orca_pod",
+      "kind": "faction",
+      "subtype": "political",
+      "name": "Razorfin's Pod",
+      "description": "The orca hunting pack led by Razorfin, the primary predatory threat to penguin fishing expeditions.",
+      "status": "active",
+      "prominence": "renowned",
+      "culture": "orca",
+      "tags": ["predators", "hunters", "tribal"],
+      "coordinates": { "x": 45, "y": 15, "z": 30 }
+    },
+
+    {
+      "id": "rule_trade_peace",
+      "kind": "rules",
+      "subtype": "edict",
+      "name": "The Trade Peace",
+      "description": "An ancient compact forbidding violence in Aurora Stack's market terraces, enforced by exile.",
+      "status": "enacted",
+      "prominence": "renowned",
+      "culture": "aurora-stack",
+      "tags": ["law", "commerce", "peace"],
+      "coordinates": { "x": 80, "y": 30, "z": 85 }
+    },
+    {
+      "id": "rule_shadow_silence",
+      "kind": "rules",
+      "subtype": "taboo",
+      "name": "The Shadow Silence",
+      "description": "An unspoken rule in Nightfall Shelf: never speak of what you see in the fissure-lit passages.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["taboo", "secrecy", "tradition"],
+      "coordinates": { "x": 25, "y": 70, "z": 20 }
+    },
+    {
+      "id": "rule_krill_tithe",
+      "kind": "rules",
+      "subtype": "social",
+      "name": "The Krill Tithe",
+      "description": "Fishers must donate one-tenth of their catch to the colony's communal stores for the elderly and young.",
+      "status": "enacted",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["social", "welfare", "obligation"],
+      "coordinates": { "x": 65, "y": 45, "z": 60 }
+    },
+    {
+      "id": "rule_orca_watch",
+      "kind": "rules",
+      "subtype": "natural",
+      "name": "The Orca Watch",
+      "description": "When the warning call sounds, all penguins must immediately seek high ice - no exceptions.",
+      "status": "active",
+      "prominence": "renowned",
+      "culture": "world",
+      "tags": ["survival", "emergency", "universal"],
+      "coordinates": { "x": 55, "y": 25, "z": 95 }
+    },
+
+    {
+      "id": "ability_ice_carving",
+      "kind": "abilities",
+      "subtype": "technology",
+      "name": "Ice Carving",
+      "description": "The traditional art of shaping ice into tools, structures, and intricate decorations.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["craft", "construction", "traditional"],
+      "coordinates": { "x": 20, "y": 30, "z": 45 }
+    },
+    {
+      "id": "ability_deep_sight",
+      "kind": "abilities",
+      "subtype": "magic",
+      "name": "Deep Sight",
+      "description": "A mystical ability to perceive through darkness and ice, said to be granted by the Glow-Fissure.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "nightshelf",
+      "tags": ["mystical", "perception", "rare"],
+      "coordinates": { "x": 80, "y": 50, "z": 75 }
+    },
+    {
+      "id": "ability_battle_cry",
+      "kind": "abilities",
+      "subtype": "combat",
+      "name": "Battle Cry of the Ancestors",
+      "description": "A powerful vocalization that can stun prey and intimidate predators, taught only to proven warriors.",
+      "status": "active",
+      "prominence": "recognized",
+      "culture": "aurora-stack",
+      "tags": ["combat", "sonic", "heroic"],
+      "coordinates": { "x": 35, "y": 75, "z": 60 }
+    },
+    {
+      "id": "ability_fissure_communion",
+      "kind": "abilities",
+      "subtype": "faith",
+      "name": "Fissure Communion",
+      "description": "A trance-like ritual that allows communion with ancestral spirits through the Glow-Fissure's light.",
+      "status": "emergent",
+      "prominence": "marginal",
+      "culture": "nightshelf",
+      "tags": ["ritual", "spiritual", "dangerous"],
+      "coordinates": { "x": 90, "y": 85, "z": 90 }
     }
   ],
 
@@ -441,6 +661,238 @@
       "srcId": "loc_nightfall_shelf",
       "dstId": "loc_glow_fissure",
       "strength": 0.9
+    },
+
+    {
+      "id": "rel_mayor_resident",
+      "kind": "resident_of",
+      "srcId": "npc_mayor_brightflip",
+      "dstId": "loc_aurora_stack",
+      "strength": 1
+    },
+    {
+      "id": "rel_whisper_resident",
+      "kind": "resident_of",
+      "srcId": "npc_whisper",
+      "dstId": "loc_nightfall_shelf",
+      "strength": 0.8
+    },
+    {
+      "id": "rel_frostbeak_resident",
+      "kind": "resident_of",
+      "srcId": "npc_captain_frostbeak",
+      "dstId": "loc_aurora_stack",
+      "strength": 1
+    },
+    {
+      "id": "rel_glimmer_resident",
+      "kind": "resident_of",
+      "srcId": "npc_madame_glimmer",
+      "dstId": "loc_aurora_stack",
+      "strength": 1
+    },
+    {
+      "id": "rel_deepcall_resident",
+      "kind": "resident_of",
+      "srcId": "npc_elder_deepcall",
+      "dstId": "loc_nightfall_shelf",
+      "strength": 1
+    },
+
+    {
+      "id": "rel_mayor_leader_council",
+      "kind": "leader_of",
+      "srcId": "npc_mayor_brightflip",
+      "dstId": "faction_trade_council",
+      "strength": 1
+    },
+    {
+      "id": "rel_glimmer_member_council",
+      "kind": "member_of",
+      "srcId": "npc_madame_glimmer",
+      "dstId": "faction_trade_council",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_whisper_leader_shadow",
+      "kind": "leader_of",
+      "srcId": "npc_whisper",
+      "dstId": "faction_shadow_fins",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_deepcall_leader_cult",
+      "kind": "leader_of",
+      "srcId": "npc_elder_deepcall",
+      "dstId": "faction_fissure_cult",
+      "strength": 1
+    },
+    {
+      "id": "rel_razorfin_leader_pod",
+      "kind": "leader_of",
+      "srcId": "npc_razorfin",
+      "dstId": "faction_orca_pod",
+      "strength": 1
+    },
+
+    {
+      "id": "rel_council_controls_aurora",
+      "kind": "controls",
+      "srcId": "faction_trade_council",
+      "dstId": "loc_aurora_stack",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_shadow_stronghold_nightfall",
+      "kind": "stronghold_of",
+      "srcId": "faction_shadow_fins",
+      "dstId": "loc_nightfall_shelf",
+      "strength": 0.7
+    },
+    {
+      "id": "rel_cult_stronghold_fissure",
+      "kind": "stronghold_of",
+      "srcId": "faction_fissure_cult",
+      "dstId": "loc_glow_fissure",
+      "strength": 1
+    },
+    {
+      "id": "rel_pod_controls_shoals",
+      "kind": "controls",
+      "srcId": "faction_orca_pod",
+      "dstId": "loc_krill_shoals",
+      "strength": 0.6
+    },
+
+    {
+      "id": "rel_frostbeak_enemy_razorfin",
+      "kind": "enemy_of",
+      "srcId": "npc_captain_frostbeak",
+      "dstId": "npc_razorfin",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_mayor_rival_whisper",
+      "kind": "rival_of",
+      "srcId": "npc_mayor_brightflip",
+      "dstId": "npc_whisper",
+      "strength": 0.6
+    },
+    {
+      "id": "rel_frostbeak_ally_mayor",
+      "kind": "ally_of",
+      "srcId": "npc_captain_frostbeak",
+      "dstId": "npc_mayor_brightflip",
+      "strength": 0.8
+    },
+
+    {
+      "id": "rel_trade_peace_applies_aurora",
+      "kind": "applies_in",
+      "srcId": "rule_trade_peace",
+      "dstId": "loc_aurora_stack",
+      "strength": 1
+    },
+    {
+      "id": "rel_shadow_silence_applies_nightfall",
+      "kind": "applies_in",
+      "srcId": "rule_shadow_silence",
+      "dstId": "loc_nightfall_shelf",
+      "strength": 1
+    },
+    {
+      "id": "rel_krill_tithe_applies_aurora",
+      "kind": "applies_in",
+      "srcId": "rule_krill_tithe",
+      "dstId": "loc_aurora_stack",
+      "strength": 1
+    },
+    {
+      "id": "rel_orca_watch_applies_berg",
+      "kind": "applies_in",
+      "srcId": "rule_orca_watch",
+      "dstId": "loc_aurora_berg",
+      "strength": 1
+    },
+    {
+      "id": "rel_mayor_champion_peace",
+      "kind": "champion_of",
+      "srcId": "npc_mayor_brightflip",
+      "dstId": "rule_trade_peace",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_deepcall_believer_silence",
+      "kind": "believer_of",
+      "srcId": "npc_elder_deepcall",
+      "dstId": "rule_shadow_silence",
+      "strength": 1
+    },
+
+    {
+      "id": "rel_frostbeak_practitioner_battle",
+      "kind": "practitioner_of",
+      "srcId": "npc_captain_frostbeak",
+      "dstId": "ability_battle_cry",
+      "strength": 1
+    },
+    {
+      "id": "rel_deepcall_practitioner_communion",
+      "kind": "practitioner_of",
+      "srcId": "npc_elder_deepcall",
+      "dstId": "ability_fissure_communion",
+      "strength": 1
+    },
+    {
+      "id": "rel_deepcall_practitioner_sight",
+      "kind": "practitioner_of",
+      "srcId": "npc_elder_deepcall",
+      "dstId": "ability_deep_sight",
+      "strength": 0.9
+    },
+    {
+      "id": "rel_whisper_practitioner_sight",
+      "kind": "practitioner_of",
+      "srcId": "npc_whisper",
+      "dstId": "ability_deep_sight",
+      "strength": 0.7
+    },
+
+    {
+      "id": "rel_deep_sight_manifests_fissure",
+      "kind": "manifests_at",
+      "srcId": "ability_deep_sight",
+      "dstId": "loc_glow_fissure",
+      "strength": 1
+    },
+    {
+      "id": "rel_communion_manifests_fissure",
+      "kind": "manifests_at",
+      "srcId": "ability_fissure_communion",
+      "dstId": "loc_glow_fissure",
+      "strength": 1
+    },
+    {
+      "id": "rel_ice_carving_manifests_aurora",
+      "kind": "manifests_at",
+      "srcId": "ability_ice_carving",
+      "dstId": "loc_aurora_stack",
+      "strength": 0.8
+    },
+
+    {
+      "id": "rel_cult_wields_communion",
+      "kind": "wields",
+      "srcId": "faction_fissure_cult",
+      "dstId": "ability_fissure_communion",
+      "strength": 1
+    },
+    {
+      "id": "rel_shadow_wields_sight",
+      "kind": "wields",
+      "srcId": "faction_shadow_fins",
+      "dstId": "ability_deep_sight",
+      "strength": 0.6
     }
   ]
 }
