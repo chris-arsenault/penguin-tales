@@ -1,48 +1,14 @@
 /**
  * PlaneCanvas - 2D canvas for visualizing and editing semantic planes.
- * Supports pan, zoom, region rendering, and entity placement.
+ * Coordinate system: 0-100 on both axes, with (0,0) at bottom-left.
  */
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-const styles = {
-  container: {
-    position: 'relative',
-    flex: 1,
-    backgroundColor: '#0d1117',
-    borderRadius: '8px',
-    overflow: 'hidden'
-  },
-  canvas: {
-    display: 'block',
-    cursor: 'grab'
-  },
-  canvasDragging: {
-    cursor: 'grabbing'
-  },
-  axisLabel: {
-    position: 'absolute',
-    fontSize: '11px',
-    color: '#666',
-    pointerEvents: 'none'
-  },
-  controls: {
-    position: 'absolute',
-    bottom: '12px',
-    right: '12px',
-    display: 'flex',
-    gap: '4px'
-  },
-  controlButton: {
-    padding: '6px 10px',
-    fontSize: '14px',
-    backgroundColor: '#16213e',
-    color: '#aaa',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  }
-};
+const WORLD_MIN = 0;
+const WORLD_MAX = 100;
+const WORLD_SIZE = WORLD_MAX - WORLD_MIN;
+const PADDING = 40; // Padding for axis labels
 
 export default function PlaneCanvas({
   plane,
@@ -51,42 +17,67 @@ export default function PlaneCanvas({
   cultures = [],
   selectedEntityId,
   onSelectEntity,
-  onMoveEntity,
-  width = 600,
-  height = 500
+  onMoveEntity
 }) {
+  const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [draggedEntity, setDraggedEntity] = useState(null);
+  const [size, setSize] = useState({ width: 600, height: 400 });
+  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const [interaction, setInteraction] = useState({ type: null, startX: 0, startY: 0, startCamera: null });
 
-  // Convert world coordinates to canvas coordinates
+  // Resize observer to fill container
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      setSize({ width: Math.floor(width), height: Math.floor(height) });
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Calculate the drawable area (inside padding)
+  const drawArea = {
+    left: PADDING,
+    top: PADDING,
+    width: size.width - PADDING * 2,
+    height: size.height - PADDING * 2
+  };
+
+  // Base scale to fit world in draw area (maintaining aspect ratio)
+  const baseScale = Math.min(drawArea.width / WORLD_SIZE, drawArea.height / WORLD_SIZE);
+
+  // Convert world coordinates (0-100) to canvas pixel coordinates
   const worldToCanvas = useCallback((wx, wy) => {
-    const bounds = plane?.bounds || { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } };
-    const scaleX = width / (bounds.x.max - bounds.x.min);
-    const scaleY = height / (bounds.y.max - bounds.y.min);
-    const scale = Math.min(scaleX, scaleY) * zoom;
+    const scale = baseScale * camera.zoom;
+    // Center the world in the draw area
+    const worldPixelSize = WORLD_SIZE * scale;
+    const offsetX = drawArea.left + (drawArea.width - worldPixelSize) / 2;
+    const offsetY = drawArea.top + (drawArea.height - worldPixelSize) / 2;
 
     return {
-      x: (wx - bounds.x.min) * scale + pan.x + width / 2 - (bounds.x.max - bounds.x.min) * scale / 2,
-      y: height - ((wy - bounds.y.min) * scale + pan.y + height / 2 - (bounds.y.max - bounds.y.min) * scale / 2)
+      x: offsetX + (wx - WORLD_MIN) * scale + camera.x,
+      // Flip Y so 0 is at bottom
+      y: offsetY + (WORLD_MAX - wy) * scale + camera.y
     };
-  }, [plane, width, height, zoom, pan]);
+  }, [baseScale, camera, drawArea]);
 
-  // Convert canvas coordinates to world coordinates
+  // Convert canvas pixel coordinates to world coordinates
   const canvasToWorld = useCallback((cx, cy) => {
-    const bounds = plane?.bounds || { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } };
-    const scaleX = width / (bounds.x.max - bounds.x.min);
-    const scaleY = height / (bounds.y.max - bounds.y.min);
-    const scale = Math.min(scaleX, scaleY) * zoom;
+    const scale = baseScale * camera.zoom;
+    const worldPixelSize = WORLD_SIZE * scale;
+    const offsetX = drawArea.left + (drawArea.width - worldPixelSize) / 2;
+    const offsetY = drawArea.top + (drawArea.height - worldPixelSize) / 2;
 
     return {
-      x: (cx - pan.x - width / 2 + (bounds.x.max - bounds.x.min) * scale / 2) / scale + bounds.x.min,
-      y: (height - cy - pan.y - height / 2 + (bounds.y.max - bounds.y.min) * scale / 2) / scale + bounds.y.min
+      x: (cx - camera.x - offsetX) / scale + WORLD_MIN,
+      // Flip Y so 0 is at bottom
+      y: WORLD_MAX - (cy - camera.y - offsetY) / scale
     };
-  }, [plane, width, height, zoom, pan]);
+  }, [baseScale, camera, drawArea]);
 
   // Draw the canvas
   useEffect(() => {
@@ -94,39 +85,72 @@ export default function PlaneCanvas({
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height);
+    const { width, height } = size;
+
+    // Clear
+    ctx.fillStyle = '#0a0e14';
+    ctx.fillRect(0, 0, width, height);
+
+    const scale = baseScale * camera.zoom;
+
+    // Get world corners in canvas space
+    const topLeft = worldToCanvas(WORLD_MIN, WORLD_MAX);
+    const bottomRight = worldToCanvas(WORLD_MAX, WORLD_MIN);
+    const worldWidth = bottomRight.x - topLeft.x;
+    const worldHeight = bottomRight.y - topLeft.y;
+
+    // Draw world background
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(topLeft.x, topLeft.y, worldWidth, worldHeight);
 
     // Draw grid
     ctx.strokeStyle = '#1a2332';
     ctx.lineWidth = 1;
-    const gridSize = 10;
-    const bounds = plane?.bounds || { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } };
+    const gridStep = 10;
 
-    for (let x = bounds.x.min; x <= bounds.x.max; x += gridSize) {
+    for (let x = WORLD_MIN; x <= WORLD_MAX; x += gridStep) {
       const { x: cx } = worldToCanvas(x, 0);
       ctx.beginPath();
-      ctx.moveTo(cx, 0);
-      ctx.lineTo(cx, height);
+      ctx.moveTo(cx, topLeft.y);
+      ctx.lineTo(cx, bottomRight.y);
       ctx.stroke();
     }
-    for (let y = bounds.y.min; y <= bounds.y.max; y += gridSize) {
+    for (let y = WORLD_MIN; y <= WORLD_MAX; y += gridStep) {
       const { y: cy } = worldToCanvas(0, y);
       ctx.beginPath();
-      ctx.moveTo(0, cy);
-      ctx.lineTo(width, cy);
+      ctx.moveTo(topLeft.x, cy);
+      ctx.lineTo(bottomRight.x, cy);
       ctx.stroke();
     }
+
+    // Draw center crosshair
+    ctx.strokeStyle = '#2a3a4a';
+    ctx.lineWidth = 1;
+    const center = worldToCanvas(50, 50);
+    ctx.beginPath();
+    ctx.moveTo(topLeft.x, center.y);
+    ctx.lineTo(bottomRight.x, center.y);
+    ctx.moveTo(center.x, topLeft.y);
+    ctx.lineTo(center.x, bottomRight.y);
+    ctx.stroke();
+
+    // Draw world border
+    ctx.strokeStyle = '#3a4a5a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(topLeft.x, topLeft.y, worldWidth, worldHeight);
 
     // Draw regions
     regions.forEach((region) => {
       const regionBounds = region.bounds;
-      ctx.fillStyle = (region.color || '#0f3460') + '40';
+      if (!regionBounds) return;
+
+      ctx.fillStyle = (region.color || '#0f3460') + '30';
       ctx.strokeStyle = region.color || '#0f3460';
       ctx.lineWidth = 2;
 
-      if (regionBounds.shape === 'circle') {
+      if (regionBounds.shape === 'circle' && regionBounds.center) {
         const { x: cx, y: cy } = worldToCanvas(regionBounds.center.x, regionBounds.center.y);
-        const radius = regionBounds.radius * zoom * (width / (bounds.x.max - bounds.x.min));
+        const radius = (regionBounds.radius || 10) * scale;
 
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -137,21 +161,7 @@ export default function PlaneCanvas({
         ctx.fillStyle = '#888';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(region.label, cx, cy + radius + 14);
-      } else if (regionBounds.shape === 'rect') {
-        const { x: x1, y: y1 } = worldToCanvas(regionBounds.x1, regionBounds.y2);
-        const { x: x2, y: y2 } = worldToCanvas(regionBounds.x2, regionBounds.y1);
-
-        ctx.beginPath();
-        ctx.rect(x1, y1, x2 - x1, y2 - y1);
-        ctx.fill();
-        ctx.stroke();
-
-        // Label
-        ctx.fillStyle = '#888';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(region.label, (x1 + x2) / 2, y2 + 14);
+        ctx.fillText(region.label || '', cx, cy + radius + 14);
       }
     });
 
@@ -183,74 +193,178 @@ export default function PlaneCanvas({
       ctx.fillText(entity.name || entity.id, cx, cy - 12);
     });
 
-  }, [plane, regions, entities, cultures, selectedEntityId, width, height, zoom, pan, worldToCanvas]);
+    // Draw axis labels on the edges
+    const axes = plane?.axes || {};
 
-  // Mouse handlers
+    ctx.fillStyle = '#666';
+    ctx.font = '11px sans-serif';
+
+    // X axis labels
+    if (axes.x) {
+      ctx.textAlign = 'left';
+      ctx.fillText(axes.x.lowLabel || '0', topLeft.x, bottomRight.y + 16);
+      ctx.textAlign = 'right';
+      ctx.fillText(axes.x.highLabel || '100', bottomRight.x, bottomRight.y + 16);
+      ctx.textAlign = 'center';
+      ctx.fillText(axes.x.name || 'X Axis', (topLeft.x + bottomRight.x) / 2, bottomRight.y + 28);
+    }
+
+    // Y axis labels
+    if (axes.y) {
+      ctx.textAlign = 'right';
+      ctx.fillText(axes.y.lowLabel || '0', topLeft.x - 6, bottomRight.y);
+      ctx.fillText(axes.y.highLabel || '100', topLeft.x - 6, topLeft.y + 4);
+
+      // Rotated Y axis name
+      ctx.save();
+      ctx.translate(topLeft.x - 28, (topLeft.y + bottomRight.y) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.fillText(axes.y.name || 'Y Axis', 0, 0);
+      ctx.restore();
+    }
+
+  }, [plane, regions, entities, cultures, selectedEntityId, size, camera, baseScale, worldToCanvas]);
+
+  // Find entity at canvas position
+  const findEntityAt = (cx, cy) => {
+    for (const entity of entities) {
+      if (!entity.coordinates) continue;
+      const { x: ex, y: ey } = worldToCanvas(entity.coordinates.x, entity.coordinates.y);
+      const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
+      if (dist < 12) return entity;
+    }
+    return null;
+  };
+
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
 
     // Check if clicking on an entity
-    for (const entity of entities) {
-      if (!entity.coordinates) continue;
-      const { x: ex, y: ey } = worldToCanvas(entity.coordinates.x, entity.coordinates.y);
-      const dist = Math.sqrt((cx - ex) ** 2 + (cy - ey) ** 2);
-      if (dist < 12) {
-        onSelectEntity?.(entity.id);
-        setDraggedEntity(entity.id);
-        return;
-      }
+    const entity = findEntityAt(cx, cy);
+    if (entity) {
+      onSelectEntity?.(entity.id);
+      setInteraction({
+        type: 'drag-entity',
+        entityId: entity.id,
+        startX: cx,
+        startY: cy
+      });
+      return;
     }
 
     // Start panning
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     onSelectEntity?.(null);
+    setInteraction({
+      type: 'pan',
+      startX: cx,
+      startY: cy,
+      startCamera: { ...camera }
+    });
   };
 
   const handleMouseMove = (e) => {
-    if (draggedEntity) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
+    if (!interaction.type) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    if (interaction.type === 'drag-entity') {
       const world = canvasToWorld(cx, cy);
-      onMoveEntity?.(draggedEntity, world);
-    } else if (isDragging) {
-      setPan({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+      // Clamp to world bounds
+      const clampedX = Math.max(WORLD_MIN, Math.min(WORLD_MAX, world.x));
+      const clampedY = Math.max(WORLD_MIN, Math.min(WORLD_MAX, world.y));
+      onMoveEntity?.(interaction.entityId, { x: clampedX, y: clampedY });
+    } else if (interaction.type === 'pan') {
+      // Pan moves in same direction as mouse (natural scrolling)
+      const dx = cx - interaction.startX;
+      const dy = cy - interaction.startY;
+      setCamera({
+        ...camera,
+        x: interaction.startCamera.x + dx,
+        y: interaction.startCamera.y + dy
       });
     }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
-    setDraggedEntity(null);
+    setInteraction({ type: null });
   };
 
   const handleWheel = (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.max(0.5, Math.min(3, z * delta)));
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    // Zoom towards cursor position
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.5, Math.min(4, camera.zoom * zoomFactor));
+
+    // Adjust pan to keep point under cursor stationary
+    const scale = baseScale * camera.zoom;
+    const newScale = baseScale * newZoom;
+    const scaleRatio = newScale / scale;
+
+    // Get world coords before zoom
+    const worldPos = canvasToWorld(cx, cy);
+
+    // Calculate new camera position to keep world point under cursor
+    const worldPixelSize = WORLD_SIZE * newScale;
+    const offsetX = drawArea.left + (drawArea.width - worldPixelSize) / 2;
+    const offsetY = drawArea.top + (drawArea.height - worldPixelSize) / 2;
+
+    const newCameraX = cx - offsetX - (worldPos.x - WORLD_MIN) * newScale;
+    const newCameraY = cy - offsetY - (WORLD_MAX - worldPos.y) * newScale;
+
+    setCamera({
+      x: newCameraX,
+      y: newCameraY,
+      zoom: newZoom
+    });
   };
 
   const resetView = () => {
-    setPan({ x: 0, y: 0 });
-    setZoom(1);
+    setCamera({ x: 0, y: 0, zoom: 1 });
   };
 
-  const axes = plane?.axes || {};
+  const zoomIn = () => {
+    setCamera(c => ({ ...c, zoom: Math.min(4, c.zoom * 1.25) }));
+  };
+
+  const zoomOut = () => {
+    setCamera(c => ({ ...c, zoom: Math.max(0.5, c.zoom * 0.8) }));
+  };
+
+  const getCursor = () => {
+    if (interaction.type === 'pan') return 'grabbing';
+    if (interaction.type === 'drag-entity') return 'move';
+    return 'grab';
+  };
 
   return (
-    <div style={styles.container}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#0a0e14',
+        borderRadius: '8px',
+        overflow: 'hidden'
+      }}
+    >
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
+        width={size.width}
+        height={size.height}
         style={{
-          ...styles.canvas,
-          ...(isDragging ? styles.canvasDragging : {})
+          display: 'block',
+          cursor: getCursor()
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -259,41 +373,70 @@ export default function PlaneCanvas({
         onWheel={handleWheel}
       />
 
-      {/* Axis labels */}
-      {axes.x && (
-        <>
-          <div style={{ ...styles.axisLabel, bottom: '8px', left: '8px' }}>
-            {axes.x.lowLabel}
-          </div>
-          <div style={{ ...styles.axisLabel, bottom: '8px', right: '60px' }}>
-            {axes.x.highLabel}
-          </div>
-          <div style={{ ...styles.axisLabel, bottom: '8px', left: '50%', transform: 'translateX(-50%)' }}>
-            ← {axes.x.name} →
-          </div>
-        </>
-      )}
-      {axes.y && (
-        <>
-          <div style={{ ...styles.axisLabel, top: '8px', left: '8px' }}>
-            {axes.y.highLabel}
-          </div>
-          <div style={{ ...styles.axisLabel, bottom: '28px', left: '8px' }}>
-            {axes.y.lowLabel}
-          </div>
-        </>
-      )}
-
-      <div style={styles.controls}>
-        <button style={styles.controlButton} onClick={() => setZoom(z => Math.min(3, z * 1.2))}>
+      {/* Zoom controls */}
+      <div style={{
+        position: 'absolute',
+        bottom: '12px',
+        right: '12px',
+        display: 'flex',
+        gap: '4px'
+      }}>
+        <button
+          onClick={zoomIn}
+          style={{
+            padding: '6px 12px',
+            fontSize: '16px',
+            backgroundColor: '#16213e',
+            color: '#aaa',
+            border: '1px solid #0f3460',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
           +
         </button>
-        <button style={styles.controlButton} onClick={() => setZoom(z => Math.max(0.5, z * 0.8))}>
+        <button
+          onClick={zoomOut}
+          style={{
+            padding: '6px 12px',
+            fontSize: '16px',
+            backgroundColor: '#16213e',
+            color: '#aaa',
+            border: '1px solid #0f3460',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
           −
         </button>
-        <button style={styles.controlButton} onClick={resetView}>
-          ⌂
+        <button
+          onClick={resetView}
+          style={{
+            padding: '6px 12px',
+            fontSize: '14px',
+            backgroundColor: '#16213e',
+            color: '#aaa',
+            border: '1px solid #0f3460',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Reset
         </button>
+      </div>
+
+      {/* Zoom indicator */}
+      <div style={{
+        position: 'absolute',
+        bottom: '12px',
+        left: '12px',
+        fontSize: '11px',
+        color: '#666',
+        backgroundColor: '#16213e',
+        padding: '4px 8px',
+        borderRadius: '4px'
+      }}>
+        {Math.round(camera.zoom * 100)}%
       </div>
     </div>
   );

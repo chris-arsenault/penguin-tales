@@ -12,25 +12,28 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    height: '100%'
+    height: '100%',
+    minHeight: 0
   },
   header: {
-    marginBottom: '16px'
+    flexShrink: 0,
+    marginBottom: '12px'
   },
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    marginBottom: '8px'
+    marginBottom: '4px'
   },
   subtitle: {
     color: '#888',
     fontSize: '14px'
   },
   toolbar: {
+    flexShrink: 0,
     display: 'flex',
     gap: '12px',
     alignItems: 'center',
-    marginBottom: '16px'
+    marginBottom: '12px'
   },
   select: {
     padding: '8px 12px',
@@ -39,16 +42,7 @@ const styles = {
     border: '1px solid #0f3460',
     borderRadius: '4px',
     color: '#eee',
-    minWidth: '180px'
-  },
-  button: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: '#0f3460',
-    color: '#aaa',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    minWidth: '200px'
   },
   addButton: {
     padding: '8px 16px',
@@ -65,26 +59,47 @@ const styles = {
     flex: 1,
     minHeight: 0
   },
-  canvasArea: {
+  canvasContainer: {
     flex: 1,
+    minHeight: 0,
     display: 'flex',
     flexDirection: 'column'
   },
   sidebar: {
-    width: '280px',
+    width: '260px',
+    flexShrink: 0,
     backgroundColor: '#16213e',
     borderRadius: '8px',
     padding: '16px',
-    overflowY: 'auto'
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
   },
-  sidebarSection: {
-    marginBottom: '20px'
-  },
+  sidebarSection: {},
   sidebarTitle: {
-    fontSize: '13px',
-    fontWeight: 500,
+    fontSize: '12px',
+    fontWeight: 600,
     color: '#888',
-    marginBottom: '8px'
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  axisInfo: {
+    fontSize: '12px',
+    color: '#aaa',
+    marginBottom: '6px',
+    display: 'flex',
+    gap: '8px'
+  },
+  axisLabel: {
+    color: '#e94560',
+    fontWeight: 600,
+    width: '16px'
+  },
+  axisRange: {
+    color: '#666',
+    fontSize: '11px'
   },
   regionItem: {
     padding: '8px 10px',
@@ -99,13 +114,65 @@ const styles = {
   regionColor: {
     width: '12px',
     height: '12px',
-    borderRadius: '2px'
+    borderRadius: '3px',
+    flexShrink: 0
+  },
+  regionLabel: {
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  deleteButton: {
+    padding: '2px 6px',
+    fontSize: '10px',
+    backgroundColor: 'transparent',
+    color: '#e94560',
+    border: '1px solid #e94560',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    flexShrink: 0
+  },
+  entityItem: {
+    padding: '8px 10px',
+    backgroundColor: '#1a1a2e',
+    borderRadius: '4px',
+    marginBottom: '4px',
+    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer'
+  },
+  entityItemSelected: {
+    backgroundColor: '#0f3460'
+  },
+  entityDot: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    flexShrink: 0
+  },
+  entityName: {
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  entityCoords: {
+    fontSize: '10px',
+    color: '#666',
+    flexShrink: 0
   },
   emptyState: {
     color: '#666',
     fontSize: '13px',
     textAlign: 'center',
-    padding: '20px'
+    padding: '40px'
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: '12px'
   },
   modal: {
     position: 'fixed',
@@ -123,35 +190,38 @@ const styles = {
     backgroundColor: '#1a1a2e',
     padding: '24px',
     borderRadius: '8px',
-    width: '400px'
+    width: '360px'
   },
   modalTitle: {
     fontSize: '16px',
     fontWeight: 600,
     marginBottom: '16px'
   },
+  formGroup: {
+    marginBottom: '12px'
+  },
+  label: {
+    fontSize: '12px',
+    color: '#888',
+    marginBottom: '4px',
+    display: 'block'
+  },
   input: {
     width: '100%',
-    padding: '10px',
+    padding: '8px 10px',
     fontSize: '14px',
     backgroundColor: '#16213e',
     border: '1px solid #0f3460',
     borderRadius: '4px',
     color: '#eee',
-    marginBottom: '12px'
+    boxSizing: 'border-box'
   },
   inputRow: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '12px'
+    gap: '12px'
   },
-  inputGroup: {
+  inputHalf: {
     flex: 1
-  },
-  inputLabel: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '4px'
   },
   modalActions: {
     display: 'flex',
@@ -159,15 +229,14 @@ const styles = {
     gap: '8px',
     marginTop: '16px'
   },
-  deleteButton: {
-    padding: '4px 8px',
-    fontSize: '10px',
-    backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
-    borderRadius: '3px',
-    cursor: 'pointer',
-    marginLeft: 'auto'
+  button: {
+    padding: '8px 16px',
+    fontSize: '13px',
+    backgroundColor: '#0f3460',
+    color: '#aaa',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
   }
 };
 
@@ -239,18 +308,38 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     const entities = project?.seedEntities || [];
     const updated = entities.map(e =>
       e.id === entityId
-        ? { ...e, coordinates: { x: coords.x, y: coords.y, z: e.coordinates?.z || 50 } }
+        ? { ...e, coordinates: { x: Math.round(coords.x), y: Math.round(coords.y), z: e.coordinates?.z || 50 } }
         : e
     );
     onSave({ seedEntities: updated });
   };
+
+  const getCultureColor = (cultureId) => {
+    return cultures.find(c => c.id === cultureId)?.color || '#888';
+  };
+
+  if (entityKinds.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <div style={styles.title}>Semantic Planes</div>
+          <div style={styles.subtitle}>
+            View and edit the coordinate space for each entity kind.
+          </div>
+        </div>
+        <div style={styles.emptyState}>
+          Define entity kinds in the Schema tab first to view their semantic planes.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <div style={styles.title}>Semantic Planes</div>
         <div style={styles.subtitle}>
-          View and edit the coordinate space for each entity kind. Drag entities to reposition them.
+          Drag entities to reposition. Scroll to zoom, drag background to pan.
         </div>
       </div>
 
@@ -258,165 +347,180 @@ export default function SemanticPlaneEditor({ project, onSave }) {
         <select
           style={styles.select}
           value={selectedKind?.id || ''}
-          onChange={(e) => setSelectedKindId(e.target.value)}
+          onChange={(e) => {
+            setSelectedKindId(e.target.value);
+            setSelectedEntityId(null);
+          }}
         >
-          {entityKinds.length === 0 && <option value="">No entity kinds</option>}
           {entityKinds.map(k => (
             <option key={k.id} value={k.id}>
-              {k.name} ({planeEntities.filter(e => e.kind === k.id).length} entities)
+              {k.name} ({seedEntities.filter(e => e.kind === k.id).length} entities)
             </option>
           ))}
         </select>
-        {selectedKind && (
-          <button style={styles.addButton} onClick={() => setShowNewRegionModal(true)}>
-            + Add Region
-          </button>
-        )}
+        <button style={styles.addButton} onClick={() => setShowNewRegionModal(true)}>
+          + Add Region
+        </button>
       </div>
 
-      {entityKinds.length === 0 ? (
-        <div style={styles.emptyState}>
-          Define entity kinds in the Schema tab first to view their semantic planes.
+      <div style={styles.mainArea}>
+        <div style={styles.canvasContainer}>
+          <PlaneCanvas
+            plane={semanticPlane}
+            regions={semanticPlane.regions || []}
+            entities={planeEntities}
+            cultures={cultures}
+            selectedEntityId={selectedEntityId}
+            onSelectEntity={setSelectedEntityId}
+            onMoveEntity={handleMoveEntity}
+          />
         </div>
-      ) : !selectedKind ? (
-        <div style={styles.emptyState}>
-          Select an entity kind to view its semantic plane.
-        </div>
-      ) : (
-        <div style={styles.mainArea}>
-          <div style={styles.canvasArea}>
-            <PlaneCanvas
-              plane={semanticPlane}
-              regions={semanticPlane.regions || []}
-              entities={planeEntities}
-              cultures={cultures}
-              selectedEntityId={selectedEntityId}
-              onSelectEntity={setSelectedEntityId}
-              onMoveEntity={handleMoveEntity}
-              width={700}
-              height={500}
-            />
+
+        <div style={styles.sidebar}>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sidebarTitle}>Axes</div>
+            {['x', 'y', 'z'].map(axis => {
+              const config = semanticPlane.axes?.[axis];
+              if (!config) return null;
+              return (
+                <div key={axis} style={styles.axisInfo}>
+                  <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
+                  <span>{config.name}</span>
+                  <span style={styles.axisRange}>
+                    ({config.lowLabel} → {config.highLabel})
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
-          <div style={styles.sidebar}>
-            <div style={styles.sidebarSection}>
-              <div style={styles.sidebarTitle}>
-                Axes
-              </div>
-              <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px' }}>
-                <strong>X:</strong> {semanticPlane.axes?.x?.name || 'X Axis'}
-                <span style={{ color: '#666' }}> ({semanticPlane.axes?.x?.lowLabel} → {semanticPlane.axes?.x?.highLabel})</span>
-              </div>
-              <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px' }}>
-                <strong>Y:</strong> {semanticPlane.axes?.y?.name || 'Y Axis'}
-                <span style={{ color: '#666' }}> ({semanticPlane.axes?.y?.lowLabel} → {semanticPlane.axes?.y?.highLabel})</span>
-              </div>
-              <div style={{ fontSize: '12px', color: '#aaa' }}>
-                <strong>Z:</strong> {semanticPlane.axes?.z?.name || 'Z Axis'}
-                <span style={{ color: '#666' }}> ({semanticPlane.axes?.z?.lowLabel} → {semanticPlane.axes?.z?.highLabel})</span>
-              </div>
+          <div style={styles.sidebarSection}>
+            <div style={styles.sidebarTitle}>
+              Regions ({semanticPlane.regions?.length || 0})
             </div>
-
-            <div style={styles.sidebarSection}>
-              <div style={styles.sidebarTitle}>Regions ({semanticPlane.regions?.length || 0})</div>
-              {(semanticPlane.regions || []).length === 0 ? (
-                <div style={{ color: '#666', fontSize: '12px' }}>No regions yet</div>
-              ) : (
-                semanticPlane.regions.map(region => (
-                  <div key={region.id} style={styles.regionItem}>
-                    <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
-                    <span>{region.label}</span>
-                    <button
-                      style={styles.deleteButton}
-                      onClick={() => deleteRegion(region.id)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div style={styles.sidebarSection}>
-              <div style={styles.sidebarTitle}>Entities ({planeEntities.length})</div>
-              {planeEntities.length === 0 ? (
-                <div style={{ color: '#666', fontSize: '12px' }}>
-                  No entities of kind "{selectedKind.name}"
+            {(semanticPlane.regions || []).length === 0 ? (
+              <div style={styles.emptyText}>No regions defined</div>
+            ) : (
+              semanticPlane.regions.map(region => (
+                <div key={region.id} style={styles.regionItem}>
+                  <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
+                  <span style={styles.regionLabel}>{region.label}</span>
+                  <button
+                    style={styles.deleteButton}
+                    onClick={() => deleteRegion(region.id)}
+                  >
+                    ×
+                  </button>
                 </div>
-              ) : (
-                planeEntities.slice(0, 10).map(entity => (
+              ))
+            )}
+          </div>
+
+          <div style={styles.sidebarSection}>
+            <div style={styles.sidebarTitle}>
+              Entities ({planeEntities.length})
+            </div>
+            {planeEntities.length === 0 ? (
+              <div style={styles.emptyText}>
+                No {selectedKind?.name || 'entities'} yet
+              </div>
+            ) : (
+              <>
+                {planeEntities.slice(0, 15).map(entity => (
                   <div
                     key={entity.id}
                     style={{
-                      ...styles.regionItem,
-                      backgroundColor: selectedEntityId === entity.id ? '#0f3460' : '#1a1a2e',
-                      cursor: 'pointer'
+                      ...styles.entityItem,
+                      ...(selectedEntityId === entity.id ? styles.entityItemSelected : {})
                     }}
                     onClick={() => setSelectedEntityId(entity.id)}
                   >
                     <div style={{
-                      ...styles.regionColor,
-                      borderRadius: '50%',
-                      backgroundColor: cultures.find(c => c.id === entity.culture)?.color || '#888'
+                      ...styles.entityDot,
+                      backgroundColor: getCultureColor(entity.culture)
                     }} />
-                    <span>{entity.name || entity.id}</span>
+                    <span style={styles.entityName}>{entity.name}</span>
+                    <span style={styles.entityCoords}>
+                      ({Math.round(entity.coordinates?.x || 0)}, {Math.round(entity.coordinates?.y || 0)})
+                    </span>
                   </div>
-                ))
-              )}
-              {planeEntities.length > 10 && (
-                <div style={{ color: '#666', fontSize: '11px', marginTop: '4px' }}>
-                  ...and {planeEntities.length - 10} more
-                </div>
-              )}
-            </div>
+                ))}
+                {planeEntities.length > 15 && (
+                  <div style={{ ...styles.emptyText, marginTop: '4px' }}>
+                    +{planeEntities.length - 15} more
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* New Region Modal */}
       {showNewRegionModal && (
         <div style={styles.modal} onClick={() => setShowNewRegionModal(false)}>
           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
             <div style={styles.modalTitle}>Add Region to {selectedKind?.name}</div>
-            <input
-              style={styles.input}
-              placeholder="Region label"
-              value={newRegion.label}
-              onChange={e => setNewRegion({ ...newRegion, label: e.target.value })}
-              autoFocus
-            />
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Label</label>
+              <input
+                style={styles.input}
+                placeholder="Region name"
+                value={newRegion.label}
+                onChange={e => setNewRegion({ ...newRegion, label: e.target.value })}
+                autoFocus
+              />
+            </div>
+
             <div style={styles.inputRow}>
-              <div style={styles.inputGroup}>
-                <div style={styles.inputLabel}>Center X</div>
-                <input
-                  style={styles.input}
-                  type="number"
-                  value={newRegion.x}
-                  onChange={e => setNewRegion({ ...newRegion, x: e.target.value })}
-                />
+              <div style={styles.inputHalf}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Center X (0-100)</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newRegion.x}
+                    onChange={e => setNewRegion({ ...newRegion, x: e.target.value })}
+                  />
+                </div>
               </div>
-              <div style={styles.inputGroup}>
-                <div style={styles.inputLabel}>Center Y</div>
-                <input
-                  style={styles.input}
-                  type="number"
-                  value={newRegion.y}
-                  onChange={e => setNewRegion({ ...newRegion, y: e.target.value })}
-                />
-              </div>
-              <div style={styles.inputGroup}>
-                <div style={styles.inputLabel}>Radius</div>
-                <input
-                  style={styles.input}
-                  type="number"
-                  value={newRegion.radius}
-                  onChange={e => setNewRegion({ ...newRegion, radius: e.target.value })}
-                />
+              <div style={styles.inputHalf}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Center Y (0-100)</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newRegion.y}
+                    onChange={e => setNewRegion({ ...newRegion, y: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Radius</label>
+              <input
+                style={styles.input}
+                type="number"
+                min="1"
+                max="50"
+                value={newRegion.radius}
+                onChange={e => setNewRegion({ ...newRegion, radius: e.target.value })}
+              />
+            </div>
+
             <div style={styles.modalActions}>
-              <button style={styles.button} onClick={() => setShowNewRegionModal(false)}>Cancel</button>
-              <button style={styles.addButton} onClick={addRegion}>Add</button>
+              <button style={styles.button} onClick={() => setShowNewRegionModal(false)}>
+                Cancel
+              </button>
+              <button style={styles.addButton} onClick={addRegion}>
+                Add Region
+              </button>
             </div>
           </div>
         </div>
