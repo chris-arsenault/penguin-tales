@@ -1,36 +1,62 @@
-/* Arctic Color Palette */
+/* Unified Canonry Color Palette - Name Forge (Orange/Gold accent) */
 :root {
-  --arctic-deep: #0a1929;
-  --arctic-dark: #1e3a5f;
-  --arctic-mid: #2d4a6f;
-  --arctic-ice: #3b82f6;
-  --arctic-frost: #60a5fa;
-  --arctic-light: #93c5fd;
-  --gold-accent: #fbbf24;
-  --gold-dark: #f59e0b;
+  /* Backgrounds - brighter than before */
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #252535;
+  --bg-tertiary: #2d2d3d;
+  --bg-sidebar: #1a1a28;
+
+  /* Borders */
+  --border-color: #3d3d4d;
+  --border-light: #4d4d5d;
+
+  /* Text */
+  --text-color: #f0f0f0;
+  --text-secondary: #a0a0b0;
+  --text-muted: #707080;
+
+  /* Name Forge accent (orange/gold) */
+  --accent-color: #ffb366;
+  --accent-hover: #ffc080;
+
+  /* Legacy variable mappings for compatibility */
+  --arctic-deep: var(--bg-sidebar);
+  --arctic-dark: var(--bg-secondary);
+  --arctic-mid: var(--bg-tertiary);
+  --arctic-ice: var(--accent-color);
+  --arctic-frost: var(--text-secondary);
+  --arctic-light: var(--text-color);
+  --gold-accent: #ffb366;
+  --gold-dark: #ff9933;
 
   /* Consistent spacing scale */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 0.75rem;
-  --space-lg: 1rem;
-  --space-xl: 1.5rem;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
 
   /* Consistent font sizes */
-  --text-xs: 0.7rem;
-  --text-sm: 0.75rem;
-  --text-base: 0.85rem;
-  --text-lg: 0.95rem;
-  --text-xl: 1.1rem;
-  --text-2xl: 1.25rem;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-lg: 14px;
+  --text-xl: 16px;
+  --text-2xl: 20px;
 
   /* Component colors */
-  --card-bg: rgba(30, 58, 95, 0.4);
-  --card-border: rgba(59, 130, 246, 0.3);
-  --input-bg: rgba(30, 58, 95, 0.5);
-  --text-color: #ffffff;
-  --text-muted: var(--arctic-frost);
-  --border-color: rgba(59, 130, 246, 0.2);
+  --card-bg: var(--bg-secondary);
+  --card-border: var(--border-color);
+  --input-bg: var(--bg-tertiary);
+
+  /* Semantic colors */
+  --danger: #ff6b7a;
+  --success: #66ddb3;
+  --warning: #ffcc66;
+
+  /* Buttons */
+  --button-primary: #5588ee;
+  --button-primary-hover: #6699ff;
 }
 
 /* Reset & Base */
@@ -45,7 +71,7 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: var(--text-base);
   line-height: 1.5;
-  background: var(--arctic-deep);
+  background: var(--bg-primary);
   color: var(--text-color);
 }
 
@@ -55,43 +81,18 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #0a1929 0%, #1a2332 50%, #0f1f3a 100%);
+  background: var(--bg-primary);
 }
 
 /* Header */
 .app-header {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    #021a2f 0%,
-    #031e35 25%,
-    var(--arctic-dark) 50%,
-    #031e35 75%,
-    #021a2f 100%
-  );
+  background: var(--bg-sidebar);
   padding: var(--space-md) var(--space-lg);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    inset 0 -1px 0 rgba(59, 130, 246, 0.2);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   overflow: hidden;
-}
-
-/* Subtle animated gradient overlay */
-.app-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(59, 130, 246, 0.08) 0%,
-    transparent 70%
-  );
-  pointer-events: none;
 }
 
 .header-content {
@@ -163,11 +164,10 @@ body {
   justify-content: center;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
-  background: var(--arctic-deep);
+  background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   font-size: var(--text-xs);
-  color: var(--arctic-frost);
-  opacity: 0.6;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -203,7 +203,7 @@ body {
   width: 240px;
   min-width: 240px;
   max-width: 240px;
-  background: rgba(30, 58, 95, 0.5);
+  background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -218,7 +218,7 @@ body {
   padding: var(--space-lg);
   overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(10, 25, 41, 0.4);
+  background: var(--bg-primary);
 }
 
 .main-content > div {
@@ -238,7 +238,7 @@ body {
   min-width: 220px;
   max-width: 220px;
   border-right: 1px solid var(--border-color);
-  background: rgba(30, 58, 95, 0.2);
+  background: var(--bg-sidebar);
   overflow-y: auto;
 }
 
@@ -253,7 +253,7 @@ body {
   width: 320px;
   min-width: 320px;
   max-width: 320px;
-  background: rgba(30, 58, 95, 0.5);
+  background: var(--bg-sidebar);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
 }
