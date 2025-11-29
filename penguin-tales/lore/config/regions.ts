@@ -289,8 +289,7 @@ const locationMapConfig: EntityKindMapConfig = {
 
 /**
  * NPC map - where NPCs are located.
- * NPCs inherit location regions, so no seed regions needed.
- * Emergent regions form when NPC groups cluster in new areas.
+ * Seed regions mirror location regions so culture placement works.
  */
 const npcMapConfig: EntityKindMapConfig = {
   entityKind: 'npc',
@@ -304,13 +303,19 @@ const npcMapConfig: EntityKindMapConfig = {
     minDistanceFromExisting: 8,
     defaultRadius: 8
   },
-  // NPCs use the same geographic space as locations but track their own clusters
-  seedRegions: []
+  seedRegions: [
+    { ...auroraBergRegion, id: 'aurora_berg' },
+    { ...auroraStackRegion, id: 'aurora_stack' },
+    { ...nightfallShelfRegion, id: 'nightfall_shelf' },
+    { ...windwardRidgeRegion, id: 'windward_ridge' },
+    { ...krillShoalsRegion, id: 'krill_shoals' },
+    { ...glowFissureRegion, id: 'glow_fissure' }
+  ]
 };
 
 /**
  * Faction map - spheres of influence.
- * No seed regions - factions create emergent influence zones.
+ * Seed regions mirror location regions so culture placement works.
  */
 const factionMapConfig: EntityKindMapConfig = {
   entityKind: 'faction',
@@ -323,12 +328,19 @@ const factionMapConfig: EntityKindMapConfig = {
     defaultRadius: 15,
     maxAttempts: 30
   },
-  seedRegions: []
+  seedRegions: [
+    { ...auroraBergRegion, id: 'aurora_berg' },
+    { ...auroraStackRegion, id: 'aurora_stack' },
+    { ...nightfallShelfRegion, id: 'nightfall_shelf' },
+    { ...windwardRidgeRegion, id: 'windward_ridge' },
+    { ...krillShoalsRegion, id: 'krill_shoals' },
+    { ...glowFissureRegion, id: 'glow_fissure' }
+  ]
 };
 
 /**
  * Rules map - abstract domains of governance.
- * Represents conceptual domains like "trade", "justice", "tradition".
+ * Seed regions mirror location regions so culture placement works.
  */
 const rulesMapConfig: EntityKindMapConfig = {
   entityKind: 'rules',
@@ -342,12 +354,19 @@ const rulesMapConfig: EntityKindMapConfig = {
     defaultRadius: 12,
     maxAttempts: 20
   },
-  seedRegions: []
+  seedRegions: [
+    { ...auroraBergRegion, id: 'aurora_berg' },
+    { ...auroraStackRegion, id: 'aurora_stack' },
+    { ...nightfallShelfRegion, id: 'nightfall_shelf' },
+    { ...windwardRidgeRegion, id: 'windward_ridge' },
+    { ...krillShoalsRegion, id: 'krill_shoals' },
+    { ...glowFissureRegion, id: 'glow_fissure' }
+  ]
 };
 
 /**
  * Abilities map - conceptual space of powers.
- * Represents domains like "ice magic", "navigation", "combat".
+ * Seed regions mirror location regions so culture placement works.
  */
 const abilitiesMapConfig: EntityKindMapConfig = {
   entityKind: 'abilities',
@@ -361,7 +380,14 @@ const abilitiesMapConfig: EntityKindMapConfig = {
     defaultRadius: 10,
     maxAttempts: 20
   },
-  seedRegions: []
+  seedRegions: [
+    { ...auroraBergRegion, id: 'aurora_berg' },
+    { ...auroraStackRegion, id: 'aurora_stack' },
+    { ...nightfallShelfRegion, id: 'nightfall_shelf' },
+    { ...windwardRidgeRegion, id: 'windward_ridge' },
+    { ...krillShoalsRegion, id: 'krill_shoals' },
+    { ...glowFissureRegion, id: 'glow_fissure' }
+  ]
 };
 
 /**
