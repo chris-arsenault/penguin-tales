@@ -351,29 +351,24 @@ export class CoordinateContext {
     kind: string,
     context: PlacementContext,
     existingPoints: Point[] = [],
-    minDistance: number = 5
+    minDistance: number = 5,
+    options: { enableNonRegionPlacement?: boolean } = {}
   ): Point | null {
+    const { enableNonRegionPlacement = false } = options;
     const mapper = this.kindRegionService.getMapper(kind);
 
-    // If culture specified, try to sample from seed regions
-    // NOTE: Seed regions must be defined for EACH entity kind in the domain's
-    // kindRegionConfig. Each kind has its own region map - there is no sharing
-    // of regions across kinds. If seedRegionIds refer to regions that don't
-    // exist for this kind, they will be skipped and fallback to other placement.
+    // Try to sample from seed regions
     if (context.cultureId && context.seedRegionIds && context.seedRegionIds.length > 0) {
-      // Shuffle seed regions for variety
       const shuffledSeeds = [...context.seedRegionIds].sort(() => Math.random() - 0.5);
 
       for (const seedRegionId of shuffledSeeds) {
-        // Look up seed region in THIS kind's mapper
         const region = mapper.getRegion(seedRegionId);
         if (!region) continue;
 
-        // Sample within this region
         const point = mapper.sampleRegion(seedRegionId, {
           avoid: existingPoints,
           minDistance,
-          centerBias: 0.3 // Slight bias toward center
+          centerBias: 0.3
         });
 
         if (point && this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
@@ -382,7 +377,34 @@ export class CoordinateContext {
       }
     }
 
-    // If reference entity provided, place nearby
+    // Try any region of this kind
+    const allRegions = mapper.getAllRegions();
+    for (const region of allRegions.sort(() => Math.random() - 0.5)) {
+      const point = mapper.sampleRegion(region.id, {
+        avoid: existingPoints,
+        minDistance
+      });
+
+      if (point && this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
+        return point;
+      }
+    }
+
+    // No region placement available - fail unless fallback explicitly enabled
+    if (!enableNonRegionPlacement) {
+      throw new Error(
+        `[CoordinateContext] No regions configured for kind '${kind}'. ` +
+        `Culture '${context.cultureId ?? 'none'}' seed regions: [${context.seedRegionIds?.join(', ') ?? 'none'}]. ` +
+        `Configure regions in kindRegionConfig['${kind}'] or set enableNonRegionPlacement=true.`
+      );
+    }
+
+    // FALLBACK (explicitly enabled): Reference entity proximity
+    console.warn(
+      `[CoordinateContext] FALLBACK (enableNonRegionPlacement=true): ` +
+      `Using non-region placement for '${kind}'. This is likely a contract violation.`
+    );
+
     if (context.referenceEntity?.coordinates) {
       const ref = context.referenceEntity.coordinates;
       const maxAttempts = 50;
@@ -403,20 +425,7 @@ export class CoordinateContext {
       }
     }
 
-    // Fallback: sample from any region of this kind
-    const allRegions = mapper.getAllRegions();
-    for (const region of allRegions.sort(() => Math.random() - 0.5)) {
-      const point = mapper.sampleRegion(region.id, {
-        avoid: existingPoints,
-        minDistance
-      });
-
-      if (point && this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
-        return point;
-      }
-    }
-
-    // Ultimate fallback: random point in space
+    // Ultimate fallback: random coordinates
     return {
       x: 10 + Math.random() * 80,
       y: 10 + Math.random() * 80,
