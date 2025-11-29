@@ -1,7 +1,7 @@
-import { MetaEntityConfig } from '@lore-weave/core/types/engine';
-import { Graph } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { MetaEntityConfig } from '@lore-weave/core';
+import { Graph } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom, slugifyName, hasTag } from '@lore-weave/core';
 
 /**
  * Magic School Formation Configuration
@@ -66,11 +66,11 @@ export const magicSchoolFormation: MetaEntityConfig = {
     // Aggregate tags from cluster
     const allTags = new Set<string>();
     cluster.forEach(ability => {
-      (ability.tags || []).forEach(tag => allTags.add(tag));
+      Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
     });
 
     // Take top 4 most common tags (save room for meta-entity tag)
-    const tags = Array.from(allTags).slice(0, 4);
+    const tagArray = Array.from(allTags).slice(0, 4);
 
     // Build description
     const abilityNames = cluster.map(a => a.name).join(', ');
@@ -101,6 +101,11 @@ export const magicSchoolFormation: MetaEntityConfig = {
       }
     });
 
+    // Convert to tag object
+    const tags: Record<string, boolean> = {};
+    tagArray.forEach(tag => tags[tag] = true);
+    tags['meta-entity'] = true;
+
     // Create an ABILITY that represents the school
     // It functions as an ability in all existing systems
     return {
@@ -111,7 +116,7 @@ export const magicSchoolFormation: MetaEntityConfig = {
       status: 'active',
       prominence,
       culture: majorityCulture,  // Inherit dominant culture from cluster
-      tags: [...tags, 'meta-entity']  // Mark as meta-entity via tag
+      tags  // Mark as meta-entity via tag
     };
   }
 };
@@ -142,8 +147,8 @@ export const legalCodeFormation: MetaEntityConfig = {
     markOriginalsHistorical: true,   // Individual laws become historical when unified into code
     transferRelationships: true,      // Transfer enacted_by, etc. to legal code
     redirectFutureRelationships: true, // Future enforcement targets the code
-    preserveOriginalLinks: true,      // Keep part_of links for lore
-    createGovernanceFaction: true     // NEW: Create faction:political to govern the code
+    preserveOriginalLinks: true       // Keep part_of links for lore
+    // NOTE: Governance faction creation is handled by domain's legalCodeFormation SimulationSystem
   },
 
   factory: (cluster: HardState[], graph: Graph): Partial<HardState> => {
@@ -181,9 +186,9 @@ export const legalCodeFormation: MetaEntityConfig = {
     // Aggregate tags
     const allTags = new Set<string>();
     cluster.forEach(rule => {
-      (rule.tags || []).forEach(tag => allTags.add(tag));
+      Object.keys(rule.tags || {}).forEach(tag => allTags.add(tag));
     });
-    const tags = Array.from(allTags).slice(0, 4);  // Save room for meta-entity tag
+    const tagArray = Array.from(allTags).slice(0, 4);  // Save room for meta-entity tag
 
     // Build description
     const ruleNames = cluster.map(r => r.name).join(', ');
@@ -214,6 +219,11 @@ export const legalCodeFormation: MetaEntityConfig = {
       }
     });
 
+    // Convert to tag object
+    const tags: Record<string, boolean> = {};
+    tagArray.forEach(tag => tags[tag] = true);
+    tags['meta-entity'] = true;
+
     // Create a RULE that represents the legal code
     // It functions as a rule in all existing systems
     return {
@@ -224,7 +234,7 @@ export const legalCodeFormation: MetaEntityConfig = {
       status: 'enacted',
       prominence,
       culture: majorityCulture,  // Inherit dominant culture from cluster
-      tags: [...tags, 'meta-entity']  // Mark as meta-entity via tag
+      tags  // Mark as meta-entity via tag
     };
   }
 };
@@ -297,9 +307,9 @@ export const combatTechniqueFormation: MetaEntityConfig = {
     // Aggregate tags
     const allTags = new Set<string>();
     combatAbilities.forEach(ability => {
-      (ability.tags || []).forEach(tag => allTags.add(tag));
+      Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
     });
-    const tags = Array.from(allTags).slice(0, 4);
+    const tagArray = Array.from(allTags).slice(0, 4);
 
     // Build description
     const techniqueNames = combatAbilities.map(a => a.name).join(', ');
@@ -330,6 +340,12 @@ export const combatTechniqueFormation: MetaEntityConfig = {
       }
     });
 
+    // Convert to tag object
+    const tags: Record<string, boolean> = {};
+    tagArray.forEach(tag => tags[tag] = true);
+    tags['meta-entity'] = true;
+    tags['combat-style'] = true;
+
     return {
       kind: 'abilities',
       subtype: majoritySubtype,
@@ -338,7 +354,7 @@ export const combatTechniqueFormation: MetaEntityConfig = {
       status: 'active',
       prominence,
       culture: majorityCulture,  // Inherit dominant culture from cluster
-      tags: [...tags, 'meta-entity', 'combat-style']
+      tags
     };
   }
 };

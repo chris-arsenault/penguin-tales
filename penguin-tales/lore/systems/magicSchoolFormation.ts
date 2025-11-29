@@ -8,29 +8,17 @@
  *         10 NPCs × 1 school = rich history
  */
 
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  pickRandom,
-  addEntity,
-  generateId
-} from '@lore-weave/core/utils/helpers';
-import {
-  detectClusters,
-  filterClusterableEntities,
-  ClusterConfig
-} from '@lore-weave/core/utils/clusteringUtils';
-import {
-  archiveEntities,
-  transferRelationships,
-  createPartOfRelationships
-} from '@lore-weave/core/utils/entityArchival';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPrimitives';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, generateId, hasTag } from '@lore-weave/core';
+import { detectClusters, filterClusterableEntities, ClusterConfig } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { TargetSelector } from '@lore-weave/core';
+import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core';
 
 /**
  * Clustering configuration for magic schools
+ * Culture is weighted heavily - magic traditions are culturally bound
  */
 const MAGIC_SCHOOL_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 3,
@@ -41,6 +29,10 @@ const MAGIC_SCHOOL_CLUSTER_CONFIG: ClusterConfig = {
       weight: 5.0,
       relationshipKind: 'practitioner_of',
       direction: 'dst'
+    },
+    {
+      type: 'same_culture',
+      weight: 4.0  // Strong cultural affinity - magic traditions are culturally bound
     },
     {
       type: 'shared_tags',
@@ -77,7 +69,7 @@ function generateSchoolName(majoritySubtype: string, clusterSize: number): strin
 /**
  * Create a meta-entity ability from a cluster
  */
-function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createSchoolEntity(cluster: HardState[], graphView: TemplateGraphView): Partial<HardState> {
   // Determine school subtype from cluster majority
   const subtypeCounts = new Map<string, number>();
   cluster.forEach(ability => {
@@ -101,9 +93,9 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
   // Aggregate tags from cluster (top 4 to leave room for meta-entity tag)
   const allTags = new Set<string>();
   cluster.forEach(ability => {
-    (ability.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const abilityNames = cluster.map(a => a.name).join(', ');
@@ -134,6 +126,25 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+
+  // Derive coordinates from cluster entities using culture-aware placement
+  const schoolPlacement = graphView.deriveCoordinatesWithCulture(
+    majorityCulture,
+    'abilities',
+    cluster
+  );
+  if (!schoolPlacement) {
+    throw new Error(
+      `magic_school_formation: Failed to derive coordinates for magic school "${schoolName}". ` +
+      `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    );
+  }
+  const coords = schoolPlacement.coordinates;
+
   return {
     kind: 'abilities',
     subtype: majoritySubtype,
@@ -142,7 +153,8 @@ function createSchoolEntity(cluster: HardState[], graph: Graph): Partial<HardSta
     status: 'active',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity']
+    tags,
+    coordinates: coords
   };
 }
 
@@ -201,10 +213,10 @@ export const magicSchoolFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
-    const epochLength = graph.config.epochLength || 20;
-    if (graph.tick % epochLength !== 0) {
+    const epochLength = graphView.config.epochLength || 20;
+    if (graphView.tick % epochLength !== 0) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -212,10 +224,6 @@ export const magicSchoolFormation: SimulationSystem = {
         description: 'Not epoch end, skipping magic school formation'
       };
     }
-
-    // Create graph view for clustering
-    const targetSelector = new TargetSelector();
-    const graphView = new TemplateGraphView(graph, targetSelector);
 
     // Find magic abilities eligible for clustering (exclude combat subtypes for combat system)
     const allAbilities = graphView.findEntities({ kind: 'abilities' });
@@ -243,16 +251,15 @@ export const magicSchoolFormation: SimulationSystem = {
       if (cluster.score < MAGIC_SCHOOL_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the school entity
-      const schoolPartial = createSchoolEntity(cluster.entities, graph);
-      const schoolId = addEntity(graph, schoolPartial);
+      const schoolPartial = createSchoolEntity(cluster.entities, graphView);
+      const schoolId = await graphView.addEntity(schoolPartial);
       entitiesCreated.push(schoolId);
 
       // Get cluster entity IDs
       const clusterIds = cluster.entities.map(e => e.id);
 
       // Transfer relationships from cluster to school
-      transferRelationships(
-        graph,
+      graphView.transferRelationships(
         clusterIds,
         schoolId,
         {
@@ -262,7 +269,7 @@ export const magicSchoolFormation: SimulationSystem = {
       );
 
       // Create part_of relationships
-      createPartOfRelationships(graph, clusterIds, schoolId);
+      graphView.createPartOfRelationships(clusterIds, schoolId);
       clusterIds.forEach(id => {
         relationshipsAdded.push({
           kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
@@ -272,8 +279,7 @@ export const magicSchoolFormation: SimulationSystem = {
       });
 
       // Archive original abilities
-      archiveEntities(
-        graph,
+      graphView.archiveEntities(
         clusterIds,
         {
           archiveRelationships: false, // Already handled by transfer
@@ -292,9 +298,9 @@ export const magicSchoolFormation: SimulationSystem = {
 
     // Record in history
     if (entitiesCreated.length > 0) {
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: `${entitiesCreated.length} magic schools formed from ${entitiesModified.length} abilities`,
         entitiesCreated,

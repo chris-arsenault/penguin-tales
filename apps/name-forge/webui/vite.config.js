@@ -10,7 +10,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@lib': resolve(__dirname, '../lib'),
-      '@validation': resolve(__dirname, '../validation'),
     },
   },
   optimizeDeps: {

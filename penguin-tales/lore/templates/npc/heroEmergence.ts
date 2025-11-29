@@ -1,8 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
-import { EntityClusterBuilder } from '@lore-weave/core/utils/entityClusterBuilder';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -86,7 +85,7 @@ export const heroEmergence: GrowthTemplate = {
     return colonies.filter(c => c.status === 'thriving' || c.status === 'waning');
   },
 
-  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+  expand: async (graphView: TemplateGraphView, target?: HardState): Promise<TemplateResult> => {
     const colony = target || pickRandom(
       graphView.findEntities({ kind: 'location', subtype: 'colony' })
     );
@@ -100,27 +99,65 @@ export const heroEmergence: GrowthTemplate = {
       };
     }
 
-    const hero: Partial<HardState> = {
+    // Region-based placement within colony's region is REQUIRED
+    if (!graphView.hasRegionSystem()) {
+      throw new Error(
+        `hero_emergence: Region system is not configured. ` +
+        `Cannot place hero without spatial coordinates.`
+      );
+    }
+
+    // Place hero near the colony using culture-aware placement
+    const cultureId = colony.culture ?? 'default';
+    const placementResult = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'npc',
+      [colony]
+    );
+
+    if (!placementResult) {
+      throw new Error(
+        `hero_emergence: Failed to derive coordinates for hero near colony "${colony.name}". ` +
+        `Ensure coordinate system is properly configured for 'npc' entities.`
+      );
+    }
+
+    const entityId = await graphView.addEntity({
       kind: 'npc',
       subtype: 'hero',
       description: `A brave penguin who emerged during troubled times in ${colony.name}`,
       status: 'alive',
-      prominence: 'marginal', // Heroes start marginal, must earn prominence
-      culture: colony.culture,  // Inherit culture from home colony
-      tags: ['brave', 'emergent']
-    };
+      prominence: 'marginal',
+      culture: colony.culture,
+      tags: { brave: true, emergent: true },
+      coordinates: placementResult.coordinates
+    });
 
-    // Use EntityClusterBuilder for cleaner relationship creation
-    const cluster = new EntityClusterBuilder()
-      .addEntity(hero)
-      .relateToExisting(0, colony.id, 'resident_of');
+    if (!entityId) {
+      throw new Error(
+        `hero_emergence: Failed to create hero entity. ` +
+        `Entity creation unexpectedly returned no ID.`
+      );
+    }
+
+    const relationships: any[] = [
+      { kind: 'resident_of', src: entityId, dst: colony.id }
+    ];
 
     // Add ability practice relationship if abilities exist
     const abilities = graphView.findEntities({ kind: 'abilities' });
     if (abilities.length > 0) {
-      cluster.relateToExisting(0, pickRandom(abilities).id, 'practitioner_of');
+      relationships.push({
+        kind: 'practitioner_of',
+        src: entityId,
+        dst: pickRandom(abilities).id
+      });
     }
 
-    return cluster.buildWithDescription(`A new hero emerges in ${colony.name}`);
+    return {
+      entities: [],  // Already added via addEntityInRegion
+      relationships,
+      description: `A new hero emerges in ${colony.name}`
+    };
   }
 };

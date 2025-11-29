@@ -1,12 +1,10 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
 import {
-  findEntities,
-  getFactionMembers,
   getProminenceValue,
-  adjustProminence,
-  getRelated
-} from '@lore-weave/core/utils/helpers';
+  adjustProminence
+} from '@lore-weave/core';
 
 /**
  * Prominence Evolution System
@@ -111,7 +109,7 @@ export const prominenceEvolution: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = prominenceEvolution.metadata?.parameters || {};
     const npcGainChance = params.npcGainChance?.value ?? 0.3;
     const npcDecayChance = params.npcDecayChance?.value ?? 0.7;
@@ -125,10 +123,10 @@ export const prominenceEvolution: SimulationSystem = {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
 
     // NPCs: Prominence based on catalyzed events (agency and impact)
-    const npcs = findEntities(graph, { kind: 'npc' });
+    const npcs = graphView.findEntities({ kind: 'npc' });
 
     npcs.forEach(npc => {
-      const relationships = graph.relationships.filter(r =>
+      const relationships = graphView.getAllRelationships().filter(r =>
         r.src === npc.id || r.dst === npc.id
       );
 
@@ -174,11 +172,11 @@ export const prominenceEvolution: SimulationSystem = {
     });
 
     // Factions: Gain prominence through membership
-    const factions = findEntities(graph, { kind: 'faction' });
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     factions.forEach(faction => {
       // Only core members (>= 0.6 strength) contribute to faction prominence
-      const coreMembers = getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.6 });
+      const coreMembers = graphView.getRelated(faction.id, 'member_of', 'dst', { minStrength: 0.6 });
       const memberProminence = coreMembers.reduce((sum, m) =>
         sum + getProminenceValue(m.prominence), 0
       );
@@ -194,10 +192,10 @@ export const prominenceEvolution: SimulationSystem = {
     });
 
     // Locations: Gain prominence through connections and occupancy
-    const locations = findEntities(graph, { kind: 'location' });
+    const locations = graphView.findEntities({ kind: 'location' });
 
     locations.forEach(location => {
-      const relationships = graph.relationships.filter(r =>
+      const relationships = graphView.getAllRelationships().filter(r =>
         r.src === location.id || r.dst === location.id
       );
       const connectionScore = relationships.length;
@@ -226,10 +224,10 @@ export const prominenceEvolution: SimulationSystem = {
     });
 
     // Abilities: Gain prominence through practitioners
-    const abilities = findEntities(graph, { kind: 'abilities' });
+    const abilities = graphView.findEntities({ kind: 'abilities' });
 
     abilities.forEach(ability => {
-      const practitioners = graph.relationships.filter(r =>
+      const practitioners = graphView.getAllRelationships().filter(r =>
         r.kind === 'practitioner_of' && r.dst === ability.id
       );
       const currentProminence = getProminenceValue(ability.prominence);
@@ -252,10 +250,10 @@ export const prominenceEvolution: SimulationSystem = {
     });
 
     // Rules: Gain prominence through commemorations and enactment
-    const rules = findEntities(graph, { kind: 'rules' });
+    const rules = graphView.findEntities({ kind: 'rules' });
 
     rules.forEach(rule => {
-      const connections = graph.relationships.filter(r =>
+      const connections = graphView.getAllRelationships().filter(r =>
         r.src === rule.id || r.dst === rule.id
       );
       const currentProminence = getProminenceValue(rule.prominence);

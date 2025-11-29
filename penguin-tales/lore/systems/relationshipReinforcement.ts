@@ -1,5 +1,5 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { getLocation, getRelated, modifyRelationshipStrength } from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
 
 /**
  * Relationship Reinforcement System
@@ -89,7 +89,7 @@ export const relationshipReinforcement: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = relationshipReinforcement.metadata?.parameters || {};
 
     const structuralBonus = (params.structuralBonus?.value ?? 0.02) * modifier;
@@ -105,14 +105,14 @@ export const relationshipReinforcement: SimulationSystem = {
 
     let modificationsCount = 0;
 
-    graph.relationships.forEach(rel => {
+    graphView.getAllRelationships().forEach(rel => {
       const currentStrength = rel.strength ?? 0.5;
 
       // Skip if already at cap
       if (currentStrength >= reinforcementCap) return;
 
-      const srcEntity = graph.entities.get(rel.src);
-      const dstEntity = graph.entities.get(rel.dst);
+      const srcEntity = graphView.getEntity(rel.src);
+      const dstEntity = graphView.getEntity(rel.dst);
 
       if (!srcEntity || !dstEntity) return;
 
@@ -129,8 +129,8 @@ export const relationshipReinforcement: SimulationSystem = {
 
       // Proximity bonus: same location (for social relationships)
       if (!isSpatial) {
-        const srcLocation = getLocation(graph, rel.src);
-        const dstLocation = getLocation(graph, rel.dst);
+        const srcLocation = graphView.getLocation(rel.src);
+        const dstLocation = graphView.getLocation(rel.dst);
         if (srcLocation && dstLocation && srcLocation.id === dstLocation.id) {
           totalBonus += proximityBonus;
         }
@@ -138,8 +138,8 @@ export const relationshipReinforcement: SimulationSystem = {
 
       // Shared faction bonus (for social relationships)
       if (!isSpatial) {
-        const srcFactions = getRelated(graph, rel.src, 'member_of', 'src');
-        const dstFactions = getRelated(graph, rel.dst, 'member_of', 'src');
+        const srcFactions = graphView.getRelated(rel.src, 'member_of', 'src');
+        const dstFactions = graphView.getRelated(rel.dst, 'member_of', 'src');
         if (srcFactions.some(f => dstFactions.some(df => df.id === f.id))) {
           totalBonus += sharedFactionBonus;
         }
@@ -147,8 +147,8 @@ export const relationshipReinforcement: SimulationSystem = {
 
       // Shared conflict bonus (both have enemy_of to same target)
       if (!isSpatial) {
-        const srcEnemies = getRelated(graph, rel.src, 'enemy_of', 'src');
-        const dstEnemies = getRelated(graph, rel.dst, 'enemy_of', 'src');
+        const srcEnemies = graphView.getRelated(rel.src, 'enemy_of', 'src');
+        const dstEnemies = graphView.getRelated(rel.dst, 'enemy_of', 'src');
         if (srcEnemies.some(e => dstEnemies.some(de => de.id === e.id))) {
           totalBonus += sharedConflictBonus;
         }

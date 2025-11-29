@@ -1,6 +1,6 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
 
 /**
  * Trade Route Establishment Template

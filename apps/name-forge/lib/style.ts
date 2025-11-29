@@ -24,35 +24,53 @@ export function applyStyle(
   const hyphenRate = style.hyphenRate ?? 0;
   const capitalization = style.capitalization ?? "title";
 
-  // 1. Apply apostrophes
-  if (
-    apostropheRate > 0 &&
-    chance(rng, apostropheRate) &&
-    syllables &&
-    syllables.length > 1
-  ) {
+  // Determine which markers to insert
+  const wantApostrophe = apostropheRate > 0 && chance(rng, apostropheRate);
+  const wantHyphen = hyphenRate > 0 && chance(rng, hyphenRate);
+
+  // Insert markers at syllable boundaries (avoiding adjacent placement)
+  if ((wantApostrophe || wantHyphen) && syllables && syllables.length > 1) {
     const boundaries = findSyllableBoundaries(result, syllables);
+
     if (boundaries.length > 0) {
-      result = insertAtBoundary(result, "'", boundaries, rng);
-      transforms.push("apostrophe");
+      if (wantApostrophe && wantHyphen) {
+        // Both wanted - place at different boundaries if possible
+        if (boundaries.length >= 2) {
+          // Multiple boundaries: pick two different ones
+          const shuffled = [...boundaries].sort(() => rng() - 0.5);
+          const apoIdx = shuffled[0];
+          const hypIdx = shuffled[1];
+
+          // Insert at higher index first to preserve positions
+          if (apoIdx > hypIdx) {
+            result = result.slice(0, apoIdx) + "'" + result.slice(apoIdx);
+            result = result.slice(0, hypIdx) + "-" + result.slice(hypIdx);
+          } else {
+            result = result.slice(0, hypIdx) + "-" + result.slice(hypIdx);
+            result = result.slice(0, apoIdx) + "'" + result.slice(apoIdx);
+          }
+          transforms.push("apostrophe", "hyphen");
+        } else {
+          // Only one boundary: randomly pick one marker
+          if (rng() < 0.5) {
+            result = insertAtBoundary(result, "'", boundaries, rng);
+            transforms.push("apostrophe");
+          } else {
+            result = insertAtBoundary(result, "-", boundaries, rng);
+            transforms.push("hyphen");
+          }
+        }
+      } else if (wantApostrophe) {
+        result = insertAtBoundary(result, "'", boundaries, rng);
+        transforms.push("apostrophe");
+      } else if (wantHyphen) {
+        result = insertAtBoundary(result, "-", boundaries, rng);
+        transforms.push("hyphen");
+      }
     }
   }
 
-  // 2. Apply hyphens
-  if (
-    hyphenRate > 0 &&
-    chance(rng, hyphenRate) &&
-    syllables &&
-    syllables.length > 1
-  ) {
-    const boundaries = findSyllableBoundaries(result, syllables);
-    if (boundaries.length > 0) {
-      result = insertAtBoundary(result, "-", boundaries, rng);
-      transforms.push("hyphen");
-    }
-  }
-
-  // 3. Apply capitalization
+  // Apply capitalization
   result = applyCapitalization(result, capitalization);
   transforms.push(`cap:${capitalization}`);
 

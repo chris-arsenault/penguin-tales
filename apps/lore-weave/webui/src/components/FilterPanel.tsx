@@ -22,6 +22,19 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
 
   const [isRelTypesExpanded, setIsRelTypesExpanded] = useState(false);
 
+  // Get entity kinds and prominence levels from uiSchema (with fallbacks for older data)
+  const entityKindSchemas = worldData.uiSchema?.entityKinds ?? [];
+  const entityKinds: EntityKind[] = entityKindSchemas.length > 0
+    ? entityKindSchemas.map(ek => ek.kind)
+    : ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
+  const prominenceLevels: Prominence[] = worldData.uiSchema?.prominenceLevels
+    ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+
+  // Build a map from kind to display name
+  const kindDisplayNames = Object.fromEntries(
+    entityKindSchemas.map(ek => [ek.kind, ek.displayName])
+  );
+
   const toggleKind = (kind: EntityKind) => {
     const kinds = filters.kinds.includes(kind)
       ? filters.kinds.filter(k => k !== kind)
@@ -58,9 +71,6 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
     onChange({ ...filters, relationshipTypes });
   };
 
-  const entityKinds: EntityKind[] = ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
-  const prominenceLevels: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-
   return (
     <div className="filter-panel">
       <div>
@@ -93,7 +103,7 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
                 checked={filters.kinds.includes(kind)}
                 onChange={() => toggleKind(kind)}
               />
-              <span>{kind}</span>
+              <span>{kindDisplayNames[kind] ?? kind}</span>
             </label>
           ))}
         </div>
@@ -282,7 +292,7 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
       <button
         onClick={() => onChange({
           kinds: entityKinds,
-          minProminence: 'forgotten',
+          minProminence: prominenceLevels[0] ?? 'forgotten',
           timeRange: [0, maxTick],
           tags: [],
           searchQuery: '',

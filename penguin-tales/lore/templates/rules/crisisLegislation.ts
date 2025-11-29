@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, slugifyName } from '@lore-weave/core';
 
 /**
  * Crisis Legislation Template
@@ -71,6 +71,15 @@ export const crisisLegislation: GrowthTemplate = {
   
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
     const colony = target || pickRandom(graphView.findEntities({ kind: 'location', subtype: 'colony' }));
+
+    if (!colony) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Cannot enact crisis legislation - no colonies exist'
+      };
+    }
+
     const ruleType = pickRandom(['edict', 'taboo', 'social']);
 
     // Find existing rules in same location to establish lineage
@@ -101,7 +110,28 @@ export const crisisLegislation: GrowthTemplate = {
       }
     }
 
-    const ruleName = `${colony.name} ${pickRandom(['Protection', 'Rationing', 'Defense'])} ${ruleType}`;
+    // Derive coordinates in conceptual space - rules exist near the colony they apply to
+    const referenceEntities: HardState[] = [colony];
+    if (relatedRule) {
+      referenceEntities.push(relatedRule);
+    }
+
+    const cultureId = colony.culture ?? 'default';
+    const rulePlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'rules',
+      referenceEntities
+    );
+
+    if (!rulePlacement) {
+      throw new Error(
+        `crisis_legislation: Failed to derive coordinates for rule in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'rules' entities.`
+      );
+    }
+
+    const conceptualCoords = rulePlacement.coordinates;
+
     const relationships: Relationship[] = [
       { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }
     ];
@@ -137,12 +167,12 @@ export const crisisLegislation: GrowthTemplate = {
       entities: [{
         kind: 'rules',
         subtype: ruleType,
-        name: ruleName,
         description: `Emergency measure enacted in ${colony.name}${lineageDesc}`,
         status: 'enacted',
         prominence: 'recognized',
         culture: colony.culture,  // Inherit culture from enacting colony
-        tags: ['crisis', 'emergency']
+        tags: { crisis: true, emergency: true },
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `New ${ruleType} enacted in ${colony.name}${lineageDesc}`

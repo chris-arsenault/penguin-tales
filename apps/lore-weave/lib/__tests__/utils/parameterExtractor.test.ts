@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { ParameterExtractor, extractParams } from '../../utils/parameterExtractor';
-import { ComponentMetadata } from '../../types/engine';
+import { ParameterExtractor, extractParams } from '../../engine/parameterExtractor';
+import { ComponentMetadata } from '../../engine/types';
 
 describe('ParameterExtractor', () => {
   describe('constructor', () => {

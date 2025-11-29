@@ -9,6 +9,7 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
   const [formData, setFormData] = useState({
     id: `${cultureId}_grammar`,
     start: 'name',
+    capitalization: '',
     rules: {}
   });
   const [newRuleKey, setNewRuleKey] = useState('');
@@ -112,6 +113,7 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
     setFormData({
       id: `${cultureId}_grammar`,
       start: 'name',
+      capitalization: '',
       rules: {}
     });
     setMode('edit');
@@ -171,6 +173,7 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
                     <strong>{grammar.id}</strong>
                     <div style={{ fontSize: '0.875rem', color: 'var(--arctic-frost)', marginTop: '0.25rem' }}>
                       Start: <code>{grammar.start}</code> • {Object.keys(grammar.rules || {}).length} rules
+                      {grammar.capitalization && <> • Case: <code>{grammar.capitalization}</code></>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -220,6 +223,28 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
           placeholder="e.g., name, phrase, title"
         />
         <small className="text-muted">The entry point for name generation</small>
+      </div>
+
+      <div className="form-group">
+        <label>Capitalization</label>
+        <select
+          value={formData.capitalization || ''}
+          onChange={(e) => setFormData({ ...formData, capitalization: e.target.value || undefined })}
+        >
+          <option value="">None</option>
+          <option value="titleWords">Each Word Capitalized</option>
+          <option value="title">First Letter Only</option>
+          <option value="allcaps">ALL CAPS</option>
+          <option value="lowercase">lowercase</option>
+          <option value="mixed">MiXeD (alternating)</option>
+        </select>
+        <small className="text-muted">
+          e.g., "king of north" → {formData.capitalization === 'titleWords' ? '"King Of North"' :
+            formData.capitalization === 'title' ? '"King of north"' :
+            formData.capitalization === 'allcaps' ? '"KING OF NORTH"' :
+            formData.capitalization === 'lowercase' ? '"king of north"' :
+            formData.capitalization === 'mixed' ? '"KiNg Of NoRtH"' : 'unchanged'}
+        </small>
       </div>
 
       <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>Production Rules</h4>
@@ -618,6 +643,17 @@ function GrammarHelpModal({ onClose }) {
             <li><code>context:key</code> - Related entity name</li>
             <li><code>^suffix</code> - Attach suffix (e.g., <code>^'s</code>)</li>
             <li><code>|</code> - Alternatives</li>
+          </ul>
+
+          <h4>Capitalization</h4>
+          <p style={{ fontSize: '0.875rem' }}>
+            Controls how the final generated name is formatted:
+          </p>
+          <ul style={{ fontSize: '0.875rem' }}>
+            <li><strong>Each Word Capitalized</strong> - "king of north" → "King Of North"</li>
+            <li><strong>First Letter Only</strong> - "king of north" → "King of north"</li>
+            <li><strong>ALL CAPS / lowercase</strong> - Force case</li>
+            <li><strong>MiXeD</strong> - "king of north" → "KiNg Of NoRtH"</li>
           </ul>
         </div>
       </div>

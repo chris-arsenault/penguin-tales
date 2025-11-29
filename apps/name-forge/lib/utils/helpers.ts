@@ -2,6 +2,25 @@
  * String manipulation helpers
  */
 
+// ============================================================================
+// Capitalization
+// ============================================================================
+
+/**
+ * Capitalization styles:
+ * - "title": First letter uppercase, rest lowercase (e.g., "Testname")
+ * - "titleWords": Each word capitalized (e.g., "King Of The North")
+ * - "allcaps": All uppercase (e.g., "TESTNAME")
+ * - "lowercase": All lowercase (e.g., "testname")
+ * - "mixed": Alternating case (e.g., "TeSt NaMe")
+ */
+export type Capitalization =
+  | "title"
+  | "titleWords"
+  | "allcaps"
+  | "lowercase"
+  | "mixed";
+
 /**
  * Capitalize first letter of a string
  */
@@ -11,42 +30,58 @@ export function capitalize(str: string): string {
 }
 
 /**
- * Convert string to title case
+ * Capitalize first letter of each word
  */
-export function titleCase(str: string): string {
+export function capitalizeWords(str: string): string {
   return str
-    .split(/\s+/)
-    .map((word) => capitalize(word.toLowerCase()))
-    .join(" ");
+    .split(/(\s+)/) // Split but keep whitespace
+    .map((part) => {
+      // Don't capitalize whitespace-only parts
+      if (/^\s+$/.test(part)) return part;
+      return capitalize(part.toLowerCase());
+    })
+    .join("");
 }
 
 /**
- * Apply capitalization style
+ * Alternating capitalization (e.g., "test name" → "TeSt NaMe")
+ */
+export function mixedCase(str: string): string {
+  let letterIndex = 0;
+  return str
+    .split("")
+    .map((char) => {
+      if (/[a-zA-Z]/.test(char)) {
+        const result = letterIndex % 2 === 0 ? char.toUpperCase() : char.toLowerCase();
+        letterIndex++;
+        return result;
+      }
+      return char;
+    })
+    .join("");
+}
+
+/**
+ * Apply capitalization style to a string
  */
 export function applyCapitalization(
   str: string,
-  style: "title" | "allcaps" | "mixed" | "lowercase"
+  style: Capitalization
 ): string {
   switch (style) {
     case "title":
       return capitalize(str.toLowerCase());
+    case "titleWords":
+      return capitalizeWords(str);
     case "allcaps":
       return str.toUpperCase();
     case "lowercase":
       return str.toLowerCase();
     case "mixed":
-      // Keep as-is for mixed case
-      return str;
+      return mixedCase(str);
     default:
       return str;
   }
-}
-
-/**
- * Check if a string contains a substring (case-insensitive)
- */
-export function containsIgnoreCase(str: string, substring: string): boolean {
-  return str.toLowerCase().includes(substring.toLowerCase());
 }
 
 /**
@@ -146,13 +181,6 @@ export function normalizeWeights(weights: number[]): number[] {
     return weights.map(() => 1 / weights.length);
   }
   return weights.map((w) => Math.max(0, w) / total);
-}
-
-/**
- * Clamp a number between min and max
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

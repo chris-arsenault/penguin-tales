@@ -1,6 +1,12 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
-import { HardState } from '../types/worldTypes';
-import { generateId } from '../utils/helpers';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
+import { HardState } from '../core/worldTypes';
+import { generateId } from '../utils';
+import {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_STATUS,
+  FRAMEWORK_RELATIONSHIP_KINDS
+} from '../core/frameworkPrimitives';
+import { TemplateGraphView } from '../graph/templateGraphView';
 
 /**
  * Era Spawner System
@@ -25,14 +31,14 @@ export const eraSpawner: SimulationSystem = {
     affects: {
       entities: [
         {
-          kind: 'era',
+          kind: FRAMEWORK_ENTITY_KINDS.ERA,
           operation: 'create',
           count: { min: 0, max: 10 }
         }
       ],
       relationships: [
         {
-          kind: 'supersedes',
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
           operation: 'create',
           count: { min: 0, max: 10 }
         }
@@ -78,12 +84,12 @@ export const eraSpawner: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = eraSpawner.metadata?.parameters || {};
     const ticksPerEra = params.ticksPerEra?.value ?? 30;
 
     // Check if era entities already exist
-    const existingEras = Array.from(graph.entities.values()).filter(e => e.kind === 'era');
+    const existingEras = graphView.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA });
 
     if (existingEras.length > 0) {
       // Eras already spawned - skip
@@ -96,7 +102,7 @@ export const eraSpawner: SimulationSystem = {
     }
 
     // Get eras from config
-    const configEras = graph.config.eras;
+    const configEras = graphView.config.eras;
     if (!configEras || configEras.length === 0) {
       return {
         relationshipsAdded: [],
@@ -116,20 +122,21 @@ export const eraSpawner: SimulationSystem = {
       const isFirst = i === 0;
 
       const eraEntity: HardState = {
-        id: generateId('era'),
-        kind: 'era',
+        id: generateId(FRAMEWORK_ENTITY_KINDS.ERA),
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
         subtype: configEra.id,
         name: configEra.name,
         description: configEra.description,
-        status: isFirst ? 'current' : 'future',
+        status: isFirst ? FRAMEWORK_STATUS.CURRENT : FRAMEWORK_STATUS.FUTURE,
         prominence: 'mythic',  // Eras are always mythic (world-defining)
         culture: 'world',  // Eras are world-level entities
-        tags: ['temporal', 'era', configEra.id],
+        tags: { temporal: true, era: true, eraId: configEra.id },
         links: [],
-        createdAt: graph.tick,
-        updatedAt: graph.tick,
+        createdAt: graphView.tick,
+        updatedAt: graphView.tick,
+        coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map
         temporal: isFirst ? {
-          startTick: graph.tick,
+          startTick: graphView.tick,
           endTick: null
         } : undefined
       };
@@ -140,35 +147,35 @@ export const eraSpawner: SimulationSystem = {
       if (previousEra) {
         // Distance = expected tick difference normalized to [0, 1]
         // For 30 ticks per era and 500 max ticks: distance = 30/500 = 0.06
-        const maxTicks = graph.config.maxTicks || 500;
+        const maxTicks = graphView.config.maxTicks || 500;
         const distance = Math.min(ticksPerEra / maxTicks, 0.5);
 
         relationshipsAdded.push({
-          kind: 'supersedes',
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
           src: eraEntity.id,
           dst: previousEra.id,
           strength: 1.0,
           distance: distance,
-          createdAt: graph.tick
+          createdAt: graphView.tick
         });
       }
 
       previousEra = eraEntity;
     }
 
-    // Add entities to graph
+    // Add entities to graph using TemplateGraphView method
     entitiesCreated.forEach(entity => {
-      graph.entities.set(entity.id, entity);
+      graphView.loadEntity(entity);
     });
 
     // Set currentEra reference to first era
     if (entitiesCreated.length > 0) {
-      graph.currentEra = configEras[0];
+      graphView.setCurrentEra(configEras[0]);
     }
 
     // Create history event
-    graph.history.push({
-      tick: graph.tick,
+    graphView.addHistoryEvent({
+      tick: graphView.tick,
       era: configEras[0].id,
       type: 'special',
       description: `World timeline established: ${configEras.map(e => e.name).join(' → ')}`,

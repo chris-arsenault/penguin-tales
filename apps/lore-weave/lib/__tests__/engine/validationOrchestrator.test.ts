@@ -2,8 +2,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ValidationOrchestrator, ValidationResult } from '../../engine/validationOrchestrator';
 import { FrameworkValidator } from '../../engine/frameworkValidator';
-import { EngineConfig } from '../../types/engine';
-import { DomainSchema } from '../../types/domainSchema';
+import { EngineConfig } from '../../engine/types';
+import { DomainSchema } from '../../domainInterface/domainSchema';
 
 describe('ValidationOrchestrator', () => {
   let mockConfig: EngineConfig;

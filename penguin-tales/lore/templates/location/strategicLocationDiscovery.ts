@@ -6,16 +6,16 @@
  * tactically relevant positions.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   analyzeConflictPatterns,
   generateStrategicTheme,
   shouldDiscoverLocation,
   findNearbyLocations
-} from '@lore-weave/core/utils/emergentDiscovery';
+} from '../../utils/emergentDiscovery';
 
 export const strategicLocationDiscovery: GrowthTemplate = {
   id: 'strategic_location_discovery',
@@ -71,11 +71,11 @@ export const strategicLocationDiscovery: GrowthTemplate = {
 
   canApply: (graphView: TemplateGraphView): boolean => {
     // Must have active conflicts
-    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
+    const conflict = analyzeConflictPatterns(graphView);
     if (!conflict) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graphView.getInternalGraph());
+    return shouldDiscoverLocation(graphView);
   },
 
   findTargets: (graphView: TemplateGraphView): HardState[] => {
@@ -98,7 +98,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     const relationships: Relationship[] = [];
 
     // Analyze conflict patterns
-    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
+    const conflict = analyzeConflictPatterns(graphView);
     if (!conflict) {
       return {
         entities: [],
@@ -140,6 +140,20 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
+    // Convert theme tags array to KVP
+    const themeTags = Array.isArray(theme.tags)
+      ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
+      : theme.tags;
+
+    // Derive coordinates for new location - place near discoverer's location
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'location',
+      [discoverer]
+    );
+    const locationCoords = locationPlacement?.coordinates;
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -148,7 +162,8 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'recognized',  // Strategic locations are notable
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: theme.tags,
+      tags: themeTags,
+      coordinates: locationCoords,
       links: []
     };
 
@@ -168,7 +183,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

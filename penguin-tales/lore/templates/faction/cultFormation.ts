@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, findEntities } from '@lore-weave/core';
 
 /**
  * Cult Formation Template
@@ -134,53 +134,119 @@ export const cultFormation: GrowthTemplate = {
       };
     }
 
+    // Find existing cults to place new cult in conceptual space
+    const existingCults = graphView.findEntities({ kind: 'faction', subtype: 'cult' });
+    const nearbyMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
+
+    // Derive conceptual coordinates - place cult near location and any related magic
+    const referenceEntities: HardState[] = [location];
+    if (nearbyMagic.length > 0) {
+      referenceEntities.push(pickRandom(nearbyMagic));
+    }
+    if (existingCults.length > 0) {
+      // Place moderately far from existing cults (diverse mystical traditions)
+      referenceEntities.push(pickRandom(existingCults));
+    }
+
+    const cultureId = location.culture ?? 'default';
+    const cultPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'faction',
+      referenceEntities
+    );
+
+    if (!cultPlacement) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for cult near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'faction' entities.`
+      );
+    }
+
+    const conceptualCoords = cultPlacement.coordinates;
+
     const cult: Partial<HardState> = {
       kind: 'faction',
       subtype: 'cult',
-      name: `${pickRandom(['Order', 'Covenant', 'Circle'])} of the ${pickRandom(['Fissure', 'Depths', 'Ice'])}`,
       description: `A mystical cult drawn to the power near ${location.name}`,
       status: 'illegal',
       prominence: 'marginal',
       culture: location.culture,  // Inherit culture from location
-      tags: ['mystical', 'secretive', 'cult']
+      tags: { mystical: true, secretive: true, cult: true },
+      coordinates: conceptualCoords
     };
+
+    // Derive coordinates for prophet (NPC near cult location)
+    const prophetPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'npc',
+      [location]
+    );
+
+    if (!prophetPlacement) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for prophet near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'npc' entities.`
+      );
+    }
+
+    const prophetCoords = prophetPlacement.coordinates;
 
     const prophet: Partial<HardState> = {
       kind: 'npc',
       subtype: 'hero',
-      description: `The enigmatic prophet of ${cult.name}`,
+      description: `The enigmatic prophet of a mystical cult near ${location.name}`,
       status: 'alive',
       prominence: 'marginal', // Prophets start marginal
       culture: location.culture,  // Inherit culture from location
-      tags: ['prophet', 'mystical']
+      tags: { prophet: true, mystical: true },
+      coordinates: prophetCoords
     };
+
+    // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
+    const cultistPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'npc',
+      [location]
+    );
+
+    if (!cultistPlacement) {
+      throw new Error(
+        `cult_formation: Failed to derive coordinates for potential new cultists near ${location.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'npc' entities.`
+      );
+    }
+
+    const newCultistCoords = cultistPlacement.coordinates;
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)
     let cultists: HardState[] = [];
     let newCultists: Array<Partial<HardState>> = [];
 
-    // Smart selection with hub penalties
+    // Smart selection with hub penalties and cultural affinity
     const result = graphView.selectTargets('npc', numCultists, {
         prefer: {
           subtypes: ['merchant', 'outlaw', 'hero'],
           sameLocationAs: location.id, // Prefer local NPCs
+          sameCultureAs: location.culture, // Prefer same-culture recruits
           preferenceBoost: 2.0
         },
         avoid: {
           relationshipKinds: ['member_of'], // Penalize multi-faction NPCs
           hubPenaltyStrength: 2.0, // Quadratic penalty: 1/(1+count^2)
-          maxTotalRelationships: 15 // Hard cap on super-hubs
+          maxTotalRelationships: 15, // Hard cap on super-hubs
+          differentCulturePenalty: 0.3 // Cross-culture recruitment is rare
         },
         createIfSaturated: {
           threshold: 0.15, // If best score < 0.15, create new NPC
-          factory: (gv, ctx) => ({
+          factory: () => ({
             kind: 'npc',
             subtype: pickRandom(['merchant', 'outlaw']),
             description: `A convert drawn to the cult's mystical teachings`,
             status: 'alive',
             prominence: 'marginal',
             culture: location.culture,  // Inherit culture from cult location
-            tags: ['cultist']
+            tags: { cultist: true },
+            coordinates: newCultistCoords
           }),
           maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
         },
@@ -252,7 +318,7 @@ export const cultFormation: GrowthTemplate = {
     return {
       entities: [cult, prophet, ...newCultists], // Include new cultists
       relationships,
-      description: `${cult.name} forms with ${prophet.name} as prophet and ${totalCultists} followers${creationNote}`
+      description: `A mystical cult forms near ${location.name} with ${totalCultists} followers${creationNote}`
     };
   }
 };

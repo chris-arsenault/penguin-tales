@@ -206,7 +206,7 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema })
   };
 
   const handleTestNames = async (profile, count = 10) => {
-    if (!profile) return;
+    if (!profile || !cultureConfig) return;
 
     setTestLoading(true);
     setTestError(null);
@@ -215,10 +215,8 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema })
 
     try {
       const result = await generateTestNames({
-        profile,
-        domains: domains.length > 0 ? domains : (effectiveDomain ? [effectiveDomain] : []),
-        grammars,
-        lexemes: lexemeLists,
+        culture: cultureConfig,
+        profileId: profile.id,
         count,
         seed: `test-${Date.now()}`
       });

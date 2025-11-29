@@ -1,16 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  rollProbability,
-  canFormRelationship,
-  recordRelationshipFormation,
-  areRelationshipsCompatible,
-  pickRandom,
-  pickMultiple,
-  getFactionMembers
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { rollProbability, pickRandom, pickMultiple } from '@lore-weave/core';
 
 /**
  * Succession Vacuum System
@@ -124,7 +115,7 @@ export const successionVacuum: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = successionVacuum.metadata?.parameters || {};
     const throttleChance = params.throttleChance?.value ?? 0.2;
     const RIVALRY_COOLDOWN = params.rivalryCooldown?.value ?? 8;
@@ -148,11 +139,11 @@ export const successionVacuum: SimulationSystem = {
     const pressureChanges: Record<string, number> = {};
 
     // === STEP 1: Detect Leaderless Factions ===
-    const factions = findEntities(graph, { kind: 'faction', status: 'active' });
+    const factions = graphView.findEntities({ kind: 'faction', status: 'active' });
     const leaderlessFactions: HardState[] = [];
 
     factions.forEach(faction => {
-      const leaders = getRelated(graph, faction.id, 'leader_of', 'dst');
+      const leaders = graphView.getRelated(faction.id, 'leader_of', 'dst');
       const livingLeaders = leaders.filter(leader => leader.status === 'alive');
 
       // Faction is leaderless if no living leaders
@@ -174,7 +165,7 @@ export const successionVacuum: SimulationSystem = {
     // === STEP 2: Process Each Succession Crisis ===
     leaderlessFactions.forEach(faction => {
       // Only core members (>= 0.7 strength) with sufficient prominence can claim leadership
-      const coreMembers = getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.7 });
+      const coreMembers = graphView.getRelated(faction.id, 'member_of', 'dst', { minStrength: 0.7 });
       const eligibleClaimants = coreMembers.filter(npc =>
         npc.status === 'alive' &&
         (npc.prominence === 'recognized' || npc.prominence === 'renowned' || npc.prominence === 'mythic')
@@ -204,8 +195,8 @@ export const successionVacuum: SimulationSystem = {
           const claimant2 = claimants[j];
 
           // Check all preconditions before creating rivalry
-          if (!areRelationshipsCompatible(graph, claimant1.id, claimant2.id, 'rival_of') ||
-              !canFormRelationship(graph, claimant1.id, 'rival_of', RIVALRY_COOLDOWN)) {
+          if (!graphView.areRelationshipsCompatible(claimant1.id, claimant2.id, 'rival_of') ||
+              !graphView.canFormRelationship(claimant1.id, 'rival_of', RIVALRY_COOLDOWN)) {
             continue;
           }
 
@@ -216,7 +207,7 @@ export const successionVacuum: SimulationSystem = {
               src: claimant1.id,
               dst: claimant2.id
             });
-            recordRelationshipFormation(graph, claimant1.id, 'rival_of');
+            graphView.recordRelationshipFormation(claimant1.id, 'rival_of');
           }
         }
       }
@@ -225,7 +216,7 @@ export const successionVacuum: SimulationSystem = {
       // Tunable chance rivalries escalate to enemy_of between supporter groups
       // Use faction members as proxy for supporters (since follower_of was removed)
       if (claimants.length >= 2 && Math.random() < escalationChance) {
-        const factionMembers = getRelated(graph, faction.id, 'member_of', 'dst');
+        const factionMembers = graphView.getRelated(faction.id, 'member_of', 'dst');
         const potentialSupporters = factionMembers.filter(m =>
           m.status === 'alive' && !claimants.some(c => c.id === m.id)
         );
@@ -234,8 +225,8 @@ export const successionVacuum: SimulationSystem = {
           const supporter1 = pickRandom(potentialSupporters);
           const supporter2 = pickRandom(potentialSupporters.filter(s => s.id !== supporter1.id));
 
-          if (areRelationshipsCompatible(graph, supporter1.id, supporter2.id, 'enemy_of') &&
-              canFormRelationship(graph, supporter1.id, 'enemy_of', 8)) {
+          if (graphView.areRelationshipsCompatible(supporter1.id, supporter2.id, 'enemy_of') &&
+              graphView.canFormRelationship(supporter1.id, 'enemy_of', 8)) {
             const conflictProb = Math.min(0.95, conflictChance * modifier);
             if (rollProbability(conflictProb, modifier)) {
               relationships.push({
@@ -244,7 +235,7 @@ export const successionVacuum: SimulationSystem = {
                 dst: supporter2.id,
                 catalyzedBy: faction.id  // Faction's crisis catalyzes internal conflict
               });
-              recordRelationshipFormation(graph, supporter1.id, 'enemy_of');
+              graphView.recordRelationshipFormation(supporter1.id, 'enemy_of');
             }
           }
         }
@@ -252,13 +243,13 @@ export const successionVacuum: SimulationSystem = {
 
       // === STEP 6: Rule Repeals ===
       // Old edicts of the dead leader may be questioned
-      const deadLeader = getRelated(graph, faction.id, 'leader_of', 'dst')
+      const deadLeader = graphView.getRelated(faction.id, 'leader_of', 'dst')
         .find(leader => leader.status === 'dead');
 
       if (deadLeader) {
-        const leaderRules = findEntities(graph, { kind: 'rules', status: 'enacted' })
+        const leaderRules = graphView.findEntities({ kind: 'rules', status: 'enacted' })
           .filter(rule => {
-            const originators = getRelated(graph, rule.id, 'originated_in', 'src');
+            const originators = graphView.getRelated(rule.id, 'originated_in', 'src');
             return originators.some(orig => orig.id === faction.id);
           });
 

@@ -22,7 +22,7 @@ export default defineConfig({
       branches: 70,
       statements: 70,
     },
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'lib/**/*.test.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
   },

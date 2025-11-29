@@ -3,6 +3,7 @@ import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '.
 import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
 import GraphView from './GraphView.tsx';
 import GraphView3D from './GraphView3D.tsx';
+import CoordinateMapView from './CoordinateMapView.tsx';
 import FilterPanel from './FilterPanel.tsx';
 import EntityDetail from './EntityDetail.tsx';
 import TimelineControl from './TimelineControl.tsx';
@@ -17,17 +18,26 @@ interface WorldExplorerProps {
 }
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
+export type ViewMode = 'graph3d' | 'graph2d' | 'map';
 
 export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
   const [currentTick, setCurrentTick] = useState<number>(worldData.metadata.tick);
   const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
-  const [is3DView, setIs3DView] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('graph3d');
   const [edgeMetric, setEdgeMetric] = useState<EdgeMetric>('strength');
   const recalculateLayoutRef = useRef<(() => void) | null>(null);
+
+  // Get UI configuration from schema (with fallbacks)
+  const worldIcon = worldData.uiSchema?.worldIcon ?? '🌍';
+  const worldName = worldData.uiSchema?.worldName ?? 'World';
+  const entityKinds = worldData.uiSchema?.entityKinds?.map(ek => ek.kind)
+    ?? ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
+  const defaultMinProminence = worldData.uiSchema?.prominenceLevels?.[0] ?? 'forgotten';
+
   const [filters, setFilters] = useState<Filters>({
-    kinds: ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'] as EntityKind[],
-    minProminence: 'forgotten',
+    kinds: entityKinds as EntityKind[],
+    minProminence: defaultMinProminence,
     timeRange: [0, worldData.metadata.tick],
     tags: [],
     searchQuery: '',
@@ -47,9 +57,9 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
       <header className="world-header">
         <div className="world-header-content">
           <div className="world-header-left">
-            <div className="world-penguin">🐧</div>
+            <div className="world-penguin">{worldIcon}</div>
             <div className="world-title-container">
-              <h1 className="world-title">PENGUIN TALES</h1>
+              <h1 className="world-title">{worldName.toUpperCase()}</h1>
               <p className="world-subtitle">History Explorer</p>
             </div>
           </div>
@@ -77,9 +87,9 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
               </div>
             </div>
             <HeaderMenu
-              is3DView={is3DView}
+              viewMode={viewMode}
               edgeMetric={edgeMetric}
-              onToggle3D={() => setIs3DView(!is3DView)}
+              onViewModeChange={setViewMode}
               onEdgeMetricChange={setEdgeMetric}
               onRecalculateLayout={() => recalculateLayoutRef.current?.()}
               onToggleStats={() => setIsStatsPanelOpen(!isStatsPanelOpen)}
@@ -99,7 +109,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
 
         {/* Graph View */}
         <main className="world-graph-container">
-          {is3DView ? (
+          {viewMode === 'graph3d' && (
             <GraphView3D
               key={`3d-view-${edgeMetric}`}
               data={filteredData}
@@ -108,7 +118,8 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
               showCatalyzedBy={filters.showCatalyzedBy}
               edgeMetric={edgeMetric}
             />
-          ) : (
+          )}
+          {viewMode === 'graph2d' && (
             <GraphView
               key="2d-view"
               data={filteredData}
@@ -116,6 +127,14 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
               onNodeSelect={setSelectedEntityId}
               showCatalyzedBy={filters.showCatalyzedBy}
               onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
+            />
+          )}
+          {viewMode === 'map' && (
+            <CoordinateMapView
+              key="map-view"
+              data={filteredData}
+              selectedNodeId={selectedEntityId}
+              onNodeSelect={setSelectedEntityId}
             />
           )}
         </main>

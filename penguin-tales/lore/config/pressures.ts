@@ -1,5 +1,5 @@
-import { Pressure, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { findEntities, getRelated } from '@lore-weave/core/utils/helpers';
+import { Pressure, ComponentPurpose } from '@lore-weave/core';
+import { findEntities, hasTag } from '@lore-weave/core';
 
 export const pressures: Pressure[] = [
   {
@@ -87,11 +87,11 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Measure conflict as RATIO of hostile vs friendly relationships
-      const hostileRelations = graph.relationships.filter(r =>
+      const hostileRelations = graph.getRelationships().filter(r =>
         r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
       );
 
-      const friendlyRelations = graph.relationships.filter(r =>
+      const friendlyRelations = graph.getRelationships().filter(r =>
         r.kind === 'allied_with' || r.kind === 'trades_with' || r.kind === 'member_of'
       );
 
@@ -102,7 +102,7 @@ export const pressures: Pressure[] = [
       const hostileRatio = hostileRelations.length / totalSocialBonds;
 
       // Active wars add extra tension
-      const factionWars = graph.relationships.filter(r => r.kind === 'at_war_with');
+      const factionWars = graph.getRelationships().filter(r => r.kind === 'at_war_with');
       const warBonus = Math.min(factionWars.length * 2, 5); // Cap war bonus at 5
 
       // FEEDBACK LOOP: Heroes reduce conflict
@@ -148,7 +148,7 @@ export const pressures: Pressure[] = [
       const magicAbilities = findEntities(graph, { kind: 'abilities', subtype: 'magic' });
       const techAbilities = findEntities(graph, { kind: 'abilities', subtype: 'technology' });
       const allAbilities = findEntities(graph, { kind: 'abilities' });
-      const totalEntities = graph.entities.size;
+      const totalEntities = graph.getEntityCount();
 
       if (totalEntities === 0) return 0;
 
@@ -182,17 +182,18 @@ export const pressures: Pressure[] = [
     id: 'cultural_tension',
     name: 'Cultural Divergence',
     value: 5,
-    decay: 15,  // TUNED: Increased from 10 to 15 (still at 90 vs target 35)
+    decay: 15,
     contract: {
       purpose: ComponentPurpose.PRESSURE_ACCUMULATION,
       sources: [
-        { component: 'template.faction_splinter', formula: 'fragmentationRatio * 8' },
-        { component: 'template.colony_founding', formula: 'isolationRatio * 4' },
-        { component: 'formula.faction_pressure', formula: 'politicalFactions.length * 0.4' }
+        { component: 'formula.cross_culture_ratio', formula: 'crossCultureRatio * 10' },
+        { component: 'formula.location_diversity', formula: 'locationDiversity * 4' },
+        { component: 'formula.faction_diversity', formula: 'factionDiversity * 3' },
+        { component: 'template.faction_splinter', formula: 'fragmentationRatio * 5' }
       ],
       sinks: [
-        { component: 'relationship.allied_with', formula: 'alliances.length * 0.3' },
-        { component: 'template.ideology_emergence', formula: 'socialRules.length * 0.2' },
+        { component: 'formula.same_culture_alliances', formula: 'sameCultureAlliances * 0.5' },
+        { component: 'formula.cultural_homogeneity', formula: 'homogeneousLocations * 0.3' },
         { component: 'time', formula: 'value * 15' }
       ],
       affects: [
@@ -205,43 +206,96 @@ export const pressures: Pressure[] = [
       }
     },
     growth: (graph) => {
-      // Measure cultural fragmentation as RATIO
-      const allFactions = findEntities(graph, { kind: 'faction' });
-      const politicalFactions = findEntities(graph, { kind: 'faction', subtype: 'political' });
-      const splinterFactions = graph.relationships.filter(r => r.kind === 'splinter_of');
+      // CULTURE-FIRST: Measure actual cultural state, not just political fragmentation
 
-      if (allFactions.length === 0) return 0;
-
-      // Faction fragmentation ratio (splinters / total factions)
-      const fragmentationRatio = splinterFactions.length / Math.max(1, allFactions.length);
-
-      // Isolated colonies add to tension
-      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
-      const isolatedColonies = colonies.filter(c =>
-        c.tags.includes('isolated') || c.tags.includes('divergent')
+      // 1. Cross-culture relationship ratio
+      const socialRelationships = graph.getRelationships().filter(r =>
+        ['follower_of', 'rival_of', 'lover_of', 'enemy_of', 'allied_with'].includes(r.kind)
       );
 
-      const isolationRatio = colonies.length > 0
-        ? isolatedColonies.length / colonies.length
+      let crossCultureCount = 0;
+      for (const rel of socialRelationships) {
+        const src = graph.getEntity(rel.src);
+        const dst = graph.getEntity(rel.dst);
+        if (src && dst && src.culture !== dst.culture) {
+          crossCultureCount++;
+        }
+      }
+      const crossCultureRatio = socialRelationships.length > 0
+        ? crossCultureCount / socialRelationships.length
         : 0;
 
-      // FEEDBACK LOOP: Political faction count drives tension (positive feedback coefficient 0.4)
-      const factionPressure = politicalFactions.length * 0.4;
+      // 2. Location cultural diversity (entities of different cultures in same location)
+      const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+      let totalLocationDiversity = 0;
+      let homogeneousLocations = 0;
 
-      // FEEDBACK LOOP: Alliances reduce tension (negative feedback)
-      const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
-      const allianceReduction = alliances.length * 0.3;
+      for (const colony of colonies) {
+        const residents = graph.getRelationships()
+          .filter(r => r.kind === 'resident_of' && r.dst === colony.id);
+        const residentCultures = new Set<string>();
+        for (const rel of residents) {
+          const resident = graph.getEntity(rel.src);
+          if (resident) residentCultures.add(resident.culture);
+        }
+        if (residentCultures.size > 1) {
+          totalLocationDiversity += residentCultures.size - 1;
+        } else if (residentCultures.size === 1) {
+          homogeneousLocations++;
+        }
+      }
 
-      // FEEDBACK LOOP: Social rules reduce tension (negative feedback)
-      const socialRules = findEntities(graph, { kind: 'rules', subtype: 'social' });
-      const ruleReduction = socialRules.length * 0.2;
+      // 3. Faction cultural diversity (members of different cultures in same faction)
+      const factions = findEntities(graph, { kind: 'faction' });
+      let totalFactionDiversity = 0;
 
-      // Combine: fragmentation (0-4) + isolation (0-4) + faction pressure - alliance reduction - rule reduction
-      // Cap total growth at 8
-      return Math.max(0, Math.min(
-        fragmentationRatio * 8 + isolationRatio * 4 + factionPressure - allianceReduction - ruleReduction,
-        8
-      ));
+      for (const faction of factions) {
+        const members = graph.getRelationships()
+          .filter(r => r.kind === 'member_of' && r.dst === faction.id);
+        const memberCultures = new Set<string>();
+        for (const rel of members) {
+          const member = graph.getEntity(rel.src);
+          if (member) memberCultures.add(member.culture);
+        }
+        if (memberCultures.size > 1) {
+          totalFactionDiversity += memberCultures.size - 1;
+        }
+      }
+
+      // 4. Same-culture alliances reduce tension
+      const alliances = graph.getRelationships().filter(r => r.kind === 'allied_with');
+      let sameCultureAlliances = 0;
+      for (const rel of alliances) {
+        const src = graph.getEntity(rel.src);
+        const dst = graph.getEntity(rel.dst);
+        if (src && dst && src.culture === dst.culture) {
+          sameCultureAlliances++;
+        }
+      }
+
+      // 5. Traditional factors (splinters, isolation)
+      const splinterFactions = graph.getRelationships().filter(r => r.kind === 'splinter_of');
+      const fragmentationRatio = factions.length > 0
+        ? splinterFactions.length / factions.length
+        : 0;
+
+      // Combine cultural metrics:
+      // - Cross-culture relationships increase tension
+      // - Location diversity increases tension
+      // - Faction diversity increases tension
+      // - Same-culture alliances reduce tension
+      // - Homogeneous locations reduce tension
+      // - Splinters add moderate tension
+      const growth = (
+        crossCultureRatio * 10 +           // 0-10: Cross-culture relationship pressure
+        totalLocationDiversity * 0.5 +      // Location cultural mixing
+        totalFactionDiversity * 0.3 +       // Faction cultural mixing
+        fragmentationRatio * 5 -            // Political fragmentation
+        sameCultureAlliances * 0.5 -        // Same-culture cooperation
+        homogeneousLocations * 0.3          // Cultural homogeneity stabilizes
+      );
+
+      return Math.max(0, Math.min(growth, 10));
     }
   },
   
@@ -272,8 +326,8 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Measure stability indicators as ratios
-      const alliances = graph.relationships.filter(r => r.kind === 'allied_with');
-      const conflicts = graph.relationships.filter(r =>
+      const alliances = graph.getRelationships().filter(r => r.kind === 'allied_with');
+      const conflicts = graph.getRelationships().filter(r =>
         r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
       );
 
@@ -290,7 +344,7 @@ export const pressures: Pressure[] = [
         : 1; // No leaders = stable (not tracked yet)
 
       // FEEDBACK LOOP: Leader count increases stability (positive feedback coefficient 0.3)
-      const leadershipRelations = graph.relationships.filter(r => r.kind === 'leader_of');
+      const leadershipRelations = graph.getRelationships().filter(r => r.kind === 'leader_of');
       const leadershipBonus = leadershipRelations.length * 0.3;
 
       // FEEDBACK LOOP: Mayor count (succession events) can reduce stability over time
@@ -331,8 +385,8 @@ export const pressures: Pressure[] = [
     },
     growth: (graph) => {
       // Increases during invasion era or when entities marked as external appear
-      const externalTags = Array.from(graph.entities.values())
-        .filter(e => e.tags.includes('external') || e.tags.includes('invader'));
+      const externalTags = graph.getEntities()
+        .filter(e => hasTag(e.tags, 'external') || hasTag(e.tags, 'invader'));
 
       // FEEDBACK LOOP: Orca count drives external threat (positive feedback coefficient 0.8)
       const orcas = findEntities(graph, { kind: 'npc', subtype: 'orca' });

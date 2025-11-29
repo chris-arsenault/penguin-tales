@@ -19,7 +19,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "ui": "cd webui && npm run dev",
+    "ui:build": "cd webui && npm run build",
+    "ui:sync": "cd webui && npm run sync"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

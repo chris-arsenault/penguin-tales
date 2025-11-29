@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
 
 /**
  * Kinship Constellation Template
@@ -193,7 +193,7 @@ export const kinshipConstellation: GrowthTemplate = {
     // Metropolis algorithm to minimize energy (maximize drama)
     const TEMPERATURE = isingTemperature;
     const J = isingCouplingStrength;
-    const h = faction.tags.includes('traditional') ? isingExternalField : -isingExternalField;
+    const h = hasTag(faction.tags, 'traditional') ? isingExternalField : -isingExternalField;
 
     for (let iteration = 0; iteration < 50; iteration++) {
       const memberIndex = Math.floor(Math.random() * familyMembers.length);
@@ -235,28 +235,29 @@ export const kinshipConstellation: GrowthTemplate = {
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    const familyName = generateFamilyName();
-
     familyMembers.forEach((member, i) => {
       // Determine tags based on trait
-      const tags: string[] = ['family', familyName.toLowerCase()];
+      const tags: Record<string, boolean> = {
+        family: true
+      };
+
       if (member.trait > 0) {
-        tags.push('traditional');
+        tags.traditional = true;
       } else {
-        tags.push('radical');
+        tags.radical = true;
       }
 
-      if (member.role === 'prodigy') tags.push('talented');
-      if (member.role === 'blacksheep') tags.push('rebellious');
+      if (member.role === 'prodigy') tags.talented = true;
+      if (member.role === 'blacksheep') tags.rebellious = true;
 
       entities.push({
         kind: 'npc',
         subtype: member.subtype,
-        description: `A ${member.role} of the ${familyName} family, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
+        description: `A ${member.role} in a family at ${location.name}, ${member.trait > 0 ? 'upholding tradition' : 'embracing change'}.`,
         status: 'alive',
         prominence: member.role === 'prodigy' ? 'recognized' : 'marginal',
         culture: location.culture,  // Inherit culture from settlement location
-        tags: tags.slice(0, 10)
+        tags
       });
 
       // REQUIRED: Add resident_of for all NPCs
@@ -324,7 +325,7 @@ export const kinshipConstellation: GrowthTemplate = {
     return {
       entities,
       relationships,
-      description: `The ${familyName} family emerges in ${location.name}, ${familySize} members strong with complex internal dynamics`
+      description: `An extended family emerges in ${location.name}, ${familySize} members strong with complex internal dynamics`
     };
   }
 };
@@ -345,10 +346,3 @@ function calculateEnergy(members: FamilyMember[], index: number, J: number, h: n
   return energy;
 }
 
-// Helper: Generate family name
-function generateFamilyName(): string {
-  const prefixes = ['Frost', 'Ice', 'Snow', 'Tide', 'Wave', 'Storm', 'Aurora', 'Drift', 'Chill', 'Crystal'];
-  const suffixes = ['Walker', 'Singer', 'Diver', 'Seeker', 'Keeper', 'Bearer', 'Caller', 'Watcher', 'Runner', 'Glider'];
-
-  return `${pickRandom(prefixes)}-${pickRandom(suffixes)}`;
-}

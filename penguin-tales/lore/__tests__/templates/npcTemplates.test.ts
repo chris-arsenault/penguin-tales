@@ -1,18 +1,42 @@
 // @ts-nocheck
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { familyExpansion } from '../../domain/penguin/templates/npc/familyExpansion';
-import { heroEmergence } from '../../domain/penguin/templates/npc/heroEmergence';
-import { succession } from '../../domain/penguin/templates/npc/succession';
-import { outlawRecruitment } from '../../domain/penguin/templates/npc/outlawRecruitment';
-import { kinshipConstellation } from '../../domain/penguin/templates/npc/kinshipConstellation';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { Graph, Era } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { familyExpansion } from '../../templates/npc/familyExpansion';
+import { heroEmergence } from '../../templates/npc/heroEmergence';
+import { succession } from '../../templates/npc/succession';
+import { outlawRecruitment } from '../../templates/npc/outlawRecruitment';
+import { kinshipConstellation } from '../../templates/npc/kinshipConstellation';
+import { TemplateGraphView, TargetSelector } from '@lore-weave/core';
+import { Graph, Era } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Mock CoordinateContext for testing
+const mockCoordinateContext = {
+  getKindRegionService: () => ({
+    getMapper: () => ({
+      getAllRegions: () => [],
+      getRegion: () => null,
+      sampleRegion: () => ({ x: 50, y: 50, z: 50 }),
+      distance: () => 0,
+      lookup: () => ({ region: null, distance: 0 })
+    }),
+    processEntityPlacement: () => ({ region: null, allRegions: [], tags: {} }),
+    placeNear: () => ({ coordinates: { x: 50, y: 50, z: 50 }, region: null, tags: {} })
+  }),
+  getSemanticEncoder: () => ({
+    encode: () => ({ coordinates: { x: 50, y: 50, z: 50 }, matchedTags: [], confidence: 1 }),
+    getAxes: () => null
+  }),
+  getCultureConfig: () => ({ cultureId: 'test', seedRegionIds: [] }),
+  hasCulture: () => true,
+  getCultureIds: () => ['test'],
+  buildPlacementContext: () => ({})
+} as any;
 
 describe('NPC Templates', () => {
   let mockGraph: Graph;
   let mockGraphView: TemplateGraphView;
+  let mockTargetSelector: TargetSelector;
   let mockEra: Era;
 
   beforeEach(() => {
@@ -29,10 +53,16 @@ describe('NPC Templates', () => {
       tick: 10,
       currentEra: mockEra,
       pressures: new Map(),
-      history: []
+      history: [],
+      getEntities() { return [...this.entities.values()]; },
+      getEntity(id: string) { return this.entities.get(id); },
+      forEachEntity(cb: any) { this.entities.forEach(cb); },
+      getRelationships() { return this.relationships; },
+      getEntityCount() { return this.entities.size; }
     };
 
-    mockGraphView = new TemplateGraphView(mockGraph);
+    mockTargetSelector = new TargetSelector();
+    mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
   });
 
   describe('familyExpansion', () => {
@@ -63,7 +93,7 @@ describe('NPC Templates', () => {
       };
 
       mockGraph.entities.set('npc-1', npc);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = familyExpansion.canApply(mockGraphView);
       expect(result).toBe(false);
@@ -100,7 +130,7 @@ describe('NPC Templates', () => {
 
       mockGraph.entities.set('npc-1', npc1);
       mockGraph.entities.set('npc-2', npc2);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = familyExpansion.canApply(mockGraphView);
       expect(result).toBe(true);
@@ -160,7 +190,7 @@ describe('NPC Templates', () => {
         { kind: 'resident_of', src: 'npc-1', dst: 'colony-1' },
         { kind: 'resident_of', src: 'npc-2', dst: 'colony-1' }
       ];
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const targets = familyExpansion.findTargets(mockGraphView);
       expect(targets.length).toBeGreaterThan(0);
@@ -186,7 +216,7 @@ describe('NPC Templates', () => {
       };
 
       mockGraph.entities.set('npc-1', npc);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = familyExpansion.canApply(mockGraphView);
       expect(result).toBe(false);

@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { relationshipDecay } from '../../systems/relationshipDecay';
-import { Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { Graph, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
 
 describe('relationshipDecay', () => {
   let mockGraph: Graph;
@@ -11,6 +11,10 @@ describe('relationshipDecay', () => {
   beforeEach(() => {
     mockGraph = {
       entities: new Map<string, HardState>(),
+      forEachEntity: function(cb) { this.entities.forEach(cb); },
+      getEntity: function(id) { return this.entities.get(id); },
+      getRelationships: function() { return this.relationships || []; },
+      getEntities: function() { return [...this.entities.values()]; },
       relationships: [],
       tick: 10,
       currentEra: {
@@ -116,7 +120,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('faction-1', faction);
       mockGraph.relationships.push({ kind: 'member_of', src: 'npc-1', dst: 'faction-1' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -154,7 +158,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('faction-1', faction);
       mockGraph.relationships.push({ kind: 'leader_of', src: 'npc-1', dst: 'faction-1' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -192,7 +196,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('ability-1', ability);
       mockGraph.relationships.push({ kind: 'practitioner_of', src: 'npc-1', dst: 'ability-1' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -232,7 +236,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('npc-2', npc2);
       mockGraph.relationships.push({ kind: 'follower_of', src: 'npc-2', dst: 'npc-1' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -270,7 +274,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('npc-2', npc2);
       mockGraph.relationships.push({ kind: 'friend_of', src: 'npc-1', dst: 'npc-2' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -308,7 +312,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('npc-2', npc2);
       mockGraph.relationships.push({ kind: 'rival_of', src: 'npc-1', dst: 'npc-2' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -348,7 +352,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('loc-1', location);
       mockGraph.relationships.push({ kind: 'resident_of', src: 'npc-1', dst: 'loc-1' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -386,7 +390,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('loc-2', loc2);
       mockGraph.relationships.push({ kind: 'adjacent_to', src: 'loc-1', dst: 'loc-2' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -426,7 +430,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('npc-2', npc2);
       mockGraph.relationships.push({ kind: 'enemy_of', src: 'npc-1', dst: 'npc-2' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -464,7 +468,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.set('faction-2', faction2);
       mockGraph.relationships.push({ kind: 'at_war_with', src: 'faction-1', dst: 'faction-2' });
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -472,7 +476,7 @@ describe('relationshipDecay', () => {
 
   describe('system result', () => {
     it('should return valid SystemResult', () => {
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toHaveProperty('description');
       expect(typeof result.description).toBe('string');
@@ -482,7 +486,7 @@ describe('relationshipDecay', () => {
       mockGraph.entities.clear();
       mockGraph.relationships = [];
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -505,7 +509,7 @@ describe('relationshipDecay', () => {
 
       mockGraph.entities.set('npc-1', npc1);
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result.newRelationships || []).toEqual([]);
     });
@@ -577,7 +581,7 @@ describe('relationshipDecay', () => {
         { kind: 'friend_of', src: 'npc-1', dst: 'npc-2' }
       );
 
-      const result = relationshipDecay.apply(mockGraph, mockModifier);
+      const result = relationshipDecay.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });

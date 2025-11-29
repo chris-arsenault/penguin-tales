@@ -1,10 +1,33 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { outlawRecruitment } from '../../../../../domain/penguin/templates/npc/outlawRecruitment';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
-import { Graph, Era } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { outlawRecruitment } from '../../../templates/npc/outlawRecruitment';
+import { TemplateGraphView } from '@lore-weave/core';
+import { TargetSelector } from '@lore-weave/core';
+import { Graph, Era } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Mock CoordinateContext for testing
+const mockCoordinateContext = {
+  getKindRegionService: () => ({
+    getMapper: () => ({
+      getAllRegions: () => [],
+      getRegion: () => null,
+      sampleRegion: () => ({ x: 50, y: 50, z: 50 }),
+      distance: () => 0,
+      lookup: () => ({ region: null, distance: 0 })
+    }),
+    processEntityPlacement: () => ({ region: null, allRegions: [], tags: {} }),
+    placeNear: () => ({ coordinates: { x: 50, y: 50, z: 50 }, region: null, tags: {} })
+  }),
+  getSemanticEncoder: () => ({
+    encode: () => ({ coordinates: { x: 50, y: 50, z: 50 }, matchedTags: [], confidence: 1 }),
+    getAxes: () => null
+  }),
+  getCultureConfig: () => ({ cultureId: 'test', seedRegionIds: [] }),
+  hasCulture: () => true,
+  getCultureIds: () => ['test'],
+  buildPlacementContext: () => ({})
+} as any;
 
 describe('outlawRecruitment template', () => {
   let mockGraph: Graph;
@@ -32,12 +55,16 @@ describe('outlawRecruitment template', () => {
       discoveryState: {
         discoveredSites: new Map(),
         siteOccurrences: new Map()
-      }
+      },
+      getEntities() { return [...this.entities.values()]; },
+      getEntity(id: string) { return this.entities.get(id); },
+      forEachEntity(cb: any) { this.entities.forEach(cb); },
+      getRelationships() { return this.relationships; }
     };
 
     // Create a TargetSelector instance
     targetSelector = new TargetSelector({} as any);
-    mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+    mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
   });
 
   describe('contract and metadata', () => {
@@ -92,7 +119,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', merchantFaction);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(false);
     });
@@ -112,7 +139,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', criminalFaction);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(true);
     });
@@ -148,7 +175,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', faction1);
       mockGraph.entities.set('fac-2', faction2);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       expect(outlawRecruitment.canApply(mockGraphView)).toBe(true);
     });
@@ -206,7 +233,7 @@ describe('outlawRecruitment template', () => {
       mockGraph.entities.set('fac-1', faction1);
       mockGraph.entities.set('fac-2', faction2);
       mockGraph.entities.set('fac-3', merchantFaction);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       const targets = outlawRecruitment.findTargets!(mockGraphView);
       expect(targets).toHaveLength(2);
@@ -239,7 +266,7 @@ describe('outlawRecruitment template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('fac-1', criminalFaction);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       const result = outlawRecruitment.expand(mockGraphView, criminalFaction);
       expect(result.entities).toEqual([]);
@@ -285,7 +312,7 @@ describe('outlawRecruitment template', () => {
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', stronghold);
       mockGraph.relationships.push(controlsRel);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       // Mock selectTargets to return created entities
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -341,7 +368,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       // Mock selectTargets to return created entities
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -410,7 +437,7 @@ describe('outlawRecruitment template', () => {
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
       mockGraph.entities.set('npc-1', existingNpc);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       // Mock selectTargets to return existing NPCs
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -463,7 +490,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       // Mock selectTargets to return new outlaws
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({
@@ -545,7 +572,7 @@ describe('outlawRecruitment template', () => {
 
       mockGraph.entities.set('fac-1', criminalFaction);
       mockGraph.entities.set('loc-1', colony);
-      mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+      mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
       // Mock selectTargets
       vi.spyOn(mockGraphView, 'selectTargets').mockReturnValue({

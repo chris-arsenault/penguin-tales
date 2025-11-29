@@ -1,12 +1,56 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import cytoscape from 'cytoscape';
-import type { Core, NodeSingular } from 'cytoscape';
+import type { Core, NodeSingular, Stylesheet } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
-import type { WorldState } from '../types/world.ts';
+import type { WorldState, EntityKindSchema } from '../types/world.ts';
 import { transformWorldData } from '../utils/dataTransform.ts';
 
 cytoscape.use(coseBilkent);
+
+// Default entity kind styles (fallback when uiSchema not present)
+const DEFAULT_ENTITY_STYLES: EntityKindSchema[] = [
+  { kind: 'npc', displayName: 'NPCs', color: '#6FB1FC', shape: 'ellipse', subtypes: [], statusValues: [] },
+  { kind: 'faction', displayName: 'Factions', color: '#FC6B6B', shape: 'diamond', subtypes: [], statusValues: [] },
+  { kind: 'location', displayName: 'Locations', color: '#6BFC9C', shape: 'hexagon', subtypes: [], statusValues: [] },
+  { kind: 'rules', displayName: 'Rules', color: '#FCA86B', shape: 'rectangle', subtypes: [], statusValues: [] },
+  { kind: 'abilities', displayName: 'Abilities', color: '#C76BFC', shape: 'star', subtypes: [], statusValues: [] },
+  { kind: 'era', displayName: 'Eras', color: '#FFD700', shape: 'octagon', subtypes: [], statusValues: [] },
+  { kind: 'occurrence', displayName: 'Occurrences', color: '#FF69B4', shape: 'triangle', subtypes: [], statusValues: [] }
+];
+
+// Generate Cytoscape style array from entity kind schemas
+function generateEntityKindStyles(entityKinds: EntityKindSchema[]): Stylesheet[] {
+  return entityKinds.map(ek => ({
+    selector: `node[kind="${ek.kind}"]`,
+    style: {
+      'background-color': ek.color,
+      'shape': ek.shape as any
+    }
+  }));
+}
+
+// Map Cytoscape shape to CSS clip-path for legend
+function shapeToLegendStyle(shape: string): React.CSSProperties {
+  switch (shape) {
+    case 'ellipse':
+      return { borderRadius: '50%' };
+    case 'diamond':
+      return { transform: 'rotate(45deg)' };
+    case 'hexagon':
+      return { clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' };
+    case 'rectangle':
+      return {}; // Default square
+    case 'star':
+      return { clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' };
+    case 'triangle':
+      return { clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)' };
+    case 'octagon':
+      return { clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' };
+    default:
+      return {};
+  }
+}
 
 interface GraphViewProps {
   data: WorldState;
@@ -20,6 +64,11 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
+
+  // Get entity kind schemas from uiSchema or use defaults
+  const entityKindSchemas = useMemo(() => {
+    return data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
+  }, [data.uiSchema?.entityKinds]);
 
   const handleRecalculateLayout = () => {
     if (!cyRef.current) return;
@@ -65,6 +114,9 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
   useEffect(() => {
     if (!containerRef.current || isInitializedRef.current) return;
 
+    // Generate entity kind styles dynamically from schema
+    const entityStyles = generateEntityKindStyles(entityKindSchemas);
+
     const cy = cytoscape({
       container: containerRef.current,
       elements: [],
@@ -84,26 +136,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
             'background-color': '#666'
           }
         },
-        {
-          selector: 'node[kind="npc"]',
-          style: { 'background-color': '#6FB1FC', 'shape': 'ellipse' }
-        },
-        {
-          selector: 'node[kind="faction"]',
-          style: { 'background-color': '#FC6B6B', 'shape': 'diamond' }
-        },
-        {
-          selector: 'node[kind="location"]',
-          style: { 'background-color': '#6BFC9C', 'shape': 'hexagon' }
-        },
-        {
-          selector: 'node[kind="rules"]',
-          style: { 'background-color': '#FCA86B', 'shape': 'rectangle' }
-        },
-        {
-          selector: 'node[kind="abilities"]',
-          style: { 'background-color': '#C76BFC', 'shape': 'star' }
-        },
+        // Dynamic entity kind styles from uiSchema
+        ...entityStyles,
         {
           selector: 'node:selected',
           style: {
@@ -194,6 +228,73 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
       isInitializedRef.current = false;
     };
   }, []);
+
+  // Update styles when entity kind schema changes
+  useEffect(() => {
+    if (!cyRef.current) return;
+    const entityStyles = generateEntityKindStyles(entityKindSchemas);
+    cyRef.current.style([
+      {
+        selector: 'node',
+        style: {
+          'label': 'data(name)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '10px',
+          'color': '#fff',
+          'text-outline-color': '#000',
+          'text-outline-width': 2,
+          'width': 'mapData(prominence, 0, 4, 20, 60)',
+          'height': 'mapData(prominence, 0, 4, 20, 60)',
+          'background-color': '#666'
+        }
+      },
+      ...entityStyles,
+      {
+        selector: 'node:selected',
+        style: {
+          'border-width': 4,
+          'border-color': '#FFD700',
+          'background-color': '#FFD700'
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 'mapData(strength, 0, 1, 0.5, 7)' as any,
+          'line-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
+          'target-arrow-color': 'mapData(strength, 0, 1, "#aaa", "#000")' as any,
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'opacity': 'mapData(strength, 0, 1, 0.2, 1)' as any,
+          'label': 'data(label)',
+          'font-size': '8px',
+          'color': '#999',
+          'text-rotation': 'autorotate',
+          'text-margin-y': -10
+        }
+      },
+      {
+        selector: 'edge.highlighted',
+        style: {
+          'line-color': '#FFD700',
+          'target-arrow-color': '#FFD700',
+          'width': 3
+        }
+      },
+      {
+        selector: 'edge.catalyzed',
+        style: {
+          'line-style': 'dashed' as any,
+          'line-dash-pattern': [6, 3] as any,
+          'line-color': '#a78bfa' as any,
+          'target-arrow-color': '#a78bfa' as any,
+          'width': 'mapData(strength, 0, 1, 1, 4)' as any,
+          'opacity': 0.9 as any
+        }
+      }
+    ]);
+  }, [entityKindSchemas]);
 
   // Update graph data incrementally when data changes
   useEffect(() => {
@@ -313,42 +414,25 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
     <div className="relative w-full h-full">
       <div ref={containerRef} className="cytoscape-container" />
 
-      {/* Legend */}
+      {/* Legend - Dynamic from uiSchema */}
       <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500/30 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%)' }}>
         <div className="px-5 py-3 border-b border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
           <div className="font-bold text-blue-200 uppercase tracking-wider text-xs">Legend</div>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#6FB1FC' }}></div>
-            <span className="font-medium">NPCs</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 shadow-lg flex-shrink-0" style={{
-              backgroundColor: '#FC6B6B',
-              transform: 'rotate(45deg)'
-            }}></div>
-            <span className="font-medium">Factions</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 shadow-lg flex-shrink-0" style={{
-              backgroundColor: '#6BFC9C',
-              clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
-            }}></div>
-            <span className="font-medium">Locations</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 shadow-lg flex-shrink-0" style={{ backgroundColor: '#FCA86B' }}></div>
-            <span className="font-medium">Rules</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 shadow-lg flex-shrink-0" style={{
-              backgroundColor: '#C76BFC',
-              clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)'
-            }}></div>
-            <span className="font-medium">Abilities</span>
-          </div>
+          {entityKindSchemas.map(ek => (
+            <div key={ek.kind} className="flex items-center gap-3">
+              <div
+                className="w-5 h-5 shadow-lg flex-shrink-0"
+                style={{
+                  backgroundColor: ek.color,
+                  ...shapeToLegendStyle(ek.shape)
+                }}
+              ></div>
+              <span className="font-medium">{ek.displayName}</span>
+            </div>
+          ))}
         </div>
         <div className="px-5 py-3 border-t border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.05)' }}>
           <div className="text-xs text-blue-300 italic">Size indicates prominence</div>

@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple, slugifyName } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, slugifyName } from '@lore-weave/core';
 
 /**
  * Great Festival Template
@@ -129,33 +129,11 @@ export const greatFestival: GrowthTemplate = {
 
     // Select festival type based on trigger
     let festivalType: 'harvest' | 'memorial' | 'treaty' | 'celestial';
-    let festivalName: string;
 
     if (conflict > 80) {
       festivalType = 'treaty';
-      festivalName = pickRandom([
-        'Peace Accord Festival',
-        'Truce Celebration',
-        'Unity Gathering',
-        'Reconciliation Feast'
-      ]);
     } else {
       festivalType = pickRandom(['harvest', 'memorial', 'celestial']);
-      festivalName = pickRandom(
-        festivalType === 'harvest' ? [
-          'First Catch Festival',
-          'Ice Harvest Celebration',
-          'Krill Bloom Feast'
-        ] : festivalType === 'memorial' ? [
-          'The Long Swim Remembrance',
-          'Fallen Heroes Day',
-          'Founders Festival'
-        ] : [
-          'Aurora Peak Celebration',
-          'Fissure Light Dance',
-          'The Quiet Tide'
-        ]
-      );
     }
 
     const relationships: Relationship[] = [];
@@ -190,19 +168,36 @@ export const greatFestival: GrowthTemplate = {
       }
     }
 
+    // Derive coordinates in conceptual space - festivals exist near the hosting colony
+    const cultureId = colony.culture ?? 'default';
+    const festivalPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'rules',
+      [colony]
+    );
+
+    if (!festivalPlacement) {
+      throw new Error(
+        `great_festival: Failed to derive coordinates for festival in ${colony.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'rules' entities.`
+      );
+    }
+
+    const conceptualCoords = festivalPlacement.coordinates;
+
     return {
       entities: [{
         kind: 'rules',
         subtype: 'social',
-        name: festivalName,
         description: `A great festival celebrating ${festivalType === 'harvest' ? 'abundance and prosperity' : festivalType === 'memorial' ? 'shared history and fallen heroes' : festivalType === 'treaty' ? 'peace and unity between factions' : 'the aurora and celestial wonders'}, held in ${colony.name}`,
         status: 'enacted',
         prominence: conflict > 80 ? 'renowned' : 'recognized', // Treaty festivals more prominent
         culture: colony.culture,  // Inherit culture from hosting colony
-        tags: ['festival', festivalType, 'cultural']
+        tags: { festival: true, [festivalType]: true, cultural: true },
+        coordinates: conceptualCoords
       }],
       relationships,
-      description: `${festivalName} established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`
+      description: `A great ${festivalType} festival established in ${colony.name}, bringing together ${participatingFactions.length} factions in celebration`
     };
   }
 };

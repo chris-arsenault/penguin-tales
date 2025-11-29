@@ -1,8 +1,24 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { beliefContagion } from '../../../../domain/penguin/systems/beliefContagion';
-import { Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { beliefContagion } from '../../systems/beliefContagion';
+import { Graph, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Helper to create mock graphView from graph
+const createMockGraphView = (graph: any) => ({
+  getGraph: () => graph,
+  findEntities: (criteria: any) => {
+    const entities = [...graph.entities.values()];
+    if (!criteria) return entities;
+    return entities.filter((e: any) => {
+      if (criteria.kind && e.kind !== criteria.kind) return false;
+      if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+      if (criteria.status && e.status !== criteria.status) return false;
+      return true;
+    });
+  },
+  getRelatedEntities: () => []
+});
 
 describe('beliefContagion', () => {
   let mockGraph: Graph;
@@ -10,6 +26,10 @@ describe('beliefContagion', () => {
   beforeEach(() => {
     mockGraph = {
       entities: new Map<string, HardState>(),
+      forEachEntity: function(cb) { this.entities.forEach(cb); },
+      getEntity: function(id) { return this.entities.get(id); },
+      getRelationships: function() { return this.relationships || []; },
+      getEntities: function() { return [...this.entities.values()]; },
       relationships: [],
       tick: 10,
       currentEra: {
@@ -66,7 +86,7 @@ describe('beliefContagion', () => {
 
   describe('basic execution', () => {
     it('should return valid SystemResult', () => {
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toHaveProperty('relationshipsAdded');
       expect(result).toHaveProperty('description');
@@ -74,14 +94,14 @@ describe('beliefContagion', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
     });
 
     it('should work with modifier parameter', () => {
-      const result = beliefContagion.apply(mockGraph, 1.5);
+      const result = beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.5);
 
       expect(result).toBeDefined();
     });
@@ -135,11 +155,11 @@ describe('beliefContagion', () => {
 
       // Run system multiple times to allow contagion
       for (let i = 0; i < 20; i++) {
-        beliefContagion.apply(mockGraph, 10.0); // High modifier to force attempts
+        beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 10.0); // High modifier to force attempts
       }
 
       // Check if any relationships were created
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
       expect(result).toBeDefined();
     });
 
@@ -172,7 +192,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       // Should not try to spread enacted rules
       expect(result).toBeDefined();
@@ -232,7 +252,7 @@ describe('beliefContagion', () => {
 
       // Run system to allow spread
       for (let i = 0; i < 20; i++) {
-        beliefContagion.apply(mockGraph, 10.0);
+        beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 10.0);
       }
 
       expect(mockGraph).toBeDefined();
@@ -288,7 +308,7 @@ describe('beliefContagion', () => {
       });
 
       for (let i = 0; i < 20; i++) {
-        beliefContagion.apply(mockGraph, 10.0);
+        beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 10.0);
       }
 
       expect(mockGraph).toBeDefined();
@@ -326,7 +346,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph, 10.0);
+      const result = beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 10.0);
 
       // Immune NPC should not adopt
       expect(result).toBeDefined();
@@ -370,7 +390,7 @@ describe('beliefContagion', () => {
 
       // Run system to allow rejection
       for (let i = 0; i < 50; i++) {
-        beliefContagion.apply(mockGraph, 1.0);
+        beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.0);
       }
 
       expect(mockGraph).toBeDefined();
@@ -416,7 +436,7 @@ describe('beliefContagion', () => {
         });
       }
 
-      beliefContagion.apply(mockGraph);
+      beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       // Check if rule transitioned
       const rule = mockGraph.entities.get('rule-1');
@@ -440,7 +460,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.pressureChanges).toBeDefined();
     });
@@ -460,7 +480,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.pressureChanges).toBeDefined();
     });
@@ -545,7 +565,7 @@ describe('beliefContagion', () => {
 
       // Run system to allow spread
       for (let i = 0; i < 30; i++) {
-        beliefContagion.apply(mockGraph, 10.0);
+        beliefContagion.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 10.0);
       }
 
       expect(mockGraph).toBeDefined();
@@ -581,7 +601,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       // Should report no active contagion
       expect(result.description).toBeDefined();
@@ -632,7 +652,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -654,7 +674,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toBeDefined();
       expect(result.relationshipsAdded.length).toBe(0);
@@ -675,7 +695,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toBeDefined();
       expect(result.relationshipsAdded.length).toBe(0);
@@ -710,7 +730,7 @@ describe('beliefContagion', () => {
         updatedAt: 0
       });
 
-      const result = beliefContagion.apply(mockGraph);
+      const result = beliefContagion.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result).toBeDefined();
     });

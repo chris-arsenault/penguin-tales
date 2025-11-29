@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore } from '../types/world.ts';
-import { getEntityById, getRelatedEntities, getRelationships } from '../utils/dataTransform.ts';
+import { getEntityById, getRelatedEntities, getRelationships, getTagsArray } from '../utils/dataTransform.ts';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
 import ChainLinkSection from './ChainLinkSection.tsx';
@@ -202,11 +202,11 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
       </div>
 
       {/* Tags */}
-      {entity.tags.length > 0 && (
+      {getTagsArray(entity.tags).length > 0 && (
         <div className="mb-6">
           <div className="section-header">Tags</div>
           <div className="tags-container">
-            {entity.tags.map(tag => (
+            {getTagsArray(entity.tags).map(tag => (
               <span key={tag} className="tag">{tag}</span>
             ))}
           </div>

@@ -6,16 +6,16 @@
  * appropriate mystical phenomena.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   analyzeMagicPresence,
   generateMysticalTheme,
   shouldDiscoverLocation,
   findNearbyLocations
-} from '@lore-weave/core/utils/emergentDiscovery';
+} from '../../utils/emergentDiscovery';
 
 export const mysticalLocationDiscovery: GrowthTemplate = {
   id: 'mystical_location_discovery',
@@ -75,11 +75,11 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
 
   canApply: (graphView: TemplateGraphView): boolean => {
     // Must have magical instability
-    const magic = analyzeMagicPresence(graphView.getInternalGraph());
+    const magic = analyzeMagicPresence(graphView);
     if (!magic) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graphView.getInternalGraph());
+    return shouldDiscoverLocation(graphView);
   },
 
   findTargets: (graphView: TemplateGraphView): HardState[] => {
@@ -107,7 +107,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     const relationships: Relationship[] = [];
 
     // Analyze magical patterns
-    const magic = analyzeMagicPresence(graphView.getInternalGraph());
+    const magic = analyzeMagicPresence(graphView);
     if (!magic) {
       return {
         entities: [],
@@ -152,6 +152,20 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
+    // Convert theme tags array to KVP
+    const themeTags = Array.isArray(theme.tags)
+      ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
+      : theme.tags;
+
+    // Derive coordinates for new location - place near discoverer's location
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'location',
+      [discoverer]
+    );
+    const locationCoords = locationPlacement?.coordinates;
+
     // Create the discovered location
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -160,7 +174,8 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'recognized',  // Mystical places are notable
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: theme.tags,
+      tags: themeTags,
+      coordinates: locationCoords,
       links: []
     };
 
@@ -180,7 +195,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({
