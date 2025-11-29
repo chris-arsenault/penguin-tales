@@ -3,9 +3,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { universalCatalyst } from '../../systems/universalCatalyst';
 import { Graph, ComponentPurpose } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
+import { TemplateGraphView } from '../../graph/templateGraphView';
+import { TargetSelector } from '../../services/targetSelector';
 
 describe('universalCatalyst', () => {
   let mockGraph: Graph;
+  let graphView: TemplateGraphView;
   let mockModifier: any;
 
   beforeEach(() => {
@@ -162,8 +165,13 @@ describe('universalCatalyst', () => {
       // Keep backward compatibility for tests
       get entities() { return _entities; },
       get relationships() { return _relationships; },
-      set relationships(rels: Relationship[]) { _relationships = rels; }
+      set relationships(rels: Relationship[]) { _relationships = rels; },
+      relationshipCooldowns: new Map()
     } as any;
+
+    // Create TemplateGraphView wrapper
+    const targetSelector = new TargetSelector();
+    graphView = new TemplateGraphView(mockGraph, targetSelector);
 
     mockModifier = 1.0;
   });
@@ -206,7 +214,7 @@ describe('universalCatalyst', () => {
 
   describe('apply', () => {
     it('should return valid SystemResult', () => {
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toHaveProperty('relationshipsAdded');
       expect(result).toHaveProperty('description');
@@ -214,7 +222,7 @@ describe('universalCatalyst', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -226,7 +234,7 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0
       });
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -240,7 +248,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -254,8 +262,8 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result1 = universalCatalyst.apply(mockGraph, 0.0);
-      const result2 = universalCatalyst.apply(mockGraph, 2.0);
+      const result1 = universalCatalyst.apply(graphView, 0.0);
+      const result2 = universalCatalyst.apply(graphView, 2.0);
 
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();
@@ -281,7 +289,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.entities.set('npc-1', renownedNpc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -316,7 +324,7 @@ describe('universalCatalyst', () => {
     it('should work with empty action domains', () => {
       mockGraph.config.actionDomains = [];
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -330,7 +338,7 @@ describe('universalCatalyst', () => {
         });
       }
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -346,7 +354,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -366,7 +374,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -385,7 +393,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -410,7 +418,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
 
       expect(result).toBeDefined();
     });
@@ -480,7 +488,7 @@ describe('universalCatalyst', () => {
 
       // Run multiple times to increase chance of action execution
       for (let i = 0; i < 20; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0); // High modifier to force attempts
+        const result = universalCatalyst.apply(graphView, 10.0); // High modifier to force attempts
         expect(result).toBeDefined();
       }
     });
@@ -510,7 +518,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, 10.0);
+      const result = universalCatalyst.apply(graphView, 10.0);
       expect(result).toBeDefined();
     });
 
@@ -553,7 +561,7 @@ describe('universalCatalyst', () => {
 
       // Run multiple times - most should fail due to low success chance
       for (let i = 0; i < 50; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0);
+        const result = universalCatalyst.apply(graphView, 10.0);
         expect(result).toBeDefined();
       }
     });
@@ -610,7 +618,7 @@ describe('universalCatalyst', () => {
       mockGraph.entities.set('npc-1', lowProminenceNpc);
       mockGraph.entities.set('npc-2', highProminenceNpc);
 
-      const result = universalCatalyst.apply(mockGraph, 10.0);
+      const result = universalCatalyst.apply(graphView, 10.0);
       expect(result).toBeDefined();
       // High prominence NPC more likely to have successful actions
     });
@@ -667,7 +675,7 @@ describe('universalCatalyst', () => {
       mockGraph.entities.set('npc-1', npcWithoutRel);
       mockGraph.entities.set('npc-2', npcWithRel);
 
-      const result = universalCatalyst.apply(mockGraph, 10.0);
+      const result = universalCatalyst.apply(graphView, 10.0);
       expect(result).toBeDefined();
     });
 
@@ -711,7 +719,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, 10.0);
+      const result = universalCatalyst.apply(graphView, 10.0);
       expect(result).toBeDefined();
       // Action should be available when conflict pressure is high enough
     });
@@ -770,7 +778,7 @@ describe('universalCatalyst', () => {
 
       // Run multiple times to verify system works
       for (let i = 0; i < 10; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0);
+        const result = universalCatalyst.apply(graphView, 10.0);
         expect(result).toBeDefined();
       }
     });
@@ -814,7 +822,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.setEntity('npc-1', npc);
 
-      const result = universalCatalyst.apply(mockGraph, 10.0);
+      const result = universalCatalyst.apply(graphView, 10.0);
       expect(result).toBeDefined();
     });
   });
@@ -863,7 +871,7 @@ describe('universalCatalyst', () => {
 
       // Force action attempt
       for (let i = 0; i < 20; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0);
+        const result = universalCatalyst.apply(graphView, 10.0);
         expect(result).toBeDefined();
       }
     });
@@ -906,7 +914,7 @@ describe('universalCatalyst', () => {
       mockGraph.setEntity('npc-1', npc);
 
       for (let i = 0; i < 20; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0);
+        const result = universalCatalyst.apply(graphView, 10.0);
         expect(result).toBeDefined();
       }
     });
@@ -951,7 +959,7 @@ describe('universalCatalyst', () => {
       mockGraph.setEntity('npc-1', npc);
 
       for (let i = 0; i < 20; i++) {
-        const result = universalCatalyst.apply(mockGraph, 10.0);
+        const result = universalCatalyst.apply(graphView, 10.0);
         expect(result).toBeDefined();
 
         // Check if relationships were created with attribution
@@ -1002,7 +1010,7 @@ describe('universalCatalyst', () => {
       const historyLengthBefore = mockGraph.history.length;
 
       for (let i = 0; i < 20; i++) {
-        universalCatalyst.apply(mockGraph, 10.0);
+        universalCatalyst.apply(graphView, 10.0);
       }
 
       // History should have grown
@@ -1028,7 +1036,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.entities.set('npc-1', firstOrderAgent);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
       expect(result).toBeDefined();
     });
 
@@ -1049,7 +1057,7 @@ describe('universalCatalyst', () => {
 
       mockGraph.entities.set('faction-1', secondOrderAgent);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
       expect(result).toBeDefined();
     });
 
@@ -1083,7 +1091,7 @@ describe('universalCatalyst', () => {
       mockGraph.entities.set('npc-1', firstOrder);
       mockGraph.entities.set('faction-1', secondOrder);
 
-      const result = universalCatalyst.apply(mockGraph, mockModifier);
+      const result = universalCatalyst.apply(graphView, mockModifier);
       expect(result).toBeDefined();
     });
   });

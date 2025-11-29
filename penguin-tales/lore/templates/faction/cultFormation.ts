@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, findEntities } from '@lore-weave/core';
 
 /**
  * Cult Formation Template
@@ -148,19 +148,21 @@ export const cultFormation: GrowthTemplate = {
       referenceEntities.push(pickRandom(existingCults));
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = location.culture ?? 'default';
+    const cultPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'faction',
-      'physical',
-      { maxDistance: existingCults.length > 0 ? 0.5 : 0.3, minDistance: 0.2 }  // Farther if other cults exist
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!cultPlacement) {
       throw new Error(
         `cult_formation: Failed to derive coordinates for cult near ${location.name}. ` +
         `This indicates the coordinate system is not properly configured for 'faction' entities.`
       );
     }
+
+    const conceptualCoords = cultPlacement.coordinates;
 
     const cult: Partial<HardState> = {
       kind: 'faction',
@@ -174,19 +176,20 @@ export const cultFormation: GrowthTemplate = {
     };
 
     // Derive coordinates for prophet (NPC near cult location)
-    const prophetCoords = graphView.deriveCoordinates(
-      [location],
+    const prophetPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'npc',
-      'physical',
-      { maxDistance: 0.2, minDistance: 0.05 }
+      [location]
     );
 
-    if (!prophetCoords) {
+    if (!prophetPlacement) {
       throw new Error(
         `cult_formation: Failed to derive coordinates for prophet near ${location.name}. ` +
         `This indicates the coordinate system is not properly configured for 'npc' entities.`
       );
     }
+
+    const prophetCoords = prophetPlacement.coordinates;
 
     const prophet: Partial<HardState> = {
       kind: 'npc',
@@ -200,19 +203,20 @@ export const cultFormation: GrowthTemplate = {
     };
 
     // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
-    const newCultistCoords = graphView.deriveCoordinates(
-      [location],
+    const cultistPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'npc',
-      'physical',
-      { maxDistance: 0.3, minDistance: 0.1 }
+      [location]
     );
 
-    if (!newCultistCoords) {
+    if (!cultistPlacement) {
       throw new Error(
         `cult_formation: Failed to derive coordinates for potential new cultists near ${location.name}. ` +
         `This indicates the coordinate system is not properly configured for 'npc' entities.`
       );
     }
+
+    const newCultistCoords = cultistPlacement.coordinates;
 
     // Use targetSelector to intelligently select cultists (prevents super-hubs)
     let cultists: HardState[] = [];

@@ -6,10 +6,10 @@
  * appropriate mystical phenomena.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   analyzeMagicPresence,
   generateMysticalTheme,
@@ -75,11 +75,11 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
 
   canApply: (graphView: TemplateGraphView): boolean => {
     // Must have magical instability
-    const magic = analyzeMagicPresence(graphView.getInternalGraph());
+    const magic = analyzeMagicPresence(graphView);
     if (!magic) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graphView.getInternalGraph());
+    return shouldDiscoverLocation(graphView);
   },
 
   findTargets: (graphView: TemplateGraphView): HardState[] => {
@@ -107,7 +107,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     const relationships: Relationship[] = [];
 
     // Analyze magical patterns
-    const magic = analyzeMagicPresence(graphView.getInternalGraph());
+    const magic = analyzeMagicPresence(graphView);
     if (!magic) {
       return {
         entities: [],
@@ -158,12 +158,13 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
       : theme.tags;
 
     // Derive coordinates for new location - place near discoverer's location
-    const locationCoords = graphView.deriveCoordinates(
-      [discoverer],
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      undefined,
-      { maxDistance: 20 }  // Larger distance - discoveries are further away
+      [discoverer]
     );
+    const locationCoords = locationPlacement?.coordinates;
 
     // Create the discovered location
     const newLocation: Partial<HardState> = {
@@ -194,7 +195,7 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

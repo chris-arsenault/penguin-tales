@@ -1,17 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  rollProbability,
-  canFormRelationship,
-  recordRelationshipFormation,
-  areRelationshipsCompatible,
-  hasRelationship,
-  pickRandom,
-  pickMultiple,
-  hasTag
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { rollProbability, pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
 
 /**
  * Thermal Cascade System
@@ -162,7 +152,7 @@ export const thermalCascade: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = thermalCascade.metadata?.parameters || {};
     const FREQUENCY = params.frequency?.value ?? 5;
     const ALPHA = params.alpha?.value ?? 0.1;
@@ -173,7 +163,7 @@ export const thermalCascade: SimulationSystem = {
     const discoveryChance = params.discoveryChance?.value ?? 0.1;
 
     // Throttle: Only run every FREQUENCY ticks
-    if (graph.tick % FREQUENCY !== 0) {
+    if (graphView.tick % FREQUENCY !== 0) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -186,13 +176,13 @@ export const thermalCascade: SimulationSystem = {
     const relationships: Relationship[] = [];
 
     // === STEP 1: Heat Diffusion ===
-    const locations = findEntities(graph, { kind: 'location' });
+    const locations = graphView.findEntities({ kind: 'location' });
     const temperatureUpdates = new Map<string, number>();
 
     // Calculate new temperatures using graph Laplacian
     locations.forEach(location => {
       const currentTemp = getTemperature(location);
-      const neighbors = getRelated(graph, location.id, 'adjacent_to');
+      const neighbors = graphView.getRelated(location.id, 'adjacent_to', 'src');
 
       if (neighbors.length === 0) {
         // Isolated locations maintain temperature
@@ -217,7 +207,7 @@ export const thermalCascade: SimulationSystem = {
     const significantChanges: Array<{ location: HardState; oldTemp: number; newTemp: number }> = [];
 
     temperatureUpdates.forEach((newTemp, locationId) => {
-      const location = graph.getEntity(locationId);
+      const location = graphView.getEntity(locationId);
       if (!location) return;
 
       const oldTemp = getTemperature(location);
@@ -272,12 +262,12 @@ export const thermalCascade: SimulationSystem = {
 
       // === EVENT B: NPC Migrations ===
       // NPCs flee extreme temperatures, seek moderate zones
-      const residents = getRelated(graph, location.id, 'resident_of', 'dst');
+      const residents = graphView.getRelated(location.id, 'resident_of', 'dst');
       const extremeTemp = newTemp > 0.85 || newTemp < 0.15;
 
       if (extremeTemp && residents.length > 0) {
         // Find moderate temperature refuges
-        const allLocations = findEntities(graph, { kind: 'location' });
+        const allLocations = graphView.findEntities({ kind: 'location' });
         const refuges = allLocations.filter(loc => {
           const temp = getTemperature(loc);
           return temp >= 0.3 && temp <= 0.7 && loc.id !== location.id;
@@ -290,7 +280,7 @@ export const thermalCascade: SimulationSystem = {
 
           migrants.forEach(migrant => {
             // Check cooldown before migrating
-            if (!canFormRelationship(graph, migrant.id, 'resident_of', MIGRATION_COOLDOWN)) {
+            if (!graphView.canFormRelationship(migrant.id, 'resident_of', MIGRATION_COOLDOWN)) {
               return;
             }
 
@@ -306,7 +296,7 @@ export const thermalCascade: SimulationSystem = {
                 dst: refuge.id
               });
 
-              recordRelationshipFormation(graph, migrant.id, 'resident_of');
+              graphView.recordRelationshipFormation(migrant.id, 'resident_of');
             }
           });
         }
@@ -321,12 +311,12 @@ export const thermalCascade: SimulationSystem = {
           const discoveryProb = Math.min(0.95, discoveryChance * modifier);
           if (rollProbability(discoveryProb, modifier)) {
             // Find existing abilities that could manifest here
-            const abilities = findEntities(graph, { kind: 'abilities', status: 'active' });
+            const abilities = graphView.findEntities({ kind: 'abilities', status: 'active' });
             if (abilities.length > 0) {
               const ability = pickRandom(abilities);
 
               // Check if ability already manifests here
-              if (!hasRelationship(graph, ability.id, location.id, 'manifests_at')) {
+              if (!graphView.hasRelationship(ability.id, location.id, 'manifests_at')) {
                 relationships.push({
                   kind: 'manifests_at',
                   src: ability.id,

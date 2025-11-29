@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Orca Combat Technique Template
@@ -114,12 +114,12 @@ export const orcaCombatTechnique: GrowthTemplate = {
     const prominence = Math.random() < 0.4 ? 'renowned' : 'recognized';
 
     // Derive coordinates for ability in conceptual space (near the orca practitioner)
-    const abilityCoords = graphView.deriveCoordinates(
-      [orca],
+    const orcaPlacement = graphView.deriveCoordinatesWithCulture(
+      'orca',  // Orca combat techniques belong to orca culture
       'abilities',
-      undefined,
-      { maxDistance: 10 }
+      [orca]
     );
+    const abilityCoords = orcaPlacement?.coordinates;
 
     const technique: Partial<HardState> = {
       kind: 'abilities',

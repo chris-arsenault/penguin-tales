@@ -6,10 +6,10 @@
  * tactically relevant positions.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   analyzeConflictPatterns,
   generateStrategicTheme,
@@ -71,11 +71,11 @@ export const strategicLocationDiscovery: GrowthTemplate = {
 
   canApply: (graphView: TemplateGraphView): boolean => {
     // Must have active conflicts
-    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
+    const conflict = analyzeConflictPatterns(graphView);
     if (!conflict) return false;
 
     // Use emergent discovery probability
-    return shouldDiscoverLocation(graphView.getInternalGraph());
+    return shouldDiscoverLocation(graphView);
   },
 
   findTargets: (graphView: TemplateGraphView): HardState[] => {
@@ -98,7 +98,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     const relationships: Relationship[] = [];
 
     // Analyze conflict patterns
-    const conflict = analyzeConflictPatterns(graphView.getInternalGraph());
+    const conflict = analyzeConflictPatterns(graphView);
     if (!conflict) {
       return {
         entities: [],
@@ -146,12 +146,13 @@ export const strategicLocationDiscovery: GrowthTemplate = {
       : theme.tags;
 
     // Derive coordinates for new location - place near discoverer's location
-    const locationCoords = graphView.deriveCoordinates(
-      [discoverer],
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      undefined,
-      { maxDistance: 20 }  // Larger distance - discoveries are further away
+      [discoverer]
     );
+    const locationCoords = locationPlacement?.coordinates;
 
     // Create the discovered location
     const newLocation: Partial<HardState> = {
@@ -182,7 +183,7 @@ export const strategicLocationDiscovery: GrowthTemplate = {
     });
 
     // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

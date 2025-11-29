@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Magic Discovery Template
@@ -172,19 +172,21 @@ export const magicDiscovery: GrowthTemplate = {
     if (relatedMagic) referenceEntities.push(relatedMagic);
     if (anomaly) referenceEntities.push(anomaly);
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = hero.culture || anomaly?.culture || 'world';
+    const magicPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'abilities',
-      'physical',
-      { maxDistance: relatedMagic ? 0.3 : 0.6, minDistance: 0.1 }  // Closer if related lineage
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!magicPlacement) {
       throw new Error(
         `magic_discovery: Failed to derive coordinates for magic discovered by ${hero.name}. ` +
         `This indicates the coordinate system is not properly configured for 'abilities' entities.`
       );
     }
+
+    const conceptualCoords = magicPlacement.coordinates;
 
     const magicAbility: Partial<HardState> = {
       kind: 'abilities',

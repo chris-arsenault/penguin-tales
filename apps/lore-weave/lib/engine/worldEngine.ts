@@ -26,6 +26,8 @@ import { DynamicWeightCalculator } from '../selection/dynamicWeightCalculator';
 import { FeedbackAnalyzer } from '../feedback/feedbackAnalyzer';
 import { TargetSelector } from '../selection/targetSelector';
 import { TemplateGraphView } from '../graph/templateGraphView';
+import { CoordinateContext } from '../coordinates/coordinateContext';
+import { coordinateStats } from '../coordinates/coordinateStatistics';
 // MetaEntityFormation removed - now handled by SimulationSystems (magicSchoolFormation, etc.)
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
@@ -327,6 +329,9 @@ export class WorldEngine {
   // Target selection service (prevents super-hub formation)
   private targetSelector: TargetSelector;
 
+  // Coordinate context (shared across all templates/systems)
+  private coordinateContext: CoordinateContext;
+
   // Track entity state for change detection
   private entitySnapshots = new Map<string, EntitySnapshot>();
 
@@ -446,6 +451,18 @@ export class WorldEngine {
     // Initialize target selector (prevents super-hub formation)
     this.targetSelector = new TargetSelector();
     console.log('✓ Intelligent target selection enabled (anti-super-hub)');
+
+    // Initialize coordinate context (REQUIRED - no fallbacks)
+    if (!config.coordinateContextConfig) {
+      throw new Error(
+        'WorldEngine: coordinateContextConfig is required in EngineConfig. ' +
+        'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
+      );
+    }
+    this.coordinateContext = new CoordinateContext(config.coordinateContextConfig);
+    console.log(`✓ Coordinate context initialized`);
+    console.log(`  - ${this.coordinateContext.getCultureIds().length} cultures configured`);
+    console.log(`  - ${this.coordinateContext.getConfiguredKinds().length} entity kinds with region maps`);
 
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
@@ -575,6 +592,9 @@ export class WorldEngine {
     console.log('Starting world generation...');
     console.log(`Initial state: ${this.graph.getEntityCount()} entities`);
 
+    // Reset coordinate statistics for this run
+    coordinateStats.reset();
+
     // Enrich initial entities (descriptions only, preserve canonical names)
     this.enrichInitialEntities();
 
@@ -606,6 +626,9 @@ export class WorldEngine {
 
     // FINAL HOMEOSTATIC SYSTEM REPORT
     this.printFinalFeedbackReport();
+
+    // COORDINATE SYSTEM STATISTICS
+    coordinateStats.printSummary();
 
     // Log warning file location
     try {
@@ -895,7 +918,7 @@ export class WorldEngine {
         console.log(`\n  ⚠️  Unused templates (${unusedTemplates.length}) - Diagnostic Analysis:`);
         unusedTemplates.forEach(t => {
           // Test canApply to diagnose why it didn't run
-          const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector);
+          const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
           console.log(`    • ${t.id.padEnd(35)}`);
           console.log(`      ${this.contractEnforcer.getDiagnostic(t, this.graph, diagnosticView)}`);
@@ -956,7 +979,7 @@ export class WorldEngine {
       attempts++;
 
       // Create restricted graph view for template (enforces targetSelector usage)
-      const graphView = new TemplateGraphView(this.graph, this.targetSelector);
+      const graphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
       // Re-filter applicable templates each iteration (graph state changes)
       const applicableTemplates = this.config.templates.filter(t => {
@@ -1373,6 +1396,9 @@ export class WorldEngine {
       ? this.calculateDistributionSystemModifiers(era)
       : {};
 
+    // Create a TemplateGraphView for systems to use
+    const systemGraphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+
     for (const system of this.config.systems) {
       const baseModifier = getSystemModifier(era, system.id);
       if (baseModifier === 0) continue; // System disabled by era
@@ -1381,7 +1407,7 @@ export class WorldEngine {
       const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
-        const result = await system.apply(this.graph, modifier);
+        const result = await system.apply(systemGraphView, modifier);
 
         // Record system execution
         this.statisticsCollector.recordSystemExecution(system.id);
@@ -2391,7 +2417,18 @@ export class WorldEngine {
       };
     }
 
+    // Export coordinate context state (emergent regions, etc.)
+    exportData.coordinateState = this.coordinateContext.export();
+
     return exportData;
+  }
+
+  /**
+   * Import coordinate state from a previously exported world.
+   * Call this after loading entities to restore emergent regions.
+   */
+  public importCoordinateState(coordinateState: ReturnType<CoordinateContext['export']>): void {
+    this.coordinateContext.import(coordinateState);
   }
 
   /**

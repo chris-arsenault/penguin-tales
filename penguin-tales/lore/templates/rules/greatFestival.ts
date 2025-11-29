@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple, slugifyName } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, slugifyName } from '@lore-weave/core';
 
 /**
  * Great Festival Template
@@ -169,19 +169,21 @@ export const greatFestival: GrowthTemplate = {
     }
 
     // Derive coordinates in conceptual space - festivals exist near the hosting colony
-    const conceptualCoords = graphView.deriveCoordinates(
-      [colony],
+    const cultureId = colony.culture ?? 'default';
+    const festivalPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'rules',
-      'physical',
-      { maxDistance: 0.3, minDistance: 0.1 }
+      [colony]
     );
 
-    if (!conceptualCoords) {
+    if (!festivalPlacement) {
       throw new Error(
         `great_festival: Failed to derive coordinates for festival in ${colony.name}. ` +
         `This indicates the coordinate system is not properly configured for 'rules' entities.`
       );
     }
+
+    const conceptualCoords = festivalPlacement.coordinates;
 
     return {
       entities: [{

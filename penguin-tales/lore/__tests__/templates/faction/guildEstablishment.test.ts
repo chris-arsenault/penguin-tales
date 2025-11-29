@@ -1,10 +1,33 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { guildEstablishment } from '../../../../../domain/penguin/templates/faction/guildEstablishment';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/selection/targetSelector';
-import { Graph } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { guildEstablishment } from '../../../templates/faction/guildEstablishment';
+import { TemplateGraphView } from '@lore-weave/core';
+import { TargetSelector } from '@lore-weave/core';
+import { Graph } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Mock CoordinateContext for testing
+const mockCoordinateContext = {
+  getKindRegionService: () => ({
+    getMapper: () => ({
+      getAllRegions: () => [],
+      getRegion: () => null,
+      sampleRegion: () => ({ x: 50, y: 50, z: 50 }),
+      distance: () => 0,
+      lookup: () => ({ region: null, distance: 0 })
+    }),
+    processEntityPlacement: () => ({ region: null, allRegions: [], tags: {} }),
+    placeNear: () => ({ coordinates: { x: 50, y: 50, z: 50 }, region: null, tags: {} })
+  }),
+  getSemanticEncoder: () => ({
+    encode: () => ({ coordinates: { x: 50, y: 50, z: 50 }, matchedTags: [], confidence: 1 }),
+    getAxes: () => null
+  }),
+  getCultureConfig: () => ({ cultureId: 'test', seedRegionIds: [] }),
+  hasCulture: () => true,
+  getCultureIds: () => ['test'],
+  buildPlacementContext: () => ({})
+} as any;
 
 describe('guildEstablishment Template', () => {
   let mockGraph: Graph;
@@ -22,11 +45,15 @@ describe('guildEstablishment Template', () => {
       history: [],
       config: {} as any,
       relationshipCooldowns: new Map(),
-      discoveryState: { sites: [], discovered: new Set() }
+      discoveryState: { sites: [], discovered: new Set() },
+      getEntities() { return [...this.entities.values()]; },
+      getEntity(id: string) { return this.entities.get(id); },
+      forEachEntity(cb: any) { this.entities.forEach(cb); },
+      getRelationships() { return this.relationships; }
     };
 
     mockTargetSelector = new TargetSelector();
-    mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector);
+    mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
   });
 
   describe('Template Metadata', () => {
@@ -350,8 +377,8 @@ describe('guildEstablishment Template', () => {
       expect(guild.subtype).toBe('company');
       expect(guild.status).toBe('state_sanctioned');
       expect(guild.prominence).toBe('recognized');
-      expect(guild.tags).toContain('trade');
-      expect(guild.tags).toContain('guild');
+      expect(guild.tags).toHaveProperty('trade');
+      expect(guild.tags).toHaveProperty('guild');
     });
 
     it('should create controls relationship to colony', () => {

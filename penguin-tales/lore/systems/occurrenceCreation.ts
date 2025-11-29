@@ -1,7 +1,7 @@
+import { TemplateGraphView } from '@lore-weave/core';
 import {
   SimulationSystem,
   SystemResult,
-  Graph,
   ComponentPurpose,
   HardState,
   Relationship,
@@ -120,7 +120,7 @@ export const occurrenceCreation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = occurrenceCreation.metadata?.parameters || {};
     const warThreshold = params.warThreshold?.value ?? 2;
     const disasterThreshold = params.disasterThreshold?.value ?? 2;
@@ -128,21 +128,21 @@ export const occurrenceCreation: SimulationSystem = {
     const boomThreshold = params.boomThreshold?.value ?? 4;
 
     // Get occurrence creation triggers from domain config
-    const occurrenceTriggers = graph.config.domain.getOccurrenceTriggers?.() || {};
+    const occurrenceTriggers = graphView.config.domain.getOccurrenceTriggers?.() || {};
 
     const relationshipsAdded: Relationship[] = [];
     const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
     const occurrencesCreated: HardState[] = [];
 
     // CONDITION 1: Create war occurrence if major faction conflicts
-    const warOutcome = checkForWar(graph, warThreshold, occurrenceTriggers.war);
+    const warOutcome = checkForWar(graphView, warThreshold, occurrenceTriggers.war);
     if (warOutcome) {
       occurrencesCreated.push(warOutcome.occurrence);
       relationshipsAdded.push(...warOutcome.relationships);
 
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: warOutcome.description,
         entitiesCreated: [warOutcome.occurrence.id],
@@ -152,14 +152,14 @@ export const occurrenceCreation: SimulationSystem = {
     }
 
     // CONDITION 2: Create magical disaster if corruption spreads
-    const disasterOutcome = checkForMagicalDisaster(graph, disasterThreshold, occurrenceTriggers.magical_disaster);
+    const disasterOutcome = checkForMagicalDisaster(graphView, disasterThreshold, occurrenceTriggers.magical_disaster);
     if (disasterOutcome) {
       occurrencesCreated.push(disasterOutcome.occurrence);
       relationshipsAdded.push(...disasterOutcome.relationships);
 
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: disasterOutcome.description,
         entitiesCreated: [disasterOutcome.occurrence.id],
@@ -169,14 +169,14 @@ export const occurrenceCreation: SimulationSystem = {
     }
 
     // CONDITION 3: Create cultural movement if ideology spreading
-    const movementOutcome = checkForCulturalMovement(graph, movementThreshold, occurrenceTriggers.cultural_movement);
+    const movementOutcome = checkForCulturalMovement(graphView, movementThreshold, occurrenceTriggers.cultural_movement);
     if (movementOutcome) {
       occurrencesCreated.push(movementOutcome.occurrence);
       relationshipsAdded.push(...movementOutcome.relationships);
 
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: movementOutcome.description,
         entitiesCreated: [movementOutcome.occurrence.id],
@@ -186,14 +186,14 @@ export const occurrenceCreation: SimulationSystem = {
     }
 
     // CONDITION 4: Create economic boom if trade network abundant
-    const boomOutcome = checkForEconomicBoom(graph, boomThreshold, occurrenceTriggers.economic_boom);
+    const boomOutcome = checkForEconomicBoom(graphView, boomThreshold, occurrenceTriggers.economic_boom);
     if (boomOutcome) {
       occurrencesCreated.push(boomOutcome.occurrence);
       relationshipsAdded.push(...boomOutcome.relationships);
 
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: boomOutcome.description,
         entitiesCreated: [boomOutcome.occurrence.id],
@@ -204,7 +204,7 @@ export const occurrenceCreation: SimulationSystem = {
 
     // Add created occurrences to graph
     occurrencesCreated.forEach(occ => {
-      graph._loadEntity(occ.id, occ);
+      graphView.loadEntity(occ);
     });
 
     return {
@@ -222,21 +222,21 @@ export const occurrenceCreation: SimulationSystem = {
  * Check if conditions are met for war occurrence
  */
 function checkForWar(
-  graph: Graph,
+  graphView: TemplateGraphView,
   threshold: number,
   trigger?: any
 ): OccurrenceOutcome | null {
   // Find faction conflicts
-  const warRelationships = graph.getRelationships().filter(rel =>
+  const warRelationships = graphView.getAllRelationships().filter(rel =>
     rel.kind === 'at_war_with' &&
-    graph.getEntity(rel.src)?.kind === 'faction' &&
-    graph.getEntity(rel.dst)?.kind === 'faction'
+    graphView.getEntity(rel.src)?.kind === 'faction' &&
+    graphView.getEntity(rel.dst)?.kind === 'faction'
   );
 
   if (warRelationships.length < threshold) return null;
 
   // Group conflicts - look for multi-faction wars
-  const conflictClusters = findConflictClusters(graph, warRelationships);
+  const conflictClusters = findConflictClusters(graphView, warRelationships);
 
   // Find largest cluster
   const largestCluster = conflictClusters.reduce((max, cluster) =>
@@ -256,20 +256,20 @@ function checkForWar(
   const factionsInRecentWar = largestCluster.factions.some(f => {
     const warStartTick = getTagValue<string>(f.tags, 'warStartTick');
     if (!warStartTick) return false;
-    return parseInt(warStartTick) > graph.tick - 20;
+    return parseInt(warStartTick) > graphView.tick - 20;
   });
 
   if (factionsInRecentWar) return null; // Factions recently involved in war
 
   // Also check for existing active war involving these factions
-  const existingWar = graph.getEntities().find(e => {
+  const existingWar = graphView.getEntities().find(e => {
     if (e.kind !== FRAMEWORK_ENTITY_KINDS.OCCURRENCE || e.subtype !== 'war' || e.status === FRAMEWORK_STATUS.HISTORICAL) {
       return false;
     }
 
     // Check if any faction in THIS cluster already participates in this war
     return largestCluster.factions.some(f =>
-      graph.getRelationships().some(r =>
+      graphView.getAllRelationships().some(r =>
         r.kind === 'participant_in' &&
         r.src === f.id &&
         r.dst === e.id
@@ -293,11 +293,11 @@ function checkForWar(
     culture: 'world',  // Wars are world-level events
     tags: { war: true, conflict: true, violence: true },
     links: [],
-    createdAt: graph.tick,
-    updatedAt: graph.tick,
+    createdAt: graphView.tick,
+    updatedAt: graphView.tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
-      startTick: graph.tick,
+      startTick: graphView.tick,
       endTick: null
     }
   };
@@ -314,24 +314,24 @@ function checkForWar(
       dst: warId,
       strength: 1.0,
       catalyzedBy: faction.id,
-      createdAt: graph.tick
+      createdAt: graphView.tick
     });
 
     // Tag faction with war participation timestamp for cooldown tracking
     if (!faction.tags) faction.tags = {};
-    (faction.tags as EntityTags).warStartTick = String(graph.tick);
-    faction.updatedAt = graph.tick;
+    (faction.tags as EntityTags).warStartTick = String(graphView.tick);
+    faction.updatedAt = graphView.tick;
   });
 
   // Add epicenter if there's a contested location
-  const contestedLocation = findContestedLocation(graph, largestCluster.factions);
+  const contestedLocation = findContestedLocation(graphView, largestCluster.factions);
   if (contestedLocation) {
     relationships.push({
       kind: 'epicenter_of',
       src: warId,
       dst: contestedLocation.id,
       strength: 1.0,
-      createdAt: graph.tick
+      createdAt: graphView.tick
     });
   }
 
@@ -348,20 +348,20 @@ function checkForWar(
  * Check if conditions are met for magical disaster occurrence
  */
 function checkForMagicalDisaster(
-  graph: Graph,
+  graphView: TemplateGraphView,
   threshold: number,
   trigger?: any
 ): OccurrenceOutcome | null {
   // Find recent corruption events (this tick only)
-  const recentCorruption = graph.getRelationships().filter(rel =>
+  const recentCorruption = graphView.getAllRelationships().filter(rel =>
     rel.kind === 'corrupted_by' &&
-    rel.createdAt === graph.tick
+    rel.createdAt === graphView.tick
   );
 
   if (recentCorruption.length < threshold) return null;
 
   // Check if disaster already exists
-  const existingDisaster = graph.getEntities().find(e =>
+  const existingDisaster = graphView.getEntities().find(e =>
     e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE &&
     e.subtype === 'magical_disaster' &&
     e.status === FRAMEWORK_STATUS.ACTIVE
@@ -384,11 +384,11 @@ function checkForMagicalDisaster(
     culture: 'world',  // Disasters are world-level events
     tags: { disaster: true, magic: true, corruption: true },
     links: [],
-    createdAt: graph.tick,
-    updatedAt: graph.tick,
+    createdAt: graphView.tick,
+    updatedAt: graphView.tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
-      startTick: graph.tick,
+      startTick: graphView.tick,
       endTick: null
     }
   };
@@ -414,7 +414,7 @@ function checkForMagicalDisaster(
       src: disasterId,
       dst: epicenterId,
       strength: 1.0,
-      createdAt: graph.tick
+      createdAt: graphView.tick
     });
     // Note: disaster.links will be populated by addRelationship() in worldEngine
   }
@@ -430,17 +430,17 @@ function checkForMagicalDisaster(
  * Check if conditions are met for cultural movement occurrence
  */
 function checkForCulturalMovement(
-  graph: Graph,
+  graphView: TemplateGraphView,
   threshold: number,
   trigger?: any
 ): OccurrenceOutcome | null {
   // Find rules with multiple adopters
   const ruleAdoption = new Map<string, HardState[]>();
 
-  graph.getRelationships().forEach(rel => {
+  graphView.getAllRelationships().forEach(rel => {
     if (rel.kind === 'weaponized_by' || rel.kind === 'kept_secret_by') {
-      const rule = graph.getEntity(rel.dst);
-      const faction = graph.getEntity(rel.src);
+      const rule = graphView.getEntity(rel.dst);
+      const faction = graphView.getEntity(rel.src);
       if (rule && faction && rule.kind === 'rules' && faction.kind === 'faction') {
         if (!ruleAdoption.has(rule.id)) {
           ruleAdoption.set(rule.id, []);
@@ -458,7 +458,7 @@ function checkForCulturalMovement(
 
   // Pick most widely adopted
   const [ruleId, factions] = widelyAdoptedRules[0];
-  const rule = graph.getEntity(ruleId);
+  const rule = graphView.getEntity(ruleId);
   if (!rule) return null;
 
   // Check if movement already exists
@@ -466,7 +466,7 @@ function checkForCulturalMovement(
   const expectedMovementName = trigger?.nameGenerator?.(rule.name) ||
     `The ${rule.name} Movement`;
 
-  const existingMovement = graph.getEntities().find(e => {
+  const existingMovement = graphView.getEntities().find(e => {
     if (e.kind !== FRAMEWORK_ENTITY_KINDS.OCCURRENCE || e.subtype !== 'cultural_movement' || e.status !== FRAMEWORK_STATUS.ACTIVE) {
       return false;
     }
@@ -477,7 +477,7 @@ function checkForCulturalMovement(
     }
 
     // Also check if this movement is already about this rule
-    return graph.getRelationships().some(r =>
+    return graphView.getAllRelationships().some(r =>
       r.src === e.id && r.dst === ruleId
     );
   });
@@ -498,11 +498,11 @@ function checkForCulturalMovement(
     culture: 'world',  // Cultural movements are world-level events
     tags: { cultural: true, ideology: true, movement: true },
     links: [],
-    createdAt: graph.tick,
-    updatedAt: graph.tick,
+    createdAt: graphView.tick,
+    updatedAt: graphView.tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
-      startTick: graph.tick,
+      startTick: graphView.tick,
       endTick: null
     }
   };
@@ -519,7 +519,7 @@ function checkForCulturalMovement(
       dst: movementId,
       strength: 1.0,
       catalyzedBy: faction.id,
-      createdAt: graph.tick
+      createdAt: graphView.tick
     });
     // Note: movement.links will be populated by addRelationship() in worldEngine
   });
@@ -535,19 +535,19 @@ function checkForCulturalMovement(
  * Check if conditions are met for economic boom occurrence
  */
 function checkForEconomicBoom(
-  graph: Graph,
+  graphView: TemplateGraphView,
   threshold: number,
   trigger?: any
 ): OccurrenceOutcome | null {
   // Count trade-related relationships
-  const tradeRoutes = graph.getRelationships().filter(rel =>
+  const tradeRoutes = graphView.getAllRelationships().filter(rel =>
     rel.kind === 'trades_with' || rel.kind === 'monopolizes'
   );
 
   if (tradeRoutes.length < threshold) return null;
 
   // Check if boom already exists
-  const existingBoom = graph.getEntities().find(e =>
+  const existingBoom = graphView.getEntities().find(e =>
     e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE &&
     e.subtype === 'economic_boom' &&
     e.status === FRAMEWORK_STATUS.ACTIVE
@@ -570,11 +570,11 @@ function checkForEconomicBoom(
     culture: 'world',  // Economic events are world-level events
     tags: { economic: true, prosperity: true, trade: true },
     links: [],
-    createdAt: graph.tick,
-    updatedAt: graph.tick,
+    createdAt: graphView.tick,
+    updatedAt: graphView.tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Occurrences are world-level, centered in their map
     temporal: {
-      startTick: graph.tick,
+      startTick: graphView.tick,
       endTick: null
     }
   };
@@ -592,15 +592,15 @@ function checkForEconomicBoom(
  * Helper: Find conflict clusters
  */
 function findConflictClusters(
-  graph: Graph,
+  graphView: TemplateGraphView,
   warRelationships: Relationship[]
 ): Array<{ factions: HardState[]; center: HardState | null }> {
   const clusters: Array<{ factions: HardState[]; center: HardState | null }> = [];
 
   // Simple clustering: each war relationship is a cluster
   warRelationships.forEach(rel => {
-    const src = graph.getEntity(rel.src);
-    const dst = graph.getEntity(rel.dst);
+    const src = graphView.getEntity(rel.src);
+    const dst = graphView.getEntity(rel.dst);
     if (src && dst) {
       clusters.push({
         factions: [src, dst],
@@ -616,15 +616,15 @@ function findConflictClusters(
  * Helper: Find contested location
  */
 function findContestedLocation(
-  graph: Graph,
+  graphView: TemplateGraphView,
   factions: HardState[]
 ): HardState | null {
   // Find locations controlled by different factions in conflict
-  const locations = graph.getEntities()
+  const locations = graphView.getEntities()
     .filter(e => e.kind === 'location');
 
   for (const loc of locations) {
-    const controllers = graph.getRelationships()
+    const controllers = graphView.getAllRelationships()
       .filter(rel => rel.kind === 'controls' && rel.dst === loc.id)
       .map(rel => rel.src);
 

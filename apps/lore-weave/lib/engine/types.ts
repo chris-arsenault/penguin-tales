@@ -3,6 +3,7 @@ import { LoreIndex, LoreRecord } from '../llm/types';
 import { TemplateMetadata, SystemMetadata, DistributionTargets } from '../statistics/types';
 import { DomainSchema } from '../domainInterface/domainSchema';
 import { FeedbackLoop } from '../feedback/feedbackAnalyzer';
+import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 
 export interface LLMConfig {
   enabled: boolean;
@@ -229,8 +230,9 @@ export interface SimulationSystem {
   contract?: ComponentContract;
 
   // Run one tick of this system
+  // graphView provides access to graph queries AND coordinate context
   // Returns Promise to support async operations (e.g., name generation)
-  apply: (graph: Graph, modifier: number) => Promise<SystemResult> | SystemResult;
+  apply: (graphView: import('../graph/templateGraphView').TemplateGraphView, modifier: number) => Promise<SystemResult> | SystemResult;
 }
 
 export interface SystemResult {
@@ -418,6 +420,9 @@ export interface EngineConfig {
 
   // Name generation service (wraps name-forge)
   nameForgeService?: NameGenerationService;
+
+  // Coordinate context configuration (REQUIRED for coordinate system)
+  coordinateContextConfig: CoordinateContextConfig;
 }
 
 // Meta-entity formation config (legacy - used by validationOrchestrator)

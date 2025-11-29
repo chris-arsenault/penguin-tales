@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
 
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
@@ -124,13 +124,13 @@ export const orcaRaiderArrival: GrowthTemplate = {
                        : Math.random() < 0.3 ? 'recognized'
                        : 'marginal';
 
-      // Derive coordinates spatially - place near the target colony
-      const baseCoords = graphView.deriveCoordinates(
-        [colony],
+      // Derive coordinates spatially using orca culture
+      const placementResult = graphView.deriveCoordinatesWithCulture(
+        'orca',  // Orca raiders have their own culture
         'npc',
-        undefined,  // No tags - pure spatial placement
-        { maxDistance: 15, minDistance: 5 }
+        [colony]
       );
+      const baseCoords = placementResult?.coordinates;
 
       // Adjust z to underwater (10-30) instead of surface (70)
       const orcaCoords = baseCoords ? {

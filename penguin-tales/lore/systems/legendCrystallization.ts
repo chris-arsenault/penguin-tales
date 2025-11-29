@@ -1,14 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  getLocation,
-  rollProbability,
-  pickRandom,
-  generateId,
-  hasTag
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { rollProbability, pickRandom, generateId, hasTag } from '@lore-weave/core';
 
 /**
  * Legend Crystallization System
@@ -89,7 +82,7 @@ export const legendCrystallization: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = legendCrystallization.metadata?.parameters || {};
     const throttleChance = params.throttleChance?.value ?? 0.2;
     const CRYSTALLIZATION_THRESHOLD = params.crystallizationThreshold?.value ?? 50;
@@ -109,11 +102,11 @@ export const legendCrystallization: SimulationSystem = {
     const newEntities: Array<{ id: string; entity: Partial<HardState> }> = [];
 
     // Find dead NPCs with high prominence who have been dead long enough
-    const deadNPCs = findEntities(graph, { kind: 'npc', status: 'dead' });
+    const deadNPCs = graphView.findEntities({ kind: 'npc', status: 'dead' });
 
     deadNPCs.forEach(npc => {
       // Calculate death age (ticks since last update, which was death)
-      const deathAge = graph.tick - npc.updatedAt;
+      const deathAge = graphView.tick - npc.updatedAt;
 
       // Only crystallize high-prominence NPCs who have been dead long enough
       if (deathAge < CRYSTALLIZATION_THRESHOLD) return;
@@ -131,7 +124,7 @@ export const legendCrystallization: SimulationSystem = {
 
       // === STAGE 2: Commemorative Location Renaming ===
       // Find the location where the NPC died (or lived)
-      const location = getLocation(graph, npc.id);
+      const location = graphView.getLocation(npc.id);
       if (location) {
         // Append commemorative suffix to location name
         const commemorativeSuffix = pickRandom([
@@ -192,8 +185,8 @@ export const legendCrystallization: SimulationSystem = {
           status: 'enacted',
           prominence: 'renowned',
           tags,
-          createdAt: graph.tick,
-          updatedAt: graph.tick
+          createdAt: graphView.tick,
+          updatedAt: graphView.tick
         }
       });
 
@@ -232,9 +225,8 @@ export const legendCrystallization: SimulationSystem = {
         coordinates: entity.coordinates || { x: 50, y: 50, z: 50 }
       };
 
-      // Use the Graph API to add entity
-      const entities = graph.getEntities();
-      entities.push(fullEntity);
+      // Use TemplateGraphView to add entity
+      graphView.loadEntity(fullEntity);
     });
 
     // Note: This system doesn't use pressure changes because crystallization is

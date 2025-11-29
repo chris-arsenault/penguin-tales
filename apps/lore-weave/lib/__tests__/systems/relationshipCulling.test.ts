@@ -3,9 +3,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { relationshipCulling } from '../../systems/relationshipCulling';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
+import { TemplateGraphView } from '../../graph/templateGraphView';
+import { TargetSelector } from '../../services/targetSelector';
 
 describe('relationshipCulling', () => {
   let graph: Graph;
+  let graphView: TemplateGraphView;
 
   const createEntity = (id: string, createdAt: number = 0): HardState => ({
     id,
@@ -216,6 +219,10 @@ describe('relationshipCulling', () => {
         return false;
       }
     };
+
+    // Create TemplateGraphView wrapper
+    const targetSelector = new TargetSelector();
+    graphView = new TemplateGraphView(graph, targetSelector);
   });
 
   describe('metadata', () => {
@@ -496,7 +503,7 @@ describe('relationshipCulling', () => {
   describe('custom modifier', () => {
     it('should accept modifier parameter', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph, 2.0);
+      const result = relationshipCulling.apply(graphView, 2.0);
 
       // Modifier doesn't affect culling logic currently, but shouldn't error
       expect(result).toBeDefined();
@@ -504,7 +511,7 @@ describe('relationshipCulling', () => {
 
     it('should work with zero modifier', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph, 0);
+      const result = relationshipCulling.apply(graphView, 0);
 
       expect(result).toBeDefined();
     });

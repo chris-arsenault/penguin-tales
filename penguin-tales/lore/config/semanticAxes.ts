@@ -5,7 +5,7 @@
  * Tags are mapped to positions on these axes to encode semantic meaning.
  */
 
-import { EntityKindAxes, TagSemanticWeights } from '@lore-weave/core/types/semanticAxes';
+import type { EntityKindAxes, TagSemanticWeights, SemanticEncoderConfig } from '@lore-weave/core';
 
 /**
  * Axis definitions for each entity kind.
@@ -649,3 +649,12 @@ export function getAxesForKind(entityKind: string): EntityKindAxes | undefined {
 export function getTagWeights(tag: string): TagSemanticWeights | undefined {
   return tagSemanticWeights.find(t => t.tag === tag);
 }
+
+/**
+ * Complete semantic encoder configuration for penguin domain.
+ */
+export const penguinSemanticConfig: SemanticEncoderConfig = {
+  axes: semanticAxes,
+  tagWeights: tagSemanticWeights,
+  warnOnUnconfiguredTags: false  // Don't warn - many tags are intentionally unconfigured
+};

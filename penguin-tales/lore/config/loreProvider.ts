@@ -10,7 +10,7 @@ import {
   CulturalGroup,
   NamingRules,
   GeographyConstraints
-} from '@lore-weave/core/types/domainLore';
+} from '@lore-weave/core';
 
 export const penguinLoreProvider: DomainLoreProvider = {
   getWorldName: () => "Super Penguin Colonies of Aurora Berg",

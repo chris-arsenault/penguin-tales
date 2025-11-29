@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateId } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { generateId } from '@lore-weave/core';
 
 /**
  * Magical Site Discovery Template
@@ -145,19 +145,21 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     // Derive coordinates - reference the magical ability and catalyst
     const referenceEntities = [target, catalyst];
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = catalyst.culture ?? 'default';
+    const sitePlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      'physical',
-      { maxDistance: 0.4, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!sitePlacement) {
       throw new Error(
         `magical_site_discovery: Failed to derive coordinates for magical site discovered by ${catalyst.name}. ` +
         `This indicates the coordinate system is not properly configured for 'location' entities.`
       );
     }
+
+    const conceptualCoords = sitePlacement.coordinates;
 
     const newLocation: Partial<HardState> = {
       kind: 'location',

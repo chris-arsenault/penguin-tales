@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, hasTag } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom, hasTag } from '@lore-weave/core';
 
 /**
  * Anomaly Manifestation Template
@@ -124,15 +124,18 @@ export const anomalyManifestation: GrowthTemplate = {
       };
     }
 
+    // Find nearest colony for culture inheritance
+    const nearestColony = colonies.length > 0 ? pickRandom(colonies) : null;
+    const cultureId = nearestColony?.culture || referenceEntities.find(e => e.culture)?.culture || 'world';
+
     // Derive coordinates for the anomaly (place away from civilization)
-    const coords = graphView.deriveCoordinates(
-      referenceEntities,
+    const anomalyPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      'physical',
-      { maxDistance: 0.5, minDistance: 0.2 }  // Further away than normal for wilderness feel
+      referenceEntities
     );
 
-    if (!coords) {
+    if (!anomalyPlacement) {
       return {
         entities: [],
         relationships: [],
@@ -140,8 +143,7 @@ export const anomalyManifestation: GrowthTemplate = {
       };
     }
 
-    // Find nearest colony for culture inheritance
-    const nearestColony = colonies.length > 0 ? pickRandom(colonies) : null;
+    const coords = anomalyPlacement.coordinates;
 
     const anomaly: Partial<HardState> = {
       kind: 'location',

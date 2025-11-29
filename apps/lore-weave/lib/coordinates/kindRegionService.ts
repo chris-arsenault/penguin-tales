@@ -25,6 +25,7 @@ import type {
   RegionLookupResult
 } from '../coordinates/types';
 import type { EntityTags } from '../core/worldTypes';
+import type { PlacementContext, CultureCoordinateConfig } from './coordinateContext';
 import { RegionMapper } from './regionMapper';
 
 /**
@@ -234,27 +235,38 @@ export class KindRegionService {
   /**
    * Process entity placement - returns tags to apply.
    * Also triggers emergent region creation if needed.
+   *
+   * This is the SINGLE ENTRY POINT for all placements.
+   * Culture context influences:
+   * - Emergent region labels and tags
+   * - Culture ID tracking on result
+   *
+   * @param kind - Entity kind
+   * @param entityId - Entity identifier
+   * @param point - Placement coordinates
+   * @param tick - Current simulation tick
+   * @param context - Optional placement context with culture data
    */
   processEntityPlacement(
     kind: string,
     entityId: string,
     point: Point,
     tick: number,
-    options?: {
-      createEmergentRegion?: boolean;
-      emergentLabel?: string;
-      emergentDescription?: string;
-    }
-  ): { tags: EntityTags; region: Region | null; emergentRegionCreated?: Region } {
+    context?: PlacementContext
+  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; emergentRegionCreated?: Region; cultureId?: string } {
     const mapper = this.getMapper(kind);
     const lookupResult = mapper.lookup(point);
 
     let emergentRegionCreated: Region | undefined;
 
     // Create emergent region if requested and not in any region
-    if (options?.createEmergentRegion && !lookupResult.primary) {
-      const label = options.emergentLabel ?? `${kind} Zone ${this.states[kind]?.regions.length ?? 0 + 1}`;
-      const description = options.emergentDescription ?? `Emergent region discovered at tick ${tick}`;
+    if (context?.createEmergentRegion && !lookupResult.primary) {
+      // Culture-aware labeling
+      const culturePrefix = context.cultureId ? `${context.cultureId} ` : '';
+      const label = context.emergentRegionLabel ??
+        `${culturePrefix}${kind} Zone ${(this.states[kind]?.regions.length ?? 0) + 1}`;
+      const description = `Emergent region discovered at tick ${tick}` +
+        (context.cultureId ? ` by ${context.cultureId} culture` : '');
 
       const emergentResult = this.createEmergentRegion(
         kind,
@@ -275,8 +287,24 @@ export class KindRegionService {
     return {
       tags,
       region: lookupResult.primary,
-      emergentRegionCreated
+      allRegions: lookupResult.all,
+      emergentRegionCreated,
+      cultureId: context?.cultureId
     };
+  }
+
+  /**
+   * Process entity placement with full PlacementContext.
+   * Convenience method that wraps processEntityPlacement with clearer API.
+   */
+  placeEntity(
+    kind: string,
+    entityId: string,
+    point: Point,
+    tick: number,
+    context: PlacementContext
+  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; emergentRegionCreated?: Region; cultureId?: string } {
+    return this.processEntityPlacement(kind, entityId, point, tick, context);
   }
 
   // ==========================================================================

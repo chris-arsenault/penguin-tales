@@ -20,7 +20,9 @@ export type {
   Relationship,
   Prominence,
   EntityKind,
-  EntityTags
+  EntityTags,
+  NPCSubtype,
+  FactionSubtype
 } from './core/worldTypes';
 
 export type {
@@ -47,7 +49,6 @@ export { ComponentPurpose, GraphStore } from './engine/types';
 
 export type {
   DomainSchema,
-  BaseDomainSchema,
   RelationshipKindDefinition,
   RelationshipConfig,
   RelationshipLimits,
@@ -63,8 +64,14 @@ export type {
   CultureImageConfig
 } from './domainInterface/domainSchema';
 
+// BaseDomainSchema is a class, not just a type
+export { BaseDomainSchema } from './domainInterface/domainSchema';
+
 export type {
-  DomainLoreProvider
+  DomainLoreProvider,
+  CulturalGroup,
+  NamingRules,
+  GeographyConstraints
 } from './llm/types';
 
 export type {
@@ -114,7 +121,17 @@ export {
   getTrueTagKeys,
   getStringTags,
   tagsToArray,
-  arrayToTags
+  arrayToTags,
+  // Additional entity/relationship utilities
+  rollProbability,
+  addEntity,
+  addRelationship,
+  canFormRelationship,
+  recordRelationshipFormation,
+  getProminenceValue,
+  adjustProminence,
+  getConnectionWeight,
+  getFactionRelationship
 } from './utils';
 
 // Name generation service (wraps name-forge)
@@ -274,3 +291,30 @@ export {
   SemanticEncoder,
   createSemanticEncoder
 } from './coordinates/semanticEncoder';
+
+// =============================================================================
+// COORDINATE CONTEXT (Culture-First Placement)
+// =============================================================================
+
+export {
+  CoordinateContext,
+  createCoordinateContext
+} from './coordinates/coordinateContext';
+
+export type {
+  CoordinateContextConfig,
+  CultureCoordinateConfig,
+  PlacementContext,
+  PlacementResult
+} from './coordinates/coordinateContext';
+
+// =============================================================================
+// COORDINATE STATISTICS (Diagnostics)
+// =============================================================================
+
+export { coordinateStats } from './coordinates/coordinateStatistics';
+export type {
+  PlacementEvent,
+  CultureClusterStats,
+  CoordinateStatsSummary
+} from './coordinates/coordinateStatistics';

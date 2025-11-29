@@ -1,13 +1,13 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../engine/types';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
-  getAgentsByCategory,
   calculateAttemptChance,
   addCatalyzedEvent,
   updateInfluence,
   getInfluence
 } from '../systems/catalystHelpers';
 import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
+import { TemplateGraphView } from '../graph/templateGraphView';
 
 /**
  * Universal Catalyst System
@@ -108,7 +108,7 @@ export const universalCatalyst: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = universalCatalyst.metadata?.parameters || {};
     const actionAttemptRate = params.actionAttemptRate?.value ?? 0.3;
     const influenceGain = params.influenceGain?.value ?? 0.1;
@@ -117,7 +117,7 @@ export const universalCatalyst: SimulationSystem = {
 
     // Get action domain definitions from domain config
     // These define what actions are available and how to execute them
-    const actionDomains = graph.config.domain.getActionDomains?.() || [];
+    const actionDomains = graphView.config.domain.getActionDomains?.() || [];
 
     if (actionDomains.length === 0) {
       // No action domains defined - catalyst system not configured yet
@@ -130,9 +130,7 @@ export const universalCatalyst: SimulationSystem = {
     }
 
     // Find all agents (entities that can act)
-    const firstOrderAgents = getAgentsByCategory(graph, 'first-order');
-    const secondOrderAgents = getAgentsByCategory(graph, 'second-order');
-    const allAgents = [...firstOrderAgents, ...secondOrderAgents];
+    const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
 
     const relationshipsAdded: Relationship[] = [];
     const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
@@ -146,7 +144,7 @@ export const universalCatalyst: SimulationSystem = {
       const attemptChance = calculateAttemptChance(agent, actionAttemptRate);
 
       // Apply pressure multiplier - high pressures increase action rates
-      const relevantPressures = getRelevantPressures(graph, agent.catalyst.actionDomains);
+      const relevantPressures = getRelevantPressures(graphView, agent.catalyst.actionDomains);
       const pressureBonus = relevantPressures * (pressureMultiplier - 1.0);
       const finalAttemptChance = Math.min(1.0, (attemptChance + pressureBonus) * modifier);
 
@@ -155,11 +153,11 @@ export const universalCatalyst: SimulationSystem = {
       actionsAttempted++;
 
       // Select action from agent's available domains
-      const selectedAction = selectAction(agent, graph, actionDomains);
+      const selectedAction = selectAction(agent, graphView, actionDomains);
       if (!selectedAction) return;
 
       // Attempt to execute action
-      const outcome = executeAction(agent, selectedAction, graph);
+      const outcome = executeAction(agent, selectedAction, graphView);
 
       if (outcome.success) {
         actionsSucceeded++;
@@ -167,7 +165,7 @@ export const universalCatalyst: SimulationSystem = {
         // Add created relationships with catalyst attribution
         outcome.relationships.forEach(rel => {
           rel.catalyzedBy = agent.id;
-          rel.createdAt = graph.tick;
+          rel.createdAt = graphView.tick;
           relationshipsAdded.push(rel);
         });
 
@@ -178,21 +176,21 @@ export const universalCatalyst: SimulationSystem = {
         addCatalyzedEvent(agent, {
           relationshipId: outcome.relationships[0]?.kind || undefined,
           action: outcome.description,
-          tick: graph.tick
+          tick: graphView.tick
         });
 
         entitiesModified.push({
           id: agent.id,
           changes: {
             catalyst: agent.catalyst,
-            updatedAt: graph.tick
+            updatedAt: graphView.tick
           }
         });
 
         // Create history event
-        graph.history.push({
-          tick: graph.tick,
-          era: graph.currentEra.id,
+        graphView.addHistoryEvent({
+          tick: graphView.tick,
+          era: graphView.currentEra.id,
           type: 'simulation',
           description: `${agent.name} ${outcome.description}`,
           entitiesCreated: outcome.entitiesCreated || [],
@@ -207,7 +205,7 @@ export const universalCatalyst: SimulationSystem = {
           id: agent.id,
           changes: {
             catalyst: agent.catalyst,
-            updatedAt: graph.tick
+            updatedAt: graphView.tick
           }
         });
       }
@@ -228,13 +226,13 @@ export const universalCatalyst: SimulationSystem = {
 
 /**
  * Get average pressure for relevant domains
- * @param graph - The world graph
+ * @param graphView - The graph view
  * @param actionDomains - Domains the agent can act in
  * @returns Average pressure (0-1)
  */
-function getRelevantPressures(graph: Graph, actionDomains: string[]): number {
+function getRelevantPressures(graphView: TemplateGraphView, actionDomains: string[]): number {
   // Domain can define pressure mappings (e.g., 'conflict' pressure → 'military' domain)
-  const pressureMappings = graph.config.domain.getPressureDomainMappings?.() || {};
+  const pressureMappings = graphView.config.domain.getPressureDomainMappings?.() || {};
 
   let totalPressure = 0;
   let count = 0;
@@ -242,7 +240,7 @@ function getRelevantPressures(graph: Graph, actionDomains: string[]): number {
   actionDomains.forEach(domain => {
     const pressureIds = pressureMappings[domain] || [];
     pressureIds.forEach(pressureId => {
-      const pressure = graph.pressures.get(pressureId) || 0;
+      const pressure = graphView.getPressure(pressureId);
       totalPressure += pressure / 100; // Normalize to 0-1
       count++;
     });
@@ -255,13 +253,13 @@ function getRelevantPressures(graph: Graph, actionDomains: string[]): number {
  * Select an action for the agent to attempt
  * Weighted by era modifiers and pressure levels
  * @param agent - The acting agent
- * @param graph - The world graph
+ * @param graphView - The graph view
  * @param actionDomains - Available action domain definitions
  * @returns Selected action or null
  */
 function selectAction(
   agent: HardState,
-  graph: Graph,
+  graphView: TemplateGraphView,
   actionDomains: any[]
 ): any | null {
   if (!agent.catalyst) return null;
@@ -274,11 +272,11 @@ function selectAction(
 
     domain.actions?.forEach((action: any) => {
       // Check if action requirements are met
-      if (meetsRequirements(agent, action, graph)) {
+      if (meetsRequirements(agent, action, graphView)) {
         availableActions.push({
           ...action,
           domain: domain.id,
-          weight: calculateActionWeight(action, domain.id, graph)
+          weight: calculateActionWeight(action, domain.id, graphView)
         });
       }
     });
@@ -304,10 +302,10 @@ function selectAction(
  * Check if agent meets action requirements
  * @param agent - The acting agent
  * @param action - The action definition
- * @param graph - The world graph
+ * @param graphView - The graph view
  * @returns True if requirements met
  */
-function meetsRequirements(agent: HardState, action: any, graph: Graph): boolean {
+function meetsRequirements(agent: HardState, action: any, graphView: TemplateGraphView): boolean {
   if (!action.requirements) return true;
 
   const reqs = action.requirements;
@@ -331,7 +329,7 @@ function meetsRequirements(agent: HardState, action: any, graph: Graph): boolean
   // Check required pressures
   if (reqs.requiredPressures) {
     const meetsAll = Object.entries(reqs.requiredPressures).every(([pressureId, threshold]) => {
-      const pressure = graph.pressures.get(pressureId) || 0;
+      const pressure = graphView.getPressure(pressureId);
       return pressure >= (threshold as number);
     });
     if (!meetsAll) return false;
@@ -344,22 +342,22 @@ function meetsRequirements(agent: HardState, action: any, graph: Graph): boolean
  * Calculate action weight based on era and pressures
  * @param action - The action definition
  * @param domain - The action domain ID
- * @param graph - The world graph
+ * @param graphView - The graph view
  * @returns Weight for selection
  */
-function calculateActionWeight(action: any, domain: string, graph: Graph): number {
+function calculateActionWeight(action: any, domain: string, graphView: TemplateGraphView): number {
   let weight = action.baseWeight || 1.0;
 
   // Apply era modifier if defined
-  const eraModifier = graph.currentEra.systemModifiers?.[domain] || 1.0;
+  const eraModifier = graphView.currentEra.systemModifiers?.[domain] || 1.0;
   weight *= eraModifier;
 
   // Apply pressure boost
-  const pressureMappings = graph.config.domain.getPressureDomainMappings?.() || {};
+  const pressureMappings = graphView.config.domain.getPressureDomainMappings?.() || {};
   const relevantPressures = pressureMappings[domain] || [];
 
   relevantPressures.forEach((pressureId: string) => {
-    const pressure = graph.pressures.get(pressureId) || 0;
+    const pressure = graphView.getPressure(pressureId);
     if (pressure > 50) {
       weight *= (1 + (pressure - 50) / 100); // Up to 2x at 100 pressure
     }
@@ -372,13 +370,13 @@ function calculateActionWeight(action: any, domain: string, graph: Graph): numbe
  * Execute an action via domain-defined handler
  * @param agent - The acting agent
  * @param action - The action definition
- * @param graph - The world graph
+ * @param graphView - The graph view
  * @returns Action outcome
  */
 function executeAction(
   agent: HardState,
   action: any,
-  graph: Graph
+  graphView: TemplateGraphView
 ): ActionOutcome {
   // Action handler is domain-defined
   if (!action.handler) {
@@ -399,8 +397,8 @@ function executeAction(
   const success = Math.random() < successChance;
 
   if (success) {
-    // Execute domain handler
-    return action.handler(graph, agent);
+    // Execute domain handler - pass graphView instead of graph
+    return action.handler(graphView, agent);
   } else {
     return {
       success: false,

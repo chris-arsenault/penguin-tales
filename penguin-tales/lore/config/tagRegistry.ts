@@ -6,7 +6,7 @@
  * relationships, and consolidation opportunities.
  */
 
-import type { TagMetadata } from '@lore-weave/core/index.js';
+import type { TagMetadata } from '@lore-weave/core';
 
 export const penguinTagRegistry: TagMetadata[] = [
   // STATUS TAGS

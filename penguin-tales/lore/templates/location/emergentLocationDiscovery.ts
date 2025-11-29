@@ -10,10 +10,10 @@
  * Uses emergent discovery logic to generate thematically appropriate locations.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, findEntities } from '@lore-weave/core';
 
 export const emergentLocationDiscovery: GrowthTemplate = {
   id: 'emergent_location_discovery',
@@ -170,19 +170,21 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       referenceEntities.push(nearbyLocations[0]);  // Use first nearby location as reference
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      'physical',
-      { maxDistance: 0.4, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!locationPlacement) {
       throw new Error(
         `emergent_location_discovery: Failed to derive coordinates for ${locationTheme} discovered by ${discoverer.name}. ` +
         `This indicates the coordinate system is not properly configured for 'location' entities.`
       );
     }
+
+    const conceptualCoords = locationPlacement.coordinates;
 
     const newLocation: Partial<HardState> = {
       kind: 'location',

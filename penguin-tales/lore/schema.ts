@@ -18,9 +18,9 @@ import {
   SnapshotConfig,
   EmergentDiscoveryConfig,
   ImageGenerationPromptConfig
-} from '@lore-weave/core/types/domainSchema';
-import { SemanticEncoderConfig } from '@lore-weave/core/types/semanticAxes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+} from '@lore-weave/core';
+import { SemanticEncoderConfig } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   getActionDomains,
   getActionDomainsForEntity,

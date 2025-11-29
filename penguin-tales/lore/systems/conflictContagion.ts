@@ -1,14 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  getRelated,
-  hasRelationship,
-  rollProbability,
-  canFormRelationship,
-  recordRelationshipFormation,
-  areRelationshipsCompatible
-} from '@lore-weave/core/utils/helpers';
-import { extractParams } from '@lore-weave/core/utils/parameterExtractor';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { rollProbability, extractParams } from '@lore-weave/core';
 
 /**
  * Conflict Contagion System
@@ -77,7 +70,7 @@ export const conflictContagion: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     // Extract parameters using utility (cleaner than manual extraction)
     const { throttleChance, spreadChance, cooldown: COOLDOWN } = extractParams(
       conflictContagion.metadata,
@@ -102,17 +95,17 @@ export const conflictContagion: SimulationSystem = {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
 
     // Find existing conflicts
-    const conflicts = graph.getRelationships().filter(r =>
+    const conflicts = graphView.getAllRelationships().filter(r =>
       r.kind === 'enemy_of' || r.kind === 'rival_of' || r.kind === 'at_war_with'
     );
 
     conflicts.forEach(conflict => {
       // Only strong allies (>= 0.5 loyalty) will join the conflict
       // Use allied_with and member_of relationships (follower_of was removed)
-      const srcAllies = getRelated(graph, conflict.src, 'allied_with', 'src', { minStrength: 0.5 })
-        .concat(getRelated(graph, conflict.src, 'member_of', 'src', { minStrength: 0.5 }));
-      const dstAllies = getRelated(graph, conflict.dst, 'allied_with', 'src', { minStrength: 0.5 })
-        .concat(getRelated(graph, conflict.dst, 'member_of', 'src', { minStrength: 0.5 }));
+      const srcAllies = graphView.getRelated(conflict.src, 'allied_with', 'src', { minStrength: 0.5 })
+        .concat(graphView.getRelated(conflict.src, 'member_of', 'src', { minStrength: 0.5 }));
+      const dstAllies = graphView.getRelated(conflict.dst, 'allied_with', 'src', { minStrength: 0.5 })
+        .concat(graphView.getRelated(conflict.dst, 'member_of', 'src', { minStrength: 0.5 }));
 
       // Conflicts spread to strong allies only
       srcAllies.forEach(ally => {
@@ -121,16 +114,16 @@ export const conflictContagion: SimulationSystem = {
 
         if (rollProbability(spreadChance, modifier)) {
           // Check: no existing enemy_of, not on cooldown, no contradictions
-          if (!hasRelationship(graph, ally.id, conflict.dst, 'enemy_of') &&
-              canFormRelationship(graph, ally.id, 'enemy_of', COOLDOWN) &&
-              areRelationshipsCompatible(graph, ally.id, conflict.dst, 'enemy_of')) {
+          if (!graphView.hasRelationship(ally.id, conflict.dst, 'enemy_of') &&
+              graphView.canFormRelationship(ally.id, 'enemy_of', COOLDOWN) &&
+              graphView.areRelationshipsCompatible(ally.id, conflict.dst, 'enemy_of')) {
             relationships.push({
               kind: 'enemy_of',
               src: ally.id,
               dst: conflict.dst,
               catalyzedBy: conflict.src  // Catalyst is the conflict participant who dragged ally in
             });
-            recordRelationshipFormation(graph, ally.id, 'enemy_of');
+            graphView.recordRelationshipFormation(ally.id, 'enemy_of');
           }
         }
       });
@@ -141,16 +134,16 @@ export const conflictContagion: SimulationSystem = {
 
         if (rollProbability(spreadChance, modifier)) {
           // Check: no existing enemy_of, not on cooldown, no contradictions
-          if (!hasRelationship(graph, ally.id, conflict.src, 'enemy_of') &&
-              canFormRelationship(graph, ally.id, 'enemy_of', COOLDOWN) &&
-              areRelationshipsCompatible(graph, ally.id, conflict.src, 'enemy_of')) {
+          if (!graphView.hasRelationship(ally.id, conflict.src, 'enemy_of') &&
+              graphView.canFormRelationship(ally.id, 'enemy_of', COOLDOWN) &&
+              graphView.areRelationshipsCompatible(ally.id, conflict.src, 'enemy_of')) {
             relationships.push({
               kind: 'enemy_of',
               src: ally.id,
               dst: conflict.src,
               catalyzedBy: conflict.dst  // Catalyst is the conflict participant who dragged ally in
             });
-            recordRelationshipFormation(graph, ally.id, 'enemy_of');
+            graphView.recordRelationshipFormation(ally.id, 'enemy_of');
           }
         }
       });

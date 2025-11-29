@@ -1,11 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  adjustProminence,
-  hasTag
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { adjustProminence, hasTag } from '@lore-weave/core';
 
 /**
  * Resource Flow System
@@ -55,15 +51,15 @@ export const resourceFlow: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     colonies.forEach(colony => {
       // Count resources and consumers
-      const resources = getRelated(graph, colony.id, 'adjacent_to')
+      const resources = graphView.getRelated(colony.id, 'adjacent_to', 'src')
         .filter(loc => hasTag(loc.tags, 'resource'));
-      const residents = getRelated(graph, colony.id, 'resident_of', 'dst');
+      const residents = graphView.getRelated(colony.id, 'resident_of', 'dst');
 
       const ratio = resources.length / Math.max(1, residents.length);
 
@@ -83,7 +79,7 @@ export const resourceFlow: SimulationSystem = {
       }
 
       // Merchant factions gain prominence in good times
-      const merchants = findEntities(graph, { kind: 'faction', subtype: 'company' })
+      const merchants = graphView.findEntities({ kind: 'faction', subtype: 'company' })
         .filter(f => f.links.some(l => l.kind === 'controls' && l.dst === colony.id));
 
       merchants.forEach(merchant => {

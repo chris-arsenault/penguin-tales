@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
 
 /**
  * Krill Bloom Migration Template
@@ -266,12 +266,13 @@ export const krillBloomMigration: GrowthTemplate = {
         const selectedColonies = pickMultiple(colonies, Math.min(2, colonies.length));
 
         // Derive coordinates for new bloom - place between selected colonies
-        const bloomCoords = graphView.deriveCoordinates(
-          selectedColonies,
+        const bloomCultureId = selectedColonies[0]?.culture || 'aurora-stack';
+        const bloomPlacement = graphView.deriveCoordinatesWithCulture(
+          bloomCultureId,
           'location',
-          undefined,
-          { maxDistance: 15 }  // Add some randomness to spread blooms out
+          selectedColonies
         );
+        const bloomCoords = bloomPlacement?.coordinates;
 
         entities.push({
           kind: 'location',
@@ -307,12 +308,13 @@ export const krillBloomMigration: GrowthTemplate = {
       if (!faction || !homeColony) continue;
 
       // Derive coordinates for NPC near their home colony
-      const npcCoords = graphView.deriveCoordinates(
-        [homeColony],
+      const npcCultureId = homeColony.culture ?? 'default';
+      const npcPlacement = graphView.deriveCoordinatesWithCulture(
+        npcCultureId,
         'npc',
-        undefined,
-        { maxDistance: 5 }
+        [homeColony]
       );
+      const npcCoords = npcPlacement?.coordinates;
 
       entities.push({
         kind: 'npc',

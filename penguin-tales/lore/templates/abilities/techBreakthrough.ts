@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateId } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { generateId } from '@lore-weave/core';
 
 /**
  * Tech Breakthrough Template
@@ -177,19 +177,21 @@ export const techBreakthrough: GrowthTemplate = {
       referenceEntities.push(parentTech);
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = target.culture ?? 'default';
+    const techPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'abilities',
-      'physical',
-      { maxDistance: parentTech ? 0.3 : 0.5, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!techPlacement) {
       throw new Error(
         `tech_breakthrough: Failed to derive coordinates for technology developed by ${target.name}. ` +
         `This indicates the coordinate system is not properly configured for 'abilities' entities.`
       );
     }
+
+    const conceptualCoords = techPlacement.coordinates;
 
     const newTech: Partial<HardState> = {
       kind: 'abilities',

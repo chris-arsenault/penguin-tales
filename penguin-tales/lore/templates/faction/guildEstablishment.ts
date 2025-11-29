@@ -1,8 +1,8 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, findEntities, slugifyName } from '@lore-weave/core/utils/helpers';
-import { buildRelationships } from '@lore-weave/core/graph/relationshipBuilder';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, findEntities, slugifyName } from '@lore-weave/core';
+import { buildRelationships } from '@lore-weave/core';
 
 /**
  * Guild Establishment Template
@@ -103,19 +103,21 @@ export const guildEstablishment: GrowthTemplate = {
       referenceEntities.push(...existingCompanies.slice(0, 2));
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = colony.culture ?? 'default';
+    const guildPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'faction',
-      'physical',
-      { maxDistance: 0.3, minDistance: 0.1 }  // Trade guilds cluster together conceptually
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!guildPlacement) {
       throw new Error(
         `guild_establishment: Failed to derive coordinates for guild in ${colony.name}. ` +
         `This indicates the coordinate system is not properly configured for 'faction' entities.`
       );
     }
+
+    const conceptualCoords = guildPlacement.coordinates;
 
     const guild: Partial<HardState> = {
       kind: 'faction',
@@ -129,19 +131,20 @@ export const guildEstablishment: GrowthTemplate = {
     };
 
     // Pre-compute coordinates for potential new merchants (factory receives Graph, not TemplateGraphView)
-    const newMerchantCoords = graphView.deriveCoordinates(
-      [colony],
+    const merchantPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'npc',
-      'physical',
-      { maxDistance: 0.3, minDistance: 0.1 }
+      [colony]
     );
 
-    if (!newMerchantCoords) {
+    if (!merchantPlacement) {
       throw new Error(
         `guild_establishment: Failed to derive coordinates for potential new merchants in ${colony.name}. ` +
         `This indicates the coordinate system is not properly configured for 'npc' entities.`
       );
     }
+
+    const newMerchantCoords = merchantPlacement.coordinates;
 
     // Use targetSelector to intelligently select merchants (prevents super-hubs)
     let merchantsToRecruit: HardState[] = [];

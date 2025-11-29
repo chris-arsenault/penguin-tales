@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -107,33 +107,36 @@ export const heroEmergence: GrowthTemplate = {
       );
     }
 
-    const colonyRegion = graphView.getEntityRegion(colony);
-    if (!colonyRegion) {
+    // Place hero near the colony using culture-aware placement
+    const cultureId = colony.culture ?? 'default';
+    const placementResult = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'npc',
+      [colony]
+    );
+
+    if (!placementResult) {
       throw new Error(
-        `hero_emergence: Colony "${colony.name}" (${colony.id}) has no associated region. ` +
-        `Ensure colony coordinates are properly set.`
+        `hero_emergence: Failed to derive coordinates for hero near colony "${colony.name}". ` +
+        `Ensure coordinate system is properly configured for 'npc' entities.`
       );
     }
 
-    // Place hero within the colony's region
-    const entityId = await graphView.addEntityInRegion(
-      {
-        kind: 'npc',
-        subtype: 'hero',
-        description: `A brave penguin who emerged during troubled times in ${colony.name}`,
-        status: 'alive',
-        prominence: 'marginal',
-        culture: colony.culture,
-        tags: { brave: true, emergent: true }
-      },
-      colonyRegion.id,
-      { minDistance: 1 }
-    );
+    const entityId = await graphView.addEntity({
+      kind: 'npc',
+      subtype: 'hero',
+      description: `A brave penguin who emerged during troubled times in ${colony.name}`,
+      status: 'alive',
+      prominence: 'marginal',
+      culture: colony.culture,
+      tags: { brave: true, emergent: true },
+      coordinates: placementResult.coordinates
+    });
 
     if (!entityId) {
       throw new Error(
-        `hero_emergence: Failed to place hero in region "${colonyRegion.id}". ` +
-        `Region may be saturated or coordinate placement failed.`
+        `hero_emergence: Failed to create hero entity. ` +
+        `Entity creation unexpectedly returned no ID.`
       );
     }
 

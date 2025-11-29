@@ -1,13 +1,37 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { succession } from '../../../../../domain/penguin/templates/npc/succession';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { Graph, Era, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { succession } from '../../../templates/npc/succession';
+import { TemplateGraphView, TargetSelector } from '@lore-weave/core';
+import { Graph, Era, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Mock CoordinateContext for testing
+const mockCoordinateContext = {
+  getKindRegionService: () => ({
+    getMapper: () => ({
+      getAllRegions: () => [],
+      getRegion: () => null,
+      sampleRegion: () => ({ x: 50, y: 50, z: 50 }),
+      distance: () => 0,
+      lookup: () => ({ region: null, distance: 0 })
+    }),
+    processEntityPlacement: () => ({ region: null, allRegions: [], tags: {} }),
+    placeNear: () => ({ coordinates: { x: 50, y: 50, z: 50 }, region: null, tags: {} })
+  }),
+  getSemanticEncoder: () => ({
+    encode: () => ({ coordinates: { x: 50, y: 50, z: 50 }, matchedTags: [], confidence: 1 }),
+    getAxes: () => null
+  }),
+  getCultureConfig: () => ({ cultureId: 'test', seedRegionIds: [] }),
+  hasCulture: () => true,
+  getCultureIds: () => ['test'],
+  buildPlacementContext: () => ({})
+} as any;
 
 describe('succession template', () => {
   let mockGraph: Graph;
   let mockGraphView: TemplateGraphView;
+  let mockTargetSelector: TargetSelector;
   let mockEra: Era;
 
   beforeEach(() => {
@@ -30,10 +54,15 @@ describe('succession template', () => {
       discoveryState: {
         discoveredSites: new Map(),
         siteOccurrences: new Map()
-      }
+      },
+      getEntities() { return [...this.entities.values()]; },
+      getEntity(id: string) { return this.entities.get(id); },
+      forEachEntity(cb: any) { this.entities.forEach(cb); },
+      getRelationships() { return this.relationships; }
     };
 
-    mockGraphView = new TemplateGraphView(mockGraph);
+    mockTargetSelector = new TargetSelector();
+    mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
   });
 
   describe('contract and metadata', () => {
@@ -102,7 +131,7 @@ describe('succession template', () => {
         updatedAt: 0
       };
       mockGraph.entities.set('npc-1', merchant);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       expect(succession.canApply(mockGraphView)).toBe(false);
     });
@@ -122,7 +151,7 @@ describe('succession template', () => {
         updatedAt: 10
       };
       mockGraph.entities.set('npc-1', deadMayor);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       expect(succession.canApply(mockGraphView)).toBe(true);
     });
@@ -143,7 +172,7 @@ describe('succession template', () => {
       };
       mockGraph.entities.set('npc-1', aliveMayor);
       mockGraph.tick = 60;
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       expect(succession.canApply(mockGraphView)).toBe(true);
     });
@@ -164,7 +193,7 @@ describe('succession template', () => {
       };
       mockGraph.entities.set('npc-1', aliveMayor);
       mockGraph.tick = 30;
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       expect(succession.canApply(mockGraphView)).toBe(false);
     });
@@ -191,7 +220,7 @@ describe('succession template', () => {
         updatedAt: 10
       };
       mockGraph.entities.set('npc-1', deadMayor);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const targets = succession.findTargets!(mockGraphView);
       expect(targets).toHaveLength(1);
@@ -214,7 +243,7 @@ describe('succession template', () => {
       };
       mockGraph.entities.set('npc-1', oldMayor);
       mockGraph.tick = 60;
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const targets = succession.findTargets!(mockGraphView);
       expect(targets).toHaveLength(1);
@@ -237,7 +266,7 @@ describe('succession template', () => {
       };
       mockGraph.entities.set('npc-1', youngMayor);
       mockGraph.tick = 60;
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const targets = succession.findTargets!(mockGraphView);
       expect(targets).toEqual([]);
@@ -267,7 +296,7 @@ describe('succession template', () => {
         updatedAt: 10
       };
       mockGraph.entities.set('npc-1', mayorWithoutColony);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = succession.expand(mockGraphView, mayorWithoutColony);
       expect(result.entities).toEqual([]);
@@ -313,7 +342,7 @@ describe('succession template', () => {
       mockGraph.entities.set('npc-1', oldMayor);
       mockGraph.entities.set('loc-1', colony);
       mockGraph.relationships.push(leaderOfRel);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = succession.expand(mockGraphView, oldMayor);
 
@@ -323,7 +352,7 @@ describe('succession template', () => {
       expect(newMayor.subtype).toBe('mayor');
       expect(newMayor.status).toBe('alive');
       expect(newMayor.prominence).toBe('marginal');
-      expect(newMayor.tags).toContain('successor');
+      expect(newMayor.tags).toHaveProperty('successor');
       expect(newMayor.description).toContain('Old Mayor');
       expect(newMayor.description).toContain('Test Colony');
     });
@@ -366,7 +395,7 @@ describe('succession template', () => {
       mockGraph.entities.set('npc-1', oldMayor);
       mockGraph.entities.set('loc-1', colony);
       mockGraph.relationships.push(leaderOfRel);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = succession.expand(mockGraphView, oldMayor);
 
@@ -433,7 +462,7 @@ describe('succession template', () => {
       mockGraph.entities.set('loc-1', colony);
       mockGraph.entities.set('fac-1', faction);
       mockGraph.relationships.push(colonyRel, factionRel);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = succession.expand(mockGraphView, oldMayor);
 
@@ -488,7 +517,7 @@ describe('succession template', () => {
       mockGraph.entities.set('npc-1', oldMayor);
       mockGraph.entities.set('loc-1', colony);
       mockGraph.relationships.push(leaderOfRel);
-      mockGraphView = new TemplateGraphView(mockGraph);
+      mockGraphView = new TemplateGraphView(mockGraph, mockTargetSelector, mockCoordinateContext);
 
       const result = succession.expand(mockGraphView, oldMayor);
 

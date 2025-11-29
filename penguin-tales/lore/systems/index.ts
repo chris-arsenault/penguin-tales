@@ -1,3 +1,4 @@
+import { TemplateGraphView } from '@lore-weave/core';
 /**
  * Penguin Simulation Systems
  *
@@ -8,12 +9,12 @@
  * and should be added separately in the engine configuration.
  */
 
-import { SimulationSystem } from '@lore-weave/core/types/engine';
+import { SimulationSystem } from '@lore-weave/core';
 
 // Import framework systems
-import { eraSpawner } from '@lore-weave/core/systems/eraSpawner';
-import { universalCatalyst } from '@lore-weave/core/systems/universalCatalyst';
-import { eraTransition } from '@lore-weave/core/systems/eraTransition';
+import { eraSpawner } from '@lore-weave/core';
+import { universalCatalyst } from '@lore-weave/core';
+import { eraTransition } from '@lore-weave/core';
 
 // Import domain-specific occurrence system (moved from framework)
 import { occurrenceCreation } from './occurrenceCreation';

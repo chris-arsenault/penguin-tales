@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 export const outlawRecruitment: GrowthTemplate = {
   id: 'outlaw_recruitment',

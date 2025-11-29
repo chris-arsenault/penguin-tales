@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple, slugifyName, archiveRelationship } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, slugifyName } from '@lore-weave/core';
 
 /**
  * Mysterious Vanishing Template
@@ -241,13 +241,12 @@ export const mysteriousVanishing: GrowthTemplate = {
     // === STEP 5: Archive All Relationships (Temporal Tracking) ===
     // Archive all relationships of the vanishing NPC
     // This marks them as historical rather than deleting them
-    const graph = graphView.getInternalGraph();
-    const victimRelationships = graph.getRelationships().filter(r =>
+    const victimRelationships = graphView.getAllRelationships().filter(r =>
       (r.src === victim.id || r.dst === victim.id) && r.status !== 'historical'
     );
 
     victimRelationships.forEach(rel => {
-      archiveRelationship(graph, rel.src, rel.dst, rel.kind);
+      graphView.archiveRelationship(rel.src, rel.dst, rel.kind);
     });
 
     // === STEP 6: Create searching_for Relationships ===

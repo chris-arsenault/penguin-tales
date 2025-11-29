@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, hasTag } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, hasTag } from '@lore-weave/core';
 
 /**
  * Ideology Emergence Template
@@ -255,19 +255,21 @@ export const ideologyEmergence: GrowthTemplate = {
       referenceEntities.push(relatedRule);
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = champion.culture ?? 'default';
+    const ideologyPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'rules',
-      'physical',
-      { maxDistance: relatedRule ? 0.4 : 0.6, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!ideologyPlacement) {
       throw new Error(
         `ideology_emergence: Failed to derive coordinates for ideology championed by ${champion.name}. ` +
         `This indicates the coordinate system is not properly configured for 'rules' entities.`
       );
     }
+
+    const conceptualCoords = ideologyPlacement.coordinates;
 
     return {
       entities: [{

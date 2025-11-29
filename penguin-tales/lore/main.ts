@@ -19,14 +19,14 @@ import {
   applyParameterOverrides,
   relationshipCulling,
   NameForgeService
-} from '@lore-weave/core/index.js';
+} from '@lore-weave/core';
 
 import type {
   EngineConfig,
   HardState,
   DistributionTargets,
   NameForgeConfig
-} from '@lore-weave/core/index.js';
+} from '@lore-weave/core';
 
 // Domain imports (penguin-specific)
 import {
@@ -43,6 +43,9 @@ import { penguinLoreProvider } from './config/loreProvider.js';
 import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
 import { penguinFeedbackLoops } from './config/feedbackLoops.js';
 import { penguinTagRegistry } from './config/tagRegistry.js';
+import { penguinCultures } from './config/cultures.js';
+import { penguinSemanticConfig } from './config/semanticAxes.js';
+import type { CoordinateContextConfig } from '@lore-weave/core';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -250,7 +253,14 @@ const config: EngineConfig = {
   feedbackLoops: penguinFeedbackLoops,
 
   // Tag registry for tag health analysis (penguin-specific)
-  tagRegistry: penguinTagRegistry
+  tagRegistry: penguinTagRegistry,
+
+  // Coordinate context configuration (culture-first placement system)
+  coordinateContextConfig: {
+    kindRegionConfig: penguinKindRegionConfig,
+    semanticConfig: penguinSemanticConfig,
+    cultures: penguinCultures
+  } as CoordinateContextConfig
 
   // Meta-entity formation is now handled by SimulationSystems:
   // magicSchoolFormation, legalCodeFormation, combatTechniqueFormation

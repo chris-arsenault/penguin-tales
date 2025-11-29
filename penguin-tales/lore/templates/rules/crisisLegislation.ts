@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, slugifyName } from '@lore-weave/core';
 
 /**
  * Crisis Legislation Template
@@ -116,19 +116,21 @@ export const crisisLegislation: GrowthTemplate = {
       referenceEntities.push(relatedRule);
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = colony.culture ?? 'default';
+    const rulePlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'rules',
-      'physical',
-      { maxDistance: relatedRule ? 0.3 : 0.5, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!rulePlacement) {
       throw new Error(
         `crisis_legislation: Failed to derive coordinates for rule in ${colony.name}. ` +
         `This indicates the coordinate system is not properly configured for 'rules' entities.`
       );
     }
+
+    const conceptualCoords = rulePlacement.coordinates;
 
     const relationships: Relationship[] = [
       { kind: 'applies_in', src: 'will-be-assigned-0', dst: colony.id }

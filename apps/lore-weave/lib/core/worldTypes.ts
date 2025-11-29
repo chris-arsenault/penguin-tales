@@ -49,6 +49,10 @@ export interface HardState {
 
     // Coordinates in this entity's kind-specific map (simple 2D + optional z)
     coordinates: Point;
+
+    // Region placement results (populated during entity creation)
+    regionId?: string | null;    // Primary (most specific) region ID, null if wilderness
+    allRegionIds?: string[];     // All region IDs containing this entity's coordinates
 }
 
 // Catalyst system types

@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, NPCSubtype } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, NPCSubtype } from '@lore-weave/core';
+import { pickRandom, slugifyName } from '@lore-weave/core';
 
 /**
  * Family Expansion Template

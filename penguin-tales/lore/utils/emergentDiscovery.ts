@@ -7,7 +7,7 @@
  * Requires EmergentDiscoveryConfig from domain schema.
  */
 
-import { Graph, EmergentDiscoveryConfig, HardState, pickRandom, pickMultiple } from '@lore-weave/core';
+import { TemplateGraphView, EmergentDiscoveryConfig, HardState, pickRandom, pickMultiple } from '@lore-weave/core';
 
 // LocationSubtype is a domain-specific type alias
 type LocationSubtype = string;
@@ -17,11 +17,11 @@ type LocationSubtype = string;
 // ============================================================================
 
 /**
- * Get discovery config from graph. Requires domain schema to be configured.
+ * Get discovery config from graphView. Requires domain schema to be configured.
  * @throws Error if domain schema doesn't provide emergentDiscoveryConfig
  */
-function getDiscoveryConfig(graph: Graph): EmergentDiscoveryConfig {
-  const config = graph.config?.domain?.emergentDiscoveryConfig;
+function getDiscoveryConfig(graphView: TemplateGraphView): EmergentDiscoveryConfig {
+  const config = graphView.config?.domain?.emergentDiscoveryConfig;
   if (!config) {
     throw new Error('EmergentDiscoveryConfig not provided by domain schema');
   }
@@ -32,8 +32,8 @@ function getDiscoveryConfig(graph: Graph): EmergentDiscoveryConfig {
  * Try to get discovery config, returning null if not available.
  * Use this for functions that should gracefully degrade.
  */
-function tryGetDiscoveryConfig(graph: Graph): EmergentDiscoveryConfig | null {
-  return graph.config?.domain?.emergentDiscoveryConfig ?? null;
+function tryGetDiscoveryConfig(graphView: TemplateGraphView): EmergentDiscoveryConfig | null {
+  return graphView.config?.domain?.emergentDiscoveryConfig ?? null;
 }
 
 /**
@@ -65,8 +65,8 @@ export interface ResourceAnalysis {
  * Analyze resource deficit by examining colony status and population.
  * Returns null if discovery config is not available.
  */
-export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
-  const config = tryGetDiscoveryConfig(graph);
+export function analyzeResourceDeficit(graphView: TemplateGraphView): ResourceAnalysis | null {
+  const config = tryGetDiscoveryConfig(graphView);
   if (!config) return null;
 
   const settlementSubtypes = requireConfigValue(config, 'settlementSubtypes');
@@ -74,7 +74,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
   const strugglingStatuses = requireConfigValue(config, 'strugglingStatuses');
   const foodResources = requireConfigValue(config, 'foodResources');
 
-  const colonies = graph.getEntities().filter(
+  const colonies = graphView.getEntities().filter(
     e => e.kind === 'location' && settlementSubtypes.includes(e.subtype)
   );
 
@@ -85,7 +85,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
 
   // Food scarcity if colonies are waning
   if (waningColonies.length > thrivingColonies.length) {
-    const scarcity = graph.pressures.get('resource_scarcity') || 0;
+    const scarcity = graphView.getPressure('resource_scarcity');
     return {
       primary: 'food',
       severity: scarcity,
@@ -95,7 +95,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
   }
 
   // Water scarcity if high population but low resources
-  const npcs = graph.getEntities().filter(e => e.kind === 'npc');
+  const npcs = graphView.getEntities().filter(e => e.kind === 'npc');
   const locationsPerNPC = colonies.length / Math.max(npcs.length, 1);
   if (locationsPerNPC < 0.1 && colonies.length > 2) {
     return {
@@ -107,7 +107,7 @@ export function analyzeResourceDeficit(graph: Graph): ResourceAnalysis | null {
   }
 
   // Check scarcity pressure generally
-  const scarcity = graph.pressures.get('resource_scarcity') || 0;
+  const scarcity = graphView.getPressure('resource_scarcity');
   if (scarcity > 50) {
     return {
       primary: 'food',
@@ -130,19 +130,20 @@ export interface ConflictAnalysis {
 /**
  * Analyze conflict patterns to determine strategic needs
  */
-export function analyzeConflictPatterns(graph: Graph): ConflictAnalysis | null {
-  const conflictPressure = graph.pressures.get('conflict') || 0;
+export function analyzeConflictPatterns(graphView: TemplateGraphView): ConflictAnalysis | null {
+  const conflictPressure = graphView.getPressure('conflict');
   if (conflictPressure < 30) return null;
 
   // Find active conflicts
-  const enemies = graph.getRelationships().filter(r => r.kind === 'enemy_of' || r.kind === 'at_war_with');
-  const conflicts = graph.getRelationships().filter(r => r.kind === 'attacking');
+  const allRelationships = graphView.getAllRelationships();
+  const enemies = allRelationships.filter(r => r.kind === 'enemy_of' || r.kind === 'at_war_with');
+  const conflicts = allRelationships.filter(r => r.kind === 'attacking');
 
   if (enemies.length === 0) return null;
 
   // Determine conflict type from graph patterns
-  const resourceScarcity = graph.pressures.get('resource_scarcity') || 0;
-  const culturalTension = graph.pressures.get('cultural_tension') || 0;
+  const resourceScarcity = graphView.getPressure('resource_scarcity');
+  const culturalTension = graphView.getPressure('cultural_tension');
 
   let type: ConflictAnalysis['type'] = 'territorial';
   if (resourceScarcity > 50) {
@@ -156,8 +157,8 @@ export function analyzeConflictPatterns(graph: Graph): ConflictAnalysis | null {
   // Find involved factions
   const factionIds = new Set<string>();
   enemies.forEach(e => {
-    const srcEntity = graph.getEntity(e.src);
-    const dstEntity = graph.getEntity(e.dst);
+    const srcEntity = graphView.getEntity(e.src);
+    const dstEntity = graphView.getEntity(e.dst);
     if (srcEntity?.kind === 'faction') factionIds.add(e.src);
     if (dstEntity?.kind === 'faction') factionIds.add(e.dst);
   });
@@ -180,18 +181,18 @@ export interface MagicAnalysis {
 /**
  * Analyze magical presence and instability
  */
-export function analyzeMagicPresence(graph: Graph): MagicAnalysis | null {
-  const config = tryGetDiscoveryConfig(graph);
+export function analyzeMagicPresence(graphView: TemplateGraphView): MagicAnalysis | null {
+  const config = tryGetDiscoveryConfig(graphView);
   const anomalySubtype = config?.anomalySubtype ?? 'anomaly';
 
-  const instability = graph.pressures.get('magical_instability') || 0;
+  const instability = graphView.getPressure('magical_instability');
   if (instability < 25) return null;
 
   // Find existing magic
-  const magicAbilities = graph.getEntities().filter(
+  const magicAbilities = graphView.getEntities().filter(
     e => e.kind === 'abilities' && e.subtype === 'magic'
   );
-  const anomalies = graph.getEntities().filter(
+  const anomalies = graphView.getEntities().filter(
     e => e.kind === 'location' && e.subtype === anomalySubtype
   );
 
@@ -201,7 +202,7 @@ export function analyzeMagicPresence(graph: Graph): MagicAnalysis | null {
     manifestationType = 'convergence';
   } else if (magicAbilities.length > 3) {
     manifestationType = 'artifact';
-  } else if (graph.currentEra.id === 'expansion') {
+  } else if (graphView.currentEra.id === 'expansion') {
     manifestationType = 'temple';
   }
 
@@ -320,12 +321,12 @@ export function generateMysticalTheme(analysis: MagicAnalysis, era: string): Loc
  * Generate a neutral exploration theme.
  * Returns null if discovery config is not available.
  */
-export function generateExplorationTheme(graph: Graph): LocationTheme | null {
-  const config = tryGetDiscoveryConfig(graph);
+export function generateExplorationTheme(graphView: TemplateGraphView): LocationTheme | null {
+  const config = tryGetDiscoveryConfig(graphView);
   if (!config) return null;
 
   const eraThemeWords = config.eraThemeWords ?? {};
-  const era = graph.currentEra.id;
+  const era = graphView.currentEra.id;
 
   const geographicWords = ['shelf', 'terrace', 'ledge', 'plateau', 'hollow', 'valley'];
 
@@ -354,8 +355,8 @@ export function generateExplorationTheme(graph: Graph): LocationTheme | null {
  * Calculate if a discovery should occur based on world state.
  * Returns false if discovery config is not available.
  */
-export function shouldDiscoverLocation(graph: Graph): boolean {
-  const config = tryGetDiscoveryConfig(graph);
+export function shouldDiscoverLocation(graphView: TemplateGraphView): boolean {
+  const config = tryGetDiscoveryConfig(graphView);
   if (!config) return false;
 
   const maxLocations = requireConfigValue(config, 'maxLocations');
@@ -365,7 +366,7 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
   const explorerActiveStatus = requireConfigValue(config, 'explorerActiveStatus');
   const eraDiscoveryModifiers = config.eraDiscoveryModifiers ?? {};
 
-  const locationCount = graph.getEntities().filter(
+  const locationCount = graphView.getEntities().filter(
     e => e.kind === 'location'
   ).length;
 
@@ -373,13 +374,13 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
   if (locationCount >= maxLocations) return false;
 
   // Check discovery state
-  const ticksSince = graph.tick - graph.discoveryState.lastDiscoveryTick;
+  const ticksSince = graphView.tick - graphView.discoveryState.lastDiscoveryTick;
   if (ticksSince < minTicksBetweenDiscoveries) return false;
 
-  if (graph.discoveryState.discoveriesThisEpoch >= maxDiscoveriesPerEpoch) return false;
+  if (graphView.discoveryState.discoveriesThisEpoch >= maxDiscoveriesPerEpoch) return false;
 
   // Must have explorers
-  const explorers = graph.getEntities().filter(
+  const explorers = graphView.getEntities().filter(
     e => e.kind === 'npc' &&
          explorerSubtypes.includes(e.subtype) &&
          e.status === explorerActiveStatus
@@ -387,7 +388,7 @@ export function shouldDiscoverLocation(graph: Graph): boolean {
   if (explorers.length === 0) return false;
 
   // Base probability scaled by era (from config)
-  const baseChance = eraDiscoveryModifiers[graph.currentEra.id] ?? 0.10;
+  const baseChance = eraDiscoveryModifiers[graphView.currentEra.id] ?? 0.10;
 
   return Math.random() < baseChance;
 }
@@ -414,7 +415,7 @@ export function calculateThemeSimilarity(location1: HardState, theme2: string): 
 /**
  * Get nearby locations for adjacency
  */
-export function findNearbyLocations(explorer: HardState, graph: Graph): HardState[] {
+export function findNearbyLocations(explorer: HardState, graphView: TemplateGraphView): HardState[] {
   // Find explorer's location
   const residenceRel = explorer.links.find(
     r => r.kind === 'resident_of' || r.kind === 'leader_of'
@@ -422,7 +423,7 @@ export function findNearbyLocations(explorer: HardState, graph: Graph): HardStat
 
   if (!residenceRel) return [];
 
-  const explorerLocation = graph.getEntity(residenceRel.dst);
+  const explorerLocation = graphView.getEntity(residenceRel.dst);
   if (!explorerLocation) return [];
 
   // Find adjacent locations
@@ -431,6 +432,6 @@ export function findNearbyLocations(explorer: HardState, graph: Graph): HardStat
     .map(r => r.dst);
 
   return adjacentIds
-    .map(id => graph.getEntity(id))
+    .map(id => graphView.getEntity(id))
     .filter((e): e is HardState => e !== undefined && e.kind === 'location');
 }

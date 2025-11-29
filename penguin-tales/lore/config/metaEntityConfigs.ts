@@ -1,7 +1,7 @@
-import { MetaEntityConfig } from '@lore-weave/core/types/engine';
-import { Graph } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName, hasTag } from '@lore-weave/core/utils/helpers';
+import { MetaEntityConfig } from '@lore-weave/core';
+import { Graph } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom, slugifyName, hasTag } from '@lore-weave/core';
 
 /**
  * Magic School Formation Configuration

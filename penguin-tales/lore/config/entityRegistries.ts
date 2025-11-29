@@ -10,9 +10,9 @@
  * lineage logic are penguin-domain specific.
  */
 
-import type { EntityOperatorRegistry } from '@lore-weave/core/types/engine.js';
-import type { HardState } from '@lore-weave/core/types/worldTypes.js';
-import type { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView.js';
+import type { EntityOperatorRegistry } from '@lore-weave/core';
+import type { HardState } from '@lore-weave/core';
+import type { TemplateGraphView } from '@lore-weave/core';
 
 /**
  * NPC Entity Registry

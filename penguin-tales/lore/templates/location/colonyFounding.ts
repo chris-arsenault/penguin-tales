@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Colony Founding Template
@@ -119,20 +119,26 @@ export const colonyFounding: GrowthTemplate = {
         );
 
         if (regionResult.success && regionResult.region) {
-          // Place the colony within the new region
-          const entityId = await graphView.addEntityInRegion(
-            {
-              kind: 'location',
-              subtype: 'colony',
-              description: `New colony established on ${iceberg.name} in the ${pickRandom(['northern', 'southern', 'eastern', 'western'])} reaches.`,
-              status: 'thriving',
-              prominence: 'marginal',
-              culture,
-              tags: { new: true, colony: true }
-            },
-            regionResult.region.id,
-            { minDistance: 3 }
+          // Place the colony within the new region using culture-aware placement
+          const placementResult = graphView.deriveCoordinatesWithCulture(
+            culture,
+            'location',
+            iceberg ? [iceberg] : undefined
           );
+
+          // Use region center as fallback if culture placement fails
+          const coords = placementResult?.coordinates ?? referencePoint;
+
+          const entityId = await graphView.addEntity({
+            kind: 'location',
+            subtype: 'colony',
+            description: `New colony established on ${iceberg.name} in the ${pickRandom(['northern', 'southern', 'eastern', 'western'])} reaches.`,
+            status: 'thriving',
+            prominence: 'marginal',
+            culture,
+            tags: { new: true, colony: true },
+            coordinates: coords
+          });
 
           if (entityId) {
             // Return minimal result - entity already added via graphView

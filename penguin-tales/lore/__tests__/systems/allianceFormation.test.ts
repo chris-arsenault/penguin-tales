@@ -1,8 +1,23 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { allianceFormation } from '../../../../domain/penguin/systems/allianceFormation';
-import { Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
+import { allianceFormation } from '../../systems/allianceFormation';
+import { Graph, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+
+// Helper to create mock graphView from graph
+const createMockGraphView = (graph: any) => ({
+  getGraph: () => graph,
+  findEntities: (criteria: any) => {
+    const entities = [...graph.entities.values()];
+    if (!criteria) return entities;
+    return entities.filter((e: any) => {
+      if (criteria.kind && e.kind !== criteria.kind) return false;
+      if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+      return true;
+    });
+  },
+  getRelatedEntities: () => []
+});
 
 describe('allianceFormation System', () => {
   let mockGraph: Graph;
@@ -10,6 +25,10 @@ describe('allianceFormation System', () => {
   beforeEach(() => {
     mockGraph = {
       entities: new Map<string, HardState>(),
+      forEachEntity: function(cb) { this.entities.forEach(cb); },
+      getEntity: function(id) { return this.entities.get(id); },
+      getRelationships: function() { return this.relationships || []; },
+      getEntities: function() { return [...this.entities.values()]; },
       relationships: [],
       tick: 0,
       currentEra: { id: 'test_era', name: 'Test Era' },
@@ -46,7 +65,7 @@ describe('allianceFormation System', () => {
 
   describe('apply', () => {
     it('should return empty result when no factions exist', () => {
-      const result = allianceFormation.apply(mockGraph);
+      const result = allianceFormation.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.relationshipsAdded).toEqual([]);
       expect(result.entitiesModified).toEqual([]);
@@ -70,7 +89,7 @@ describe('allianceFormation System', () => {
 
       mockGraph.entities.set(faction1.id, faction1);
 
-      const result = allianceFormation.apply(mockGraph);
+      const result = allianceFormation.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.relationshipsAdded).toEqual([]);
     });
@@ -107,7 +126,7 @@ describe('allianceFormation System', () => {
       mockGraph.entities.set(faction1.id, faction1);
       mockGraph.entities.set(faction2.id, faction2);
 
-      const result = allianceFormation.apply(mockGraph);
+      const result = allianceFormation.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.relationshipsAdded).toEqual([]);
     });
@@ -168,7 +187,7 @@ describe('allianceFormation System', () => {
       // Run multiple times to account for randomness
       let allianceFormed = false;
       for (let i = 0; i < 20; i++) {
-        const result = allianceFormation.apply(mockGraph, 1.0);
+        const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.0);
         if (result.relationshipsAdded.length > 0) {
           allianceFormed = true;
           expect(result.relationshipsAdded[0].kind).toBe('allied_with');
@@ -236,7 +255,7 @@ describe('allianceFormation System', () => {
 
       // Run until alliance forms
       for (let i = 0; i < 20; i++) {
-        const result = allianceFormation.apply(mockGraph, 1.0);
+        const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.0);
         if (result.relationshipsAdded.length > 0) {
           expect(result.pressureChanges.stability).toBe(5);
           break;
@@ -298,7 +317,7 @@ describe('allianceFormation System', () => {
 
       // First call creates alliance
       for (let i = 0; i < 20; i++) {
-        const result1 = allianceFormation.apply(mockGraph, 1.0);
+        const result1 = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.0);
         if (result1.relationshipsAdded.length > 0) {
           // Add the alliance to the graph
           mockGraph.relationships.push(...result1.relationshipsAdded);
@@ -307,7 +326,7 @@ describe('allianceFormation System', () => {
       }
 
       // Second call should not create duplicate
-      const result2 = allianceFormation.apply(mockGraph, 1.0);
+      const result2 = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 1.0);
       expect(result2.relationshipsAdded).toEqual([]);
     });
 
@@ -368,7 +387,7 @@ describe('allianceFormation System', () => {
       let highModifierCount = 0;
       for (let i = 0; i < 20; i++) {
         mockGraph.relationships = mockGraph.relationships.filter(r => r.kind !== 'allied_with');
-        const result = allianceFormation.apply(mockGraph, 2.0);
+        const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, 2.0);
         if (result.relationshipsAdded.length > 0) {
           highModifierCount++;
         }
@@ -379,7 +398,7 @@ describe('allianceFormation System', () => {
     });
 
     it('should have descriptive result text', () => {
-      const result = allianceFormation.apply(mockGraph);
+      const result = allianceFormation.apply(createMockGraphView(mockGraph) as any, 1.0);
 
       expect(result.description).toBeDefined();
       expect(result.description).toContain('alliances formed');

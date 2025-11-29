@@ -5,9 +5,9 @@ import { prominenceEvolution } from '../../systems/prominenceEvolution';
 import { culturalDrift } from '../../systems/culturalDrift';
 import { allianceFormation } from '../../systems/allianceFormation';
 import { thermalCascade } from '../../systems/thermalCascade';
-import { Graph, Era } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import { GraphModifier } from '@lore-weave/core/types/engine';
+import { Graph, Era } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { GraphModifier } from '@lore-weave/core';
 
 describe('Additional Systems', () => {
   let mockGraph: Graph;
@@ -24,6 +24,10 @@ describe('Additional Systems', () => {
 
     mockGraph = {
       entities: new Map(),
+      forEachEntity: function(cb: any) { this.entities.forEach(cb); },
+      getEntity: function(id: string) { return this.entities.get(id); },
+      getRelationships: function() { return this.relationships || []; },
+      getEntities: function() { return [...this.entities.values()]; },
       relationships: [],
       tick: 10,
       currentEra: mockEra,
@@ -61,7 +65,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('npc-1', npc);
 
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -69,7 +73,7 @@ describe('Additional Systems', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.entitiesModified.length).toBe(0);
@@ -116,7 +120,7 @@ describe('Additional Systems', () => {
         { kind: 'resident_of', src: 'npc-1', dst: 'location-1' }
       ];
 
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -138,7 +142,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('npc-1', npc);
 
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -161,7 +165,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('npc-1', npc);
 
       // Apply with zero modifier should have minimal effect
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 0.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 0.0);
 
       expect(result).toBeDefined();
     });
@@ -183,7 +187,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('faction-1', faction);
 
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -205,7 +209,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('location-1', location);
 
-      const result = prominenceEvolution.apply(mockGraph, mockModifier, 1.0);
+      const result = prominenceEvolution.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -234,7 +238,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('faction-1', faction);
 
-      const result = culturalDrift.apply(mockGraph, mockModifier, 1.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -242,7 +246,7 @@ describe('Additional Systems', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = culturalDrift.apply(mockGraph, mockModifier, 1.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.entitiesModified.length).toBe(0);
@@ -265,7 +269,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('faction-1', faction);
 
-      const result = culturalDrift.apply(mockGraph, mockModifier, 1.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -302,7 +306,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('faction-1', faction1);
       mockGraph.entities.set('faction-2', faction2);
 
-      const result = culturalDrift.apply(mockGraph, mockModifier, 1.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -325,7 +329,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('faction-1', faction);
 
       // Apply with zero modifier
-      const result = culturalDrift.apply(mockGraph, mockModifier, 0.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 0.0);
 
       expect(result).toBeDefined();
     });
@@ -347,7 +351,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('ability-1', ability);
 
-      const result = culturalDrift.apply(mockGraph, mockModifier, 1.0);
+      const result = culturalDrift.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -391,7 +395,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('faction-1', faction1);
       mockGraph.entities.set('faction-2', faction2);
 
-      const result = allianceFormation.apply(mockGraph, mockModifier, 1.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -399,7 +403,7 @@ describe('Additional Systems', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = allianceFormation.apply(mockGraph, mockModifier, 1.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.relationshipsAdded.length).toBe(0);
@@ -422,7 +426,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('faction-1', faction);
 
-      const result = allianceFormation.apply(mockGraph, mockModifier, 1.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.relationshipsAdded.length).toBe(0);
@@ -467,7 +471,7 @@ describe('Additional Systems', () => {
         { kind: 'allied_with', src: 'faction-1', dst: 'faction-2' }
       ];
 
-      const result = allianceFormation.apply(mockGraph, mockModifier, 1.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -505,7 +509,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('faction-2', faction2);
 
       // Apply with zero modifier
-      const result = allianceFormation.apply(mockGraph, mockModifier, 0.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 0.0);
 
       expect(result).toBeDefined();
       expect(result.relationshipsAdded.length).toBe(0);
@@ -550,7 +554,7 @@ describe('Additional Systems', () => {
         { kind: 'at_war_with', src: 'faction-1', dst: 'faction-2' }
       ];
 
-      const result = allianceFormation.apply(mockGraph, mockModifier, 1.0);
+      const result = allianceFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -579,7 +583,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('location-1', location);
 
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.description).toBeDefined();
@@ -587,7 +591,7 @@ describe('Additional Systems', () => {
     });
 
     it('should handle empty graph', () => {
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.entitiesModified.length).toBe(0);
@@ -610,7 +614,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('location-1', location);
 
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -654,7 +658,7 @@ describe('Additional Systems', () => {
         { kind: 'adjacent_to', src: 'location-1', dst: 'location-2' }
       ];
 
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -677,7 +681,7 @@ describe('Additional Systems', () => {
       mockGraph.entities.set('location-1', location);
 
       // Apply with zero modifier
-      const result = thermalCascade.apply(mockGraph, mockModifier, 0.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 0.0);
 
       expect(result).toBeDefined();
     });
@@ -699,7 +703,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('location-1', location);
 
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
     });
@@ -721,7 +725,7 @@ describe('Additional Systems', () => {
 
       mockGraph.entities.set('location-1', location);
 
-      const result = thermalCascade.apply(mockGraph, mockModifier, 1.0);
+      const result = thermalCascade.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier, 1.0);
 
       expect(result).toBeDefined();
       expect(result.pressureChanges).toBeDefined();

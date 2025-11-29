@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, FactionSubtype, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, archiveRelationship } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, FactionSubtype, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -152,12 +152,12 @@ export const factionSplinter: GrowthTemplate = {
     let leaderEntity: HardState | undefined = undefined;
 
     const members = graphView.getRelatedEntities(parentFaction.id, 'member_of', 'dst');
-    const graph = graphView.getInternalGraph();
 
     if (members.length > 0) {
       // Select a member from the parent faction to lead the splinter
       // Prefer non-leaders
-      const nonLeaders = members.filter(m => !graph.getRelationships().filter(r => r.src === m.id && r.kind === 'leader_of').length);
+      const allRelationships = graphView.getAllRelationships();
+      const nonLeaders = members.filter(m => !allRelationships.filter(r => r.src === m.id && r.kind === 'leader_of').length);
       leaderEntity = nonLeaders.length > 0 ? pickRandom(nonLeaders) : pickRandom(members);
     }
 
@@ -214,7 +214,7 @@ export const factionSplinter: GrowthTemplate = {
     // Add leader relationships (either existing or new)
     if (leaderEntity) {
       // Use existing NPC as leader - archive their old faction membership (full defection)
-      archiveRelationship(graph, leaderEntity.id, parentFaction.id, 'member_of');
+      graphView.archiveRelationship(leaderEntity.id, parentFaction.id, 'member_of');
 
       relationships.push(
         { kind: 'leader_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },

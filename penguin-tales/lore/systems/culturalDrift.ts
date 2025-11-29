@@ -1,12 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  hasRelationship,
-  pickRandom,
-  rollProbability,
-  hasTag
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import { pickRandom, rollProbability, hasTag } from '@lore-weave/core';
 
 /**
  * Cultural Drift System
@@ -76,19 +71,19 @@ export const culturalDrift: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = culturalDrift.metadata?.parameters || {};
     const convergenceChance = params.convergenceChance?.value ?? 0.3;
     const divergenceChance = params.divergenceChance?.value ?? 0.3;
 
     const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
-    const colonies = findEntities(graph, { kind: 'location', subtype: 'colony' });
+    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
 
     // Track cultural differences between colonies
     colonies.forEach((colony, i) => {
       colonies.slice(i + 1).forEach(otherColony => {
         // Check if colonies are connected
-        const connected = hasRelationship(graph, colony.id, otherColony.id, 'adjacent_to');
+        const connected = graphView.hasRelationship(colony.id, otherColony.id, 'adjacent_to');
 
         if (connected) {
           // Connected colonies influence each other (reduce drift)

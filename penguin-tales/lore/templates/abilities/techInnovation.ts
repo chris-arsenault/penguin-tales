@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Technology Innovation Template
@@ -132,19 +132,21 @@ export const techInnovation: GrowthTemplate = {
       referenceEntities.push(existingTech[0]);
     }
 
-    const conceptualCoords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = faction.culture ?? 'default';
+    const techPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'abilities',
-      'physical',
-      { maxDistance: existingTech.length > 0 ? 0.25 : 0.5, minDistance: 0.1 }  // Closer if building on existing tech
+      referenceEntities
     );
 
-    if (!conceptualCoords) {
+    if (!techPlacement) {
       throw new Error(
         `tech_innovation: Failed to derive coordinates for technology from ${faction.name}. ` +
         `This indicates the coordinate system is not properly configured for 'abilities' entities.`
       );
     }
+
+    const conceptualCoords = techPlacement.coordinates;
 
     return {
       entities: [{

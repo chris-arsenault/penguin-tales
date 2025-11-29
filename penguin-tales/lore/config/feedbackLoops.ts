@@ -8,7 +8,7 @@
  * Positive feedback = amplifying (source up → target up)
  */
 
-import type { FeedbackLoop } from '@lore-weave/core/index.js';
+import type { FeedbackLoop } from '@lore-weave/core';
 
 export const penguinFeedbackLoops: FeedbackLoop[] = [
   // ========================================

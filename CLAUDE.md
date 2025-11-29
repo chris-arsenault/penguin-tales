@@ -235,6 +235,87 @@ Framework changes go in `apps/lore-weave/lib/`:
 - Fail fast, fail loud - don't silently use defaults when config is wrong
 - Domain misconfiguration should be obvious immediately, not hidden by framework workarounds
 
+## API Discipline - CRITICAL
+
+**This section exists because Claude repeatedly creates backwards-compatibility shims that cause architectural divergence. These rules are non-negotiable.**
+
+### NEVER Do These Things
+
+**1. NEVER add methods that return internal objects:**
+```typescript
+// FORBIDDEN - Creates escape hatch
+getGraph(): Graph { return this.graph; }
+getMapper(): RegionMapper { return this.mapper; }
+getInternal*(): any { ... }
+```
+If code needs functionality, add a specific method to the wrapper class instead.
+
+**2. NEVER add fallback defaults for required config:**
+```typescript
+// FORBIDDEN - Hides misconfiguration
+const culture = config.culture ?? 'default';
+const options = settings || {};
+const value = context?.value ?? fallbackValue;
+```
+If config is required, make it required. If it's missing, throw an error.
+
+**3. NEVER leave deprecated code "for compatibility":**
+```typescript
+// FORBIDDEN - Creates parallel paths
+/** @deprecated Use newMethod instead */
+oldMethod() { return this.newMethod(); }
+```
+Delete deprecated code immediately. Fix all callers in the same PR.
+
+**4. NEVER create multiple ways to do the same thing:**
+```typescript
+// FORBIDDEN - Creates divergent paths
+placeEntity()           // Method 1
+addEntityInRegion()     // Method 2
+deriveCoordinates()     // Method 3
+placeWithCulture()      // Method 4
+```
+Have ONE canonical way. Delete the others.
+
+### ALWAYS Do These Things
+
+**1. ALWAYS throw on missing required config:**
+```typescript
+// CORRECT
+if (!config.culture) {
+  throw new Error('culture is required in PlacementConfig');
+}
+```
+
+**2. ALWAYS delete old APIs when adding new ones:**
+```typescript
+// CORRECT - In the SAME PR:
+// 1. Add new API
+// 2. Update ALL callers to use new API
+// 3. DELETE old API
+// No deprecation period. No compatibility shims.
+```
+
+**3. ALWAYS make the type system enforce correct usage:**
+```typescript
+// CORRECT - Required, not optional
+interface PlacementConfig {
+  cultureId: string;      // NOT string | undefined
+  coordinates: Point;     // NOT Point | undefined
+}
+```
+
+**4. ALWAYS break domain code when framework changes:**
+Domain code should fail to compile or fail at startup when framework APIs change. This is correct behavior - it forces immediate fixes rather than silent divergence.
+
+### Validation
+
+Run `./scripts/check-escape-hatches.sh` before committing. It checks for:
+- Methods returning internal objects
+- Fallback patterns for config
+- @deprecated markers (code should be deleted)
+- Legacy API usage in domain code
+
 ## Debugging Tips
 
 1. Set small targets first: `targetEntitiesPerKind: 5` in domain's main.ts

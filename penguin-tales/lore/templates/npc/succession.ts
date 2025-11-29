@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, slugifyName, archiveRelationship } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, slugifyName } from '@lore-weave/core';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -92,24 +92,25 @@ export const succession: GrowthTemplate = {
     const colony = leadsColonies[0];
 
     // Archive old leader_of relationship to colony (temporal tracking)
-    const graph = graphView.getInternalGraph();
-    archiveRelationship(graph, oldLeader.id, colony.id, 'leader_of');
+    graphView.archiveRelationship(oldLeader.id, colony.id, 'leader_of');
 
-    // Derive coordinates from colony (new leader will live there)
-    const coords = graphView.deriveCoordinates(
-      [colony],
+    // Derive coordinates using culture-aware placement
+    const cultureId = colony.culture ?? 'default';
+    const placementResult = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'npc',
-      'physical',
-      { maxDistance: 0.2, minDistance: 0.05 }
+      [colony]
     );
 
-    if (!coords) {
+    if (!placementResult) {
       return {
         entities: [],
         relationships: [],
         description: `Cannot place successor - ${colony.name} has no coordinates`
       };
     }
+
+    const coords = placementResult.coordinates;
 
     const newLeader: Partial<HardState> = {
       kind: 'npc',
@@ -142,7 +143,7 @@ export const succession: GrowthTemplate = {
     if (leadsFactions.length > 0) {
       const faction = leadsFactions[0];
       // Archive old leader_of relationship to faction (temporal tracking)
-      archiveRelationship(graph, oldLeader.id, faction.id, 'leader_of');
+      graphView.archiveRelationship(oldLeader.id, faction.id, 'leader_of');
 
       relationships.push({
         kind: 'leader_of',

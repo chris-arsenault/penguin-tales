@@ -5,10 +5,10 @@
  * Creates general-purpose locations when no specific pressure drives discovery.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/graph/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   generateExplorationTheme,
   shouldDiscoverLocation,
@@ -142,7 +142,7 @@ export const geographicExploration: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE neutral theme based on era
-    const theme = generateExplorationTheme(graphView.getInternalGraph());
+    const theme = generateExplorationTheme(graphView);
     if (!theme) {
       return {
         entities: [],
@@ -162,27 +162,29 @@ export const geographicExploration: GrowthTemplate = {
       : theme.tags;
 
     // Find nearby locations for coordinate derivation
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
     const referenceEntities: HardState[] = [discoverer];
     if (nearbyLocations.length > 0) {
       referenceEntities.push(nearbyLocations[0]);
     }
 
     // Derive coordinates from discoverer and nearby locations
-    const coords = graphView.deriveCoordinates(
-      referenceEntities,
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
       'location',
-      'physical',
-      { maxDistance: 0.4, minDistance: 0.1 }
+      referenceEntities
     );
 
-    if (!coords) {
+    if (!locationPlacement) {
       return {
         entities: [],
         relationships: [],
         description: 'Unable to place discovered location in world'
       };
     }
+
+    const coords = locationPlacement.coordinates;
 
     // Create the discovered location (name will be auto-generated)
     const newLocation: Partial<HardState> = {

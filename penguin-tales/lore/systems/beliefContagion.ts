@@ -1,11 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  rollProbability,
-  hasTag
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { rollProbability, hasTag } from '@lore-weave/core';
 
 /**
  * Belief Contagion System
@@ -36,8 +32,8 @@ import {
 
 // Infection state tracking (stored in relationships only - no tags)
 // Check if NPC has believer_of relationship to rule
-function hasAdoptedBelief(graph: Graph, npcId: string, ruleId: string): boolean {
-  return graph.getRelationships().some(r =>
+function hasAdoptedBelief(graphView: TemplateGraphView, npcId: string, ruleId: string): boolean {
+  return graphView.getAllRelationships().some(r =>
     r.kind === 'believer_of' && r.src === npcId && r.dst === ruleId
   );
 }
@@ -62,10 +58,10 @@ function rejectBelief(relationships: Relationship[], modifications: Array<{ id: 
   }
 }
 
-function isImmune(graph: Graph, npcId: string, ruleId: string): boolean {
+function isImmune(graphView: TemplateGraphView, npcId: string, ruleId: string): boolean {
   // Check if NPC previously rejected this ideology
   // Use archived relationships to track immunity
-  const npc = graph.getEntity(npcId);
+  const npc = graphView.getEntity(npcId);
   if (!npc) return false;
 
   // Check for immune:* tag (legacy immunity tracking)
@@ -155,7 +151,7 @@ export const beliefContagion: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = beliefContagion.metadata?.parameters || {};
     const BETA = params.transmissionRate?.value ?? 0.15;
     const GAMMA = params.recoveryRate?.value ?? 0.03;
@@ -167,7 +163,7 @@ export const beliefContagion: SimulationSystem = {
     const relationships: Relationship[] = [];
 
     // Find all proposed rules (these are the "diseases" to spread)
-    const proposedRules = findEntities(graph, { kind: 'rules', status: 'proposed' });
+    const proposedRules = graphView.findEntities({ kind: 'rules', status: 'proposed' });
 
     // Natural throttling: Only runs if there are proposed rules
     if (proposedRules.length === 0) {
@@ -179,7 +175,7 @@ export const beliefContagion: SimulationSystem = {
       };
     }
 
-    const npcs = findEntities(graph, { kind: 'npc', status: 'alive' });
+    const npcs = graphView.findEntities({ kind: 'npc', status: 'alive' });
 
     proposedRules.forEach(rule => {
       const carriers: HardState[] = []; // Infected NPCs
@@ -189,11 +185,11 @@ export const beliefContagion: SimulationSystem = {
       // Categorize NPCs by infection state
       npcs.forEach(npc => {
         // Check believer_of relationships only (no tags)
-        const hasBelieverRelationship = hasAdoptedBelief(graph, npc.id, rule.id);
+        const hasBelieverRelationship = hasAdoptedBelief(graphView, npc.id, rule.id);
 
         if (hasBelieverRelationship) {
           carriers.push(npc);
-        } else if (isImmune(graph, npc.id, rule.id)) {
+        } else if (isImmune(graphView, npc.id, rule.id)) {
           recovered.push(npc);
         } else {
           susceptible.push(npc);
@@ -205,13 +201,13 @@ export const beliefContagion: SimulationSystem = {
       susceptible.forEach(npc => {
         // Count infected neighbors (via follower_of, member_of)
         // Only relationships >= 0.3 have meaningful influence on belief transmission
-        const followers = getRelated(graph, npc.id, 'follower_of', 'dst', { minStrength: 0.3 }); // NPCs who follow this one
-        const followees = getRelated(graph, npc.id, 'follower_of', 'src', { minStrength: 0.3 }); // NPCs this one follows
-        const factionMembers = getRelated(graph, npc.id, 'member_of', 'src', { minStrength: 0.3 })
-          .flatMap(faction => getRelated(graph, faction.id, 'member_of', 'dst', { minStrength: 0.3 }));
+        const followers = graphView.getRelated(npc.id, 'follower_of', 'dst', { minStrength: 0.3 }); // NPCs who follow this one
+        const followees = graphView.getRelated(npc.id, 'follower_of', 'src', { minStrength: 0.3 }); // NPCs this one follows
+        const factionMembers = graphView.getRelated(npc.id, 'member_of', 'src', { minStrength: 0.3 })
+          .flatMap(faction => graphView.getRelated(faction.id, 'member_of', 'dst', { minStrength: 0.3 }));
 
         const contacts = [...followers, ...followees, ...factionMembers];
-        const infectedContacts = contacts.filter(contact => hasAdoptedBelief(graph, contact.id, rule.id));
+        const infectedContacts = contacts.filter(contact => hasAdoptedBelief(graphView, contact.id, rule.id));
 
         if (infectedContacts.length === 0) return; // No exposure
 
@@ -273,7 +269,7 @@ export const beliefContagion: SimulationSystem = {
 
       // === ENACTMENT CHECK ===
       // If enough NPCs have adopted the belief, transition proposed → enacted
-      const currentCarriers = npcs.filter(npc => hasAdoptedBelief(graph, npc.id, rule.id));
+      const currentCarriers = npcs.filter(npc => hasAdoptedBelief(graphView, npc.id, rule.id));
       const adoptionRate = currentCarriers.length / npcs.length;
 
       if (adoptionRate >= ENACTMENT_THRESHOLD && rule.status === 'proposed') {
