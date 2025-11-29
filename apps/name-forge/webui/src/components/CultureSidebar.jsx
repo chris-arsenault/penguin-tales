@@ -4,7 +4,8 @@ function CultureSidebar({
   cultures,
   selectedCulture,
   onSelectCulture,
-  onCulturesChange
+  onCulturesChange,
+  readOnly = false
 }) {
   const [creatingCulture, setCreatingCulture] = useState(false);
   const [newCultureId, setNewCultureId] = useState('');
@@ -79,7 +80,7 @@ function CultureSidebar({
       <div style={{ borderBottom: '1px solid var(--border-color)', padding: 'var(--space-md)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
           <h4 style={{ margin: 0 }}>Cultures</h4>
-          {!creatingCulture && (
+          {!readOnly && !creatingCulture && (
             <button className="primary" onClick={() => setCreatingCulture(true)} style={{ fontSize: 'var(--text-xs)' }}>
               + New
             </button>

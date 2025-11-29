@@ -242,17 +242,6 @@ const styles = {
   }
 };
 
-const PRESET_COLORS = [
-  '#e94560', '#ff6b6b', '#ffa502', '#ffdd59',
-  '#7bed9f', '#2ed573', '#1e90ff', '#5352ed',
-  '#a55eea', '#ff6b81', '#70a1ff', '#eccc68',
-  '#ff7f50', '#20bf6b', '#0fb9b1', '#778ca3'
-];
-
-function generateId(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
 export default function CultureEditor({ project, onSave }) {
   const [expandedCultures, setExpandedCultures] = useState({});
   const [expandedKinds, setExpandedKinds] = useState({});
@@ -277,33 +266,10 @@ export default function CultureEditor({ project, onSave }) {
     onSave({ cultures: newCultures });
   };
 
-  const addCulture = () => {
-    // Initialize axisBiases for all entity kinds at 50/50/50
-    const axisBiases = {};
-    entityKinds.forEach(kind => {
-      axisBiases[kind.id] = { x: 50, y: 50, z: 50 };
-    });
-
-    const newCulture = {
-      id: `culture_${Date.now()}`,
-      name: 'New Culture',
-      description: '',
-      color: PRESET_COLORS[cultures.length % PRESET_COLORS.length],
-      axisBiases,
-      homeRegions: {}
-    };
-    updateCultures([...cultures, newCulture]);
-    setExpandedCultures(prev => ({ ...prev, [newCulture.id]: true }));
-  };
-
   const updateCulture = (cultureId, updates) => {
     updateCultures(cultures.map(c =>
       c.id === cultureId ? { ...c, ...updates } : c
     ));
-  };
-
-  const deleteCulture = (cultureId) => {
-    updateCultures(cultures.filter(c => c.id !== cultureId));
   };
 
   const setAxisBias = (cultureId, kindId, axis, value) => {
@@ -331,9 +297,9 @@ export default function CultureEditor({ project, onSave }) {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div style={styles.title}>Cultures</div>
+        <div style={styles.title}>Culture Biases</div>
         <div style={styles.subtitle}>
-          Define cultures with axis biases for each entity kind's semantic plane.
+          Configure axis biases for each culture on each entity kind's semantic plane.
         </div>
       </div>
 
@@ -341,14 +307,11 @@ export default function CultureEditor({ project, onSave }) {
         <span style={{ color: '#888', fontSize: '13px' }}>
           {cultures.length} culture{cultures.length !== 1 ? 's' : ''}
         </span>
-        <button style={styles.addButton} onClick={addCulture}>
-          + Add Culture
-        </button>
       </div>
 
       {cultures.length === 0 ? (
         <div style={styles.emptyState}>
-          No cultures defined yet. Add one to give your world cultural diversity.
+          No cultures defined yet. Add cultures in the Enumerist tab first.
         </div>
       ) : (
         <div style={styles.cultureList}>
@@ -379,55 +342,10 @@ export default function CultureEditor({ project, onSave }) {
 
                 {isExpanded && (
                   <div style={styles.cultureBody}>
-                    {/* Name and Description */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Name</label>
-                        <input
-                          style={styles.input}
-                          value={culture.name}
-                          onChange={(e) => updateCulture(culture.id, {
-                            name: e.target.value,
-                            id: generateId(e.target.value) || culture.id
-                          })}
-                          placeholder="Culture name"
-                        />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Description</label>
-                        <input
-                          style={styles.input}
-                          value={culture.description || ''}
-                          onChange={(e) => updateCulture(culture.id, { description: e.target.value })}
-                          placeholder="Optional description"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Color Selection */}
-                    <div style={styles.colorSection}>
-                      <div
-                        style={{ ...styles.colorPickerDot, backgroundColor: culture.color }}
-                      />
-                      <div style={styles.colorPicker}>
-                        {PRESET_COLORS.map((color) => (
-                          <div
-                            key={color}
-                            style={{
-                              ...styles.colorOption,
-                              backgroundColor: color,
-                              borderColor: culture.color === color ? '#fff' : 'transparent'
-                            }}
-                            onClick={() => updateCulture(culture.id, { color })}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
                     {/* Axis Biases by Entity Kind */}
                     {entityKinds.length === 0 ? (
                       <div style={styles.noKindsWarning}>
-                        Define entity kinds in the Schema tab first to configure axis biases.
+                        Define entity kinds in the Enumerist tab first to configure axis biases.
                       </div>
                     ) : (
                       entityKinds.map((kind) => {
@@ -482,16 +400,6 @@ export default function CultureEditor({ project, onSave }) {
                         );
                       })
                     )}
-
-                    {/* Delete Button */}
-                    <div style={styles.actionsRow}>
-                      <button
-                        style={styles.deleteButton}
-                        onClick={() => deleteCulture(culture.id)}
-                      >
-                        Delete Culture
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>

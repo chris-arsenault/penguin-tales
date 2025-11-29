@@ -247,6 +247,8 @@ const styles = {
 export default function SemanticPlaneEditor({ project, onSave }) {
   const [selectedKindId, setSelectedKindId] = useState(null);
   const [showNewRegionModal, setShowNewRegionModal] = useState(false);
+  const [showAxisModal, setShowAxisModal] = useState(false);
+  const [editingAxis, setEditingAxis] = useState(null);
   const [newRegion, setNewRegion] = useState({ label: '', x: 50, y: 50, radius: 15, culture: '' });
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [selectedRegionId, setSelectedRegionId] = useState(null);
@@ -375,6 +377,34 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     return cultures.find(c => c.id === cultureId)?.color || '#888';
   };
 
+  const openAxisEditor = (axisKey) => {
+    const axisConfig = semanticPlane.axes?.[axisKey] || { name: '', lowLabel: '', highLabel: '' };
+    setEditingAxis({ key: axisKey, ...axisConfig });
+    setShowAxisModal(true);
+  };
+
+  const saveAxisConfig = () => {
+    if (!selectedKind || !editingAxis) return;
+
+    const updatedAxes = {
+      ...semanticPlane.axes,
+      [editingAxis.key]: {
+        name: editingAxis.name,
+        lowLabel: editingAxis.lowLabel,
+        highLabel: editingAxis.highLabel
+      }
+    };
+
+    const updatedPlane = {
+      ...semanticPlane,
+      axes: updatedAxes
+    };
+
+    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    setShowAxisModal(false);
+    setEditingAxis(null);
+  };
+
   if (entityKinds.length === 0) {
     return (
       <div style={styles.container}>
@@ -385,7 +415,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
           </div>
         </div>
         <div style={styles.emptyState}>
-          Define entity kinds in the Schema tab first to view their semantic planes.
+          Define entity kinds in the Enumerist tab first to view their semantic planes.
         </div>
       </div>
     );
@@ -440,16 +470,19 @@ export default function SemanticPlaneEditor({ project, onSave }) {
 
         <div style={styles.sidebar}>
           <div style={styles.sidebarSection}>
-            <div style={styles.sidebarTitle}>Axes</div>
+            <div style={styles.sidebarTitle}>Axes (click to edit)</div>
             {['x', 'y', 'z'].map(axis => {
-              const config = semanticPlane.axes?.[axis];
-              if (!config) return null;
+              const config = semanticPlane.axes?.[axis] || { name: `${axis.toUpperCase()} Axis`, lowLabel: 'Low', highLabel: 'High' };
               return (
-                <div key={axis} style={styles.axisInfo}>
+                <div
+                  key={axis}
+                  style={{ ...styles.axisInfo, cursor: 'pointer', padding: '6px 8px', borderRadius: '4px', backgroundColor: '#1a1a2e', marginBottom: '4px' }}
+                  onClick={() => openAxisEditor(axis)}
+                >
                   <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
-                  <span>{config.name}</span>
+                  <span style={{ flex: 1 }}>{config.name}</span>
                   <span style={styles.axisRange}>
-                    ({config.lowLabel} → {config.highLabel})
+                    {config.lowLabel} → {config.highLabel}
                   </span>
                 </div>
               );
@@ -619,6 +652,62 @@ export default function SemanticPlaneEditor({ project, onSave }) {
               </button>
               <button style={styles.addButton} onClick={addRegion}>
                 Add Region
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Axis Modal */}
+      {showAxisModal && editingAxis && (
+        <div style={styles.modal} onClick={() => setShowAxisModal(false)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalTitle}>
+              Edit {editingAxis.key.toUpperCase()} Axis for {selectedKind?.name}
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Axis Name</label>
+              <input
+                style={styles.input}
+                placeholder="e.g., Power, Alignment, Size"
+                value={editingAxis.name}
+                onChange={e => setEditingAxis({ ...editingAxis, name: e.target.value })}
+                autoFocus
+              />
+            </div>
+
+            <div style={styles.inputRow}>
+              <div style={styles.inputHalf}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Low Label (0)</label>
+                  <input
+                    style={styles.input}
+                    placeholder="e.g., Weak, Evil, Tiny"
+                    value={editingAxis.lowLabel}
+                    onChange={e => setEditingAxis({ ...editingAxis, lowLabel: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={styles.inputHalf}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>High Label (100)</label>
+                  <input
+                    style={styles.input}
+                    placeholder="e.g., Strong, Good, Huge"
+                    value={editingAxis.highLabel}
+                    onChange={e => setEditingAxis({ ...editingAxis, highLabel: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.modalActions}>
+              <button style={styles.button} onClick={() => setShowAxisModal(false)}>
+                Cancel
+              </button>
+              <button style={styles.addButton} onClick={saveAxisConfig}>
+                Save
               </button>
             </div>
           </div>

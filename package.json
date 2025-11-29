@@ -10,6 +10,9 @@
     "apps/lore-weave",
     "apps/name-forge",
     "apps/lore-weave/webui",
+    "apps/canonry/webui",
+    "apps/cosmographer/webui",
+    "packages/world-schema",
     "penguin-tales/lore"
   ],
   "scripts": {
@@ -17,6 +20,8 @@
     "build:framework": "cd apps/lore-weave && npm run build",
     "build:domain": "cd penguin-tales/lore && npm run build",
     "build:ui": "cd apps/lore-weave/webui && npm run build",
+    "build:canonry": "npm run build:world-schema && cd apps/canonry/webui && npm run build && cd ../../name-forge/webui && npm run build && cd ../../cosmographer/webui && npm run build",
+    "build:world-schema": "cd packages/world-schema && npm run build",
     "generate": "cd penguin-tales/lore && npm run dev",
     "generate:llm": "cd penguin-tales/lore && LLM_ENABLED=partial npm run dev",
     "generate:llm:full": "cd penguin-tales/lore && LLM_ENABLED=full npm run dev",
@@ -28,6 +33,7 @@
     "ui:build": "npm run sync && cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
     "dev": "npm run generate:sync && npm run ui",
+    "canonry": "npx concurrently -n canonry,name-forge,cosmographer -c blue,yellow,magenta \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\"",
     "test": "npm run test:framework && npm run test:domain",
     "test:framework": "cd apps/lore-weave && npm test",
     "test:domain": "cd penguin-tales/lore && npm test",
@@ -35,7 +41,8 @@
     "clean:framework": "cd apps/lore-weave && npm run clean",
     "clean:domain": "cd penguin-tales/lore && npm run clean",
     "clean:output": "rm -rf penguin-tales/lore/output/*",
-    "install:all": "npm install && cd apps/lore-weave && npm install && cd ../name-forge && npm install && cd ../../penguin-tales/lore && npm install && cd ../../apps/lore-weave/webui && npm install"
+    "install:all": "npm install && cd apps/lore-weave && npm install && cd ../name-forge && npm install && cd ../../penguin-tales/lore && npm install && cd ../../apps/lore-weave/webui && npm install",
+    "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../../packages/world-schema && npm install"
   },
   "keywords": [
     "procedural-generation",
@@ -46,6 +53,7 @@
     "lore"
   ],
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
