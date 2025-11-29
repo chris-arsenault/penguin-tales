@@ -109,7 +109,11 @@ const styles = {
     fontSize: '13px',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '8px',
+    cursor: 'pointer'
+  },
+  regionItemSelected: {
+    backgroundColor: '#0f3460'
   },
   regionColor: {
     width: '12px',
@@ -245,6 +249,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
   const [showNewRegionModal, setShowNewRegionModal] = useState(false);
   const [newRegion, setNewRegion] = useState({ label: '', x: 50, y: 50, radius: 15 });
   const [selectedEntityId, setSelectedEntityId] = useState(null);
+  const [selectedRegionId, setSelectedRegionId] = useState(null);
 
   // Schema v2: entityKinds at project root
   const entityKinds = project?.entityKinds || [];
@@ -314,6 +319,29 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     onSave({ seedEntities: updated });
   };
 
+  const handleMoveRegion = (regionId, coords) => {
+    if (!selectedKind) return;
+
+    const updatedRegions = (semanticPlane.regions || []).map(r =>
+      r.id === regionId
+        ? {
+            ...r,
+            bounds: {
+              ...r.bounds,
+              center: { x: Math.round(coords.x), y: Math.round(coords.y) }
+            }
+          }
+        : r
+    );
+
+    const updatedPlane = {
+      ...semanticPlane,
+      regions: updatedRegions
+    };
+
+    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+  };
+
   const getCultureColor = (cultureId) => {
     return cultures.find(c => c.id === cultureId)?.color || '#888';
   };
@@ -350,6 +378,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
           onChange={(e) => {
             setSelectedKindId(e.target.value);
             setSelectedEntityId(null);
+            setSelectedRegionId(null);
           }}
         >
           {entityKinds.map(k => (
@@ -371,8 +400,11 @@ export default function SemanticPlaneEditor({ project, onSave }) {
             entities={planeEntities}
             cultures={cultures}
             selectedEntityId={selectedEntityId}
+            selectedRegionId={selectedRegionId}
             onSelectEntity={setSelectedEntityId}
+            onSelectRegion={setSelectedRegionId}
             onMoveEntity={handleMoveEntity}
+            onMoveRegion={handleMoveRegion}
           />
         </div>
 
@@ -402,12 +434,28 @@ export default function SemanticPlaneEditor({ project, onSave }) {
               <div style={styles.emptyText}>No regions defined</div>
             ) : (
               semanticPlane.regions.map(region => (
-                <div key={region.id} style={styles.regionItem}>
+                <div
+                  key={region.id}
+                  style={{
+                    ...styles.regionItem,
+                    ...(selectedRegionId === region.id ? styles.regionItemSelected : {})
+                  }}
+                  onClick={() => {
+                    setSelectedRegionId(region.id);
+                    setSelectedEntityId(null);
+                  }}
+                >
                   <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
                   <span style={styles.regionLabel}>{region.label}</span>
+                  <span style={styles.entityCoords}>
+                    ({Math.round(region.bounds?.center?.x || 0)}, {Math.round(region.bounds?.center?.y || 0)})
+                  </span>
                   <button
                     style={styles.deleteButton}
-                    onClick={() => deleteRegion(region.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteRegion(region.id);
+                    }}
                   >
                     ×
                   </button>

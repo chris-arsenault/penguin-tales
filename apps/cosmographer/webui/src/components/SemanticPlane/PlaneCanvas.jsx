@@ -16,8 +16,11 @@ export default function PlaneCanvas({
   entities = [],
   cultures = [],
   selectedEntityId,
+  selectedRegionId,
   onSelectEntity,
-  onMoveEntity
+  onSelectRegion,
+  onMoveEntity,
+  onMoveRegion
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -144,9 +147,10 @@ export default function PlaneCanvas({
       const regionBounds = region.bounds;
       if (!regionBounds) return;
 
-      ctx.fillStyle = (region.color || '#0f3460') + '30';
-      ctx.strokeStyle = region.color || '#0f3460';
-      ctx.lineWidth = 2;
+      const isSelected = region.id === selectedRegionId;
+      ctx.fillStyle = (region.color || '#0f3460') + (isSelected ? '50' : '30');
+      ctx.strokeStyle = isSelected ? '#fff' : (region.color || '#0f3460');
+      ctx.lineWidth = isSelected ? 3 : 2;
 
       if (regionBounds.shape === 'circle' && regionBounds.center) {
         const { x: cx, y: cy } = worldToCanvas(regionBounds.center.x, regionBounds.center.y);
@@ -157,9 +161,20 @@ export default function PlaneCanvas({
         ctx.fill();
         ctx.stroke();
 
+        // Draw center handle when selected
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+          ctx.strokeStyle = region.color || '#0f3460';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
         // Label
-        ctx.fillStyle = '#888';
-        ctx.font = '11px sans-serif';
+        ctx.fillStyle = isSelected ? '#fff' : '#888';
+        ctx.font = isSelected ? 'bold 11px sans-serif' : '11px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(region.label || '', cx, cy + radius + 14);
       }
@@ -224,7 +239,7 @@ export default function PlaneCanvas({
       ctx.restore();
     }
 
-  }, [plane, regions, entities, cultures, selectedEntityId, size, camera, baseScale, worldToCanvas]);
+  }, [plane, regions, entities, cultures, selectedEntityId, selectedRegionId, size, camera, baseScale, worldToCanvas]);
 
   // Find entity at canvas position
   const findEntityAt = (cx, cy) => {
@@ -237,15 +252,35 @@ export default function PlaneCanvas({
     return null;
   };
 
+  // Find region at canvas position (checks if click is within region bounds)
+  const findRegionAt = (cx, cy) => {
+    const scale = baseScale * camera.zoom;
+    // Check in reverse order so topmost (last drawn) regions are found first
+    for (let i = regions.length - 1; i >= 0; i--) {
+      const region = regions[i];
+      const bounds = region.bounds;
+      if (!bounds) continue;
+
+      if (bounds.shape === 'circle' && bounds.center) {
+        const { x: rx, y: ry } = worldToCanvas(bounds.center.x, bounds.center.y);
+        const radius = (bounds.radius || 10) * scale;
+        const dist = Math.sqrt((cx - rx) ** 2 + (cy - ry) ** 2);
+        if (dist < radius) return region;
+      }
+    }
+    return null;
+  };
+
   const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
 
-    // Check if clicking on an entity
+    // Check if clicking on an entity (entities have priority over regions)
     const entity = findEntityAt(cx, cy);
     if (entity) {
       onSelectEntity?.(entity.id);
+      onSelectRegion?.(null);
       setInteraction({
         type: 'drag-entity',
         entityId: entity.id,
@@ -255,8 +290,29 @@ export default function PlaneCanvas({
       return;
     }
 
-    // Start panning
+    // Check if clicking on a region
+    const region = findRegionAt(cx, cy);
+    if (region) {
+      onSelectRegion?.(region.id);
+      onSelectEntity?.(null);
+      // Get current region center in world coords for offset calculation
+      const worldClick = canvasToWorld(cx, cy);
+      const regionCenter = region.bounds?.center || { x: 50, y: 50 };
+      setInteraction({
+        type: 'drag-region',
+        regionId: region.id,
+        startX: cx,
+        startY: cy,
+        // Store offset from click to region center
+        offsetX: regionCenter.x - worldClick.x,
+        offsetY: regionCenter.y - worldClick.y
+      });
+      return;
+    }
+
+    // Start panning (clicked on empty space)
     onSelectEntity?.(null);
+    onSelectRegion?.(null);
     setInteraction({
       type: 'pan',
       startX: cx,
@@ -278,6 +334,15 @@ export default function PlaneCanvas({
       const clampedX = Math.max(WORLD_MIN, Math.min(WORLD_MAX, world.x));
       const clampedY = Math.max(WORLD_MIN, Math.min(WORLD_MAX, world.y));
       onMoveEntity?.(interaction.entityId, { x: clampedX, y: clampedY });
+    } else if (interaction.type === 'drag-region') {
+      const world = canvasToWorld(cx, cy);
+      // Apply offset to maintain grab point relative to center
+      const newX = world.x + interaction.offsetX;
+      const newY = world.y + interaction.offsetY;
+      // Clamp to world bounds
+      const clampedX = Math.max(WORLD_MIN, Math.min(WORLD_MAX, newX));
+      const clampedY = Math.max(WORLD_MIN, Math.min(WORLD_MAX, newY));
+      onMoveRegion?.(interaction.regionId, { x: clampedX, y: clampedY });
     } else if (interaction.type === 'pan') {
       // Pan moves in same direction as mouse (natural scrolling)
       const dx = cx - interaction.startX;
@@ -343,6 +408,7 @@ export default function PlaneCanvas({
   const getCursor = () => {
     if (interaction.type === 'pan') return 'grabbing';
     if (interaction.type === 'drag-entity') return 'move';
+    if (interaction.type === 'drag-region') return 'move';
     return 'grab';
   };
 
