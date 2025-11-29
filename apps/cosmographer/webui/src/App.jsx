@@ -10,6 +10,7 @@ import ProjectManager from './components/ProjectManager.jsx';
 import SchemaEditor from './components/SchemaEditor/index.jsx';
 import CultureEditor from './components/CultureEditor/index.jsx';
 import SemanticPlaneEditor from './components/SemanticPlane/index.jsx';
+import EntityEditor from './components/EntityEditor/index.jsx';
 
 const TABS = [
   { id: 'schema', label: 'Schema', icon: '📋' },
@@ -100,13 +101,11 @@ function TabContent({ tab, project, onSave }) {
       return <CultureEditor project={project} onSave={onSave} />;
     case 'planes':
       return <SemanticPlaneEditor project={project} onSave={onSave} />;
+    case 'entities':
+      return <EntityEditor project={project} onSave={onSave} />;
 
     default: {
       const placeholders = {
-        entities: {
-          title: 'Entity Placement',
-          desc: 'Place seed entities on their semantic planes.'
-        },
         relationships: {
           title: 'Relationships',
           desc: 'Define connections between seed entities.'
