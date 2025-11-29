@@ -3,14 +3,13 @@ import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
 import { resolve } from 'path'
 
-const isStandalone = process.env.STANDALONE === 'true';
+// Name Forge is now an MFE remote only - standalone mode has been removed.
+// To use Name Forge, run The Canonry (apps/canonry/webui).
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    // Only add federation when not in standalone mode
-    !isStandalone && federation({
+    federation({
       name: 'nameForge',
       filename: 'remoteEntry.js',
       exposes: {
@@ -21,7 +20,7 @@ export default defineConfig({
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
     }),
-  ].filter(Boolean),
+  ],
   // Base path - only use /name-forge/ when DEPLOY_TARGET=aws is set
   base: process.env.DEPLOY_TARGET === 'aws' ? '/name-forge/' : '/',
   resolve: {
@@ -33,7 +32,7 @@ export default defineConfig({
     include: ['seedrandom', 'zod'],
   },
   server: {
-    port: isStandalone ? 3000 : 5001,
+    port: 5001,
     strictPort: true,
     cors: true,
   },

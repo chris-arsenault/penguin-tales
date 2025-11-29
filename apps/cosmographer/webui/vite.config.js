@@ -3,13 +3,13 @@ import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import { resolve } from 'path';
 
-const isStandalone = process.env.STANDALONE === 'true';
+// Cosmographer is now an MFE remote only - standalone mode has been removed.
+// To use Cosmographer, run The Canonry (apps/canonry/webui).
 
 export default defineConfig({
   plugins: [
     react(),
-    // Only add federation when not in standalone mode
-    !isStandalone && federation({
+    federation({
       name: 'cosmographer',
       filename: 'remoteEntry.js',
       exposes: {
@@ -20,7 +20,7 @@ export default defineConfig({
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
     }),
-  ].filter(Boolean),
+  ],
   base: process.env.DEPLOY_TARGET === 'aws' ? '/cosmographer/' : '/',
   resolve: {
     alias: {
@@ -36,7 +36,7 @@ export default defineConfig({
     minify: false,
   },
   server: {
-    port: isStandalone ? 3001 : 5002,
+    port: 5002,
     strictPort: true,
     cors: true,
   },
