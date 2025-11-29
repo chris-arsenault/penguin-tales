@@ -4,6 +4,7 @@
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import RemotePlaceholder from './RemotePlaceholder';
+import { colors, typography } from '../theme';
 
 // Lazy load the remote module
 // This will be replaced with actual federation import once name-forge exposes the remote
@@ -29,12 +30,19 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#888',
-    fontSize: '14px',
+    color: colors.textMuted,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
   },
 };
 
-export default function NameForgeHost({ schema, namingData, onNamingDataChange }) {
+export default function NameForgeHost({
+  schema,
+  namingData,
+  onNamingDataChange,
+  activeSection,
+  onSectionChange,
+}) {
   return (
     <div style={styles.container}>
       <Suspense fallback={<div style={styles.loading}>Loading Name Forge...</div>}>
@@ -42,6 +50,8 @@ export default function NameForgeHost({ schema, namingData, onNamingDataChange }
           schema={schema}
           namingData={namingData}
           onNamingDataChange={onNamingDataChange}
+          activeSection={activeSection}
+          onSectionChange={onSectionChange}
         />
       </Suspense>
     </div>

@@ -3,27 +3,31 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { colors, typography, spacing, radius, shadows } from '../theme';
 
 const styles = {
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
-    backgroundColor: '#0a0a0f',
-    borderBottom: '1px solid #1e1e2e',
+    padding: `${spacing.md} ${spacing.lg}`,
+    backgroundColor: colors.bgSidebar,
+    borderBottom: `1px solid ${colors.border}`,
     flexShrink: 0,
   },
   left: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: spacing.lg,
   },
   logo: {
-    fontSize: '20px',
-    fontWeight: 700,
-    color: '#e94560',
+    fontSize: typography.sizeXxl,
+    fontWeight: typography.weightBold,
+    fontFamily: typography.fontFamily,
+    color: colors.accentEnumerist,
     letterSpacing: '-0.5px',
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
   },
   projectSelector: {
     position: 'relative',
@@ -31,140 +35,150 @@ const styles = {
   projectButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    backgroundColor: '#1e1e2e',
-    border: 'none',
-    borderRadius: '4px',
-    color: '#ccc',
-    fontSize: '14px',
+    gap: spacing.sm,
+    padding: `${spacing.sm} ${spacing.md}`,
+    backgroundColor: colors.bgSecondary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    color: colors.textPrimary,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
     cursor: 'pointer',
     minWidth: '200px',
     justifyContent: 'space-between',
   },
   projectName: {
-    fontWeight: 500,
+    fontWeight: typography.weightMedium,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
   chevron: {
-    fontSize: '10px',
-    color: '#666',
+    fontSize: typography.sizeXs,
+    color: colors.textMuted,
   },
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
-    marginTop: '4px',
-    backgroundColor: '#12121a',
-    border: '1px solid #1e1e2e',
-    borderRadius: '6px',
+    marginTop: spacing.xs,
+    backgroundColor: colors.bgSecondary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.lg,
     minWidth: '320px',
     maxHeight: '400px',
     overflowY: 'auto',
     zIndex: 1000,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+    boxShadow: shadows.lg,
   },
   dropdownHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px',
-    borderBottom: '1px solid #1e1e2e',
+    padding: spacing.md,
+    borderBottom: `1px solid ${colors.border}`,
   },
   dropdownTitle: {
-    fontSize: '12px',
-    fontWeight: 600,
-    color: '#666',
+    fontSize: typography.sizeSm,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   dropdownActions: {
     display: 'flex',
-    gap: '8px',
+    gap: spacing.sm,
   },
   smallButton: {
-    padding: '4px 8px',
-    fontSize: '11px',
+    padding: `${spacing.xs} ${spacing.sm}`,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
     border: 'none',
-    borderRadius: '3px',
+    borderRadius: radius.sm,
     cursor: 'pointer',
-    backgroundColor: '#1e1e2e',
-    color: '#888',
+    backgroundColor: colors.bgTertiary,
+    color: colors.textSecondary,
   },
   smallButtonPrimary: {
-    backgroundColor: '#e94560',
+    backgroundColor: colors.buttonPrimary,
     color: 'white',
   },
   projectList: {
-    padding: '8px',
+    padding: spacing.sm,
   },
   projectItem: {
-    padding: '10px 12px',
-    borderRadius: '4px',
+    padding: `${spacing.md} ${spacing.md}`,
+    borderRadius: radius.sm,
     cursor: 'pointer',
-    marginBottom: '4px',
+    marginBottom: spacing.xs,
     backgroundColor: 'transparent',
     transition: 'background-color 0.15s',
   },
   projectItemActive: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: colors.bgTertiary,
   },
   projectItemHover: {
-    backgroundColor: '#1a1a24',
+    backgroundColor: colors.bgPrimary,
   },
   projectItemName: {
-    fontSize: '14px',
-    fontWeight: 500,
-    color: '#e0e0e0',
+    fontSize: typography.sizeLg,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
     marginBottom: '2px',
   },
   projectItemMeta: {
-    fontSize: '11px',
-    color: '#666',
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
     display: 'flex',
-    gap: '12px',
+    gap: spacing.md,
   },
   projectItemActions: {
     display: 'flex',
-    gap: '4px',
-    marginTop: '6px',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   tinyButton: {
-    padding: '2px 6px',
-    fontSize: '10px',
+    padding: `2px ${spacing.sm}`,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
     border: 'none',
     borderRadius: '2px',
     cursor: 'pointer',
-    backgroundColor: '#0a0a0f',
-    color: '#666',
+    backgroundColor: colors.bgSidebar,
+    color: colors.textMuted,
   },
   emptyState: {
-    padding: '20px',
+    padding: spacing.xl,
     textAlign: 'center',
-    color: '#666',
-    fontSize: '13px',
+    color: colors.textMuted,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
   },
   right: {
     display: 'flex',
-    gap: '8px',
+    gap: spacing.sm,
   },
   button: {
-    padding: '8px 14px',
-    fontSize: '13px',
+    padding: `${spacing.sm} ${spacing.lg}`,
+    fontSize: typography.sizeMd,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: radius.sm,
     cursor: 'pointer',
     transition: 'background-color 0.15s',
   },
   buttonPrimary: {
-    backgroundColor: '#e94560',
+    backgroundColor: colors.buttonPrimary,
     color: 'white',
   },
   buttonSecondary: {
-    backgroundColor: '#1e1e2e',
-    color: '#ccc',
+    backgroundColor: colors.bgSecondary,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
   },
   hiddenInput: {
     display: 'none',
@@ -175,39 +189,42 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
   },
   modalContent: {
-    backgroundColor: '#12121a',
-    padding: '24px',
-    borderRadius: '8px',
+    backgroundColor: colors.bgSecondary,
+    padding: spacing.xxl,
+    borderRadius: radius.lg,
     width: '400px',
+    border: `1px solid ${colors.border}`,
   },
   modalTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
-    marginBottom: '16px',
-    color: '#e0e0e0',
+    fontSize: typography.sizeXl,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    marginBottom: spacing.lg,
+    color: colors.textPrimary,
   },
   input: {
     width: '100%',
-    padding: '10px',
-    fontSize: '14px',
-    backgroundColor: '#0d0d14',
-    border: '1px solid #1e1e2e',
-    borderRadius: '4px',
-    color: '#e0e0e0',
-    marginBottom: '16px',
+    padding: spacing.md,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
+    backgroundColor: colors.bgTertiary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
     boxSizing: 'border-box',
   },
   modalActions: {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: '8px',
+    gap: spacing.sm,
   },
 };
 
@@ -220,6 +237,7 @@ export default function ProjectManager({
   onDuplicateProject,
   onExportProject,
   onImportProject,
+  onGoHome,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -286,7 +304,15 @@ export default function ProjectManager({
   return (
     <header style={styles.header}>
       <div style={styles.left}>
-        <div style={styles.logo}>The Canonry</div>
+        <div
+          style={styles.logo}
+          onClick={onGoHome}
+          onMouseEnter={(e) => (e.target.style.opacity = '0.8')}
+          onMouseLeave={(e) => (e.target.style.opacity = '1')}
+          title="Go to home"
+        >
+          The Canonry
+        </div>
 
         <div style={styles.projectSelector} ref={dropdownRef}>
           <button
@@ -363,7 +389,7 @@ export default function ProjectManager({
                           Duplicate
                         </button>
                         <button
-                          style={{ ...styles.tinyButton, color: '#e94560' }}
+                          style={{ ...styles.tinyButton, color: colors.danger }}
                           onClick={() => {
                             if (confirm(`Delete "${project.name}"?`)) {
                               onDeleteProject(project.id);

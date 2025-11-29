@@ -29,16 +29,22 @@ const TABS = [
   { id: 'relationships', label: 'Relationships' },
 ];
 
+// Cosmographer accent gradient
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #66ddb3 0%, #8eecc8 100%)';
+const HOVER_BG = 'rgba(102, 221, 179, 0.15)';
+const ACCENT_COLOR = '#66ddb3';
+
 const styles = {
   container: {
     display: 'flex',
     height: '100%',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#1e1e2e',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#0f0f1a',
-    borderRight: '1px solid #2a2a4a',
+    backgroundColor: '#1a1a28',
+    borderRight: '1px solid #3d3d4d',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
@@ -57,15 +63,17 @@ const styles = {
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'background-color 0.15s, color 0.15s',
+    transition: 'all 0.15s',
+    fontFamily: 'inherit',
   },
   navButtonInactive: {
     backgroundColor: 'transparent',
-    color: '#888',
+    color: '#b0b0c0',
   },
   navButtonActive: {
-    backgroundColor: '#d4a574',
-    color: '#0f0f1a',
+    background: ACCENT_GRADIENT,
+    color: '#1a1a28',
+    fontWeight: 600,
   },
   main: {
     flex: 1,
@@ -83,7 +91,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#666',
+    color: '#707080',
     textAlign: 'center',
     padding: '40px',
   },
@@ -91,6 +99,7 @@ const styles = {
     fontSize: '18px',
     fontWeight: 500,
     marginBottom: '8px',
+    color: '#f0f0f0',
   },
 };
 
@@ -101,6 +110,7 @@ function buildInternalProject(
   schema,
   semanticData,
   cultureVisuals,
+  namingData,
   seedEntities,
   seedRelationships
 ) {
@@ -116,11 +126,16 @@ function buildInternalProject(
     },
   }));
 
-  // Build cultures with embedded visuals
+  // Build cultures with embedded visuals and naming data
   const cultures = (schema?.cultures || []).map((c) => ({
     ...c,
     axisBiases: cultureVisuals?.[c.id]?.axisBiases || {},
     homeRegions: cultureVisuals?.[c.id]?.homeRegions || {},
+    // Include naming data for name generation
+    domains: namingData?.[c.id]?.domains || [],
+    lexemeLists: namingData?.[c.id]?.lexemeLists || {},
+    grammars: namingData?.[c.id]?.grammars || [],
+    profiles: namingData?.[c.id]?.profiles || [],
   }));
 
   return {
@@ -136,14 +151,19 @@ export default function CosmographerRemote({
   schema,
   semanticData,
   cultureVisuals,
+  namingData,
   seedEntities,
   seedRelationships,
   onSemanticDataChange,
   onCultureVisualsChange,
   onSeedEntitiesChange,
   onSeedRelationshipsChange,
+  activeSection,
+  onSectionChange,
 }) {
-  const [activeTab, setActiveTab] = useState('planes');
+  // Use passed-in section or default to 'planes'
+  const activeTab = activeSection || 'planes';
+  const setActiveTab = onSectionChange || (() => {});
 
   // Build internal project representation
   const project = useMemo(
@@ -152,10 +172,11 @@ export default function CosmographerRemote({
         schema,
         semanticData,
         cultureVisuals,
+        namingData,
         seedEntities,
         seedRelationships
       ),
-    [schema, semanticData, cultureVisuals, seedEntities, seedRelationships]
+    [schema, semanticData, cultureVisuals, namingData, seedEntities, seedRelationships]
   );
 
   // Handle save - route updates to appropriate callbacks

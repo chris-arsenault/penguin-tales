@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
+import { resolve } from 'path';
 
 const isStandalone = process.env.STANDALONE === 'true';
 
@@ -21,6 +22,15 @@ export default defineConfig({
     }),
   ].filter(Boolean),
   base: process.env.DEPLOY_TARGET === 'aws' ? '/cosmographer/' : '/',
+  resolve: {
+    alias: {
+      // Import name-forge lib directly for name generation
+      '@name-forge': resolve(__dirname, '../../name-forge/lib'),
+    },
+  },
+  optimizeDeps: {
+    include: ['seedrandom', 'zod'],
+  },
   build: {
     target: 'esnext',
     minify: false,

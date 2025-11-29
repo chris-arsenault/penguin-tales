@@ -5,10 +5,11 @@
  * Edits entity kinds, relationship kinds, and culture identity.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import EntityKindEditor from './EntityKindEditor';
 import RelationshipKindEditor from './RelationshipKindEditor';
 import CultureEditor from './CultureEditor';
+import { colors, typography, spacing, radius, getAccentGradient, getHoverBg } from '../../theme';
 
 const styles = {
   container: {
@@ -17,59 +18,48 @@ const styles = {
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#12121a',
-    borderRight: '1px solid #1e1e2e',
-    padding: '16px',
+    backgroundColor: colors.bgSidebar,
+    borderRight: `1px solid ${colors.border}`,
+    padding: spacing.lg,
   },
   sidebarTitle: {
-    fontSize: '12px',
-    fontWeight: 600,
-    color: '#666',
+    fontSize: typography.sizeSm,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
     textTransform: 'uppercase',
-    marginBottom: '12px',
+    letterSpacing: '0.5px',
+    marginBottom: spacing.md,
   },
   sidebarItem: {
-    padding: '8px 12px',
-    fontSize: '13px',
-    borderRadius: '4px',
+    padding: `${spacing.sm} ${spacing.md}`,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
+    fontWeight: typography.weightMedium,
+    borderRadius: radius.md,
     cursor: 'pointer',
-    marginBottom: '4px',
+    marginBottom: spacing.xs,
+    transition: 'all 0.15s',
   },
   sidebarItemActive: {
-    backgroundColor: '#1e1e2e',
-    color: '#e94560',
+    background: getAccentGradient('enumerist'),
+    color: colors.bgSidebar,
+    fontWeight: typography.weightSemibold,
   },
   sidebarItemInactive: {
     backgroundColor: 'transparent',
-    color: '#888',
+    color: colors.textSecondary,
   },
   sidebarCount: {
     float: 'right',
-    fontSize: '11px',
-    color: '#666',
+    fontSize: typography.sizeXs,
+    opacity: 0.8,
   },
   main: {
     flex: 1,
-    padding: '24px',
+    padding: spacing.xxl,
     overflow: 'auto',
-  },
-  placeholder: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    color: '#666',
-    textAlign: 'center',
-  },
-  placeholderIcon: {
-    fontSize: '48px',
-    marginBottom: '16px',
-    opacity: 0.5,
-  },
-  placeholderText: {
-    fontSize: '14px',
-    maxWidth: '300px',
+    backgroundColor: colors.bgPrimary,
   },
 };
 
@@ -81,11 +71,14 @@ const SECTIONS = [
 
 export default function SchemaEditor({
   project,
+  activeSection,
+  onSectionChange,
   onUpdateEntityKinds,
   onUpdateRelationshipKinds,
   onUpdateCultures,
 }) {
-  const [activeSection, setActiveSection] = useState('entityKinds');
+  // Use passed-in activeSection, fallback to entityKinds
+  const currentSection = activeSection || 'entityKinds';
 
   const counts = {
     entityKinds: project.entityKinds.length,
@@ -94,7 +87,7 @@ export default function SchemaEditor({
   };
 
   const renderEditor = () => {
-    switch (activeSection) {
+    switch (currentSection) {
       case 'entityKinds':
         return (
           <EntityKindEditor
@@ -134,11 +127,11 @@ export default function SchemaEditor({
             key={section.id}
             style={{
               ...styles.sidebarItem,
-              ...(section.id === activeSection
+              ...(section.id === currentSection
                 ? styles.sidebarItemActive
                 : styles.sidebarItemInactive),
             }}
-            onClick={() => setActiveSection(section.id)}
+            onClick={() => onSectionChange(section.id)}
           >
             {section.label}
             <span style={styles.sidebarCount}>{counts[section.countKey]}</span>

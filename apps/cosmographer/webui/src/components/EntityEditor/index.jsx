@@ -3,12 +3,14 @@
  */
 
 import React, { useState } from 'react';
+import { generateEntityName } from '../../lib/name-generator.js';
 
 const styles = {
   container: {
     display: 'flex',
     gap: '24px',
-    height: '100%'
+    height: '100%',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   listPanel: {
     width: '320px',
@@ -21,10 +23,11 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    marginBottom: '8px'
+    marginBottom: '8px',
+    color: '#f0f0f0'
   },
   subtitle: {
-    color: '#888',
+    color: '#a0a0b0',
     fontSize: '14px'
   },
   toolbar: {
@@ -35,20 +38,23 @@ const styles = {
   addButton: {
     padding: '8px 16px',
     fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
+    backgroundColor: '#66ddb3',
+    color: '#1a1a28',
     border: 'none',
     borderRadius: '4px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    fontWeight: 500,
+    fontFamily: 'inherit'
   },
   filterSelect: {
-    padding: '6px 10px',
+    padding: '8px 12px',
     fontSize: '13px',
-    backgroundColor: '#16213e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#2d2d3d',
+    border: '1px solid #3d3d4d',
     borderRadius: '4px',
-    color: '#eee',
-    flex: 1
+    color: '#f0f0f0',
+    flex: 1,
+    fontFamily: 'inherit'
   },
   entityList: {
     flex: 1,
@@ -59,7 +65,7 @@ const styles = {
   },
   entityItem: {
     padding: '12px',
-    backgroundColor: '#16213e',
+    backgroundColor: '#252535',
     borderRadius: '6px',
     cursor: 'pointer',
     border: '2px solid transparent',
@@ -68,7 +74,7 @@ const styles = {
     gap: '10px'
   },
   entityItemSelected: {
-    borderColor: '#e94560'
+    borderColor: '#66ddb3'
   },
   entityColor: {
     width: '10px',
@@ -80,61 +86,70 @@ const styles = {
   },
   entityName: {
     fontSize: '14px',
-    fontWeight: 500
+    fontWeight: 500,
+    color: '#f0f0f0'
   },
   entityMeta: {
     fontSize: '11px',
-    color: '#888'
+    color: '#707080'
   },
   formPanel: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: '#252535',
     borderRadius: '8px',
     padding: '20px',
-    overflowY: 'auto'
+    overflowY: 'auto',
+    border: '1px solid #3d3d4d'
   },
   formTitle: {
     fontSize: '18px',
     fontWeight: 600,
-    marginBottom: '20px'
+    marginBottom: '20px',
+    color: '#f0f0f0'
   },
   formGroup: {
     marginBottom: '16px'
   },
   label: {
     fontSize: '12px',
-    color: '#888',
+    color: '#a0a0b0',
     marginBottom: '6px',
-    display: 'block'
+    display: 'block',
+    fontWeight: 500
   },
   input: {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#2d2d3d',
+    border: '1px solid #3d3d4d',
     borderRadius: '4px',
-    color: '#eee'
+    color: '#f0f0f0',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
   },
   select: {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#2d2d3d',
+    border: '1px solid #3d3d4d',
     borderRadius: '4px',
-    color: '#eee'
+    color: '#f0f0f0',
+    fontFamily: 'inherit'
   },
   textarea: {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#2d2d3d',
+    border: '1px solid #3d3d4d',
     borderRadius: '4px',
-    color: '#eee',
+    color: '#f0f0f0',
     minHeight: '80px',
-    resize: 'vertical'
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
   },
   row: {
     display: 'flex',
@@ -147,14 +162,15 @@ const styles = {
     padding: '10px 20px',
     fontSize: '13px',
     backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
+    color: '#ff6b7a',
+    border: '1px solid #ff6b7a',
     borderRadius: '4px',
     cursor: 'pointer',
-    marginTop: '24px'
+    marginTop: '24px',
+    fontFamily: 'inherit'
   },
   emptyState: {
-    color: '#666',
+    color: '#707080',
     fontSize: '14px',
     textAlign: 'center',
     padding: '40px'
@@ -164,13 +180,100 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#666'
+    color: '#707080'
+  },
+  nameRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'flex-end'
+  },
+  nameInput: {
+    flex: 1
+  },
+  generateButton: {
+    padding: '10px 14px',
+    fontSize: '13px',
+    backgroundColor: '#66ddb3',
+    color: '#1a1a28',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: 500,
+    whiteSpace: 'nowrap',
+    fontFamily: 'inherit'
+  },
+  generateButtonDisabled: {
+    backgroundColor: '#3d3d4d',
+    color: '#707080',
+    cursor: 'not-allowed'
+  },
+  tagsContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    marginBottom: '8px'
+  },
+  tag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '4px 8px',
+    backgroundColor: '#3d3d4d',
+    borderRadius: '4px',
+    fontSize: '12px',
+    color: '#f0f0f0'
+  },
+  tagRemove: {
+    cursor: 'pointer',
+    color: '#a0a0b0',
+    fontSize: '14px',
+    lineHeight: 1
+  },
+  tagInput: {
+    flex: 1,
+    minWidth: '100px',
+    padding: '6px 8px',
+    fontSize: '12px',
+    backgroundColor: '#2d2d3d',
+    border: '1px solid #3d3d4d',
+    borderRadius: '4px',
+    color: '#f0f0f0',
+    fontFamily: 'inherit'
+  },
+  coordsDisplay: {
+    display: 'flex',
+    gap: '16px',
+    padding: '10px 12px',
+    backgroundColor: '#2d2d3d',
+    borderRadius: '4px',
+    fontSize: '12px',
+    border: '1px solid #3d3d4d'
+  },
+  coordItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  },
+  coordLabel: {
+    fontWeight: 600,
+    color: '#66ddb3'
+  },
+  coordValue: {
+    color: '#f0f0f0'
+  },
+  coordHint: {
+    fontSize: '11px',
+    color: '#707080',
+    marginTop: '6px'
   }
 };
 
 export default function EntityEditor({ project, onSave }) {
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [filterKind, setFilterKind] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState(null);
+  const [newTag, setNewTag] = useState('');
 
   const entities = project?.seedEntities || [];
   // Schema v2: entityKinds at project root
@@ -236,7 +339,74 @@ export default function EntityEditor({ project, onSave }) {
   };
 
   const getCultureColor = (cultureId) => {
-    return cultures.find(c => c.id === cultureId)?.color || '#888';
+    return cultures.find(c => c.id === cultureId)?.color || '#707080';
+  };
+
+  const handleGenerateName = async () => {
+    if (!selectedEntity) return;
+
+    const culture = cultures.find(c => c.id === selectedEntity.culture);
+    if (!culture) {
+      setGenerateError('Select a culture first');
+      return;
+    }
+
+    // Check if culture has naming profiles
+    if (!culture.profiles || culture.profiles.length === 0) {
+      setGenerateError(`Culture "${culture.name}" has no naming profiles. Configure naming in Name Forge first.`);
+      return;
+    }
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const name = await generateEntityName(culture, {
+        kind: selectedEntity.kind,
+        subtype: selectedEntity.subtype,
+        prominence: selectedEntity.prominence,
+        tags: selectedEntity.tags || [],
+      });
+      updateEntity({ name });
+    } catch (err) {
+      console.error('Name generation error:', err);
+      setGenerateError(err.message || 'Failed to generate name');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Check if current entity can have names generated
+  const canGenerateName = () => {
+    if (!selectedEntity) return false;
+    const culture = cultures.find(c => c.id === selectedEntity.culture);
+    return culture && culture.profiles && culture.profiles.length > 0;
+  };
+
+  const addTag = () => {
+    if (!selectedEntity || !newTag.trim()) return;
+    const tag = newTag.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
+    if (!tag) return;
+    const currentTags = selectedEntity.tags || [];
+    if (currentTags.includes(tag)) {
+      setNewTag('');
+      return;
+    }
+    updateEntity({ tags: [...currentTags, tag] });
+    setNewTag('');
+  };
+
+  const removeTag = (tagToRemove) => {
+    if (!selectedEntity) return;
+    const currentTags = selectedEntity.tags || [];
+    updateEntity({ tags: currentTags.filter(t => t !== tagToRemove) });
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
   };
 
   return (
@@ -308,11 +478,29 @@ export default function EntityEditor({ project, onSave }) {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Name</label>
-              <input
-                style={styles.input}
-                value={selectedEntity.name}
-                onChange={(e) => updateEntity({ name: e.target.value })}
-              />
+              <div style={styles.nameRow}>
+                <input
+                  style={{ ...styles.input, ...styles.nameInput }}
+                  value={selectedEntity.name}
+                  onChange={(e) => updateEntity({ name: e.target.value })}
+                />
+                <button
+                  style={{
+                    ...styles.generateButton,
+                    ...((!canGenerateName() || generating) ? styles.generateButtonDisabled : {})
+                  }}
+                  onClick={handleGenerateName}
+                  disabled={!canGenerateName() || generating}
+                  title={!selectedEntity.culture ? 'Select a culture first' : !canGenerateName() ? 'Configure naming in Name Forge first' : 'Generate a culturally-appropriate name'}
+                >
+                  {generating ? 'Generating...' : 'Generate'}
+                </button>
+              </div>
+              {generateError && (
+                <div style={{ color: '#ff6b7a', fontSize: '12px', marginTop: '6px' }}>
+                  {generateError}
+                </div>
+              )}
             </div>
 
             <div style={styles.row}>
@@ -389,6 +577,32 @@ export default function EntityEditor({ project, onSave }) {
             </div>
 
             <div style={styles.formGroup}>
+              <label style={styles.label}>Tags</label>
+              <div style={styles.tagsContainer}>
+                {(selectedEntity.tags || []).map(tag => (
+                  <span key={tag} style={styles.tag}>
+                    {tag}
+                    <span
+                      style={styles.tagRemove}
+                      onClick={() => removeTag(tag)}
+                      title="Remove tag"
+                    >
+                      ×
+                    </span>
+                  </span>
+                ))}
+                <input
+                  style={styles.tagInput}
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={addTag}
+                  placeholder="Add tag..."
+                />
+              </div>
+            </div>
+
+            <div style={styles.formGroup}>
               <label style={styles.label}>Description</label>
               <textarea
                 style={styles.textarea}
@@ -399,40 +613,18 @@ export default function EntityEditor({ project, onSave }) {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Coordinates (on {selectedKindDef?.name || 'kind'}'s semantic plane)</label>
-              {['x', 'y', 'z'].map((axis) => {
-                const axisConfig = selectedKindDef?.semanticPlane?.axes?.[axis] || {
-                  name: `${axis.toUpperCase()} Axis`,
-                  lowLabel: 'Low',
-                  highLabel: 'High'
-                };
-                return (
-                  <div key={axis} style={{ ...styles.row, marginBottom: '8px', alignItems: 'center' }}>
-                    <span style={{ width: '20px', fontWeight: 600, color: '#e94560', fontSize: '12px' }}>
-                      {axis.toUpperCase()}
-                    </span>
-                    <span style={{ width: '100px', fontSize: '11px', color: '#888' }}>
-                      {axisConfig.name}
-                    </span>
-                    <span style={{ width: '60px', fontSize: '10px', color: '#666', textAlign: 'right' }}>
-                      {axisConfig.lowLabel}
-                    </span>
-                    <input
-                      style={{ ...styles.input, flex: 1 }}
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={selectedEntity.coordinates?.[axis] ?? 50}
-                      onChange={(e) => updateEntity({
-                        coordinates: { ...selectedEntity.coordinates, [axis]: parseFloat(e.target.value) || 0 }
-                      })}
-                    />
-                    <span style={{ width: '60px', fontSize: '10px', color: '#666' }}>
-                      {axisConfig.highLabel}
-                    </span>
+              <label style={styles.label}>Coordinates</label>
+              <div style={styles.coordsDisplay}>
+                {['x', 'y', 'z'].map((axis) => (
+                  <div key={axis} style={styles.coordItem}>
+                    <span style={styles.coordLabel}>{axis.toUpperCase()}:</span>
+                    <span style={styles.coordValue}>{selectedEntity.coordinates?.[axis] ?? 50}</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              <div style={styles.coordHint}>
+                Edit coordinates by dragging entities on the Semantic Planes view
+              </div>
             </div>
 
             <button style={styles.deleteButton} onClick={deleteEntity}>

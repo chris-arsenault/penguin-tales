@@ -5,21 +5,25 @@
  * as module federation remotes with a unified WorldSeedProject schema.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useProjectStorage } from './storage/useProjectStorage';
 import ProjectManager from './components/ProjectManager';
 import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
+import LandingPage from './components/LandingPage';
+import HelpModal from './components/HelpModal';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
+import { colors, typography, spacing } from './theme';
 
 const styles = {
   app: {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-    backgroundColor: '#0a0a0f',
-    color: '#e0e0e0',
+    backgroundColor: colors.bgPrimary,
+    color: colors.textPrimary,
+    fontFamily: typography.fontFamily,
   },
   content: {
     flex: 1,
@@ -30,34 +34,100 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#666',
-  },
-  noProject: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    color: '#666',
-    textAlign: 'center',
-    padding: '40px',
+    color: colors.textMuted,
   },
   footer: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    backgroundColor: '#0a0a0f',
-    borderTop: '1px solid #1e1e2e',
-    fontSize: '12px',
-    color: '#666',
+    gap: spacing.sm,
+    padding: `${spacing.sm} ${spacing.lg}`,
+    backgroundColor: colors.bgPrimary,
+    borderTop: `1px solid ${colors.border}`,
+    fontSize: typography.sizeSm,
+    color: colors.textMuted,
     flexShrink: 0,
   },
 };
 
+// Valid sub-nav values for each tab
+const VALID_SUBNAV = {
+  enumerist: ['entityKinds', 'relationshipKinds', 'cultures'],
+  names: ['workshop', 'optimizer', 'generate'],
+  cosmography: ['planes', 'cultures', 'entities', 'relationships'],
+  simulation: [],
+};
+
+// URL state management
+function getInitialState() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  const section = params.get('section');
+
+  // If no tab param, show home (landing page)
+  if (!tab) {
+    return { tab: null, section: null, showHome: true };
+  }
+
+  const validTab = ['enumerist', 'names', 'cosmography', 'simulation'].includes(tab)
+    ? tab
+    : 'enumerist';
+
+  const validSection = VALID_SUBNAV[validTab]?.includes(section)
+    ? section
+    : VALID_SUBNAV[validTab]?.[0] || null;
+
+  return { tab: validTab, section: validSection, showHome: false };
+}
+
+function updateUrl(tab, section, showHome) {
+  const url = new URL(window.location.href);
+  if (showHome) {
+    url.searchParams.delete('tab');
+    url.searchParams.delete('section');
+  } else {
+    url.searchParams.set('tab', tab);
+    if (section) {
+      url.searchParams.set('section', section);
+    } else {
+      url.searchParams.delete('section');
+    }
+  }
+  window.history.replaceState({}, '', url);
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('enumerist');
+  const initialState = getInitialState();
+  const [activeTab, setActiveTab] = useState(initialState.tab);
+  const [activeSection, setActiveSection] = useState(initialState.section);
+  const [showHome, setShowHome] = useState(initialState.showHome);
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+
+  // Handle tab change - reset section to first valid for new tab
+  const handleTabChange = useCallback((newTab) => {
+    setActiveTab(newTab);
+    const defaultSection = VALID_SUBNAV[newTab]?.[0] || null;
+    setActiveSection(defaultSection);
+    setShowHome(false);
+  }, []);
+
+  // Handle going home (clicking logo)
+  const handleGoHome = useCallback(() => {
+    setShowHome(true);
+  }, []);
+
+  // Handle navigation from landing page cards
+  const handleLandingNavigate = useCallback((tabId) => {
+    setActiveTab(tabId);
+    const defaultSection = VALID_SUBNAV[tabId]?.[0] || null;
+    setActiveSection(defaultSection);
+    setShowHome(false);
+  }, []);
+
+  // Sync state changes to URL
+  useEffect(() => {
+    updateUrl(activeTab, activeSection, showHome);
+  }, [activeTab, activeSection, showHome]);
 
   const {
     projects,
@@ -190,15 +260,13 @@ export default function App() {
   }, [currentProject?.entityKinds, currentProject?.relationshipKinds, currentProject?.cultures]);
 
   const renderContent = () => {
-    if (!currentProject) {
+    // Show landing page if explicitly on home or no project selected
+    if (showHome || !currentProject) {
       return (
-        <div style={styles.noProject}>
-          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>
-
-          </div>
-          <div style={{ fontSize: '18px', marginBottom: '8px' }}>No Project Selected</div>
-          <div>Create or select a project to begin.</div>
-        </div>
+        <LandingPage
+          onNavigate={handleLandingNavigate}
+          hasProject={!!currentProject}
+        />
       );
     }
 
@@ -207,6 +275,8 @@ export default function App() {
         return (
           <SchemaEditor
             project={currentProject}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
             onUpdateEntityKinds={updateEntityKinds}
             onUpdateRelationshipKinds={updateRelationshipKinds}
             onUpdateCultures={updateCultures}
@@ -219,6 +289,8 @@ export default function App() {
             schema={schema}
             namingData={namingData}
             onNamingDataChange={updateCultureNaming}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
           />
         );
 
@@ -228,12 +300,15 @@ export default function App() {
             schema={schema}
             semanticData={semanticData}
             cultureVisuals={cultureVisuals}
+            namingData={namingData}
             seedEntities={currentProject.seedEntities}
             seedRelationships={currentProject.seedRelationships}
             onSemanticDataChange={updateEntityKindSemanticPlane}
             onCultureVisualsChange={updateCultureVisuals}
             onSeedEntitiesChange={updateSeedEntities}
             onSeedRelationshipsChange={updateSeedRelationships}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
           />
         );
 
@@ -271,8 +346,15 @@ export default function App() {
         onDuplicateProject={duplicateProject}
         onExportProject={exportProject}
         onImportProject={importProject}
+        onGoHome={handleGoHome}
       />
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      {currentProject && !showHome && (
+        <Navigation
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onHelpClick={() => setHelpModalOpen(true)}
+        />
+      )}
       <div style={styles.content}>{renderContent()}</div>
       <footer style={styles.footer}>
         <span>Copyright © 2025</span>
@@ -282,17 +364,23 @@ export default function App() {
         <div
           style={{
             position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            backgroundColor: '#e94560',
+            bottom: spacing.xl,
+            right: spacing.xl,
+            backgroundColor: colors.danger,
             color: 'white',
-            padding: '12px 20px',
-            borderRadius: '4px',
+            padding: `${spacing.md} ${spacing.xl}`,
+            borderRadius: spacing.sm,
+            fontSize: typography.sizeMd,
           }}
         >
           Error: {error}
         </div>
       )}
+      <HelpModal
+        isOpen={helpModalOpen}
+        onClose={() => setHelpModalOpen(false)}
+        activeTab={activeTab}
+      />
     </div>
   );
 }

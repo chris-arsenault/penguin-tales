@@ -6,195 +6,187 @@
  */
 
 import React, { useState } from 'react';
+import { colors, typography, spacing, radius, components } from '../../theme';
 
 const styles = {
   container: {
     maxWidth: '900px',
   },
   header: {
-    marginBottom: '24px',
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: '24px',
-    fontWeight: 600,
-    marginBottom: '8px',
+    fontSize: typography.sizeTitle,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    color: '#888',
-    fontSize: '14px',
+    color: colors.textSecondary,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
   },
   toolbar: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: spacing.lg,
+  },
+  count: {
+    color: colors.textMuted,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
   },
   addButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonPrimary,
   },
   kindList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: spacing.sm,
   },
   kindCard: {
-    backgroundColor: '#16213e',
-    borderRadius: '8px',
-    border: '1px solid #0f3460',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
     overflow: 'hidden',
   },
   kindHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
+    padding: `${spacing.md} ${spacing.lg}`,
     cursor: 'pointer',
   },
   kindHeaderLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: spacing.md,
   },
   expandIcon: {
-    fontSize: '12px',
-    color: '#888',
+    fontSize: typography.sizeSm,
+    color: colors.textMuted,
     transition: 'transform 0.2s',
     width: '16px',
   },
   kindName: {
-    fontWeight: 500,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
   },
   kindId: {
-    color: '#666',
-    fontSize: '11px',
+    color: colors.textMuted,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
   },
   kindSummary: {
-    fontSize: '11px',
-    color: '#666',
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
   },
   kindBody: {
-    padding: '16px',
-    borderTop: '1px solid #0f3460',
+    padding: spacing.lg,
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgTertiary,
   },
   formRow: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
     alignItems: 'flex-start',
   },
   formGroup: {
     flex: 1,
   },
   label: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '6px',
-    display: 'block',
+    ...components.label,
   },
   input: {
-    width: '100%',
-    padding: '8px 10px',
-    fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
-    boxSizing: 'border-box',
-  },
-  textarea: {
-    width: '100%',
-    padding: '8px 10px',
-    fontSize: '13px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
-    resize: 'vertical',
-    minHeight: '60px',
-    boxSizing: 'border-box',
+    ...components.input,
   },
   section: {
-    marginBottom: '16px',
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: '13px',
-    fontWeight: 500,
-    color: '#ccc',
-    marginBottom: '8px',
+    fontSize: typography.sizeMd,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   itemList: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '6px',
-    marginBottom: '8px',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 8px',
-    backgroundColor: '#1a1a2e',
-    borderRadius: '4px',
-    fontSize: '12px',
+    gap: spacing.sm,
+    padding: `${spacing.xs} ${spacing.sm}`,
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.sm,
+    fontSize: typography.sizeSm,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
   },
   itemRemove: {
     background: 'none',
     border: 'none',
-    color: '#e94560',
+    color: colors.danger,
     cursor: 'pointer',
     padding: '0 2px',
-    fontSize: '14px',
+    fontSize: typography.sizeLg,
   },
   addItemRow: {
     display: 'flex',
-    gap: '8px',
+    gap: spacing.sm,
   },
   addItemInput: {
     flex: 1,
-    padding: '6px 10px',
-    fontSize: '12px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
+    padding: `${spacing.sm} ${spacing.md}`,
+    fontSize: typography.sizeSm,
+    fontFamily: typography.fontFamily,
+    backgroundColor: colors.bgSecondary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    color: colors.textPrimary,
   },
   addItemButton: {
-    padding: '6px 12px',
-    fontSize: '12px',
-    backgroundColor: '#0f3460',
-    color: '#ccc',
+    padding: `${spacing.sm} ${spacing.md}`,
+    fontSize: typography.sizeSm,
+    fontFamily: typography.fontFamily,
+    backgroundColor: colors.buttonSecondary,
+    color: colors.textSecondary,
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: radius.sm,
     cursor: 'pointer',
   },
   actionsRow: {
     display: 'flex',
     justifyContent: 'flex-end',
-    marginTop: '16px',
+    marginTop: spacing.lg,
   },
   deleteButton: {
-    padding: '6px 12px',
-    fontSize: '12px',
-    backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonDanger,
   },
   emptyState: {
-    color: '#666',
-    fontSize: '14px',
+    color: colors.textMuted,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
     textAlign: 'center',
-    padding: '40px',
+    padding: spacing.xxxl,
   },
   checkbox: {
-    marginRight: '6px',
+    marginRight: spacing.sm,
+  },
+  hint: {
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
 };
 
@@ -297,7 +289,7 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
       </div>
 
       <div style={styles.toolbar}>
-        <span style={{ color: '#888', fontSize: '13px' }}>
+        <span style={styles.count}>
           {entityKinds.length} kind{entityKinds.length !== 1 ? 's' : ''}
         </span>
         <button style={styles.addButton} onClick={addEntityKind}>
@@ -479,7 +471,7 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                           Add
                         </button>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                      <div style={styles.hint}>
                         Check the box to mark as terminal (entity "ends" in this status)
                       </div>
                     </div>

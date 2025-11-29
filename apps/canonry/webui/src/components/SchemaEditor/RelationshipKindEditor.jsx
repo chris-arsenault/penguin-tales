@@ -3,181 +3,176 @@
  */
 
 import React, { useState } from 'react';
+import { colors, typography, spacing, radius, components } from '../../theme';
 
 const styles = {
   container: {
     maxWidth: '900px',
   },
   header: {
-    marginBottom: '24px',
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: '24px',
-    fontWeight: 600,
-    marginBottom: '8px',
+    fontSize: typography.sizeTitle,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    color: '#888',
-    fontSize: '14px',
+    color: colors.textSecondary,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
   },
   toolbar: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: spacing.lg,
+  },
+  count: {
+    color: colors.textMuted,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
   },
   addButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonPrimary,
   },
   relList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: spacing.sm,
   },
   relCard: {
-    backgroundColor: '#16213e',
-    borderRadius: '8px',
-    border: '1px solid #0f3460',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
     overflow: 'hidden',
   },
   relHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
+    padding: `${spacing.md} ${spacing.lg}`,
     cursor: 'pointer',
   },
   relHeaderLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: spacing.md,
   },
   expandIcon: {
-    fontSize: '12px',
-    color: '#888',
+    fontSize: typography.sizeSm,
+    color: colors.textMuted,
     transition: 'transform 0.2s',
     width: '16px',
   },
   relName: {
-    fontWeight: 500,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
   },
   relId: {
-    color: '#666',
-    fontSize: '11px',
+    color: colors.textMuted,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
   },
   relSummary: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '11px',
-    color: '#666',
+    gap: spacing.sm,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
   },
   summaryKind: {
-    padding: '2px 6px',
-    backgroundColor: '#0f3460',
-    borderRadius: '3px',
-    fontSize: '10px',
+    padding: `2px ${spacing.sm}`,
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.sm,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
   },
   relBody: {
-    padding: '16px',
-    borderTop: '1px solid #0f3460',
+    padding: spacing.lg,
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgTertiary,
   },
   formRow: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
     alignItems: 'flex-start',
   },
   formGroup: {
     flex: 1,
   },
   label: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '6px',
-    display: 'block',
+    ...components.label,
   },
   input: {
-    width: '100%',
-    padding: '8px 10px',
-    fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
-    boxSizing: 'border-box',
+    ...components.input,
   },
   textarea: {
-    width: '100%',
-    padding: '8px 10px',
-    fontSize: '13px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
+    ...components.input,
     resize: 'vertical',
     minHeight: '60px',
-    boxSizing: 'border-box',
   },
   constraintsSection: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: '6px',
-    padding: '16px',
-    marginBottom: '16px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   constraintsTitle: {
-    fontSize: '13px',
-    fontWeight: 500,
-    color: '#ccc',
-    marginBottom: '12px',
+    fontSize: typography.sizeMd,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   constraintRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: spacing.lg,
   },
   kindBox: {
     flex: 1,
   },
   kindBoxLabel: {
-    fontSize: '11px',
-    color: '#888',
-    marginBottom: '8px',
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
     display: 'flex',
     justifyContent: 'space-between',
   },
   kindGrid: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '6px',
+    gap: spacing.sm,
   },
   kindChip: {
-    padding: '6px 10px',
-    borderRadius: '4px',
-    fontSize: '12px',
+    padding: `${spacing.sm} ${spacing.md}`,
+    borderRadius: radius.sm,
+    fontSize: typography.sizeSm,
+    fontFamily: typography.fontFamily,
     cursor: 'pointer',
     transition: 'background-color 0.15s',
     border: '1px solid transparent',
   },
   kindChipActive: {
-    backgroundColor: '#e94560',
+    backgroundColor: colors.buttonPrimary,
     color: 'white',
   },
   kindChipInactive: {
-    backgroundColor: '#0f3460',
-    color: '#aaa',
-    border: '1px solid #0f3460',
+    backgroundColor: colors.bgTertiary,
+    color: colors.textSecondary,
+    border: `1px solid ${colors.border}`,
   },
   arrow: {
-    fontSize: '24px',
-    color: '#666',
-    fontWeight: 300,
+    fontSize: typography.sizeTitle,
+    color: colors.textMuted,
+    fontWeight: typography.weightNormal,
   },
   optionsRow: {
     display: 'flex',
@@ -187,30 +182,32 @@ const styles = {
   checkbox: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '13px',
-    color: '#aaa',
+    gap: spacing.sm,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
+    color: colors.textSecondary,
     cursor: 'pointer',
   },
   deleteButton: {
-    padding: '6px 12px',
-    fontSize: '12px',
-    backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonDanger,
   },
   emptyState: {
-    color: '#666',
-    fontSize: '14px',
+    color: colors.textMuted,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
     textAlign: 'center',
-    padding: '40px',
+    padding: spacing.xxxl,
   },
   anyLabel: {
-    fontSize: '10px',
-    color: '#888',
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
     fontStyle: 'italic',
+  },
+  symmetricLabel: {
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
   },
 };
 
@@ -294,7 +291,7 @@ export default function RelationshipKindEditor({
       </div>
 
       <div style={styles.toolbar}>
-        <span style={{ color: '#888', fontSize: '13px' }}>
+        <span style={styles.count}>
           {relationshipKinds.length} relationship
           {relationshipKinds.length !== 1 ? 's' : ''}
         </span>
@@ -332,7 +329,7 @@ export default function RelationshipKindEditor({
                     <span style={styles.relName}>{rel.name}</span>
                     <span style={styles.relId}>({rel.id})</span>
                     {rel.symmetric && (
-                      <span style={{ fontSize: '11px', color: '#888' }}>
+                      <span style={styles.symmetricLabel}>
                         ↔ symmetric
                       </span>
                     )}
@@ -346,7 +343,7 @@ export default function RelationshipKindEditor({
                     {rel.srcKinds?.length > 2 && (
                       <span>+{rel.srcKinds.length - 2}</span>
                     )}
-                    <span style={{ color: '#666' }}>→</span>
+                    <span style={{ color: colors.textMuted }}>→</span>
                     {dstNames.map((name, i) => (
                       <span key={i} style={styles.summaryKind}>
                         {name}
@@ -410,7 +407,7 @@ export default function RelationshipKindEditor({
                       </div>
 
                       {entityKinds.length === 0 ? (
-                        <div style={{ color: '#666', fontSize: '12px' }}>
+                        <div style={{ color: colors.textMuted, fontSize: typography.sizeSm }}>
                           Define entity kinds first to set constraints.
                         </div>
                       ) : (

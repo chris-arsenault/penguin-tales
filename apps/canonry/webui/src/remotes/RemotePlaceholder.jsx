@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { colors, typography, spacing, radius } from '../theme';
 
 const styles = {
   container: {
@@ -11,33 +12,36 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    padding: '40px',
+    padding: spacing.xxxl,
     textAlign: 'center',
   },
   icon: {
     fontSize: '48px',
-    marginBottom: '16px',
+    marginBottom: spacing.lg,
     opacity: 0.5,
   },
   title: {
-    fontSize: '20px',
-    fontWeight: 600,
-    marginBottom: '8px',
-    color: '#ccc',
+    fontSize: typography.sizeXxl,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
   },
   message: {
-    fontSize: '14px',
-    color: '#888',
-    marginBottom: '24px',
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxl,
     maxWidth: '400px',
   },
   instructions: {
-    backgroundColor: '#1a1a2e',
-    padding: '16px 24px',
-    borderRadius: '8px',
-    fontSize: '13px',
-    color: '#aaa',
+    backgroundColor: colors.bgSecondary,
+    padding: `${spacing.lg} ${spacing.xxl}`,
+    borderRadius: radius.lg,
+    fontSize: typography.sizeMd,
     fontFamily: 'monospace',
+    color: colors.textSecondary,
+    border: `1px solid ${colors.border}`,
   },
 };
 

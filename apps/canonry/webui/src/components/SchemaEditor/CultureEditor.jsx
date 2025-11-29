@@ -7,64 +7,67 @@
  */
 
 import React, { useState } from 'react';
+import { colors, typography, spacing, radius, components } from '../../theme';
 
 const styles = {
   container: {
     maxWidth: '900px',
   },
   header: {
-    marginBottom: '24px',
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: '24px',
-    fontWeight: 600,
-    marginBottom: '8px',
+    fontSize: typography.sizeTitle,
+    fontWeight: typography.weightSemibold,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    color: '#888',
-    fontSize: '14px',
+    color: colors.textSecondary,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
   },
   toolbar: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: spacing.lg,
+  },
+  count: {
+    color: colors.textMuted,
+    fontSize: typography.sizeMd,
+    fontFamily: typography.fontFamily,
   },
   addButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonPrimary,
   },
   cultureList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: spacing.sm,
   },
   cultureCard: {
-    backgroundColor: '#16213e',
-    borderRadius: '8px',
-    border: '1px solid #0f3460',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
     overflow: 'hidden',
   },
   cultureHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
+    padding: `${spacing.md} ${spacing.lg}`,
     cursor: 'pointer',
   },
   cultureHeaderLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: spacing.md,
   },
   expandIcon: {
-    fontSize: '12px',
-    color: '#888',
+    fontSize: typography.sizeSm,
+    color: colors.textMuted,
     transition: 'transform 0.2s',
     width: '16px',
   },
@@ -72,70 +75,65 @@ const styles = {
     width: '16px',
     height: '16px',
     borderRadius: '50%',
-    border: '2px solid #0f3460',
+    border: `2px solid ${colors.border}`,
   },
   cultureName: {
-    fontWeight: 500,
+    fontWeight: typography.weightMedium,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
   },
   cultureId: {
-    color: '#666',
-    fontSize: '11px',
+    color: colors.textMuted,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
   },
   cultureSummary: {
-    fontSize: '11px',
-    color: '#666',
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
   },
   cultureBody: {
-    padding: '16px',
-    borderTop: '1px solid #0f3460',
+    padding: spacing.lg,
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgTertiary,
   },
   formRow: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
     alignItems: 'flex-start',
   },
   formGroup: {
     flex: 1,
   },
   label: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '6px',
-    display: 'block',
+    ...components.label,
   },
   input: {
-    width: '100%',
-    padding: '8px 10px',
-    fontSize: '14px',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '4px',
-    color: '#eee',
-    boxSizing: 'border-box',
+    ...components.input,
   },
   colorSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   colorPickerDot: {
     width: '32px',
     height: '32px',
     borderRadius: '50%',
     cursor: 'pointer',
-    border: '3px solid #0f3460',
+    border: `3px solid ${colors.border}`,
   },
   colorPicker: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '6px',
+    gap: spacing.sm,
   },
   colorOption: {
     width: '24px',
     height: '24px',
-    borderRadius: '4px',
+    borderRadius: radius.sm,
     cursor: 'pointer',
     border: '2px solid transparent',
   },
@@ -143,43 +141,40 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: '16px',
+    marginTop: spacing.lg,
   },
   deleteButton: {
-    padding: '6px 12px',
-    fontSize: '12px',
-    backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
-    borderRadius: '4px',
-    cursor: 'pointer',
+    ...components.buttonDanger,
   },
   emptyState: {
-    color: '#666',
-    fontSize: '14px',
+    color: colors.textMuted,
+    fontSize: typography.sizeLg,
+    fontFamily: typography.fontFamily,
     textAlign: 'center',
-    padding: '40px',
+    padding: spacing.xxxl,
   },
   badge: {
-    padding: '2px 6px',
-    backgroundColor: '#0f3460',
-    borderRadius: '3px',
-    fontSize: '10px',
-    color: '#888',
+    padding: `2px ${spacing.sm}`,
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.sm,
+    fontSize: typography.sizeXs,
+    fontFamily: typography.fontFamily,
+    color: colors.textMuted,
   },
   infoBox: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: '6px',
-    padding: '12px',
-    fontSize: '12px',
-    color: '#888',
-    marginTop: '16px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: typography.sizeSm,
+    fontFamily: typography.fontFamily,
+    color: colors.textSecondary,
+    marginTop: spacing.lg,
   },
 };
 
 const PRESET_COLORS = [
-  '#e94560', '#ff6b6b', '#ffa502', '#ffdd59',
-  '#7bed9f', '#2ed573', '#1e90ff', '#5352ed',
+  '#ff6b7a', '#ff8f6b', '#ffb366', '#ffdd59',
+  '#7bed9f', '#66ddb3', '#6c9bff', '#5352ed',
   '#a55eea', '#ff6b81', '#70a1ff', '#eccc68',
   '#ff7f50', '#20bf6b', '#0fb9b1', '#778ca3',
 ];
@@ -240,7 +235,7 @@ export default function CultureEditor({ cultures, onChange }) {
       </div>
 
       <div style={styles.toolbar}>
-        <span style={{ color: '#888', fontSize: '13px' }}>
+        <span style={styles.count}>
           {cultures.length} culture{cultures.length !== 1 ? 's' : ''}
         </span>
         <button style={styles.addButton} onClick={addCulture}>
@@ -371,7 +366,7 @@ export default function CultureEditor({ cultures, onChange }) {
 
                     {/* Actions */}
                     <div style={styles.actionsRow}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: spacing.sm }}>
                         {culture.naming && (
                           <span style={styles.badge}>has naming</span>
                         )}
