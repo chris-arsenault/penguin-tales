@@ -1,5 +1,5 @@
 /**
- * EntityKindEditor - Edit entity kinds with their subtypes, statuses, and semantic plane.
+ * EntityKindEditor - Edit entity kinds with collapsible sections for subtypes, statuses, and semantic plane.
  */
 
 import React, { useState } from 'react';
@@ -30,24 +30,49 @@ const styles = {
   kindList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: '8px'
   },
   kindCard: {
     backgroundColor: '#16213e',
     borderRadius: '8px',
-    padding: '16px',
-    border: '1px solid #0f3460'
+    border: '1px solid #0f3460',
+    overflow: 'hidden'
   },
   kindHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px'
+    padding: '12px 16px',
+    cursor: 'pointer',
+    backgroundColor: '#16213e'
+  },
+  kindHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  expandIcon: {
+    fontSize: '12px',
+    color: '#888',
+    transition: 'transform 0.2s',
+    width: '16px'
   },
   kindName: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px'
+  },
+  kindId: {
+    color: '#666',
+    fontSize: '11px'
+  },
+  kindSummary: {
+    fontSize: '11px',
+    color: '#666'
+  },
+  kindBody: {
+    padding: '0 16px 16px 16px',
+    borderTop: '1px solid #0f3460'
   },
   input: {
     padding: '6px 10px',
@@ -56,7 +81,7 @@ const styles = {
     border: '1px solid #0f3460',
     borderRadius: '4px',
     color: '#eee',
-    width: '150px'
+    width: '180px'
   },
   inputSmall: {
     width: '120px',
@@ -64,7 +89,7 @@ const styles = {
     fontSize: '12px'
   },
   inputAxis: {
-    width: '100px',
+    width: '90px',
     padding: '4px 8px',
     fontSize: '12px',
     backgroundColor: '#1a1a2e',
@@ -81,16 +106,42 @@ const styles = {
     borderRadius: '3px',
     cursor: 'pointer'
   },
-  section: {
-    marginTop: '12px'
+  accordion: {
+    marginTop: '12px',
+    backgroundColor: '#1a1a2e',
+    borderRadius: '6px',
+    overflow: 'hidden'
   },
-  sectionTitle: {
-    fontSize: '12px',
-    color: '#888',
-    marginBottom: '8px',
+  accordionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#ccc'
+  },
+  accordionHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  accordionIcon: {
+    fontSize: '10px',
+    color: '#666',
+    transition: 'transform 0.2s'
+  },
+  accordionBadge: {
+    fontSize: '10px',
+    padding: '2px 6px',
+    backgroundColor: '#0f3460',
+    borderRadius: '10px',
+    color: '#888'
+  },
+  accordionBody: {
+    padding: '12px',
+    borderTop: '1px solid #0f3460'
   },
   tagList: {
     display: 'flex',
@@ -112,13 +163,18 @@ const styles = {
     marginLeft: '4px'
   },
   addSmallButton: {
-    padding: '2px 6px',
-    fontSize: '10px',
+    padding: '4px 10px',
+    fontSize: '11px',
     backgroundColor: '#0f3460',
     color: '#aaa',
     border: 'none',
     borderRadius: '3px',
     cursor: 'pointer'
+  },
+  inlineForm: {
+    display: 'flex',
+    gap: '6px',
+    marginTop: '8px'
   },
   emptyState: {
     color: '#666',
@@ -141,6 +197,11 @@ const styles = {
   axisArrow: {
     color: '#666',
     fontSize: '12px'
+  },
+  emptyTag: {
+    color: '#666',
+    fontSize: '12px',
+    fontStyle: 'italic'
   }
 };
 
@@ -149,10 +210,25 @@ function generateId(name) {
 }
 
 export default function EntityKindEditor({ entityKinds = [], onChange }) {
-  const [editingSubtype, setEditingSubtype] = useState(null);
-  const [editingStatus, setEditingStatus] = useState(null);
+  const [expandedKinds, setExpandedKinds] = useState({});
+  const [expandedSections, setExpandedSections] = useState({});
   const [newSubtype, setNewSubtype] = useState('');
   const [newStatus, setNewStatus] = useState('');
+  const [addingSubtype, setAddingSubtype] = useState(null);
+  const [addingStatus, setAddingStatus] = useState(null);
+
+  const toggleKind = (kindId) => {
+    setExpandedKinds(prev => ({ ...prev, [kindId]: !prev[kindId] }));
+  };
+
+  const toggleSection = (kindId, section) => {
+    const key = `${kindId}-${section}`;
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isSectionExpanded = (kindId, section) => {
+    return expandedSections[`${kindId}-${section}`];
+  };
 
   const addEntityKind = () => {
     const newKind = {
@@ -173,6 +249,7 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
       }
     };
     onChange([...entityKinds, newKind]);
+    setExpandedKinds(prev => ({ ...prev, [newKind.id]: true }));
   };
 
   const updateKind = (kindId, updates) => {
@@ -199,7 +276,7 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
       subtypes: [...kind.subtypes, subtype]
     });
     setNewSubtype('');
-    setEditingSubtype(null);
+    setAddingSubtype(null);
   };
 
   const removeSubtype = (kindId, subtypeId) => {
@@ -225,7 +302,7 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
       statuses: [...kind.statuses, status]
     });
     setNewStatus('');
-    setEditingStatus(null);
+    setAddingStatus(null);
   };
 
   const removeStatus = (kindId, statusId) => {
@@ -290,184 +367,243 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
         </div>
       ) : (
         <div style={styles.kindList}>
-          {entityKinds.map((kind) => (
-            <div key={kind.id} style={styles.kindCard}>
-              <div style={styles.kindHeader}>
-                <div style={styles.kindName}>
-                  <input
-                    style={styles.input}
-                    value={kind.name}
-                    onChange={(e) => updateKind(kind.id, {
-                      name: e.target.value,
-                      id: generateId(e.target.value) || kind.id
-                    })}
-                    placeholder="Kind name"
-                  />
-                  <span style={{ color: '#666', fontSize: '12px' }}>
-                    ({kind.id})
-                  </span>
-                </div>
-                <button
-                  style={styles.deleteButton}
-                  onClick={() => deleteKind(kind.id)}
+          {entityKinds.map((kind) => {
+            const isExpanded = expandedKinds[kind.id];
+            return (
+              <div key={kind.id} style={styles.kindCard}>
+                <div
+                  style={styles.kindHeader}
+                  onClick={() => toggleKind(kind.id)}
                 >
-                  Delete
-                </button>
-              </div>
+                  <div style={styles.kindHeaderLeft}>
+                    <span style={{
+                      ...styles.expandIcon,
+                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                    }}>
+                      ▶
+                    </span>
+                    <span style={{ fontWeight: 500 }}>{kind.name}</span>
+                    <span style={styles.kindId}>({kind.id})</span>
+                  </div>
+                  <div style={styles.kindSummary}>
+                    {kind.subtypes.length} subtypes · {kind.statuses.length} statuses
+                  </div>
+                </div>
 
-              {/* Subtypes */}
-              <div style={styles.section}>
-                <div style={styles.sectionTitle}>
-                  <span>Subtypes</span>
-                  {editingSubtype === kind.id ? (
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                {isExpanded && (
+                  <div style={styles.kindBody}>
+                    {/* Name input */}
+                    <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <input
-                        style={{ ...styles.input, ...styles.inputSmall }}
-                        value={newSubtype}
-                        onChange={(e) => setNewSubtype(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addSubtype(kind.id)}
-                        placeholder="Subtype name"
-                        autoFocus
+                        style={styles.input}
+                        value={kind.name}
+                        onChange={(e) => updateKind(kind.id, {
+                          name: e.target.value,
+                          id: generateId(e.target.value) || kind.id
+                        })}
+                        placeholder="Kind name"
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <button
-                        style={styles.addSmallButton}
-                        onClick={() => addSubtype(kind.id)}
+                        style={styles.deleteButton}
+                        onClick={(e) => { e.stopPropagation(); deleteKind(kind.id); }}
                       >
-                        Add
-                      </button>
-                      <button
-                        style={styles.addSmallButton}
-                        onClick={() => { setEditingSubtype(null); setNewSubtype(''); }}
-                      >
-                        ✕
+                        Delete Kind
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      style={styles.addSmallButton}
-                      onClick={() => setEditingSubtype(kind.id)}
-                    >
-                      + Add
-                    </button>
-                  )}
-                </div>
-                <div style={styles.tagList}>
-                  {kind.subtypes.map((subtype) => (
-                    <div key={subtype.id} style={styles.tag}>
-                      {subtype.name}
-                      <span
-                        style={styles.tagRemove}
-                        onClick={() => removeSubtype(kind.id, subtype.id)}
-                      >
-                        ×
-                      </span>
-                    </div>
-                  ))}
-                  {kind.subtypes.length === 0 && (
-                    <span style={{ color: '#666', fontSize: '12px' }}>None</span>
-                  )}
-                </div>
-              </div>
 
-              {/* Statuses */}
-              <div style={styles.section}>
-                <div style={styles.sectionTitle}>
-                  <span>Statuses</span>
-                  {editingStatus === kind.id ? (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <input
-                        style={{ ...styles.input, ...styles.inputSmall }}
-                        value={newStatus}
-                        onChange={(e) => setNewStatus(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addStatus(kind.id)}
-                        placeholder="Status name"
-                        autoFocus
-                      />
-                      <button
-                        style={styles.addSmallButton}
-                        onClick={() => addStatus(kind.id)}
+                    {/* Subtypes Accordion */}
+                    <div style={styles.accordion}>
+                      <div
+                        style={styles.accordionHeader}
+                        onClick={() => toggleSection(kind.id, 'subtypes')}
                       >
-                        Add
-                      </button>
-                      <button
-                        style={styles.addSmallButton}
-                        onClick={() => { setEditingStatus(null); setNewStatus(''); }}
-                      >
-                        ✕
-                      </button>
+                        <div style={styles.accordionHeaderLeft}>
+                          <span style={{
+                            ...styles.accordionIcon,
+                            transform: isSectionExpanded(kind.id, 'subtypes') ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}>▶</span>
+                          <span>Subtypes</span>
+                          <span style={styles.accordionBadge}>{kind.subtypes.length}</span>
+                        </div>
+                      </div>
+                      {isSectionExpanded(kind.id, 'subtypes') && (
+                        <div style={styles.accordionBody}>
+                          <div style={styles.tagList}>
+                            {kind.subtypes.map((subtype) => (
+                              <div key={subtype.id} style={styles.tag}>
+                                {subtype.name}
+                                <span
+                                  style={styles.tagRemove}
+                                  onClick={() => removeSubtype(kind.id, subtype.id)}
+                                >
+                                  ×
+                                </span>
+                              </div>
+                            ))}
+                            {kind.subtypes.length === 0 && (
+                              <span style={styles.emptyTag}>No subtypes defined</span>
+                            )}
+                          </div>
+                          {addingSubtype === kind.id ? (
+                            <div style={styles.inlineForm}>
+                              <input
+                                style={{ ...styles.input, ...styles.inputSmall, flex: 1 }}
+                                value={newSubtype}
+                                onChange={(e) => setNewSubtype(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && addSubtype(kind.id)}
+                                placeholder="Subtype name"
+                                autoFocus
+                              />
+                              <button style={styles.addSmallButton} onClick={() => addSubtype(kind.id)}>
+                                Add
+                              </button>
+                              <button
+                                style={styles.addSmallButton}
+                                onClick={() => { setAddingSubtype(null); setNewSubtype(''); }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              style={{ ...styles.addSmallButton, marginTop: '8px' }}
+                              onClick={() => setAddingSubtype(kind.id)}
+                            >
+                              + Add Subtype
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      style={styles.addSmallButton}
-                      onClick={() => setEditingStatus(kind.id)}
-                    >
-                      + Add
-                    </button>
-                  )}
-                </div>
-                <div style={styles.tagList}>
-                  {kind.statuses.map((status) => (
-                    <div
-                      key={status.id}
-                      style={{
-                        ...styles.tag,
-                        backgroundColor: status.isTerminal ? '#4a1942' : '#0f3460'
-                      }}
-                      onClick={() => toggleTerminal(kind.id, status.id)}
-                      title={status.isTerminal ? 'Terminal status (click to toggle)' : 'Click to make terminal'}
-                    >
-                      {status.name}
-                      {status.isTerminal && <span style={{ marginLeft: '4px' }}>⏹</span>}
-                      <span
-                        style={styles.tagRemove}
-                        onClick={(e) => { e.stopPropagation(); removeStatus(kind.id, status.id); }}
-                      >
-                        ×
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Semantic Plane Axes */}
-              <div style={styles.section}>
-                <div style={styles.sectionTitle}>
-                  <span>Semantic Plane Axes</span>
-                </div>
-                {['x', 'y', 'z'].map((axis) => {
-                  const axisConfig = kind.semanticPlane?.axes?.[axis] || { name: '', lowLabel: '', highLabel: '' };
-                  return (
-                    <div key={axis} style={styles.axisRow}>
-                      <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
-                      <input
-                        style={styles.inputAxis}
-                        value={axisConfig.lowLabel}
-                        onChange={(e) => updateAxis(kind.id, axis, 'lowLabel', e.target.value)}
-                        placeholder="Low"
-                        title="Low label"
-                      />
-                      <span style={styles.axisArrow}>←</span>
-                      <input
-                        style={{ ...styles.inputAxis, width: '120px' }}
-                        value={axisConfig.name}
-                        onChange={(e) => updateAxis(kind.id, axis, 'name', e.target.value)}
-                        placeholder="Axis name"
-                        title="Axis name"
-                      />
-                      <span style={styles.axisArrow}>→</span>
-                      <input
-                        style={styles.inputAxis}
-                        value={axisConfig.highLabel}
-                        onChange={(e) => updateAxis(kind.id, axis, 'highLabel', e.target.value)}
-                        placeholder="High"
-                        title="High label"
-                      />
+                    {/* Statuses Accordion */}
+                    <div style={styles.accordion}>
+                      <div
+                        style={styles.accordionHeader}
+                        onClick={() => toggleSection(kind.id, 'statuses')}
+                      >
+                        <div style={styles.accordionHeaderLeft}>
+                          <span style={{
+                            ...styles.accordionIcon,
+                            transform: isSectionExpanded(kind.id, 'statuses') ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}>▶</span>
+                          <span>Statuses</span>
+                          <span style={styles.accordionBadge}>{kind.statuses.length}</span>
+                        </div>
+                      </div>
+                      {isSectionExpanded(kind.id, 'statuses') && (
+                        <div style={styles.accordionBody}>
+                          <div style={styles.tagList}>
+                            {kind.statuses.map((status) => (
+                              <div
+                                key={status.id}
+                                style={{
+                                  ...styles.tag,
+                                  backgroundColor: status.isTerminal ? '#4a1942' : '#0f3460',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => toggleTerminal(kind.id, status.id)}
+                                title={status.isTerminal ? 'Terminal status (click to toggle)' : 'Click to make terminal'}
+                              >
+                                {status.name}
+                                {status.isTerminal && <span style={{ marginLeft: '4px' }}>⏹</span>}
+                                <span
+                                  style={styles.tagRemove}
+                                  onClick={(e) => { e.stopPropagation(); removeStatus(kind.id, status.id); }}
+                                >
+                                  ×
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {addingStatus === kind.id ? (
+                            <div style={styles.inlineForm}>
+                              <input
+                                style={{ ...styles.input, ...styles.inputSmall, flex: 1 }}
+                                value={newStatus}
+                                onChange={(e) => setNewStatus(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && addStatus(kind.id)}
+                                placeholder="Status name"
+                                autoFocus
+                              />
+                              <button style={styles.addSmallButton} onClick={() => addStatus(kind.id)}>
+                                Add
+                              </button>
+                              <button
+                                style={styles.addSmallButton}
+                                onClick={() => { setAddingStatus(null); setNewStatus(''); }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              style={{ ...styles.addSmallButton, marginTop: '8px' }}
+                              onClick={() => setAddingStatus(kind.id)}
+                            >
+                              + Add Status
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+
+                    {/* Semantic Plane Accordion */}
+                    <div style={styles.accordion}>
+                      <div
+                        style={styles.accordionHeader}
+                        onClick={() => toggleSection(kind.id, 'semanticPlane')}
+                      >
+                        <div style={styles.accordionHeaderLeft}>
+                          <span style={{
+                            ...styles.accordionIcon,
+                            transform: isSectionExpanded(kind.id, 'semanticPlane') ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}>▶</span>
+                          <span>Semantic Plane Axes</span>
+                        </div>
+                      </div>
+                      {isSectionExpanded(kind.id, 'semanticPlane') && (
+                        <div style={styles.accordionBody}>
+                          {['x', 'y', 'z'].map((axis) => {
+                            const axisConfig = kind.semanticPlane?.axes?.[axis] || { name: '', lowLabel: '', highLabel: '' };
+                            return (
+                              <div key={axis} style={styles.axisRow}>
+                                <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
+                                <input
+                                  style={styles.inputAxis}
+                                  value={axisConfig.lowLabel}
+                                  onChange={(e) => updateAxis(kind.id, axis, 'lowLabel', e.target.value)}
+                                  placeholder="Low"
+                                  title="Low label"
+                                />
+                                <span style={styles.axisArrow}>←</span>
+                                <input
+                                  style={{ ...styles.inputAxis, width: '110px' }}
+                                  value={axisConfig.name}
+                                  onChange={(e) => updateAxis(kind.id, axis, 'name', e.target.value)}
+                                  placeholder="Axis name"
+                                  title="Axis name"
+                                />
+                                <span style={styles.axisArrow}>→</span>
+                                <input
+                                  style={styles.inputAxis}
+                                  value={axisConfig.highLabel}
+                                  onChange={(e) => updateAxis(kind.id, axis, 'highLabel', e.target.value)}
+                                  placeholder="High"
+                                  title="High label"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

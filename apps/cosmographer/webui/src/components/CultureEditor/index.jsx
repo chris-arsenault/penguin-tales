@@ -1,5 +1,5 @@
 /**
- * CultureEditor - Create and manage cultures with per-entity-kind axis biases.
+ * CultureEditor - Create and manage cultures with collapsible per-entity-kind axis biases.
  *
  * Schema v2: Each culture has axisBiases keyed by entityKindId, where each
  * contains x, y, z values corresponding to that kind's semantic plane axes.
@@ -41,80 +41,138 @@ const styles = {
   cultureList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px'
+    gap: '8px'
   },
   cultureCard: {
     backgroundColor: '#16213e',
     borderRadius: '8px',
-    padding: '20px',
-    border: '2px solid transparent'
+    border: '1px solid #0f3460',
+    overflow: 'hidden'
   },
-  cardHeader: {
+  cultureHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '16px'
+    alignItems: 'center',
+    padding: '12px 16px',
+    cursor: 'pointer'
+  },
+  cultureHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  expandIcon: {
+    fontSize: '12px',
+    color: '#888',
+    transition: 'transform 0.2s',
+    width: '16px'
   },
   colorDot: {
-    width: '24px',
-    height: '24px',
+    width: '16px',
+    height: '16px',
     borderRadius: '50%',
-    marginRight: '12px',
-    cursor: 'pointer',
     border: '2px solid #0f3460'
   },
-  nameRow: {
+  cultureName: {
+    fontWeight: 500
+  },
+  cultureId: {
+    color: '#666',
+    fontSize: '11px'
+  },
+  cultureSummary: {
+    fontSize: '11px',
+    color: '#666'
+  },
+  cultureBody: {
+    padding: '16px',
+    borderTop: '1px solid #0f3460'
+  },
+  formRow: {
     display: 'flex',
-    alignItems: 'center'
+    gap: '12px',
+    marginBottom: '16px',
+    alignItems: 'flex-start'
+  },
+  formGroup: {
+    flex: 1
+  },
+  label: {
+    fontSize: '12px',
+    color: '#888',
+    marginBottom: '6px',
+    display: 'block'
   },
   input: {
-    padding: '8px 12px',
+    width: '100%',
+    padding: '8px 10px',
     fontSize: '14px',
     backgroundColor: '#1a1a2e',
     border: '1px solid #0f3460',
     borderRadius: '4px',
     color: '#eee',
-    width: '200px'
+    boxSizing: 'border-box'
   },
-  inputWide: {
-    width: '100%',
-    marginTop: '8px'
+  colorSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px'
   },
-  deleteButton: {
-    padding: '4px 10px',
-    fontSize: '11px',
-    backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
-    borderRadius: '3px',
-    cursor: 'pointer'
+  colorPickerDot: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    border: '3px solid #0f3460'
   },
-  section: {
-    marginTop: '16px'
+  colorPicker: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px'
   },
-  sectionTitle: {
+  colorOption: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    border: '2px solid transparent'
+  },
+  accordion: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: '6px',
+    overflow: 'hidden',
+    marginBottom: '8px'
+  },
+  accordionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 12px',
+    cursor: 'pointer',
     fontSize: '13px',
     fontWeight: 500,
-    color: '#aaa',
-    marginBottom: '12px'
+    color: '#ccc'
   },
-  kindSection: {
-    marginBottom: '16px',
+  accordionHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  accordionIcon: {
+    fontSize: '10px',
+    color: '#666',
+    transition: 'transform 0.2s'
+  },
+  accordionBody: {
     padding: '12px',
-    backgroundColor: '#1a1a2e',
-    borderRadius: '6px'
-  },
-  kindTitle: {
-    fontSize: '13px',
-    fontWeight: 600,
-    color: '#eee',
-    marginBottom: '10px'
+    borderTop: '1px solid #0f3460'
   },
   axisRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '6px'
+    marginBottom: '8px'
   },
   axisLabel: {
     width: '20px',
@@ -123,7 +181,7 @@ const styles = {
     color: '#e94560'
   },
   axisName: {
-    width: '100px',
+    width: '90px',
     fontSize: '11px',
     color: '#888',
     overflow: 'hidden',
@@ -133,13 +191,13 @@ const styles = {
   lowLabel: {
     fontSize: '10px',
     color: '#666',
-    width: '60px',
+    width: '55px',
     textAlign: 'right'
   },
   highLabel: {
     fontSize: '10px',
     color: '#666',
-    width: '60px'
+    width: '55px'
   },
   slider: {
     flex: 1,
@@ -150,10 +208,19 @@ const styles = {
     outline: 'none'
   },
   axisValue: {
-    width: '30px',
+    width: '28px',
     textAlign: 'right',
     fontSize: '11px',
     color: '#888'
+  },
+  deleteButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    backgroundColor: 'transparent',
+    color: '#e94560',
+    border: '1px solid #e94560',
+    borderRadius: '4px',
+    cursor: 'pointer'
   },
   emptyState: {
     color: '#666',
@@ -166,27 +233,12 @@ const styles = {
     fontSize: '12px',
     padding: '12px',
     backgroundColor: 'rgba(240, 165, 0, 0.1)',
-    borderRadius: '4px',
-    marginTop: '8px'
+    borderRadius: '4px'
   },
-  colorPicker: {
-    position: 'absolute',
-    zIndex: 100,
-    backgroundColor: '#1a1a2e',
-    border: '1px solid #0f3460',
-    borderRadius: '8px',
-    padding: '12px',
+  actionsRow: {
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-    width: '200px'
-  },
-  colorOption: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    border: '2px solid transparent'
+    justifyContent: 'flex-end',
+    marginTop: '16px'
   }
 };
 
@@ -202,10 +254,24 @@ function generateId(name) {
 }
 
 export default function CultureEditor({ project, onSave }) {
-  const [colorPickerFor, setColorPickerFor] = useState(null);
+  const [expandedCultures, setExpandedCultures] = useState({});
+  const [expandedKinds, setExpandedKinds] = useState({});
 
   const cultures = project?.cultures || [];
   const entityKinds = project?.entityKinds || [];
+
+  const toggleCulture = (cultureId) => {
+    setExpandedCultures(prev => ({ ...prev, [cultureId]: !prev[cultureId] }));
+  };
+
+  const toggleKind = (cultureId, kindId) => {
+    const key = `${cultureId}-${kindId}`;
+    setExpandedKinds(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isKindExpanded = (cultureId, kindId) => {
+    return expandedKinds[`${cultureId}-${kindId}`];
+  };
 
   const updateCultures = (newCultures) => {
     onSave({ cultures: newCultures });
@@ -227,6 +293,7 @@ export default function CultureEditor({ project, onSave }) {
       homeRegions: {}
     };
     updateCultures([...cultures, newCulture]);
+    setExpandedCultures(prev => ({ ...prev, [newCulture.id]: true }));
   };
 
   const updateCulture = (cultureId, updates) => {
@@ -256,6 +323,11 @@ export default function CultureEditor({ project, onSave }) {
     });
   };
 
+  const getBiasSummary = (culture) => {
+    const biasCount = Object.keys(culture.axisBiases || {}).length;
+    return `${biasCount} kind${biasCount !== 1 ? 's' : ''} configured`;
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -280,18 +352,63 @@ export default function CultureEditor({ project, onSave }) {
         </div>
       ) : (
         <div style={styles.cultureList}>
-          {cultures.map((culture) => (
-            <div key={culture.id} style={styles.cultureCard}>
-              <div style={styles.cardHeader}>
-                <div style={styles.nameRow}>
-                  <div style={{ position: 'relative' }}>
-                    <div
-                      style={{ ...styles.colorDot, backgroundColor: culture.color }}
-                      onClick={() => setColorPickerFor(
-                        colorPickerFor === culture.id ? null : culture.id
-                      )}
-                    />
-                    {colorPickerFor === culture.id && (
+          {cultures.map((culture) => {
+            const isExpanded = expandedCultures[culture.id];
+
+            return (
+              <div key={culture.id} style={styles.cultureCard}>
+                <div
+                  style={styles.cultureHeader}
+                  onClick={() => toggleCulture(culture.id)}
+                >
+                  <div style={styles.cultureHeaderLeft}>
+                    <span style={{
+                      ...styles.expandIcon,
+                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                    }}>
+                      ▶
+                    </span>
+                    <div style={{ ...styles.colorDot, backgroundColor: culture.color }} />
+                    <span style={styles.cultureName}>{culture.name}</span>
+                    <span style={styles.cultureId}>({culture.id})</span>
+                  </div>
+                  <div style={styles.cultureSummary}>
+                    {getBiasSummary(culture)}
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div style={styles.cultureBody}>
+                    {/* Name and Description */}
+                    <div style={styles.formRow}>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Name</label>
+                        <input
+                          style={styles.input}
+                          value={culture.name}
+                          onChange={(e) => updateCulture(culture.id, {
+                            name: e.target.value,
+                            id: generateId(e.target.value) || culture.id
+                          })}
+                          placeholder="Culture name"
+                        />
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Description</label>
+                        <input
+                          style={styles.input}
+                          value={culture.description || ''}
+                          onChange={(e) => updateCulture(culture.id, { description: e.target.value })}
+                          placeholder="Optional description"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Color Selection */}
+                    <div style={styles.colorSection}>
+                      <div
+                        style={{ ...styles.colorPickerDot, backgroundColor: culture.color }}
+                      />
                       <div style={styles.colorPicker}>
                         {PRESET_COLORS.map((color) => (
                           <div
@@ -301,86 +418,85 @@ export default function CultureEditor({ project, onSave }) {
                               backgroundColor: color,
                               borderColor: culture.color === color ? '#fff' : 'transparent'
                             }}
-                            onClick={() => {
-                              updateCulture(culture.id, { color });
-                              setColorPickerFor(null);
-                            }}
+                            onClick={() => updateCulture(culture.id, { color })}
                           />
                         ))}
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      style={styles.input}
-                      value={culture.name}
-                      onChange={(e) => updateCulture(culture.id, {
-                        name: e.target.value,
-                        id: generateId(e.target.value) || culture.id
-                      })}
-                      placeholder="Culture name"
-                    />
-                    <input
-                      style={{ ...styles.input, ...styles.inputWide }}
-                      value={culture.description || ''}
-                      onChange={(e) => updateCulture(culture.id, { description: e.target.value })}
-                      placeholder="Description (optional)"
-                    />
-                  </div>
-                </div>
-                <button
-                  style={styles.deleteButton}
-                  onClick={() => deleteCulture(culture.id)}
-                >
-                  Delete
-                </button>
-              </div>
+                    </div>
 
-              <div style={styles.section}>
-                <div style={styles.sectionTitle}>Axis Biases by Entity Kind</div>
-
-                {entityKinds.length === 0 ? (
-                  <div style={styles.noKindsWarning}>
-                    Define entity kinds in the Schema tab first to configure axis biases.
-                  </div>
-                ) : (
-                  entityKinds.map((kind) => {
-                    const axes = kind.semanticPlane?.axes || {};
-                    const biases = culture.axisBiases?.[kind.id] || { x: 50, y: 50, z: 50 };
-
-                    return (
-                      <div key={kind.id} style={styles.kindSection}>
-                        <div style={styles.kindTitle}>{kind.name}</div>
-
-                        {['x', 'y', 'z'].map((axis) => {
-                          const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowLabel: 'Low', highLabel: 'High' };
-                          return (
-                            <div key={axis} style={styles.axisRow}>
-                              <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
-                              <span style={styles.axisName} title={axisConfig.name}>
-                                {axisConfig.name}
-                              </span>
-                              <span style={styles.lowLabel}>{axisConfig.lowLabel}</span>
-                              <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={biases[axis] ?? 50}
-                                onChange={(e) => setAxisBias(culture.id, kind.id, axis, e.target.value)}
-                                style={styles.slider}
-                              />
-                              <span style={styles.highLabel}>{axisConfig.highLabel}</span>
-                              <div style={styles.axisValue}>{biases[axis] ?? 50}</div>
-                            </div>
-                          );
-                        })}
+                    {/* Axis Biases by Entity Kind */}
+                    {entityKinds.length === 0 ? (
+                      <div style={styles.noKindsWarning}>
+                        Define entity kinds in the Schema tab first to configure axis biases.
                       </div>
-                    );
-                  })
+                    ) : (
+                      entityKinds.map((kind) => {
+                        const axes = kind.semanticPlane?.axes || {};
+                        const biases = culture.axisBiases?.[kind.id] || { x: 50, y: 50, z: 50 };
+                        const kindExpanded = isKindExpanded(culture.id, kind.id);
+
+                        return (
+                          <div key={kind.id} style={styles.accordion}>
+                            <div
+                              style={styles.accordionHeader}
+                              onClick={() => toggleKind(culture.id, kind.id)}
+                            >
+                              <div style={styles.accordionHeaderLeft}>
+                                <span style={{
+                                  ...styles.accordionIcon,
+                                  transform: kindExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                                }}>▶</span>
+                                <span>{kind.name}</span>
+                              </div>
+                              <span style={{ fontSize: '11px', color: '#666' }}>
+                                X:{biases.x} Y:{biases.y} Z:{biases.z}
+                              </span>
+                            </div>
+                            {kindExpanded && (
+                              <div style={styles.accordionBody}>
+                                {['x', 'y', 'z'].map((axis) => {
+                                  const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowLabel: 'Low', highLabel: 'High' };
+                                  return (
+                                    <div key={axis} style={styles.axisRow}>
+                                      <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
+                                      <span style={styles.axisName} title={axisConfig.name}>
+                                        {axisConfig.name}
+                                      </span>
+                                      <span style={styles.lowLabel}>{axisConfig.lowLabel}</span>
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={biases[axis] ?? 50}
+                                        onChange={(e) => setAxisBias(culture.id, kind.id, axis, e.target.value)}
+                                        style={styles.slider}
+                                      />
+                                      <span style={styles.highLabel}>{axisConfig.highLabel}</span>
+                                      <div style={styles.axisValue}>{biases[axis] ?? 50}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+
+                    {/* Delete Button */}
+                    <div style={styles.actionsRow}>
+                      <button
+                        style={styles.deleteButton}
+                        onClick={() => deleteCulture(culture.id)}
+                      >
+                        Delete Culture
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
