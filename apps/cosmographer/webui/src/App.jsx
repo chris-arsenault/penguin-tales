@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useProjectStorage } from './storage/useProjectStorage.js';
 import ProjectManager from './components/ProjectManager.jsx';
+import SchemaEditor from './components/SchemaEditor/index.jsx';
 
 const TABS = [
   { id: 'schema', label: 'Schema', icon: '📋' },
@@ -90,45 +91,47 @@ const styles = {
 };
 
 function TabContent({ tab, project, onSave }) {
-  // Placeholder content - will be replaced with actual editors
-  const placeholders = {
-    schema: {
-      title: 'Schema Editor',
-      desc: 'Define entity kinds, subtypes, statuses, and relationship types.'
-    },
-    cultures: {
-      title: 'Culture Editor',
-      desc: 'Create cultures with semantic axis biases and home regions.'
-    },
-    planes: {
-      title: 'Semantic Planes',
-      desc: 'Configure coordinate spaces for each entity kind with regions.'
-    },
-    entities: {
-      title: 'Entity Placement',
-      desc: 'Place seed entities on their semantic planes.'
-    },
-    relationships: {
-      title: 'Relationships',
-      desc: 'Define connections between seed entities.'
-    },
-    export: {
-      title: 'Export',
-      desc: 'Preview and download the world seed JSON.'
+  switch (tab) {
+    case 'schema':
+      return <SchemaEditor project={project} onSave={onSave} />;
+
+    default: {
+      const placeholders = {
+        cultures: {
+          title: 'Culture Editor',
+          desc: 'Create cultures with semantic axis biases and home regions.'
+        },
+        planes: {
+          title: 'Semantic Planes',
+          desc: 'Configure coordinate spaces for each entity kind with regions.'
+        },
+        entities: {
+          title: 'Entity Placement',
+          desc: 'Place seed entities on their semantic planes.'
+        },
+        relationships: {
+          title: 'Relationships',
+          desc: 'Define connections between seed entities.'
+        },
+        export: {
+          title: 'Export',
+          desc: 'Preview and download the world seed JSON.'
+        }
+      };
+
+      const info = placeholders[tab] || { title: 'Unknown', desc: '' };
+
+      return (
+        <div style={styles.placeholder}>
+          <div style={styles.placeholderTitle}>{info.title}</div>
+          <div>{info.desc}</div>
+          <div style={{ marginTop: '20px', color: '#444' }}>
+            Coming soon...
+          </div>
+        </div>
+      );
     }
-  };
-
-  const info = placeholders[tab];
-
-  return (
-    <div style={styles.placeholder}>
-      <div style={styles.placeholderTitle}>{info.title}</div>
-      <div>{info.desc}</div>
-      <div style={{ marginTop: '20px', color: '#444' }}>
-        Coming soon...
-      </div>
-    </div>
-  );
+  }
 }
 
 export default function App() {
