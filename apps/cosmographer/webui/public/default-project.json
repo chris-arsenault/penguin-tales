@@ -1,211 +1,256 @@
 {
   "id": "penguin_colony_world",
   "name": "Penguin Colony World",
-  "version": "1.0",
+  "version": "2.0",
   "createdAt": "2024-01-01T00:00:00.000Z",
   "updatedAt": "2024-01-01T00:00:00.000Z",
 
-  "worldSchema": {
-    "entityKinds": [
-      {
-        "id": "npc",
-        "name": "NPCs",
-        "subtypes": [
-          { "id": "merchant", "name": "Merchant" },
-          { "id": "mayor", "name": "Mayor" },
-          { "id": "hero", "name": "Hero" },
-          { "id": "outlaw", "name": "Outlaw" },
-          { "id": "orca", "name": "Orca" }
-        ],
-        "statuses": [
-          { "id": "alive", "name": "Alive" },
-          { "id": "dead", "name": "Dead" },
-          { "id": "fictional", "name": "Fictional" },
-          { "id": "missing", "name": "Missing" }
-        ]
-      },
-      {
-        "id": "location",
-        "name": "Locations",
-        "subtypes": [
-          { "id": "iceberg", "name": "Iceberg" },
-          { "id": "colony", "name": "Colony" },
-          { "id": "igloo", "name": "Igloo" },
-          { "id": "geographic_feature", "name": "Geographic Feature" },
-          { "id": "anomaly", "name": "Anomaly" }
-        ],
-        "statuses": [
-          { "id": "thriving", "name": "Thriving" },
-          { "id": "waning", "name": "Waning" },
-          { "id": "abandoned", "name": "Abandoned" }
-        ]
-      },
-      {
-        "id": "faction",
-        "name": "Factions",
-        "subtypes": [
-          { "id": "political", "name": "Political" },
-          { "id": "criminal", "name": "Criminal" },
-          { "id": "cult", "name": "Cult" },
-          { "id": "company", "name": "Company" }
-        ],
-        "statuses": [
-          { "id": "active", "name": "Active" },
-          { "id": "disbanded", "name": "Disbanded" },
-          { "id": "waning", "name": "Waning" }
-        ]
-      },
-      {
-        "id": "rules",
-        "name": "Rules",
-        "subtypes": [
-          { "id": "edict", "name": "Edict" },
-          { "id": "taboo", "name": "Taboo" },
-          { "id": "social", "name": "Social" },
-          { "id": "natural", "name": "Natural" }
-        ],
-        "statuses": [
-          { "id": "active", "name": "Active" },
-          { "id": "forgotten", "name": "Forgotten" },
-          { "id": "proposed", "name": "Proposed" },
-          { "id": "enacted", "name": "Enacted" },
-          { "id": "repealed", "name": "Repealed" }
-        ]
-      },
-      {
-        "id": "abilities",
-        "name": "Abilities",
-        "subtypes": [
-          { "id": "magic", "name": "Magic" },
-          { "id": "faith", "name": "Faith" },
-          { "id": "technology", "name": "Technology" },
-          { "id": "physical", "name": "Physical" },
-          { "id": "combat", "name": "Combat" }
-        ],
-        "statuses": [
-          { "id": "active", "name": "Active" },
-          { "id": "lost", "name": "Lost" },
-          { "id": "emergent", "name": "Emergent" }
+  "entityKinds": [
+    {
+      "id": "npc",
+      "name": "NPCs",
+      "subtypes": [
+        { "id": "merchant", "name": "Merchant" },
+        { "id": "mayor", "name": "Mayor" },
+        { "id": "hero", "name": "Hero" },
+        { "id": "outlaw", "name": "Outlaw" },
+        { "id": "orca", "name": "Orca" }
+      ],
+      "statuses": [
+        { "id": "alive", "name": "Alive", "isTerminal": false },
+        { "id": "dead", "name": "Dead", "isTerminal": true },
+        { "id": "fictional", "name": "Fictional", "isTerminal": false },
+        { "id": "missing", "name": "Missing", "isTerminal": false }
+      ],
+      "semanticPlane": {
+        "axes": {
+          "x": { "name": "Alignment", "lowLabel": "Hostile", "highLabel": "Friendly" },
+          "y": { "name": "Role", "lowLabel": "Follower", "highLabel": "Leader" },
+          "z": { "name": "Approach", "lowLabel": "Mundane", "highLabel": "Mystical" }
+        },
+        "regions": [
+          {
+            "id": "aurora_stack",
+            "label": "Aurora Stack",
+            "color": "#FFD700",
+            "bounds": { "shape": "circle", "center": { "x": 70, "y": 60 }, "radius": 15 }
+          },
+          {
+            "id": "nightfall_shelf",
+            "label": "Nightfall Shelf",
+            "color": "#9370DB",
+            "bounds": { "shape": "circle", "center": { "x": 35, "y": 45 }, "radius": 15 }
+          },
+          {
+            "id": "orca_waters",
+            "label": "Orca Waters",
+            "color": "#2F4F4F",
+            "bounds": { "shape": "circle", "center": { "x": 15, "y": 55 }, "radius": 12 }
+          }
         ]
       }
-    ],
-    "relationshipKinds": [
-      {
-        "id": "resident_of",
-        "name": "Resident Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "member_of",
-        "name": "Member Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["faction"]
-      },
-      {
-        "id": "leader_of",
-        "name": "Leader Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["faction"]
-      },
-      {
-        "id": "practitioner_of",
-        "name": "Practitioner Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["abilities"]
-      },
-      {
-        "id": "ally_of",
-        "name": "Ally Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["npc"]
-      },
-      {
-        "id": "enemy_of",
-        "name": "Enemy Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["npc"]
-      },
-      {
-        "id": "rival_of",
-        "name": "Rival Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["npc"]
-      },
-      {
-        "id": "family_of",
-        "name": "Family Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["npc"]
-      },
-      {
-        "id": "allied_with",
-        "name": "Allied With",
-        "srcKinds": ["faction"],
-        "dstKinds": ["faction"]
-      },
-      {
-        "id": "at_war_with",
-        "name": "At War With",
-        "srcKinds": ["faction"],
-        "dstKinds": ["faction"]
-      },
-      {
-        "id": "controls",
-        "name": "Controls",
-        "srcKinds": ["faction"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "stronghold_of",
-        "name": "Stronghold Of",
-        "srcKinds": ["faction"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "applies_in",
-        "name": "Applies In",
-        "srcKinds": ["rules"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "champion_of",
-        "name": "Champion Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["rules"]
-      },
-      {
-        "id": "believer_of",
-        "name": "Believer Of",
-        "srcKinds": ["npc"],
-        "dstKinds": ["rules"]
-      },
-      {
-        "id": "manifests_at",
-        "name": "Manifests At",
-        "srcKinds": ["abilities"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "wields",
-        "name": "Wields",
-        "srcKinds": ["faction"],
-        "dstKinds": ["abilities"]
-      },
-      {
-        "id": "contains",
-        "name": "Contains",
-        "srcKinds": ["location"],
-        "dstKinds": ["location"]
-      },
-      {
-        "id": "adjacent_to",
-        "name": "Adjacent To",
-        "srcKinds": ["location"],
-        "dstKinds": ["location"]
+    },
+    {
+      "id": "location",
+      "name": "Locations",
+      "subtypes": [
+        { "id": "iceberg", "name": "Iceberg" },
+        { "id": "colony", "name": "Colony" },
+        { "id": "igloo", "name": "Igloo" },
+        { "id": "geographic_feature", "name": "Geographic Feature" },
+        { "id": "anomaly", "name": "Anomaly" }
+      ],
+      "statuses": [
+        { "id": "thriving", "name": "Thriving", "isTerminal": false },
+        { "id": "waning", "name": "Waning", "isTerminal": false },
+        { "id": "abandoned", "name": "Abandoned", "isTerminal": true }
+      ],
+      "semanticPlane": {
+        "axes": {
+          "x": { "name": "Accessibility", "lowLabel": "Hidden", "highLabel": "Central" },
+          "y": { "name": "Nature", "lowLabel": "Mundane", "highLabel": "Anomalous" },
+          "z": { "name": "Safety", "lowLabel": "Dangerous", "highLabel": "Safe" }
+        },
+        "regions": [
+          {
+            "id": "aurora_berg",
+            "label": "Aurora Berg",
+            "color": "#4A90D9",
+            "bounds": { "shape": "rect", "x1": 15, "y1": 15, "x2": 85, "y2": 75 }
+          },
+          {
+            "id": "aurora_stack",
+            "label": "Aurora Stack",
+            "color": "#FFD700",
+            "bounds": { "shape": "circle", "center": { "x": 65, "y": 25 }, "radius": 12 }
+          },
+          {
+            "id": "nightfall_shelf",
+            "label": "Nightfall Shelf",
+            "color": "#9370DB",
+            "bounds": { "shape": "circle", "center": { "x": 35, "y": 35 }, "radius": 12 }
+          },
+          {
+            "id": "windward_ridge",
+            "label": "Windward Ridge",
+            "color": "#87CEEB",
+            "bounds": { "shape": "circle", "center": { "x": 50, "y": 30 }, "radius": 8 }
+          },
+          {
+            "id": "krill_shoals",
+            "label": "Krill Shoals",
+            "color": "#20B2AA",
+            "bounds": { "shape": "circle", "center": { "x": 60, "y": 45 }, "radius": 10 }
+          },
+          {
+            "id": "glow_fissure",
+            "label": "The Glow-Fissure",
+            "color": "#FF6347",
+            "bounds": { "shape": "circle", "center": { "x": 30, "y": 65 }, "radius": 8 }
+          }
+        ]
       }
-    ]
-  },
+    },
+    {
+      "id": "faction",
+      "name": "Factions",
+      "subtypes": [
+        { "id": "political", "name": "Political" },
+        { "id": "criminal", "name": "Criminal" },
+        { "id": "cult", "name": "Cult" },
+        { "id": "company", "name": "Company" }
+      ],
+      "statuses": [
+        { "id": "active", "name": "Active", "isTerminal": false },
+        { "id": "disbanded", "name": "Disbanded", "isTerminal": true },
+        { "id": "waning", "name": "Waning", "isTerminal": false }
+      ],
+      "semanticPlane": {
+        "axes": {
+          "x": { "name": "Structure", "lowLabel": "Chaotic", "highLabel": "Organized" },
+          "y": { "name": "Purpose", "lowLabel": "Destructive", "highLabel": "Constructive" },
+          "z": { "name": "Reach", "lowLabel": "Local", "highLabel": "Widespread" }
+        },
+        "regions": [
+          {
+            "id": "aurora_stack",
+            "label": "Aurora Stack",
+            "color": "#FFD700",
+            "bounds": { "shape": "circle", "center": { "x": 75, "y": 70 }, "radius": 15 }
+          },
+          {
+            "id": "nightfall_shelf",
+            "label": "Nightfall Shelf",
+            "color": "#9370DB",
+            "bounds": { "shape": "circle", "center": { "x": 35, "y": 40 }, "radius": 15 }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rules",
+      "name": "Rules",
+      "subtypes": [
+        { "id": "edict", "name": "Edict" },
+        { "id": "taboo", "name": "Taboo" },
+        { "id": "social", "name": "Social" },
+        { "id": "natural", "name": "Natural" }
+      ],
+      "statuses": [
+        { "id": "active", "name": "Active", "isTerminal": false },
+        { "id": "forgotten", "name": "Forgotten", "isTerminal": true },
+        { "id": "proposed", "name": "Proposed", "isTerminal": false },
+        { "id": "enacted", "name": "Enacted", "isTerminal": false },
+        { "id": "repealed", "name": "Repealed", "isTerminal": true }
+      ],
+      "semanticPlane": {
+        "axes": {
+          "x": { "name": "Scope", "lowLabel": "Personal", "highLabel": "Universal" },
+          "y": { "name": "Nature", "lowLabel": "Traditional", "highLabel": "Progressive" },
+          "z": { "name": "Enforcement", "lowLabel": "Social", "highLabel": "Absolute" }
+        },
+        "regions": [
+          {
+            "id": "aurora_stack",
+            "label": "Aurora Stack Laws",
+            "color": "#FFD700",
+            "bounds": { "shape": "circle", "center": { "x": 70, "y": 35 }, "radius": 15 }
+          },
+          {
+            "id": "nightfall_shelf",
+            "label": "Shadow Customs",
+            "color": "#9370DB",
+            "bounds": { "shape": "circle", "center": { "x": 35, "y": 60 }, "radius": 15 }
+          }
+        ]
+      }
+    },
+    {
+      "id": "abilities",
+      "name": "Abilities",
+      "subtypes": [
+        { "id": "magic", "name": "Magic" },
+        { "id": "faith", "name": "Faith" },
+        { "id": "technology", "name": "Technology" },
+        { "id": "physical", "name": "Physical" },
+        { "id": "combat", "name": "Combat" }
+      ],
+      "statuses": [
+        { "id": "active", "name": "Active", "isTerminal": false },
+        { "id": "lost", "name": "Lost", "isTerminal": true },
+        { "id": "emergent", "name": "Emergent", "isTerminal": false }
+      ],
+      "semanticPlane": {
+        "axes": {
+          "x": { "name": "Source", "lowLabel": "Physical", "highLabel": "Mystical" },
+          "y": { "name": "Application", "lowLabel": "Defensive", "highLabel": "Offensive" },
+          "z": { "name": "Mastery", "lowLabel": "Basic", "highLabel": "Advanced" }
+        },
+        "regions": [
+          {
+            "id": "aurora_stack",
+            "label": "Trade Arts",
+            "color": "#FFD700",
+            "bounds": { "shape": "circle", "center": { "x": 25, "y": 35 }, "radius": 15 }
+          },
+          {
+            "id": "nightfall_shelf",
+            "label": "Shadow Magic",
+            "color": "#9370DB",
+            "bounds": { "shape": "circle", "center": { "x": 75, "y": 55 }, "radius": 15 }
+          },
+          {
+            "id": "glow_fissure",
+            "label": "Fissure Powers",
+            "color": "#FF6347",
+            "bounds": { "shape": "circle", "center": { "x": 85, "y": 80 }, "radius": 10 }
+          }
+        ]
+      }
+    }
+  ],
+
+  "relationshipKinds": [
+    { "id": "resident_of", "name": "Resident Of", "srcKinds": ["npc"], "dstKinds": ["location"] },
+    { "id": "member_of", "name": "Member Of", "srcKinds": ["npc"], "dstKinds": ["faction"] },
+    { "id": "leader_of", "name": "Leader Of", "srcKinds": ["npc"], "dstKinds": ["faction"] },
+    { "id": "practitioner_of", "name": "Practitioner Of", "srcKinds": ["npc"], "dstKinds": ["abilities"] },
+    { "id": "ally_of", "name": "Ally Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
+    { "id": "enemy_of", "name": "Enemy Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
+    { "id": "rival_of", "name": "Rival Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
+    { "id": "family_of", "name": "Family Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
+    { "id": "allied_with", "name": "Allied With", "srcKinds": ["faction"], "dstKinds": ["faction"] },
+    { "id": "at_war_with", "name": "At War With", "srcKinds": ["faction"], "dstKinds": ["faction"] },
+    { "id": "controls", "name": "Controls", "srcKinds": ["faction"], "dstKinds": ["location"] },
+    { "id": "stronghold_of", "name": "Stronghold Of", "srcKinds": ["faction"], "dstKinds": ["location"] },
+    { "id": "applies_in", "name": "Applies In", "srcKinds": ["rules"], "dstKinds": ["location"] },
+    { "id": "champion_of", "name": "Champion Of", "srcKinds": ["npc"], "dstKinds": ["rules"] },
+    { "id": "believer_of", "name": "Believer Of", "srcKinds": ["npc"], "dstKinds": ["rules"] },
+    { "id": "manifests_at", "name": "Manifests At", "srcKinds": ["abilities"], "dstKinds": ["location"] },
+    { "id": "wields", "name": "Wields", "srcKinds": ["faction"], "dstKinds": ["abilities"] },
+    { "id": "contains", "name": "Contains", "srcKinds": ["location"], "dstKinds": ["location"] },
+    { "id": "adjacent_to", "name": "Adjacent To", "srcKinds": ["location"], "dstKinds": ["location"] }
+  ],
 
   "cultures": [
     {
@@ -213,10 +258,18 @@
       "name": "Aurora Stack",
       "color": "#FFD700",
       "axisBiases": {
-        "Order": 70,
-        "Utility": 65,
-        "Elevation": 60,
-        "Influence": 55
+        "npc": { "x": 70, "y": 55, "z": 35 },
+        "location": { "x": 70, "y": 25, "z": 70 },
+        "faction": { "x": 80, "y": 75, "z": 60 },
+        "rules": { "x": 70, "y": 40, "z": 70 },
+        "abilities": { "x": 30, "y": 40, "z": 50 }
+      },
+      "homeRegions": {
+        "npc": ["aurora_stack"],
+        "location": ["aurora_stack"],
+        "faction": ["aurora_stack"],
+        "rules": ["aurora_stack"],
+        "abilities": ["aurora_stack"]
       }
     },
     {
@@ -224,10 +277,18 @@
       "name": "Nightfall Shelf",
       "color": "#9370DB",
       "axisBiases": {
-        "Order": 30,
-        "Elevation": 40,
-        "Influence": 40,
-        "Utility": 50
+        "npc": { "x": 45, "y": 50, "z": 65 },
+        "location": { "x": 35, "y": 55, "z": 40 },
+        "faction": { "x": 40, "y": 45, "z": 50 },
+        "rules": { "x": 35, "y": 65, "z": 30 },
+        "abilities": { "x": 75, "y": 55, "z": 60 }
+      },
+      "homeRegions": {
+        "npc": ["nightfall_shelf"],
+        "location": ["nightfall_shelf", "glow_fissure"],
+        "faction": ["nightfall_shelf"],
+        "rules": ["nightfall_shelf"],
+        "abilities": ["nightfall_shelf", "glow_fissure"]
       }
     },
     {
@@ -235,10 +296,18 @@
       "name": "Orca Raiders",
       "color": "#2F4F4F",
       "axisBiases": {
-        "Influence": 80,
-        "Elevation": 15,
-        "Combat": 85,
-        "Order": 45
+        "npc": { "x": 15, "y": 60, "z": 25 },
+        "location": { "x": 20, "y": 30, "z": 20 },
+        "faction": { "x": 55, "y": 20, "z": 40 },
+        "rules": { "x": 50, "y": 50, "z": 50 },
+        "abilities": { "x": 20, "y": 85, "z": 70 }
+      },
+      "homeRegions": {
+        "npc": ["orca_waters", "krill_shoals"],
+        "location": ["krill_shoals"],
+        "faction": [],
+        "rules": [],
+        "abilities": []
       }
     },
     {
@@ -246,185 +315,19 @@
       "name": "World",
       "color": "#87CEEB",
       "axisBiases": {
-        "Order": 50,
-        "Elevation": 50,
-        "Influence": 50,
-        "Utility": 50
+        "npc": { "x": 50, "y": 50, "z": 50 },
+        "location": { "x": 50, "y": 50, "z": 50 },
+        "faction": { "x": 50, "y": 50, "z": 50 },
+        "rules": { "x": 50, "y": 50, "z": 50 },
+        "abilities": { "x": 50, "y": 50, "z": 50 }
+      },
+      "homeRegions": {
+        "npc": [],
+        "location": ["aurora_berg"],
+        "faction": [],
+        "rules": [],
+        "abilities": []
       }
-    }
-  ],
-
-  "semanticPlanes": [
-    {
-      "id": "plane_location",
-      "name": "Aurora Berg Map",
-      "entityKind": "location",
-      "axes": {
-        "x": { "name": "Accessibility", "lowLabel": "Hidden", "highLabel": "Central" },
-        "y": { "name": "Nature", "lowLabel": "Mundane", "highLabel": "Anomalous" }
-      },
-      "bounds": {
-        "x": { "min": 0, "max": 100 },
-        "y": { "min": 0, "max": 100 }
-      },
-      "regions": [
-        {
-          "id": "aurora_berg",
-          "label": "Aurora Berg",
-          "color": "#4A90D9",
-          "bounds": { "shape": "rect", "x1": 15, "y1": 20, "x2": 85, "y2": 85 }
-        },
-        {
-          "id": "aurora_stack",
-          "label": "Aurora Stack",
-          "color": "#FFD700",
-          "bounds": { "shape": "circle", "center": { "x": 60, "y": 60 }, "radius": 12 }
-        },
-        {
-          "id": "nightfall_shelf",
-          "label": "Nightfall Shelf",
-          "color": "#9370DB",
-          "bounds": { "shape": "circle", "center": { "x": 30, "y": 40 }, "radius": 12 }
-        },
-        {
-          "id": "windward_ridge",
-          "label": "Windward Ridge",
-          "color": "#87CEEB",
-          "bounds": { "shape": "circle", "center": { "x": 50, "y": 70 }, "radius": 8 }
-        },
-        {
-          "id": "krill_shoals",
-          "label": "Krill Shoals",
-          "color": "#20B2AA",
-          "bounds": { "shape": "circle", "center": { "x": 60, "y": 55 }, "radius": 10 }
-        },
-        {
-          "id": "glow_fissure",
-          "label": "The Glow-Fissure",
-          "color": "#FF6347",
-          "bounds": { "shape": "circle", "center": { "x": 30, "y": 35 }, "radius": 6 }
-        }
-      ]
-    },
-    {
-      "id": "plane_npc",
-      "name": "Character Locations",
-      "entityKind": "npc",
-      "axes": {
-        "x": { "name": "Alignment", "lowLabel": "Hostile", "highLabel": "Friendly" },
-        "y": { "name": "Role", "lowLabel": "Follower", "highLabel": "Leader" }
-      },
-      "bounds": {
-        "x": { "min": 0, "max": 100 },
-        "y": { "min": 0, "max": 100 }
-      },
-      "regions": [
-        {
-          "id": "aurora_stack",
-          "label": "Aurora Stack",
-          "color": "#FFD700",
-          "bounds": { "shape": "circle", "center": { "x": 60, "y": 60 }, "radius": 12 }
-        },
-        {
-          "id": "nightfall_shelf",
-          "label": "Nightfall Shelf",
-          "color": "#9370DB",
-          "bounds": { "shape": "circle", "center": { "x": 30, "y": 40 }, "radius": 12 }
-        },
-        {
-          "id": "krill_shoals",
-          "label": "Krill Shoals",
-          "color": "#20B2AA",
-          "bounds": { "shape": "circle", "center": { "x": 60, "y": 55 }, "radius": 10 }
-        }
-      ]
-    },
-    {
-      "id": "plane_faction",
-      "name": "Influence Map",
-      "entityKind": "faction",
-      "axes": {
-        "x": { "name": "Structure", "lowLabel": "Chaotic", "highLabel": "Organized" },
-        "y": { "name": "Purpose", "lowLabel": "Destructive", "highLabel": "Constructive" }
-      },
-      "bounds": {
-        "x": { "min": 0, "max": 100 },
-        "y": { "min": 0, "max": 100 }
-      },
-      "regions": [
-        {
-          "id": "aurora_stack",
-          "label": "Aurora Stack",
-          "color": "#FFD700",
-          "bounds": { "shape": "circle", "center": { "x": 70, "y": 75 }, "radius": 15 }
-        },
-        {
-          "id": "nightfall_shelf",
-          "label": "Nightfall Shelf",
-          "color": "#9370DB",
-          "bounds": { "shape": "circle", "center": { "x": 40, "y": 45 }, "radius": 15 }
-        }
-      ]
-    },
-    {
-      "id": "plane_rules",
-      "name": "Governance Domains",
-      "entityKind": "rules",
-      "axes": {
-        "x": { "name": "Scope", "lowLabel": "Personal", "highLabel": "Universal" },
-        "y": { "name": "Nature", "lowLabel": "Traditional", "highLabel": "Progressive" }
-      },
-      "bounds": {
-        "x": { "min": 0, "max": 100 },
-        "y": { "min": 0, "max": 100 }
-      },
-      "regions": [
-        {
-          "id": "aurora_stack",
-          "label": "Aurora Stack Laws",
-          "color": "#FFD700",
-          "bounds": { "shape": "circle", "center": { "x": 70, "y": 40 }, "radius": 15 }
-        },
-        {
-          "id": "nightfall_shelf",
-          "label": "Shadow Customs",
-          "color": "#9370DB",
-          "bounds": { "shape": "circle", "center": { "x": 35, "y": 60 }, "radius": 15 }
-        }
-      ]
-    },
-    {
-      "id": "plane_abilities",
-      "name": "Power Domains",
-      "entityKind": "abilities",
-      "axes": {
-        "x": { "name": "Source", "lowLabel": "Physical", "highLabel": "Mystical" },
-        "y": { "name": "Application", "lowLabel": "Defensive", "highLabel": "Offensive" }
-      },
-      "bounds": {
-        "x": { "min": 0, "max": 100 },
-        "y": { "min": 0, "max": 100 }
-      },
-      "regions": [
-        {
-          "id": "aurora_stack",
-          "label": "Trade Arts",
-          "color": "#FFD700",
-          "bounds": { "shape": "circle", "center": { "x": 30, "y": 40 }, "radius": 15 }
-        },
-        {
-          "id": "nightfall_shelf",
-          "label": "Shadow Magic",
-          "color": "#9370DB",
-          "bounds": { "shape": "circle", "center": { "x": 75, "y": 55 }, "radius": 15 }
-        },
-        {
-          "id": "glow_fissure",
-          "label": "Fissure Powers",
-          "color": "#FF6347",
-          "bounds": { "shape": "circle", "center": { "x": 85, "y": 75 }, "radius": 10 }
-        }
-      ]
     }
   ],
 
@@ -439,7 +342,7 @@
       "prominence": "renowned",
       "culture": "aurora-stack",
       "tags": ["colony", "trade", "orderly"],
-      "coordinates": { "x": 60, "y": 60, "z": 50 }
+      "coordinates": { "x": 65, "y": 25, "z": 70 }
     },
     {
       "id": "loc_nightfall_shelf",
@@ -451,7 +354,7 @@
       "prominence": "renowned",
       "culture": "nightshelf",
       "tags": ["colony", "secretive", "mystical"],
-      "coordinates": { "x": 30, "y": 40, "z": 45 }
+      "coordinates": { "x": 35, "y": 35, "z": 45 }
     },
     {
       "id": "loc_aurora_berg",
@@ -463,7 +366,7 @@
       "prominence": "mythic",
       "culture": "world",
       "tags": ["iceberg", "landmark"],
-      "coordinates": { "x": 50, "y": 50, "z": 50 }
+      "coordinates": { "x": 50, "y": 45, "z": 50 }
     },
     {
       "id": "loc_windward_ridge",
@@ -475,7 +378,7 @@
       "prominence": "recognized",
       "culture": "world",
       "tags": ["geographic", "elevated", "strategic"],
-      "coordinates": { "x": 50, "y": 70, "z": 80 }
+      "coordinates": { "x": 50, "y": 30, "z": 80 }
     },
     {
       "id": "loc_krill_shoals",
@@ -487,7 +390,7 @@
       "prominence": "recognized",
       "culture": "world",
       "tags": ["underwater", "resource", "krill"],
-      "coordinates": { "x": 60, "y": 55, "z": 20 }
+      "coordinates": { "x": 60, "y": 45, "z": 20 }
     },
     {
       "id": "loc_glow_fissure",
@@ -499,7 +402,7 @@
       "prominence": "recognized",
       "culture": "nightshelf",
       "tags": ["anomaly", "mystical", "caverns"],
-      "coordinates": { "x": 30, "y": 35, "z": 10 }
+      "coordinates": { "x": 30, "y": 65, "z": 10 }
     }
   ],
 

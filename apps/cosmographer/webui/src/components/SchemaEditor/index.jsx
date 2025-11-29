@@ -28,24 +28,16 @@ const styles = {
 };
 
 export default function SchemaEditor({ project, onSave }) {
-  const schema = project?.worldSchema || { entityKinds: [], relationshipKinds: [] };
+  // Schema v2: entityKinds and relationshipKinds at project root
+  const entityKinds = project?.entityKinds || [];
+  const relationshipKinds = project?.relationshipKinds || [];
 
-  const updateEntityKinds = (entityKinds) => {
-    onSave({
-      worldSchema: {
-        ...schema,
-        entityKinds
-      }
-    });
+  const updateEntityKinds = (newEntityKinds) => {
+    onSave({ entityKinds: newEntityKinds });
   };
 
-  const updateRelationshipKinds = (relationshipKinds) => {
-    onSave({
-      worldSchema: {
-        ...schema,
-        relationshipKinds
-      }
-    });
+  const updateRelationshipKinds = (newRelationshipKinds) => {
+    onSave({ relationshipKinds: newRelationshipKinds });
   };
 
   return (
@@ -59,15 +51,15 @@ export default function SchemaEditor({ project, onSave }) {
 
       <div style={styles.section}>
         <EntityKindEditor
-          entityKinds={schema.entityKinds}
+          entityKinds={entityKinds}
           onChange={updateEntityKinds}
         />
       </div>
 
       <div style={styles.section}>
         <RelationshipKindEditor
-          relationshipKinds={schema.relationshipKinds}
-          entityKinds={schema.entityKinds}
+          relationshipKinds={relationshipKinds}
+          entityKinds={entityKinds}
           onChange={updateRelationshipKinds}
         />
       </div>

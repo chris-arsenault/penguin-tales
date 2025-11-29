@@ -155,26 +155,31 @@ export async function clearAllProjects() {
 
 /**
  * Create a new empty project with default structure.
+ *
+ * Schema v2:
+ * - entityKinds include their semanticPlane (axes + regions)
+ * - cultures have per-entityKind axisBiases and homeRegions
+ * - No top-level semanticPlanes array
  */
 export function createEmptyProject(name = 'New World') {
   return {
     id: `project_${Date.now()}`,
     name,
-    version: '1.0',
+    version: '2.0',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
 
-    worldSchema: {
-      entityKinds: [],
-      relationshipKinds: []
-    },
+    // Entity kinds with embedded semantic planes
+    entityKinds: [],
 
+    // Relationship kinds
+    relationshipKinds: [],
+
+    // Cultures with per-kind axis biases
     cultures: [],
 
-    semanticPlanes: [],
-
+    // Seed data
     seedEntities: [],
-
     seedRelationships: []
   };
 }

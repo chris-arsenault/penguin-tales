@@ -148,14 +148,14 @@ const styles = {
 function validateProject(project) {
   const issues = [];
 
-  // Check for entity kinds
-  const entityKinds = project?.worldSchema?.entityKinds || [];
+  // Schema v2: entityKinds at project root
+  const entityKinds = project?.entityKinds || [];
   if (entityKinds.length === 0) {
     issues.push({ type: 'error', message: 'No entity kinds defined in schema' });
   }
 
-  // Check for relationship kinds
-  const relationshipKinds = project?.worldSchema?.relationshipKinds || [];
+  // Schema v2: relationshipKinds at project root
+  const relationshipKinds = project?.relationshipKinds || [];
   if (relationshipKinds.length === 0) {
     issues.push({ type: 'warning', message: 'No relationship kinds defined' });
   }
@@ -166,19 +166,17 @@ function validateProject(project) {
     issues.push({ type: 'warning', message: 'No cultures defined' });
   }
 
-  // Check for semantic planes
-  const planes = project?.semanticPlanes || [];
-  if (planes.length === 0) {
-    issues.push({ type: 'warning', message: 'No semantic planes defined' });
-  }
-
-  // Check entity kind coverage for planes
+  // Schema v2: semantic planes are embedded in entity kinds
   entityKinds.forEach(kind => {
-    const hasPlane = planes.some(p => p.entityKind === kind.id);
-    if (!hasPlane) {
+    if (!kind.semanticPlane) {
       issues.push({
         type: 'info',
-        message: `No semantic plane for entity kind "${kind.name}"`
+        message: `Entity kind "${kind.name}" has no semantic plane configured`
+      });
+    } else if (!kind.semanticPlane.regions || kind.semanticPlane.regions.length === 0) {
+      issues.push({
+        type: 'info',
+        message: `Entity kind "${kind.name}" has no regions defined in its semantic plane`
       });
     }
   });
@@ -230,56 +228,44 @@ function validateProject(project) {
     }
   });
 
-  // Check for region coverage in planes
-  planes.forEach(plane => {
-    if (!plane.regions || plane.regions.length === 0) {
-      issues.push({
-        type: 'info',
-        message: `Semantic plane "${plane.name}" has no regions defined`
-      });
-    }
-  });
-
   return issues;
 }
 
 function buildExportData(project) {
+  // Schema v2: entityKinds and relationshipKinds at project root
+  // Semantic planes are embedded in entity kinds
   return {
     name: project.name,
-    version: '1.0',
+    version: '2.0',
     exportedAt: new Date().toISOString(),
-    worldSchema: {
-      entityKinds: (project.worldSchema?.entityKinds || []).map(k => ({
-        id: k.id,
-        name: k.name,
-        subtypes: k.subtypes || [],
-        statuses: k.statuses || []
-      })),
-      relationshipKinds: (project.worldSchema?.relationshipKinds || []).map(k => ({
-        id: k.id,
-        name: k.name,
-        srcKinds: k.srcKinds || [],
-        dstKinds: k.dstKinds || []
-      }))
-    },
+    entityKinds: (project.entityKinds || []).map(k => ({
+      id: k.id,
+      name: k.name,
+      subtypes: k.subtypes || [],
+      statuses: k.statuses || [],
+      semanticPlane: k.semanticPlane ? {
+        axes: k.semanticPlane.axes || {},
+        regions: (k.semanticPlane.regions || []).map(r => ({
+          id: r.id,
+          label: r.label,
+          color: r.color,
+          bounds: r.bounds
+        }))
+      } : undefined
+    })),
+    relationshipKinds: (project.relationshipKinds || []).map(k => ({
+      id: k.id,
+      name: k.name,
+      srcKinds: k.srcKinds || [],
+      dstKinds: k.dstKinds || []
+    })),
     cultures: (project.cultures || []).map(c => ({
       id: c.id,
       name: c.name,
+      description: c.description,
       color: c.color,
-      axisBiases: c.axisBiases || {}
-    })),
-    semanticPlanes: (project.semanticPlanes || []).map(p => ({
-      id: p.id,
-      name: p.name,
-      entityKind: p.entityKind,
-      axes: p.axes,
-      bounds: p.bounds,
-      regions: (p.regions || []).map(r => ({
-        id: r.id,
-        label: r.label,
-        color: r.color,
-        bounds: r.bounds
-      }))
+      axisBiases: c.axisBiases || {},
+      homeRegions: c.homeRegions || {}
     })),
     seedEntities: (project.seedEntities || []).map(e => ({
       id: e.id,
@@ -335,11 +321,11 @@ export default function ExportEditor({ project }) {
     }
   };
 
+  // Schema v2: entityKinds and relationshipKinds at project root
   const stats = {
-    entityKinds: project?.worldSchema?.entityKinds?.length || 0,
-    relationshipKinds: project?.worldSchema?.relationshipKinds?.length || 0,
+    entityKinds: project?.entityKinds?.length || 0,
+    relationshipKinds: project?.relationshipKinds?.length || 0,
     cultures: project?.cultures?.length || 0,
-    planes: project?.semanticPlanes?.length || 0,
     entities: project?.seedEntities?.length || 0,
     relationships: project?.seedRelationships?.length || 0
   };
@@ -389,10 +375,6 @@ export default function ExportEditor({ project }) {
           <div style={styles.statRow}>
             <span style={styles.statLabel}>Cultures</span>
             <span style={styles.statValue}>{stats.cultures}</span>
-          </div>
-          <div style={styles.statRow}>
-            <span style={styles.statLabel}>Semantic Planes</span>
-            <span style={styles.statValue}>{stats.planes}</span>
           </div>
           <div style={styles.statRow}>
             <span style={styles.statLabel}>Seed Entities</span>

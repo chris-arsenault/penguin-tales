@@ -173,7 +173,8 @@ export default function EntityEditor({ project, onSave }) {
   const [filterKind, setFilterKind] = useState('');
 
   const entities = project?.seedEntities || [];
-  const entityKinds = project?.worldSchema?.entityKinds || [];
+  // Schema v2: entityKinds at project root
+  const entityKinds = project?.entityKinds || [];
   const cultures = project?.cultures || [];
 
   const filteredEntities = filterKind
@@ -398,42 +399,40 @@ export default function EntityEditor({ project, onSave }) {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Coordinates</label>
-              <div style={styles.row}>
-                <div style={styles.coordGroup}>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    placeholder="X"
-                    value={selectedEntity.coordinates?.x ?? 50}
-                    onChange={(e) => updateEntity({
-                      coordinates: { ...selectedEntity.coordinates, x: parseFloat(e.target.value) || 0 }
-                    })}
-                  />
-                </div>
-                <div style={styles.coordGroup}>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    placeholder="Y"
-                    value={selectedEntity.coordinates?.y ?? 50}
-                    onChange={(e) => updateEntity({
-                      coordinates: { ...selectedEntity.coordinates, y: parseFloat(e.target.value) || 0 }
-                    })}
-                  />
-                </div>
-                <div style={styles.coordGroup}>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    placeholder="Z"
-                    value={selectedEntity.coordinates?.z ?? 50}
-                    onChange={(e) => updateEntity({
-                      coordinates: { ...selectedEntity.coordinates, z: parseFloat(e.target.value) || 0 }
-                    })}
-                  />
-                </div>
-              </div>
+              <label style={styles.label}>Coordinates (on {selectedKindDef?.name || 'kind'}'s semantic plane)</label>
+              {['x', 'y', 'z'].map((axis) => {
+                const axisConfig = selectedKindDef?.semanticPlane?.axes?.[axis] || {
+                  name: `${axis.toUpperCase()} Axis`,
+                  lowLabel: 'Low',
+                  highLabel: 'High'
+                };
+                return (
+                  <div key={axis} style={{ ...styles.row, marginBottom: '8px', alignItems: 'center' }}>
+                    <span style={{ width: '20px', fontWeight: 600, color: '#e94560', fontSize: '12px' }}>
+                      {axis.toUpperCase()}
+                    </span>
+                    <span style={{ width: '100px', fontSize: '11px', color: '#888' }}>
+                      {axisConfig.name}
+                    </span>
+                    <span style={{ width: '60px', fontSize: '10px', color: '#666', textAlign: 'right' }}>
+                      {axisConfig.lowLabel}
+                    </span>
+                    <input
+                      style={{ ...styles.input, flex: 1 }}
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={selectedEntity.coordinates?.[axis] ?? 50}
+                      onChange={(e) => updateEntity({
+                        coordinates: { ...selectedEntity.coordinates, [axis]: parseFloat(e.target.value) || 0 }
+                      })}
+                    />
+                    <span style={{ width: '60px', fontSize: '10px', color: '#666' }}>
+                      {axisConfig.highLabel}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             <button style={styles.deleteButton} onClick={deleteEntity}>

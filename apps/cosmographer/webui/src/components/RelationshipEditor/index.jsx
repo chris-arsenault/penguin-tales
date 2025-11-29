@@ -169,7 +169,8 @@ export default function RelationshipEditor({ project, onSave }) {
 
   const relationships = project?.seedRelationships || [];
   const entities = project?.seedEntities || [];
-  const relationshipKinds = project?.worldSchema?.relationshipKinds || [];
+  // Schema v2: relationshipKinds at project root
+  const relationshipKinds = project?.relationshipKinds || [];
 
   const filteredRels = filterKind
     ? relationships.filter(r => r.kind === filterKind)

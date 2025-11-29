@@ -1,5 +1,8 @@
 /**
- * CultureEditor - Create and manage cultures with axis biases and home regions.
+ * CultureEditor - Create and manage cultures with per-entity-kind axis biases.
+ *
+ * Schema v2: Each culture has axisBiases keyed by entityKindId, where each
+ * contains x, y, z values corresponding to that kind's semantic plane axes.
  */
 
 import React, { useState } from 'react';
@@ -45,9 +48,6 @@ const styles = {
     borderRadius: '8px',
     padding: '20px',
     border: '2px solid transparent'
-  },
-  cultureCardActive: {
-    borderColor: '#e94560'
   },
   cardHeader: {
     display: 'flex',
@@ -98,28 +98,61 @@ const styles = {
     color: '#aaa',
     marginBottom: '12px'
   },
+  kindSection: {
+    marginBottom: '16px',
+    padding: '12px',
+    backgroundColor: '#1a1a2e',
+    borderRadius: '6px'
+  },
+  kindTitle: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#eee',
+    marginBottom: '10px'
+  },
   axisRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    marginBottom: '8px'
+    gap: '8px',
+    marginBottom: '6px'
   },
   axisLabel: {
-    width: '120px',
-    fontSize: '13px'
+    width: '20px',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#e94560'
+  },
+  axisName: {
+    width: '100px',
+    fontSize: '11px',
+    color: '#888',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  lowLabel: {
+    fontSize: '10px',
+    color: '#666',
+    width: '60px',
+    textAlign: 'right'
+  },
+  highLabel: {
+    fontSize: '10px',
+    color: '#666',
+    width: '60px'
   },
   slider: {
     flex: 1,
-    height: '6px',
+    height: '4px',
     WebkitAppearance: 'none',
     background: 'linear-gradient(to right, #0f3460, #e94560)',
-    borderRadius: '3px',
+    borderRadius: '2px',
     outline: 'none'
   },
   axisValue: {
-    width: '40px',
+    width: '30px',
     textAlign: 'right',
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#888'
   },
   emptyState: {
@@ -127,6 +160,14 @@ const styles = {
     fontSize: '14px',
     textAlign: 'center',
     padding: '40px'
+  },
+  noKindsWarning: {
+    color: '#f0a500',
+    fontSize: '12px',
+    padding: '12px',
+    backgroundColor: 'rgba(240, 165, 0, 0.1)',
+    borderRadius: '4px',
+    marginTop: '8px'
   },
   colorPicker: {
     position: 'absolute',
@@ -156,35 +197,33 @@ const PRESET_COLORS = [
   '#ff7f50', '#20bf6b', '#0fb9b1', '#778ca3'
 ];
 
-const DEFAULT_AXES = [
-  { name: 'Order', lowLabel: 'Chaotic', highLabel: 'Lawful' },
-  { name: 'Influence', lowLabel: 'Subtle', highLabel: 'Dominant' },
-  { name: 'Elevation', lowLabel: 'Depths', highLabel: 'Heights' }
-];
-
 function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 export default function CultureEditor({ project, onSave }) {
   const [colorPickerFor, setColorPickerFor] = useState(null);
+
   const cultures = project?.cultures || [];
+  const entityKinds = project?.entityKinds || [];
 
   const updateCultures = (newCultures) => {
     onSave({ cultures: newCultures });
   };
 
   const addCulture = () => {
+    // Initialize axisBiases for all entity kinds at 50/50/50
+    const axisBiases = {};
+    entityKinds.forEach(kind => {
+      axisBiases[kind.id] = { x: 50, y: 50, z: 50 };
+    });
+
     const newCulture = {
       id: `culture_${Date.now()}`,
       name: 'New Culture',
       description: '',
       color: PRESET_COLORS[cultures.length % PRESET_COLORS.length],
-      axisBiases: {
-        Order: 50,
-        Influence: 50,
-        Elevation: 50
-      },
+      axisBiases,
       homeRegions: {}
     };
     updateCultures([...cultures, newCulture]);
@@ -200,14 +239,19 @@ export default function CultureEditor({ project, onSave }) {
     updateCultures(cultures.filter(c => c.id !== cultureId));
   };
 
-  const setAxisBias = (cultureId, axisName, value) => {
+  const setAxisBias = (cultureId, kindId, axis, value) => {
     const culture = cultures.find(c => c.id === cultureId);
     if (!culture) return;
+
+    const kindBiases = culture.axisBiases?.[kindId] || { x: 50, y: 50, z: 50 };
 
     updateCulture(cultureId, {
       axisBiases: {
         ...culture.axisBiases,
-        [axisName]: parseInt(value, 10)
+        [kindId]: {
+          ...kindBiases,
+          [axis]: parseInt(value, 10)
+        }
       }
     });
   };
@@ -217,7 +261,7 @@ export default function CultureEditor({ project, onSave }) {
       <div style={styles.header}>
         <div style={styles.title}>Cultures</div>
         <div style={styles.subtitle}>
-          Define cultures with semantic axis biases that influence entity placement.
+          Define cultures with axis biases for each entity kind's semantic plane.
         </div>
       </div>
 
@@ -293,31 +337,47 @@ export default function CultureEditor({ project, onSave }) {
               </div>
 
               <div style={styles.section}>
-                <div style={styles.sectionTitle}>Axis Biases</div>
-                {DEFAULT_AXES.map((axis) => (
-                  <div key={axis.name} style={styles.axisRow}>
-                    <div style={styles.axisLabel}>
-                      {axis.name}
-                    </div>
-                    <span style={{ fontSize: '11px', color: '#666', width: '60px' }}>
-                      {axis.lowLabel}
-                    </span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={culture.axisBiases?.[axis.name] ?? 50}
-                      onChange={(e) => setAxisBias(culture.id, axis.name, e.target.value)}
-                      style={styles.slider}
-                    />
-                    <span style={{ fontSize: '11px', color: '#666', width: '60px', textAlign: 'right' }}>
-                      {axis.highLabel}
-                    </span>
-                    <div style={styles.axisValue}>
-                      {culture.axisBiases?.[axis.name] ?? 50}
-                    </div>
+                <div style={styles.sectionTitle}>Axis Biases by Entity Kind</div>
+
+                {entityKinds.length === 0 ? (
+                  <div style={styles.noKindsWarning}>
+                    Define entity kinds in the Schema tab first to configure axis biases.
                   </div>
-                ))}
+                ) : (
+                  entityKinds.map((kind) => {
+                    const axes = kind.semanticPlane?.axes || {};
+                    const biases = culture.axisBiases?.[kind.id] || { x: 50, y: 50, z: 50 };
+
+                    return (
+                      <div key={kind.id} style={styles.kindSection}>
+                        <div style={styles.kindTitle}>{kind.name}</div>
+
+                        {['x', 'y', 'z'].map((axis) => {
+                          const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowLabel: 'Low', highLabel: 'High' };
+                          return (
+                            <div key={axis} style={styles.axisRow}>
+                              <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
+                              <span style={styles.axisName} title={axisConfig.name}>
+                                {axisConfig.name}
+                              </span>
+                              <span style={styles.lowLabel}>{axisConfig.lowLabel}</span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={biases[axis] ?? 50}
+                                onChange={(e) => setAxisBias(culture.id, kind.id, axis, e.target.value)}
+                                style={styles.slider}
+                              />
+                              <span style={styles.highLabel}>{axisConfig.highLabel}</span>
+                              <div style={styles.axisValue}>{biases[axis] ?? 50}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           ))}

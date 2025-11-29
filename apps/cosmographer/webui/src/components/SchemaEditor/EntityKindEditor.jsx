@@ -1,5 +1,5 @@
 /**
- * EntityKindEditor - Edit entity kinds with their subtypes and statuses.
+ * EntityKindEditor - Edit entity kinds with their subtypes, statuses, and semantic plane.
  */
 
 import React, { useState } from 'react';
@@ -63,6 +63,15 @@ const styles = {
     padding: '4px 8px',
     fontSize: '12px'
   },
+  inputAxis: {
+    width: '100px',
+    padding: '4px 8px',
+    fontSize: '12px',
+    backgroundColor: '#1a1a2e',
+    border: '1px solid #0f3460',
+    borderRadius: '4px',
+    color: '#eee'
+  },
   deleteButton: {
     padding: '4px 8px',
     fontSize: '11px',
@@ -116,6 +125,22 @@ const styles = {
     fontSize: '13px',
     textAlign: 'center',
     padding: '20px'
+  },
+  axisRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px'
+  },
+  axisLabel: {
+    width: '20px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#e94560'
+  },
+  axisArrow: {
+    color: '#666',
+    fontSize: '12px'
   }
 };
 
@@ -137,7 +162,15 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
       statuses: [
         { id: 'active', name: 'Active', isTerminal: false },
         { id: 'inactive', name: 'Inactive', isTerminal: true }
-      ]
+      ],
+      semanticPlane: {
+        axes: {
+          x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
+          y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' },
+          z: { name: 'Z Axis', lowLabel: 'Low', highLabel: 'High' }
+        },
+        regions: []
+      }
     };
     onChange([...entityKinds, newKind]);
   };
@@ -212,6 +245,33 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
       statuses: kind.statuses.map(s =>
         s.id === statusId ? { ...s, isTerminal: !s.isTerminal } : s
       )
+    });
+  };
+
+  const updateAxis = (kindId, axis, field, value) => {
+    const kind = entityKinds.find(k => k.id === kindId);
+    if (!kind) return;
+
+    const semanticPlane = kind.semanticPlane || {
+      axes: {
+        x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
+        y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' },
+        z: { name: 'Z Axis', lowLabel: 'Low', highLabel: 'High' }
+      },
+      regions: []
+    };
+
+    updateKind(kindId, {
+      semanticPlane: {
+        ...semanticPlane,
+        axes: {
+          ...semanticPlane.axes,
+          [axis]: {
+            ...semanticPlane.axes[axis],
+            [field]: value
+          }
+        }
+      }
     });
   };
 
@@ -367,6 +427,44 @@ export default function EntityKindEditor({ entityKinds = [], onChange }) {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Semantic Plane Axes */}
+              <div style={styles.section}>
+                <div style={styles.sectionTitle}>
+                  <span>Semantic Plane Axes</span>
+                </div>
+                {['x', 'y', 'z'].map((axis) => {
+                  const axisConfig = kind.semanticPlane?.axes?.[axis] || { name: '', lowLabel: '', highLabel: '' };
+                  return (
+                    <div key={axis} style={styles.axisRow}>
+                      <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
+                      <input
+                        style={styles.inputAxis}
+                        value={axisConfig.lowLabel}
+                        onChange={(e) => updateAxis(kind.id, axis, 'lowLabel', e.target.value)}
+                        placeholder="Low"
+                        title="Low label"
+                      />
+                      <span style={styles.axisArrow}>←</span>
+                      <input
+                        style={{ ...styles.inputAxis, width: '120px' }}
+                        value={axisConfig.name}
+                        onChange={(e) => updateAxis(kind.id, axis, 'name', e.target.value)}
+                        placeholder="Axis name"
+                        title="Axis name"
+                      />
+                      <span style={styles.axisArrow}>→</span>
+                      <input
+                        style={styles.inputAxis}
+                        value={axisConfig.highLabel}
+                        onChange={(e) => updateAxis(kind.id, axis, 'highLabel', e.target.value)}
+                        placeholder="High"
+                        title="High label"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

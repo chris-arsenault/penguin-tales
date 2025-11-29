@@ -1,5 +1,8 @@
 /**
- * SemanticPlane - Editor for semantic planes with regions and entity visualization.
+ * SemanticPlaneEditor - View and edit semantic planes embedded in entity kinds.
+ *
+ * Schema v2: Each entityKind has a semanticPlane with axes and regions.
+ * This editor lets you select a kind, view/place entities, and manage regions.
  */
 
 import React, { useState } from 'react';
@@ -38,20 +41,20 @@ const styles = {
     color: '#eee',
     minWidth: '180px'
   },
-  addButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  },
   button: {
     padding: '8px 16px',
     fontSize: '13px',
     backgroundColor: '#0f3460',
     color: '#aaa',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
+  addButton: {
+    padding: '8px 16px',
+    fontSize: '13px',
+    backgroundColor: '#e94560',
+    color: 'white',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
@@ -155,63 +158,50 @@ const styles = {
     justifyContent: 'flex-end',
     gap: '8px',
     marginTop: '16px'
+  },
+  deleteButton: {
+    padding: '4px 8px',
+    fontSize: '10px',
+    backgroundColor: 'transparent',
+    color: '#e94560',
+    border: '1px solid #e94560',
+    borderRadius: '3px',
+    cursor: 'pointer',
+    marginLeft: 'auto'
   }
 };
 
-const DEFAULT_PLANE = {
-  name: 'New Plane',
-  axes: {
-    x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
-    y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' }
-  },
-  bounds: {
-    x: { min: 0, max: 100 },
-    y: { min: 0, max: 100 }
-  },
-  regions: []
-};
-
 export default function SemanticPlaneEditor({ project, onSave }) {
-  const [selectedPlaneId, setSelectedPlaneId] = useState(null);
-  const [showNewPlaneModal, setShowNewPlaneModal] = useState(false);
+  const [selectedKindId, setSelectedKindId] = useState(null);
   const [showNewRegionModal, setShowNewRegionModal] = useState(false);
-  const [newPlaneName, setNewPlaneName] = useState('');
-  const [newPlaneKind, setNewPlaneKind] = useState('');
   const [newRegion, setNewRegion] = useState({ label: '', x: 50, y: 50, radius: 15 });
   const [selectedEntityId, setSelectedEntityId] = useState(null);
 
-  const planes = project?.semanticPlanes || [];
+  // Schema v2: entityKinds at project root
+  const entityKinds = project?.entityKinds || [];
   const cultures = project?.cultures || [];
-  const entityKinds = project?.worldSchema?.entityKinds || [];
   const seedEntities = project?.seedEntities || [];
 
-  const selectedPlane = planes.find(p => p.id === selectedPlaneId) || planes[0];
-  const planeEntities = seedEntities.filter(e => e.kind === selectedPlane?.entityKind);
-
-  const updatePlanes = (newPlanes) => {
-    onSave({ semanticPlanes: newPlanes });
+  // Select first kind by default
+  const selectedKind = entityKinds.find(k => k.id === selectedKindId) || entityKinds[0];
+  const semanticPlane = selectedKind?.semanticPlane || {
+    axes: {
+      x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
+      y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' }
+    },
+    regions: []
   };
+  const planeEntities = seedEntities.filter(e => e.kind === selectedKind?.id);
 
-  const addPlane = () => {
-    if (!newPlaneName.trim()) return;
-
-    const newPlane = {
-      ...DEFAULT_PLANE,
-      id: `plane_${Date.now()}`,
-      name: newPlaneName.trim(),
-      entityKind: newPlaneKind || entityKinds[0]?.id || 'default',
-      regions: []
-    };
-
-    updatePlanes([...planes, newPlane]);
-    setSelectedPlaneId(newPlane.id);
-    setShowNewPlaneModal(false);
-    setNewPlaneName('');
-    setNewPlaneKind('');
+  const updateEntityKind = (kindId, updates) => {
+    const newKinds = entityKinds.map(k =>
+      k.id === kindId ? { ...k, ...updates } : k
+    );
+    onSave({ entityKinds: newKinds });
   };
 
   const addRegion = () => {
-    if (!selectedPlane || !newRegion.label.trim()) return;
+    if (!selectedKind || !newRegion.label.trim()) return;
 
     const region = {
       id: `region_${Date.now()}`,
@@ -225,13 +215,24 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     };
 
     const updatedPlane = {
-      ...selectedPlane,
-      regions: [...(selectedPlane.regions || []), region]
+      ...semanticPlane,
+      regions: [...(semanticPlane.regions || []), region]
     };
 
-    updatePlanes(planes.map(p => p.id === selectedPlane.id ? updatedPlane : p));
+    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
     setShowNewRegionModal(false);
     setNewRegion({ label: '', x: 50, y: 50, radius: 15 });
+  };
+
+  const deleteRegion = (regionId) => {
+    if (!selectedKind) return;
+
+    const updatedPlane = {
+      ...semanticPlane,
+      regions: (semanticPlane.regions || []).filter(r => r.id !== regionId)
+    };
+
+    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
   };
 
   const handleMoveEntity = (entityId, coords) => {
@@ -249,43 +250,44 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       <div style={styles.header}>
         <div style={styles.title}>Semantic Planes</div>
         <div style={styles.subtitle}>
-          Configure coordinate spaces for each entity kind with named axes and regions.
+          View and edit the coordinate space for each entity kind. Drag entities to reposition them.
         </div>
       </div>
 
       <div style={styles.toolbar}>
         <select
           style={styles.select}
-          value={selectedPlane?.id || ''}
-          onChange={(e) => setSelectedPlaneId(e.target.value)}
+          value={selectedKind?.id || ''}
+          onChange={(e) => setSelectedKindId(e.target.value)}
         >
-          {planes.length === 0 && <option value="">No planes</option>}
-          {planes.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.entityKind})
+          {entityKinds.length === 0 && <option value="">No entity kinds</option>}
+          {entityKinds.map(k => (
+            <option key={k.id} value={k.id}>
+              {k.name} ({planeEntities.filter(e => e.kind === k.id).length} entities)
             </option>
           ))}
         </select>
-        <button style={styles.addButton} onClick={() => setShowNewPlaneModal(true)}>
-          + New Plane
-        </button>
-        {selectedPlane && (
-          <button style={styles.button} onClick={() => setShowNewRegionModal(true)}>
+        {selectedKind && (
+          <button style={styles.addButton} onClick={() => setShowNewRegionModal(true)}>
             + Add Region
           </button>
         )}
       </div>
 
-      {!selectedPlane ? (
+      {entityKinds.length === 0 ? (
         <div style={styles.emptyState}>
-          No semantic planes defined. Create one to visualize your world's coordinate space.
+          Define entity kinds in the Schema tab first to view their semantic planes.
+        </div>
+      ) : !selectedKind ? (
+        <div style={styles.emptyState}>
+          Select an entity kind to view its semantic plane.
         </div>
       ) : (
         <div style={styles.mainArea}>
           <div style={styles.canvasArea}>
             <PlaneCanvas
-              plane={selectedPlane}
-              regions={selectedPlane.regions || []}
+              plane={semanticPlane}
+              regions={semanticPlane.regions || []}
               entities={planeEntities}
               cultures={cultures}
               selectedEntityId={selectedEntityId}
@@ -298,14 +300,38 @@ export default function SemanticPlaneEditor({ project, onSave }) {
 
           <div style={styles.sidebar}>
             <div style={styles.sidebarSection}>
-              <div style={styles.sidebarTitle}>Regions ({selectedPlane.regions?.length || 0})</div>
-              {(selectedPlane.regions || []).length === 0 ? (
+              <div style={styles.sidebarTitle}>
+                Axes
+              </div>
+              <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px' }}>
+                <strong>X:</strong> {semanticPlane.axes?.x?.name || 'X Axis'}
+                <span style={{ color: '#666' }}> ({semanticPlane.axes?.x?.lowLabel} → {semanticPlane.axes?.x?.highLabel})</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '4px' }}>
+                <strong>Y:</strong> {semanticPlane.axes?.y?.name || 'Y Axis'}
+                <span style={{ color: '#666' }}> ({semanticPlane.axes?.y?.lowLabel} → {semanticPlane.axes?.y?.highLabel})</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#aaa' }}>
+                <strong>Z:</strong> {semanticPlane.axes?.z?.name || 'Z Axis'}
+                <span style={{ color: '#666' }}> ({semanticPlane.axes?.z?.lowLabel} → {semanticPlane.axes?.z?.highLabel})</span>
+              </div>
+            </div>
+
+            <div style={styles.sidebarSection}>
+              <div style={styles.sidebarTitle}>Regions ({semanticPlane.regions?.length || 0})</div>
+              {(semanticPlane.regions || []).length === 0 ? (
                 <div style={{ color: '#666', fontSize: '12px' }}>No regions yet</div>
               ) : (
-                selectedPlane.regions.map(region => (
+                semanticPlane.regions.map(region => (
                   <div key={region.id} style={styles.regionItem}>
                     <div style={{ ...styles.regionColor, backgroundColor: region.color }} />
                     <span>{region.label}</span>
+                    <button
+                      style={styles.deleteButton}
+                      onClick={() => deleteRegion(region.id)}
+                    >
+                      ×
+                    </button>
                   </div>
                 ))
               )}
@@ -315,7 +341,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
               <div style={styles.sidebarTitle}>Entities ({planeEntities.length})</div>
               {planeEntities.length === 0 ? (
                 <div style={{ color: '#666', fontSize: '12px' }}>
-                  No entities of kind "{selectedPlane.entityKind}"
+                  No entities of kind "{selectedKind.name}"
                 </div>
               ) : (
                 planeEntities.slice(0, 10).map(entity => (
@@ -337,37 +363,11 @@ export default function SemanticPlaneEditor({ project, onSave }) {
                   </div>
                 ))
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* New Plane Modal */}
-      {showNewPlaneModal && (
-        <div style={styles.modal} onClick={() => setShowNewPlaneModal(false)}>
-          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalTitle}>Create Semantic Plane</div>
-            <input
-              style={styles.input}
-              placeholder="Plane name"
-              value={newPlaneName}
-              onChange={e => setNewPlaneName(e.target.value)}
-              autoFocus
-            />
-            <div style={styles.inputLabel}>Entity Kind</div>
-            <select
-              style={{ ...styles.input, marginBottom: '0' }}
-              value={newPlaneKind}
-              onChange={e => setNewPlaneKind(e.target.value)}
-            >
-              <option value="">Select kind...</option>
-              {entityKinds.map(k => (
-                <option key={k.id} value={k.id}>{k.name}</option>
-              ))}
-            </select>
-            <div style={styles.modalActions}>
-              <button style={styles.button} onClick={() => setShowNewPlaneModal(false)}>Cancel</button>
-              <button style={styles.addButton} onClick={addPlane}>Create</button>
+              {planeEntities.length > 10 && (
+                <div style={{ color: '#666', fontSize: '11px', marginTop: '4px' }}>
+                  ...and {planeEntities.length - 10} more
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -377,7 +377,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       {showNewRegionModal && (
         <div style={styles.modal} onClick={() => setShowNewRegionModal(false)}>
           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalTitle}>Add Region</div>
+            <div style={styles.modalTitle}>Add Region to {selectedKind?.name}</div>
             <input
               style={styles.input}
               placeholder="Region label"
