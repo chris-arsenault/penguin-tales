@@ -12,6 +12,7 @@ import CultureEditor from './components/CultureEditor/index.jsx';
 import SemanticPlaneEditor from './components/SemanticPlane/index.jsx';
 import EntityEditor from './components/EntityEditor/index.jsx';
 import RelationshipEditor from './components/RelationshipEditor/index.jsx';
+import ExportEditor from './components/ExportEditor/index.jsx';
 
 const TABS = [
   { id: 'schema', label: 'Schema', icon: '📋' },
@@ -82,15 +83,6 @@ const styles = {
   noProjectTitle: {
     fontSize: '24px',
     marginBottom: '8px'
-  },
-  placeholder: {
-    textAlign: 'center',
-    color: '#666',
-    marginTop: '100px'
-  },
-  placeholderTitle: {
-    fontSize: '20px',
-    marginBottom: '8px'
   }
 };
 
@@ -106,27 +98,11 @@ function TabContent({ tab, project, onSave }) {
       return <EntityEditor project={project} onSave={onSave} />;
     case 'relationships':
       return <RelationshipEditor project={project} onSave={onSave} />;
+    case 'export':
+      return <ExportEditor project={project} />;
 
-    default: {
-      const placeholders = {
-        export: {
-          title: 'Export',
-          desc: 'Preview and download the world seed JSON.'
-        }
-      };
-
-      const info = placeholders[tab] || { title: 'Unknown', desc: '' };
-
-      return (
-        <div style={styles.placeholder}>
-          <div style={styles.placeholderTitle}>{info.title}</div>
-          <div>{info.desc}</div>
-          <div style={{ marginTop: '20px', color: '#444' }}>
-            Coming soon...
-          </div>
-        </div>
-      );
-    }
+    default:
+      return null;
   }
 }
 
