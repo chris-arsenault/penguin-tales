@@ -15,7 +15,7 @@
  * - orcaRaiderArrival (creates external threat NPC)
  */
 
-import { GrowthTemplate } from '@lore-weave/core/types/engine';
+import { GrowthTemplate } from '@lore-weave/core';
 
 // REMOVED: familyExpansion, outlawRecruitment, kinshipConstellation, mysteriousVanishing
 export { heroEmergence } from './heroEmergence';

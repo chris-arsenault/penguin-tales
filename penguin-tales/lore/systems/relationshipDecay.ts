@@ -1,5 +1,5 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { modifyRelationshipStrength, getLocation, getRelated } from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
 
 /**
  * Relationship Decay System
@@ -106,7 +106,7 @@ export const relationshipDecay: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = relationshipDecay.metadata?.parameters || {};
 
     // Decay rate categories
@@ -124,7 +124,7 @@ export const relationshipDecay: SimulationSystem = {
 
     let modificationsCount = 0;
 
-    graph.relationships.forEach(rel => {
+    graphView.getAllRelationships().forEach(rel => {
       const currentStrength = rel.strength ?? 0.5;
 
       // Skip if already at floor
@@ -144,16 +144,16 @@ export const relationshipDecay: SimulationSystem = {
 
       // Check proximity (same location)
       let proximityFactor = 1.0;
-      const srcLocation = getLocation(graph, rel.src);
-      const dstLocation = getLocation(graph, rel.dst);
+      const srcLocation = graphView.getLocation(rel.src);
+      const dstLocation = graphView.getLocation(rel.dst);
       if (srcLocation && dstLocation && srcLocation.id === dstLocation.id) {
         proximityFactor = 1.0 - proximityReduction;
       }
 
       // Check shared faction
       let sharedFactionFactor = 1.0;
-      const srcFactions = getRelated(graph, rel.src, 'member_of', 'src');
-      const dstFactions = getRelated(graph, rel.dst, 'member_of', 'src');
+      const srcFactions = graphView.getRelated(rel.src, 'member_of', 'src');
+      const dstFactions = graphView.getRelated(rel.dst, 'member_of', 'src');
       if (srcFactions.some(f => dstFactions.some(df => df.id === f.id))) {
         sharedFactionFactor = 1.0 - sharedFactionReduction;
       }
@@ -167,7 +167,7 @@ export const relationshipDecay: SimulationSystem = {
         rel.strength = newStrength;
 
         // Update entity links
-        const srcEntity = graph.entities.get(rel.src);
+        const srcEntity = graphView.getEntity(rel.src);
         if (srcEntity) {
           const link = srcEntity.links.find(l =>
             l.kind === rel.kind && l.src === rel.src && l.dst === rel.dst

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { EntityClusterBuilder, buildCluster } from '../../utils/entityClusterBuilder';
-import { HardState } from '../../types/worldTypes';
+import { EntityClusterBuilder, buildCluster } from '../../graph/entityClusterBuilder';
+import { HardState } from '../../core/worldTypes';
 
 describe('EntityClusterBuilder', () => {
   let builder: EntityClusterBuilder;

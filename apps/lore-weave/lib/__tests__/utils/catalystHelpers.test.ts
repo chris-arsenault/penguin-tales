@@ -16,9 +16,9 @@ import {
   initializeCatalyst,
   initializeCatalystSmart,
   updateInfluence
-} from '../../utils/catalystHelpers';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship, Prominence, CatalyzedEvent } from '../../types/worldTypes';
+} from '../../systems/catalystHelpers';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship, Prominence, CatalyzedEvent } from '../../core/worldTypes';
 
 // Helper function to create minimal HardState for testing
 function createEntity(
@@ -36,7 +36,7 @@ function createEntity(
     description: '',
     status: 'active',
     prominence, culture: 'world',
-    tags: [],
+    tags: {},
     links: [],
     createdAt: 0,
     updatedAt: 0
@@ -56,17 +56,29 @@ function createEntity(
 
 // Helper function to create minimal Graph for testing
 function createGraph(entities: HardState[], relationships: Relationship[] = []): Graph {
-  const entityMap = new Map<string, HardState>();
-  entities.forEach(e => entityMap.set(e.id, e));
+  const _entities = new Map<string, HardState>();
+  let _relationships = relationships;
+  entities.forEach(e => _entities.set(e.id, e));
 
   return {
-    entities: entityMap,
-    relationships,
     tick: 0,
     currentEra: { id: 'test', name: 'Test Era' } as any,
     pressures: new Map(),
     history: [],
-    config: {} as any,
+    config: {
+      domain: {
+        getActionDomainsForEntity(entity: HardState): string[] {
+          // Mock implementation based on test expectations
+          if (entity.kind === 'faction') return ['political', 'economic'];
+          if (entity.kind === 'abilities' && entity.subtype === 'magic') return ['magical'];
+          if (entity.kind === 'occurrence' && entity.subtype === 'war') return ['conflict_escalation', 'military'];
+          if (entity.kind === 'location' && entity.subtype === 'anomaly') return ['environmental', 'magical'];
+          if (entity.kind === 'npc' && entity.subtype === 'hero') return ['political', 'military'];
+          if (entity.kind === 'npc' && entity.subtype === 'mayor') return ['political', 'economic'];
+          return [];
+        }
+      }
+    } as any,
     relationshipCooldowns: new Map(),
     loreRecords: [],
     discoveryState: {
@@ -77,6 +89,60 @@ function createGraph(entities: HardState[], relationships: Relationship[] = []):
     growthMetrics: {
       relationshipsPerTick: [],
       averageGrowthRate: 0
+    },
+
+    // Entity read methods
+    getEntity(id: string) { return _entities.get(id); },
+    hasEntity(id: string) { return _entities.has(id); },
+    getEntityCount() { return _entities.size; },
+    getEntities() { return Array.from(_entities.values()); },
+    getEntityIds() { return Array.from(_entities.keys()); },
+    forEachEntity(cb: (e: HardState, id: string) => void) { _entities.forEach(cb); },
+    findEntities(criteria: any) {
+      return Array.from(_entities.values()).filter(e => {
+        if (criteria.kind && e.kind !== criteria.kind) return false;
+        if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+        if (criteria.status && e.status !== criteria.status) return false;
+        return true;
+      });
+    },
+    getEntitiesByKind(kind: string) { return Array.from(_entities.values()).filter(e => e.kind === kind); },
+    getConnectedEntities(id: string) { return []; },
+
+    // Entity mutation
+    setEntity(id: string, entity: HardState) { _entities.set(id, entity); },
+    updateEntity(id: string, changes: Partial<HardState>) { const e = _entities.get(id); if(e) Object.assign(e, changes); return !!e; },
+    deleteEntity(id: string) { return _entities.delete(id); },
+
+    // Relationship read methods
+    getRelationships() { return _relationships; },
+    getRelationshipCount() { return _relationships.length; },
+    findRelationships(criteria: any) {
+      return _relationships.filter(r => {
+        if (criteria.kind && r.kind !== criteria.kind) return false;
+        if (criteria.src && r.src !== criteria.src) return false;
+        if (criteria.dst && r.dst !== criteria.dst) return false;
+        return true;
+      });
+    },
+    getEntityRelationships(id: string, direction?: 'src' | 'dst' | 'both') {
+      return _relationships.filter(r => {
+        if (direction === 'src') return r.src === id;
+        if (direction === 'dst') return r.dst === id;
+        return r.src === id || r.dst === id;
+      });
+    },
+    hasRelationship(src: string, dst: string, kind?: string) {
+      return _relationships.some(r => r.src === src && r.dst === dst && (!kind || r.kind === kind));
+    },
+
+    // Relationship mutation
+    pushRelationship(rel: Relationship) { _relationships.push(rel); },
+    setRelationships(rels: Relationship[]) { _relationships = rels; },
+    removeRelationship(src: string, dst: string, kind: string) {
+      const idx = _relationships.findIndex(r => r.src === src && r.dst === dst && r.kind === kind);
+      if(idx >= 0) { _relationships.splice(idx, 1); return true; }
+      return false;
     }
   } as Graph;
 }
@@ -486,8 +552,9 @@ describe('initializeCatalyst', () => {
 describe('initializeCatalystSmart', () => {
   it('should initialize catalyst for recognized hero', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'recognized');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
@@ -498,8 +565,9 @@ describe('initializeCatalystSmart', () => {
 
   it('should initialize catalyst for renowned mayor', () => {
     const entity = createEntity('npc1', 'npc', 'mayor', 'renowned');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('political');
@@ -509,24 +577,27 @@ describe('initializeCatalystSmart', () => {
 
   it('should not initialize catalyst for marginal entities', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'marginal');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeUndefined();
   });
 
   it('should not initialize catalyst for forgotten entities', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'forgotten');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeUndefined();
   });
 
   it('should initialize catalyst for mythic faction', () => {
     const entity = createEntity('faction1', 'faction', 'guild', 'mythic');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('political');
@@ -536,8 +607,9 @@ describe('initializeCatalystSmart', () => {
 
   it('should initialize catalyst for magic abilities', () => {
     const entity = createEntity('ability1', 'abilities', 'magic', 'recognized');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('magical');
@@ -545,8 +617,9 @@ describe('initializeCatalystSmart', () => {
 
   it('should initialize catalyst for occurrences', () => {
     const entity = createEntity('occ1', 'occurrence', 'war', 'recognized');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('conflict_escalation');
@@ -555,8 +628,9 @@ describe('initializeCatalystSmart', () => {
 
   it('should handle anomaly locations', () => {
     const entity = createEntity('loc1', 'location', 'anomaly', 'renowned');
+    const graph = createGraph([entity]);
 
-    initializeCatalystSmart(entity);
+    initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('environmental');

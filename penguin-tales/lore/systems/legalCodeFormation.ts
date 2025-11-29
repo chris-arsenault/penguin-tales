@@ -7,28 +7,13 @@
  * Example: 15 scattered laws → 2-3 unified codes
  */
 
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  pickRandom,
-  addEntity,
-  addRelationship,
-  generateId
-} from '@lore-weave/core/utils/helpers';
-import {
-  detectClusters,
-  filterClusterableEntities,
-  ClusterConfig,
-  ClusterCriterion
-} from '@lore-weave/core/utils/clusteringUtils';
-import {
-  archiveEntities,
-  transferRelationships,
-  createPartOfRelationships
-} from '@lore-weave/core/utils/entityArchival';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPrimitives';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, generateId, hasTag, addRelationship } from '@lore-weave/core';
+import { detectClusters, filterClusterableEntities, ClusterConfig, ClusterCriterion } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { TargetSelector } from '@lore-weave/core';
+import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core';
 
 /**
  * Custom criterion for shared location using applies_in or active_during
@@ -57,11 +42,16 @@ const sharedLocationCriterion: ClusterCriterion = {
 
 /**
  * Clustering configuration for legal codes
+ * Culture is critical - laws are culturally specific
  */
 const LEGAL_CODE_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 4,
   criteria: [
     sharedLocationCriterion,
+    {
+      type: 'same_culture',
+      weight: 5.0  // Very strong cultural affinity - laws are culturally specific
+    },
     {
       type: 'temporal_proximity',
       weight: 2.0,
@@ -72,26 +62,9 @@ const LEGAL_CODE_CLUSTER_CONFIG: ClusterConfig = {
 };
 
 /**
- * Generate a legal code name based on subtype
- */
-function generateCodeName(majoritySubtype: string, clusterSize: number): string {
-  const nameFragments: Record<string, string[]> = {
-    edict: ['Statutory', 'Administrative', 'Governmental', 'Official', 'Imperial'],
-    taboo: ['Sacred', 'Divine', 'Ecclesiastical', 'Forbidden', 'Holy'],
-    social: ['Traditional', 'Ancestral', 'Cultural', 'Folk', 'Common'],
-    natural: ['Natural', 'Universal', 'Fundamental', 'Eternal', 'Immutable']
-  };
-
-  const descriptor = pickRandom(
-    nameFragments[majoritySubtype] || nameFragments.edict
-  );
-  return `${descriptor} Code of ${clusterSize} Laws`;
-}
-
-/**
  * Create a meta-entity rule from a cluster
  */
-function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createCodeEntity(cluster: HardState[], graphView: TemplateGraphView): Partial<HardState> {
   // Determine code subtype from cluster majority
   const subtypeCounts = new Map<string, number>();
   cluster.forEach(rule => {
@@ -109,15 +82,12 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
     }
   });
 
-  // Generate code name
-  const codeName = generateCodeName(majoritySubtype, cluster.length);
-
   // Aggregate tags from cluster
   const allTags = new Set<string>();
   cluster.forEach(rule => {
-    (rule.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(rule.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const ruleNames = cluster.map(r => r.name).join(', ');
@@ -148,32 +118,51 @@ function createCodeEntity(cluster: HardState[], graph: Graph): Partial<HardState
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+
+  // Derive coordinates from cluster entities using culture-aware placement
+  const codePlacement = graphView.deriveCoordinatesWithCulture(
+    majorityCulture,
+    'rules',
+    cluster
+  );
+  if (!codePlacement) {
+    throw new Error(
+      `legal_code_formation: Failed to derive coordinates for legal code. ` +
+      `This indicates the coordinate system is not properly configured for 'rules' entities.`
+    );
+  }
+  const coords = codePlacement.coordinates;
+
   return {
     kind: 'rules',
     subtype: majoritySubtype,
-    name: codeName,
     description,
     status: 'enacted',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity']
+    tags,
+    coordinates: coords
   };
 }
 
 /**
  * Create a governance faction for a legal code
  */
-function createGovernanceFaction(
-  graph: Graph,
+async function createGovernanceFaction(
+  graphView: TemplateGraphView,
   legalCode: HardState,
   originalRules: HardState[]
-): { faction: HardState | null; relationships: Relationship[] } {
+): Promise<{ faction: HardState | null; relationships: Relationship[] }> {
   const relationships: Relationship[] = [];
 
   // Find locations where this code applies
-  const codeLocations = graph.relationships
+  const codeLocations = graphView.getAllRelationships()
     .filter(r => r.kind === 'applies_in' && r.src === legalCode.id)
-    .map(r => graph.entities.get(r.dst))
+    .map(r => graphView.getEntity(r.dst))
     .filter((l): l is HardState => l !== undefined);
 
   // If no location, don't create faction
@@ -184,10 +173,10 @@ function createGovernanceFaction(
   const primaryLocation = codeLocations[0];
 
   // Check if a political faction already governs this location
-  const existingGoverningFaction = Array.from(graph.entities.values()).find(e =>
+  const existingGoverningFaction = graphView.getEntities().find(e =>
     e.kind === 'faction' &&
     e.subtype === 'political' &&
-    graph.relationships.some(r =>
+    graphView.getAllRelationships().some(r =>
       r.kind === 'controls' &&
       r.src === e.id &&
       r.dst === primaryLocation.id
@@ -197,7 +186,7 @@ function createGovernanceFaction(
   // Don't create duplicate governance factions
   if (existingGoverningFaction) {
     // Just link the existing faction to the legal code
-    addRelationship(graph, 'weaponized_by', existingGoverningFaction.id, legalCode.id);
+    graphView.createRelationship('weaponized_by', existingGoverningFaction.id, legalCode.id);
     relationships.push({
       kind: 'weaponized_by',
       src: existingGoverningFaction.id,
@@ -206,28 +195,37 @@ function createGovernanceFaction(
     return { faction: null, relationships };
   }
 
-  // Generate faction name based on legal code
-  const factionName = legalCode.name.includes('Code')
-    ? legalCode.name.replace('Code', 'Council')
-    : `Council of ${primaryLocation.name}`;
+  // Derive coordinates from location and legal code using culture-aware placement
+  const referenceEntities = [primaryLocation, legalCode];
+  const factionCultureId = primaryLocation.culture ?? 'default';
+  const factionPlacement = graphView.deriveCoordinatesWithCulture(
+    factionCultureId,
+    'faction',
+    referenceEntities
+  );
+  if (!factionPlacement) {
+    // Can't place faction without coordinates - skip creation
+    return { faction: null, relationships: [] };
+  }
+  const coords = factionPlacement.coordinates;
 
   // Create political faction
   const factionPartial: Partial<HardState> = {
     kind: 'faction',
     subtype: 'political',
-    name: factionName,
     description: `A legislative body formed to administer ${legalCode.name}. Emerged from the consolidation of ${originalRules.length} laws.`,
     status: 'active',
     prominence: legalCode.prominence,
     culture: primaryLocation.culture,
-    tags: ['governance', 'legislative', 'political']
+    tags: { governance: true, legislative: true, political: true },
+    coordinates: coords
   };
 
-  const factionId = addEntity(graph, factionPartial);
-  const faction = graph.entities.get(factionId)!;
+  const factionId = await graphView.addEntity(factionPartial);
+  const faction = graphView.getEntity(factionId)!;
 
   // Link faction to legal code
-  addRelationship(graph, 'weaponized_by', factionId, legalCode.id);
+  graphView.createRelationship('weaponized_by', factionId, legalCode.id);
   relationships.push({
     kind: 'weaponized_by',
     src: factionId,
@@ -235,7 +233,7 @@ function createGovernanceFaction(
   });
 
   // Link faction to location
-  addRelationship(graph, 'controls', factionId, primaryLocation.id);
+  graphView.createRelationship('controls', factionId, primaryLocation.id);
   relationships.push({
     kind: 'controls',
     src: factionId,
@@ -305,10 +303,10 @@ export const legalCodeFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
-    const epochLength = graph.config.epochLength || 20;
-    if (graph.tick % epochLength !== 0) {
+    const epochLength = graphView.config.epochLength || 20;
+    if (graphView.tick % epochLength !== 0) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -316,10 +314,6 @@ export const legalCodeFormation: SimulationSystem = {
         description: 'Not epoch end, skipping legal code formation'
       };
     }
-
-    // Create graph view for clustering
-    const targetSelector = new TargetSelector();
-    const graphView = new TemplateGraphView(graph, targetSelector);
 
     // Find rules eligible for clustering
     const allRules = graphView.findEntities({ kind: 'rules' });
@@ -347,17 +341,16 @@ export const legalCodeFormation: SimulationSystem = {
       if (cluster.score < LEGAL_CODE_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the legal code entity
-      const codePartial = createCodeEntity(cluster.entities, graph);
-      const codeId = addEntity(graph, codePartial);
-      const codeEntity = graph.entities.get(codeId)!;
+      const codePartial = createCodeEntity(cluster.entities, graphView);
+      const codeId = await graphView.addEntity(codePartial);
+      const codeEntity = graphView.getEntity(codeId)!;
       codesCreated.push(codeId);
 
       // Get cluster entity IDs
       const clusterIds = cluster.entities.map(e => e.id);
 
       // Transfer relationships from cluster to code
-      transferRelationships(
-        graph,
+      graphView.transferRelationships(
         clusterIds,
         codeId,
         {
@@ -367,7 +360,7 @@ export const legalCodeFormation: SimulationSystem = {
       );
 
       // Create part_of relationships
-      createPartOfRelationships(graph, clusterIds, codeId);
+      graphView.createPartOfRelationships(clusterIds, codeId);
       clusterIds.forEach(id => {
         relationshipsAdded.push({
           kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
@@ -381,8 +374,8 @@ export const legalCodeFormation: SimulationSystem = {
       const shouldCreateGovernance = (params.createGovernance?.value ?? 1) === 1;
 
       if (shouldCreateGovernance) {
-        const { faction, relationships } = createGovernanceFaction(
-          graph,
+        const { faction, relationships } = await createGovernanceFaction(
+          graphView,
           codeEntity,
           cluster.entities
         );
@@ -395,8 +388,7 @@ export const legalCodeFormation: SimulationSystem = {
       }
 
       // Archive original rules
-      archiveEntities(
-        graph,
+      graphView.archiveEntities(
         clusterIds,
         {
           archiveRelationships: false, // Already handled by transfer
@@ -416,9 +408,9 @@ export const legalCodeFormation: SimulationSystem = {
     // Record in history
     if (codesCreated.length > 0) {
       const allCreated = [...codesCreated, ...factionsCreated];
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: `${codesCreated.length} legal codes formed from ${entitiesModified.length} rules` +
           (factionsCreated.length > 0 ? `, ${factionsCreated.length} governance factions established` : ''),

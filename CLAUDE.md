@@ -2,6 +2,11 @@
 
 **Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs or plan files. When working on multi-step tasks, create a bead with `bd create` to track progress rather than writing implementation plans to markdown files. See AGENTS.md for workflow details.
 
+**Bead Guidelines:**
+- **Never create analysis-only tickets.** Analysis is not useful on its own - implementation is. If analysis is needed, do it as part of implementing the ticket, not as a separate task.
+- When closing a ticket, ensure the work is actually done. If implementation remains, create a new implementation ticket before closing.
+- Beads should track actionable work, not research or investigation.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -104,6 +109,27 @@ The system alternates between two phases:
 - Simulation systems (relationship formation, cultural drift, etc.)
 - Domain schema (entity kinds, relationship types)
 - Initial state data
+
+### Framework Primitives
+
+The framework defines a minimal set of entity kinds, relationship kinds, and status values in `apps/lore-weave/lib/types/frameworkPrimitives.ts` that **must be implemented** for the framework to function:
+
+**Entity Kinds:**
+- `era` - Time periods that structure the simulation
+- `occurrence` - Events/happenings during the simulation
+
+**Relationship Kinds:**
+- `supersedes` - Era lineage (newer era supersedes older)
+- `part_of` - Subsumption into meta-entity
+- `active_during` - Temporal association with era
+
+**Status Values:**
+- `active` - Entity is currently active
+- `historical` - Entity has been archived
+- `current` - Era is currently running
+- `future` - Era is queued for the future
+
+**Important:** Domains are free to define additional entity kinds, relationship kinds, and status values beyond these framework primitives. For example, the penguin domain defines occurrence statuses like `'brewing'`, `'waning'`, `'legendary'` in addition to the framework's `'active'` and `'historical'`.
 
 ### Key Files
 
@@ -208,6 +234,87 @@ Framework changes go in `apps/lore-weave/lib/`:
 - Errors should bubble up with clear, actionable messages
 - Fail fast, fail loud - don't silently use defaults when config is wrong
 - Domain misconfiguration should be obvious immediately, not hidden by framework workarounds
+
+## API Discipline - CRITICAL
+
+**This section exists because Claude repeatedly creates backwards-compatibility shims that cause architectural divergence. These rules are non-negotiable.**
+
+### NEVER Do These Things
+
+**1. NEVER add methods that return internal objects:**
+```typescript
+// FORBIDDEN - Creates escape hatch
+getGraph(): Graph { return this.graph; }
+getMapper(): RegionMapper { return this.mapper; }
+getInternal*(): any { ... }
+```
+If code needs functionality, add a specific method to the wrapper class instead.
+
+**2. NEVER add fallback defaults for required config:**
+```typescript
+// FORBIDDEN - Hides misconfiguration
+const culture = config.culture ?? 'default';
+const options = settings || {};
+const value = context?.value ?? fallbackValue;
+```
+If config is required, make it required. If it's missing, throw an error.
+
+**3. NEVER leave deprecated code "for compatibility":**
+```typescript
+// FORBIDDEN - Creates parallel paths
+/** @deprecated Use newMethod instead */
+oldMethod() { return this.newMethod(); }
+```
+Delete deprecated code immediately. Fix all callers in the same PR.
+
+**4. NEVER create multiple ways to do the same thing:**
+```typescript
+// FORBIDDEN - Creates divergent paths
+placeEntity()           // Method 1
+addEntityInRegion()     // Method 2
+deriveCoordinates()     // Method 3
+placeWithCulture()      // Method 4
+```
+Have ONE canonical way. Delete the others.
+
+### ALWAYS Do These Things
+
+**1. ALWAYS throw on missing required config:**
+```typescript
+// CORRECT
+if (!config.culture) {
+  throw new Error('culture is required in PlacementConfig');
+}
+```
+
+**2. ALWAYS delete old APIs when adding new ones:**
+```typescript
+// CORRECT - In the SAME PR:
+// 1. Add new API
+// 2. Update ALL callers to use new API
+// 3. DELETE old API
+// No deprecation period. No compatibility shims.
+```
+
+**3. ALWAYS make the type system enforce correct usage:**
+```typescript
+// CORRECT - Required, not optional
+interface PlacementConfig {
+  cultureId: string;      // NOT string | undefined
+  coordinates: Point;     // NOT Point | undefined
+}
+```
+
+**4. ALWAYS break domain code when framework changes:**
+Domain code should fail to compile or fail at startup when framework APIs change. This is correct behavior - it forces immediate fixes rather than silent divergence.
+
+### Validation
+
+Run `./scripts/check-escape-hatches.sh` before committing. It checks for:
+- Methods returning internal objects
+- Fallback patterns for config
+- @deprecated markers (code should be deleted)
+- Legacy API usage in domain code
 
 ## Debugging Tips
 

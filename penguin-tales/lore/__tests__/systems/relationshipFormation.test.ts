@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { relationshipFormation } from '../../systems/relationshipFormation';
-import { Graph } from '@lore-weave/core/types/engine';
-import { HardState } from '@lore-weave/core/types/worldTypes';
-import * as helpers from '@lore-weave/core/utils/helpers';
+import { Graph } from '@lore-weave/core';
+import { HardState } from '@lore-weave/core';
+import * as helpers from '@lore-weave/core';
 
 describe('relationshipFormation', () => {
   let mockGraph: Graph;
@@ -12,6 +12,10 @@ describe('relationshipFormation', () => {
   beforeEach(() => {
     mockGraph = {
       entities: new Map<string, HardState>(),
+      forEachEntity: function(cb) { this.entities.forEach(cb); },
+      getEntity: function(id) { return this.entities.get(id); },
+      getRelationships: function() { return this.relationships || []; },
+      getEntities: function() { return [...this.entities.values()]; },
       relationships: [],
       tick: 10,
       currentEra: {
@@ -128,7 +132,7 @@ describe('relationshipFormation', () => {
       vi.spyOn(helpers, 'canFormRelationship').mockReturnValue(true);
       vi.spyOn(helpers, 'areRelationshipsCompatible').mockReturnValue(true);
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result.relationshipsAdded.length).toBeGreaterThan(0);
       const friendship = result.relationshipsAdded.find(r => r.kind === 'follower_of' || r.kind === 'rival_of');
@@ -139,7 +143,7 @@ describe('relationshipFormation', () => {
       // Already friends
       mockGraph.relationships.push({ kind: 'follower_of', src: 'npc-1', dst: 'npc-2' });
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       const duplicateFriendship = result.relationshipsAdded.find(
         r => (r.src === 'npc-1' && r.dst === 'npc-2' && r.kind === 'follower_of')
@@ -155,7 +159,7 @@ describe('relationshipFormation', () => {
       // canFormRelationship should return false due to cooldown
       vi.spyOn(helpers, 'canFormRelationship').mockReturnValue(false);
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       const relationship = result.relationshipsAdded.find(
         r => (r.src === 'npc-1' && r.dst === 'npc-2') || (r.src === 'npc-2' && r.dst === 'npc-1')
@@ -188,7 +192,7 @@ describe('relationshipFormation', () => {
         mockGraph.relationships.push({ kind: 'member_of', src: `npc-${i}`, dst: 'faction-1' });
       }
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       const friendships = result.relationshipsAdded.filter(r => r.kind === 'follower_of').length;
       const rivalries = result.relationshipsAdded.filter(r => r.kind === 'rival_of').length;
@@ -295,7 +299,7 @@ describe('relationshipFormation', () => {
       vi.spyOn(helpers, 'canFormRelationship').mockReturnValue(true);
       vi.spyOn(helpers, 'areRelationshipsCompatible').mockReturnValue(true);
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       const conflict = result.relationshipsAdded.find(r => r.kind === 'enemy_of');
       expect(conflict).toBeDefined();
@@ -381,7 +385,7 @@ describe('relationshipFormation', () => {
       // Mock to always fail throttle check
       vi.spyOn(helpers, 'rollProbability').mockReturnValueOnce(false);
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       // Should return early with no relationships
       expect(result.relationshipsAdded.length).toBe(0);
@@ -390,7 +394,7 @@ describe('relationshipFormation', () => {
 
   describe('system result structure', () => {
     it('should return valid SystemResult', () => {
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toHaveProperty('relationshipsAdded');
       expect(result).toHaveProperty('description');
@@ -399,7 +403,7 @@ describe('relationshipFormation', () => {
     });
 
     it('should provide meaningful description', () => {
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result.description.length).toBeGreaterThan(0);
     });
@@ -408,7 +412,7 @@ describe('relationshipFormation', () => {
       mockGraph.entities.clear();
       mockGraph.relationships = [];
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result.relationshipsAdded).toEqual([]);
     });
@@ -454,7 +458,7 @@ describe('relationshipFormation', () => {
       vi.spyOn(helpers, 'canFormRelationship').mockReturnValue(true);
       vi.spyOn(helpers, 'areRelationshipsCompatible').mockReturnValue(false);
 
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       const friendship = result.relationshipsAdded.find(
         r => (r.src === 'npc-1' && r.dst === 'npc-2' && r.kind === 'follower_of')
@@ -520,7 +524,7 @@ describe('relationshipFormation', () => {
       vi.spyOn(helpers, 'canFormRelationship').mockReturnValue(true);
       const recordSpy = vi.spyOn(helpers, 'recordRelationshipFormation');
 
-      relationshipFormation.apply(mockGraph, mockModifier);
+      relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       // Should record cooldowns if relationships were formed
       if (recordSpy.mock.calls.length > 0) {
@@ -563,7 +567,7 @@ describe('relationshipFormation', () => {
       mockGraph.entities.set('npc-2', marginalNpc);
 
       // Both should be able to form relationships
-      const result = relationshipFormation.apply(mockGraph, mockModifier);
+      const result = relationshipFormation.apply({ getGraph: () => mockGraph, findEntities: (c) => [...mockGraph.entities?.values?.() || []].filter(e => !c || e.kind === c.kind), getRelatedEntities: () => [] } as any, mockModifier);
 
       expect(result).toBeDefined();
     });

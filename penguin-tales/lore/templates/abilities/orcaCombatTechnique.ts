@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Orca Combat Technique Template
@@ -88,18 +88,6 @@ export const orcaCombatTechnique: GrowthTemplate = {
       };
     }
 
-    // Orca combat technique names
-    const techniqueNames = [
-      'Crushing Dive',
-      'Sonic Stun',
-      'Pack Coordination',
-      'Echolocation Strike',
-      'Tail Slam',
-      'Ice Breaker Rush',
-      'Deep Ambush',
-      'Thermal Shock'
-    ];
-
     // Find existing combat techniques to establish lineage
     const existingCombat = graphView.findEntities({ kind: 'abilities', subtype: 'combat' })
       .filter(c => c.status === 'active');
@@ -123,18 +111,25 @@ export const orcaCombatTechnique: GrowthTemplate = {
       }
     }
 
-    const techniqueName = pickRandom(techniqueNames);
     const prominence = Math.random() < 0.4 ? 'renowned' : 'recognized';
+
+    // Derive coordinates for ability in conceptual space (near the orca practitioner)
+    const orcaPlacement = graphView.deriveCoordinatesWithCulture(
+      'orca',  // Orca combat techniques belong to orca culture
+      'abilities',
+      [orca]
+    );
+    const abilityCoords = orcaPlacement?.coordinates;
 
     const technique: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'combat',
-      name: techniqueName,
       description: `A devastating combat technique used by orca raiders, witnessed when ${orca.name} attacked`,
       status: 'active',
       prominence,
       culture: 'orca',  // Orca combat techniques belong to orca culture
-      tags: ['combat', 'orca', 'offensive', 'external']
+      tags: { combat: true, orca: true, offensive: true, external: true },
+      coordinates: abilityCoords
     };
 
     const relationships: Relationship[] = [
@@ -184,7 +179,7 @@ export const orcaCombatTechnique: GrowthTemplate = {
     return {
       entities: [technique],
       relationships,
-      description: `Orcas demonstrate the fearsome technique: ${techniqueName}${lineageDesc}`
+      description: `Orcas demonstrate a fearsome combat technique${lineageDesc}`
     };
   }
 };

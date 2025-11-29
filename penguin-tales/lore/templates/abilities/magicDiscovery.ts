@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Magic Discovery Template
@@ -144,7 +144,6 @@ export const magicDiscovery: GrowthTemplate = {
       }
     }
 
-    const magicName = `${pickRandom(['Frost', 'Ice', 'Glow'])} ${pickRandom(['Ward', 'Sight', 'Bond'])}`;
     const relationships: Relationship[] = [
       { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' }
     ];
@@ -168,21 +167,42 @@ export const magicDiscovery: GrowthTemplate = {
     const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
     const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
 
+    // Derive conceptual coordinates - place magic near related magic/anomaly in concept space
+    const referenceEntities = [hero];
+    if (relatedMagic) referenceEntities.push(relatedMagic);
+    if (anomaly) referenceEntities.push(anomaly);
+
+    const cultureId = hero.culture || anomaly?.culture || 'world';
+    const magicPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'abilities',
+      referenceEntities
+    );
+
+    if (!magicPlacement) {
+      throw new Error(
+        `magic_discovery: Failed to derive coordinates for magic discovered by ${hero.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
+    const conceptualCoords = magicPlacement.coordinates;
+
     const magicAbility: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'magic',
-      name: magicName,
       description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
       status: 'emergent',
       prominence: 'recognized',
       culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
-      tags: ['magic', 'mystical']
+      tags: { magic: true, mystical: true },
+      coordinates: conceptualCoords
     };
 
     return {
       entities: [magicAbility],
       relationships,
-      description: `${hero.name} discovers ${magicName}${locationDesc}${lineageDesc}`
+      description: `${hero.name} discovers a mystical ability${locationDesc}${lineageDesc}`
     };
   }
 };

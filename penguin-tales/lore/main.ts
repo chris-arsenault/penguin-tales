@@ -19,14 +19,14 @@ import {
   applyParameterOverrides,
   relationshipCulling,
   NameForgeService
-} from '@lore-weave/core/index.js';
+} from '@lore-weave/core';
 
 import type {
   EngineConfig,
   HardState,
   DistributionTargets,
   NameForgeConfig
-} from '@lore-weave/core/index.js';
+} from '@lore-weave/core';
 
 // Domain imports (penguin-specific)
 import {
@@ -40,6 +40,12 @@ import {
 } from './index.js';
 
 import { penguinLoreProvider } from './config/loreProvider.js';
+import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
+import { penguinFeedbackLoops } from './config/feedbackLoops.js';
+import { penguinTagRegistry } from './config/tagRegistry.js';
+import { penguinCultures } from './config/cultures.js';
+import { penguinSemanticConfig } from './config/semanticAxes.js';
+import type { CoordinateContextConfig } from '@lore-weave/core';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -161,7 +167,8 @@ const imageGenConfig = {
   apiKey: sanitize(process.env.OPENAI_API_KEY),
   model: sanitize(process.env.IMAGE_MODEL) || 'dall-e-3',
   size: (sanitize(process.env.IMAGE_SIZE) || '1024x1024') as '1024x1024' | '1792x1024' | '1024x1792',
-  quality: (sanitize(process.env.IMAGE_QUALITY) || 'standard') as 'standard' | 'hd'
+  quality: (sanitize(process.env.IMAGE_QUALITY) || 'standard') as 'standard' | 'hd',
+  promptConfig: penguinDomain.imageGenerationConfig
 };
 const imageGenerationService = imageGenEnabled
   ? new ImageGenerationService(imageGenConfig)
@@ -240,7 +247,20 @@ const config: EngineConfig = {
   },
 
   // Pass scale factor to engine for internal calculations
-  scaleFactor: SCALE_FACTOR
+  scaleFactor: SCALE_FACTOR,
+
+  // Feedback loops for homeostatic regulation (penguin-specific)
+  feedbackLoops: penguinFeedbackLoops,
+
+  // Tag registry for tag health analysis (penguin-specific)
+  tagRegistry: penguinTagRegistry,
+
+  // Coordinate context configuration (culture-first placement system)
+  coordinateContextConfig: {
+    kindRegionConfig: penguinKindRegionConfig,
+    semanticConfig: penguinSemanticConfig,
+    cultures: penguinCultures
+  } as CoordinateContextConfig
 
   // Meta-entity formation is now handled by SimulationSystems:
   // magicSchoolFormation, legalCodeFormation, combatTechniqueFormation
@@ -264,7 +284,7 @@ async function generateWorld() {
   const engine = new WorldEngine(config, initialState, enrichmentService, imageGenerationService);
 
   console.time('Generation Time');
-  const finalGraph = engine.run();
+  const finalGraph = await engine.run();
   console.timeEnd('Generation Time');
   await engine.finalizeEnrichments();
 
@@ -399,9 +419,77 @@ async function generateWorld() {
     console.log(`📁 Output directory: ${outputDir}`);
   }
 
-  // Add validation results to export
+  // Extract UI schema from domain for webui consumption
+  const uiSchema = {
+    worldName: penguinDomain.name,
+    worldIcon: penguinDomain.uiConfig?.worldIcon ?? '🌍',
+    entityKinds: penguinDomain.entityKinds.map(ek => ({
+      kind: ek.kind,
+      displayName: ek.style?.displayName ?? ek.kind.charAt(0).toUpperCase() + ek.kind.slice(1),
+      color: ek.style?.color ?? '#999',
+      shape: ek.style?.shape ?? 'ellipse',
+      subtypes: ek.subtypes,
+      statusValues: ek.statusValues
+    })),
+    relationshipKinds: penguinDomain.relationshipKinds.map(rk => ({
+      kind: rk.kind,
+      description: rk.description,
+      srcKinds: rk.srcKinds,
+      dstKinds: rk.dstKinds,
+      category: rk.category ?? 'social'
+    })),
+    prominenceLevels: penguinDomain.uiConfig?.prominenceLevels ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
+    cultures: penguinDomain.cultures.map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description
+    })),
+    // Legacy global regions (for backward compatibility)
+    regions: penguinRegionConfig.regions.map(r => ({
+      id: r.id,
+      label: r.label,
+      description: r.description,
+      bounds: r.bounds,
+      zRange: r.zRange,
+      parentRegion: r.parentRegion,
+      metadata: r.metadata
+    })),
+    coordinateBounds: { min: 0, max: 100 },
+    // Per-entity-kind map configurations
+    perKindMaps: Object.fromEntries(
+      Object.entries(penguinKindMaps).map(([kind, config]) => [
+        kind,
+        {
+          entityKind: config.entityKind,
+          name: config.name,
+          description: config.description,
+          bounds: { min: 0, max: 100 },  // Flatten to simple bounds for UI
+          hasZAxis: config.hasZAxis,
+          zAxisLabel: config.zAxisLabel
+        }
+      ])
+    ),
+    // Per-entity-kind region lists
+    perKindRegions: Object.fromEntries(
+      Object.entries(penguinKindMaps).map(([kind, config]) => [
+        kind,
+        (config.seedRegions ?? []).map(r => ({
+          id: r.id,
+          label: r.label,
+          description: r.description,
+          bounds: r.bounds,
+          zRange: r.zRange,
+          parentRegion: r.parentRegion,
+          metadata: r.metadata
+        }))
+      ])
+    )
+  };
+
+  // Add validation results and UI schema to export
   const exportData = {
     ...worldState,
+    uiSchema,
     validation: {
       totalChecks: validationReport.totalChecks,
       passed: validationReport.passed,

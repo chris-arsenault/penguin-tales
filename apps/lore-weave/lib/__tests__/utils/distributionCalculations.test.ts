@@ -6,9 +6,9 @@ import {
   calculateRelationshipDistribution,
   calculateConnectivityMetrics,
   calculateSubtypeDistribution
-} from '../../utils/distributionCalculations';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship, Prominence } from '../../types/worldTypes';
+} from '../../statistics/distributionCalculations';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship, Prominence } from '../../core/worldTypes';
 
 describe('distributionCalculations', () => {
   const createEntity = (id: string, kind: string, subtype: string, prominence: string): HardState => ({
@@ -20,11 +20,52 @@ describe('distributionCalculations', () => {
     status: 'active',
     prominence: prominence as any,
     culture: 'world',
-    tags: [],
+    tags: {},
     links: [],
     createdAt: 0,
     updatedAt: 0
   });
+
+  // Helper to create mock graph with new interface
+  function createMockGraph(
+    entities: Map<string, HardState> = new Map(),
+    relationships: Relationship[] = []
+  ): Graph {
+    return {
+      tick: 0,
+      currentEra: {} as any,
+      pressures: new Map(),
+      history: [],
+      config: {} as any,
+      relationshipCooldowns: new Map(),
+      loreRecords: [],
+      discoveryState: {
+        currentThreshold: 1,
+        lastDiscoveryTick: 0,
+        discoveriesThisEpoch: 0
+      },
+      growthMetrics: {
+        relationshipsPerTick: [],
+        averageGrowthRate: 0
+      },
+      // New Graph interface methods
+      getEntity(id: string) { return entities.get(id); },
+      hasEntity(id: string) { return entities.has(id); },
+      getEntityCount() { return entities.size; },
+      getEntities() { return Array.from(entities.values()); },
+      getRelationships() { return [...relationships]; },
+      getRelationshipCount() { return relationships.length; },
+      findRelationships(predicate: (r: Relationship) => boolean) { return relationships.filter(predicate); },
+      updateEntity() { return false; },
+      addRelationship() {},
+      _loadEntity(id: string, entity: HardState) { entities.set(id, entity); },
+      _loadRelationship(rel: Relationship) { relationships.push(rel); },
+      _setRelationships(rels: Relationship[]) { relationships.length = 0; relationships.push(...rels); },
+      // Keep backward compatibility
+      get entities() { return entities; },
+      get relationships() { return relationships; }
+    } as Graph;
+  }
 
   describe('calculateEntityKindCounts', () => {
     it('should count entities by kind', () => {
@@ -171,32 +212,13 @@ describe('distributionCalculations', () => {
 
   describe('calculateRelationshipDistribution', () => {
     it('should calculate relationship distribution and diversity', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [
-          { kind: 'allied_with', src: 'e1', dst: 'e2' },
-          { kind: 'allied_with', src: 'e2', dst: 'e3' },
-          { kind: 'member_of', src: 'e1', dst: 'e3' },
-          { kind: 'located_at', src: 'e1', dst: 'e4' },
-          { kind: 'located_at', src: 'e2', dst: 'e4' }
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph(new Map(), [
+        { kind: 'allied_with', src: 'e1', dst: 'e2' },
+        { kind: 'allied_with', src: 'e2', dst: 'e3' },
+        { kind: 'member_of', src: 'e1', dst: 'e3' },
+        { kind: 'located_at', src: 'e1', dst: 'e4' },
+        { kind: 'located_at', src: 'e2', dst: 'e4' }
+      ]);
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 
@@ -214,26 +236,7 @@ describe('distributionCalculations', () => {
     });
 
     it('should handle empty graph', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph();
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 
@@ -243,31 +246,12 @@ describe('distributionCalculations', () => {
     });
 
     it('should calculate max diversity for uniform distribution', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [
-          { kind: 'type1', src: 'e1', dst: 'e2' },
-          { kind: 'type2', src: 'e2', dst: 'e3' },
-          { kind: 'type3', src: 'e3', dst: 'e4' },
-          { kind: 'type4', src: 'e4', dst: 'e1' }
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph(new Map(), [
+        { kind: 'type1', src: 'e1', dst: 'e2' },
+        { kind: 'type2', src: 'e2', dst: 'e3' },
+        { kind: 'type3', src: 'e3', dst: 'e4' },
+        { kind: 'type4', src: 'e4', dst: 'e1' }
+      ]);
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 
@@ -276,30 +260,11 @@ describe('distributionCalculations', () => {
     });
 
     it('should have zero diversity for single relationship type', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [
-          { kind: 'same_type', src: 'e1', dst: 'e2' },
-          { kind: 'same_type', src: 'e2', dst: 'e3' },
-          { kind: 'same_type', src: 'e3', dst: 'e4' }
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph(new Map(), [
+        { kind: 'same_type', src: 'e1', dst: 'e2' },
+        { kind: 'same_type', src: 'e2', dst: 'e3' },
+        { kind: 'same_type', src: 'e3', dst: 'e4' }
+      ]);
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 
@@ -307,37 +272,18 @@ describe('distributionCalculations', () => {
     });
 
     it('should handle diversity with very small ratios', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [
-          { kind: 'type1', src: 'e1', dst: 'e2' },
-          { kind: 'type1', src: 'e2', dst: 'e3' },
-          { kind: 'type1', src: 'e3', dst: 'e4' },
-          { kind: 'type1', src: 'e4', dst: 'e5' },
-          { kind: 'type1', src: 'e5', dst: 'e6' },
-          { kind: 'type1', src: 'e6', dst: 'e7' },
-          { kind: 'type1', src: 'e7', dst: 'e8' },
-          { kind: 'type1', src: 'e8', dst: 'e9' },
-          { kind: 'type1', src: 'e9', dst: 'e10' },
-          { kind: 'type2', src: 'e10', dst: 'e1' } // 10% vs 90%
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph(new Map(), [
+        { kind: 'type1', src: 'e1', dst: 'e2' },
+        { kind: 'type1', src: 'e2', dst: 'e3' },
+        { kind: 'type1', src: 'e3', dst: 'e4' },
+        { kind: 'type1', src: 'e4', dst: 'e5' },
+        { kind: 'type1', src: 'e5', dst: 'e6' },
+        { kind: 'type1', src: 'e6', dst: 'e7' },
+        { kind: 'type1', src: 'e7', dst: 'e8' },
+        { kind: 'type1', src: 'e8', dst: 'e9' },
+        { kind: 'type1', src: 'e9', dst: 'e10' },
+        { kind: 'type2', src: 'e10', dst: 'e1' } // 10% vs 90%
+      ]);
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 
@@ -349,37 +295,21 @@ describe('distributionCalculations', () => {
 
   describe('calculateConnectivityMetrics', () => {
     it('should calculate connectivity metrics', () => {
-      const mockGraph: Graph = {
-        entities: new Map([
+      const mockGraph = createMockGraph(
+        new Map([
           ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
           ['e2', createEntity('e2', 'npc', 'hero', 'renowned')],
           ['e3', createEntity('e3', 'faction', 'guild', 'recognized')],
           ['e4', createEntity('e4', 'location', 'colony', 'marginal')],
           ['e5', createEntity('e5', 'npc', 'outlaw', 'marginal')] // isolated
         ]),
-        relationships: [
+        [
           { kind: 'allied_with', src: 'e1', dst: 'e2' },
           { kind: 'member_of', src: 'e1', dst: 'e3' },
           { kind: 'located_at', src: 'e1', dst: 'e4' },
           { kind: 'allied_with', src: 'e2', dst: 'e3' }
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+        ]
+      );
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -390,34 +320,18 @@ describe('distributionCalculations', () => {
     });
 
     it('should handle fully connected graph', () => {
-      const mockGraph: Graph = {
-        entities: new Map([
+      const mockGraph = createMockGraph(
+        new Map([
           ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
           ['e2', createEntity('e2', 'npc', 'hero', 'renowned')],
           ['e3', createEntity('e3', 'faction', 'guild', 'recognized')]
         ]),
-        relationships: [
+        [
           { kind: 'allied_with', src: 'e1', dst: 'e2' },
           { kind: 'allied_with', src: 'e1', dst: 'e3' },
           { kind: 'allied_with', src: 'e2', dst: 'e3' }
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+        ]
+      );
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -428,30 +342,14 @@ describe('distributionCalculations', () => {
     });
 
     it('should handle graph with all isolated nodes', () => {
-      const mockGraph: Graph = {
-        entities: new Map([
+      const mockGraph = createMockGraph(
+        new Map([
           ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
           ['e2', createEntity('e2', 'npc', 'hero', 'renowned')],
           ['e3', createEntity('e3', 'faction', 'guild', 'recognized')]
         ]),
-        relationships: [],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+        []
+      );
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -462,26 +360,7 @@ describe('distributionCalculations', () => {
     });
 
     it('should handle empty graph', () => {
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships: [],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph();
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -591,32 +470,16 @@ describe('distributionCalculations', () => {
     });
 
     it('calculateConnectivityMetrics should count bidirectional connections correctly', () => {
-      const mockGraph: Graph = {
-        entities: new Map([
+      const mockGraph = createMockGraph(
+        new Map([
           ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
           ['e2', createEntity('e2', 'npc', 'hero', 'renowned')]
         ]),
-        relationships: [
+        [
           { kind: 'allied_with', src: 'e1', dst: 'e2' },
           { kind: 'allied_with', src: 'e2', dst: 'e1' } // Bidirectional
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+        ]
+      );
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -628,31 +491,15 @@ describe('distributionCalculations', () => {
     });
 
     it('calculateConnectivityMetrics should handle self-loops', () => {
-      const mockGraph: Graph = {
-        entities: new Map([
+      const mockGraph = createMockGraph(
+        new Map([
           ['e1', createEntity('e1', 'npc', 'merchant', 'recognized')],
           ['e2', createEntity('e2', 'npc', 'hero', 'renowned')]
         ]),
-        relationships: [
+        [
           { kind: 'self_reference', src: 'e1', dst: 'e1' } // Self-loop
-        ],
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+        ]
+      );
 
       const metrics = calculateConnectivityMetrics(mockGraph);
 
@@ -673,26 +520,7 @@ describe('distributionCalculations', () => {
         });
       }
 
-      const mockGraph: Graph = {
-        entities: new Map(),
-        relationships,
-        tick: 0,
-        currentEra: {} as any,
-        pressures: new Map(),
-        history: [],
-        config: {} as any,
-        relationshipCooldowns: new Map(),
-        loreRecords: [],
-        discoveryState: {
-          currentThreshold: 1,
-          lastDiscoveryTick: 0,
-          discoveriesThisEpoch: 0
-        },
-        growthMetrics: {
-          relationshipsPerTick: [],
-          averageGrowthRate: 0
-        }
-      };
+      const mockGraph = createMockGraph(new Map(), relationships);
 
       const distribution = calculateRelationshipDistribution(mockGraph);
 

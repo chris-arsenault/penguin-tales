@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, pickMultiple } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
 
 export const orcaRaiderArrival: GrowthTemplate = {
   id: 'orca_raider_arrival',
@@ -106,34 +106,60 @@ export const orcaRaiderArrival: GrowthTemplate = {
 
     // Create 1-2 orca raiders
     const raiderCount = 1 + Math.floor(Math.random() * 2); // 1-2
-    const orcas: Partial<HardState>[] = [];
+    const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    // Orca name patterns
-    const orcaNames = [
-      'Blackfin', 'Razortooth', 'Deepdive', 'Sharpfin', 'Coldwater',
-      'Riptide', 'Icebane', 'Frostbite', 'Shadowcrest', 'Tidehunter'
-    ];
+    // Find existing orcas to establish lineage
+    const existingOrcas = graphView.findEntities({ kind: 'npc', subtype: 'orca' });
+    let relatedOrca: HardState | undefined;
+    if (existingOrcas.length > 0 && Math.random() < 0.5) {
+      relatedOrca = pickRandom(existingOrcas);
+    }
+
+    // Orca tags (semantic meaning derived from placement, not placement from tags)
+    const orcaTags = { orca: true, raider: true, 'external-threat': true, predator: true, underwater: true };
 
     for (let i = 0; i < raiderCount; i++) {
       const prominence = Math.random() < 0.1 ? 'renowned'
                        : Math.random() < 0.3 ? 'recognized'
                        : 'marginal';
 
-      const orcaName = pickRandom(orcaNames);
+      // Derive coordinates spatially using orca culture
+      const placementResult = graphView.deriveCoordinatesWithCulture(
+        'orca',  // Orca raiders have their own culture
+        'npc',
+        [colony]
+      );
+      const baseCoords = placementResult?.coordinates;
 
-      const orca: Partial<HardState> = {
+      // Adjust z to underwater (10-30) instead of surface (70)
+      const orcaCoords = baseCoords ? {
+        x: baseCoords.x,
+        y: baseCoords.y,
+        z: 10 + Math.random() * 20  // Underwater: 10-30
+      } : { x: 50, y: 50, z: 20 };
+
+      entities.push({
         kind: 'npc',
         subtype: 'orca',
-        name: orcaName,
-        description: `A fearsome orca raider threatening ${colony.name}`,
+        description: `A fearsome orca raider threatening ${colony.name} from the depths`,
         status: 'alive',
         prominence,
-        culture: 'orca',  // Orcas have their own culture
-        tags: ['orca', 'raider', 'external-threat', 'predator']
-      };
+        culture: 'orca',
+        tags: orcaTags,
+        coordinates: orcaCoords
+      });
 
-      orcas.push(orca);
+      // Add lineage relationship to related orca
+      if (relatedOrca && i === 0) {
+        relationships.push({
+          kind: 'inspired_by',
+          src: 'will-be-assigned-0',
+          dst: relatedOrca.id,
+          distance: 0.2 + Math.random() * 0.2,  // Close lineage (same pod)
+          strength: 0.7
+        });
+      }
     }
 
     // Find heroes and leaders to oppose the orcas
@@ -143,7 +169,6 @@ export const orcaRaiderArrival: GrowthTemplate = {
 
     if (defenders.length > 0) {
       const defendingPenguins = pickMultiple(defenders, Math.min(raiderCount + 1, defenders.length));
-
       for (let i = 0; i < raiderCount && i < defendingPenguins.length; i++) {
         relationships.push({
           kind: 'enemy_of',
@@ -153,21 +178,19 @@ export const orcaRaiderArrival: GrowthTemplate = {
       }
     }
 
-    // Orcas might also be enemies of factions in the colony
+    // Orcas might also be enemies of factions
     const factions = graphView.findEntities({ kind: 'faction' });
     if (factions.length > 0 && Math.random() < 0.5) {
-      const targetFaction = pickRandom(factions);
-      const randomOrca = Math.floor(Math.random() * raiderCount);
       relationships.push({
         kind: 'enemy_of',
-        src: `will-be-assigned-${randomOrca}`,
-        dst: targetFaction.id
+        src: 'will-be-assigned-0',
+        dst: pickRandom(factions).id
       });
     }
 
     // Give orcas combat abilities
     const combatAbilities = graphView.findEntities({ kind: 'abilities' })
-      .filter(a => a.tags.includes('combat') || a.tags.includes('offensive'));
+      .filter(a => hasTag(a.tags, 'combat') || hasTag(a.tags, 'offensive'));
 
     if (combatAbilities.length > 0) {
       const ability = pickRandom(combatAbilities);
@@ -182,12 +205,13 @@ export const orcaRaiderArrival: GrowthTemplate = {
       }
     }
 
+    const lineageDesc = relatedOrca ? ` (from ${relatedOrca.name}'s pod)` : '';
     const description = raiderCount === 1
-      ? `An orca raider appears near ${colony.name}, threatening the colony`
-      : `A pod of ${raiderCount} orca raiders threatens ${colony.name}`;
+      ? `An orca raider surfaces near ${colony.name}, threatening the colony from the depths${lineageDesc}`
+      : `A pod of ${raiderCount} orca raiders threatens ${colony.name} from the underwater passages${lineageDesc}`;
 
     return {
-      entities: orcas,
+      entities,
       relationships,
       description
     };

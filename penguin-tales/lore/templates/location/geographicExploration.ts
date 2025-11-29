@@ -5,15 +5,15 @@
  * Creates general-purpose locations when no specific pressure drives discovery.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   generateExplorationTheme,
   shouldDiscoverLocation,
   findNearbyLocations
-} from '@lore-weave/core/utils/emergentDiscovery';
+} from '../../utils/emergentDiscovery';
 
 export const geographicExploration: GrowthTemplate = {
   id: 'geographic_exploration',
@@ -142,7 +142,7 @@ export const geographicExploration: GrowthTemplate = {
     }
 
     // PROCEDURALLY GENERATE neutral theme based on era
-    const theme = generateExplorationTheme(graphView.getInternalGraph());
+    const theme = generateExplorationTheme(graphView);
     if (!theme) {
       return {
         entities: [],
@@ -156,6 +156,36 @@ export const geographicExploration: GrowthTemplate = {
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
+    // Convert theme tags array to KVP
+    const themeTags = Array.isArray(theme.tags)
+      ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
+      : theme.tags;
+
+    // Find nearby locations for coordinate derivation
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    const referenceEntities: HardState[] = [discoverer];
+    if (nearbyLocations.length > 0) {
+      referenceEntities.push(nearbyLocations[0]);
+    }
+
+    // Derive coordinates from discoverer and nearby locations
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'location',
+      referenceEntities
+    );
+
+    if (!locationPlacement) {
+      return {
+        entities: [],
+        relationships: [],
+        description: 'Unable to place discovered location in world'
+      };
+    }
+
+    const coords = locationPlacement.coordinates;
+
     // Create the discovered location (name will be auto-generated)
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -164,7 +194,8 @@ export const geographicExploration: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'marginal',
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: theme.tags,
+      tags: themeTags,
+      coordinates: coords,
       links: []
     };
 
@@ -183,8 +214,7 @@ export const geographicExploration: GrowthTemplate = {
       dst: discoverer.id
     });
 
-    // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView.getInternalGraph());
+    // Make adjacent to nearby locations (reuse nearbyLocations from coordinate derivation)
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

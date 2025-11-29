@@ -1,4 +1,4 @@
-import { Era } from '@lore-weave/core/types/engine';
+import { Era } from '@lore-weave/core';
 
 export const penguinEras: Era[] = [
   {

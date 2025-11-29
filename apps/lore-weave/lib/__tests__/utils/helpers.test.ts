@@ -34,15 +34,16 @@ import {
   getFactionRelationship,
   isLineageRelationship,
   getExpectedDistanceRange
-} from '../../utils/helpers';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+} from '../../utils';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
-// Helper function to create a mock graph
+// Helper function to create a mock graph with the new Graph API methods
 function createMockGraph(): Graph {
+  const _entities = new Map<string, HardState>();
+  let _relationships: Relationship[] = [];
+
   return {
-    entities: new Map<string, HardState>(),
-    relationships: [],
     tick: 10,
     currentEra: {
       id: 'test-era',
@@ -56,8 +57,6 @@ function createMockGraph(): Graph {
     relationshipCooldowns: new Map(),
     loreRecords: [],
     discoveryState: {
-      discoveredLocations: new Set(),
-      discoveredAbilities: new Set(),
       currentThreshold: 1.0,
       lastDiscoveryTick: 0,
       discoveriesThisEpoch: 0
@@ -72,7 +71,42 @@ function createMockGraph(): Graph {
         initialState: [],
         nameGenerator: { generate: () => 'Test Name' },
         actionDomains: [],
-        metaEntityConfigs: []
+        metaEntityConfigs: [],
+        // Methods for lineage relationship checking
+        isLineageRelationship: (kind: string) => ['derived_from', 'split_from', 'adjacent_to'].includes(kind),
+        getExpectedDistanceRange: (kind: string) => {
+          if (['derived_from', 'split_from', 'adjacent_to'].includes(kind)) {
+            return { min: 0.1, max: 0.9 };
+          }
+          return undefined;
+        },
+        // Method for relationship conflict checking
+        checkRelationshipConflict: (existingKinds: string[], newKind: string) => {
+          // enemy_of conflicts with lover_of and vice versa
+          if (newKind === 'enemy_of' && existingKinds.includes('lover_of')) return true;
+          if (newKind === 'lover_of' && existingKinds.includes('enemy_of')) return true;
+          return false;
+        },
+        // Method for relationship strength lookup
+        getRelationshipStrength: (kind: string) => {
+          const strengthMap: Record<string, number> = {
+            member_of: 1.0,
+            leader_of: 1.0,
+            friend_of: 0.7,
+            enemy_of: 0.8
+          };
+          return strengthMap[kind] ?? 0.5;
+        },
+        // Method for relationship category lookup
+        getRelationshipCategory: (kind: string) => {
+          const categoryMap: Record<string, string> = {
+            member_of: 'membership',
+            leader_of: 'membership',
+            friend_of: 'social',
+            enemy_of: 'conflict'
+          };
+          return categoryMap[kind] ?? 'social';
+        }
       },
       targetEntitiesPerKind: 30,
       epochLength: 20,
@@ -87,6 +121,152 @@ function createMockGraph(): Graph {
     growthMetrics: {
       relationshipsPerTick: [],
       averageGrowthRate: 0
+    },
+
+    // Entity read methods
+    getEntity(id: string): HardState | undefined {
+      const entity = _entities.get(id);
+      return entity ? { ...entity, tags: { ...entity.tags }, links: [...entity.links] } : undefined;
+    },
+    hasEntity(id: string): boolean {
+      return _entities.has(id);
+    },
+    getEntityCount(): number {
+      return _entities.size;
+    },
+    getEntities(): HardState[] {
+      return Array.from(_entities.values()).map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
+    },
+    getEntityIds(): string[] {
+      return Array.from(_entities.keys());
+    },
+    forEachEntity(callback: (entity: HardState, id: string) => void): void {
+      _entities.forEach((entity, id) => {
+        callback({ ...entity, tags: { ...entity.tags }, links: [...entity.links] }, id);
+      });
+    },
+    findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
+      return Array.from(_entities.values())
+        .filter(e => {
+          if (criteria.kind && e.kind !== criteria.kind) return false;
+          if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+          if (criteria.status && e.status !== criteria.status) return false;
+          if (criteria.prominence && e.prominence !== criteria.prominence) return false;
+          if (criteria.culture && e.culture !== criteria.culture) return false;
+          if (criteria.tag && !(criteria.tag in e.tags)) return false;
+          if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
+          return true;
+        })
+        .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
+    },
+    getEntitiesByKind(kind: string): HardState[] {
+      return Array.from(_entities.values())
+        .filter(e => e.kind === kind)
+        .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
+    },
+    getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+      const connectedIds = new Set<string>();
+      _relationships.forEach(r => {
+        if (relationKind && r.kind !== relationKind) return;
+        if (r.src === entityId) connectedIds.add(r.dst);
+        if (r.dst === entityId) connectedIds.add(r.src);
+      });
+      return Array.from(connectedIds)
+        .map(id => _entities.get(id))
+        .filter((e): e is HardState => e !== undefined)
+        .map(e => ({ ...e, tags: { ...e.tags }, links: [...e.links] }));
+    },
+
+    // Entity mutation methods
+    createEntity(settings: any): string {
+      const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const tags = settings.tags || {};
+      const name = settings.name || `Test ${settings.kind}`;
+      tags.name = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const entity: HardState = {
+        id, kind: settings.kind, subtype: settings.subtype, name,
+        description: settings.description || '', status: settings.status || 'active',
+        prominence: settings.prominence || 'marginal', culture: settings.culture || 'world',
+        tags, links: [], coordinates: settings.coordinates, createdAt: 10, updatedAt: 10
+      };
+      _entities.set(id, entity);
+      return id;
+    },
+    updateEntity(id: string, changes: Partial<HardState>): boolean {
+      const entity = _entities.get(id);
+      if (!entity) return false;
+      Object.assign(entity, changes);
+      entity.updatedAt = this.tick;
+      return true;
+    },
+    deleteEntity(id: string): boolean {
+      return _entities.delete(id);
+    },
+    _loadEntity(id: string, entity: HardState): void {
+      _entities.set(id, entity);
+    },
+
+    // Relationship read methods
+    getRelationships(): Relationship[] {
+      return [..._relationships];
+    },
+    getRelationshipCount(): number {
+      return _relationships.length;
+    },
+    findRelationships(criteria: { kind?: string; src?: string; dst?: string; category?: string; minStrength?: number }): Relationship[] {
+      return _relationships.filter(r => {
+        if (criteria.kind && r.kind !== criteria.kind) return false;
+        if (criteria.src && r.src !== criteria.src) return false;
+        if (criteria.dst && r.dst !== criteria.dst) return false;
+        if (criteria.minStrength !== undefined && (r.strength ?? 0.5) < criteria.minStrength) return false;
+        return true;
+      });
+    },
+    getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[] {
+      return _relationships.filter(r => {
+        if (direction === 'src') return r.src === entityId;
+        if (direction === 'dst') return r.dst === entityId;
+        return r.src === entityId || r.dst === entityId;
+      });
+    },
+    hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+      return _relationships.some(r =>
+        r.src === srcId && r.dst === dstId && (!kind || r.kind === kind)
+      );
+    },
+
+    // Relationship mutation methods
+    addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
+      const exists = _relationships.some(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+      if (exists) return false;
+      const relationship: Relationship = { kind, src: srcId, dst: dstId, strength: strength ?? 0.5, distance, category, status: 'active' };
+      _relationships.push(relationship);
+      const srcEntity = _entities.get(srcId);
+      if (srcEntity) {
+        srcEntity.links.push({ ...relationship });
+        srcEntity.updatedAt = 10;
+      }
+      return true;
+    },
+    removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+      const idx = _relationships.findIndex(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+      if (idx >= 0) {
+        _relationships.splice(idx, 1);
+        const srcEntity = _entities.get(srcId);
+        if (srcEntity) {
+          srcEntity.links = srcEntity.links.filter(l => !(l.src === srcId && l.dst === dstId && l.kind === kind));
+          srcEntity.updatedAt = 10;
+        }
+        return true;
+      }
+      return false;
+    },
+    _setRelationships(rels: Relationship[]): void {
+      _relationships = rels;
+    },
+    // Test helper: load relationship directly without validation
+    _loadRelationship(rel: Relationship): void {
+      _relationships.push(rel);
     }
   } as Graph;
 }
@@ -263,9 +443,9 @@ describe('Entity Finding', () => {
       const entity2 = createMockEntity({ id: 'e2', kind: 'npc', subtype: 'hero' });
       const entity3 = createMockEntity({ id: 'e3', kind: 'location', subtype: 'colony' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
-      graph.entities.set(entity3.id, entity3);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
+      graph._loadEntity(entity3.id, entity3);
 
       const npcs = findEntities(graph, { kind: 'npc' });
       expect(npcs).toHaveLength(2);
@@ -278,8 +458,8 @@ describe('Entity Finding', () => {
       const entity1 = createMockEntity({ id: 'e1', kind: 'npc', subtype: 'merchant', status: 'alive' });
       const entity2 = createMockEntity({ id: 'e2', kind: 'npc', subtype: 'merchant', status: 'dead' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       const results = findEntities(graph, { kind: 'npc', subtype: 'merchant', status: 'alive' });
       expect(results).toHaveLength(1);
@@ -297,8 +477,8 @@ describe('Entity Finding', () => {
       const entity1 = createMockEntity({ id: 'e1' });
       const entity2 = createMockEntity({ id: 'e2' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
       const results = findEntities(graph, {});
       expect(results).toHaveLength(2);
@@ -310,7 +490,7 @@ describe('Relationship Queries', () => {
   describe('hasRelationship', () => {
     it('should return true when relationship exists', () => {
       const graph = createMockGraph();
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e2',
@@ -327,7 +507,7 @@ describe('Relationship Queries', () => {
 
     it('should filter by relationship kind', () => {
       const graph = createMockGraph();
-      graph.relationships.push({
+      graph._loadRelationship({
         kind: 'friend_of',
         src: 'e1',
         dst: 'e2',
@@ -346,12 +526,12 @@ describe('Relationship Queries', () => {
       const entity2 = createMockEntity({ id: 'e2' });
       const entity3 = createMockEntity({ id: 'e3' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
-      graph.entities.set(entity3.id, entity3);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
+      graph._loadEntity(entity3.id, entity3);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
-      graph.relationships.push({ kind: 'friend_of', src: 'e3', dst: 'e1', strength: 0.5 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e3', dst: 'e1', strength: 0.5 });
 
       const related = getRelated(graph, 'e1');
       expect(related).toHaveLength(2);
@@ -364,10 +544,10 @@ describe('Relationship Queries', () => {
       const entity1 = createMockEntity({ id: 'e1' });
       const entity2 = createMockEntity({ id: 'e2' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
 
       const srcRelated = getRelated(graph, 'e1', undefined, 'src');
       expect(srcRelated).toHaveLength(1);
@@ -382,12 +562,12 @@ describe('Relationship Queries', () => {
       const entity2 = createMockEntity({ id: 'e2' });
       const entity3 = createMockEntity({ id: 'e3' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
-      graph.entities.set(entity3.id, entity3);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
+      graph._loadEntity(entity3.id, entity3);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
-      graph.relationships.push({ kind: 'enemy_of', src: 'e1', dst: 'e3', strength: 0.7 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.5 });
+      graph._loadRelationship({ kind: 'enemy_of', src: 'e1', dst: 'e3', strength: 0.7 });
 
       const friends = getRelated(graph, 'e1', 'friend_of');
       expect(friends).toHaveLength(1);
@@ -400,12 +580,12 @@ describe('Relationship Queries', () => {
       const entity2 = createMockEntity({ id: 'e2' });
       const entity3 = createMockEntity({ id: 'e3' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
-      graph.entities.set(entity3.id, entity3);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
+      graph._loadEntity(entity3.id, entity3);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.8 });
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.3 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.8 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.3 });
 
       const strongFriends = getRelated(graph, 'e1', 'friend_of', 'both', { minStrength: 0.6 });
       expect(strongFriends).toHaveLength(1);
@@ -418,12 +598,12 @@ describe('Relationship Queries', () => {
       const entity2 = createMockEntity({ id: 'e2' });
       const entity3 = createMockEntity({ id: 'e3' });
 
-      graph.entities.set(entity1.id, entity1);
-      graph.entities.set(entity2.id, entity2);
-      graph.entities.set(entity3.id, entity3);
+      graph._loadEntity(entity1.id, entity1);
+      graph._loadEntity(entity2.id, entity2);
+      graph._loadEntity(entity3.id, entity3);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.3 });
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.9 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.3 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.9 });
 
       const sorted = getRelated(graph, 'e1', 'friend_of', 'both', { sortByStrength: true });
       expect(sorted[0].id).toBe('e3'); // Strongest first
@@ -438,12 +618,12 @@ describe('Relationship Queries', () => {
       const npc1 = createMockEntity({ id: 'npc1' });
       const npc2 = createMockEntity({ id: 'npc2' });
 
-      graph.entities.set(location.id, location);
-      graph.entities.set(npc1.id, npc1);
-      graph.entities.set(npc2.id, npc2);
+      graph._loadEntity(location.id, location);
+      graph._loadEntity(npc1.id, npc1);
+      graph._loadEntity(npc2.id, npc2);
 
-      graph.relationships.push({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
-      graph.relationships.push({ kind: 'resident_of', src: 'npc2', dst: 'loc1', strength: 0.3 });
+      graph._loadRelationship({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
+      graph._loadRelationship({ kind: 'resident_of', src: 'npc2', dst: 'loc1', strength: 0.3 });
 
       const residents = getResidents(graph, 'loc1');
       expect(residents).toHaveLength(2);
@@ -456,10 +636,10 @@ describe('Relationship Queries', () => {
       const location = createMockEntity({ id: 'loc1', kind: 'location', name: 'Test Colony' });
       const npc = createMockEntity({ id: 'npc1' });
 
-      graph.entities.set(location.id, location);
-      graph.entities.set(npc.id, npc);
+      graph._loadEntity(location.id, location);
+      graph._loadEntity(npc.id, npc);
 
-      graph.relationships.push({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
+      graph._loadRelationship({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
 
       const loc = getLocation(graph, 'npc1');
       expect(loc?.id).toBe('loc1');
@@ -480,12 +660,12 @@ describe('Relationship Queries', () => {
       const member1 = createMockEntity({ id: 'npc1' });
       const member2 = createMockEntity({ id: 'npc2' });
 
-      graph.entities.set(faction.id, faction);
-      graph.entities.set(member1.id, member1);
-      graph.entities.set(member2.id, member2);
+      graph._loadEntity(faction.id, faction);
+      graph._loadEntity(member1.id, member1);
+      graph._loadEntity(member2.id, member2);
 
-      graph.relationships.push({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
-      graph.relationships.push({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 1.0 });
+      graph._loadRelationship({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
+      graph._loadRelationship({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 1.0 });
 
       const members = getFactionMembers(graph, 'fac1');
       expect(members).toHaveLength(2);
@@ -498,10 +678,10 @@ describe('Relationship Queries', () => {
       const faction = createMockEntity({ id: 'fac1', kind: 'faction' });
       const leader = createMockEntity({ id: 'npc1', name: 'Leader' });
 
-      graph.entities.set(faction.id, faction);
-      graph.entities.set(leader.id, leader);
+      graph._loadEntity(faction.id, faction);
+      graph._loadEntity(leader.id, leader);
 
-      graph.relationships.push({ kind: 'leader_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
+      graph._loadRelationship({ kind: 'leader_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
 
       const result = getFactionLeader(graph, 'fac1');
       expect(result?.id).toBe('npc1');
@@ -515,12 +695,12 @@ describe('Relationship Queries', () => {
       const core = createMockEntity({ id: 'npc1' });
       const weak = createMockEntity({ id: 'npc2' });
 
-      graph.entities.set(faction.id, faction);
-      graph.entities.set(core.id, core);
-      graph.entities.set(weak.id, weak);
+      graph._loadEntity(faction.id, faction);
+      graph._loadEntity(core.id, core);
+      graph._loadEntity(weak.id, weak);
 
-      graph.relationships.push({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 0.9 });
-      graph.relationships.push({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 0.5 });
+      graph._loadRelationship({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 0.9 });
+      graph._loadRelationship({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 0.5 });
 
       const coreMembers = getCoreFactionMembers(graph, 'fac1');
       expect(coreMembers).toHaveLength(1);
@@ -533,10 +713,10 @@ describe('Relationship Queries', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1' });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.2 });
-      graph.relationships.push({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.8 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.2 });
+      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.8 });
 
       const weak = getWeakRelationships(graph, 'e1');
       expect(weak).toHaveLength(1);
@@ -615,24 +795,23 @@ describe('Name Tag Helpers', () => {
 
   describe('upsertNameTag', () => {
     it('should add name tag to entity', () => {
-      const entity = createMockEntity({ tags: [] });
+      const entity = createMockEntity({ tags: {} });
       upsertNameTag(entity, 'Test Name');
-      expect(entity.tags).toContain('name:test-name');
+      expect(entity.tags.name).toBe('test-name');
     });
 
     it('should replace existing name tag', () => {
-      const entity = createMockEntity({ tags: ['name:old-name', 'other-tag'] });
+      const entity = createMockEntity({ tags: { name: 'old-name', other: 'tag' } });
       upsertNameTag(entity, 'New Name');
-      expect(entity.tags).toContain('name:new-name');
-      expect(entity.tags).not.toContain('name:old-name');
-      expect(entity.tags).toContain('other-tag');
+      expect(entity.tags.name).toBe('new-name');
+      expect(entity.tags.other).toBe('tag');
     });
 
-    it('should limit tags to 5 total', () => {
-      const entity = createMockEntity({ tags: ['tag1', 'tag2', 'tag3', 'tag4', 'tag5'] });
+    it('should handle empty tags object', () => {
+      const entity = createMockEntity({ tags: { a: '1', b: '2', c: '3', d: '4', e: '5' } });
       upsertNameTag(entity, 'Test');
-      expect(entity.tags).toHaveLength(5);
-      expect(entity.tags[4]).toBe('name:test');
+      expect(entity.tags.name).toBe('test');
+      // KVP format doesn't have length limit, name just replaces
     });
   });
 });
@@ -641,7 +820,7 @@ describe('Initial State Normalization', () => {
   describe('normalizeInitialState', () => {
     it('should add missing fields', () => {
       const entities = [
-        { kind: 'npc', name: 'Test' }
+        { kind: 'npc', name: 'Test', coordinates: { x: 10, y: 20, z: 50 } }
       ];
 
       const normalized = normalizeInitialState(entities);
@@ -654,7 +833,7 @@ describe('Initial State Normalization', () => {
 
     it('should preserve existing fields', () => {
       const entities = [
-        { id: 'custom-id', kind: 'npc', name: 'Test', status: 'special' }
+        { id: 'custom-id', kind: 'npc', name: 'Test', status: 'special', coordinates: { x: 10, y: 20, z: 50 } }
       ];
 
       const normalized = normalizeInitialState(entities);
@@ -671,31 +850,33 @@ describe('Initial State Normalization', () => {
 
 describe('Graph Modification', () => {
   describe('addEntity', () => {
-    it('should add entity to graph', () => {
+    it('should add entity to graph', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, {
+      const id = await addEntity(graph, {
         kind: 'npc',
-        name: 'Test NPC'
+        name: 'Test NPC',
+        coordinates: { x: 10, y: 20 }
       });
 
-      expect(graph.entities.has(id)).toBe(true);
-      const entity = graph.entities.get(id);
+      expect(graph.hasEntity(id)).toBe(true);
+      const entity = graph.getEntity(id);
       expect(entity?.name).toBe('Test NPC');
     });
 
-    it('should generate ID', () => {
+    it('should generate ID', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, { kind: 'npc' });
-      expect(id).toMatch(/^npc_\d+$/);
+      const id = await addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
+      expect(id).toMatch(/^npc-\d+-[a-z0-9]+$/);
     });
 
-    it('should set defaults', () => {
+    it('should set defaults', async () => {
       const graph = createMockGraph();
-      const id = addEntity(graph, { kind: 'npc' });
-      const entity = graph.entities.get(id);
+      const id = await addEntity(graph, { kind: 'npc', coordinates: { x: 10, y: 20 } });
+      const entity = graph.getEntity(id);
 
       expect(entity?.prominence).toBe('marginal');
-      expect(entity?.tags).toEqual([]);
+      // Tags will have auto-generated name tag
+      expect(entity?.tags).toHaveProperty('name');
       expect(entity?.links).toEqual([]);
       expect(entity?.createdAt).toBe(graph.tick);
     });
@@ -707,15 +888,16 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
 
-      expect(graph.relationships).toHaveLength(1);
-      expect(graph.relationships[0].kind).toBe('friend_of');
-      expect(graph.relationships[0].src).toBe('e1');
-      expect(graph.relationships[0].dst).toBe('e2');
+      const rels = graph.getRelationships();
+      expect(rels).toHaveLength(1);
+      expect(rels[0].kind).toBe('friend_of');
+      expect(rels[0].src).toBe('e1');
+      expect(rels[0].dst).toBe('e2');
     });
 
     it('should update entity links', () => {
@@ -723,13 +905,15 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
 
-      expect(e1.links).toHaveLength(1);
-      expect(e1.links[0].kind).toBe('friend_of');
+      // Get the entity from the graph to check updated links
+      const updatedE1 = graph.getEntity(e1.id);
+      expect(updatedE1?.links).toHaveLength(1);
+      expect(updatedE1?.links[0].kind).toBe('friend_of');
     });
 
     it('should not add duplicate relationships', () => {
@@ -737,13 +921,13 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
       addRelationship(graph, 'friend_of', 'e1', 'e2');
 
-      expect(graph.relationships).toHaveLength(1);
+      expect(graph.getRelationships()).toHaveLength(1);
     });
 
     it('should auto-assign strength', () => {
@@ -751,12 +935,12 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'member_of', 'e1', 'e2');
 
-      expect(graph.relationships[0].strength).toBe(1.0); // member_of is strong
+      expect(graph.getRelationships()[0].strength).toBe(1.0); // member_of is strong
     });
 
     it('should respect strength override', () => {
@@ -764,12 +948,12 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2', 0.9);
 
-      expect(graph.relationships[0].strength).toBe(0.9);
+      expect(graph.getRelationships()[0].strength).toBe(0.9);
     });
 
     it('should auto-add distance for lineage relationships', () => {
@@ -777,14 +961,15 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'derived_from', 'e1', 'e2');
 
-      expect(graph.relationships[0].distance).toBeDefined();
-      expect(graph.relationships[0].distance).toBeGreaterThanOrEqual(0);
-      expect(graph.relationships[0].distance).toBeLessThanOrEqual(1);
+      const rels = graph.getRelationships();
+      expect(rels[0].distance).toBeDefined();
+      expect(rels[0].distance).toBeGreaterThanOrEqual(0);
+      expect(rels[0].distance).toBeLessThanOrEqual(1);
     });
   });
 
@@ -793,30 +978,32 @@ describe('Graph Modification', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1', status: 'alive' });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
 
       updateEntity(graph, 'e1', { status: 'dead' });
 
-      expect(entity.status).toBe('dead');
+      const updated = graph.getEntity('e1');
+      expect(updated?.status).toBe('dead');
     });
 
     it('should update updatedAt', () => {
       const graph = createMockGraph();
       const entity = createMockEntity({ id: 'e1', updatedAt: 0 });
 
-      graph.entities.set(entity.id, entity);
+      graph._loadEntity(entity.id, entity);
       graph.tick = 100;
 
       updateEntity(graph, 'e1', { status: 'changed' });
 
-      expect(entity.updatedAt).toBe(100);
+      const updated = graph.getEntity('e1');
+      expect(updated?.updatedAt).toBe(100);
     });
 
     it('should do nothing for nonexistent entity', () => {
       const graph = createMockGraph();
       updateEntity(graph, 'nonexistent', { status: 'changed' });
       // Should not throw
-      expect(graph.entities.size).toBe(0);
+      expect(graph.getEntityCount()).toBe(0);
     });
   });
 
@@ -826,12 +1013,12 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationshipWithDistance(graph, 'derived_from', 'e1', 'e2', { min: 0.3, max: 0.5 });
 
-      const rel = graph.relationships[0];
+      const rel = graph.getRelationships()[0];
       expect(rel.distance).toBeGreaterThanOrEqual(0.3);
       expect(rel.distance).toBeLessThanOrEqual(0.5);
     });
@@ -841,14 +1028,14 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       // Should clamp to [0, 1]
       addRelationshipWithDistance(graph, 'test', 'e1', 'e2', { min: -1, max: 2 });
 
-      expect(graph.relationships[0].distance).toBeGreaterThanOrEqual(0);
-      expect(graph.relationships[0].distance).toBeLessThanOrEqual(1);
+      expect(graph.getRelationships()[0].distance).toBeGreaterThanOrEqual(0);
+      expect(graph.getRelationships()[0].distance).toBeLessThanOrEqual(1);
     });
   });
 
@@ -858,14 +1045,14 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
       archiveRelationship(graph, 'e1', 'e2', 'friend_of');
 
-      expect(graph.relationships[0].status).toBe('historical');
-      expect(graph.relationships[0].archivedAt).toBe(graph.tick);
+      expect(graph.getRelationships()[0].status).toBe('historical');
+      expect(graph.getRelationships()[0].archivedAt).toBe(graph.tick);
     });
 
     it('should update entity links', () => {
@@ -873,8 +1060,8 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
       archiveRelationship(graph, 'e1', 'e2', 'friend_of');
@@ -889,14 +1076,14 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2', 0.5);
       const result = modifyRelationshipStrength(graph, 'e1', 'e2', 'friend_of', 0.2);
 
       expect(result).toBe(true);
-      expect(graph.relationships[0].strength).toBe(0.7);
+      expect(graph.getRelationships()[0].strength).toBe(0.7);
     });
 
     it('should decrease strength', () => {
@@ -904,14 +1091,14 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2', 0.7);
       modifyRelationshipStrength(graph, 'e1', 'e2', 'friend_of', -0.3);
 
       // Use toBeCloseTo for floating point comparison
-      expect(graph.relationships[0].strength).toBeCloseTo(0.4, 10);
+      expect(graph.getRelationships()[0].strength).toBeCloseTo(0.4, 10);
     });
 
     it('should clamp to 0-1 range', () => {
@@ -919,15 +1106,15 @@ describe('Graph Modification', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2', 0.5);
       modifyRelationshipStrength(graph, 'e1', 'e2', 'friend_of', 1.0);
-      expect(graph.relationships[0].strength).toBe(1.0);
+      expect(graph.getRelationships()[0].strength).toBe(1.0);
 
       modifyRelationshipStrength(graph, 'e1', 'e2', 'friend_of', -2.0);
-      expect(graph.relationships[0].strength).toBe(0.0);
+      expect(graph.getRelationships()[0].strength).toBe(0.0);
     });
 
     it('should return false for nonexistent relationship', () => {
@@ -1029,8 +1216,8 @@ describe('Relationship Compatibility', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'lover_of', 'e1', 'e2');
 
@@ -1043,8 +1230,8 @@ describe('Relationship Compatibility', () => {
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
 
-      graph.entities.set(e1.id, e1);
-      graph.entities.set(e2.id, e2);
+      graph._loadEntity(e1.id, e1);
+      graph._loadEntity(e2.id, e2);
 
       addRelationship(graph, 'friend_of', 'e1', 'e2');
 
@@ -1105,10 +1292,10 @@ describe('Faction Relationships', () => {
       const faction1 = createMockEntity({ id: 'f1', kind: 'faction' });
       const faction2 = createMockEntity({ id: 'f2', kind: 'faction' });
 
-      graph.entities.set(faction1.id, faction1);
-      graph.entities.set(faction2.id, faction2);
+      graph._loadEntity(faction1.id, faction1);
+      graph._loadEntity(faction2.id, faction2);
 
-      graph.relationships.push({ kind: 'at_war_with', src: 'f1', dst: 'f2', strength: 0.7 });
+      graph._loadRelationship({ kind: 'at_war_with', src: 'f1', dst: 'f2', strength: 0.7 });
 
       const rel = getFactionRelationship([faction1], [faction2], graph);
       expect(rel).toBe('enemy');
@@ -1119,10 +1306,10 @@ describe('Faction Relationships', () => {
       const faction1 = createMockEntity({ id: 'f1', kind: 'faction' });
       const faction2 = createMockEntity({ id: 'f2', kind: 'faction' });
 
-      graph.entities.set(faction1.id, faction1);
-      graph.entities.set(faction2.id, faction2);
+      graph._loadEntity(faction1.id, faction1);
+      graph._loadEntity(faction2.id, faction2);
 
-      graph.relationships.push({ kind: 'allied_with', src: 'f1', dst: 'f2', strength: 0.7 });
+      graph._loadRelationship({ kind: 'allied_with', src: 'f1', dst: 'f2', strength: 0.7 });
 
       const rel = getFactionRelationship([faction1], [faction2], graph);
       expect(rel).toBe('allied');
@@ -1142,20 +1329,23 @@ describe('Faction Relationships', () => {
 describe('Lineage Relationships', () => {
   describe('isLineageRelationship', () => {
     it('should identify lineage relationships', () => {
-      expect(isLineageRelationship('derived_from')).toBe(true);
-      expect(isLineageRelationship('split_from')).toBe(true);
-      expect(isLineageRelationship('adjacent_to')).toBe(true);
+      const graph = createMockGraph();
+      expect(isLineageRelationship('derived_from', graph)).toBe(true);
+      expect(isLineageRelationship('split_from', graph)).toBe(true);
+      expect(isLineageRelationship('adjacent_to', graph)).toBe(true);
     });
 
     it('should reject non-lineage relationships', () => {
-      expect(isLineageRelationship('friend_of')).toBe(false);
-      expect(isLineageRelationship('member_of')).toBe(false);
+      const graph = createMockGraph();
+      expect(isLineageRelationship('friend_of', graph)).toBe(false);
+      expect(isLineageRelationship('member_of', graph)).toBe(false);
     });
   });
 
   describe('getExpectedDistanceRange', () => {
     it('should return range for lineage relationships', () => {
-      const range = getExpectedDistanceRange('derived_from');
+      const graph = createMockGraph();
+      const range = getExpectedDistanceRange('derived_from', graph);
       expect(range).toBeDefined();
       expect(range?.min).toBeGreaterThanOrEqual(0);
       expect(range?.max).toBeLessThanOrEqual(1);
@@ -1163,7 +1353,8 @@ describe('Lineage Relationships', () => {
     });
 
     it('should return undefined for non-lineage relationships', () => {
-      const range = getExpectedDistanceRange('friend_of');
+      const graph = createMockGraph();
+      const range = getExpectedDistanceRange('friend_of', graph);
       expect(range).toBeUndefined();
     });
   });

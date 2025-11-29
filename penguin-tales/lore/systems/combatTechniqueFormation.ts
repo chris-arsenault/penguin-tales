@@ -5,28 +5,17 @@
  * Similar to magic schools but for physical/combat abilities.
  */
 
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  pickRandom,
-  addEntity
-} from '@lore-weave/core/utils/helpers';
-import {
-  detectClusters,
-  filterClusterableEntities,
-  ClusterConfig
-} from '@lore-weave/core/utils/clusteringUtils';
-import {
-  archiveEntities,
-  transferRelationships,
-  createPartOfRelationships
-} from '@lore-weave/core/utils/entityArchival';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { TargetSelector } from '@lore-weave/core/services/targetSelector';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core/types/frameworkPrimitives';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, hasTag } from '@lore-weave/core';
+import { detectClusters, filterClusterableEntities, ClusterConfig } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { TargetSelector } from '@lore-weave/core';
+import { FRAMEWORK_RELATIONSHIP_KINDS } from '@lore-weave/core';
 
 /**
  * Clustering configuration for combat techniques
+ * Culture is weighted heavily - martial traditions are culturally bound
  */
 const COMBAT_TECHNIQUE_CLUSTER_CONFIG: ClusterConfig = {
   minSize: 3,
@@ -37,6 +26,10 @@ const COMBAT_TECHNIQUE_CLUSTER_CONFIG: ClusterConfig = {
       weight: 5.0,
       relationshipKind: 'practitioner_of',
       direction: 'dst'
+    },
+    {
+      type: 'same_culture',
+      weight: 4.0  // Strong cultural affinity - martial traditions are culturally bound
     },
     {
       type: 'shared_tags',
@@ -70,7 +63,7 @@ function generateStyleName(majoritySubtype: string, clusterSize: number): string
 /**
  * Create a combat style entity from a cluster
  */
-function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardState> {
+function createStyleEntity(cluster: HardState[], graphView: TemplateGraphView): Partial<HardState> {
   // Filter to only combat-type abilities
   const combatAbilities = cluster.filter(a =>
     a.subtype === 'combat' || a.subtype === 'physical'
@@ -101,9 +94,9 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
   // Aggregate tags from cluster
   const allTags = new Set<string>();
   effectiveCluster.forEach(ability => {
-    (ability.tags || []).forEach(tag => allTags.add(tag));
+    Object.keys(ability.tags || {}).forEach(tag => allTags.add(tag));
   });
-  const tags = Array.from(allTags).slice(0, 4);
+  const tagArray = Array.from(allTags).slice(0, 4);
 
   // Build description
   const techniqueNames = effectiveCluster.map(a => a.name).join(', ');
@@ -134,6 +127,26 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
     }
   });
 
+  // Convert to tag object
+  const tags: Record<string, boolean> = {};
+  tagArray.forEach(tag => tags[tag] = true);
+  tags['meta-entity'] = true;
+  tags['combat-style'] = true;
+
+  // Derive coordinates from cluster entities using culture-aware placement
+  const stylePlacement = graphView.deriveCoordinatesWithCulture(
+    majorityCulture,
+    'abilities',
+    effectiveCluster
+  );
+  if (!stylePlacement) {
+    throw new Error(
+      `combat_technique_formation: Failed to derive coordinates for combat style "${styleName}". ` +
+      `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    );
+  }
+  const coords = stylePlacement.coordinates;
+
   return {
     kind: 'abilities',
     subtype: majoritySubtype,
@@ -142,7 +155,8 @@ function createStyleEntity(cluster: HardState[], graph: Graph): Partial<HardStat
     status: 'active',
     prominence,
     culture: majorityCulture,
-    tags: [...tags, 'meta-entity', 'combat-style']
+    tags,
+    coordinates: coords
   };
 }
 
@@ -201,10 +215,10 @@ export const combatTechniqueFormation: SimulationSystem = {
     }
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
     // Only run at epoch end
-    const epochLength = graph.config.epochLength || 20;
-    if (graph.tick % epochLength !== 0) {
+    const epochLength = graphView.config.epochLength || 20;
+    if (graphView.tick % epochLength !== 0) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -212,10 +226,6 @@ export const combatTechniqueFormation: SimulationSystem = {
         description: 'Not epoch end, skipping combat technique formation'
       };
     }
-
-    // Create graph view for clustering
-    const targetSelector = new TargetSelector();
-    const graphView = new TemplateGraphView(graph, targetSelector);
 
     // Find combat abilities eligible for clustering
     const allAbilities = graphView.findEntities({ kind: 'abilities' });
@@ -243,16 +253,15 @@ export const combatTechniqueFormation: SimulationSystem = {
       if (cluster.score < COMBAT_TECHNIQUE_CLUSTER_CONFIG.minimumScore) continue;
 
       // Create the style entity
-      const stylePartial = createStyleEntity(cluster.entities, graph);
-      const styleId = addEntity(graph, stylePartial);
+      const stylePartial = createStyleEntity(cluster.entities, graphView);
+      const styleId = await graphView.addEntity(stylePartial);
       entitiesCreated.push(styleId);
 
       // Get cluster entity IDs
       const clusterIds = cluster.entities.map(e => e.id);
 
       // Transfer relationships from cluster to style
-      transferRelationships(
-        graph,
+      graphView.transferRelationships(
         clusterIds,
         styleId,
         {
@@ -262,7 +271,7 @@ export const combatTechniqueFormation: SimulationSystem = {
       );
 
       // Create part_of relationships
-      createPartOfRelationships(graph, clusterIds, styleId);
+      graphView.createPartOfRelationships(clusterIds, styleId);
       clusterIds.forEach(id => {
         relationshipsAdded.push({
           kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
@@ -272,8 +281,7 @@ export const combatTechniqueFormation: SimulationSystem = {
       });
 
       // Archive original abilities
-      archiveEntities(
-        graph,
+      graphView.archiveEntities(
         clusterIds,
         {
           archiveRelationships: false,
@@ -292,9 +300,9 @@ export const combatTechniqueFormation: SimulationSystem = {
 
     // Record in history
     if (entitiesCreated.length > 0) {
-      graph.history.push({
-        tick: graph.tick,
-        era: graph.currentEra.id,
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: graphView.currentEra.id,
         type: 'special',
         description: `${entitiesCreated.length} combat styles formed from ${entitiesModified.length} techniques`,
         entitiesCreated,

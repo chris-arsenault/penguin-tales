@@ -1,5 +1,6 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '../types/engine';
-import { Relationship } from '../types/worldTypes';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
+import { Relationship } from '../core/worldTypes';
+import { TemplateGraphView } from '../graph/templateGraphView';
 
 /**
  * Relationship Culling System
@@ -63,7 +64,7 @@ export const relationshipCulling: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = relationshipCulling.metadata?.parameters || {};
 
     const cullThreshold = params.cullThreshold?.value ?? 0.15;
@@ -72,18 +73,18 @@ export const relationshipCulling: SimulationSystem = {
 
     // Get protected relationship kinds from domain schema
     // Protected = structural relationships that should never be culled
-    const protectedKinds = new Set(graph.config.domain.getProtectedRelationshipKinds?.() || []);
+    const protectedKinds = new Set(graphView.config.domain.getProtectedRelationshipKinds?.() || []);
 
     // Get immutable relationship kinds from domain schema
     // Immutable = facts that don't change (spatial, discovery, etc.)
     // These are automatically protected since they don't decay naturally
-    const immutableKinds = new Set(graph.config.domain.getImmutableRelationshipKinds?.() || []);
+    const immutableKinds = new Set(graphView.config.domain.getImmutableRelationshipKinds?.() || []);
 
     // Combine: all immutable relationships are also protected
     immutableKinds.forEach(kind => protectedKinds.add(kind));
 
     // Only run every N ticks
-    if (graph.tick % cullFrequency !== 0) {
+    if (graphView.tick % cullFrequency !== 0) {
       return {
         relationshipsAdded: [],
         entitiesModified: [],
@@ -94,9 +95,10 @@ export const relationshipCulling: SimulationSystem = {
 
     const removed: Relationship[] = [];
     const protectedBelowThreshold: { kind: string; strength: number }[] = [];
-    const originalCount = graph.relationships.length;
+    const originalCount = graphView.getRelationshipCount();
 
-    graph.relationships = graph.relationships.filter(rel => {
+    // Filter relationships and collect kept ones
+    const keptRelationships = graphView.getAllRelationships().filter(rel => {
       // Protected kinds never get culled, but track if they're weak
       if (protectedKinds.has(rel.kind)) {
         const strength = rel.strength ?? 0.5;
@@ -107,8 +109,8 @@ export const relationshipCulling: SimulationSystem = {
       }
 
       // Calculate relationship age (minimum age of both entities)
-      const srcEntity = graph.entities.get(rel.src);
-      const dstEntity = graph.entities.get(rel.dst);
+      const srcEntity = graphView.getEntity(rel.src);
+      const dstEntity = graphView.getEntity(rel.dst);
 
       if (!srcEntity || !dstEntity) {
         // Remove relationships to non-existent entities
@@ -117,8 +119,8 @@ export const relationshipCulling: SimulationSystem = {
       }
 
       const age = Math.min(
-        graph.tick - srcEntity.createdAt,
-        graph.tick - dstEntity.createdAt
+        graphView.tick - srcEntity.createdAt,
+        graphView.tick - dstEntity.createdAt
       );
 
       // Young relationships get grace period
@@ -130,14 +132,16 @@ export const relationshipCulling: SimulationSystem = {
         removed.push(rel);
 
         // Remove from entity links
-        if (srcEntity) {
-          srcEntity.links = srcEntity.links.filter(l =>
+        const srcEntityToUpdate = graphView.getEntity(rel.src);
+        const dstEntityToUpdate = graphView.getEntity(rel.dst);
+        if (srcEntityToUpdate) {
+          srcEntityToUpdate.links = srcEntityToUpdate.links.filter(l =>
             !(l.kind === rel.kind && l.src === rel.src && l.dst === rel.dst)
           );
-          srcEntity.updatedAt = graph.tick;
+          srcEntityToUpdate.updatedAt = graphView.tick;
         }
-        if (dstEntity) {
-          dstEntity.updatedAt = graph.tick;
+        if (dstEntityToUpdate) {
+          dstEntityToUpdate.updatedAt = graphView.tick;
         }
 
         return false; // Remove from graph
@@ -146,17 +150,14 @@ export const relationshipCulling: SimulationSystem = {
       return true; // Keep
     });
 
+    // Update graph with filtered relationships
+    graphView.setRelationships([...keptRelationships]);
+
     const culledCount = removed.length;
 
-    // Store violation data in graph metadata for genetic algorithm fitness evaluation
-    if (!graph.protectedRelationshipViolations) {
-      graph.protectedRelationshipViolations = [];
-    }
+    // Store violation data for genetic algorithm fitness evaluation
     if (protectedBelowThreshold.length > 0) {
-      graph.protectedRelationshipViolations.push({
-        tick: graph.tick,
-        violations: protectedBelowThreshold
-      });
+      graphView.recordProtectedRelationshipViolation(graphView.tick, protectedBelowThreshold);
     }
 
     return {

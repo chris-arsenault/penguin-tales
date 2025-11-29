@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 /**
  * Technology Innovation Template
@@ -122,16 +122,42 @@ export const techInnovation: GrowthTemplate = {
       });
     });
 
+    // Find existing tech from same faction to place new tech nearby in concept space
+    const existingTech = graphView.findEntities({ kind: 'abilities', subtype: 'technology' })
+      .filter(tech => graphView.hasRelationship(faction.id, tech.id, 'wields'));
+
+    // Derive conceptual coordinates - place tech near faction's other tech
+    const referenceEntities: HardState[] = [faction, ...practitioners];
+    if (existingTech.length > 0) {
+      referenceEntities.push(existingTech[0]);
+    }
+
+    const cultureId = faction.culture ?? 'default';
+    const techPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'abilities',
+      referenceEntities
+    );
+
+    if (!techPlacement) {
+      throw new Error(
+        `tech_innovation: Failed to derive coordinates for technology from ${faction.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
+    const conceptualCoords = techPlacement.coordinates;
+
     return {
       entities: [{
         kind: 'abilities',
         subtype: 'technology',
-        name: `${pickRandom(['Advanced', 'Improved', 'Enhanced'])} ${pickRandom(['Fishing', 'Ice', 'Navigation'])} Tech`,
         description: `Innovation developed by ${faction.name}`,
         status: 'discovered',
         prominence: 'marginal',
         culture: faction.culture,  // Inherit culture from developing faction
-        tags: ['technology', 'innovation']
+        tags: { technology: true, innovation: true },
+        coordinates: conceptualCoords
       }],
       relationships,
       description: `${faction.name} develops new technology`

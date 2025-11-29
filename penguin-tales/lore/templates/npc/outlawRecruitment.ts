@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 
 export const outlawRecruitment: GrowthTemplate = {
   id: 'outlaw_recruitment',
@@ -73,15 +73,18 @@ export const outlawRecruitment: GrowthTemplate = {
     const numOutlaws = Math.floor(Math.random() * (numOutlawsMax - numOutlawsMin + 1)) + numOutlawsMin;
 
     // Use targetSelector to find existing NPCs or create new outlaws
+    // Criminal factions recruit from their own culture (trust networks)
     const result = graphView.selectTargets('npc', numOutlaws, {
       prefer: {
         subtypes: ['merchant', 'hero'], // People turning to crime
+        sameCultureAs: faction.culture, // Criminal networks are culturally bound
         preferenceBoost: 1.5
       },
       avoid: {
         relationshipKinds: ['member_of'], // Prefer NPCs not already in factions
         hubPenaltyStrength: 2.0,
-        maxTotalRelationships: 12
+        maxTotalRelationships: 12,
+        differentCulturePenalty: 0.4 // Cross-culture recruitment is risky
       },
       createIfSaturated: {
         threshold: 0.2,
@@ -92,7 +95,7 @@ export const outlawRecruitment: GrowthTemplate = {
           status: 'alive',
           prominence: 'marginal',
           culture: faction.culture,  // Inherit culture from recruiting faction
-          tags: ['criminal', 'recruit']
+          tags: { criminal: true, recruit: true }
         }),
         maxCreated: Math.ceil(numOutlaws * 0.7) // Max 70% new
       },

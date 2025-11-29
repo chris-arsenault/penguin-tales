@@ -16,14 +16,18 @@ import {
   RelationshipLimits,
   CultureDefinition,
   SnapshotConfig,
-  EmergentDiscoveryConfig
-} from '@lore-weave/core/types/domainSchema';
-import { pickRandom } from '@lore-weave/core/utils/helpers';
+  EmergentDiscoveryConfig,
+  ImageGenerationPromptConfig
+} from '@lore-weave/core';
+import { SemanticEncoderConfig } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
 import {
   getActionDomains,
   getActionDomainsForEntity,
   getPressureDomainMappings
 } from './config/actionDomains';
+import { penguinRegionConfig } from './config/regions';
+import { semanticAxes, tagSemanticWeights } from './config/semanticAxes';
 
 // ===========================
 // SNAPSHOT CONFIGURATIONS
@@ -117,7 +121,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
         description: 'Living non-orca NPCs must have a location'
       }
     ],
-    snapshotConfig: npcSnapshotConfig
+    snapshotConfig: npcSnapshotConfig,
+    style: { displayName: 'NPCs', color: '#6FB1FC', shape: 'ellipse' }
   },
   {
     kind: 'location',
@@ -125,7 +130,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['iceberg', 'colony', 'igloo', 'geographic_feature', 'anomaly'],
     statusValues: ['thriving', 'waning', 'abandoned'],
     defaultStatus: 'thriving',
-    snapshotConfig: locationSnapshotConfig
+    snapshotConfig: locationSnapshotConfig,
+    style: { displayName: 'Locations', color: '#6BFC9C', shape: 'hexagon' }
   },
   {
     kind: 'faction',
@@ -133,7 +139,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['political', 'criminal', 'cult', 'company'],
     statusValues: ['active', 'disbanded', 'waning'],
     defaultStatus: 'active',
-    snapshotConfig: factionSnapshotConfig
+    snapshotConfig: factionSnapshotConfig,
+    style: { displayName: 'Factions', color: '#FC6B6B', shape: 'diamond' }
   },
   {
     kind: 'rules',
@@ -141,7 +148,8 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['edict', 'taboo', 'social', 'natural'],
     statusValues: ['active', 'forgotten', 'proposed', 'enacted', 'repealed'],
     defaultStatus: 'enacted',
-    snapshotConfig: rulesSnapshotConfig
+    snapshotConfig: rulesSnapshotConfig,
+    style: { displayName: 'Rules', color: '#FCA86B', shape: 'rectangle' }
   },
   {
     kind: 'abilities',
@@ -149,21 +157,24 @@ const penguinEntityKinds: EntityKindDefinition[] = [
     subtypes: ['magic', 'faith', 'technology', 'physical', 'combat'],
     statusValues: ['active', 'lost', 'emergent'],
     defaultStatus: 'active',
-    snapshotConfig: abilitiesSnapshotConfig
+    snapshotConfig: abilitiesSnapshotConfig,
+    style: { displayName: 'Abilities', color: '#C76BFC', shape: 'star' }
   },
   {
     kind: 'era',
     description: 'Temporal contexts that modify action probabilities and template weights',
     subtypes: ['expansion', 'conflict', 'innovation', 'invasion', 'reconstruction'],
     statusValues: ['past', 'current', 'future'],
-    defaultStatus: 'future'
+    defaultStatus: 'future',
+    style: { displayName: 'Eras', color: '#FFD700', shape: 'octagon' }
   },
   {
     kind: 'occurrence',
     description: 'Major happenings with their own momentum (second-order agents)',
     subtypes: ['war', 'magical_disaster', 'cultural_movement', 'economic_boom'],
     statusValues: ['brewing', 'active', 'waning', 'ended', 'legendary'],
-    defaultStatus: 'brewing'
+    defaultStatus: 'brewing',
+    style: { displayName: 'Occurrences', color: '#FF69B4', shape: 'triangle' }
   }
 ];
 
@@ -763,6 +774,114 @@ const penguinDiscoveryConfig: EmergentDiscoveryConfig = {
 };
 
 // ===========================
+// SEMANTIC AXIS CONFIG
+// ===========================
+
+/**
+ * Semantic encoder configuration for penguin domain.
+ * Maps tags to positions on meaningful axes for coordinate derivation.
+ */
+const penguinSemanticConfig: SemanticEncoderConfig = {
+  axes: semanticAxes,
+  tagWeights: tagSemanticWeights,
+  warnOnUnconfiguredTags: true  // Enable warnings for unconfigured tags
+};
+
+// ===========================
+// IMAGE GENERATION CONFIG
+// ===========================
+
+/**
+ * Penguin-domain image generation configuration.
+ * Culture is first-class: visual identity (species) flows from culture,
+ * then kind-specific details layer on top.
+ */
+const penguinImageGenerationConfig: ImageGenerationPromptConfig = {
+  worldContext: 'Geographic atlas illustration from a frozen Antarctic world with colossal ice formations.',
+
+  // Culture is first-class - defines visual identity (species/appearance)
+  cultures: {
+    'aurora-stack': {
+      visualIdentity: 'Anthropomorphic emperor penguin from the orderly Aurora Stack colony. Dignified bearing, intelligent eyes, pristine black and white plumage.',
+      styleModifiers: 'Warm golden and orange tones from aurora borealis, clean geometric ice architecture, symbols of commerce and guild seals, organized and prosperous atmosphere.',
+      kindContexts: {
+        npc: 'Field guide portrait: detailed feather texture, expressive pose, scientific illustration quality.',
+        location: 'Cartographic vista: geometric ice architecture within the Aurora Stack territory, topographic detail.',
+        faction: 'Symbolic heraldry: penguin collective represented through guild seals and trade emblems.',
+        abilities: 'Phenomenon illustration: technological forces manifesting as crystalline ice devices.',
+        rules: 'Cultural iconography: formal decrees represented through organized, official imagery.'
+      }
+    },
+    'nightshelf': {
+      visualIdentity: 'Anthropomorphic emperor penguin from the secretive Nightfall Shelf colony. Mysterious bearing, knowing eyes, plumage seeming to absorb shadow.',
+      styleModifiers: 'Cool purple and midnight blue tones, shadowy ice caverns, mystical glowing runes, veiled and mysterious atmosphere, sense of hidden secrets.',
+      kindContexts: {
+        npc: 'Field guide portrait: partially shadowed, enigmatic pose, hints of arcane knowledge.',
+        location: 'Cartographic vista: shadowy ice caverns and hidden grottos, mysterious depth.',
+        faction: 'Symbolic heraldry: penguin collective represented through mystical symbols and shadow imagery.',
+        abilities: 'Phenomenon illustration: magical energy manifesting as glowing runes and ethereal light.',
+        rules: 'Cultural iconography: secret traditions represented through veiled, mystical imagery.'
+      }
+    },
+    'orca': {
+      visualIdentity: 'Powerful orca (killer whale) of the fierce Orca Raiders. Sleek black and white coloring, distinctive eye patch, intelligent predatory gaze, powerful dorsal fin.',
+      styleModifiers: 'Stark black and white contrasts, dark oceanic waters, dynamic aggressive composition, symbols of strength and conquest, predatory elegance.',
+      kindContexts: {
+        npc: 'Field guide portrait: powerful marine predator, sleek hydrodynamic form, fierce intelligence.',
+        location: 'Cartographic vista: deep oceanic territories, hunting grounds, dark waters.',
+        faction: 'Symbolic heraldry: orca pod represented through oceanic imagery and predatory symbols.',
+        abilities: 'Phenomenon illustration: primal oceanic forces, hunting techniques, pack coordination.',
+        rules: 'Cultural iconography: raider customs represented through conquest and dominance imagery.'
+      }
+    },
+    'world': {
+      visualIdentity: 'Transcendent entity of the Antarctic world itself. Primordial, timeless, spanning the vast frozen expanse.',
+      styleModifiers: 'Epic cosmic scale, celestial lighting, ancient and primordial aesthetic, sense of vast time and space.',
+      kindContexts: {
+        npc: 'Mythic figure: legendary being of world-spanning significance, primordial presence.',
+        location: 'Cartographic vista: world-defining landmark, primordial ice formation of cosmic scale.',
+        faction: 'Symbolic heraldry: world-spanning influence represented through elemental imagery.',
+        abilities: 'Phenomenon illustration: primordial forces of nature, world-shaping power.',
+        rules: 'Cultural iconography: ancient laws of nature, timeless cosmic order.'
+      }
+    }
+  },
+
+  subtypeContexts: {
+    // NPCs (additive details)
+    hero: 'Depicted in a heroic, larger-than-life pose with legendary bearing.',
+    mayor: 'Shown with symbols of authority and leadership.',
+    merchant: 'Surrounded by trade goods and symbols of commerce.',
+    outlaw: 'Shown in a defiant or secretive manner.',
+
+    // Locations
+    colony: 'A bustling settlement with architectural details.',
+    anomaly: 'A mysterious, otherworldly location with strange phenomena.',
+    geographic_feature: 'A dramatic natural formation.',
+    iceberg: 'A massive floating ice mountain.',
+
+    // Factions
+    company: 'Shown through trade symbols and prosperity.',
+    criminal: 'Depicted through darkness and secrecy.',
+    cult: 'Shown with spiritual symbolism.',
+    political: 'Depicted with symbols of power and order.',
+
+    // Abilities
+    magic: 'Mystical energy manifestation.',
+    technology: 'Advanced devices or tools.',
+
+    // Rules
+    edict: 'A formal law or decree.',
+    taboo: 'Ominous or warning imagery.',
+    social: 'Community tradition imagery.'
+  },
+
+  styleGuidance: 'Style: Illustrated geographic atlas or field guide style, hand-painted watercolor and ink aesthetic, dramatic lighting, Antarctic color palette (deep blues, ice whites, seafoam teals, aurora purples). Museum-quality natural history illustration.',
+
+  noTextInstruction: 'IMPORTANT: No text, labels, words, letters, titles, captions, or written language of any kind. Pure visual imagery only. No typography or lettering.'
+};
+
+// ===========================
 // PENGUIN DOMAIN SCHEMA
 // ===========================
 
@@ -774,13 +893,31 @@ const baseDomain = new BaseDomainSchema({
   entityKinds: penguinEntityKinds,
   relationshipKinds: penguinRelationshipKinds,
   cultures: penguinCultures,
-  relationshipConfig: penguinRelationshipConfig
+  relationshipConfig: penguinRelationshipConfig,
+  uiConfig: {
+    worldIcon: '🐧',
+    prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic']
+  }
 });
 
 // Extend with catalyst system methods and discovery config
 export const penguinDomain = Object.assign(baseDomain, {
+  // Region-based coordinate system configuration
+  regionConfig: penguinRegionConfig,
+
+  // Image generation configuration
+  imageGenerationConfig: penguinImageGenerationConfig,
+
+  // Semantic relationship kinds - defines which relationships mean "location", "membership", etc.
+  locationRelationshipKinds: ['resident_of', 'located_at'],
+  membershipRelationshipKinds: ['member_of'],
+  leadershipRelationshipKinds: ['leader_of'],
+
   // Emergent discovery configuration
   emergentDiscoveryConfig: penguinDiscoveryConfig,
+
+  // Semantic axis configuration for coordinate encoding
+  semanticConfig: penguinSemanticConfig,
 
   // Action domains for catalyst system
   getActionDomains() {

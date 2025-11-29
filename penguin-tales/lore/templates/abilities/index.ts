@@ -4,7 +4,7 @@
  * Templates for creating technologies and magical abilities.
  */
 
-import { GrowthTemplate } from '@lore-weave/core/types/engine';
+import { GrowthTemplate } from '@lore-weave/core';
 
 export { techInnovation } from './techInnovation';
 export { magicDiscovery } from './magicDiscovery';

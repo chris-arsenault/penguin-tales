@@ -19,8 +19,11 @@ export type {
   HardState,
   Relationship,
   Prominence,
-  EntityKind
-} from './types/worldTypes';
+  EntityKind,
+  EntityTags,
+  NPCSubtype,
+  FactionSubtype
+} from './core/worldTypes';
 
 export type {
   Graph,
@@ -34,10 +37,11 @@ export type {
   TemplateResult,
   MetaEntityConfig,
   EntityOperatorRegistry,
-  NameGenerationService
-} from './types/engine';
+  NameGenerationService,
+  TagMetadata
+} from './engine/types';
 
-export { ComponentPurpose } from './types/engine';
+export { ComponentPurpose, GraphStore } from './engine/types';
 
 // =============================================================================
 // DOMAIN SCHEMA TYPES - For implementing domain schemas
@@ -45,43 +49,56 @@ export { ComponentPurpose } from './types/engine';
 
 export type {
   DomainSchema,
-  BaseDomainSchema,
   RelationshipKindDefinition,
   RelationshipConfig,
   RelationshipLimits,
   RelationshipCategory,
   SnapshotConfig,
   EntityKindDefinition,
+  EntityKindStyle,
+  DomainUIConfig,
   EmergentDiscoveryConfig,
   CultureDefinition,
-  NameGenerator
-} from './types/domainSchema';
+  NameGenerator,
+  ImageGenerationPromptConfig,
+  CultureImageConfig
+} from './domainInterface/domainSchema';
+
+// BaseDomainSchema is a class, not just a type
+export { BaseDomainSchema } from './domainInterface/domainSchema';
 
 export type {
-  DomainLoreProvider
-} from './types/domainLore';
+  DomainLoreProvider,
+  CulturalGroup,
+  NamingRules,
+  GeographyConstraints
+} from './llm/types';
 
 export type {
   DistributionTargets
-} from './types/distribution';
+} from './statistics/types';
 
 // =============================================================================
 // SERVICES - For domain templates and systems
 // =============================================================================
 
-export { TemplateGraphView } from './services/templateGraphView';
-export { TargetSelector } from './services/targetSelector';
-export type { SelectionBias, SelectionResult } from './services/targetSelector';
+export { TemplateGraphView } from './graph/templateGraphView';
+export { TargetSelector } from './selection/targetSelector';
+export type { SelectionBias, SelectionResult } from './selection/targetSelector';
 
 // Services for optional LLM integration (domain configures these)
-export { EnrichmentService } from './services/enrichmentService';
-export { ImageGenerationService } from './services/imageGenerationService';
+export { EnrichmentService } from './llm/enrichmentService';
+export { ImageGenerationService } from './llm/imageGenerationService';
+
+// Cultural awareness analysis (debugging/reporting)
+export { CulturalAwarenessAnalyzer } from './statistics/culturalAwarenessAnalyzer';
+export type { CulturalAwarenessReport } from './statistics/culturalAwarenessAnalyzer';
 
 // =============================================================================
 // UTILITY FUNCTIONS - For domain templates and systems
 // =============================================================================
 
-// Core helpers
+// Core helpers (re-exported from utils index)
 export {
   generateId,
   pickRandom,
@@ -96,20 +113,38 @@ export {
   archiveRelationship,
   addRelationshipWithDistance,
   modifyRelationshipStrength,
-  areRelationshipsCompatible
-} from './utils/helpers';
+  areRelationshipsCompatible,
+  // Tag utilities
+  mergeTags,
+  hasTag,
+  getTagValue,
+  getTrueTagKeys,
+  getStringTags,
+  tagsToArray,
+  arrayToTags,
+  // Additional entity/relationship utilities
+  rollProbability,
+  addEntity,
+  addRelationship,
+  canFormRelationship,
+  recordRelationshipFormation,
+  getProminenceValue,
+  adjustProminence,
+  getConnectionWeight,
+  getFactionRelationship
+} from './utils';
 
 // Name generation service (wraps name-forge)
-export { NameForgeService } from './services/nameForgeService';
-export type { NameForgeConfig, NameForgeCultureConfig } from './services/nameForgeService';
+export { NameForgeService } from './naming/nameForgeService';
+export type { NameForgeConfig, NameForgeProjectFile, Culture } from './naming/nameForgeService';
 
 // Validation
-export { validateWorld } from './utils/validators';
-export type { ValidationResult, ValidationReport } from './utils/validators';
+export { validateWorld } from './engine/validators';
+export type { ValidationResult, ValidationReport } from './engine/validators';
 
 // Parameter configuration
-export { applyParameterOverrides } from './utils/parameterOverrides';
-export { extractParams } from './utils/parameterExtractor';
+export { applyParameterOverrides } from './engine/parameterOverrides';
+export { extractParams } from './engine/parameterExtractor';
 
 // Entity clustering (for meta-entity formation systems)
 export {
@@ -117,14 +152,14 @@ export {
   detectClusters,
   filterClusterableEntities,
   findBestClusterMatch
-} from './utils/clusteringUtils';
+} from './graph/clusteringUtils';
 
 export type {
   Cluster,
   ClusterCriterion,
   ClusterCriterionType,
   ClusterConfig
-} from './utils/clusteringUtils';
+} from './graph/clusteringUtils';
 
 // Entity archival (for entity lifecycle management)
 export {
@@ -137,38 +172,32 @@ export {
   isHistoricalEntity,
   getPartOfMembers,
   supersedeEntity
-} from './utils/entityArchival';
+} from './graph/entityArchival';
 
 export type {
   ArchiveEntityOptions,
   TransferRelationshipsOptions,
   SupersedeEntityOptions
-} from './utils/entityArchival';
-
-// Emergent discovery (for location discovery templates)
-export {
-  analyzeResourceDeficit,
-  analyzeConflictPatterns,
-  analyzeMagicPresence,
-  generateResourceTheme,
-  generateStrategicTheme,
-  generateMysticalTheme,
-  generateExplorationTheme,
-  shouldDiscoverLocation,
-  calculateThemeSimilarity,
-  findNearbyLocations
-} from './utils/emergentDiscovery';
-
-export type {
-  ResourceAnalysis,
-  ConflictAnalysis,
-  MagicAnalysis,
-  LocationTheme
-} from './utils/emergentDiscovery';
+} from './graph/entityArchival';
 
 // Template building utilities
-export { EntityClusterBuilder } from './utils/entityClusterBuilder';
-export { buildRelationships } from './utils/relationshipBuilder';
+export { EntityClusterBuilder } from './graph/entityClusterBuilder';
+export { buildRelationships } from './graph/relationshipBuilder';
+
+// Catalyst helpers (for domain occurrence/catalyst systems)
+export {
+  initializeCatalyst,
+  initializeCatalystSmart,
+  getAgentsByCategory,
+  canPerformAction,
+  getInfluence,
+  recordCatalyst,
+  getCatalyzedEvents,
+  getCatalyzedEventCount,
+  addCatalyzedEvent,
+  calculateAttemptChance,
+  updateInfluence
+} from './systems/catalystHelpers';
 
 // =============================================================================
 // FRAMEWORK SYSTEMS - Domain registers these with engine config
@@ -177,7 +206,6 @@ export { buildRelationships } from './utils/relationshipBuilder';
 export { relationshipCulling } from './systems/relationshipCulling';
 export { eraSpawner } from './systems/eraSpawner';
 export { eraTransition } from './systems/eraTransition';
-export { occurrenceCreation } from './systems/occurrenceCreation';
 export { universalCatalyst } from './systems/universalCatalyst';
 
 // =============================================================================
@@ -185,9 +213,108 @@ export { universalCatalyst } from './systems/universalCatalyst';
 // =============================================================================
 
 export {
-  FRAMEWORK_RELATIONSHIP_KINDS
-} from './types/frameworkPrimitives';
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_STATUS
+} from './core/frameworkPrimitives';
 
 export type {
-  FrameworkRelationshipKind
-} from './types/frameworkPrimitives';
+  FrameworkEntityKind,
+  FrameworkRelationshipKind,
+  FrameworkStatus
+} from './core/frameworkPrimitives';
+
+// Feedback loop types (domain provides feedback loop configuration)
+export type { FeedbackLoop } from './feedback/feedbackAnalyzer';
+
+// =============================================================================
+// REGION-BASED COORDINATE SYSTEM
+// =============================================================================
+
+export type {
+  Point,
+  Region,
+  RegionShape,
+  RegionBounds,
+  CircleBounds,
+  RectBounds,
+  PolygonBounds,
+  RegionMapperConfig,
+  RegionLookupResult,
+  SampleRegionOptions,
+  EmergentRegionConfig,
+  EmergentRegionResult,
+  RegionCreatedEvent,
+  EntityPlacedInRegionEvent,
+  // Per-kind coordinate maps
+  MapBounds,
+  EntityKindMapConfig,
+  EntityKindMapState,
+  EntityKindMaps,
+  EntityKindMapsState
+} from './coordinates/types';
+
+export { SPACE_BOUNDS } from './coordinates/types';
+
+export { RegionMapper } from './coordinates/regionMapper';
+
+export { RegionPlacementService } from './coordinates/regionPlacement';
+export type {
+  PlacementOptions as RegionPlacementOptions,
+  PlacementResult as RegionPlacementResult,
+  BatchPlacementOptions as RegionBatchPlacementOptions,
+  BatchPlacementResult as RegionBatchPlacementResult
+} from './coordinates/regionPlacement';
+
+// Per-kind region management
+export {
+  KindRegionService,
+  createDefaultEmergentConfig,
+  createKindMapConfig
+} from './coordinates/kindRegionService';
+export type { KindRegionServiceConfig } from './coordinates/kindRegionService';
+
+// =============================================================================
+// SEMANTIC AXIS SYSTEM
+// =============================================================================
+
+export type {
+  SemanticAxis,
+  EntityKindAxes,
+  TagSemanticWeight,
+  TagSemanticWeights,
+  SemanticEncodingResult,
+  SemanticEncoderConfig
+} from './coordinates/types';
+
+export {
+  SemanticEncoder,
+  createSemanticEncoder
+} from './coordinates/semanticEncoder';
+
+// =============================================================================
+// COORDINATE CONTEXT (Culture-First Placement)
+// =============================================================================
+
+export {
+  CoordinateContext,
+  createCoordinateContext
+} from './coordinates/coordinateContext';
+
+export type {
+  CoordinateContextConfig,
+  CultureCoordinateConfig,
+  PlacementContext,
+  PlacementResult
+} from './coordinates/coordinateContext';
+
+// =============================================================================
+// COORDINATE STATISTICS (Diagnostics)
+// =============================================================================
+
+export { coordinateStats } from './coordinates/coordinateStatistics';
+export type {
+  PlacementEvent,
+  CultureClusterStats,
+  CoordinateStatsSummary
+} from './coordinates/coordinateStatistics';

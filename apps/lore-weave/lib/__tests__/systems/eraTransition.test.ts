@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eraTransition } from '../../systems/eraTransition';
-import { Graph } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import { FRAMEWORK_STATUS } from '../../core/frameworkPrimitives';
 
 describe('eraTransition', () => {
   let graph: Graph;
@@ -22,14 +23,17 @@ describe('eraTransition', () => {
   });
 
   beforeEach(() => {
-    const entities = new Map<string, HardState>();
-    entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
-    entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
-    entities.set('era3', createEraEntity('era3', 'Late Age', 'future', 0));
+    const _entities = new Map<string, HardState>();
+    _entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
+    _entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
+    _entities.set('era3', createEraEntity('era3', 'Late Age', 'future', 0));
+
+    let _relationships: Relationship[] = [];
 
     graph = {
-      entities,
-      relationships: [],
+      // Keep entities/relationships getters for test code compatibility
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
       tick: 100,
       currentEra: { id: 'era1', name: 'Early Age', description: 'Test', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
       pressures: new Map(),
@@ -53,7 +57,66 @@ describe('eraTransition', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
-    };
+      growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
+      loreRecords: [],
+      // New Graph interface methods - entity read
+      getEntity(id: string) { return _entities.get(id); },
+      hasEntity(id: string) { return _entities.has(id); },
+      getEntityCount() { return _entities.size; },
+      getEntities() { return Array.from(_entities.values()); },
+      getEntityIds() { return Array.from(_entities.keys()); },
+      forEachEntity(cb: any) { _entities.forEach((e, id) => cb(e, id)); },
+      findEntities(criteria: any) {
+        return Array.from(_entities.values()).filter(e => {
+          if (criteria.kind && e.kind !== criteria.kind) return false;
+          if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+          if (criteria.status && e.status !== criteria.status) return false;
+          return true;
+        });
+      },
+      getEntitiesByKind(kind: string) { return Array.from(_entities.values()).filter(e => e.kind === kind); },
+      getConnectedEntities(entityId: string, relationKind?: string) {
+        const connectedIds = new Set<string>();
+        _relationships.forEach(r => {
+          if (relationKind && r.kind !== relationKind) return;
+          if (r.src === entityId) connectedIds.add(r.dst);
+          if (r.dst === entityId) connectedIds.add(r.src);
+        });
+        return Array.from(connectedIds).map(id => _entities.get(id)).filter(Boolean);
+      },
+      // Entity mutation methods
+      createEntity(settings: any) {
+        const id = `${settings.kind}-${Date.now()}`;
+        _entities.set(id, { ...settings, id, links: [] });
+        return id;
+      },
+      updateEntity(id: string, changes: any) {
+        const e = _entities.get(id);
+        if (!e) return false;
+        Object.assign(e, changes);
+        return true;
+      },
+      deleteEntity(id: string) { return _entities.delete(id); },
+      _loadEntity(id: string, entity: HardState) { _entities.set(id, entity); },
+      // Relationship read methods
+      getRelationships() { return [..._relationships]; },
+      getRelationshipCount() { return _relationships.length; },
+      findRelationships(criteria: any) {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          return true;
+        });
+      },
+      getEntityRelationships(entityId: string) {
+        return _relationships.filter(r => r.src === entityId || r.dst === entityId);
+      },
+      // Relationship mutation methods
+      addRelationship(rel: any) { _relationships.push(rel); },
+      _loadRelationship(rel: any) { _relationships.push(rel); },
+      _setRelationships(rels: any[]) { _relationships = rels; }
+    } as any;
   });
 
   describe('metadata', () => {
@@ -102,8 +165,8 @@ describe('eraTransition', () => {
 
     it('should handle no future eras', () => {
       // Set all eras to past except current
-      graph.entities.get('era2')!.status = 'past';
-      graph.entities.get('era3')!.status = 'past';
+      graph.entities.get('era2')!.status = FRAMEWORK_STATUS.HISTORICAL;
+      graph.entities.get('era3')!.status = FRAMEWORK_STATUS.HISTORICAL;
 
       graph.tick = 100;
       const result = eraTransition.apply(graph);
@@ -556,7 +619,7 @@ describe('eraTransition', () => {
         subtype: 'war',
         name: 'Great War',
         description: '',
-        status: 'ended',
+        status: FRAMEWORK_STATUS.HISTORICAL,
         prominence: 'recognized',
         tags: [],
         links: [],
@@ -706,8 +769,8 @@ describe('eraTransition', () => {
     it('should indicate final era when no future eras remain', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
-      graph.entities.get('era2')!.status = 'past';
-      graph.entities.get('era3')!.status = 'past';
+      graph.entities.get('era2')!.status = FRAMEWORK_STATUS.HISTORICAL;
+      graph.entities.get('era3')!.status = FRAMEWORK_STATUS.HISTORICAL;
       graph.tick = 120;
 
       graph.config.domain.getEraTransitionConditions = () => [];

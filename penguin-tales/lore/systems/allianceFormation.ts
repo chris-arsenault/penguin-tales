@@ -1,11 +1,7 @@
-import { SimulationSystem, SystemResult, Graph, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { Relationship } from '@lore-weave/core/types/worldTypes';
-import {
-  findEntities,
-  getRelated,
-  hasRelationship,
-  rollProbability
-} from '@lore-weave/core/utils/helpers';
+import { TemplateGraphView } from '@lore-weave/core';
+import { SimulationSystem, SystemResult, ComponentPurpose } from '@lore-weave/core';
+import { Relationship } from '@lore-weave/core';
+import { rollProbability } from '@lore-weave/core';
 
 /**
  * Alliance Formation System
@@ -61,18 +57,18 @@ export const allianceFormation: SimulationSystem = {
     },
   },
 
-  apply: (graph: Graph, modifier: number = 1.0): SystemResult => {
+  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
     const params = allianceFormation.metadata?.parameters || {};
     const allianceBaseChance = params.allianceBaseChance?.value ?? 0.5;
 
     const relationships: Relationship[] = [];
-    const factions = findEntities(graph, { kind: 'faction' });
+    const factions = graphView.findEntities({ kind: 'faction' });
 
     factions.forEach((faction, i) => {
       factions.slice(i + 1).forEach(otherFaction => {
         // Check for common enemies (only strong/active wars count)
-        const factionEnemies = getRelated(graph, faction.id, 'at_war_with', 'src', { minStrength: 0.5 });
-        const otherEnemies = getRelated(graph, otherFaction.id, 'at_war_with', 'src', { minStrength: 0.5 });
+        const factionEnemies = graphView.getRelated(faction.id, 'at_war_with', 'src', { minStrength: 0.5 });
+        const otherEnemies = graphView.getRelated(otherFaction.id, 'at_war_with', 'src', { minStrength: 0.5 });
 
         const commonEnemies = factionEnemies.filter(e =>
           otherEnemies.some(oe => oe.id === e.id)
@@ -80,7 +76,7 @@ export const allianceFormation: SimulationSystem = {
 
         // Common enemies drive alliances
         if (commonEnemies.length > 0 && rollProbability(allianceBaseChance, modifier)) {
-          if (!hasRelationship(graph, faction.id, otherFaction.id, 'allied_with')) {
+          if (!graphView.hasRelationship(faction.id, otherFaction.id, 'allied_with')) {
             relationships.push({
               kind: 'allied_with',
               src: faction.id,

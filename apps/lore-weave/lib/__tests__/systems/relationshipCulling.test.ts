@@ -1,11 +1,14 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { relationshipCulling } from '../../systems/relationshipCulling';
-import { Graph } from '../../types/engine';
-import { HardState, Relationship } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
+import { TemplateGraphView } from '../../graph/templateGraphView';
+import { TargetSelector } from '../../services/targetSelector';
 
 describe('relationshipCulling', () => {
   let graph: Graph;
+  let graphView: TemplateGraphView;
 
   const createEntity = (id: string, createdAt: number = 0): HardState => ({
     id,
@@ -28,13 +31,13 @@ describe('relationshipCulling', () => {
   };
 
   beforeEach(() => {
-    const entities = new Map<string, HardState>();
-    entities.set('npc1', createEntity('npc1', 0));
-    entities.set('npc2', createEntity('npc2', 0));
-    entities.set('npc3', createEntity('npc3', 0));
-    entities.set('npc4', createEntity('npc4', 0));
+    let _entities = new Map<string, HardState>();
+    _entities.set('npc1', createEntity('npc1', 0));
+    _entities.set('npc2', createEntity('npc2', 0));
+    _entities.set('npc3', createEntity('npc3', 0));
+    _entities.set('npc4', createEntity('npc4', 0));
 
-    const relationships: Relationship[] = [
+    let _relationships: Relationship[] = [
       createRelationship('npc1', 'npc2', 'allies', 0.8), // Strong
       createRelationship('npc1', 'npc3', 'knows', 0.1), // Weak
       createRelationship('npc2', 'npc3', 'trades_with', 0.3), // Medium
@@ -42,16 +45,20 @@ describe('relationshipCulling', () => {
     ];
 
     // Sync links
-    relationships.forEach(rel => {
-      const src = entities.get(rel.src);
-      const dst = entities.get(rel.dst);
+    _relationships.forEach(rel => {
+      const src = _entities.get(rel.src);
+      const dst = _entities.get(rel.dst);
       if (src) src.links.push(rel);
       if (dst) dst.links.push(rel);
     });
 
     graph = {
-      entities,
-      relationships,
+      // Keep relationships getter/setter for test code compatibility
+      get relationships() { return _relationships; },
+      set relationships(rels: Relationship[]) { _relationships = rels; },
+      // Keep entities getter/setter for test code compatibility
+      get entities() { return _entities; },
+      set entities(ents: Map<string, HardState>) { _entities = ents; },
       tick: 50,
       currentEra: {
         id: 'test',
@@ -77,7 +84,145 @@ describe('relationshipCulling', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
+
+      // Entity read methods
+      // Returns actual entity reference (not a copy) so mutations persist
+      getEntity(id: string): HardState | undefined {
+        return _entities.get(id);
+      },
+      hasEntity(id: string): boolean {
+        return _entities.has(id);
+      },
+      getEntityCount(): number {
+        return _entities.size;
+      },
+      getEntities(): HardState[] {
+        return Array.from(_entities.values()).map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntityIds(): string[] {
+        return Array.from(_entities.keys());
+      },
+      forEachEntity(callback: (entity: HardState, id: string) => void): void {
+        _entities.forEach((entity, id) => {
+          callback({ ...entity, tags: [...entity.tags], links: [...entity.links] }, id);
+        });
+      },
+      findEntities(criteria: { kind?: string; subtype?: string; status?: string; prominence?: string; culture?: string; tag?: string; exclude?: string[] }): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => {
+            if (criteria.kind && e.kind !== criteria.kind) return false;
+            if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+            if (criteria.status && e.status !== criteria.status) return false;
+            if (criteria.prominence && e.prominence !== criteria.prominence) return false;
+            if (criteria.culture && e.culture !== criteria.culture) return false;
+            if (criteria.tag && !e.tags.includes(criteria.tag)) return false;
+            if (criteria.exclude && criteria.exclude.includes(e.id)) return false;
+            return true;
+          })
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getEntitiesByKind(kind: string): HardState[] {
+        return Array.from(_entities.values())
+          .filter(e => e.kind === kind)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+      getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+        const connectedIds = new Set<string>();
+        _relationships.forEach(r => {
+          if (relationKind && r.kind !== relationKind) return;
+          if (r.src === entityId) connectedIds.add(r.dst);
+          if (r.dst === entityId) connectedIds.add(r.src);
+        });
+        return Array.from(connectedIds)
+          .map(id => _entities.get(id))
+          .filter((e): e is HardState => e !== undefined)
+          .map(e => ({ ...e, tags: [...e.tags], links: [...e.links] }));
+      },
+
+      // Entity mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      updateEntity(id: string, changes: Partial<HardState>): boolean {
+        const entity = _entities.get(id);
+        if (!entity) return false;
+        Object.assign(entity, changes);
+        entity.updatedAt = this.tick;
+        return true;
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+
+      // Relationship read methods
+      getRelationships(): Relationship[] {
+        return [..._relationships];
+      },
+      getRelationshipCount(): number {
+        return _relationships.length;
+      },
+      findRelationships(criteria: { kind?: string; src?: string; dst?: string; category?: string; minStrength?: number }): Relationship[] {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          if (criteria.minStrength !== undefined && (r.strength ?? 0.5) < criteria.minStrength) return false;
+          return true;
+        });
+      },
+      getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[] {
+        return _relationships.filter(r => {
+          if (direction === 'src') return r.src === entityId;
+          if (direction === 'dst') return r.dst === entityId;
+          return r.src === entityId || r.dst === entityId;
+        });
+      },
+      hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+        return _relationships.some(r =>
+          r.src === srcId && r.dst === dstId && (!kind || r.kind === kind)
+        );
+      },
+
+      // Relationship mutation methods
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+        const srcEntity = _entities.get(relationship.src);
+        if (srcEntity) {
+          srcEntity.links.push({ ...relationship });
+          srcEntity.updatedAt = this.tick;
+        }
+        const dstEntity = _entities.get(relationship.dst);
+        if (dstEntity) {
+          dstEntity.updatedAt = this.tick;
+        }
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      _setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      _loadRelationship(rel: Relationship): void {
+        _relationships.push(rel);
+      },
+      removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+        const idx = _relationships.findIndex(r => r.src === srcId && r.dst === dstId && r.kind === kind);
+        if (idx >= 0) {
+          _relationships.splice(idx, 1);
+          const srcEntity = _entities.get(srcId);
+          if (srcEntity) {
+            srcEntity.links = srcEntity.links.filter(l => !(l.src === srcId && l.dst === dstId && l.kind === kind));
+            srcEntity.updatedAt = this.tick;
+          }
+          return true;
+        }
+        return false;
+      }
     };
+
+    // Create TemplateGraphView wrapper
+    const targetSelector = new TargetSelector();
+    graphView = new TemplateGraphView(graph, targetSelector);
   });
 
   describe('metadata', () => {
@@ -358,7 +503,7 @@ describe('relationshipCulling', () => {
   describe('custom modifier', () => {
     it('should accept modifier parameter', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph, 2.0);
+      const result = relationshipCulling.apply(graphView, 2.0);
 
       // Modifier doesn't affect culling logic currently, but shouldn't error
       expect(result).toBeDefined();
@@ -366,7 +511,7 @@ describe('relationshipCulling', () => {
 
     it('should work with zero modifier', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph, 0);
+      const result = relationshipCulling.apply(graphView, 0);
 
       expect(result).toBeDefined();
     });

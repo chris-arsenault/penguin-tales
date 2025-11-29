@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateId } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { generateId } from '@lore-weave/core';
 
 /**
  * Magical Site Discovery Template
@@ -141,26 +141,35 @@ export const magicalSiteDiscovery: GrowthTemplate = {
 
     // Create new magical anomaly location
     const locationId = 'will-be-assigned-0';
-    const locationNames = [
-      'The Shimmering Chasm',
-      'Frost-Light Grotto',
-      'The Whispering Ice',
-      'Ethereal Shelf',
-      'The Glowing Depths',
-      'Mystic Ice Cavern',
-      'The Frozen Aurora',
-      'Spectral Basin'
-    ];
+
+    // Derive coordinates - reference the magical ability and catalyst
+    const referenceEntities = [target, catalyst];
+
+    const cultureId = catalyst.culture ?? 'default';
+    const sitePlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'location',
+      referenceEntities
+    );
+
+    if (!sitePlacement) {
+      throw new Error(
+        `magical_site_discovery: Failed to derive coordinates for magical site discovered by ${catalyst.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'location' entities.`
+      );
+    }
+
+    const conceptualCoords = sitePlacement.coordinates;
 
     const newLocation: Partial<HardState> = {
       kind: 'location',
       subtype: 'anomaly',
-      name: locationNames[Math.floor(Math.random() * locationNames.length)],
       description: `A mystical site where ${target.name} manifests with unusual intensity`,
       status: 'thriving',
       prominence: 'recognized',
       culture: catalyst.culture,  // Inherit culture from discovering practitioner
-      tags: ['anomaly', 'magical', target.name.toLowerCase().split(' ')[0]],
+      tags: { anomaly: true, magical: true, [target.name.toLowerCase().split(' ')[0]]: true },
+      coordinates: conceptualCoords,
       links: []
     };
 
@@ -184,7 +193,7 @@ export const magicalSiteDiscovery: GrowthTemplate = {
     return {
       entities: [newLocation],
       relationships,
-      description: `${catalyst.name} discovers ${newLocation.name}, where ${target.name} manifests`
+      description: `${catalyst.name} discovers a mystical site where ${target.name} manifests`
     };
   }
 };

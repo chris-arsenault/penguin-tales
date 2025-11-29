@@ -5,9 +5,9 @@
  * The framework's universal catalyst system calls these handlers.
  */
 
-import { Graph } from '@lore-weave/core/types/engine';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateId } from '@lore-weave/core/utils/helpers';
+import { Graph } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { generateId } from '@lore-weave/core';
 
 // ===========================
 // ACTION DOMAIN DEFINITIONS
@@ -65,11 +65,11 @@ const politicalDomain: ActionDomain = {
       },
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         // Find adjacent uncontrolled locations
-        const controlledLocations = graph.relationships
+        const controlledLocations = graph.getRelationships()
           .filter(r => r.kind === 'controls' && r.src === actor.id)
           .map(r => r.dst);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => {
             if (e.kind !== 'location') return false;
 
@@ -77,7 +77,7 @@ const politicalDomain: ActionDomain = {
             if (controlledLocations.includes(e.id)) return false;
 
             // Check if adjacent to controlled location
-            const isAdjacent = graph.relationships.some(r =>
+            const isAdjacent = graph.getRelationships().some(r =>
               r.kind === 'adjacent_to' &&
               ((r.src === e.id && controlledLocations.includes(r.dst)) ||
                (r.dst === e.id && controlledLocations.includes(r.src)))
@@ -120,7 +120,7 @@ const politicalDomain: ActionDomain = {
       },
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         const actorFaction = actor.kind === 'faction' ? actor :
-          graph.entities.get(
+          graph.getEntity(
             actor.links.find(l => l.kind === 'leader_of')?.dst || ''
           );
 
@@ -133,16 +133,16 @@ const politicalDomain: ActionDomain = {
         }
 
         // Find factions not already allied or at war
-        const existingAllies = graph.relationships
+        const existingAllies = graph.getRelationships()
           .filter(r => r.kind === 'allied_with' && r.src === actorFaction.id)
           .map(r => r.dst);
 
-        const enemies = graph.relationships
+        const enemies = graph.getRelationships()
           .filter(r => r.kind === 'at_war_with' &&
                       (r.src === actorFaction.id || r.dst === actorFaction.id))
           .map(r => r.src === actorFaction.id ? r.dst : r.src);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e =>
             e.kind === 'faction' &&
             e.id !== actorFaction.id &&
@@ -192,7 +192,7 @@ const politicalDomain: ActionDomain = {
       },
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         const actorFaction = actor.kind === 'faction' ? actor :
-          graph.entities.get(
+          graph.getEntity(
             actor.links.find(l => l.kind === 'leader_of')?.dst || ''
           );
 
@@ -205,12 +205,12 @@ const politicalDomain: ActionDomain = {
         }
 
         // Find factions not already at war
-        const existingEnemies = graph.relationships
+        const existingEnemies = graph.getRelationships()
           .filter(r => r.kind === 'at_war_with' &&
                       (r.src === actorFaction.id || r.dst === actorFaction.id))
           .map(r => r.src === actorFaction.id ? r.dst : r.src);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e =>
             e.kind === 'faction' &&
             e.id !== actorFaction.id &&
@@ -270,13 +270,13 @@ const militaryDomain: ActionDomain = {
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         // Find enemy factions
         const actorFaction = actor.kind === 'faction' ? actor :
-          graph.entities.get(actor.links.find(l => l.kind === 'leader_of')?.dst || '');
+          graph.getEntity(actor.links.find(l => l.kind === 'leader_of')?.dst || '');
 
         if (!actorFaction) {
           return { success: false, relationships: [], description: 'has no faction' };
         }
 
-        const enemies = graph.relationships
+        const enemies = graph.getRelationships()
           .filter(r => r.kind === 'at_war_with' && r.src === actorFaction.id)
           .map(r => r.dst);
 
@@ -284,7 +284,7 @@ const militaryDomain: ActionDomain = {
           return { success: false, relationships: [], description: 'has no enemies to raid' };
         }
 
-        const enemy = graph.entities.get(enemies[Math.floor(Math.random() * enemies.length)]);
+        const enemy = graph.getEntity(enemies[Math.floor(Math.random() * enemies.length)]);
         if (!enemy) {
           return { success: false, relationships: [], description: 'enemy not found' };
         }
@@ -323,7 +323,7 @@ const economicDomain: ActionDomain = {
       baseWeight: 1.2,
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         // Find two locations not already trading
-        const locations = Array.from(graph.entities.values())
+        const locations = graph.getEntities()
           .filter(e => e.kind === 'location' && e.status === 'thriving');
 
         if (locations.length < 2) {
@@ -338,7 +338,7 @@ const economicDomain: ActionDomain = {
         }
 
         // Check if already trading
-        const alreadyTrading = graph.relationships.some(r =>
+        const alreadyTrading = graph.getRelationships().some(r =>
           r.kind === 'trades_with' &&
           ((r.src === loc1.id && r.dst === loc2.id) || (r.src === loc2.id && r.dst === loc1.id))
         );
@@ -394,7 +394,7 @@ const magicalDomain: ActionDomain = {
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         // Find magical ability
         const ability = actor.kind === 'abilities' ? actor :
-          graph.entities.get(
+          graph.getEntity(
             actor.links.find(l => l.kind === 'practitioner_of')?.dst || ''
           );
 
@@ -403,11 +403,11 @@ const magicalDomain: ActionDomain = {
         }
 
         // Find uncorrupted location
-        const corruptedLocations = graph.relationships
+        const corruptedLocations = graph.getRelationships()
           .filter(r => r.kind === 'corrupted_by')
           .map(r => r.src);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => e.kind === 'location' && !corruptedLocations.includes(e.id));
 
         if (candidates.length === 0) {
@@ -441,11 +441,11 @@ const magicalDomain: ActionDomain = {
         }
 
         // Find locations where magic doesn't already manifest
-        const manifestLocations = graph.relationships
+        const manifestLocations = graph.getRelationships()
           .filter(r => r.kind === 'manifests_at' && r.src === actor.id)
           .map(r => r.dst);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => e.kind === 'location' && !manifestLocations.includes(e.id));
 
         if (candidates.length === 0) {
@@ -494,11 +494,11 @@ const technologicalDomain: ActionDomain = {
         }
 
         // Find NPCs/factions not yet practitioners
-        const practitioners = graph.relationships
+        const practitioners = graph.getRelationships()
           .filter(r => r.kind === 'practitioner_of' && r.dst === tech.id)
           .map(r => r.src);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => (e.kind === 'npc' || e.kind === 'faction') &&
                       !practitioners.includes(e.id) &&
                       e.status !== 'dead');
@@ -571,9 +571,9 @@ const culturalDomain: ActionDomain = {
       baseWeight: 1.0,
       handler: (graph: Graph, actor: HardState): ActionOutcome => {
         // Find rules this actor weaponizes
-        const rules = graph.relationships
+        const rules = graph.getRelationships()
           .filter(r => r.kind === 'weaponized_by' && r.src === actor.id)
-          .map(r => graph.entities.get(r.dst))
+          .map(r => graph.getEntity(r.dst))
           .filter(r => r && r.kind === 'rules');
 
         if (rules.length === 0) {
@@ -584,11 +584,11 @@ const culturalDomain: ActionDomain = {
         if (!rule) return { success: false, relationships: [], description: 'rule not found' };
 
         // Find factions not yet weaponizing this rule
-        const adopters = graph.relationships
+        const adopters = graph.getRelationships()
           .filter(r => r.kind === 'weaponized_by' && r.dst === rule.id)
           .map(r => r.src);
 
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => e.kind === 'faction' && !adopters.includes(e.id));
 
         if (candidates.length === 0) {
@@ -635,12 +635,12 @@ const conflictEscalationDomain: ActionDomain = {
         }
 
         // Find current participants
-        const participants = graph.relationships
+        const participants = graph.getRelationships()
           .filter(r => r.kind === 'participant_in' && r.dst === actor.id)
           .map(r => r.src);
 
         // Find non-participant factions
-        const candidates = Array.from(graph.entities.values())
+        const candidates = graph.getEntities()
           .filter(e => e.kind === 'faction' && !participants.includes(e.id));
 
         if (candidates.length === 0) {
@@ -707,7 +707,7 @@ const disasterSpreadDomain: ActionDomain = {
         }
 
         // Find epicenter
-        const epicenter = graph.relationships
+        const epicenter = graph.getRelationships()
           .find(r => r.kind === 'epicenter_of' && r.src === actor.id);
 
         if (!epicenter) {
@@ -715,17 +715,17 @@ const disasterSpreadDomain: ActionDomain = {
         }
 
         // Find adjacent uncorrupted locations
-        const adjacentLocations = graph.relationships
+        const adjacentLocations = graph.getRelationships()
           .filter(r => r.kind === 'adjacent_to' &&
                       (r.src === epicenter.dst || r.dst === epicenter.dst))
           .map(r => r.src === epicenter.dst ? r.dst : r.src);
 
-        const corruptedLocations = graph.relationships
+        const corruptedLocations = graph.getRelationships()
           .filter(r => r.kind === 'corrupted_by')
           .map(r => r.src);
 
         const candidates = adjacentLocations
-          .map(id => graph.entities.get(id))
+          .map(id => graph.getEntity(id))
           .filter(e => e && !corruptedLocations.includes(e.id));
 
         if (candidates.length === 0) {
@@ -734,27 +734,18 @@ const disasterSpreadDomain: ActionDomain = {
 
         const target = candidates[Math.floor(Math.random() * candidates.length)]!;
 
-        // Create a generic "corruption" ability if needed
-        let corruptionAbility = Array.from(graph.entities.values())
+        // Find existing corruption ability or use actor if it's a corruption effect
+        const corruptionAbility = graph.getEntities()
           .find(e => e.kind === 'abilities' && e.name === 'Corruption');
 
-        if (!corruptionAbility) {
-          const abilityId = generateId('abilities');
-          corruptionAbility = {
-            id: abilityId,
-            kind: 'abilities',
-            subtype: 'magic',
-            name: 'Corruption',
-            description: 'Magical corruption that spreads',
-            status: 'active',
-            prominence: 'renowned',
-            culture: 'world',  // Corruption is a world-level phenomenon
-            tags: ['corruption', 'magic'],
-            links: [],
-            createdAt: graph.tick,
-            updatedAt: graph.tick
-          };
-          graph.entities.set(abilityId, corruptionAbility as HardState);
+        // Use existing corruption ability, or the disaster's originating ability
+        const ability = corruptionAbility || graph.getEntity(
+          graph.getRelationships()
+            .find(r => r.kind === 'caused_by' && r.src === actor.id)?.dst || ''
+        );
+
+        if (!ability) {
+          return { success: false, relationships: [], description: 'no corruption source found' };
         }
 
         return {
@@ -762,12 +753,11 @@ const disasterSpreadDomain: ActionDomain = {
           relationships: [{
             kind: 'corrupted_by',
             src: target.id,
-            dst: corruptionAbility.id,
+            dst: ability.id,
             strength: 0.8
           }],
           description: `spread corruption to ${target.name}`,
-          entitiesModified: [target.id],
-          entitiesCreated: corruptionAbility.createdAt === graph.tick ? [corruptionAbility.id] : []
+          entitiesModified: [target.id]
         };
       }
     }

@@ -3,9 +3,9 @@ import {
   applyTemplateOverrides,
   applySystemOverrides,
   applyParameterOverrides
-} from '../../utils/parameterOverrides';
-import { GrowthTemplate, SimulationSystem } from '../../types/engine';
-import { TemplateMetadata, SystemMetadata } from '../../types/distribution';
+} from '../../engine/parameterOverrides';
+import { GrowthTemplate, SimulationSystem } from '../../engine/types';
+import { TemplateMetadata, SystemMetadata } from '../../statistics/types';
 
 describe('parameterOverrides', () => {
   const createMockTemplate = (id: string, metadata?: TemplateMetadata): GrowthTemplate => ({

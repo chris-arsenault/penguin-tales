@@ -1,16 +1,20 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eraSpawner } from '../../systems/eraSpawner';
-import { Graph } from '../../types/engine';
-import { HardState } from '../../types/worldTypes';
+import { Graph } from '../../engine/types';
+import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('eraSpawner', () => {
   let graph: Graph;
 
   beforeEach(() => {
+    const _entities = new Map();
+    let _relationships: Relationship[] = [];
+
     graph = {
-      entities: new Map(),
-      relationships: [],
+      get entities() { return _entities; },
+      get relationships() { return _relationships; },
+      set relationships(rels: Relationship[]) { _relationships = rels; },
       tick: 0,
       currentEra: { id: 'test', name: 'Test', description: 'Test', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
       pressures: new Map(),
@@ -31,6 +35,65 @@ describe('eraSpawner', () => {
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
+
+      // Entity read methods
+      getEntity(id: string) { return _entities.get(id); },
+      hasEntity(id: string) { return _entities.has(id); },
+      getEntityCount() { return _entities.size; },
+      getEntities() { return Array.from(_entities.values()); },
+      getEntityIds() { return Array.from(_entities.keys()); },
+      findEntities(criteria: any) {
+        return Array.from(_entities.values()).filter((e: any) => {
+          if (criteria.kind && e.kind !== criteria.kind) return false;
+          if (criteria.subtype && e.subtype !== criteria.subtype) return false;
+          if (criteria.status && e.status !== criteria.status) return false;
+          return true;
+        });
+      },
+      getEntitiesByKind(kind: string) {
+        return Array.from(_entities.values()).filter((e: any) => e.kind === kind);
+      },
+
+      // Relationship read methods
+      getRelationships() { return [..._relationships]; },
+      getRelationshipCount() { return _relationships.length; },
+      findRelationships(criteria: any) {
+        return _relationships.filter(r => {
+          if (criteria.kind && r.kind !== criteria.kind) return false;
+          if (criteria.src && r.src !== criteria.src) return false;
+          if (criteria.dst && r.dst !== criteria.dst) return false;
+          return true;
+        });
+      },
+
+      // Mutation methods
+      setEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      updateEntity(id: string, changes: Partial<HardState>): boolean {
+        const entity = _entities.get(id);
+        if (!entity) return false;
+        Object.assign(entity, changes);
+        return true;
+      },
+      deleteEntity(id: string): boolean {
+        return _entities.delete(id);
+      },
+      pushRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      addRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      },
+      setRelationships(rels: Relationship[]): void {
+        _relationships = rels;
+      },
+      _loadEntity(id: string, entity: HardState): void {
+        _entities.set(id, entity);
+      },
+      _loadRelationship(relationship: Relationship): void {
+        _relationships.push(relationship);
+      }
     };
   });
 

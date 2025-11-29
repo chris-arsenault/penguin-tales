@@ -10,10 +10,10 @@
  * Uses emergent discovery logic to generate thematically appropriate locations.
  */
 
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { pickRandom, findEntities } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, findEntities } from '@lore-weave/core';
 
 export const emergentLocationDiscovery: GrowthTemplate = {
   id: 'emergent_location_discovery',
@@ -137,7 +137,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
     // Generate location based on dominant pressure
     let locationType: 'geographic_feature' | 'anomaly';
     let locationTheme: string;
-    let locationTags: string[];
+    let locationTags: Record<string, boolean>;
     let description: string;
 
     if (dominantPressure === 'conflict') {
@@ -145,23 +145,46 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       locationType = 'geographic_feature';
       const themes = ['Vantage Point', 'Choke Point', 'Natural Fortification', 'Strategic Ridge'];
       locationTheme = pickRandom(themes);
-      locationTags = ['strategic', 'defensive', 'conflict'];
+      locationTags = { strategic: true, defensive: true, conflict: true };
       description = `A strategic ${locationTheme.toLowerCase()} providing tactical advantage`;
     } else if (dominantPressure === 'magic') {
       // Mystical location
       locationType = 'anomaly';
       const themes = ['Ley Nexus', 'Mystical Shrine', 'Ethereal Cavern', 'Magical Convergence'];
       locationTheme = pickRandom(themes);
-      locationTags = ['mystical', 'magical', 'anomaly'];
+      locationTags = { mystical: true, magical: true, anomaly: true };
       description = `A mystical ${locationTheme.toLowerCase()} manifesting magical energies`;
     } else {
       // Resource location
       locationType = 'geographic_feature';
       const themes = ['Krill Fields', 'Ice Quarry', 'Thermal Vent', 'Fishing Grounds'];
       locationTheme = pickRandom(themes);
-      locationTags = ['resource', 'valuable', 'economic'];
+      locationTags = { resource: true, valuable: true, economic: true };
       description = `Rich ${locationTheme.toLowerCase()} providing essential resources`;
     }
+
+    // Derive coordinates - reference the discoverer and any nearby locations
+    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    const referenceEntities: HardState[] = [discoverer];
+    if (nearbyLocations.length > 0) {
+      referenceEntities.push(nearbyLocations[0]);  // Use first nearby location as reference
+    }
+
+    const cultureId = discoverer.culture ?? 'default';
+    const locationPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'location',
+      referenceEntities
+    );
+
+    if (!locationPlacement) {
+      throw new Error(
+        `emergent_location_discovery: Failed to derive coordinates for ${locationTheme} discovered by ${discoverer.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'location' entities.`
+      );
+    }
+
+    const conceptualCoords = locationPlacement.coordinates;
 
     const newLocation: Partial<HardState> = {
       kind: 'location',
@@ -170,7 +193,8 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       status: 'unspoiled',
       prominence: 'recognized',
       culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: locationTags.slice(0, 10),
+      tags: locationTags,
+      coordinates: conceptualCoords,
       links: []
     };
 
@@ -189,8 +213,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       dst: discoverer.id
     });
 
-    // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    // Make adjacent to nearby locations (reuse nearbyLocations from coordinate derivation)
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
       relationships.push({

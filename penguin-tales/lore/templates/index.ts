@@ -4,7 +4,7 @@
  * All growth templates for procedural content generation.
  */
 
-import { GrowthTemplate } from '@lore-weave/core/types/engine';
+import { GrowthTemplate } from '@lore-weave/core';
 
 // Re-export all template categories
 export * from './npc';

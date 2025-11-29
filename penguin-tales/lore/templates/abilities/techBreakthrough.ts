@@ -1,7 +1,7 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core/types/engine';
-import { TemplateGraphView } from '@lore-weave/core/services/templateGraphView';
-import { HardState, Relationship } from '@lore-weave/core/types/worldTypes';
-import { generateId } from '@lore-weave/core/utils/helpers';
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { generateId } from '@lore-weave/core';
 
 /**
  * Tech Breakthrough Template
@@ -160,16 +160,6 @@ export const techBreakthrough: GrowthTemplate = {
 
     // Create new technology
     const techId = 'will-be-assigned-0';
-    const techNames = [
-      'Advanced Ice Drilling',
-      'Thermal Preservation Arrays',
-      'Echo-Location Nets',
-      'Frost-Hardened Tools',
-      'Glacial Navigation System',
-      'Ice-Melt Refinement',
-      'Sonic Fish Herding',
-      'Crystalline Storage Vaults'
-    ];
 
     const techDescriptions = [
       'breakthrough in ice manipulation',
@@ -179,18 +169,39 @@ export const techBreakthrough: GrowthTemplate = {
       'discovery in materials science'
     ];
 
-    const techName = techNames[Math.floor(Math.random() * techNames.length)];
     const techDesc = techDescriptions[Math.floor(Math.random() * techDescriptions.length)];
+
+    // Derive coordinates - reference the faction and origin location
+    const referenceEntities = [target, originLocation];
+    if (parentTech) {
+      referenceEntities.push(parentTech);
+    }
+
+    const cultureId = target.culture ?? 'default';
+    const techPlacement = graphView.deriveCoordinatesWithCulture(
+      cultureId,
+      'abilities',
+      referenceEntities
+    );
+
+    if (!techPlacement) {
+      throw new Error(
+        `tech_breakthrough: Failed to derive coordinates for technology developed by ${target.name}. ` +
+        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+      );
+    }
+
+    const conceptualCoords = techPlacement.coordinates;
 
     const newTech: Partial<HardState> = {
       kind: 'abilities',
       subtype: 'technology',
-      name: techName,
       description: `A ${techDesc} developed by ${target.name} at ${originLocation.name}`,
       status: 'active',
       prominence: 'recognized',
       culture: target.culture,  // Inherit culture from developing faction
-      tags: ['technology', 'innovation', target.subtype],
+      tags: { technology: true, innovation: true, [target.subtype]: true },
+      coordinates: conceptualCoords,
       links: []
     };
 
@@ -236,7 +247,7 @@ export const techBreakthrough: GrowthTemplate = {
     return {
       entities: [newTech],
       relationships,
-      description: `${catalyst.name} develops ${techName} for ${target.name} at ${originLocation.name}${lineageDesc}`
+      description: `${catalyst.name} develops new technology for ${target.name} at ${originLocation.name}${lineageDesc}`
     };
   }
 };

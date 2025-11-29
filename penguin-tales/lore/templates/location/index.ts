@@ -4,7 +4,7 @@
  * Templates for creating new locations (colonies, anomalies, etc).
  */
 
-import { GrowthTemplate } from '@lore-weave/core/types/engine';
+import { GrowthTemplate } from '@lore-weave/core';
 
 export { colonyFounding } from './colonyFounding';
 export { anomalyManifestation } from './anomalyManifestation';

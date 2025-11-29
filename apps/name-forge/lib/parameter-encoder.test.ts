@@ -7,7 +7,7 @@ import {
   parameterDistance,
 } from "./parameter-encoder.js";
 import type { NamingDomain } from "./types/domain.js";
-import { DEFAULT_BOUNDS } from "../validation/optimization.js";
+import { DEFAULT_BOUNDS } from "./optimizer/optimization.js";
 
 describe("Parameter Encoder", () => {
   const testDomain: NamingDomain = {

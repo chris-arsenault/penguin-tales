@@ -1,26 +1,177 @@
 /**
- * World Gen Naming - Domain-aware procedural name generation
+ * Name Forge - Domain-aware procedural name generation
  *
- * Main library exports for programmatic use
+ * Main library exports for programmatic use.
  */
 
-// Types and schemas
-export * from "./types/domain.js";
-export * from "./types/schema.js";
-export * from "./types/kg.js";
-export * from "./types/profile.js"; // Phase 4: Profile system
-export * from "./types/integration.js"; // KG integration interface
+// ============================================================================
+// Core Generation API
+// ============================================================================
 
-// Core generation
-export * from "./generator.js";
-export * from "./phonology.js";
-export * from "./morphology.js";
-export * from "./style.js";
-export * from "./domain-selector.js";
+export {
+  generate,
+  generateOne,
+  generateFromDomain,
+  testDomain,
+  type TestDomainResult,
+} from "./generate.js";
 
-// Phase 4: Profile-based generation
-export * from "./profile-executor.js";
+// ============================================================================
+// Project Types (canonical schema matching UI)
+// ============================================================================
+
+export type {
+  // Core types
+  Culture,
+  Grammar,
+  Profile,
+  Strategy,
+  StrategyGroup,
+  GroupConditions,
+  LexemeList,
+  // Project structure
+  Project,
+  WorldSchema,
+  EntityKindDefinition,
+  // Generation
+  GenerateRequest,
+  GenerateResult,
+  // Markov (re-export from generate for backwards compat)
+} from "./types/project.js";
+
+export {
+  // Zod schemas for validation
+  LexemeListSchema,
+  GrammarSchema,
+  CapitalizationSchema,
+  StrategySchema,
+  StrategyGroupSchema,
+  GroupConditionsSchema,
+  ProfileSchema,
+} from "./types/project.js";
+
+// ============================================================================
+// Domain Types (phonotactic configuration)
+// ============================================================================
+
+export type {
+  NamingDomain,
+  PhonologyProfile,
+  MorphologyProfile,
+  StyleRules,
+  AppliesTo,
+  Prominence,
+} from "./types/domain.js";
+
+// ============================================================================
+// Low-level APIs (for advanced use / optimizer)
+// ============================================================================
+
+// Phonotactic generation
+export { generatePhonotacticName, executePhonotacticPipeline } from "./phonotactic-pipeline.js";
+export { generateWord, generateWords, generateWordWithDebug } from "./phonology.js";
+export { applyMorphology } from "./morphology.js";
+export { applyStyle } from "./style.js";
+
+// Markov generation
+export {
+  generateFromMarkov,
+  generateNamesFromMarkov,
+  MARKOV_MODELS,
+  type MarkovModelId,
+  type MarkovModel,
+} from "./markov.js";
+
+// Markov model loading (for browser base URL configuration)
+export { setMarkovBaseUrl } from "./markov-loader.js";
 
 // Utilities
-export * from "./utils/rng.js";
-export * from "./utils/helpers.js";
+export { createRNG, pickRandom, pickWeighted } from "./utils/rng.js";
+export {
+  type Capitalization,
+  applyCapitalization,
+  capitalize,
+  capitalizeWords,
+  mixedCase,
+} from "./utils/helpers.js";
+
+// Validation schemas
+export {
+  NamingDomainSchema,
+  PhonologyProfileSchema,
+  MorphologyProfileSchema,
+  StyleRulesSchema,
+  DomainCollectionSchema,
+} from "./types/schema.js";
+
+// ============================================================================
+// Validation (import from 'name-forge/validation' for tree-shaking)
+// ============================================================================
+
+export {
+  // Metrics
+  validateCapacity,
+  validateDiffuseness,
+  validateSeparation,
+  calculateEntropy,
+  estimateRequiredSamples,
+  theoreticalCapacity,
+  findSimilarClusters,
+  analyzeDiversity,
+  // Analysis
+  extractFeatures,
+  levenshtein,
+  normalizedLevenshtein,
+  euclideanDistance,
+  cosineSimilarity,
+  NearestCentroidClassifier,
+  crossValidate,
+  // Types
+  type ValidationConfig,
+  type CapacityReport,
+  type DiffusenessReport,
+  type SeparationReport,
+} from "./validation/index.js";
+
+// ============================================================================
+// Optimizer (import from 'name-forge/optimizer' for tree-shaking)
+// ============================================================================
+
+export {
+  // High-level API
+  optimizeDomain,
+  // Algorithms
+  hillclimb,
+  simulatedAnnealing,
+  geneticAlgorithm,
+  bayesianOptimization,
+  analyzePhonemeImportance,
+  // Fitness
+  computeFitness,
+  computeFitnessLight,
+  // Parameter encoding
+  encodeParameters,
+  decodeParameters,
+  perturbParameters,
+  parameterDistance,
+  // Mutations
+  MUTATIONS,
+  MUTATION_WEIGHTS,
+  applyRandomMutation,
+  applyMultipleMutations,
+  applyWeightedMutation,
+  // Settings and types
+  ValidationSettingsSchema,
+  FitnessWeightsSchema,
+  OptimizationSettingsSchema,
+  DEFAULT_BOUNDS,
+  type ValidationSettings,
+  type FitnessWeights,
+  type OptimizationAlgorithm,
+  type OptimizationSettings,
+  type ParameterVector,
+  type EvaluationResult,
+  type OptimizationResult,
+  type ParameterBounds,
+  type MutationType,
+} from "./optimizer/index.js";

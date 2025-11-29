@@ -1,25 +1,41 @@
-import type { HardState, Prominence, WorldState, Filters } from '../types/world.ts';
+import type { HardState, Prominence, WorldState, Filters, UISchema } from '../types/world.ts';
 
-export function prominenceToNumber(prominence: Prominence): number {
-  const map: Record<Prominence, number> = {
-    forgotten: 0,
-    marginal: 1,
-    recognized: 2,
-    renowned: 3,
-    mythic: 4
-  };
-  return map[prominence] || 0;
+// Helper to get tags as array (handles both KVP and array formats)
+export function getTagsArray(tags: Record<string, string | boolean> | string[]): string[] {
+  if (Array.isArray(tags)) {
+    return tags;
+  }
+  return Object.keys(tags);
 }
 
-export function getKindColor(kind: string): string {
-  const colors: Record<string, string> = {
+// Default prominence levels (fallback when uiSchema not present)
+const DEFAULT_PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+
+// Get prominence levels from uiSchema or use defaults
+export function getProminenceLevels(uiSchema?: UISchema): string[] {
+  return uiSchema?.prominenceLevels ?? DEFAULT_PROMINENCE_LEVELS;
+}
+
+export function prominenceToNumber(prominence: Prominence, uiSchema?: UISchema): number {
+  const levels = getProminenceLevels(uiSchema);
+  const index = levels.indexOf(prominence);
+  return index >= 0 ? index : 0;
+}
+
+export function getKindColor(kind: string, uiSchema?: UISchema): string {
+  if (uiSchema?.entityKinds) {
+    const entityKind = uiSchema.entityKinds.find(ek => ek.kind === kind);
+    if (entityKind) return entityKind.color;
+  }
+  // Fallback defaults
+  const defaultColors: Record<string, string> = {
     npc: '#6FB1FC',
     faction: '#FC6B6B',
     location: '#6BFC9C',
     rules: '#FCA86B',
     abilities: '#C76BFC'
   };
-  return colors[kind] || '#999';
+  return defaultColors[kind] || '#999';
 }
 
 export function transformWorldData(worldState: WorldState, showCatalyzedBy: boolean = false) {
@@ -29,7 +45,7 @@ export function transformWorldData(worldState: WorldState, showCatalyzedBy: bool
       name: entity.name,
       kind: entity.kind,
       subtype: entity.subtype,
-      prominence: prominenceToNumber(entity.prominence),
+      prominence: prominenceToNumber(entity.prominence, worldState.uiSchema),
       prominenceLabel: entity.prominence,
       status: entity.status,
       tags: entity.tags,
@@ -68,7 +84,7 @@ export function transformWorldData(worldState: WorldState, showCatalyzedBy: bool
 }
 
 export function applyFilters(worldState: WorldState, filters: Filters): WorldState {
-  const prominenceOrder: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+  const prominenceOrder = getProminenceLevels(worldState.uiSchema);
   const minProminenceIndex = prominenceOrder.indexOf(filters.minProminence);
 
   let filtered = worldState.hardState.filter(entity => {
@@ -86,17 +102,19 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
 
     // Filter by tags
     if (filters.tags.length > 0) {
-      const hasMatchingTag = filters.tags.some(tag => entity.tags.includes(tag));
+      const entityTags = getTagsArray(entity.tags);
+      const hasMatchingTag = filters.tags.some(tag => entityTags.includes(tag));
       if (!hasMatchingTag) return false;
     }
 
     // Filter by search query
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
+      const entityTags = getTagsArray(entity.tags);
       const matches =
         entity.name.toLowerCase().includes(query) ||
         entity.description.toLowerCase().includes(query) ||
-        entity.tags.some(tag => tag.toLowerCase().includes(query));
+        entityTags.some(tag => tag.toLowerCase().includes(query));
       if (!matches) return false;
     }
 
@@ -154,7 +172,7 @@ export function applyFilters(worldState: WorldState, filters: Filters): WorldSta
 export function getAllTags(worldState: WorldState): string[] {
   const tagSet = new Set<string>();
   worldState.hardState.forEach(entity => {
-    entity.tags.forEach(tag => tagSet.add(tag));
+    getTagsArray(entity.tags).forEach(tag => tagSet.add(tag));
   });
   return Array.from(tagSet).sort();
 }
