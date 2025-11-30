@@ -1,0 +1,36 @@
+{
+  "name": "@canonry/simulation-engine",
+  "version": "1.0.0",
+  "description": "Browser-based simulation engine for The Canonry world generation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@canonry/world-schema": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "world-building",
+    "procedural-generation",
+    "simulation",
+    "browser"
+  ],
+  "license": "MIT"
+}

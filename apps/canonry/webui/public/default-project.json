@@ -689,5 +689,1334 @@
       "dstId": "loc_nightfall_shelf",
       "strength": 1.0
     }
-  ]
+  ],
+
+  "eras": [
+    {
+      "id": "expansion",
+      "name": "The Great Thaw",
+      "description": "A period of exploration and colony founding as the ice recedes",
+      "ticks": 20,
+      "themes": ["exploration", "founding", "discovery", "growth"]
+    },
+    {
+      "id": "conflict",
+      "name": "The Faction Wars",
+      "description": "Resource scarcity leads to inter-colony conflicts",
+      "ticks": 25,
+      "themes": ["war", "faction", "territory", "alliance"]
+    },
+    {
+      "id": "innovation",
+      "name": "The Clever Ice Age",
+      "description": "Technology and magic flourish as penguins seek solutions",
+      "ticks": 20,
+      "themes": ["technology", "magic", "knowledge", "trade"]
+    },
+    {
+      "id": "invasion",
+      "name": "The Orca Incursion",
+      "description": "External threats unite the colonies against common enemies",
+      "ticks": 30,
+      "themes": ["orca", "defense", "unity", "heroism"]
+    },
+    {
+      "id": "reconstruction",
+      "name": "The Frozen Peace",
+      "description": "Rebuilding and consolidation after the wars",
+      "ticks": 25,
+      "themes": ["peace", "rebuilding", "trade", "memory"]
+    }
+  ],
+
+  "simulation": {
+    "settings": {
+      "ticksPerEra": 20,
+      "growthSimulationRatio": 2,
+      "maxEntities": 60,
+      "randomSeed": 42
+    },
+
+    "pressures": [
+      {
+        "id": "territorial_ambition",
+        "name": "Territorial Ambition",
+        "description": "Drive for factions to claim and expand territory - rises with faction density",
+        "initialValue": 40,
+        "range": { "min": 0, "max": 100 },
+        "naturalDrift": 2,
+        "equilibrium": 50,
+        "decayRate": 0.05,
+        "dynamicCalculation": {
+          "moduleId": "surplus_pressure",
+          "params": {
+            "measureKind": "faction",
+            "equilibriumRatio": 0.3,
+            "sensitivity": 5,
+            "baseValue": 40
+          }
+        }
+      },
+      {
+        "id": "trade_wealth",
+        "name": "Trade Wealth",
+        "description": "Economic prosperity - based on merchant to outlaw ratio",
+        "initialValue": 30,
+        "range": { "min": 0, "max": 100 },
+        "naturalDrift": 1,
+        "equilibrium": 40,
+        "decayRate": 0.08,
+        "dynamicCalculation": {
+          "moduleId": "population_ratio_pressure",
+          "params": {
+            "numeratorKind": "npc",
+            "numeratorSubtype": "merchant",
+            "denominatorKind": "npc",
+            "denominatorSubtype": "outlaw",
+            "multiplier": 20,
+            "offset": 20
+          }
+        }
+      },
+      {
+        "id": "orca_menace",
+        "name": "Orca Menace",
+        "description": "The looming threat - rises with orca population",
+        "initialValue": 15,
+        "range": { "min": 0, "max": 100 },
+        "naturalDrift": 3,
+        "equilibrium": 60,
+        "decayRate": 0.02,
+        "dynamicCalculation": {
+          "moduleId": "population_ratio_pressure",
+          "params": {
+            "numeratorKind": "npc",
+            "numeratorSubtype": "orca",
+            "denominatorKind": "npc",
+            "multiplier": 50,
+            "offset": 10
+          }
+        }
+      },
+      {
+        "id": "mystical_stirring",
+        "name": "Mystical Stirring",
+        "description": "Strange energies - rises with anomaly and cult density",
+        "initialValue": 20,
+        "range": { "min": 0, "max": 100 },
+        "naturalDrift": 1,
+        "equilibrium": 35,
+        "decayRate": 0.03,
+        "dynamicCalculation": {
+          "moduleId": "population_ratio_pressure",
+          "params": {
+            "numeratorKind": "location",
+            "numeratorSubtype": "anomaly",
+            "denominatorKind": "location",
+            "multiplier": 30,
+            "offset": 15
+          }
+        }
+      }
+    ],
+
+    "generationRules": [
+      {
+        "id": "gen_trade_outpost",
+        "name": "Trade Outpost Established",
+        "description": "A faction establishes a new trade outpost near a thriving colony. Uses proximity_decay to place near active trade routes.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "trade_wealth", "threshold": 50 } },
+          { "type": "entity_count_below", "params": { "kind": "location", "subtype": "igloo", "threshold": 6 } }
+        ],
+        "select": [
+          {
+            "ref": "parent_colony",
+            "query": { "kind": "location", "subtype": "colony", "status": "thriving" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["trade", "wealthy"], "preferBoost": 1.5 } },
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 5, "penaltyBase": 0.6, "relationshipKinds": ["contains"] } }
+            ]
+          },
+          {
+            "ref": "sponsor",
+            "query": { "kind": "faction", "subtype": "company", "status": "active" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "culture_affinity", "params": { "sameCultureBoost": 2.0, "differentCulturePenalty": 0.5 } },
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 4, "penaltyBase": 0.7, "relationshipKinds": ["controls"] } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "outpost",
+            "kind": "location",
+            "subtype": "igloo",
+            "count": 1,
+            "placement": { "near": { "ref": "parent_colony" }, "culture": "inherit", "coordinateStrategy": "culture_aware" },
+            "status": "thriving",
+            "prominence": "marginal",
+            "tags": ["trade", "outpost"],
+            "descriptionTemplate": "A trading outpost built to extend commercial reach across the ice."
+          },
+          {
+            "ref": "founder",
+            "kind": "npc",
+            "subtype": "merchant",
+            "count": 1,
+            "placement": { "near": { "ref": "outpost" }, "culture": "inherit", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["founder", "ambitious"],
+            "descriptionTemplate": "The enterprising penguin who founded this outpost."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "controls",
+            "from": { "ref": "sponsor" },
+            "to": { "ref": "outpost" }
+          },
+          {
+            "kind": "resident_of",
+            "from": { "ref": "founder" },
+            "to": { "ref": "outpost" }
+          },
+          {
+            "kind": "adjacent_to",
+            "from": { "ref": "outpost" },
+            "to": { "ref": "parent_colony" }
+          }
+        ],
+        "occurrence": {
+          "kind": "outpost_founded",
+          "descriptionTemplate": "{founder.name} established {outpost.name}, extending {sponsor.name}'s trade routes near {parent_colony.name}."
+        },
+        "pressureEffects": [
+          { "pressure": "trade_wealth", "delta": -10 },
+          { "pressure": "territorial_ambition", "delta": 5 }
+        ],
+        "weight": 1.0,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "trade_wealth", "range": { "min": 50 } }] },
+          "produces": {
+            "entityKinds": [
+              { "kind": "location", "subtype": "igloo", "count": 1 },
+              { "kind": "npc", "subtype": "merchant", "count": 1 }
+            ]
+          },
+          "tags": ["expansion", "trade", "founding"]
+        }
+      },
+      {
+        "id": "gen_faction_splinter",
+        "name": "Faction Splinters",
+        "description": "Internal conflict causes a faction to split. Uses hub_penalty to avoid already-fragmented factions and status_gate to prefer troubled ones.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "territorial_ambition", "threshold": 60 } },
+          { "type": "entity_count_below", "params": { "kind": "faction", "threshold": 6 } }
+        ],
+        "select": [
+          {
+            "ref": "parent_faction",
+            "query": { "kind": "faction", "status": "active" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 6, "penaltyBase": 0.5, "relationshipKinds": ["at_war_with"] } },
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["troubled", "divided"], "preferBoost": 1.8, "forbiddenTags": ["unified"] } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "splinter",
+            "kind": "faction",
+            "subtype": "political",
+            "count": 1,
+            "placement": { "near": { "ref": "parent_faction" }, "culture": "inherit", "coordinateStrategy": "culture_aware" },
+            "status": "active",
+            "prominence": "marginal",
+            "tags": ["splinter", "ambitious"],
+            "descriptionTemplate": "A breakaway faction formed by dissenters from {parent_faction.name}."
+          },
+          {
+            "ref": "rebel_leader",
+            "kind": "npc",
+            "subtype": "mayor",
+            "count": 1,
+            "placement": { "culture": "inherit", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["rebel", "charismatic"],
+            "descriptionTemplate": "The ambitious leader who split from {parent_faction.name} to forge a new destiny."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "leader_of",
+            "from": { "ref": "rebel_leader" },
+            "to": { "ref": "splinter" }
+          }
+        ],
+        "modify": [
+          {
+            "target": { "ref": "parent_faction" },
+            "set": { "addTags": ["weakened", "divided"] }
+          }
+        ],
+        "occurrence": {
+          "kind": "faction_schism",
+          "descriptionTemplate": "{rebel_leader.name} led a schism from {parent_faction.name}, founding {splinter.name} amid bitter acrimony."
+        },
+        "pressureEffects": [
+          { "pressure": "territorial_ambition", "delta": -15 }
+        ],
+        "weight": 0.6,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "territorial_ambition", "range": { "min": 60 } }] },
+          "produces": {
+            "entityKinds": [
+              { "kind": "faction", "subtype": "political", "count": 1 },
+              { "kind": "npc", "subtype": "mayor", "count": 1 }
+            ]
+          },
+          "tags": ["conflict", "faction", "founding"]
+        }
+      },
+      {
+        "id": "gen_criminal_syndicate",
+        "name": "Criminal Syndicate Emerges",
+        "description": "Wealth inequality spawns organized crime near prosperous locations. Uses proximity_decay to place near wealthy areas.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "trade_wealth", "threshold": 60 } },
+          { "type": "entity_count_below", "params": { "kind": "faction", "subtype": "criminal", "threshold": 3 } }
+        ],
+        "select": [
+          {
+            "ref": "wealthy_location",
+            "query": { "kind": "location", "status": "thriving" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["trade", "wealthy", "prosperous"], "preferBoost": 2.0 } },
+              { "moduleId": "culture_affinity", "params": { "mode": "avoid", "sameCultureBoost": 0.5, "differentCulturePenalty": 1.5 } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "syndicate",
+            "kind": "faction",
+            "subtype": "criminal",
+            "count": 1,
+            "placement": { "near": { "ref": "wealthy_location" }, "culture": "nightshelf", "coordinateStrategy": "culture_aware" },
+            "status": "active",
+            "prominence": "marginal",
+            "tags": ["criminal", "secretive", "ruthless"],
+            "descriptionTemplate": "A shadowy syndicate that preys on the wealth flowing through {wealthy_location.name}."
+          },
+          {
+            "ref": "crime_boss",
+            "kind": "npc",
+            "subtype": "outlaw",
+            "count": 1,
+            "placement": { "culture": "nightshelf", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["cunning", "dangerous"],
+            "descriptionTemplate": "The ruthless mastermind who built a criminal empire in the shadows."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "leader_of",
+            "from": { "ref": "crime_boss" },
+            "to": { "ref": "syndicate" }
+          }
+        ],
+        "occurrence": {
+          "kind": "syndicate_formed",
+          "descriptionTemplate": "{crime_boss.name} founded {syndicate.name} near {wealthy_location.name}, casting a shadow over the berg's prosperity."
+        },
+        "pressureEffects": [
+          { "pressure": "trade_wealth", "delta": -8 }
+        ],
+        "weight": 0.5,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "trade_wealth", "range": { "min": 60 } }] },
+          "produces": {
+            "entityKinds": [
+              { "kind": "faction", "subtype": "criminal", "count": 1 },
+              { "kind": "npc", "subtype": "outlaw", "count": 1 }
+            ]
+          },
+          "tags": ["crime", "faction", "founding"]
+        }
+      },
+      {
+        "id": "gen_cult_revelation",
+        "name": "Cult Receives Revelation",
+        "description": "Mystical energies near an anomaly inspire cult founding. Uses proximity_decay to spawn near anomalies.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "mystical_stirring", "threshold": 50 } },
+          { "type": "entity_count_below", "params": { "kind": "faction", "subtype": "cult", "threshold": 2 } }
+        ],
+        "select": [
+          {
+            "ref": "holy_site",
+            "query": { "kind": "location", "subtype": "anomaly" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["glowing", "mystical", "active"], "preferBoost": 1.8, "forbiddenTags": ["dormant"] } },
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 2, "penaltyBase": 0.5, "relationshipKinds": ["controls"] } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "cult",
+            "kind": "faction",
+            "subtype": "cult",
+            "count": 1,
+            "placement": { "near": { "ref": "holy_site" }, "culture": "nightshelf", "coordinateStrategy": "culture_aware" },
+            "status": "active",
+            "prominence": "marginal",
+            "tags": ["mystical", "fanatical"],
+            "descriptionTemplate": "A cult devoted to the strange emanations of {holy_site.name}."
+          },
+          {
+            "ref": "prophet",
+            "kind": "npc",
+            "subtype": "hero",
+            "count": 1,
+            "placement": { "culture": "nightshelf", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["visionary", "charismatic", "touched"],
+            "descriptionTemplate": "A prophet who claims to have witnessed visions in {holy_site.name}'s light."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "leader_of",
+            "from": { "ref": "prophet" },
+            "to": { "ref": "cult" }
+          },
+          {
+            "kind": "controls",
+            "from": { "ref": "cult" },
+            "to": { "ref": "holy_site" }
+          }
+        ],
+        "occurrence": {
+          "kind": "cult_founded",
+          "descriptionTemplate": "{prophet.name} emerged from {holy_site.name} claiming divine revelation, founding {cult.name}."
+        },
+        "pressureEffects": [
+          { "pressure": "mystical_stirring", "delta": -15 }
+        ],
+        "weight": 0.4,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "mystical_stirring", "range": { "min": 50 } }] },
+          "produces": {
+            "entityKinds": [
+              { "kind": "faction", "subtype": "cult", "count": 1 },
+              { "kind": "npc", "subtype": "hero", "count": 1 }
+            ]
+          },
+          "tags": ["mystical", "faction", "founding"]
+        }
+      },
+      {
+        "id": "gen_anomaly_discovered",
+        "name": "Strange Anomaly Discovered",
+        "description": "Explorers discover a mysterious location. Uses proximity_decay to place near existing settlements.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "mystical_stirring", "threshold": 40 } },
+          { "type": "entity_count_below", "params": { "kind": "location", "subtype": "anomaly", "threshold": 3 } }
+        ],
+        "select": [
+          {
+            "ref": "nearest_colony",
+            "query": { "kind": "location", "subtype": "colony" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 3, "penaltyBase": 0.5, "relationshipKinds": ["adjacent_to"] } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "anomaly",
+            "kind": "location",
+            "subtype": "anomaly",
+            "count": 1,
+            "placement": { "near": { "ref": "nearest_colony" }, "culture": "random", "coordinateStrategy": "random" },
+            "status": "thriving",
+            "prominence": "recognized",
+            "tags": ["mysterious", "dangerous", "valuable"],
+            "descriptionTemplate": "A place where the ice behaves strangely, discovered near {nearest_colony.name}."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "adjacent_to",
+            "from": { "ref": "anomaly" },
+            "to": { "ref": "nearest_colony" }
+          }
+        ],
+        "occurrence": {
+          "kind": "anomaly_discovered",
+          "descriptionTemplate": "{anomaly.name} was discovered near {nearest_colony.name} - a place of mystery and danger."
+        },
+        "pressureEffects": [
+          { "pressure": "mystical_stirring", "delta": 10 }
+        ],
+        "weight": 0.5,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "mystical_stirring", "range": { "min": 40 } }] },
+          "produces": { "entityKinds": [{ "kind": "location", "subtype": "anomaly", "count": 1 }] },
+          "tags": ["exploration", "discovery", "mystical"]
+        }
+      },
+      {
+        "id": "gen_orca_warlord",
+        "name": "Orca Warlord Arrives",
+        "description": "A legendary orca hunter arrives where defenses are weakest. Uses hub_penalty to avoid well-defended areas.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "orca_menace", "threshold": 60 } },
+          { "type": "entity_count_below", "params": { "kind": "npc", "subtype": "orca", "threshold": 3 } }
+        ],
+        "select": [
+          {
+            "ref": "target_colony",
+            "query": { "kind": "location", "subtype": "colony", "status": "thriving" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "forbiddenTags": ["fortified", "defended"], "preferTags": ["isolated", "vulnerable"], "preferBoost": 1.6 } },
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 4, "penaltyBase": 0.6, "relationshipKinds": ["allied_with"] } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "warlord",
+            "kind": "npc",
+            "subtype": "orca",
+            "count": 1,
+            "placement": { "near": { "ref": "target_colony" }, "culture": "orca", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "renowned",
+            "tags": ["terrifying", "legendary", "hunter"],
+            "descriptionTemplate": "A massive orca whose name strikes terror across Aurora Berg, lurking near {target_colony.name}."
+          }
+        ],
+        "connect": [],
+        "modify": [
+          {
+            "target": { "ref": "target_colony" },
+            "set": { "addTags": ["threatened", "vulnerable"] }
+          }
+        ],
+        "occurrence": {
+          "kind": "warlord_arrival",
+          "descriptionTemplate": "{warlord.name} surfaced in the waters near {target_colony.name}, and the colonies trembled."
+        },
+        "pressureEffects": [
+          { "pressure": "orca_menace", "delta": 15 }
+        ],
+        "weight": 0.4,
+        "metadata": {
+          "requires": { "pressures": [{ "name": "orca_menace", "range": { "min": 60 } }] },
+          "produces": { "entityKinds": [{ "kind": "npc", "subtype": "orca", "count": 1 }] },
+          "tags": ["threat", "legendary", "antagonist"]
+        }
+      }
+    ],
+
+    "simulationRules": [
+      {
+        "id": "sim_faction_war",
+        "name": "Faction War Erupts",
+        "description": "Territorial tensions boil over into open warfare between factions. Uses faction_modifier to prefer enemy factions and proximity_decay to prefer nearby targets.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "territorial_ambition", "threshold": 70 } },
+          { "type": "entity_count_above", "params": { "kind": "faction", "threshold": 2 } }
+        ],
+        "select": [
+          {
+            "ref": "aggressor",
+            "query": { "kind": "faction", "status": "active", "notHasRelationship": { "kind": "at_war_with", "direction": "outgoing" } },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 4, "penaltyBase": 0.6 } },
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["ambitious", "militant"], "preferBoost": 1.5 } }
+            ]
+          },
+          {
+            "ref": "target",
+            "query": { "kind": "faction", "status": "active", "notHasRelationship": { "kind": "allied_with", "direction": "incoming" } },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "faction_modifier", "params": { "scenario": "conflict", "enemyFactionBoost": 3.0 } },
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 20, "closeBoost": 2.0, "farPenalty": 0.5 } },
+              { "moduleId": "culture_affinity", "params": { "mode": "avoid", "differentCulturePenalty": 1.5 } }
+            ]
+          }
+        ],
+        "connect": [
+          {
+            "kind": "at_war_with",
+            "from": { "ref": "aggressor" },
+            "to": { "ref": "target" }
+          }
+        ],
+        "occurrence": {
+          "kind": "war_declared",
+          "descriptionTemplate": "{aggressor.name} declared war on {target.name}, plunging the berg into conflict."
+        },
+        "pressureEffects": [
+          { "pressure": "territorial_ambition", "delta": -25 },
+          { "pressure": "trade_wealth", "delta": -10 }
+        ],
+        "weight": 0.5,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "faction", "min": 2 }],
+            "pressures": [{ "name": "territorial_ambition", "range": { "min": 70 } }]
+          },
+          "produces": { "relationships": [{ "kind": "at_war_with", "count": 1 }] },
+          "tags": ["war", "conflict", "major_event"]
+        }
+      },
+      {
+        "id": "sim_territory_seized",
+        "name": "Territory Seized",
+        "description": "A faction at war conquers a location. Uses proximity_decay to prefer nearby locations and tag_filter to prefer valuable targets.",
+        "conditions": [
+          { "type": "relationship_exists", "params": { "kind": "at_war_with" } }
+        ],
+        "select": [
+          {
+            "ref": "conqueror",
+            "query": { "kind": "faction", "status": "active", "hasRelationship": { "kind": "at_war_with", "direction": "outgoing" } },
+            "count": 1,
+            "strategy": "random"
+          },
+          {
+            "ref": "territory",
+            "query": { "kind": "location", "status": "thriving" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["trade", "valuable"], "preferBoost": 1.8 } },
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 25, "closeBoost": 2.0, "farPenalty": 0.4 } }
+            ]
+          }
+        ],
+        "connect": [
+          {
+            "kind": "controls",
+            "from": { "ref": "conqueror" },
+            "to": { "ref": "territory" }
+          }
+        ],
+        "occurrence": {
+          "kind": "territory_seized",
+          "descriptionTemplate": "{conqueror.name} seized control of {territory.name} in a decisive victory."
+        },
+        "pressureEffects": [
+          { "pressure": "territorial_ambition", "delta": -10 }
+        ],
+        "weight": 0.6,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "faction", "min": 1 }, { "kind": "location", "min": 1 }],
+            "relationships": [{ "kind": "at_war_with", "min": 1 }]
+          },
+          "produces": { "relationships": [{ "kind": "controls", "count": 1 }] },
+          "tags": ["war", "conquest"]
+        }
+      },
+      {
+        "id": "sim_alliance_against_threat",
+        "name": "Alliance Against Common Threat",
+        "description": "Factions put aside differences to face the orca menace. Uses culture_affinity to prefer same-culture alliances and proximity_decay for nearby factions.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "orca_menace", "threshold": 70 } }
+        ],
+        "select": [
+          {
+            "ref": "faction1",
+            "query": { "kind": "faction", "status": "active", "notHasRelationship": { "kind": "allied_with", "direction": "outgoing" } },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 3, "penaltyBase": 0.7 } },
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["organized", "defensive"], "preferBoost": 1.4 } }
+            ]
+          },
+          {
+            "ref": "faction2",
+            "query": { "kind": "faction", "status": "active" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "culture_affinity", "params": { "sameCultureBoost": 2.0, "differentCulturePenalty": 0.6, "mode": "prefer" } },
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 25, "closeBoost": 1.8, "farPenalty": 0.4 } },
+              { "moduleId": "faction_modifier", "params": { "scenario": "cooperation", "alliedFactionBoost": 1.5, "neutralPenalty": 0.5 } }
+            ]
+          }
+        ],
+        "connect": [
+          {
+            "kind": "allied_with",
+            "from": { "ref": "faction1" },
+            "to": { "ref": "faction2" }
+          }
+        ],
+        "occurrence": {
+          "kind": "alliance_formed",
+          "descriptionTemplate": "{faction1.name} and {faction2.name} forged an alliance against the orca threat."
+        },
+        "pressureEffects": [
+          { "pressure": "orca_menace", "delta": -10 }
+        ],
+        "weight": 0.7,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "faction", "min": 2 }],
+            "pressures": [{ "name": "orca_menace", "range": { "min": 70 } }]
+          },
+          "produces": { "relationships": [{ "kind": "allied_with", "count": 1 }] },
+          "tags": ["diplomacy", "alliance", "orca"]
+        }
+      },
+      {
+        "id": "sim_orca_raid",
+        "name": "Orca Raid on Colony",
+        "description": "Orcas attack a colony, causing devastation and creating a hero. Uses proximity_decay to prefer nearby colonies.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "orca_menace", "threshold": 65 } },
+          { "type": "entity_exists", "params": { "kind": "npc", "subtype": "orca" } }
+        ],
+        "select": [
+          {
+            "ref": "raider",
+            "query": { "kind": "npc", "subtype": "orca", "status": "alive" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 2, "penaltyBase": 0.5, "relationshipKinds": ["enemy_of"] } }
+            ]
+          },
+          {
+            "ref": "target_colony",
+            "query": { "kind": "location", "subtype": "colony", "status": "thriving" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 30, "closeBoost": 1.5, "farPenalty": 0.6 } },
+              { "moduleId": "tag_filter_score", "params": { "forbiddenTags": ["raided"], "preferTags": ["wealthy", "undefended"], "preferBoost": 1.3 } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "defender",
+            "kind": "npc",
+            "subtype": "hero",
+            "count": 1,
+            "placement": { "near": { "ref": "target_colony" }, "culture": "inherit", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["defender", "brave", "scarred"],
+            "descriptionTemplate": "A hero who rose to defend the colony during the orca raids."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "enemy_of",
+            "from": { "ref": "defender" },
+            "to": { "ref": "raider" }
+          },
+          {
+            "kind": "resident_of",
+            "from": { "ref": "defender" },
+            "to": { "ref": "target_colony" }
+          }
+        ],
+        "modify": [
+          {
+            "target": { "ref": "target_colony" },
+            "set": { "status": "waning", "addTags": ["raided", "scarred"] }
+          }
+        ],
+        "occurrence": {
+          "kind": "orca_raid",
+          "descriptionTemplate": "{raider.name} led a devastating raid on {target_colony.name}. {defender.name} emerged as a hero in the defense."
+        },
+        "pressureEffects": [
+          { "pressure": "orca_menace", "delta": -20 },
+          { "pressure": "trade_wealth", "delta": -15 }
+        ],
+        "weight": 0.4,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "npc", "subtype": "orca", "min": 1 }, { "kind": "location", "subtype": "colony", "min": 1 }],
+            "pressures": [{ "name": "orca_menace", "range": { "min": 65 } }]
+          },
+          "produces": { "entityKinds": [{ "kind": "npc", "subtype": "hero", "count": 1 }] },
+          "tags": ["raid", "destruction", "heroism"]
+        }
+      },
+      {
+        "id": "sim_coup",
+        "name": "Faction Leadership Coup",
+        "description": "An ambitious NPC seizes control of a faction. Uses status_gate to prefer waning factions and hub_penalty to avoid well-connected ones.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "territorial_ambition", "threshold": 55 } },
+          { "type": "random_chance", "params": { "probability": 0.25 } }
+        ],
+        "select": [
+          {
+            "ref": "target_faction",
+            "query": { "kind": "faction", "status": "active" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 5, "penaltyBase": 0.6 } },
+              { "moduleId": "status_gate", "params": { "allowedStatuses": ["active", "waning"], "preferredStatuses": ["waning"], "preferredBoost": 2.0 } }
+            ]
+          }
+        ],
+        "create": [
+          {
+            "ref": "usurper",
+            "kind": "npc",
+            "subtype": "mayor",
+            "count": 1,
+            "placement": { "culture": "random", "coordinateStrategy": "culture_aware" },
+            "status": "alive",
+            "prominence": "recognized",
+            "tags": ["ambitious", "ruthless", "usurper"],
+            "descriptionTemplate": "A cunning schemer who seized power through treachery."
+          }
+        ],
+        "connect": [
+          {
+            "kind": "leader_of",
+            "from": { "ref": "usurper" },
+            "to": { "ref": "target_faction" }
+          }
+        ],
+        "occurrence": {
+          "kind": "coup",
+          "descriptionTemplate": "{usurper.name} seized control of {target_faction.name} in a bloody coup."
+        },
+        "pressureEffects": [
+          { "pressure": "territorial_ambition", "delta": -10 }
+        ],
+        "weight": 0.3,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "faction", "min": 1 }],
+            "pressures": [{ "name": "territorial_ambition", "range": { "min": 55 } }]
+          },
+          "produces": {
+            "entityKinds": [{ "kind": "npc", "subtype": "mayor", "count": 1 }],
+            "relationships": [{ "kind": "leader_of", "count": 1 }]
+          },
+          "tags": ["intrigue", "coup", "leadership"]
+        }
+      },
+      {
+        "id": "sim_mystical_event",
+        "name": "Mystical Event at Anomaly",
+        "description": "Strange occurrences at an anomaly draw attention. Uses prominence_evolution to boost the anomaly's fame.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "mystical_stirring", "threshold": 60 } },
+          { "type": "entity_exists", "params": { "kind": "location", "subtype": "anomaly" } }
+        ],
+        "select": [
+          {
+            "ref": "site",
+            "query": { "kind": "location", "subtype": "anomaly" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "tag_filter_score", "params": { "forbiddenTags": ["dormant"], "preferTags": ["glowing", "mystical"], "preferBoost": 1.5 } }
+            ]
+          }
+        ],
+        "modify": [
+          {
+            "target": { "ref": "site" },
+            "set": { "prominence": "renowned", "addTags": ["active", "dangerous"] }
+          }
+        ],
+        "dynamicsModules": [
+          {
+            "moduleId": "prominence_evolution",
+            "params": {
+              "connectionThresholdBase": 2,
+              "promotionChance": 0.8
+            }
+          }
+        ],
+        "occurrence": {
+          "kind": "mystical_event",
+          "descriptionTemplate": "Strange lights and sounds erupted from {site.name}, drawing pilgrims and fearmongers alike."
+        },
+        "pressureEffects": [
+          { "pressure": "mystical_stirring", "delta": 15 }
+        ],
+        "weight": 0.4,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "location", "subtype": "anomaly", "min": 1 }],
+            "pressures": [{ "name": "mystical_stirring", "range": { "min": 60 } }]
+          },
+          "tags": ["mystical", "event", "escalation"]
+        }
+      },
+      {
+        "id": "sim_fear_spreads",
+        "name": "Fear of Orcas Spreads",
+        "description": "After orca raids, fear spreads through the population via relationships. Uses contagion_spread module to simulate epidemic-like tag propagation.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "orca_menace", "threshold": 50 } },
+          { "type": "entity_exists", "params": { "kind": "npc", "hasTag": "scarred" } }
+        ],
+        "select": [],
+        "connect": [],
+        "dynamicsModules": [
+          {
+            "moduleId": "contagion_spread",
+            "params": {
+              "contagionTag": "fearful",
+              "transmissionRate": 0.15,
+              "recoveryRate": 0.03,
+              "resistanceTag": "brave",
+              "resistanceBonus": 0.4,
+              "transmissionRelationships": ["ally_of", "member_of", "resident_of"]
+            }
+          }
+        ],
+        "occurrence": {
+          "kind": "fear_spreads",
+          "descriptionTemplate": "Fear of the orcas spreads through the colonies like a contagion."
+        },
+        "weight": 0.6,
+        "metadata": {
+          "requires": {
+            "pressures": [{ "name": "orca_menace", "range": { "min": 50 } }]
+          },
+          "tags": ["dynamics", "contagion", "fear"]
+        }
+      },
+      {
+        "id": "sim_prominence_shift",
+        "name": "Prominence Shifts",
+        "description": "Well-connected entities rise in prominence while isolated ones fade. Uses prominence_evolution module.",
+        "conditions": [
+          { "type": "tick_range", "params": { "min": 10 } },
+          { "type": "random_chance", "params": { "probability": 0.3 } }
+        ],
+        "select": [],
+        "connect": [],
+        "dynamicsModules": [
+          {
+            "moduleId": "prominence_evolution",
+            "params": {
+              "connectionThresholdBase": 5,
+              "promotionChance": 0.25,
+              "demotionThreshold": 2.0,
+              "demotionChance": 0.5
+            }
+          }
+        ],
+        "occurrence": {
+          "kind": "prominence_shift",
+          "descriptionTemplate": "The tides of fame shift across Aurora Berg - some rise while others fade from memory."
+        },
+        "weight": 0.5,
+        "metadata": {
+          "tags": ["dynamics", "prominence", "social"]
+        }
+      },
+      {
+        "id": "sim_relationships_decay",
+        "name": "Old Bonds Weaken",
+        "description": "Relationships that aren't reinforced gradually decay over time. Uses relationship_decay module.",
+        "conditions": [
+          { "type": "tick_range", "params": { "min": 20 } },
+          { "type": "random_chance", "params": { "probability": 0.4 } }
+        ],
+        "select": [],
+        "connect": [],
+        "dynamicsModules": [
+          {
+            "moduleId": "relationship_decay",
+            "params": {
+              "decayRate": 0.015,
+              "decayFloor": 0.15,
+              "gracePeriodTicks": 15,
+              "protectedKinds": ["leader_of", "contains", "resident_of"]
+            }
+          }
+        ],
+        "weight": 0.4,
+        "metadata": {
+          "tags": ["dynamics", "decay", "relationships"]
+        }
+      },
+      {
+        "id": "sim_cult_recruitment",
+        "name": "Cult Recruits Members",
+        "description": "Cults recruit nearby NPCs, especially those who are fearful or mystically inclined. Uses culture_affinity and tag_filter modules for intelligent selection.",
+        "conditions": [
+          { "type": "entity_exists", "params": { "kind": "faction", "subtype": "cult" } },
+          { "type": "pressure_above", "params": { "pressure": "mystical_stirring", "threshold": 40 } }
+        ],
+        "select": [
+          {
+            "ref": "cult",
+            "query": { "kind": "faction", "subtype": "cult", "status": "active" },
+            "count": 1,
+            "strategy": "random"
+          },
+          {
+            "ref": "recruit",
+            "query": { "kind": "npc", "status": "alive", "notHasRelationship": { "kind": "member_of", "direction": "outgoing" } },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "culture_affinity", "params": { "sameCultureBoost": 1.8, "differentCulturePenalty": 0.5 } },
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 20, "closeBoost": 2.0, "farPenalty": 0.3 } },
+              { "moduleId": "tag_filter_score", "params": { "preferTags": ["fearful", "touched", "desperate"], "preferBoost": 1.6, "forbiddenTags": ["leader"] } },
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 3, "penaltyBase": 0.6 } }
+            ]
+          }
+        ],
+        "connect": [
+          {
+            "kind": "member_of",
+            "from": { "ref": "recruit" },
+            "to": { "ref": "cult" }
+          }
+        ],
+        "modify": [
+          {
+            "target": { "ref": "recruit" },
+            "set": { "addTags": ["cultist", "zealous"] }
+          }
+        ],
+        "occurrence": {
+          "kind": "cult_recruitment",
+          "descriptionTemplate": "{recruit.name} was drawn into {cult.name}, seduced by promises of power and protection."
+        },
+        "weight": 0.5,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "faction", "subtype": "cult", "min": 1 }],
+            "pressures": [{ "name": "mystical_stirring", "range": { "min": 40 } }]
+          },
+          "produces": { "relationships": [{ "kind": "member_of", "count": 1 }] },
+          "tags": ["recruitment", "cult", "social"]
+        }
+      },
+      {
+        "id": "sim_trade_partnership",
+        "name": "Trade Partnership Forms",
+        "description": "Merchants from different cultures form trade partnerships. Uses culture_affinity in 'avoid' mode to prefer cross-cultural trade.",
+        "conditions": [
+          { "type": "pressure_above", "params": { "pressure": "trade_wealth", "threshold": 35 } },
+          { "type": "entity_count_above", "params": { "kind": "npc", "subtype": "merchant", "threshold": 1 } }
+        ],
+        "select": [
+          {
+            "ref": "merchant1",
+            "query": { "kind": "npc", "subtype": "merchant", "status": "alive" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "hub_penalty", "params": { "hubThreshold": 4, "penaltyBase": 0.7, "relationshipKinds": ["ally_of"] } }
+            ]
+          },
+          {
+            "ref": "merchant2",
+            "query": { "kind": "npc", "subtype": "merchant", "status": "alive" },
+            "count": 1,
+            "strategy": "scored",
+            "scoringModules": [
+              { "moduleId": "culture_affinity", "params": { "mode": "avoid", "sameCultureBoost": 0.5, "differentCulturePenalty": 1.8 } },
+              { "moduleId": "proximity_decay", "params": { "closeDistance": 30, "mediumDistance": 50, "closeBoost": 1.5, "mediumBoost": 1.2, "farPenalty": 0.6 } }
+            ]
+          }
+        ],
+        "connect": [
+          {
+            "kind": "ally_of",
+            "from": { "ref": "merchant1" },
+            "to": { "ref": "merchant2" },
+            "distance": 0.3
+          }
+        ],
+        "occurrence": {
+          "kind": "trade_partnership",
+          "descriptionTemplate": "{merchant1.name} and {merchant2.name} established a lucrative trade partnership across cultures."
+        },
+        "pressureEffects": [
+          { "pressure": "trade_wealth", "delta": 5 }
+        ],
+        "weight": 0.6,
+        "metadata": {
+          "requires": {
+            "entityKinds": [{ "kind": "npc", "subtype": "merchant", "min": 2 }]
+          },
+          "produces": { "relationships": [{ "kind": "ally_of", "count": 1 }] },
+          "tags": ["trade", "partnership", "cross-cultural"]
+        }
+      }
+    ],
+
+    "eraRuleWeights": {
+      "expansion": {
+        "eraId": "expansion",
+        "generationWeights": {
+          "gen_trade_outpost": 2.0,
+          "gen_faction_splinter": 0.2,
+          "gen_criminal_syndicate": 0.2,
+          "gen_cult_revelation": 0.2,
+          "gen_anomaly_discovered": 1.5,
+          "gen_orca_warlord": 0.0
+        },
+        "simulationWeights": {
+          "sim_faction_war": 0.1,
+          "sim_territory_seized": 0.3,
+          "sim_alliance_against_threat": 0.3,
+          "sim_orca_raid": 0.0,
+          "sim_coup": 0.2,
+          "sim_mystical_event": 0.5,
+          "sim_fear_spreads": 0.0,
+          "sim_prominence_shift": 0.5,
+          "sim_relationships_decay": 0.3,
+          "sim_cult_recruitment": 0.2,
+          "sim_trade_partnership": 1.5
+        },
+        "pressureDrift": {
+          "territorial_ambition": 3,
+          "trade_wealth": 4,
+          "orca_menace": 0,
+          "mystical_stirring": 2
+        }
+      },
+      "conflict": {
+        "eraId": "conflict",
+        "generationWeights": {
+          "gen_trade_outpost": 0.3,
+          "gen_faction_splinter": 2.0,
+          "gen_criminal_syndicate": 1.5,
+          "gen_cult_revelation": 0.5,
+          "gen_anomaly_discovered": 0.5,
+          "gen_orca_warlord": 0.0
+        },
+        "simulationWeights": {
+          "sim_faction_war": 2.0,
+          "sim_territory_seized": 2.0,
+          "sim_alliance_against_threat": 1.5,
+          "sim_orca_raid": 0.0,
+          "sim_coup": 1.5,
+          "sim_mystical_event": 0.3,
+          "sim_fear_spreads": 0.5,
+          "sim_prominence_shift": 0.8,
+          "sim_relationships_decay": 0.6,
+          "sim_cult_recruitment": 0.5,
+          "sim_trade_partnership": 0.3
+        },
+        "pressureDrift": {
+          "territorial_ambition": 6,
+          "trade_wealth": -2,
+          "orca_menace": 1,
+          "mystical_stirring": 1
+        }
+      },
+      "innovation": {
+        "eraId": "innovation",
+        "generationWeights": {
+          "gen_trade_outpost": 1.5,
+          "gen_faction_splinter": 0.5,
+          "gen_criminal_syndicate": 0.5,
+          "gen_cult_revelation": 1.0,
+          "gen_anomaly_discovered": 2.0,
+          "gen_orca_warlord": 0.0
+        },
+        "simulationWeights": {
+          "sim_faction_war": 0.3,
+          "sim_territory_seized": 0.5,
+          "sim_alliance_against_threat": 0.5,
+          "sim_orca_raid": 0.0,
+          "sim_coup": 0.5,
+          "sim_mystical_event": 2.0,
+          "sim_fear_spreads": 0.2,
+          "sim_prominence_shift": 1.0,
+          "sim_relationships_decay": 0.4,
+          "sim_cult_recruitment": 1.5,
+          "sim_trade_partnership": 1.2
+        },
+        "pressureDrift": {
+          "territorial_ambition": 2,
+          "trade_wealth": 5,
+          "orca_menace": 0,
+          "mystical_stirring": 4
+        }
+      },
+      "invasion": {
+        "eraId": "invasion",
+        "generationWeights": {
+          "gen_trade_outpost": 0.2,
+          "gen_faction_splinter": 0.3,
+          "gen_criminal_syndicate": 0.3,
+          "gen_cult_revelation": 0.5,
+          "gen_anomaly_discovered": 0.5,
+          "gen_orca_warlord": 3.0
+        },
+        "simulationWeights": {
+          "sim_faction_war": 0.3,
+          "sim_territory_seized": 0.5,
+          "sim_alliance_against_threat": 3.0,
+          "sim_orca_raid": 3.0,
+          "sim_coup": 0.3,
+          "sim_mystical_event": 0.5,
+          "sim_fear_spreads": 2.5,
+          "sim_prominence_shift": 1.2,
+          "sim_relationships_decay": 0.8,
+          "sim_cult_recruitment": 0.8,
+          "sim_trade_partnership": 0.2
+        },
+        "pressureDrift": {
+          "territorial_ambition": 1,
+          "trade_wealth": -3,
+          "orca_menace": 10,
+          "mystical_stirring": 2
+        }
+      },
+      "reconstruction": {
+        "eraId": "reconstruction",
+        "generationWeights": {
+          "gen_trade_outpost": 2.0,
+          "gen_faction_splinter": 0.5,
+          "gen_criminal_syndicate": 0.3,
+          "gen_cult_revelation": 1.0,
+          "gen_anomaly_discovered": 1.0,
+          "gen_orca_warlord": 0.0
+        },
+        "simulationWeights": {
+          "sim_faction_war": 0.2,
+          "sim_territory_seized": 0.3,
+          "sim_alliance_against_threat": 1.0,
+          "sim_orca_raid": 0.0,
+          "sim_coup": 0.3,
+          "sim_mystical_event": 1.5,
+          "sim_fear_spreads": 0.3,
+          "sim_prominence_shift": 0.6,
+          "sim_relationships_decay": 0.5,
+          "sim_cult_recruitment": 0.6,
+          "sim_trade_partnership": 2.0
+        },
+        "pressureDrift": {
+          "territorial_ambition": 2,
+          "trade_wealth": 4,
+          "orca_menace": -3,
+          "mystical_stirring": 3
+        }
+      }
+    },
+
+    "distributionTargets": {
+      "entities": {
+        "npc": { "total": { "min": 8, "max": 15 }, "subtypes": { "merchant": 0.2, "mayor": 0.3, "hero": 0.3, "outlaw": 0.1, "orca": 0.1 } },
+        "location": { "total": { "min": 8, "max": 12 }, "subtypes": { "iceberg": 0.1, "colony": 0.25, "igloo": 0.35, "geographic_feature": 0.1, "anomaly": 0.2 } },
+        "faction": { "total": { "min": 5, "max": 10 }, "subtypes": { "political": 0.3, "criminal": 0.25, "cult": 0.25, "company": 0.2 } }
+      },
+      "relationships": {
+        "coverage": {
+          "leader_of": 0.9,
+          "controls": 0.7,
+          "at_war_with": 0.3,
+          "allied_with": 0.4,
+          "enemy_of": 0.3,
+          "contains": 0.6,
+          "adjacent_to": 0.5,
+          "resident_of": 0.5,
+          "member_of": 0.3
+        },
+        "connectivity": {
+          "minPerEntity": 1,
+          "maxHubSize": 8
+        }
+      },
+      "cultures": {
+        "minEntitiesPerCulture": 3,
+        "maxVariance": 0.4
+      },
+      "temporal": {
+        "minEntitiesPerEra": 5,
+        "occurrencesPerEra": { "min": 4, "max": 10 }
+      }
+    },
+
+    "feedbackLoops": [
+      {
+        "id": "ambition_war_cycle",
+        "description": "Territorial ambition leads to faction wars and territory seizure",
+        "chain": [
+          { "component": "territorial_ambition", "effect": "rises above 70" },
+          { "component": "sim_faction_war", "effect": "war erupts between factions" },
+          { "component": "sim_territory_seized", "effect": "victors seize territory" },
+          { "component": "territorial_ambition", "effect": "decreases significantly" }
+        ]
+      },
+      {
+        "id": "prosperity_crime_cycle",
+        "description": "Wealth attracts criminal enterprises that undermine prosperity",
+        "chain": [
+          { "component": "trade_wealth", "effect": "rises above 60" },
+          { "component": "gen_criminal_syndicate", "effect": "crime boss founds syndicate" },
+          { "component": "trade_wealth", "effect": "decreases as crime spreads" }
+        ]
+      },
+      {
+        "id": "orca_hero_cycle",
+        "description": "Orca raids create heroes who become faction leaders",
+        "chain": [
+          { "component": "orca_menace", "effect": "rises above 65" },
+          { "component": "sim_orca_raid", "effect": "orca attacks colony" },
+          { "component": "defender created", "effect": "hero emerges from defense" },
+          { "component": "orca_menace", "effect": "decreases after raid" }
+        ]
+      },
+      {
+        "id": "mystical_cult_cycle",
+        "description": "Mystical events spawn cults that seek to control anomalies",
+        "chain": [
+          { "component": "mystical_stirring", "effect": "rises above 50" },
+          { "component": "gen_cult_revelation", "effect": "prophet founds cult" },
+          { "component": "sim_mystical_event", "effect": "anomaly becomes active" },
+          { "component": "mystical_stirring", "effect": "escalates further" }
+        ]
+      }
+    ]
+  }
 }

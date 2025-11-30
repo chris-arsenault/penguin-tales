@@ -22,6 +22,12 @@ export default defineConfig({
           entry: 'http://localhost:5002/remoteEntry.js',
           entryGlobalName: 'cosmographer',
         },
+        coherenceBench: {
+          type: 'module',
+          name: 'coherenceBench',
+          entry: 'http://localhost:5003/remoteEntry.js',
+          entryGlobalName: 'coherenceBench',
+        },
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },

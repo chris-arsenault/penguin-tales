@@ -1,0 +1,42 @@
+{
+  "name": "coherence-bench",
+  "version": "0.1.0",
+  "description": "Simulation coherence analyzer for validating world generation systems",
+  "type": "module",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "bin": {
+    "coherence-bench": "dist/cli/index.js"
+  },
+  "scripts": {
+    "cli": "tsx cli/index.ts",
+    "analyze": "tsx cli/index.ts analyze",
+    "build": "rm -rf dist && tsc",
+    "build:fast": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "simulation",
+    "coherence",
+    "validation",
+    "worldbuilding",
+    "analysis"
+  ],
+  "author": "",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "@vitest/coverage-v8": "^4.0.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.13"
+  }
+}

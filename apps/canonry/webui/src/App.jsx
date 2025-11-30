@@ -14,6 +14,7 @@ import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
+import CoherenceBenchHost from './remotes/CoherenceBenchHost';
 import { colors, typography, spacing } from './theme';
 
 const styles = {
@@ -55,7 +56,7 @@ const VALID_SUBNAV = {
   enumerist: ['entityKinds', 'relationshipKinds', 'cultures'],
   names: ['workshop', 'optimizer', 'generate'],
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
-  simulation: [],
+  coherence: ['settings', 'eras', 'pressures', 'generationRules', 'simulationRules', 'distributionTargets', 'eraWeights', 'runner'],
 };
 
 // URL state management
@@ -69,7 +70,7 @@ function getInitialState() {
     return { tab: null, section: null, showHome: true };
   }
 
-  const validTab = ['enumerist', 'names', 'cosmography', 'simulation'].includes(tab)
+  const validTab = ['enumerist', 'names', 'cosmography', 'coherence'].includes(tab)
     ? tab
     : 'enumerist';
 
@@ -166,6 +167,16 @@ export default function App() {
 
   const updateSeedRelationships = useCallback(
     (seedRelationships) => save({ seedRelationships }),
+    [save]
+  );
+
+  const updateSimulation = useCallback(
+    (simulation) => save({ simulation }),
+    [save]
+  );
+
+  const updateEras = useCallback(
+    (eras) => save({ eras }),
     [save]
   );
 
@@ -312,14 +323,15 @@ export default function App() {
           />
         );
 
-      case 'simulation':
+      case 'coherence':
         return (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-
-            </div>
-            <div>Lore Weave integration coming soon...</div>
-          </div>
+          <CoherenceBenchHost
+            project={currentProject}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            onUpdateSimulation={updateSimulation}
+            onUpdateEras={updateEras}
+          />
         );
 
       default:

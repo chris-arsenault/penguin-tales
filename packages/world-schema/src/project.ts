@@ -9,6 +9,8 @@ import type { EntityKindDefinition } from './entityKind.js';
 import type { RelationshipKindDefinition } from './relationship.js';
 import type { CultureDefinition } from './culture.js';
 import type { SeedEntity, SeedRelationship } from './seed.js';
+import type { EraDefinition } from './era.js';
+import type { SimulationConfig } from './simulation.js';
 
 /**
  * The complete world seed project
@@ -25,24 +27,34 @@ export interface WorldSeedProject {
   /** Last update timestamp (ISO 8601) */
   updatedAt: string;
 
-  // === SCHEMA DEFINITION ===
+  // === SCHEMA DEFINITION (Enumerist) ===
 
   /** All entity kinds in this world */
   entityKinds: EntityKindDefinition[];
   /** All relationship kinds in this world */
   relationshipKinds: RelationshipKindDefinition[];
 
-  // === CULTURES ===
+  // === CULTURES (Enumerist + Name Forge + Cosmographer) ===
 
   /** All cultures in this world */
   cultures: CultureDefinition[];
 
-  // === SEED DATA ===
+  // === TEMPORAL STRUCTURE (Cosmographer) ===
+
+  /** Eras define the temporal structure of world history */
+  eras: EraDefinition[];
+
+  // === SEED DATA (Cosmographer) ===
 
   /** Initial entities */
   seedEntities: SeedEntity[];
   /** Initial relationships */
   seedRelationships: SeedRelationship[];
+
+  // === SIMULATION (Simulation Workshop) ===
+
+  /** Simulation configuration (rules, pressures, targets) */
+  simulation?: SimulationConfig;
 }
 
 /**

@@ -53,5 +53,73 @@ export type {
   SeedRelationship,
 } from './seed.js';
 
+// Era types (Cosmographer)
+export type { EraDefinition } from './era.js';
+
+// Simulation types (Simulation Workshop)
+export type {
+  // Core types
+  CountSpec,
+  EntityRef,
+  EntityQuery,
+  // Conditions
+  ConditionType,
+  Condition,
+  // Entity templates
+  ProminenceDistribution,
+  PlacementSpec,
+  EntityTemplate,
+  // Relationship templates
+  RelationshipTemplate,
+  // Selection
+  ScoringSpec,
+  SelectionSpec,
+  // Modification
+  ModifySpec,
+  DisconnectSpec,
+  // Occurrences
+  OccurrenceTemplate,
+  // Pressures
+  PressureEffect,
+  PressureDefinition,
+  // Rules
+  RuleMetadata,
+  GenerationRule,
+  SimulationRule,
+  // Era weights
+  EraRuleWeights,
+  // Distribution targets
+  DistributionTargets,
+  // Feedback loops
+  FeedbackLoopDeclaration,
+  // Agents
+  AgentAction,
+  AgentBehavior,
+  // Plugins
+  PluginConfig,
+  // Top-level config
+  SimulationSettings,
+  SimulationConfig,
+  // Module types
+  ModuleCategory,
+  ModuleParameterDef,
+  ModuleRef,
+  HubPenaltyParams,
+  PopulationRatioPressureParams,
+  CultureAffinityParams,
+  ProximityDecayParams,
+  TagFilterParams,
+  RelationshipDecayParams,
+  ContagionSpreadParams,
+  ProminenceEvolutionParams,
+  FactionModifierParams,
+  CooldownParams,
+  RatioEquilibriumPressureParams,
+  StatusGateParams,
+  ModuleParams,
+  DynamicPressureCalculation,
+  SelectionScoringModules,
+} from './simulation.js';
+
 // Project types
 export type { WorldSeedProject, ProjectMetadata } from './project.js';

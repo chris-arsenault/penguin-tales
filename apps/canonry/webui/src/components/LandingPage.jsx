@@ -266,6 +266,47 @@ const APP_CARDS = [
       },
     ],
   },
+  {
+    id: 'coherence',
+    icon: '⚖',
+    title: 'Coherence Bench',
+    tagline: 'Simulation Coherence Analysis',
+    color: colors.accentCoherence,
+    bgColor: 'rgba(245, 158, 11, 0.1)',
+    description: `Coherence Bench validates your simulation configuration before you run it. It analyzes templates, systems, pressures, and feedback loops to detect structural issues - like entity kinds with no creators, tags that are set but never read, or pressures without sources. Think of it as a linter for your world generation rules.`,
+    features: [
+      {
+        title: 'Entity Coverage',
+        desc: 'Verify that every entity kind in your schema has at least one template that creates it. Detect under-served kinds that need more creators or over-served kinds with redundant templates.',
+        color: colors.highlightAmber,
+        bg: 'rgba(245, 158, 11, 0.1)',
+      },
+      {
+        title: 'Tag Flow Analysis',
+        desc: 'Track which components produce and consume each tag. Find orphan tags (consumed but never produced) and unused tags (produced but never consumed). Ensure your tag system is coherent.',
+        color: colors.highlightPurple,
+        bg: 'rgba(167, 139, 250, 0.1)',
+      },
+      {
+        title: 'Relationship Flow',
+        desc: 'Analyze which templates and systems create relationships, and which systems query them. Detect relationships that are created but never used, or queried but never created.',
+        color: colors.highlightBlue,
+        bg: 'rgba(108, 155, 255, 0.1)',
+      },
+      {
+        title: 'Pressure Equilibrium',
+        desc: 'Validate that each pressure has both sources (components that increase it) and sinks (components that decrease it). Check that initial values fall within expected ranges.',
+        color: colors.highlightTeal,
+        bg: 'rgba(102, 221, 179, 0.1)',
+      },
+      {
+        title: 'Feedback Loop Validation',
+        desc: 'Verify that declared feedback loops reference valid components. Detect broken loops with missing sources or targets, and weak loops that may not have noticeable effects.',
+        color: colors.highlightRed,
+        bg: 'rgba(248, 113, 113, 0.1)',
+      },
+    ],
+  },
 ];
 
 function AppCard({ app, onNavigate, hasProject }) {
