@@ -269,12 +269,12 @@ export class TemplateInterpreter {
       }
 
       case 'cooldown_elapsed': {
-        const ticksSince = graphView.tick - graphView.discoveryState.lastDiscoveryTick;
+        const ticksSince = graphView.tick - graphView.rateLimitState.lastCreationTick;
         return ticksSince >= rule.cooldownTicks;
       }
 
-      case 'discoveries_per_epoch': {
-        return graphView.discoveryState.discoveriesThisEpoch < rule.maxPerEpoch;
+      case 'creations_per_epoch': {
+        return graphView.rateLimitState.creationsThisEpoch < rule.maxPerEpoch;
       }
 
       case 'graph_path': {
@@ -992,9 +992,9 @@ export class TemplateInterpreter {
     const { graphView } = context;
 
     switch (rule.type) {
-      case 'update_discovery_state':
-        graphView.discoveryState.lastDiscoveryTick = graphView.tick;
-        graphView.discoveryState.discoveriesThisEpoch += 1;
+      case 'update_rate_limit':
+        graphView.rateLimitState.lastCreationTick = graphView.tick;
+        graphView.rateLimitState.creationsThisEpoch += 1;
         break;
 
       case 'archive_relationship': {

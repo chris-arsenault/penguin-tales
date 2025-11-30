@@ -27,7 +27,7 @@ describe('eraSpawner', () => {
         ],
         maxTicks: 500,
       } as any,
-      discoveryState: {} as any,
+      rateLimitState: {} as any,
       history: [],
       nameLogger: {} as any,
       tagRegistry: {} as any,

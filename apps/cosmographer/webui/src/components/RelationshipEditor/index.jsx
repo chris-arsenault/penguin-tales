@@ -4,6 +4,9 @@
 
 import React, { useState } from 'react';
 
+// Arctic Blue base theme with frost blue accent (Cosmographer)
+const ACCENT_COLOR = '#60a5fa';
+
 const styles = {
   container: {
     maxWidth: '1000px'
@@ -14,10 +17,11 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    marginBottom: '8px'
+    marginBottom: '8px',
+    color: '#ffffff'
   },
   subtitle: {
-    color: '#888',
+    color: '#93c5fd',
     fontSize: '14px'
   },
   toolbar: {
@@ -28,25 +32,26 @@ const styles = {
   addButton: {
     padding: '8px 16px',
     fontSize: '13px',
-    backgroundColor: '#e94560',
-    color: 'white',
+    backgroundColor: ACCENT_COLOR,
+    color: '#0a1929',
     border: 'none',
     borderRadius: '4px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    fontWeight: 500
   },
   filterSelect: {
     padding: '8px 12px',
     fontSize: '13px',
-    backgroundColor: '#16213e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#1e3a5f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#eee',
+    color: '#ffffff',
     minWidth: '150px'
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    backgroundColor: '#16213e',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     overflow: 'hidden'
   },
@@ -54,41 +59,43 @@ const styles = {
     padding: '12px 16px',
     textAlign: 'left',
     fontSize: '12px',
-    color: '#888',
-    borderBottom: '1px solid #0f3460',
+    color: '#93c5fd',
+    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
     fontWeight: 500
   },
   td: {
     padding: '12px 16px',
-    borderBottom: '1px solid #0f3460',
-    fontSize: '13px'
+    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
+    fontSize: '13px',
+    color: '#ffffff'
   },
   kindBadge: {
     display: 'inline-block',
     padding: '3px 8px',
-    backgroundColor: '#0f3460',
+    backgroundColor: '#0c1f2e',
     borderRadius: '4px',
-    fontSize: '11px'
+    fontSize: '11px',
+    color: '#60a5fa'
   },
   entityLink: {
-    color: '#e94560',
+    color: ACCENT_COLOR,
     cursor: 'pointer'
   },
   deleteButton: {
     padding: '4px 8px',
     fontSize: '11px',
     backgroundColor: 'transparent',
-    color: '#e94560',
-    border: '1px solid #e94560',
+    color: '#ef4444',
+    border: '1px solid #ef4444',
     borderRadius: '3px',
     cursor: 'pointer'
   },
   emptyState: {
-    color: '#666',
+    color: '#60a5fa',
     fontSize: '14px',
     textAlign: 'center',
     padding: '40px',
-    backgroundColor: '#16213e',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px'
   },
   modal: {
@@ -104,22 +111,24 @@ const styles = {
     zIndex: 1000
   },
   modalContent: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0c1f2e',
     padding: '24px',
     borderRadius: '8px',
-    width: '500px'
+    width: '500px',
+    border: '1px solid rgba(59, 130, 246, 0.3)'
   },
   modalTitle: {
     fontSize: '18px',
     fontWeight: 600,
-    marginBottom: '20px'
+    marginBottom: '20px',
+    color: '#ffffff'
   },
   formGroup: {
     marginBottom: '16px'
   },
   label: {
     fontSize: '12px',
-    color: '#888',
+    color: '#93c5fd',
     marginBottom: '6px',
     display: 'block'
   },
@@ -127,19 +136,19 @@ const styles = {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#16213e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#1e3a5f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#eee'
+    color: '#ffffff'
   },
   input: {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#16213e',
-    border: '1px solid #0f3460',
+    backgroundColor: '#1e3a5f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#eee'
+    color: '#ffffff'
   },
   modalActions: {
     display: 'flex',
@@ -150,14 +159,14 @@ const styles = {
   button: {
     padding: '8px 16px',
     fontSize: '13px',
-    backgroundColor: '#0f3460',
-    color: '#aaa',
+    backgroundColor: '#1e3a5f',
+    color: '#93c5fd',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
   },
   arrow: {
-    color: '#666',
+    color: '#60a5fa',
     fontSize: '16px'
   }
 };
@@ -259,12 +268,12 @@ export default function RelationshipEditor({ project, onSave }) {
           + Add Relationship
         </button>
         {entities.length < 2 && (
-          <span style={{ color: '#888', fontSize: '12px' }}>
+          <span style={{ color: '#93c5fd', fontSize: '12px' }}>
             Need at least 2 entities
           </span>
         )}
         {relationshipKinds.length === 0 && (
-          <span style={{ color: '#888', fontSize: '12px' }}>
+          <span style={{ color: '#93c5fd', fontSize: '12px' }}>
             Define relationship kinds in Schema first
           </span>
         )}

@@ -25,7 +25,7 @@ const TABS = [
   { id: 'systems', label: 'Systems' },
 ];
 
-// Coherence Engine accent gradient (amber)
+// Coherence Engine accent gradient (amber) - Arctic Blue base theme
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
 const ACCENT_COLOR = '#f59e0b';
 
@@ -33,13 +33,13 @@ const styles = {
   container: {
     display: 'flex',
     height: '100%',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#1a1a28',
-    borderRight: '1px solid #3d3d4d',
+    backgroundColor: '#0c1f2e',
+    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
@@ -63,11 +63,11 @@ const styles = {
   },
   navButtonInactive: {
     backgroundColor: 'transparent',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   navButtonActive: {
     background: ACCENT_GRADIENT,
-    color: '#1a1a28',
+    color: '#0a1929',
     fontWeight: 600,
   },
   main: {
@@ -86,7 +86,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#707080',
+    color: '#60a5fa',
     textAlign: 'center',
   },
   placeholderIcon: {
@@ -98,11 +98,11 @@ const styles = {
     fontSize: '18px',
     fontWeight: 500,
     marginBottom: '8px',
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   placeholderDesc: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
     maxWidth: '400px',
   },
 };
@@ -206,7 +206,7 @@ export default function CoherenceEngineRemote({
               onMouseLeave={(e) => {
                 if (activeTab !== tab.id) {
                   e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#b0b0c0';
+                  e.target.style.color = '#93c5fd';
                 }
               }}
             >

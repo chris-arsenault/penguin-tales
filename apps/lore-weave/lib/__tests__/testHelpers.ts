@@ -67,10 +67,10 @@ export function createTestGraph(overrides: Partial<Graph> = {}): Graph {
     config: overrides.config ?? {} as EngineConfig,
     relationshipCooldowns: overrides.relationshipCooldowns ?? new Map(),
     // loreRecords/loreIndex moved to @illuminator
-    discoveryState: overrides.discoveryState ?? {
+    rateLimitState: overrides.rateLimitState ?? {
       currentThreshold: 0.5,
-      lastDiscoveryTick: 0,
-      discoveriesThisEpoch: 0
+      lastCreationTick: 0,
+      creationsThisEpoch: 0
     },
     growthMetrics: overrides.growthMetrics ?? {
       relationshipsPerTick: [],

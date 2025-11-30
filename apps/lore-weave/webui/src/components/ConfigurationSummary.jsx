@@ -6,6 +6,7 @@
 
 import React from 'react';
 
+// Arctic Blue base theme with purple accent
 const ACCENT_COLOR = '#6d28d9';
 
 const styles = {
@@ -18,12 +19,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   validationBox: {
     padding: '16px 20px',
@@ -63,14 +64,14 @@ const styles = {
     marginBottom: '24px',
   },
   statCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '16px 20px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   statLabel: {
     fontSize: '12px',
-    color: '#707080',
+    color: '#60a5fa',
     marginBottom: '4px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -78,7 +79,7 @@ const styles = {
   statValue: {
     fontSize: '28px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   statZero: {
     color: '#ef4444',
@@ -89,7 +90,7 @@ const styles = {
   sectionTitle: {
     fontSize: '18px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '16px',
   },
   itemList: {
@@ -99,11 +100,11 @@ const styles = {
   },
   itemBadge: {
     padding: '6px 12px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
     fontSize: '13px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   runButton: {
     display: 'inline-flex',
@@ -120,15 +121,15 @@ const styles = {
     transition: 'all 0.15s',
   },
   runButtonDisabled: {
-    backgroundColor: '#3d3d4d',
-    color: '#707080',
+    backgroundColor: '#1e3a5f',
+    color: '#60a5fa',
     cursor: 'not-allowed',
   },
   detailCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '16px 20px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     marginBottom: '12px',
   },
   detailHeader: {
@@ -140,22 +141,22 @@ const styles = {
   detailName: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   detailId: {
     fontSize: '11px',
-    color: '#707080',
-    backgroundColor: '#1a1a28',
+    color: '#60a5fa',
+    backgroundColor: '#0c1f2e',
     padding: '2px 6px',
     borderRadius: '4px',
     fontFamily: 'monospace',
   },
   detailDescription: {
     fontSize: '13px',
-    color: '#909090',
+    color: '#93c5fd',
   },
   emptyState: {
-    color: '#707080',
+    color: '#60a5fa',
     fontStyle: 'italic',
     fontSize: '14px',
   },

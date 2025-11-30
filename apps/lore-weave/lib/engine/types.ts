@@ -140,7 +140,7 @@ export interface Graph {
   // LLM-related fields moved to @illuminator
   // loreIndex?: LoreIndex;
   // loreRecords: LoreRecord[];
-  discoveryState: import('../core/worldTypes').DiscoveryState;
+  rateLimitState: import('../core/worldTypes').RateLimitState;
   growthMetrics: {
     relationshipsPerTick: number[];
     averageGrowthRate: number;
@@ -546,10 +546,10 @@ export class GraphStore implements Graph {
   // LLM fields moved to @illuminator
   // loreIndex?: LoreIndex;
   // loreRecords: LoreRecord[] = [];
-  discoveryState: import('../core/worldTypes').DiscoveryState = {
+  rateLimitState: import('../core/worldTypes').RateLimitState = {
     currentThreshold: 0.5,
-    lastDiscoveryTick: 0,
-    discoveriesThisEpoch: 0
+    lastCreationTick: 0,
+    creationsThisEpoch: 0
   };
   growthMetrics: { relationshipsPerTick: number[]; averageGrowthRate: number } = {
     relationshipsPerTick: [],

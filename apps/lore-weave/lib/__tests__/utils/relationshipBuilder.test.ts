@@ -195,7 +195,7 @@ describe('RelationshipBuilder', () => {
         history: [],
         config: {} as any,
         relationshipCooldowns: new Map(),
-        discoveryState: { currentThreshold: 0, lastDiscoveryTick: 0, discoveriesThisEpoch: 0 },
+        rateLimitState: { currentThreshold: 0, lastCreationTick: 0, creationsThisEpoch: 0 },
         growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
 
         // Entity read methods
@@ -471,7 +471,7 @@ describe('Integration scenarios', () => {
       history: [],
       config: {} as any,
       relationshipCooldowns: new Map(),
-      discoveryState: { currentThreshold: 0, lastDiscoveryTick: 0, discoveriesThisEpoch: 0 },
+      rateLimitState: { currentThreshold: 0, lastCreationTick: 0, creationsThisEpoch: 0 },
       growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
 
       // Entity read methods

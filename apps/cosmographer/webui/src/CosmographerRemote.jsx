@@ -29,22 +29,22 @@ const TABS = [
   { id: 'relationships', label: 'Relationships' },
 ];
 
-// Cosmographer accent gradient
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #66ddb3 0%, #8eecc8 100%)';
-const HOVER_BG = 'rgba(102, 221, 179, 0.15)';
-const ACCENT_COLOR = '#66ddb3';
+// Arctic Blue Theme - Cosmographer uses frost blue accent
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)';
+const HOVER_BG = 'rgba(96, 165, 250, 0.15)';
+const ACCENT_COLOR = '#60a5fa';
 
 const styles = {
   container: {
     display: 'flex',
     height: '100%',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#1a1a28',
-    borderRight: '1px solid #3d3d4d',
+    backgroundColor: '#0c1f2e',
+    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
@@ -68,11 +68,11 @@ const styles = {
   },
   navButtonInactive: {
     backgroundColor: 'transparent',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   navButtonActive: {
     background: ACCENT_GRADIENT,
-    color: '#1a1a28',
+    color: '#0a1929',
     fontWeight: 600,
   },
   main: {
@@ -91,7 +91,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#707080',
+    color: '#60a5fa',
     textAlign: 'center',
     padding: '40px',
   },
@@ -99,7 +99,7 @@ const styles = {
     fontSize: '18px',
     fontWeight: 500,
     marginBottom: '8px',
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
 };
 

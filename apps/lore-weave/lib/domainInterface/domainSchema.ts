@@ -45,102 +45,6 @@ export interface RelationshipKindDefinition {
   decayRate?: DecayRate;
 }
 
-// ===========================
-// EMERGENT DISCOVERY CONFIG
-// ===========================
-
-/**
- * Configuration for emergent location discovery system.
- * Allows domains to customize discovery behavior based on world state.
- */
-export interface EmergentDiscoveryConfig {
-  /**
-   * Entity subtypes that represent settlements/colonies
-   * Used to analyze resource needs
-   * Default: ['colony']
-   */
-  settlementSubtypes?: string[];
-
-  /**
-   * Entity statuses that indicate a thriving settlement
-   * Default: ['thriving']
-   */
-  thrivingStatuses?: string[];
-
-  /**
-   * Entity statuses that indicate a struggling settlement
-   * Default: ['waning', 'derelict']
-   */
-  strugglingStatuses?: string[];
-
-  /**
-   * Entity subtypes that can discover new locations
-   * Default: ['hero']
-   */
-  explorerSubtypes?: string[];
-
-  /**
-   * Entity status required for explorers to be active
-   * Default: 'alive'
-   */
-  explorerActiveStatus?: string;
-
-  /**
-   * Resources that can be scarce (for resource analysis)
-   * Default: ['food', 'water', 'shelter', 'safety']
-   */
-  resourceTypes?: string[];
-
-  /**
-   * Specific resource subtypes for food scarcity
-   * Default: ['krill', 'fish', 'kelp']
-   */
-  foodResources?: string[];
-
-  /**
-   * Discovery probability modifiers by era ID
-   * Default: { expansion: 0.15, conflict: 0.08, ... }
-   */
-  eraDiscoveryModifiers?: Record<string, number>;
-
-  /**
-   * Maximum locations before stopping discoveries
-   * Default: 40
-   */
-  maxLocations?: number;
-
-  /**
-   * Maximum discoveries per epoch
-   * Default: 3
-   */
-  maxDiscoveriesPerEpoch?: number;
-
-  /**
-   * Minimum ticks between discoveries
-   * Default: 5
-   */
-  minTicksBetweenDiscoveries?: number;
-
-  /**
-   * Era-specific word lists for theme generation
-   */
-  eraThemeWords?: Record<string, {
-    depthWords?: string[];
-    descriptors?: string[];
-  }>;
-
-  /**
-   * Resource-specific theme words for location naming
-   */
-  resourceThemeWords?: Record<string, string[]>;
-
-  /**
-   * Location subtype for magical/mystical anomalies
-   * Default: 'anomaly'
-   */
-  anomalySubtype?: string;
-}
-
 /**
  * Validation rule for entity structure
  */
@@ -373,13 +277,6 @@ export interface DomainSchema {
    * @returns Array of action domain IDs
    */
   getActionDomainsForEntity?(entity: HardState): string[];
-
-  // ===========================
-  // EMERGENT DISCOVERY CONFIG
-  // ===========================
-
-  /** Optional: Configuration for emergent location discovery system */
-  emergentDiscoveryConfig?: EmergentDiscoveryConfig;
 
   // ===========================
   // SEMANTIC AXIS CONFIG

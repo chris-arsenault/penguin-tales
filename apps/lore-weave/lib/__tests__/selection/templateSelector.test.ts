@@ -197,7 +197,7 @@ describe('TemplateSelector', () => {
       history: [],
       config: {} as any,
       relationshipCooldowns: new Map(),
-      discoveryState: {} as any,
+      rateLimitState: {} as any,
       growthMetrics: {
         relationshipsPerTick: [],
         averageGrowthRate: 0,

@@ -72,7 +72,7 @@ describe('TemplateGraphView', () => {
         ['npc1', new Map([['allies', 95]])],
       ]),
       config: {} as any,
-      discoveryState: {} as any,
+      rateLimitState: {} as any,
       history: [],
       nameLogger: {} as any,
       tagRegistry: {} as any,
@@ -310,9 +310,9 @@ describe('TemplateGraphView', () => {
     });
   });
 
-  describe('discoveryState', () => {
+  describe('rateLimitState', () => {
     it('should return discovery state', () => {
-      expect(view.discoveryState).toBe(graph.discoveryState);
+      expect(view.rateLimitState).toBe(graph.rateLimitState);
     });
   });
 

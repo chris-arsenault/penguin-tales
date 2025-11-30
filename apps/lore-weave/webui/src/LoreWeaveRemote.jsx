@@ -29,7 +29,7 @@ const TABS = [
   { id: 'results', label: 'Results' },
 ];
 
-// Lore Weave accent gradient (purple)
+// Lore Weave accent gradient (purple) - Arctic Blue base theme
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)';
 const ACCENT_COLOR = '#6d28d9';
 
@@ -37,13 +37,13 @@ const styles = {
   container: {
     display: 'flex',
     height: '100%',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#1a1a28',
-    borderRight: '1px solid #3d3d4d',
+    backgroundColor: '#0c1f2e',
+    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
@@ -67,7 +67,7 @@ const styles = {
   },
   navButtonInactive: {
     backgroundColor: 'transparent',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   navButtonActive: {
     background: ACCENT_GRADIENT,
@@ -240,7 +240,7 @@ export default function LoreWeaveRemote({
               onMouseLeave={(e) => {
                 if (activeTab !== tab.id) {
                   e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#b0b0c0';
+                  e.target.style.color = '#93c5fd';
                 }
               }}
             >

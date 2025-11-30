@@ -5,6 +5,9 @@
 import React, { useState } from 'react';
 import { generateEntityName } from '../../lib/name-generator.js';
 
+// Arctic Blue base theme with frost blue accent (Cosmographer)
+const ACCENT_COLOR = '#60a5fa';
+
 const styles = {
   container: {
     display: 'flex',
@@ -24,10 +27,10 @@ const styles = {
     fontSize: '24px',
     fontWeight: 600,
     marginBottom: '8px',
-    color: '#f0f0f0'
+    color: '#ffffff'
   },
   subtitle: {
-    color: '#a0a0b0',
+    color: '#93c5fd',
     fontSize: '14px'
   },
   toolbar: {
@@ -38,8 +41,8 @@ const styles = {
   addButton: {
     padding: '8px 16px',
     fontSize: '13px',
-    backgroundColor: '#66ddb3',
-    color: '#1a1a28',
+    backgroundColor: ACCENT_COLOR,
+    color: '#0a1929',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
@@ -49,10 +52,10 @@ const styles = {
   filterSelect: {
     padding: '8px 12px',
     fontSize: '13px',
-    backgroundColor: '#2d2d3d',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     flex: 1,
     fontFamily: 'inherit'
   },
@@ -65,7 +68,7 @@ const styles = {
   },
   entityItem: {
     padding: '12px',
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '6px',
     cursor: 'pointer',
     border: '2px solid transparent',
@@ -74,7 +77,7 @@ const styles = {
     gap: '10px'
   },
   entityItemSelected: {
-    borderColor: '#66ddb3'
+    borderColor: ACCENT_COLOR
   },
   entityColor: {
     width: '10px',
@@ -87,32 +90,32 @@ const styles = {
   entityName: {
     fontSize: '14px',
     fontWeight: 500,
-    color: '#f0f0f0'
+    color: '#ffffff'
   },
   entityMeta: {
     fontSize: '11px',
-    color: '#707080'
+    color: '#60a5fa'
   },
   formPanel: {
     flex: 1,
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '20px',
     overflowY: 'auto',
-    border: '1px solid #3d3d4d'
+    border: '1px solid rgba(59, 130, 246, 0.3)'
   },
   formTitle: {
     fontSize: '18px',
     fontWeight: 600,
     marginBottom: '20px',
-    color: '#f0f0f0'
+    color: '#ffffff'
   },
   formGroup: {
     marginBottom: '16px'
   },
   label: {
     fontSize: '12px',
-    color: '#a0a0b0',
+    color: '#93c5fd',
     marginBottom: '6px',
     display: 'block',
     fontWeight: 500
@@ -121,10 +124,10 @@ const styles = {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#2d2d3d',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     fontFamily: 'inherit',
     boxSizing: 'border-box'
   },
@@ -132,20 +135,20 @@ const styles = {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#2d2d3d',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     fontFamily: 'inherit'
   },
   textarea: {
     width: '100%',
     padding: '10px',
     fontSize: '14px',
-    backgroundColor: '#2d2d3d',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     minHeight: '80px',
     resize: 'vertical',
     fontFamily: 'inherit',
@@ -162,15 +165,15 @@ const styles = {
     padding: '10px 20px',
     fontSize: '13px',
     backgroundColor: 'transparent',
-    color: '#ff6b7a',
-    border: '1px solid #ff6b7a',
+    color: '#ef4444',
+    border: '1px solid #ef4444',
     borderRadius: '4px',
     cursor: 'pointer',
     marginTop: '24px',
     fontFamily: 'inherit'
   },
   emptyState: {
-    color: '#707080',
+    color: '#60a5fa',
     fontSize: '14px',
     textAlign: 'center',
     padding: '40px'
@@ -180,7 +183,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#707080'
+    color: '#60a5fa'
   },
   nameRow: {
     display: 'flex',
@@ -193,8 +196,8 @@ const styles = {
   generateButton: {
     padding: '10px 14px',
     fontSize: '13px',
-    backgroundColor: '#66ddb3',
-    color: '#1a1a28',
+    backgroundColor: ACCENT_COLOR,
+    color: '#0a1929',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
@@ -203,8 +206,8 @@ const styles = {
     fontFamily: 'inherit'
   },
   generateButtonDisabled: {
-    backgroundColor: '#3d3d4d',
-    color: '#707080',
+    backgroundColor: '#1e3a5f',
+    color: '#60a5fa',
     cursor: 'not-allowed'
   },
   tagsContainer: {
@@ -218,14 +221,14 @@ const styles = {
     alignItems: 'center',
     gap: '4px',
     padding: '4px 8px',
-    backgroundColor: '#3d3d4d',
+    backgroundColor: '#0c1f2e',
     borderRadius: '4px',
     fontSize: '12px',
-    color: '#f0f0f0'
+    color: '#ffffff'
   },
   tagRemove: {
     cursor: 'pointer',
-    color: '#a0a0b0',
+    color: '#93c5fd',
     fontSize: '14px',
     lineHeight: 1
   },
@@ -234,20 +237,20 @@ const styles = {
     minWidth: '100px',
     padding: '6px 8px',
     fontSize: '12px',
-    backgroundColor: '#2d2d3d',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     fontFamily: 'inherit'
   },
   coordsDisplay: {
     display: 'flex',
     gap: '16px',
     padding: '10px 12px',
-    backgroundColor: '#2d2d3d',
+    backgroundColor: '#2d4a6f',
     borderRadius: '4px',
     fontSize: '12px',
-    border: '1px solid #3d3d4d'
+    border: '1px solid rgba(59, 130, 246, 0.3)'
   },
   coordItem: {
     display: 'flex',
@@ -256,14 +259,14 @@ const styles = {
   },
   coordLabel: {
     fontWeight: 600,
-    color: '#66ddb3'
+    color: ACCENT_COLOR
   },
   coordValue: {
-    color: '#f0f0f0'
+    color: '#ffffff'
   },
   coordHint: {
     fontSize: '11px',
-    color: '#707080',
+    color: '#60a5fa',
     marginTop: '6px'
   }
 };
@@ -507,7 +510,7 @@ export default function EntityEditor({ project, onSave }) {
                 </button>
               </div>
               {generateError && (
-                <div style={{ color: '#ff6b7a', fontSize: '12px', marginTop: '6px' }}>
+                <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px' }}>
                   {generateError}
                 </div>
               )}

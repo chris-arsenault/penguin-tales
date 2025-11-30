@@ -109,9 +109,9 @@ export type LocationStatus = string;
 export type RulesStatus = string;
 export type AbilitiesStatus = string;
 
-// Discovery tracking (emergent system)
-export interface DiscoveryState {
-  currentThreshold: number;     // Difficulty threshold for next discovery
-  lastDiscoveryTick: number;    // Last tick a discovery occurred
-  discoveriesThisEpoch: number; // Count for current epoch
+// Rate limiting for template-based entity creation
+export interface RateLimitState {
+  currentThreshold: number;     // Difficulty threshold for next creation
+  lastCreationTick: number;     // Last tick a rate-limited creation occurred
+  creationsThisEpoch: number;   // Count for current epoch
 }

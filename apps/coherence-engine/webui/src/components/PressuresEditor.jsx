@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 
+// Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
 
@@ -23,12 +24,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   pressureList: {
     display: 'flex',
@@ -36,9 +37,9 @@ const styles = {
     gap: '16px',
   },
   pressureCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     overflow: 'hidden',
   },
   pressureHeader: {
@@ -50,7 +51,7 @@ const styles = {
     transition: 'background-color 0.15s',
   },
   pressureHeaderHover: {
-    backgroundColor: '#2a2a3a',
+    backgroundColor: '#2d4a6f',
   },
   pressureTitle: {
     display: 'flex',
@@ -60,12 +61,12 @@ const styles = {
   pressureName: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   pressureId: {
     fontSize: '12px',
-    color: '#707080',
-    backgroundColor: '#1a1a28',
+    color: '#60a5fa',
+    backgroundColor: '#0c1f2e',
     padding: '2px 8px',
     borderRadius: '4px',
   },
@@ -73,7 +74,7 @@ const styles = {
     display: 'flex',
     gap: '16px',
     fontSize: '13px',
-    color: '#909090',
+    color: '#93c5fd',
   },
   stat: {
     display: 'flex',
@@ -81,15 +82,15 @@ const styles = {
     gap: '4px',
   },
   statLabel: {
-    color: '#707080',
+    color: '#60a5fa',
   },
   statValue: {
-    color: '#c0c0d0',
+    color: '#ffffff',
     fontWeight: 500,
   },
   expandIcon: {
     fontSize: '18px',
-    color: '#707080',
+    color: '#60a5fa',
     transition: 'transform 0.2s',
   },
   expandIconOpen: {
@@ -97,7 +98,7 @@ const styles = {
   },
   pressureContent: {
     padding: '0 20px 20px',
-    borderTop: '1px solid #3d3d4d',
+    borderTop: '1px solid rgba(59, 130, 246, 0.3)',
   },
   section: {
     marginTop: '20px',
@@ -105,7 +106,7 @@ const styles = {
   sectionTitle: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#b0b0c0',
+    color: '#93c5fd',
     marginBottom: '12px',
     display: 'flex',
     alignItems: 'center',
@@ -126,17 +127,17 @@ const styles = {
     display: 'block',
     fontSize: '12px',
     fontWeight: 500,
-    color: '#909090',
+    color: '#93c5fd',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
     padding: '8px 12px',
     fontSize: '14px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     boxSizing: 'border-box',
   },
   factorList: {
@@ -145,10 +146,10 @@ const styles = {
     gap: '8px',
   },
   factorCard: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     padding: '12px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   factorHeader: {
     display: 'flex',
@@ -159,14 +160,14 @@ const styles = {
   factorType: {
     fontSize: '13px',
     fontWeight: 600,
-    color: '#c0c0d0',
-    backgroundColor: '#2a2a3a',
+    color: '#ffffff',
+    backgroundColor: '#2d4a6f',
     padding: '2px 8px',
     borderRadius: '4px',
   },
   factorDetails: {
     fontSize: '12px',
-    color: '#909090',
+    color: '#93c5fd',
     lineHeight: 1.6,
   },
   factorRow: {
@@ -175,10 +176,10 @@ const styles = {
     flexWrap: 'wrap',
   },
   factorTag: {
-    backgroundColor: '#2a2a3a',
+    backgroundColor: '#2d4a6f',
     padding: '2px 6px',
     borderRadius: '3px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   deleteButton: {
     padding: '4px 8px',
@@ -200,9 +201,9 @@ const styles = {
     fontSize: '14px',
     fontWeight: 500,
     backgroundColor: 'transparent',
-    border: '2px dashed #3d3d4d',
+    border: '2px dashed rgba(59, 130, 246, 0.3)',
     borderRadius: '8px',
-    color: '#707080',
+    color: '#60a5fa',
     cursor: 'pointer',
     transition: 'all 0.15s',
   },
@@ -214,16 +215,16 @@ const styles = {
     padding: '8px 12px',
     fontSize: '12px',
     backgroundColor: 'transparent',
-    border: '1px dashed #3d3d4d',
+    border: '1px dashed rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#707080',
+    color: '#60a5fa',
     cursor: 'pointer',
     marginTop: '8px',
   },
   emptyState: {
     textAlign: 'center',
     padding: '48px 24px',
-    color: '#707080',
+    color: '#60a5fa',
   },
   emptyIcon: {
     fontSize: '48px',
@@ -233,7 +234,7 @@ const styles = {
   emptyFactors: {
     padding: '12px',
     textAlign: 'center',
-    color: '#606070',
+    color: '#60a5fa',
     fontSize: '13px',
     fontStyle: 'italic',
   },

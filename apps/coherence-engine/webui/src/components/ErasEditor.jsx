@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 
+// Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
 
@@ -23,12 +24,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   eraList: {
     display: 'flex',
@@ -36,9 +37,9 @@ const styles = {
     gap: '16px',
   },
   eraCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     overflow: 'hidden',
   },
   eraHeader: {
@@ -50,7 +51,7 @@ const styles = {
     transition: 'background-color 0.15s',
   },
   eraHeaderHover: {
-    backgroundColor: '#2a2a3a',
+    backgroundColor: '#2d4a6f',
   },
   eraTitle: {
     display: 'flex',
@@ -60,23 +61,23 @@ const styles = {
   eraName: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   eraId: {
     fontSize: '12px',
-    color: '#707080',
-    backgroundColor: '#1a1a28',
+    color: '#60a5fa',
+    backgroundColor: '#0c1f2e',
     padding: '2px 8px',
     borderRadius: '4px',
   },
   eraDescription: {
     fontSize: '13px',
-    color: '#909090',
+    color: '#93c5fd',
     marginTop: '4px',
   },
   expandIcon: {
     fontSize: '18px',
-    color: '#707080',
+    color: '#60a5fa',
     transition: 'transform 0.2s',
   },
   expandIconOpen: {
@@ -84,7 +85,7 @@ const styles = {
   },
   eraContent: {
     padding: '0 20px 20px',
-    borderTop: '1px solid #3d3d4d',
+    borderTop: '1px solid rgba(59, 130, 246, 0.3)',
   },
   section: {
     marginTop: '20px',
@@ -92,7 +93,7 @@ const styles = {
   sectionTitle: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#b0b0c0',
+    color: '#93c5fd',
     marginBottom: '12px',
     display: 'flex',
     alignItems: 'center',
@@ -111,13 +112,13 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '8px 12px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     gap: '12px',
   },
   weightLabel: {
     fontSize: '13px',
-    color: '#c0c0d0',
+    color: '#93c5fd',
     flex: 1,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -132,16 +133,16 @@ const styles = {
     width: '60px',
     padding: '4px 8px',
     fontSize: '13px',
-    backgroundColor: '#2a2a3a',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#2d4a6f',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     textAlign: 'right',
   },
   weightBar: {
     width: '60px',
     height: '6px',
-    backgroundColor: '#1a1a28',
+    backgroundColor: '#0c1f2e',
     borderRadius: '3px',
     overflow: 'hidden',
   },
@@ -158,26 +159,26 @@ const styles = {
     display: 'block',
     fontSize: '12px',
     fontWeight: 500,
-    color: '#909090',
+    color: '#93c5fd',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
     padding: '8px 12px',
     fontSize: '14px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   textarea: {
     width: '100%',
     padding: '8px 12px',
     fontSize: '14px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     resize: 'vertical',
     minHeight: '60px',
     fontFamily: 'inherit',
@@ -192,9 +193,9 @@ const styles = {
     fontSize: '14px',
     fontWeight: 500,
     backgroundColor: 'transparent',
-    border: '2px dashed #3d3d4d',
+    border: '2px dashed rgba(59, 130, 246, 0.3)',
     borderRadius: '8px',
-    color: '#707080',
+    color: '#60a5fa',
     cursor: 'pointer',
     transition: 'all 0.15s',
   },
@@ -205,7 +206,7 @@ const styles = {
   emptyState: {
     textAlign: 'center',
     padding: '48px 24px',
-    color: '#707080',
+    color: '#60a5fa',
   },
   emptyIcon: {
     fontSize: '48px',

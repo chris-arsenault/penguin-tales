@@ -80,10 +80,10 @@ function createGraph(entities: HardState[], relationships: Relationship[] = []):
       }
     } as any,
     relationshipCooldowns: new Map(),
-    discoveryState: {
+    rateLimitState: {
       currentThreshold: 0,
-      lastDiscoveryTick: 0,
-      discoveriesThisEpoch: 0
+      lastCreationTick: 0,
+      creationsThisEpoch: 0
     },
     growthMetrics: {
       relationshipsPerTick: [],

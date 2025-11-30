@@ -88,7 +88,7 @@ describe('TargetSelector', () => {
       pressures: new Map(),
       relationshipCooldowns: new Map(),
       config: {} as any,
-      discoveryState: {} as any,
+      rateLimitState: {} as any,
       history: [],
       nameLogger: {} as any,
       tagRegistry: {} as any,

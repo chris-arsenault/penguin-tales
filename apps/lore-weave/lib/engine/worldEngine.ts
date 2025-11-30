@@ -265,11 +265,11 @@ export class WorldEngine {
     // Initialize graph from initial state using GraphStore
     this.graph = GraphStore.create(config, config.eras[0]);
     // LLM loreIndex moved to @illuminator
-    // Override discovery state defaults
-    this.graph.discoveryState = {
+    // Override rate limit state defaults
+    this.graph.rateLimitState = {
       currentThreshold: 0.3,  // Base threshold
-      lastDiscoveryTick: -999,  // Start far in past so first discovery can happen
-      discoveriesThisEpoch: 0
+      lastCreationTick: -999,  // Start far in past so first creation can happen
+      creationsThisEpoch: 0
     };
     
     // Load initial entities and initialize catalysts
@@ -540,10 +540,10 @@ export class WorldEngine {
 
     // Recreate graph from initial state
     this.graph = GraphStore.create(this.config, this.config.eras[0]);
-    this.graph.discoveryState = {
+    this.graph.rateLimitState = {
       currentThreshold: 0.3,
-      lastDiscoveryTick: -999,
-      discoveriesThisEpoch: 0
+      lastCreationTick: -999,
+      creationsThisEpoch: 0
     };
 
     // Reload initial entities
@@ -728,8 +728,8 @@ export class WorldEngine {
       tick: this.graph.tick
     });
 
-    // Reset discovery counter for new epoch
-    this.graph.discoveryState.discoveriesThisEpoch = 0;
+    // Reset rate limit counter for new epoch
+    this.graph.rateLimitState.creationsThisEpoch = 0;
 
     // Track initial counts for statistics
     const initialEntityCount = this.graph.getEntityCount();

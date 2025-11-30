@@ -29,10 +29,10 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
     history: overrides.history ?? [],
     relationshipCooldowns: overrides.relationshipCooldowns ?? new Map(),
     // loreRecords/loreIndex moved to @illuminator
-    discoveryState: overrides.discoveryState ?? {
+    rateLimitState: overrides.rateLimitState ?? {
       currentThreshold: 1.0,
-      lastDiscoveryTick: 0,
-      discoveriesThisEpoch: 0
+      lastCreationTick: 0,
+      creationsThisEpoch: 0
     },
     config: overrides.config ?? {
       domain: {

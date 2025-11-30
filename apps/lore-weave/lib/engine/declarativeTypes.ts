@@ -70,7 +70,7 @@ export type ApplicabilityRule =
   | EraMatchRule
   | RandomChanceRule
   | CooldownElapsedRule
-  | DiscoveriesPerEpochRule
+  | CreationsPerEpochRule
   | GraphPathApplicabilityRule
   | CompositeApplicabilityRule;
 
@@ -119,8 +119,8 @@ export interface CooldownElapsedRule {
   cooldownTicks: number;
 }
 
-export interface DiscoveriesPerEpochRule {
-  type: 'discoveries_per_epoch';
+export interface CreationsPerEpochRule {
+  type: 'creations_per_epoch';
   maxPerEpoch: number;
 }
 
@@ -398,7 +398,7 @@ export type RelationshipCondition =
  * Rules for side effects after entity/relationship creation.
  */
 export type StateUpdateRule =
-  | { type: 'update_discovery_state' }
+  | { type: 'update_rate_limit' }
   | { type: 'archive_relationship'; entity: string; relationshipKind: string; with: string }
   | { type: 'modify_pressure'; pressureId: string; delta: number }
   | { type: 'update_entity_status'; entity: string; newStatus: string };

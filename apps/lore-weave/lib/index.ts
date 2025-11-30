@@ -57,7 +57,6 @@ export type {
   StatusDefinition,
   EntityKindStyle,
   DomainUIConfig,
-  EmergentDiscoveryConfig,
   CultureDefinition,
   NameGenerator,
   ImageGenerationPromptConfig,

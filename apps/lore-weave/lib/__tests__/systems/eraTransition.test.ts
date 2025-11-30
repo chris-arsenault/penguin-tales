@@ -49,7 +49,7 @@ describe('eraTransition', () => {
           checkEraTransition: () => true, // Allow transitions
         }
       } as any,
-      discoveryState: {} as any,
+      rateLimitState: {} as any,
       history: [],
       nameLogger: {} as any,
       tagRegistry: {} as any,

@@ -98,9 +98,9 @@ export class TemplateGraphView {
     return this.graph.config;
   }
 
-  /** Get discovery state (for location templates) */
-  get discoveryState() {
-    return this.graph.discoveryState;
+  /** Get rate limit state (for templates with creation rate limiting) */
+  get rateLimitState() {
+    return this.graph.rateLimitState;
   }
 
   /**

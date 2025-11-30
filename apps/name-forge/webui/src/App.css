@@ -1,33 +1,33 @@
-/* Unified Canonry Color Palette - Name Forge (Orange/Gold accent) */
+/* Arctic Blue Theme - Name Forge (with Gold accent for identity) */
 :root {
-  /* Backgrounds - brighter than before */
-  --bg-primary: #1e1e2e;
-  --bg-secondary: #252535;
-  --bg-tertiary: #2d2d3d;
-  --bg-sidebar: #1a1a28;
+  /* Backgrounds - Arctic deep blues */
+  --bg-primary: #0a1929;
+  --bg-secondary: #1e3a5f;
+  --bg-tertiary: #2d4a6f;
+  --bg-sidebar: #0c1f2e;
 
-  /* Borders */
-  --border-color: #3d3d4d;
-  --border-light: #4d4d5d;
+  /* Borders - Blue tinted */
+  --border-color: rgba(59, 130, 246, 0.3);
+  --border-light: rgba(59, 130, 246, 0.5);
 
-  /* Text */
-  --text-color: #f0f0f0;
-  --text-secondary: #a0a0b0;
-  --text-muted: #707080;
+  /* Text - Ice white tones */
+  --text-color: #ffffff;
+  --text-secondary: #93c5fd;
+  --text-muted: #60a5fa;
 
-  /* Name Forge accent (orange/gold) */
-  --accent-color: #ffb366;
-  --accent-hover: #ffc080;
+  /* Name Forge accent (gold for identity within arctic theme) */
+  --accent-color: #fbbf24;
+  --accent-hover: #fcd34d;
 
-  /* Legacy variable mappings for compatibility */
-  --arctic-deep: var(--bg-sidebar);
-  --arctic-dark: var(--bg-secondary);
-  --arctic-mid: var(--bg-tertiary);
-  --arctic-ice: var(--accent-color);
-  --arctic-frost: var(--text-secondary);
-  --arctic-light: var(--text-color);
-  --gold-accent: #ffb366;
-  --gold-dark: #ff9933;
+  /* Arctic theme variables */
+  --arctic-deep: #0a1929;
+  --arctic-dark: #1e3a5f;
+  --arctic-mid: #2d4a6f;
+  --arctic-ice: #3b82f6;
+  --arctic-frost: #60a5fa;
+  --arctic-light: #93c5fd;
+  --gold-accent: #fbbf24;
+  --gold-dark: #f59e0b;
 
   /* Consistent spacing scale */
   --space-xs: 4px;
