@@ -5,6 +5,7 @@ import { WorldEngine } from '../../engine/worldEngine';
 import { EngineConfig, GrowthTemplate, SimulationSystem, Era } from '../../engine/types';
 import { HardState } from '../../core/worldTypes';
 import { DomainSchema } from '../../domainInterface/domainSchema';
+import { createMockEmitter, createMockCultures } from '../testHelpers';
 
 describe('WorldEngine', () => {
   let mockConfig: EngineConfig;
@@ -74,7 +75,10 @@ describe('WorldEngine', () => {
         cultures: [
           { id: 'default', name: 'Default Culture', axisBiases: {} }
         ]
-      }
+      },
+      // Required by WorldEngine
+      emitter: createMockEmitter(),
+      cultures: createMockCultures(),
     };
 
     // Initial state

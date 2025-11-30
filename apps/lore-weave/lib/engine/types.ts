@@ -3,6 +3,7 @@ import { TemplateMetadata, SystemMetadata, DistributionTargets } from '../statis
 import { DomainSchema } from '../domainInterface/domainSchema';
 import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 import type { ISimulationEmitter } from '../observer/types';
+import type { Culture } from '../naming/nameForgeService';
 
 // LLM types moved to @illuminator
 // import { LoreIndex, LoreRecord } from '../llm/types';
@@ -412,7 +413,12 @@ export interface EngineConfig {
   // Tag registry for tag health analysis and validation (domain-specific)
   tagRegistry?: TagMetadata[];
 
-  // Name generation service (wraps name-forge)
+  // Cultures with naming configuration (REQUIRED for name generation)
+  // WorldEngine creates NameForgeService internally from cultures that have naming config
+  cultures: Culture[];
+
+  // Name generation service - created by WorldEngine from cultures, then set here
+  // Graph uses this for entity name generation
   nameForgeService?: NameGenerationService;
 
   // Coordinate context configuration (REQUIRED for coordinate system)
@@ -703,8 +709,9 @@ export class GraphStore implements Graph {
       const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
       if (distance < overlapThreshold) {
-        console.warn(
-          `⚠️  Coordinate overlap: ${settings.kind}:${settings.subtype} "${name}" ` +
+        this.config.emitter?.log(
+          'warn',
+          `Coordinate overlap: ${settings.kind}:${settings.subtype} "${name}" ` +
           `placed at (${newCoords.x.toFixed(1)}, ${newCoords.y.toFixed(1)}, ${(newCoords.z ?? 50).toFixed(1)}) ` +
           `overlaps with existing "${existing.name}" at ` +
           `(${existing.coordinates.x.toFixed(1)}, ${existing.coordinates.y.toFixed(1)}, ${(existing.coordinates.z ?? 50).toFixed(1)}) ` +
@@ -785,11 +792,11 @@ export class GraphStore implements Graph {
   addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
     // Validate entities exist
     if (!this.#entities.has(srcId)) {
-      console.warn(`addRelationship: source entity ${srcId} does not exist`);
+      this.config.emitter?.log('warn', `addRelationship: source entity ${srcId} does not exist`);
       return false;
     }
     if (!this.#entities.has(dstId)) {
-      console.warn(`addRelationship: destination entity ${dstId} does not exist`);
+      this.config.emitter?.log('warn', `addRelationship: destination entity ${dstId} does not exist`);
       return false;
     }
 

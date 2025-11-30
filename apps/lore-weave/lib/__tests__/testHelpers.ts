@@ -4,6 +4,41 @@
 
 import { HardState, Relationship, Prominence, EntityTags } from '../core/worldTypes';
 import { Graph, Era, EngineConfig, CreateEntitySettings } from '../engine/types';
+import type { ISimulationEmitter } from '../observer/types';
+import type { Culture } from '../naming/nameForgeService';
+
+/**
+ * Create a no-op emitter for tests that don't care about events
+ */
+export function createMockEmitter(): ISimulationEmitter {
+  return {
+    emit: () => {},
+    progress: () => {},
+    log: () => {},
+    validation: () => {},
+    epochStart: () => {},
+    epochStats: () => {},
+    growthPhase: () => {},
+    populationReport: () => {},
+    templateUsage: () => {},
+    coordinateStats: () => {},
+    tagHealth: () => {},
+    systemHealth: () => {},
+    complete: () => {},
+    error: () => {},
+  };
+}
+
+/**
+ * Create minimal cultures for tests
+ * These have no naming config - tests that need naming should provide their own
+ */
+export function createMockCultures(): Culture[] {
+  return [
+    { id: 'default', name: 'Default Culture' },
+    { id: 'world', name: 'World Culture' },
+  ];
+}
 
 /**
  * Create a minimal test graph with all Graph interface methods for testing

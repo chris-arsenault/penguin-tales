@@ -20,7 +20,8 @@ export default defineConfig({
       },
     }),
   ],
-  base: process.env.DEPLOY_TARGET === 'aws' ? '/coherence-engine/' : '/',
+  // Base path - use /coherence-engine/ in dev (via proxy) and production
+  base: '/coherence-engine/',
   build: {
     target: 'esnext',
     minify: false,

@@ -34,7 +34,7 @@
     "ui:build": "npm run sync && cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
     "dev": "npm run generate:sync && npm run ui",
-    "canonry": "npx concurrently -n canonry,name-forge,cosmographer,coherence,lore-weave -c blue,yellow,magenta,cyan,green \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\"",
+    "canonry": "npx concurrently -n proxy,canonry,name-forge,cosmographer,coherence,lore-weave -c white,blue,yellow,magenta,cyan,green \"node scripts/dev-proxy.js\" \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\"",
     "test": "npm run test:framework && npm run test:domain",
     "test:framework": "cd apps/lore-weave && npm test",
     "test:domain": "cd penguin-tales/lore && npm test",
@@ -64,7 +64,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-sonarjs": "^3.0.5",
-    "eslint-plugin-unicorn": "^62.0.0"
+    "eslint-plugin-unicorn": "^62.0.0",
+    "http-proxy": "^1.18.1"
   },
   "dependencies": {
     "@turf/turf": "^7.3.1",

@@ -157,12 +157,12 @@ export default function LoreWeaveRemote({
     };
   }, [schema, eras, pressures, generators, seedEntities, seedRelationships, namingData]);
 
-  // Handle simulation completion
+  // Handle simulation completion (don't auto-navigate - let user review logs first)
   const handleSimulationComplete = useCallback((results) => {
     setSimulationResults(results);
     setIsRunning(false);
-    setActiveTab('results');
-  }, [setActiveTab]);
+    // Don't auto-navigate to results - user will click "View Results" button
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -198,6 +198,7 @@ export default function LoreWeaveRemote({
             isRunning={isRunning}
             setIsRunning={setIsRunning}
             onComplete={handleSimulationComplete}
+            onViewResults={() => setActiveTab('results')}
           />
         );
       case 'results':

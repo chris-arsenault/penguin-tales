@@ -33,6 +33,8 @@ import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
 import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
 import type { ISimulationEmitter } from '../observer/types';
+import { NameForgeService } from '../naming/nameForgeService';
+import type { NameGenerationService } from './types';
 
 // Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
 // EntitySnapshot interface and detect*Changes functions available there
@@ -79,6 +81,9 @@ export class WorldEngine {
 
   // Coordinate context (shared across all templates/systems)
   private coordinateContext: CoordinateContext;
+
+  // Name generation service (created from cultures config)
+  private nameForgeService: NameGenerationService | null = null;
 
   // Change detection moved to @illuminator
   // private entitySnapshots = new Map<string, EntitySnapshot>();
@@ -233,6 +238,26 @@ export class WorldEngine {
       cultures: this.coordinateContext.getCultureIds().length,
       entityKinds: this.coordinateContext.getConfiguredKinds().length
     });
+
+    // Initialize NameForgeService from cultures that have naming config
+    if (!config.cultures || config.cultures.length === 0) {
+      throw new Error(
+        'WorldEngine: cultures array is required in EngineConfig. ' +
+        'Provide cultures with naming configuration for name generation.'
+      );
+    }
+    const culturesWithNaming = config.cultures.filter(c => c.naming);
+    if (culturesWithNaming.length > 0) {
+      this.nameForgeService = new NameForgeService(culturesWithNaming);
+      // Set on config so Graph can access it for entity name generation
+      this.config.nameForgeService = this.nameForgeService;
+      this.emitter.log('info', 'NameForgeService initialized', {
+        cultures: culturesWithNaming.length,
+        cultureIds: culturesWithNaming.map(c => c.id)
+      });
+    } else {
+      this.emitter.log('warn', 'No cultures have naming configuration - name generation will fail');
+    }
 
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
@@ -1489,8 +1514,8 @@ export class WorldEngine {
 
   public finalizeNameLogging(): void {
     // Print name-forge generation stats
-    if (this.config?.nameForgeService) {
-      this.config.nameForgeService.printStats();
+    if (this.nameForgeService) {
+      this.nameForgeService.printStats();
     }
     // LLM name logging moved to @illuminator
   }

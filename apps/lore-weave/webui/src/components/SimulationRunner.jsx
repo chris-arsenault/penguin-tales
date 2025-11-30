@@ -122,6 +122,20 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.15s',
   },
+  viewResultsButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: 600,
+    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
   warning: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
     border: '1px solid rgba(245, 158, 11, 0.3)',
@@ -214,6 +228,7 @@ export default function SimulationRunner({
   isRunning,
   setIsRunning,
   onComplete,
+  onViewResults,
 }) {
   // Simulation parameters
   const [params, setParams] = useState({
@@ -284,6 +299,7 @@ export default function SimulationRunner({
         srcKinds: rk.srcKinds || rk.sourceKinds || [],
         dstKinds: rk.dstKinds || rk.targetKinds || [],
       })),
+      // Domain cultures (for DomainSchema)
       cultures: (schema.cultures || []).map(c => ({
         id: c.id,
         name: c.name,
@@ -291,8 +307,20 @@ export default function SimulationRunner({
       })),
     };
 
+    // Build cultures array with naming config for EngineConfig.cultures
+    // WorldEngine uses this to create NameForgeService
+    const culturesWithNaming = (schema.cultures || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      // Include naming config for NameForgeService
+      naming: namingData[c.id] || c.naming,
+    }));
+
     return {
       domain: domainSchemaJSON,
+      // Cultures with naming config - required by WorldEngine for NameForgeService
+      cultures: culturesWithNaming,
       eras: eras.map(era => ({
         id: era.id,
         name: era.name,
@@ -313,7 +341,7 @@ export default function SimulationRunner({
       coordinateContextConfig,
       seedRelationships: seedRelationships || [],
     };
-  }, [schema, eras, pressures, generators, params, coordinateContextConfig, seedRelationships]);
+  }, [schema, eras, pressures, generators, params, coordinateContextConfig, seedRelationships, namingData]);
 
   // Run simulation using web worker
   const runSimulation = useCallback(() => {
@@ -376,16 +404,26 @@ export default function SimulationRunner({
           </div>
           <div style={styles.buttonRow}>
             {!workerIsRunning ? (
-              <button
-                style={{
-                  ...styles.runButton,
-                  ...(!validation.isValid ? styles.runButtonDisabled : {}),
-                }}
-                onClick={runSimulation}
-                disabled={!validation.isValid}
-              >
-                ▶ Run Simulation
-              </button>
+              <>
+                <button
+                  style={{
+                    ...styles.runButton,
+                    ...(!validation.isValid ? styles.runButtonDisabled : {}),
+                  }}
+                  onClick={runSimulation}
+                  disabled={!validation.isValid}
+                >
+                  ▶ Run Simulation
+                </button>
+                {simState.status === 'complete' && onViewResults && (
+                  <button
+                    style={styles.viewResultsButton}
+                    onClick={onViewResults}
+                  >
+                    ✓ View Results
+                  </button>
+                )}
+              </>
             ) : (
               <button
                 style={styles.abortButton}

@@ -21,8 +21,8 @@ export default defineConfig({
       },
     }),
   ],
-  // Base path - only use /name-forge/ when DEPLOY_TARGET=aws is set
-  base: process.env.DEPLOY_TARGET === 'aws' ? '/name-forge/' : '/',
+  // Base path - use /name-forge/ in dev (via proxy) and production
+  base: '/name-forge/',
   resolve: {
     alias: {
       '@lib': resolve(__dirname, '../lib'),

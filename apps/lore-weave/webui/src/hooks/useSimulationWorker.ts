@@ -10,8 +10,6 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-// Import worker using Vite's ?worker query - bundles as inline blob URL
-import SimulationWorker from '../workers/simulation.worker.ts?worker';
 import type {
   SimulationEvent,
   ProgressPayload,

@@ -48,9 +48,10 @@ async function runSimulation(config: EngineConfig, initialState: HardState[]): P
 
   try {
     // Create engine with the worker emitter
+    // WorldEngine creates NameForgeService internally from config.cultures
     const engineConfig: EngineConfig = {
       ...config,
-      emitter
+      emitter,
     };
 
     const engine = new WorldEngine(engineConfig, initialState);

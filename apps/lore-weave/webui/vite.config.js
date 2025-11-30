@@ -26,24 +26,17 @@ export default defineConfig({
       },
     }),
   ],
-  base: process.env.DEPLOY_TARGET === 'aws' ? '/lore-weave/' : '/',
+  // Base path - use /lore-weave/ in dev (via proxy) and production
+  base: '/lore-weave/',
   build: {
     target: 'esnext',
     minify: false,
   },
   worker: {
-    // Bundle workers as inline base64 data URLs to avoid CORS issues in MFE context
     format: 'es',
-    plugins: () => [react()],
   },
   server: {
     port: 5004,
     strictPort: true,
-    cors: {
-      origin: '*',
-    },
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-    },
   },
 });

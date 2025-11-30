@@ -21,7 +21,8 @@ export default defineConfig({
       },
     }),
   ],
-  base: process.env.DEPLOY_TARGET === 'aws' ? '/cosmographer/' : '/',
+  // Base path - use /cosmographer/ in dev (via proxy) and production
+  base: '/cosmographer/',
   resolve: {
     alias: {
       // Import name-forge lib directly for name generation
