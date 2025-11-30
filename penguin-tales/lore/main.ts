@@ -17,43 +17,33 @@ import {
   normalizeInitialState,
   validateWorld,
   applyParameterOverrides,
-  relationshipCulling,
-  NameForgeService
+  relationshipCulling
 } from '@lore-weave/core';
 
 import type {
   EngineConfig,
   HardState,
   DistributionTargets,
-  NameForgeConfig
+  CoordinateContextConfig
 } from '@lore-weave/core';
 
 // Domain imports (penguin-specific)
 import {
   penguinDomain,
-  penguinEras,
-  pressures,
   allTemplates,
   allSystems as penguinSystems,
   initialState as penguinInitialState,
-  penguinEntityRegistries
+  penguinEntityRegistries,
+  penguinLoreProvider,
+  penguinTagRegistry
 } from './index.js';
 
-import { penguinLoreProvider } from './config/loreProvider.js';
 import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
-import { penguinFeedbackLoops } from './config/feedbackLoops.js';
-import { penguinTagRegistry } from './config/tagRegistry.js';
-import { penguinCultures } from './config/cultures.js';
 import { penguinSemanticConfig } from './config/semanticAxes.js';
-import type { CoordinateContextConfig } from '@lore-weave/core';
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
 import parameterOverridesData from './config/json/templateSystemParameters.json' with { type: 'json' };
-import nameForgeConfigData from './config/nameforge.json' with { type: 'json' };
-
-// Create NameForgeService from config (cast through unknown for JSON import compatibility)
-const nameForgeService = new NameForgeService(nameForgeConfigData as unknown as NameForgeConfig);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -219,16 +209,16 @@ const config: EngineConfig = {
   // Domain schema (penguin-specific world knowledge)
   domain: penguinDomain,
 
-  eras: penguinEras,
+  eras: [],  // Eras now managed by canonry
   templates: configuredTemplates,
   systems: configuredSystems,
-  pressures: pressures,
+  pressures: [],  // Pressures now managed by canonry
   entityRegistries: scaledEntityRegistries,  // Framework formalization: entity operator registry (scaled)
   llmConfig,
   enrichmentConfig,
 
-  // Name generation service (used by addEntity when name not provided)
-  nameForgeService,
+  // Note: nameForgeService not configured here - naming now managed by canonry
+  // Templates must provide explicit names until canonry integration is complete
 
   // Statistical distribution targets (enables mid-run tuning, scaled by SCALE_FACTOR)
   distributionTargets: scaledDistributionTargets as DistributionTargets,
@@ -249,9 +239,6 @@ const config: EngineConfig = {
   // Pass scale factor to engine for internal calculations
   scaleFactor: SCALE_FACTOR,
 
-  // Feedback loops for homeostatic regulation (penguin-specific)
-  feedbackLoops: penguinFeedbackLoops,
-
   // Tag registry for tag health analysis (penguin-specific)
   tagRegistry: penguinTagRegistry,
 
@@ -259,7 +246,7 @@ const config: EngineConfig = {
   coordinateContextConfig: {
     kindRegionConfig: penguinKindRegionConfig,
     semanticConfig: penguinSemanticConfig,
-    cultures: penguinCultures
+    cultures: []  // Cultures now managed by canonry
   } as CoordinateContextConfig
 
   // Meta-entity formation is now handled by SimulationSystems:

@@ -71,13 +71,13 @@ export class PopulationTracker {
    */
   private initializeSubtypeMetrics(): void {
     this.domainSchema.entityKinds.forEach(kindDef => {
-      kindDef.subtypes.forEach(subtype => {
-        const key = `${kindDef.kind}:${subtype}`;
+      kindDef.subtypes.forEach(subtypeDef => {
+        const key = `${kindDef.kind}:${subtypeDef.id}`;
         this.metrics.entities.set(key, {
           kind: kindDef.kind,
-          subtype,
+          subtype: subtypeDef.id,
           count: 0,
-          target: this.getEntityTarget(kindDef.kind, subtype),
+          target: this.getEntityTarget(kindDef.kind, subtypeDef.id),
           deviation: -1, // All start below target
           trend: 0,
           history: []

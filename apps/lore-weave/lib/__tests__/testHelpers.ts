@@ -31,7 +31,7 @@ export function createTestGraph(overrides: Partial<Graph> = {}): Graph {
     history: overrides.history ?? [],
     config: overrides.config ?? {} as EngineConfig,
     relationshipCooldowns: overrides.relationshipCooldowns ?? new Map(),
-    loreRecords: overrides.loreRecords ?? [],
+    // loreRecords/loreIndex moved to @illuminator
     discoveryState: overrides.discoveryState ?? {
       currentThreshold: 0.5,
       lastDiscoveryTick: 0,
@@ -43,7 +43,6 @@ export function createTestGraph(overrides: Partial<Graph> = {}): Graph {
     },
     subtypeMetrics: overrides.subtypeMetrics,
     protectedRelationshipViolations: overrides.protectedRelationshipViolations,
-    loreIndex: overrides.loreIndex,
 
     // Entity read methods (return clones)
     getEntity(id: string): HardState | undefined {

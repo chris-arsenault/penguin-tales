@@ -29,7 +29,6 @@ describe('eraSpawner', () => {
       } as any,
       discoveryState: {} as any,
       history: [],
-      loreIndex: {} as any,
       nameLogger: {} as any,
       tagRegistry: {} as any,
       loreValidator: {} as any,
@@ -93,6 +92,16 @@ describe('eraSpawner', () => {
       },
       _loadRelationship(relationship: Relationship): void {
         _relationships.push(relationship);
+      },
+      // TemplateGraphView methods for eraSpawner
+      loadEntity(entity: HardState): void {
+        _entities.set(entity.id, entity);
+      },
+      setCurrentEra(era: any): void {
+        graph.currentEra = era;
+      },
+      addHistoryEvent(event: any): void {
+        graph.history.push(event);
       }
     };
   });

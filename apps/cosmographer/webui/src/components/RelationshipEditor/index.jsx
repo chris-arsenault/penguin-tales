@@ -165,7 +165,7 @@ const styles = {
 export default function RelationshipEditor({ project, onSave }) {
   const [showModal, setShowModal] = useState(false);
   const [filterKind, setFilterKind] = useState('');
-  const [newRel, setNewRel] = useState({ kind: '', srcId: '', dstId: '', strength: 1 });
+  const [newRel, setNewRel] = useState({ kind: '', src: '', dst: '', strength: 1 });
 
   const relationships = project?.seedRelationships || [];
   const entities = project?.seedEntities || [];
@@ -181,32 +181,33 @@ export default function RelationshipEditor({ project, onSave }) {
   };
 
   const addRelationship = () => {
-    if (!newRel.kind || !newRel.srcId || !newRel.dstId) {
+    if (!newRel.kind || !newRel.src || !newRel.dst) {
       alert('Please fill all required fields');
       return;
     }
 
-    if (newRel.srcId === newRel.dstId) {
+    if (newRel.src === newRel.dst) {
       alert('Source and destination must be different');
       return;
     }
 
     const rel = {
-      id: `rel_${Date.now()}`,
       kind: newRel.kind,
-      srcId: newRel.srcId,
-      dstId: newRel.dstId,
+      src: newRel.src,
+      dst: newRel.dst,
       strength: parseFloat(newRel.strength) || 1
     };
 
     updateRelationships([...relationships, rel]);
     setShowModal(false);
-    setNewRel({ kind: '', srcId: '', dstId: '', strength: 1 });
+    setNewRel({ kind: '', src: '', dst: '', strength: 1 });
   };
 
-  const deleteRelationship = (relId) => {
+  const deleteRelationship = (rel) => {
     if (!confirm('Delete this relationship?')) return;
-    updateRelationships(relationships.filter(r => r.id !== relId));
+    updateRelationships(relationships.filter(r =>
+      !(r.kind === rel.kind && r.src === rel.src && r.dst === rel.dst)
+    ));
   };
 
   const getEntityName = (entityId) => {
@@ -288,25 +289,25 @@ export default function RelationshipEditor({ project, onSave }) {
             </tr>
           </thead>
           <tbody>
-            {filteredRels.map(rel => (
-              <tr key={rel.id}>
+            {filteredRels.map((rel, idx) => (
+              <tr key={`${rel.kind}-${rel.src}-${rel.dst}-${idx}`}>
                 <td style={styles.td}>
                   <span style={styles.kindBadge}>{getRelKindName(rel.kind)}</span>
                 </td>
                 <td style={styles.td}>
-                  <span style={styles.entityLink}>{getEntityName(rel.srcId)}</span>
+                  <span style={styles.entityLink}>{getEntityName(rel.src)}</span>
                 </td>
                 <td style={{ ...styles.td, width: '30px', textAlign: 'center' }}>
                   <span style={styles.arrow}>→</span>
                 </td>
                 <td style={styles.td}>
-                  <span style={styles.entityLink}>{getEntityName(rel.dstId)}</span>
+                  <span style={styles.entityLink}>{getEntityName(rel.dst)}</span>
                 </td>
                 <td style={styles.td}>{rel.strength}</td>
                 <td style={{ ...styles.td, width: '80px' }}>
                   <button
                     style={styles.deleteButton}
-                    onClick={() => deleteRelationship(rel.id)}
+                    onClick={() => deleteRelationship(rel)}
                   >
                     Delete
                   </button>
@@ -328,7 +329,7 @@ export default function RelationshipEditor({ project, onSave }) {
               <select
                 style={styles.select}
                 value={newRel.kind}
-                onChange={(e) => setNewRel({ ...newRel, kind: e.target.value, srcId: '', dstId: '' })}
+                onChange={(e) => setNewRel({ ...newRel, kind: e.target.value, src: '', dst: '' })}
               >
                 <option value="">Select kind...</option>
                 {relationshipKinds.map(k => (
@@ -341,8 +342,8 @@ export default function RelationshipEditor({ project, onSave }) {
               <label style={styles.label}>Source Entity</label>
               <select
                 style={styles.select}
-                value={newRel.srcId}
-                onChange={(e) => setNewRel({ ...newRel, srcId: e.target.value })}
+                value={newRel.src}
+                onChange={(e) => setNewRel({ ...newRel, src: e.target.value })}
                 disabled={!newRel.kind}
               >
                 <option value="">Select source...</option>
@@ -356,13 +357,13 @@ export default function RelationshipEditor({ project, onSave }) {
               <label style={styles.label}>Destination Entity</label>
               <select
                 style={styles.select}
-                value={newRel.dstId}
-                onChange={(e) => setNewRel({ ...newRel, dstId: e.target.value })}
+                value={newRel.dst}
+                onChange={(e) => setNewRel({ ...newRel, dst: e.target.value })}
                 disabled={!newRel.kind}
               >
                 <option value="">Select destination...</option>
                 {allowedDstEntities
-                  .filter(e => e.id !== newRel.srcId)
+                  .filter(e => e.id !== newRel.src)
                   .map(e => (
                     <option key={e.id} value={e.id}>{e.name} ({e.kind})</option>
                   ))}

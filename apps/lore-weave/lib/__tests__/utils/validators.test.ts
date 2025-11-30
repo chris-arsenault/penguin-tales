@@ -4,7 +4,6 @@ import {
   validateNPCStructure,
   validateRelationshipIntegrity,
   validateLinkSync,
-  validateLorePresence,
   validateWorld,
   ValidationResult,
   ValidationReport
@@ -29,7 +28,7 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
     pressures: overrides.pressures ?? new Map<string, number>(),
     history: overrides.history ?? [],
     relationshipCooldowns: overrides.relationshipCooldowns ?? new Map(),
-    loreRecords: overrides.loreRecords ?? [],
+    // loreRecords/loreIndex moved to @illuminator
     discoveryState: overrides.discoveryState ?? {
       currentThreshold: 1.0,
       lastDiscoveryTick: 0,
@@ -63,7 +62,6 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
     },
     subtypeMetrics: overrides.subtypeMetrics,
     protectedRelationshipViolations: overrides.protectedRelationshipViolations,
-    loreIndex: overrides.loreIndex,
 
     // Entity read methods
     getEntity(id: string) { return _entities.get(id); },
@@ -580,202 +578,7 @@ describe('Link Synchronization Validation', () => {
   });
 });
 
-describe('Lore Presence Validation', () => {
-  describe('validateLorePresence', () => {
-    it('should skip when LLM is disabled', () => {
-      const graph = createMockGraph();
-      const entity = createMockEntity({ id: 'e1', createdAt: 10 });
-      graph._loadEntity(entity.id, entity);
-
-      // No lore records
-      graph.loreRecords = [];
-
-      const result = validateLorePresence(graph);
-      expect(result.passed).toBe(true);
-      expect(result.details).toContain('LLM enrichment disabled');
-    });
-
-    it('should pass when all enrichable entities have lore', () => {
-      const graph = createMockGraph();
-      const entity = createMockEntity({ id: 'e1', createdAt: 10 });
-      graph._loadEntity(entity.id, entity);
-
-      graph.loreRecords = [
-        {
-          targetId: 'e1',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test lore',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.passed).toBe(true);
-      expect(result.details).toContain('All 1 enrichable entities have lore');
-    });
-
-    it('should fail when enrichable entities lack lore', () => {
-      const graph = createMockGraph();
-      const entity1 = createMockEntity({
-        id: 'e1',
-        name: 'Entity 1',
-        kind: 'npc',
-        subtype: 'merchant',
-        createdAt: 10
-      });
-      const entity2 = createMockEntity({
-        id: 'e2',
-        name: 'Entity 2',
-        kind: 'npc',
-        subtype: 'hero',
-        createdAt: 15
-      });
-
-      graph._loadEntity(entity1.id, entity1);
-      graph._loadEntity(entity2.id, entity2);
-
-      // Only e1 has lore
-      graph.loreRecords = [
-        {
-          targetId: 'e1',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test lore',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.passed).toBe(false);
-      expect(result.failureCount).toBe(1);
-      expect(result.details).toContain('1/2 entities missing lore enrichment');
-      expect(result.failedEntities).toHaveLength(1);
-      expect(result.failedEntities![0].id).toBe('e2');
-    });
-
-    it('should exclude abilities from enrichment check', () => {
-      const graph = createMockGraph();
-      const ability = createMockEntity({
-        id: 'ab1',
-        kind: 'abilities',
-        createdAt: 10
-      });
-
-      graph._loadEntity(ability.id, ability);
-
-      // Need at least one lore record to trigger the check
-      graph.loreRecords = [
-        {
-          targetId: 'ab1',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.passed).toBe(true);
-      expect(result.details).toContain('All 0 enrichable entities have lore');
-    });
-
-    it('should exclude initial entities (createdAt = 0)', () => {
-      const graph = createMockGraph();
-      const initial = createMockEntity({ id: 'e1', createdAt: 0 });
-      const created = createMockEntity({ id: 'e2', createdAt: 10 });
-
-      graph._loadEntity(initial.id, initial);
-      graph._loadEntity(created.id, created);
-
-      // Need at least one lore record to trigger the check
-      graph.loreRecords = [
-        {
-          targetId: 'e1',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.passed).toBe(false);
-      expect(result.failureCount).toBe(1);
-      expect(result.failedEntities![0].id).toBe('e2');
-    });
-
-    it('should group missing lore by kind:subtype', () => {
-      const graph = createMockGraph();
-      const npc1 = createMockEntity({
-        id: 'e1',
-        kind: 'npc',
-        subtype: 'merchant',
-        createdAt: 10
-      });
-      const npc2 = createMockEntity({
-        id: 'e2',
-        kind: 'npc',
-        subtype: 'merchant',
-        createdAt: 15
-      });
-      const location = createMockEntity({
-        id: 'e3',
-        kind: 'location',
-        subtype: 'colony',
-        createdAt: 20
-      });
-
-      graph._loadEntity(npc1.id, npc1);
-      graph._loadEntity(npc2.id, npc2);
-      graph._loadEntity(location.id, location);
-
-      // Need at least one lore record to trigger the check (but not all)
-      graph.loreRecords = [
-        {
-          targetId: 'some-other-id',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.details).toContain('npc:merchant: 2');
-      expect(result.details).toContain('location:colony: 1');
-    });
-
-    it('should include sample entities without lore', () => {
-      const graph = createMockGraph();
-      const entity = createMockEntity({
-        id: 'e1',
-        name: 'Missing Lore',
-        kind: 'npc',
-        subtype: 'merchant',
-        createdAt: 50
-      });
-
-      graph._loadEntity(entity.id, entity);
-
-      // Need at least one lore record to trigger the check
-      graph.loreRecords = [
-        {
-          targetId: 'some-other-id',
-          kind: 'entity',
-          loreType: 'description',
-          content: 'Test',
-          tick: 10
-        } as any
-      ];
-
-      const result = validateLorePresence(graph);
-      expect(result.details).toContain('Sample entities without lore');
-      expect(result.details).toContain('Missing Lore');
-      expect(result.details).toContain('tick 50');
-    });
-  });
-});
+// Lore Presence Validation moved to @illuminator
 
 describe('Complete World Validation', () => {
   describe('validateWorld', () => {
@@ -783,13 +586,13 @@ describe('Complete World Validation', () => {
       const graph = createMockGraph();
       const report = validateWorld(graph);
 
-      expect(report.totalChecks).toBe(5);
-      expect(report.results).toHaveLength(5);
+      expect(report.totalChecks).toBe(4);
+      expect(report.results).toHaveLength(4);
       expect(report.results[0].name).toBe('Connected Entities');
       expect(report.results[1].name).toBe('Entity Structure');
       expect(report.results[2].name).toBe('Relationship Integrity');
       expect(report.results[3].name).toBe('Link Synchronization');
-      expect(report.results[4].name).toBe('Lore Presence');
+      // Lore Presence moved to @illuminator
     });
 
     it('should count passed and failed checks', () => {

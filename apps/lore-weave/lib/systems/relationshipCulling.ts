@@ -71,18 +71,6 @@ export const relationshipCulling: SimulationSystem = {
     const cullFrequency = params.cullFrequency?.value ?? 10;
     const gracePeriod = params.gracePeriod?.value ?? 20;
 
-    // Get protected relationship kinds from domain schema
-    // Protected = structural relationships that should never be culled
-    const protectedKinds = new Set(graphView.config.domain.getProtectedRelationshipKinds?.() || []);
-
-    // Get immutable relationship kinds from domain schema
-    // Immutable = facts that don't change (spatial, discovery, etc.)
-    // These are automatically protected since they don't decay naturally
-    const immutableKinds = new Set(graphView.config.domain.getImmutableRelationshipKinds?.() || []);
-
-    // Combine: all immutable relationships are also protected
-    immutableKinds.forEach(kind => protectedKinds.add(kind));
-
     // Only run every N ticks
     if (graphView.tick % cullFrequency !== 0) {
       return {
@@ -94,20 +82,10 @@ export const relationshipCulling: SimulationSystem = {
     }
 
     const removed: Relationship[] = [];
-    const protectedBelowThreshold: { kind: string; strength: number }[] = [];
     const originalCount = graphView.getRelationshipCount();
 
     // Filter relationships and collect kept ones
     const keptRelationships = graphView.getAllRelationships().filter(rel => {
-      // Protected kinds never get culled, but track if they're weak
-      if (protectedKinds.has(rel.kind)) {
-        const strength = rel.strength ?? 0.5;
-        if (strength < cullThreshold) {
-          protectedBelowThreshold.push({ kind: rel.kind, strength });
-        }
-        return true;
-      }
-
       // Calculate relationship age (minimum age of both entities)
       const srcEntity = graphView.getEntity(rel.src);
       const dstEntity = graphView.getEntity(rel.dst);
@@ -154,11 +132,6 @@ export const relationshipCulling: SimulationSystem = {
     graphView.setRelationships([...keptRelationships]);
 
     const culledCount = removed.length;
-
-    // Store violation data for genetic algorithm fitness evaluation
-    if (protectedBelowThreshold.length > 0) {
-      graphView.recordProtectedRelationshipViolation(graphView.tick, protectedBelowThreshold);
-    }
 
     return {
       relationshipsAdded: [],

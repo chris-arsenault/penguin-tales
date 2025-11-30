@@ -61,15 +61,10 @@ export {
 
 // Relationship mutation (from graph/)
 export {
-  isLineageRelationship,
-  getExpectedDistanceRange,
-  getRelationshipStrength,
-  getRelationshipCategory,
   addRelationship,
   addRelationshipWithDistance,
   archiveRelationship,
   modifyRelationshipStrength,
-  validateRelationship,
   canFormRelationship,
   recordRelationshipFormation,
   areRelationshipsCompatible

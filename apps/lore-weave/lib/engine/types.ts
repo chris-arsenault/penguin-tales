@@ -1,17 +1,14 @@
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
-import { LoreIndex, LoreRecord } from '../llm/types';
 import { TemplateMetadata, SystemMetadata, DistributionTargets } from '../statistics/types';
 import { DomainSchema } from '../domainInterface/domainSchema';
-import { FeedbackLoop } from '../feedback/feedbackAnalyzer';
 import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
+import type { ISimulationEmitter } from '../observer/types';
 
-export interface LLMConfig {
-  enabled: boolean;
-  model: string;
-  apiKey?: string;
-  maxTokens?: number;
-  temperature?: number;
-}
+// LLM types moved to @illuminator
+// import { LoreIndex, LoreRecord } from '../llm/types';
+// export interface LLMConfig { ... }
+// export type EnrichmentMode = 'off' | 'partial' | 'full';
+// export interface EnrichmentConfig { ... }
 
 /**
  * Interface for name generation service.
@@ -27,16 +24,6 @@ export interface NameGenerationService {
     context?: Record<string, string>
   ): Promise<string>;
   printStats(): void;
-}
-
-export type EnrichmentMode = 'off' | 'partial' | 'full';
-
-export interface EnrichmentConfig {
-  batchSize: number;
-  mode: EnrichmentMode;
-  maxEntityEnrichments?: number;
-  maxRelationshipEnrichments?: number;
-  maxEraNarratives?: number;
 }
 
 // Era definition
@@ -149,8 +136,9 @@ export interface Graph {
   history: HistoryEvent[];
   config: EngineConfig;
   relationshipCooldowns: Map<string, Map<string, number>>;
-  loreIndex?: LoreIndex;
-  loreRecords: LoreRecord[];
+  // LLM-related fields moved to @illuminator
+  // loreIndex?: LoreIndex;
+  // loreRecords: LoreRecord[];
   discoveryState: import('../core/worldTypes').DiscoveryState;
   growthMetrics: {
     relationshipsPerTick: number[];
@@ -373,7 +361,8 @@ export interface EntityOperatorRegistry {
   };
 }
 
-// Pressure definition
+// Pressure definition (runtime - has executable growth function)
+// This is internal to WorldEngine - external code uses DeclarativePressure
 export interface Pressure {
   id: string;
   name: string;
@@ -389,9 +378,16 @@ export interface EngineConfig {
   domain: DomainSchema;
 
   eras: Era[];
-  templates: GrowthTemplate[];
+
+  // Templates - declarative JSON format from UI
+  // WorldEngine converts these to runtime GrowthTemplate objects internally
+  templates: import('./declarativeTypes').DeclarativeTemplate[];
+
   systems: SimulationSystem[];
-  pressures: Pressure[];
+
+  // Pressures - declarative JSON format from UI
+  // WorldEngine converts these to runtime Pressure objects internally
+  pressures: import('./declarativePressureTypes').DeclarativePressure[];
   entityRegistries?: EntityOperatorRegistry[];
 
   // Configuration
@@ -407,13 +403,11 @@ export interface EngineConfig {
 
   // Scaling configuration
   scaleFactor?: number;  // Master scale multiplier for world size (default: 1.0)
-  llmConfig?: LLMConfig;
-  enrichmentConfig?: EnrichmentConfig;
-  loreIndex?: LoreIndex;
+  // LLM configuration moved to @illuminator
+  // llmConfig?: LLMConfig;
+  // enrichmentConfig?: EnrichmentConfig;
+  // loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
-
-  // Feedback loops for homeostatic regulation (domain-specific)
-  feedbackLoops?: FeedbackLoop[];
 
   // Tag registry for tag health analysis and validation (domain-specific)
   tagRegistry?: TagMetadata[];
@@ -423,6 +417,14 @@ export interface EngineConfig {
 
   // Coordinate context configuration (REQUIRED for coordinate system)
   coordinateContextConfig: CoordinateContextConfig;
+
+  // Seed relationships (optional - loaded alongside initial entities)
+  // Populates entity.links at load time
+  seedRelationships?: Relationship[];
+
+  // Simulation event emitter (REQUIRED - no fallback)
+  // Used to emit progress, logs, stats, and completion events
+  emitter: ISimulationEmitter;
 }
 
 // Meta-entity formation config (legacy - used by validationOrchestrator)
@@ -535,8 +537,9 @@ export class GraphStore implements Graph {
   history: HistoryEvent[] = [];
   config!: EngineConfig;
   relationshipCooldowns: Map<string, Map<string, number>> = new Map();
-  loreIndex?: LoreIndex;
-  loreRecords: LoreRecord[] = [];
+  // LLM fields moved to @illuminator
+  // loreIndex?: LoreIndex;
+  // loreRecords: LoreRecord[] = [];
   discoveryState: import('../core/worldTypes').DiscoveryState = {
     currentThreshold: 0.5,
     lastDiscoveryTick: 0,
@@ -558,7 +561,7 @@ export class GraphStore implements Graph {
 
   getEntity(id: string): HardState | undefined {
     const entity = this.#entities.get(id);
-    return entity ? { ...entity, tags: { ...entity.tags }, links: [...entity.links] } : undefined;
+    return entity ? { ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] } : undefined;
   }
 
   hasEntity(id: string): boolean {
@@ -573,7 +576,7 @@ export class GraphStore implements Graph {
     return Array.from(this.#entities.values()).map(e => ({
       ...e,
       tags: { ...e.tags },
-      links: [...e.links]
+      links: [...(e.links || [])]
     }));
   }
 
@@ -584,7 +587,7 @@ export class GraphStore implements Graph {
   forEachEntity(callback: (entity: HardState, id: string) => void): void {
     this.#entities.forEach((entity, id) => {
       // Pass clone to callback
-      callback({ ...entity, tags: { ...entity.tags }, links: [...entity.links] }, id);
+      callback({ ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] }, id);
     });
   }
 
@@ -598,7 +601,7 @@ export class GraphStore implements Graph {
       if (criteria.prominence && entity.prominence !== criteria.prominence) continue;
       if (criteria.culture && entity.culture !== criteria.culture) continue;
       if (criteria.tag && !(criteria.tag in entity.tags)) continue;
-      results.push({ ...entity, tags: { ...entity.tags }, links: [...entity.links] });
+      results.push({ ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] });
     }
     return results;
   }
@@ -864,9 +867,9 @@ export class GraphStore implements Graph {
     store.config = config;
     store.currentEra = initialEra;
 
-    // Initialize pressures from config
+    // Initialize pressures from config (declarative format uses initialValue)
     for (const pressure of config.pressures) {
-      store.pressures.set(pressure.id, pressure.value);
+      store.pressures.set(pressure.id, pressure.initialValue);
     }
 
     return store;

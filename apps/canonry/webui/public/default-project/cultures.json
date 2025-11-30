@@ -1,0 +1,354 @@
+[
+  {
+    "id": "aurora-stack",
+    "name": "Aurora Stack",
+    "description": "The orderly, sunlit colony on the bright face of Aurora Berg",
+    "color": "#FFD700",
+    "axisBiases": {
+      "npc": { "x": 70, "y": 55, "z": 35 },
+      "location": { "x": 70, "y": 25, "z": 70 },
+      "faction": { "x": 80, "y": 75, "z": 60 }
+    },
+    "homeRegions": {
+      "npc": ["aurora_stack"],
+      "location": ["aurora_stack_loc"],
+      "faction": ["aurora_factions"]
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "aurora_domain",
+          "phonology": {
+            "consonants": ["s", "l", "r", "k", "n", "m", "p", "t", "w", "v"],
+            "vowels": ["a", "e", "i", "o", "u", "ae", "ei"],
+            "syllableTemplates": ["CV", "CVC", "VCV", "V"],
+            "lengthRange": [2, 3],
+            "favoredClusters": ["sk", "kr", "st", "tr"],
+            "forbiddenClusters": ["gg", "kk"],
+            "favoredClusterBoost": 1.3,
+            "consonantWeights": [1, 1.2, 1.2, 1, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1.2, 1, 1, 1, 1, 0.8, 0.8],
+            "templateWeights": [1, 1.2, 0.8, 0.6]
+          },
+          "morphology": {
+            "prefixes": ["Ska", "Kri", "Nal", "Pel", "Vor"],
+            "suffixes": ["ik", "ak", "en", "ar", "ok", "um"],
+            "structure": ["root", "root-suffix", "prefix-root"],
+            "structureWeights": [0.3, 0.4, 0.3]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.02,
+            "preferredEndings": ["ik", "ak", "en", "ar"],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "neutral"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "aurora_nature": {
+          "id": "aurora_nature",
+          "description": "Light and trade words",
+          "entries": ["sun", "light", "gold", "ice", "trade", "stack", "tier", "banner"],
+          "source": "manual"
+        },
+        "aurora_titles": {
+          "id": "aurora_titles",
+          "description": "Aurora honorifics",
+          "entries": ["High-Beak", "Auditor", "Tide-Splitter", "Stack-Master"],
+          "source": "manual"
+        }
+      },
+      "grammars": [
+        {
+          "id": "aurora_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:aurora_titles", "domain:aurora_domain"],
+              ["domain:aurora_domain"]
+            ]
+          }
+        },
+        {
+          "id": "aurora_location",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:aurora_nature", "domain:aurora_domain"],
+              ["The", "slot:aurora_nature", "slot:aurora_nature"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "aurora_default",
+          "name": "Aurora Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "aurora_npc" },
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "aurora_location" },
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "nightshelf",
+    "name": "Nightfall Shelf",
+    "description": "The shadowed colony on the dark side of Aurora Berg",
+    "color": "#9370DB",
+    "axisBiases": {
+      "npc": { "x": 45, "y": 50, "z": 65 },
+      "location": { "x": 35, "y": 55, "z": 40 },
+      "faction": { "x": 40, "y": 45, "z": 50 }
+    },
+    "homeRegions": {
+      "npc": ["nightfall_shelf"],
+      "location": ["nightfall_shelf_loc", "glow_fissure"],
+      "faction": ["nightfall_factions"]
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "nightshelf_domain",
+          "phonology": {
+            "consonants": ["sh", "n", "l", "v", "m", "d", "th", "r", "s", "z"],
+            "vowels": ["a", "e", "i", "o", "u", "ae", "oe"],
+            "syllableTemplates": ["CV", "CVC", "VCV", "VC"],
+            "lengthRange": [2, 3],
+            "favoredClusters": ["sh", "th", "dr", "sl"],
+            "forbiddenClusters": ["kk", "gg"],
+            "favoredClusterBoost": 1.4,
+            "consonantWeights": [1.3, 1, 1.2, 1, 1, 1, 1.2, 1, 1, 1],
+            "vowelWeights": [1, 1, 1.2, 1, 1, 0.9, 0.8],
+            "templateWeights": [1, 1.2, 0.9, 0.7]
+          },
+          "morphology": {
+            "prefixes": ["Sha", "Nyl", "Dra", "Vel", "Mor"],
+            "suffixes": ["en", "is", "or", "ax", "um", "ith"],
+            "structure": ["root", "root-suffix", "prefix-root-suffix"],
+            "structureWeights": [0.25, 0.45, 0.3]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.1,
+            "hyphenRate": 0.05,
+            "preferredEndings": ["en", "is", "or", "ith"],
+            "preferredEndingBoost": 1.4,
+            "rhythmBias": "flowing"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "nightshelf_shadow": {
+          "id": "nightshelf_shadow",
+          "description": "Shadow and mystery words",
+          "entries": ["shadow", "night", "veil", "whisper", "glow", "fissure", "secret", "deal"],
+          "source": "manual"
+        },
+        "nightshelf_titles": {
+          "id": "nightshelf_titles",
+          "description": "Nightshelf honorifics",
+          "entries": ["Shadow-Broker", "Fissure-Walker", "Night-Warden", "Veil-Keeper"],
+          "source": "manual"
+        }
+      },
+      "grammars": [
+        {
+          "id": "nightshelf_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["slot:nightshelf_titles", "domain:nightshelf_domain"],
+              ["domain:nightshelf_domain"]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_location",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:nightshelf_shadow", "slot:nightshelf_shadow"],
+              ["slot:nightshelf_shadow", "domain:nightshelf_domain"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "nightshelf_default",
+          "name": "Nightshelf Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "nightshelf_npc" },
+                { "type": "phonotactic", "weight": 1, "domainId": "nightshelf_domain" }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["location"],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "nightshelf_location" },
+                { "type": "phonotactic", "weight": 1, "domainId": "nightshelf_domain" }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "phonotactic", "weight": 1, "domainId": "nightshelf_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "orca",
+    "name": "Orca Raiders",
+    "description": "The fearsome orca predators of the deep waters",
+    "color": "#2F4F4F",
+    "axisBiases": {
+      "npc": { "x": 15, "y": 60, "z": 25 },
+      "location": { "x": 20, "y": 30, "z": 20 },
+      "faction": { "x": 55, "y": 20, "z": 40 }
+    },
+    "homeRegions": {
+      "npc": ["orca_waters"],
+      "location": [],
+      "faction": []
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "orca_domain",
+          "phonology": {
+            "consonants": ["k", "r", "g", "n", "m", "b", "d", "th", "z"],
+            "vowels": ["a", "o", "u", "aa", "oo"],
+            "syllableTemplates": ["CV", "CVC", "CVCC"],
+            "lengthRange": [1, 2],
+            "favoredClusters": ["kr", "gr", "kn"],
+            "forbiddenClusters": ["ii", "ee"],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [1.5, 1.4, 1.3, 1, 1, 1, 1, 1, 1],
+            "vowelWeights": [1.3, 1.3, 1.2, 1, 1],
+            "templateWeights": [1, 1.4, 0.8]
+          },
+          "morphology": {
+            "prefixes": ["Kra", "Gor", "Brak", "Thun", "Rok"],
+            "suffixes": ["ak", "or", "ung", "rath"],
+            "structure": ["root", "root-suffix"],
+            "structureWeights": [0.4, 0.6]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.02,
+            "hyphenRate": 0.01,
+            "preferredEndings": ["ak", "or", "ung"],
+            "preferredEndingBoost": 1.4,
+            "rhythmBias": "harsh"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "orca_power": {
+          "id": "orca_power",
+          "description": "Strength and hunting words",
+          "entries": ["hunt", "blood", "deep", "tide", "fang", "storm", "crush", "dark"],
+          "source": "manual"
+        }
+      },
+      "grammars": [
+        {
+          "id": "orca_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["domain:orca_domain"],
+              ["slot:orca_power", "domain:orca_domain"]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "orca_default",
+          "name": "Orca Default",
+          "strategyGroups": [
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                { "type": "grammar", "weight": 2, "grammarId": "orca_npc" },
+                { "type": "phonotactic", "weight": 1, "domainId": "orca_domain" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

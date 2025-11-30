@@ -307,8 +307,11 @@ export default function EntityEditor({ project, onSave }) {
       status: defaultKind.statuses[0]?.id || 'active',
       prominence: 'recognized',
       culture: cultures[0]?.id || '',
-      tags: [],
-      coordinates: { x: 50, y: 50, z: 50 }
+      tags: {},  // Key-value pairs for semantic tagging
+      links: [], // Relationships are stored separately, populated at load time
+      coordinates: { x: 50, y: 50, z: 50 },
+      createdAt: 0,
+      updatedAt: 0
     };
 
     updateEntities([...entities, newEntity]);
@@ -365,7 +368,7 @@ export default function EntityEditor({ project, onSave }) {
         kind: selectedEntity.kind,
         subtype: selectedEntity.subtype,
         prominence: selectedEntity.prominence,
-        tags: selectedEntity.tags || [],
+        tags: Object.keys(selectedEntity.tags || {}),
       });
       updateEntity({ name });
     } catch (err) {
@@ -383,23 +386,30 @@ export default function EntityEditor({ project, onSave }) {
     return culture && culture.profiles && culture.profiles.length > 0;
   };
 
+  // Tags are stored as { key: true } for boolean flags or { key: "value" } for categorized
+  const getTagKeys = () => {
+    const tags = selectedEntity?.tags || {};
+    return Object.keys(tags);
+  };
+
   const addTag = () => {
     if (!selectedEntity || !newTag.trim()) return;
     const tag = newTag.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
     if (!tag) return;
-    const currentTags = selectedEntity.tags || [];
-    if (currentTags.includes(tag)) {
+    const currentTags = selectedEntity.tags || {};
+    if (tag in currentTags) {
       setNewTag('');
       return;
     }
-    updateEntity({ tags: [...currentTags, tag] });
+    updateEntity({ tags: { ...currentTags, [tag]: true } });
     setNewTag('');
   };
 
   const removeTag = (tagToRemove) => {
     if (!selectedEntity) return;
-    const currentTags = selectedEntity.tags || [];
-    updateEntity({ tags: currentTags.filter(t => t !== tagToRemove) });
+    const currentTags = selectedEntity.tags || {};
+    const { [tagToRemove]: _, ...rest } = currentTags;
+    updateEntity({ tags: rest });
   };
 
   const handleTagKeyDown = (e) => {
@@ -579,7 +589,7 @@ export default function EntityEditor({ project, onSave }) {
             <div style={styles.formGroup}>
               <label style={styles.label}>Tags</label>
               <div style={styles.tagsContainer}>
-                {(selectedEntity.tags || []).map(tag => (
+                {getTagKeys().map(tag => (
                   <span key={tag} style={styles.tag}>
                     {tag}
                     <span

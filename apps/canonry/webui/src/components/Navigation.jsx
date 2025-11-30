@@ -68,7 +68,8 @@ const TABS = [
   { id: 'enumerist', label: 'Enumerist', enabled: true },
   { id: 'names', label: 'Name Forge', enabled: true },
   { id: 'cosmography', label: 'Cosmographer', enabled: true },
-  { id: 'simulation', label: 'Lore Weave', enabled: false, badge: 'Soon' },
+  { id: 'coherence', label: 'Coherence Engine', enabled: true },
+  { id: 'simulation', label: 'Lore Weave', enabled: true },
 ];
 
 export default function Navigation({ activeTab, onTabChange, onHelpClick }) {

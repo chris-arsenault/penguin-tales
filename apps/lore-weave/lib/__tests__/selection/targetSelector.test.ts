@@ -90,7 +90,6 @@ describe('TargetSelector', () => {
       config: {} as any,
       discoveryState: {} as any,
       history: [],
-      loreIndex: {} as any,
       nameLogger: {} as any,
       tagRegistry: {} as any,
       loreValidator: {} as any,

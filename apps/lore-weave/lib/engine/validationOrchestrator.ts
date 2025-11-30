@@ -63,16 +63,9 @@ export class ValidationOrchestrator {
    * Display service initialization status
    */
   static displayServiceStatus(
-    feedbackLoops: any[],
     metaEntityConfigs: any[],
     hasTargetSelector: boolean
   ): void {
-    // Feedback control
-    if (feedbackLoops && feedbackLoops.length > 0) {
-      console.log(`\n✓ Homeostatic feedback control enabled`);
-      console.log(`  - Tracking ${feedbackLoops.length} feedback loops`);
-    }
-
     // Contract enforcement
     console.log('✓ Contract enforcement enabled');
     console.log('  - Template filtering by enabledBy conditions');

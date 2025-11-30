@@ -25,7 +25,7 @@ import type {
   RegionLookupResult
 } from '../coordinates/types';
 import type { EntityTags } from '../core/worldTypes';
-import type { PlacementContext, CultureCoordinateConfig } from './coordinateContext';
+import type { PlacementContext } from './coordinateContext';
 import { RegionMapper } from './regionMapper';
 
 /**
@@ -234,12 +234,11 @@ export class KindRegionService {
 
   /**
    * Process entity placement - returns tags to apply.
-   * Also triggers emergent region creation if needed.
    *
    * This is the SINGLE ENTRY POINT for all placements.
-   * Culture context influences:
-   * - Emergent region labels and tags
-   * - Culture ID tracking on result
+   * Culture context influences culture ID tracking on result.
+   *
+   * NOTE: Emergent region creation is paused pending emergentConfig implementation.
    *
    * @param kind - Entity kind
    * @param entityId - Entity identifier
@@ -251,36 +250,13 @@ export class KindRegionService {
     kind: string,
     entityId: string,
     point: Point,
-    tick: number,
+    _tick: number,
     context?: PlacementContext
-  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; emergentRegionCreated?: Region; cultureId?: string } {
+  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; cultureId?: string } {
     const mapper = this.getMapper(kind);
     const lookupResult = mapper.lookup(point);
 
-    let emergentRegionCreated: Region | undefined;
-
-    // Create emergent region if requested and not in any region
-    if (context?.createEmergentRegion && !lookupResult.primary) {
-      // Culture-aware labeling
-      const culturePrefix = context.cultureId ? `${context.cultureId} ` : '';
-      const label = context.emergentRegionLabel ??
-        `${culturePrefix}${kind} Zone ${(this.states[kind]?.regions.length ?? 0) + 1}`;
-      const description = `Emergent region discovered at tick ${tick}` +
-        (context.cultureId ? ` by ${context.cultureId} culture` : '');
-
-      const emergentResult = this.createEmergentRegion(
-        kind,
-        point,
-        label,
-        description,
-        tick,
-        entityId
-      );
-
-      if (emergentResult.success && emergentResult.region) {
-        emergentRegionCreated = emergentResult.region;
-      }
-    }
+    // Emergent region creation is paused - would be triggered here if enabled
 
     const tags = mapper.processEntityPlacement(entityId, point);
 
@@ -288,7 +264,6 @@ export class KindRegionService {
       tags,
       region: lookupResult.primary,
       allRegions: lookupResult.all,
-      emergentRegionCreated,
       cultureId: context?.cultureId
     };
   }
@@ -303,7 +278,7 @@ export class KindRegionService {
     point: Point,
     tick: number,
     context: PlacementContext
-  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; emergentRegionCreated?: Region; cultureId?: string } {
+  ): { tags: EntityTags; region: Region | null; allRegions: Region[]; cultureId?: string } {
     return this.processEntityPlacement(kind, entityId, point, tick, context);
   }
 

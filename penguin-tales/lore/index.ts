@@ -8,9 +8,7 @@
 // Domain Schema
 export { penguinDomain } from './schema.js';
 
-// Configuration
-export { penguinEras } from './config/eras.js';
-export { pressures } from './config/pressures.js';
+// Configuration (eras now managed by canonry)
 
 // Action Domains
 export {
@@ -30,7 +28,13 @@ export {
   getAllCategories
 } from './config/relationshipCategories.js';
 
-// Templates (declarative - loaded from JSON)
+// Lore Provider
+export { penguinLoreProvider } from './config/loreProvider.js';
+
+// Tag Registry
+export { penguinTagRegistry } from './config/tagRegistry.js';
+
+// Templates (declarative - loaded from JSON, now managed by canonry)
 export {
   loadGrowthTemplates,
   loadDeclarativeTemplate,
@@ -39,9 +43,8 @@ export {
   type GrowthTemplatesFile
 } from './templates/index.js';
 
-import growthTemplatesData from './data/growthTemplates.json' with { type: 'json' };
-import { loadGrowthTemplates } from './templates/index.js';
-export const allTemplates = loadGrowthTemplates(growthTemplatesData as unknown as import('./templates/index.js').GrowthTemplatesFile);
+// Templates now managed by canonry - export empty array
+export const allTemplates: import('@lore-weave/core').GrowthTemplate[] = [];
 
 // Systems
 export { allSystems } from './systems/index.js';

@@ -212,67 +212,7 @@ export function validateLinkSync(graph: Graph): ValidationResult {
   };
 }
 
-/**
- * Validate that entities have lore enrichment (if LLM is enabled)
- */
-export function validateLorePresence(graph: Graph): ValidationResult {
-  // Skip if no lore records (LLM disabled)
-  if (!graph.loreRecords || graph.loreRecords.length === 0) {
-    return {
-      name: 'Lore Presence',
-      passed: true,
-      failureCount: 0,
-      details: 'LLM enrichment disabled - skipping lore check'
-    };
-  }
-
-  // Entities that should have lore (created after tick 0, not abilities)
-  const enrichableEntities = graph.getEntities().filter(
-    e => e.createdAt > 0 && e.kind !== 'abilities'
-  );
-
-  const entitiesWithLore = new Set<string>();
-  graph.loreRecords.forEach(record => {
-    if (record.targetId) {
-      entitiesWithLore.add(record.targetId);
-    }
-  });
-
-  const missingLore = enrichableEntities.filter(e => !entitiesWithLore.has(e.id));
-
-  const passed = missingLore.length === 0;
-
-  let details = passed
-    ? `All ${enrichableEntities.length} enrichable entities have lore`
-    : `${missingLore.length}/${enrichableEntities.length} entities missing lore enrichment:\n`;
-
-  if (!passed) {
-    // Group by kind:subtype
-    const byType = new Map<string, number>();
-    missingLore.forEach(e => {
-      const key = `${e.kind}:${e.subtype}`;
-      byType.set(key, (byType.get(key) || 0) + 1);
-    });
-
-    byType.forEach((count, type) => {
-      details += `  - ${type}: ${count}\n`;
-    });
-
-    // Add sample entities
-    details += '\nSample entities without lore:\n';
-    missingLore.slice(0, 5).forEach(e => {
-      details += `  - ${e.name} (${e.kind}:${e.subtype}, tick ${e.createdAt})\n`;
-    });
-  }
-
-  return {
-    name: 'Lore Presence',
-    passed,
-    failureCount: missingLore.length,
-    details,
-    failedEntities: missingLore
-  };
-}
+// validateLorePresence moved to @illuminator
 
 /**
  * Run all validators and generate a complete report
@@ -282,8 +222,8 @@ export function validateWorld(graph: Graph): ValidationReport {
     validateConnectedEntities(graph),
     validateNPCStructure(graph),
     validateRelationshipIntegrity(graph),
-    validateLinkSync(graph),
-    validateLorePresence(graph)
+    validateLinkSync(graph)
+    // validateLorePresence moved to @illuminator
   ];
 
   const passed = results.filter(r => r.passed).length;

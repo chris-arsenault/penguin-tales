@@ -4,7 +4,8 @@ import { universalCatalyst } from '../../systems/universalCatalyst';
 import { Graph, ComponentPurpose } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { TemplateGraphView } from '../../graph/templateGraphView';
-import { TargetSelector } from '../../services/targetSelector';
+import { TargetSelector } from '../../selection/targetSelector';
+import { CoordinateContext } from '../../coordinates/coordinateContext';
 
 describe('universalCatalyst', () => {
   let mockGraph: Graph;
@@ -171,7 +172,19 @@ describe('universalCatalyst', () => {
 
     // Create TemplateGraphView wrapper
     const targetSelector = new TargetSelector();
-    graphView = new TemplateGraphView(mockGraph, targetSelector);
+
+    // Create mock coordinate context
+    const mockCoordinateContext = {
+      place: () => ({ x: 0.5, y: 0.5 }),
+      placeWithCulture: () => ({ x: 0.5, y: 0.5 }),
+      getRegionAtPoint: () => null,
+      findOrCreateRegion: () => ({ id: 'test-region', name: 'Test', bounds: { type: 'circle', center: { x: 0.5, y: 0.5 }, radius: 0.1 } }),
+      sampleRegion: () => ({ x: 0.5, y: 0.5 }),
+      getRegions: () => [],
+      getRegionById: () => null,
+    } as unknown as CoordinateContext;
+
+    graphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
 
     mockModifier = 1.0;
   });

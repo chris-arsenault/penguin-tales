@@ -150,43 +150,31 @@ export const FRAMEWORK_OCCURRENCE_STATUS_VALUES = [
 
 /**
  * Framework relationships and their properties.
- * Used for default distance/strength values and culling behavior.
+ * Used for default strength values.
  */
 export const FRAMEWORK_RELATIONSHIP_PROPERTIES = {
   [FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES]: {
     defaultStrength: 0.7,
-    protected: true,
-    mutability: 'immutable' as const,
     description: 'Era lineage (newer era supersedes older)',
   },
   [FRAMEWORK_RELATIONSHIP_KINDS.PART_OF]: {
     defaultStrength: 0.5,
-    protected: true,
-    mutability: 'immutable' as const,
     description: 'Subsumption into meta-entity',
   },
   [FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING]: {
     defaultStrength: 0.3,
-    protected: false,
-    mutability: 'immutable' as const,
     description: 'Temporal association with era',
   },
   [FRAMEWORK_RELATIONSHIP_KINDS.PARTICIPANT_IN]: {
     defaultStrength: 1.0,
-    protected: true,
-    mutability: 'immutable' as const,
     description: 'Entity participates in an occurrence',
   },
   [FRAMEWORK_RELATIONSHIP_KINDS.EPICENTER_OF]: {
     defaultStrength: 1.0,
-    protected: true,
-    mutability: 'immutable' as const,
     description: 'Occurrence has a location epicenter',
   },
   [FRAMEWORK_RELATIONSHIP_KINDS.TRIGGERED_BY]: {
     defaultStrength: 0.8,
-    protected: true,
-    mutability: 'immutable' as const,
     description: 'Occurrence was triggered by entity/event',
   },
 } as const;
@@ -196,12 +184,4 @@ export const FRAMEWORK_RELATIONSHIP_PROPERTIES = {
  */
 export function getFrameworkRelationshipStrength(kind: FrameworkRelationshipKind): number {
   return FRAMEWORK_RELATIONSHIP_PROPERTIES[kind].defaultStrength;
-}
-
-/**
- * Check if a framework relationship kind is protected from culling
- */
-export function isProtectedFrameworkRelationship(kind: string): boolean {
-  if (!isFrameworkRelationshipKind(kind)) return false;
-  return FRAMEWORK_RELATIONSHIP_PROPERTIES[kind].protected;
 }

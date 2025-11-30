@@ -4,10 +4,12 @@ import { TemplateGraphView } from '../../graph/templateGraphView';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { TargetSelector } from '../../selection/targetSelector';
+import { CoordinateContext } from '../../coordinates/coordinateContext';
 
 describe('TemplateGraphView', () => {
   let graph: Graph;
   let targetSelector: TargetSelector;
+  let coordinateContext: CoordinateContext;
   let view: TemplateGraphView;
 
   // Helper to create a test entity
@@ -72,7 +74,6 @@ describe('TemplateGraphView', () => {
       config: {} as any,
       discoveryState: {} as any,
       history: [],
-      loreIndex: {} as any,
       nameLogger: {} as any,
       tagRegistry: {} as any,
       loreValidator: {} as any,
@@ -214,7 +215,19 @@ describe('TemplateGraphView', () => {
     };
 
     targetSelector = new TargetSelector();
-    view = new TemplateGraphView(graph, targetSelector);
+
+    // Create a mock coordinate context
+    coordinateContext = {
+      place: () => ({ x: 0.5, y: 0.5 }),
+      placeWithCulture: () => ({ x: 0.5, y: 0.5 }),
+      getRegionAtPoint: () => null,
+      findOrCreateRegion: () => ({ id: 'test-region', name: 'Test', bounds: { type: 'circle', center: { x: 0.5, y: 0.5 }, radius: 0.1 } }),
+      sampleRegion: () => ({ x: 0.5, y: 0.5 }),
+      getRegions: () => [],
+      getRegionById: () => null,
+    } as any;
+
+    view = new TemplateGraphView(graph, targetSelector, coordinateContext);
   });
 
   describe('constructor', () => {

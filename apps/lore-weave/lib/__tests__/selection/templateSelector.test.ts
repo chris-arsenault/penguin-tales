@@ -202,7 +202,6 @@ describe('TemplateSelector', () => {
         relationshipsPerTick: [],
         averageGrowthRate: 0,
       },
-      loreRecords: [],
       // Entity read methods
       getEntity(id: string) { return _entities.get(id); },
       hasEntity(id: string) { return _entities.has(id); },

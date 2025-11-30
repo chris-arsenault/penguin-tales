@@ -4,7 +4,8 @@ import { relationshipCulling } from '../../systems/relationshipCulling';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { TemplateGraphView } from '../../graph/templateGraphView';
-import { TargetSelector } from '../../services/targetSelector';
+import { TargetSelector } from '../../selection/targetSelector';
+import { CoordinateContext } from '../../coordinates/coordinateContext';
 
 describe('relationshipCulling', () => {
   let graph: Graph;
@@ -78,7 +79,6 @@ describe('relationshipCulling', () => {
       } as any,
       discoveryState: {} as any,
       history: [],
-      loreIndex: {} as any,
       nameLogger: {} as any,
       tagRegistry: {} as any,
       loreValidator: {} as any,
@@ -222,7 +222,19 @@ describe('relationshipCulling', () => {
 
     // Create TemplateGraphView wrapper
     const targetSelector = new TargetSelector();
-    graphView = new TemplateGraphView(graph, targetSelector);
+
+    // Create mock coordinate context
+    const mockCoordinateContext = {
+      place: () => ({ x: 0.5, y: 0.5 }),
+      placeWithCulture: () => ({ x: 0.5, y: 0.5 }),
+      getRegionAtPoint: () => null,
+      findOrCreateRegion: () => ({ id: 'test-region', name: 'Test', bounds: { type: 'circle', center: { x: 0.5, y: 0.5 }, radius: 0.1 } }),
+      sampleRegion: () => ({ x: 0.5, y: 0.5 }),
+      getRegions: () => [],
+      getRegionById: () => null,
+    } as unknown as CoordinateContext;
+
+    graphView = new TemplateGraphView(graph, targetSelector, mockCoordinateContext);
   });
 
   describe('metadata', () => {
@@ -250,7 +262,7 @@ describe('relationshipCulling', () => {
   describe('culling behavior', () => {
     it('should remove weak relationships below threshold', () => {
       graph.tick = 50; // Ensure past grace period
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       // Should remove relationships with strength < 0.15
       expect(graph.relationships.length).toBeLessThan(4);
@@ -260,7 +272,7 @@ describe('relationshipCulling', () => {
 
     it('should keep strong relationships', () => {
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should keep allies (0.8 strength)
       expect(graph.relationships.some(r => r.kind === 'allies')).toBe(true);
@@ -268,7 +280,7 @@ describe('relationshipCulling', () => {
 
     it('should keep medium-strength relationships above threshold', () => {
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should keep trades_with (0.3 strength > 0.15)
       expect(graph.relationships.some(r => r.kind === 'trades_with')).toBe(true);
@@ -278,7 +290,7 @@ describe('relationshipCulling', () => {
       graph.tick = 5; // Not a multiple of default frequency (10)
       const initialCount = graph.relationships.length;
 
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       expect(graph.relationships.length).toBe(initialCount);
       expect(result.description).toContain('dormant');
@@ -288,7 +300,7 @@ describe('relationshipCulling', () => {
       graph.tick = 50; // Multiple of 10
       const initialCount = graph.relationships.length;
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should have culled some weak relationships
       expect(graph.relationships.length).toBeLessThan(initialCount);
@@ -308,7 +320,7 @@ describe('relationshipCulling', () => {
       graph.relationships = [weakRel];
       graph.tick = 10; // Only 5 ticks after creation (grace period default is 20)
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should keep the weak relationship due to grace period
       expect(graph.relationships.length).toBe(1);
@@ -327,52 +339,10 @@ describe('relationshipCulling', () => {
       graph.relationships = [weakRel];
       graph.tick = 50; // Well past grace period
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should cull the weak relationship
       expect(graph.relationships.length).toBe(0);
-    });
-  });
-
-  describe('protected relationships', () => {
-    it('should never cull protected relationship kinds', () => {
-      const protectedRel = createRelationship('npc1', 'npc2', 'member_of', 0.05); // Very weak but protected
-      protectedRel.strength = 0.05;
-      graph.entities.get('npc1')!.links.push(protectedRel);
-      graph.entities.get('npc2')!.links.push(protectedRel);
-      graph.relationships.push(protectedRel);
-
-      graph.tick = 50;
-      relationshipCulling.apply(graph);
-
-      // Should keep protected relationship even though it's weak
-      expect(graph.relationships.some(r => r.kind === 'member_of')).toBe(true);
-    });
-
-    it('should track violations for weak protected relationships', () => {
-      const protectedRel = createRelationship('npc1', 'npc2', 'member_of', 0.05);
-      graph.entities.get('npc1')!.links.push(protectedRel);
-      graph.entities.get('npc2')!.links.push(protectedRel);
-      graph.relationships.push(protectedRel);
-
-      graph.tick = 50;
-      relationshipCulling.apply(graph);
-
-      expect(graph.protectedRelationshipViolations).toBeDefined();
-      expect(graph.protectedRelationshipViolations!.length).toBeGreaterThan(0);
-    });
-
-    it('should never cull immutable relationship kinds', () => {
-      const immutableRel = createRelationship('npc1', 'npc2', 'located_at', 0.01); // Extremely weak but immutable
-      graph.entities.get('npc1')!.links.push(immutableRel);
-      graph.entities.get('npc2')!.links.push(immutableRel);
-      graph.relationships.push(immutableRel);
-
-      graph.tick = 50;
-      relationshipCulling.apply(graph);
-
-      // Should keep immutable relationship
-      expect(graph.relationships.some(r => r.kind === 'located_at')).toBe(true);
     });
   });
 
@@ -382,7 +352,7 @@ describe('relationshipCulling', () => {
       const npc1 = graph.entities.get('npc1')!;
       const initialLinkCount = npc1.links.length;
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // npc1's weak 'knows' relationship should be removed from links
       expect(npc1.links.length).toBeLessThan(initialLinkCount);
@@ -394,7 +364,7 @@ describe('relationshipCulling', () => {
       const npc1 = graph.entities.get('npc1')!;
       npc1.updatedAt = 0;
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Entity should be updated if its link was culled
       if (npc1.links.length < 2) { // Had 2 links initially
@@ -411,7 +381,7 @@ describe('relationshipCulling', () => {
       graph.tick = 50;
       const initialCount = graph.relationships.length;
 
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Should remove relationship to non-existent entity
       expect(graph.relationships.length).toBeLessThan(initialCount);
@@ -423,7 +393,7 @@ describe('relationshipCulling', () => {
       graph.relationships.push(brokenRel);
 
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       expect(graph.relationships.some(r => r.src === 'nonexistent')).toBe(false);
     });
@@ -438,7 +408,7 @@ describe('relationshipCulling', () => {
       graph.relationships.push(noStrengthRel);
 
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Default 0.5 strength > 0.15 threshold, should be kept
       expect(graph.relationships.some(r => r.kind === 'mysterious')).toBe(true);
@@ -448,27 +418,16 @@ describe('relationshipCulling', () => {
       graph.relationships = [];
       graph.tick = 50;
 
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       expect(result).toBeDefined();
       expect(graph.relationships.length).toBe(0);
     });
 
-    it('should handle graph with no protected relationship kinds', () => {
-      graph.config.domain.getProtectedRelationshipKinds = () => [];
-      graph.config.domain.getImmutableRelationshipKinds = () => [];
-
-      graph.tick = 50;
-      relationshipCulling.apply(graph);
-
-      // Should still work, culling weak relationships
-      expect(graph.relationships.some(r => r.strength! < 0.15)).toBe(false);
-    });
-
     it('should handle tick 0', () => {
       graph.tick = 0;
 
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       // Tick 0 is multiple of 10, should run
       expect(result.description).not.toContain('dormant');
@@ -481,7 +440,7 @@ describe('relationshipCulling', () => {
       graph.relationships.push(superStrong);
 
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       expect(graph.relationships.some(r => r.kind === 'unbreakable')).toBe(true);
     });
@@ -493,7 +452,7 @@ describe('relationshipCulling', () => {
       graph.relationships.push(negative);
 
       graph.tick = 50;
-      relationshipCulling.apply(graph);
+      relationshipCulling.apply(graphView);
 
       // Negative strength < 0.15, should be culled
       expect(graph.relationships.some(r => r.kind === 'negative')).toBe(false);
@@ -520,7 +479,7 @@ describe('relationshipCulling', () => {
   describe('return value', () => {
     it('should return proper SystemResult structure', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       expect(result).toHaveProperty('relationshipsAdded');
       expect(result).toHaveProperty('entitiesModified');
@@ -535,7 +494,7 @@ describe('relationshipCulling', () => {
 
     it('should describe culling action when relationships are removed', () => {
       graph.tick = 50;
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       if (graph.relationships.length < 4) {
         expect(result.description).toContain('fade');
@@ -548,7 +507,7 @@ describe('relationshipCulling', () => {
       graph.relationships = graph.relationships.filter(r => (r.strength ?? 0.5) >= 0.15);
       graph.tick = 50;
 
-      const result = relationshipCulling.apply(graph);
+      const result = relationshipCulling.apply(graphView);
 
       expect(result.description).toContain('above threshold');
     });

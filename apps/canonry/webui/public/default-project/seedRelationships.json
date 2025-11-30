@@ -1,0 +1,68 @@
+[
+  {
+    "kind": "contains",
+    "src": "loc_aurora_berg",
+    "dst": "loc_aurora_stack",
+    "strength": 1.0
+  },
+  {
+    "kind": "contains",
+    "src": "loc_aurora_berg",
+    "dst": "loc_nightfall_shelf",
+    "strength": 1.0
+  },
+  {
+    "kind": "contains",
+    "src": "loc_aurora_berg",
+    "dst": "loc_glow_fissure",
+    "strength": 1.0
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_aurora_stack",
+    "dst": "loc_nightfall_shelf",
+    "strength": 0.5
+  },
+  {
+    "kind": "adjacent_to",
+    "src": "loc_nightfall_shelf",
+    "dst": "loc_glow_fissure",
+    "strength": 0.5
+  },
+  {
+    "kind": "controls",
+    "src": "faction_icebound_exchange",
+    "dst": "loc_aurora_stack",
+    "strength": 0.8
+  },
+  {
+    "kind": "controls",
+    "src": "faction_midnight_claws",
+    "dst": "loc_nightfall_shelf",
+    "strength": 0.8
+  },
+  {
+    "kind": "leader_of",
+    "src": "npc_selka",
+    "dst": "faction_icebound_exchange",
+    "strength": 1.0
+  },
+  {
+    "kind": "resident_of",
+    "src": "npc_selka",
+    "dst": "loc_aurora_stack",
+    "strength": 1.0
+  },
+  {
+    "kind": "leader_of",
+    "src": "npc_nyla",
+    "dst": "faction_midnight_claws",
+    "strength": 1.0
+  },
+  {
+    "kind": "resident_of",
+    "src": "npc_nyla",
+    "dst": "loc_nightfall_shelf",
+    "strength": 1.0
+  }
+]

@@ -266,34 +266,41 @@ export default function ProjectManager({
     }
   };
 
-  const handleImport = (e) => {
+  const handleImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        onImportProject(event.target.result);
-        setShowDropdown(false);
-      } catch (err) {
-        alert('Failed to import: ' + err.message);
+    try {
+      // Check file type - support both zip and legacy JSON
+      if (file.name.endsWith('.zip') || file.type === 'application/zip') {
+        // Import as zip file
+        await onImportProject(file);
+      } else {
+        // Legacy JSON import
+        const text = await file.text();
+        await onImportProject(text);
       }
-    };
-    reader.readAsText(file);
+      setShowDropdown(false);
+    } catch (err) {
+      alert('Failed to import: ' + err.message);
+    }
     e.target.value = '';
   };
 
-  const handleExport = () => {
-    const json = onExportProject();
-    if (!json) return;
+  const handleExport = async () => {
+    try {
+      const zipBlob = await onExportProject();
+      if (!zipBlob) return;
 
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentProject?.name || 'world'}.canonry.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentProject?.name || 'world'}.canonry.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to export: ' + err.message);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -419,7 +426,7 @@ export default function ProjectManager({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".zip,.json"
           style={styles.hiddenInput}
           onChange={handleImport}
         />

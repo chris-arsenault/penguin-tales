@@ -24,16 +24,13 @@ import {
   addRelationshipWithDistance,
   archiveRelationship,
   modifyRelationshipStrength,
-  validateRelationship,
   weightedRandom,
   rollProbability,
   canFormRelationship,
   recordRelationshipFormation,
   areRelationshipsCompatible,
   getConnectionWeight,
-  getFactionRelationship,
-  isLineageRelationship,
-  getExpectedDistanceRange
+  getFactionRelationship
 } from '../../utils';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
@@ -55,7 +52,6 @@ function createMockGraph(): Graph {
     pressures: new Map<string, number>(),
     history: [],
     relationshipCooldowns: new Map(),
-    loreRecords: [],
     discoveryState: {
       currentThreshold: 1.0,
       lastDiscoveryTick: 0,
@@ -930,7 +926,7 @@ describe('Graph Modification', () => {
       expect(graph.getRelationships()).toHaveLength(1);
     });
 
-    it('should auto-assign strength', () => {
+    it('should use default strength when not specified', () => {
       const graph = createMockGraph();
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
@@ -940,7 +936,7 @@ describe('Graph Modification', () => {
 
       addRelationship(graph, 'member_of', 'e1', 'e2');
 
-      expect(graph.getRelationships()[0].strength).toBe(1.0); // member_of is strong
+      expect(graph.getRelationships()[0].strength).toBe(0.5); // default strength
     });
 
     it('should respect strength override', () => {
@@ -956,21 +952,6 @@ describe('Graph Modification', () => {
       expect(graph.getRelationships()[0].strength).toBe(0.9);
     });
 
-    it('should auto-add distance for lineage relationships', () => {
-      const graph = createMockGraph();
-      const e1 = createMockEntity({ id: 'e1', links: [] });
-      const e2 = createMockEntity({ id: 'e2', links: [] });
-
-      graph._loadEntity(e1.id, e1);
-      graph._loadEntity(e2.id, e2);
-
-      addRelationship(graph, 'derived_from', 'e1', 'e2');
-
-      const rels = graph.getRelationships();
-      expect(rels[0].distance).toBeDefined();
-      expect(rels[0].distance).toBeGreaterThanOrEqual(0);
-      expect(rels[0].distance).toBeLessThanOrEqual(1);
-    });
   });
 
   describe('updateEntity', () => {
@@ -1123,40 +1104,6 @@ describe('Graph Modification', () => {
       expect(result).toBe(false);
     });
   });
-
-  describe('validateRelationship', () => {
-    it('should validate allowed relationship', () => {
-      const schema = {
-        relationships: {
-          npc: {
-            npc: ['friend_of', 'enemy_of']
-          }
-        }
-      };
-
-      expect(validateRelationship(schema, 'npc', 'npc', 'friend_of')).toBe(true);
-    });
-
-    it('should reject disallowed relationship', () => {
-      const schema = {
-        relationships: {
-          npc: {
-            npc: ['friend_of']
-          }
-        }
-      };
-
-      expect(validateRelationship(schema, 'npc', 'npc', 'enemy_of')).toBe(false);
-    });
-
-    it('should handle missing schema entry', () => {
-      const schema = {
-        relationships: {}
-      };
-
-      expect(validateRelationship(schema, 'npc', 'npc', 'friend_of')).toBe(false);
-    });
-  });
 });
 
 describe('Relationship Cooldowns', () => {
@@ -1211,7 +1158,7 @@ describe('Relationship Cooldowns', () => {
 
 describe('Relationship Compatibility', () => {
   describe('areRelationshipsCompatible', () => {
-    it('should reject contradictory relationships', () => {
+    it('should always return true (conflict checking removed)', () => {
       const graph = createMockGraph();
       const e1 = createMockEntity({ id: 'e1', links: [] });
       const e2 = createMockEntity({ id: 'e2', links: [] });
@@ -1221,26 +1168,9 @@ describe('Relationship Compatibility', () => {
 
       addRelationship(graph, 'lover_of', 'e1', 'e2');
 
-      // Should reject enemy_of (contradicts lover_of)
-      expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'enemy_of')).toBe(false);
-    });
-
-    it('should allow compatible relationships', () => {
-      const graph = createMockGraph();
-      const e1 = createMockEntity({ id: 'e1', links: [] });
-      const e2 = createMockEntity({ id: 'e2', links: [] });
-
-      graph._loadEntity(e1.id, e1);
-      graph._loadEntity(e2.id, e2);
-
-      addRelationship(graph, 'friend_of', 'e1', 'e2');
-
-      // Should allow mentor_of (compatible with friend_of)
+      // All relationships are compatible (conflict checking removed)
+      expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'enemy_of')).toBe(true);
       expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'mentor_of')).toBe(true);
-    });
-
-    it('should allow when no existing relationships', () => {
-      const graph = createMockGraph();
       expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'friend_of')).toBe(true);
     });
   });
@@ -1326,36 +1256,3 @@ describe('Faction Relationships', () => {
   });
 });
 
-describe('Lineage Relationships', () => {
-  describe('isLineageRelationship', () => {
-    it('should identify lineage relationships', () => {
-      const graph = createMockGraph();
-      expect(isLineageRelationship('derived_from', graph)).toBe(true);
-      expect(isLineageRelationship('split_from', graph)).toBe(true);
-      expect(isLineageRelationship('adjacent_to', graph)).toBe(true);
-    });
-
-    it('should reject non-lineage relationships', () => {
-      const graph = createMockGraph();
-      expect(isLineageRelationship('friend_of', graph)).toBe(false);
-      expect(isLineageRelationship('member_of', graph)).toBe(false);
-    });
-  });
-
-  describe('getExpectedDistanceRange', () => {
-    it('should return range for lineage relationships', () => {
-      const graph = createMockGraph();
-      const range = getExpectedDistanceRange('derived_from', graph);
-      expect(range).toBeDefined();
-      expect(range?.min).toBeGreaterThanOrEqual(0);
-      expect(range?.max).toBeLessThanOrEqual(1);
-      expect(range!.max).toBeGreaterThan(range!.min);
-    });
-
-    it('should return undefined for non-lineage relationships', () => {
-      const graph = createMockGraph();
-      const range = getExpectedDistanceRange('friend_of', graph);
-      expect(range).toBeUndefined();
-    });
-  });
-});

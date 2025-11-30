@@ -23,7 +23,6 @@ describe('ValidationOrchestrator', () => {
       } as DomainSchema,
       templates: [],
       systems: [],
-      feedbackLoops: [],
       pressures: [],
       entityRegistries: [],
       epochLength: 20,
@@ -286,36 +285,8 @@ describe('ValidationOrchestrator', () => {
   });
 
   describe('displayServiceStatus', () => {
-    it('should display feedback loop status when enabled', () => {
-      const feedbackLoops = [
-        { id: 'loop1', name: 'Test Loop 1' },
-        { id: 'loop2', name: 'Test Loop 2' }
-      ];
-
-      ValidationOrchestrator.displayServiceStatus(feedbackLoops, [], false);
-
-      expect(consoleLogSpy).toHaveBeenCalledWith('\n✓ Homeostatic feedback control enabled');
-      expect(consoleLogSpy).toHaveBeenCalledWith('  - Tracking 2 feedback loops');
-    });
-
-    it('should not display feedback status when no loops', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], false);
-
-      expect(consoleLogSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining('Homeostatic feedback control')
-      );
-    });
-
-    it('should not display feedback status when null', () => {
-      ValidationOrchestrator.displayServiceStatus(null, [], false);
-
-      expect(consoleLogSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining('Homeostatic feedback control')
-      );
-    });
-
     it('should always display contract enforcement status', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], false);
+      ValidationOrchestrator.displayServiceStatus([], false);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Contract enforcement enabled');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Template filtering by enabledBy conditions');
@@ -325,13 +296,13 @@ describe('ValidationOrchestrator', () => {
     });
 
     it('should display target selector status when enabled', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], true);
+      ValidationOrchestrator.displayServiceStatus([], true);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Intelligent target selection enabled (anti-super-hub)');
     });
 
     it('should not display target selector status when disabled', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], false);
+      ValidationOrchestrator.displayServiceStatus([], false);
 
       expect(consoleLogSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('Intelligent target selection')
@@ -344,7 +315,7 @@ describe('ValidationOrchestrator', () => {
         { name: 'Trade Network Formation' }
       ];
 
-      ValidationOrchestrator.displayServiceStatus([], metaEntityConfigs, false);
+      ValidationOrchestrator.displayServiceStatus(metaEntityConfigs, false);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Meta-entity formation system initialized');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Registered Dynasty Formation formation');
@@ -352,7 +323,7 @@ describe('ValidationOrchestrator', () => {
     });
 
     it('should not display meta-entity status when no configs', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], false);
+      ValidationOrchestrator.displayServiceStatus([], false);
 
       expect(consoleLogSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('Meta-entity formation')
@@ -360,7 +331,7 @@ describe('ValidationOrchestrator', () => {
     });
 
     it('should not display meta-entity status when null', () => {
-      ValidationOrchestrator.displayServiceStatus([], null, false);
+      ValidationOrchestrator.displayServiceStatus(null, false);
 
       expect(consoleLogSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('Meta-entity formation')
@@ -368,14 +339,10 @@ describe('ValidationOrchestrator', () => {
     });
 
     it('should display all services when all enabled', () => {
-      const feedbackLoops = [{ id: 'loop1', name: 'Loop 1' }];
       const metaEntityConfigs = [{ name: 'Formation 1' }];
 
-      ValidationOrchestrator.displayServiceStatus(feedbackLoops, metaEntityConfigs, true);
+      ValidationOrchestrator.displayServiceStatus(metaEntityConfigs, true);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Homeostatic feedback control')
-      );
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Contract enforcement')
       );
@@ -388,7 +355,7 @@ describe('ValidationOrchestrator', () => {
     });
 
     it('should handle empty arrays correctly', () => {
-      ValidationOrchestrator.displayServiceStatus([], [], false);
+      ValidationOrchestrator.displayServiceStatus([], false);
 
       // Should still display contract enforcement (always on)
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Contract enforcement enabled');
@@ -396,19 +363,8 @@ describe('ValidationOrchestrator', () => {
 
     it('should handle undefined parameters gracefully', () => {
       expect(() => {
-        ValidationOrchestrator.displayServiceStatus(undefined, undefined, undefined);
+        ValidationOrchestrator.displayServiceStatus(undefined, undefined);
       }).not.toThrow();
-    });
-
-    it('should display correct counts for multiple items', () => {
-      const feedbackLoops = Array.from({ length: 5 }, (_, i) => ({
-        id: `loop${i}`,
-        name: `Loop ${i}`
-      }));
-
-      ValidationOrchestrator.displayServiceStatus(feedbackLoops, [], false);
-
-      expect(consoleLogSpy).toHaveBeenCalledWith('  - Tracking 5 feedback loops');
     });
 
     it('should display each meta-entity config name', () => {
@@ -418,25 +374,17 @@ describe('ValidationOrchestrator', () => {
         { name: 'Cultural Movement' }
       ];
 
-      ValidationOrchestrator.displayServiceStatus([], metaEntityConfigs, false);
+      ValidationOrchestrator.displayServiceStatus(metaEntityConfigs, false);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Registered Alliance Network formation');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Registered Trade Consortium formation');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Registered Cultural Movement formation');
     });
 
-    it('should handle single feedback loop', () => {
-      const feedbackLoops = [{ id: 'loop1', name: 'Single Loop' }];
-
-      ValidationOrchestrator.displayServiceStatus(feedbackLoops, [], false);
-
-      expect(consoleLogSpy).toHaveBeenCalledWith('  - Tracking 1 feedback loops');
-    });
-
     it('should handle single meta-entity config', () => {
       const metaEntityConfigs = [{ name: 'Single Formation' }];
 
-      ValidationOrchestrator.displayServiceStatus([], metaEntityConfigs, false);
+      ValidationOrchestrator.displayServiceStatus(metaEntityConfigs, false);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Meta-entity formation system initialized');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Registered Single Formation formation');
@@ -541,7 +489,7 @@ describe('ValidationOrchestrator', () => {
 
     it('should handle empty service arrays', () => {
       expect(() => {
-        ValidationOrchestrator.displayServiceStatus([], [], false);
+        ValidationOrchestrator.displayServiceStatus([], false);
       }).not.toThrow();
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Contract enforcement enabled');
@@ -554,7 +502,7 @@ describe('ValidationOrchestrator', () => {
       ];
 
       expect(() => {
-        ValidationOrchestrator.displayServiceStatus([], invalidConfigs as any, false);
+        ValidationOrchestrator.displayServiceStatus(invalidConfigs as any, false);
       }).not.toThrow();
     });
   });

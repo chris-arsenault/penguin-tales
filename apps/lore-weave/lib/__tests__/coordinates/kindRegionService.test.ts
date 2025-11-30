@@ -185,7 +185,10 @@ describe('KindRegionService', () => {
       expect(result.region?.id).toBe('aurora_stack');
     });
 
-    it('should create emergent region when requested and outside existing', () => {
+    // NOTE: Emergent region creation via PlacementContext is paused.
+    // These tests verify placement works without emergent region creation.
+
+    it('should include culture ID in placement result', () => {
       const point: Point = { x: 10, y: 10, z: 50 }; // Outside all regions
       const result = service.processEntityPlacement(
         'location',
@@ -193,44 +196,23 @@ describe('KindRegionService', () => {
         point,
         100,
         {
-          createEmergentRegion: true,
-          emergentRegionLabel: 'Frontier Settlement'
-        }
-      );
-
-      expect(result.emergentRegionCreated).toBeDefined();
-      expect(result.emergentRegionCreated?.label).toBe('Frontier Settlement');
-    });
-
-    it('should include culture prefix in emergent region label', () => {
-      const point: Point = { x: 10, y: 10, z: 50 };
-      const result = service.processEntityPlacement(
-        'location',
-        'entity_1',
-        point,
-        100,
-        {
-          createEmergentRegion: true,
           cultureId: 'aurora-stack'
         }
       );
 
-      expect(result.emergentRegionCreated).toBeDefined();
-      expect(result.emergentRegionCreated?.label).toContain('aurora-stack');
       expect(result.cultureId).toBe('aurora-stack');
     });
 
-    it('should not create emergent region inside existing region', () => {
+    it('should identify region when point is inside', () => {
       const point: Point = { x: 30, y: 70, z: 50 }; // Inside aurora_stack
       const result = service.processEntityPlacement(
         'location',
         'entity_1',
         point,
         100,
-        { createEmergentRegion: true }
+        { cultureId: 'aurora-stack' }
       );
 
-      expect(result.emergentRegionCreated).toBeUndefined();
       expect(result.region?.id).toBe('aurora_stack');
     });
   });

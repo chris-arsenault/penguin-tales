@@ -1,5 +1,8 @@
-import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent } from '../engine/types';
-import { LoreRecord } from '../llm/types';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent, Pressure } from '../engine/types';
+import { createPressureFromDeclarative } from './pressureInterpreter';
+import { DeclarativePressure } from './declarativePressureTypes';
+import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
+import { DeclarativeTemplate } from './declarativeTypes';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
@@ -15,308 +18,53 @@ import {
 } from '../utils';
 import { initializeCatalystSmart } from '../systems/catalystHelpers';
 import { selectEra, getTemplateWeight, getSystemModifier } from '../engine/eraUtils';
-import { EnrichmentService } from '../llm/enrichmentService';
-import { ImageGenerationService } from '../llm/imageGenerationService';
 import { TemplateSelector } from '../selection/templateSelector';
 import { SystemSelector } from '../selection/systemSelector';
 import { DistributionTracker } from '../statistics/distributionTracker';
 import { StatisticsCollector } from '../statistics/statisticsCollector';
 import { PopulationTracker, PopulationMetrics } from '../statistics/populationTracker';
 import { DynamicWeightCalculator } from '../selection/dynamicWeightCalculator';
-import { FeedbackAnalyzer } from '../feedback/feedbackAnalyzer';
 import { TargetSelector } from '../selection/targetSelector';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { CoordinateContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
-// MetaEntityFormation removed - now handled by SimulationSystems (magicSchoolFormation, etc.)
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
 import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
-import * as fs from 'fs';
-import * as path from 'path';
+import type { ISimulationEmitter } from '../observer/types';
 
-/**
- * Entity snapshot for change detection
- * Tracks kind-specific metrics to enable world-centric enrichment
- */
-interface EntitySnapshot {
-  // Common fields
-  tick: number;
-  status: string;
-  prominence: string;
-  keyRelationshipIds: Set<string>;
-
-  // Location-specific
-  residentCount?: number;
-  controllerId?: string;
-
-  // Faction-specific
-  leaderId?: string;
-  territoryCount?: number;
-  allyIds?: Set<string>;
-  enemyIds?: Set<string>;
-
-  // Rule-specific
-  enforcerIds?: Set<string>;
-
-  // Ability-specific
-  practitionerCount?: number;
-  locationIds?: Set<string>;
-
-  // NPC-specific
-  leadershipIds?: Set<string>;
-}
-
-/**
- * Detect location-specific changes (Tier 1: Always enrich)
- */
-function detectLocationChanges(
-  location: HardState,
-  snapshot: EntitySnapshot,
-  graph: Graph
-): string[] {
-  const changes: string[] = [];
-
-  // Population changes (track as dst of resident_of)
-  const currentResidents = graph.findRelationships({ kind: 'resident_of', dst: location.id });
-  const residentDelta = currentResidents.length - (snapshot.residentCount || 0);
-  if (Math.abs(residentDelta) >= 3) {
-    changes.push(`population: ${residentDelta > 0 ? '+' : ''}${residentDelta} residents`);
-  }
-
-  // Control changes (track as dst of stronghold_of or controls)
-  const controlRelations = graph.getEntityRelationships(location.id, 'dst');
-  const currentController = controlRelations.find(r =>
-    r.kind === 'stronghold_of' || r.kind === 'controls'
-  );
-  const currentControllerId = currentController?.src;
-  if (currentControllerId !== snapshot.controllerId) {
-    const controller = graph.getEntity(currentControllerId || '');
-    changes.push(`control: now controlled by ${controller?.name || 'none'}`);
-  }
-
-  // Prominence changes
-  if (location.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${location.prominence}`);
-  }
-
-  // Status changes
-  if (location.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${location.status}`);
-  }
-
-  return changes;
-}
-
-/**
- * Detect faction-specific changes (Tier 1: Always enrich)
- */
-function detectFactionChanges(
-  faction: HardState,
-  snapshot: EntitySnapshot,
-  graph: Graph
-): string[] {
-  const changes: string[] = [];
-
-  // Leadership changes (track as dst of leader_of)
-  const leaderRelations = graph.findRelationships({ kind: 'leader_of', dst: faction.id });
-  const currentLeader = leaderRelations[0];
-  const currentLeaderId = currentLeader?.src;
-  if (currentLeaderId !== snapshot.leaderId) {
-    const leader = graph.getEntity(currentLeaderId || '');
-    changes.push(`leadership: ${leader?.name || 'none'} took power`);
-  }
-
-  // Territory changes (track as src of stronghold_of or controls)
-  const factionRels = graph.getEntityRelationships(faction.id, 'src');
-  const currentTerritories = factionRels.filter(r =>
-    r.kind === 'stronghold_of' || r.kind === 'controls'
-  );
-  const territoryDelta = currentTerritories.length - (snapshot.territoryCount || 0);
-  if (territoryDelta > 0) {
-    changes.push(`territory: gained ${territoryDelta} locations`);
-  } else if (territoryDelta < 0) {
-    changes.push(`territory: lost ${Math.abs(territoryDelta)} locations`);
-  }
-
-  // Alliance changes (track as src of allied_with)
-  const currentAllies = new Set(
-    graph.findRelationships({ kind: 'allied_with', src: faction.id })
-      .map(r => r.dst)
-  );
-  const previousAllies = snapshot.allyIds || new Set();
-  const newAllies = Array.from(currentAllies).filter(id => !previousAllies.has(id));
-  newAllies.forEach(allyId => {
-    const ally = graph.getEntity(allyId);
-    if (ally) changes.push(`alliance: allied with ${ally.name}`);
-  });
-
-  // War changes (track as src of at_war_with)
-  const currentEnemies = new Set(
-    graph.findRelationships({ kind: 'at_war_with', src: faction.id })
-      .map(r => r.dst)
-  );
-  const previousEnemies = snapshot.enemyIds || new Set();
-  const newWars = Array.from(currentEnemies).filter(id => !previousEnemies.has(id));
-  newWars.forEach(enemyId => {
-    const enemy = graph.getEntity(enemyId);
-    if (enemy) changes.push(`war: declared war on ${enemy.name}`);
-  });
-
-  // Status/prominence changes
-  if (faction.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${faction.status}`);
-  }
-  if (faction.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${faction.prominence}`);
-  }
-
-  return changes;
-}
-
-/**
- * Detect rule-specific changes (Tier 2: If prominent)
- */
-function detectRuleChanges(
-  rule: HardState,
-  snapshot: EntitySnapshot,
-  graph: Graph
-): string[] {
-  const changes: string[] = [];
-
-  // Only enrich if rule is prominent
-  const prominenceValue = getProminenceValue(rule.prominence);
-  if (prominenceValue < 2) return changes; // Skip if not 'recognized' or higher
-
-  // Status changes (proposed → enacted → repealed → forgotten)
-  if (rule.status !== snapshot.status) {
-    changes.push(`status: ${snapshot.status} → ${rule.status}`);
-  }
-
-  // Enforcement by factions (track as dst of weaponized_by or kept_secret_by)
-  const enforcementRels = graph.getEntityRelationships(rule.id, 'dst');
-  const currentEnforcers = new Set(
-    enforcementRels
-      .filter(r => r.kind === 'weaponized_by' || r.kind === 'kept_secret_by')
-      .map(r => r.src)
-  );
-  const previousEnforcers = snapshot.enforcerIds || new Set();
-  const newEnforcers = Array.from(currentEnforcers).filter(id => !previousEnforcers.has(id));
-  newEnforcers.forEach(enforcerId => {
-    const faction = graph.getEntity(enforcerId);
-    if (faction) changes.push(`enforcement: ${faction.name} began enforcing this`);
-  });
-
-  // Prominence changes
-  if (rule.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${rule.prominence}`);
-  }
-
-  return changes;
-}
-
-/**
- * Detect ability-specific changes (Tier 2: If spreading)
- */
-function detectAbilityChanges(
-  ability: HardState,
-  snapshot: EntitySnapshot,
-  graph: Graph
-): string[] {
-  const changes: string[] = [];
-
-  // Practitioner count changes (track as dst of practitioner_of)
-  const currentPractitioners = graph.findRelationships({ kind: 'practitioner_of', dst: ability.id });
-  const practitionerDelta = currentPractitioners.length - (snapshot.practitionerCount || 0);
-  if (Math.abs(practitionerDelta) >= 3) {
-    changes.push(`practitioners: ${practitionerDelta > 0 ? '+' : ''}${practitionerDelta}`);
-  }
-
-  // Spread to new locations (track as src of manifests_at)
-  const currentLocations = new Set(
-    graph.findRelationships({ kind: 'manifests_at', src: ability.id })
-      .map(r => r.dst)
-  );
-  const previousLocations = snapshot.locationIds || new Set();
-  const newLocations = Array.from(currentLocations).filter(id => !previousLocations.has(id));
-  newLocations.forEach(locId => {
-    const location = graph.getEntity(locId);
-    if (location) changes.push(`spread: now manifests at ${location.name}`);
-  });
-
-  // Prominence changes (only if notable)
-  const prominenceValue = getProminenceValue(ability.prominence);
-  if (ability.prominence !== snapshot.prominence && prominenceValue >= 2) {
-    changes.push(`prominence: ${snapshot.prominence} → ${ability.prominence}`);
-  }
-
-  return changes;
-}
-
-/**
- * Detect NPC-specific changes (Tier 3: Only if world-significant)
- */
-function detectNPCChanges(
-  npc: HardState,
-  snapshot: EntitySnapshot,
-  graph: Graph
-): string[] {
-  const changes: string[] = [];
-
-  // Only track renowned/mythic NPCs
-  const prominenceValue = getProminenceValue(npc.prominence);
-  if (prominenceValue < 3) return changes; // Skip if not 'renowned' or 'mythic'
-
-  // Leadership changes (track as src of leader_of)
-  const currentLeaderships = new Set(
-    npc.links
-      .filter(l => l.kind === 'leader_of')
-      .map(l => l.dst)
-  );
-  const previousLeaderships = snapshot.leadershipIds || new Set();
-  const newLeaderships = Array.from(currentLeaderships).filter(id => !previousLeaderships.has(id));
-  newLeaderships.forEach(factionId => {
-    const faction = graph.getEntity(factionId);
-    if (faction) changes.push(`leadership: became leader of ${faction.name}`);
-  });
-
-  // Prominence changes
-  if (npc.prominence !== snapshot.prominence) {
-    changes.push(`prominence: ${snapshot.prominence} → ${npc.prominence}`);
-  }
-
-  return changes;
-}
+// Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
+// EntitySnapshot interface and detect*Changes functions available there
 
 export class WorldEngine {
   private config: EngineConfig;
+  private emitter: ISimulationEmitter;  // REQUIRED - emits all simulation events
+  private runtimePressures: Pressure[];  // Converted from declarative pressures
+  private runtimeTemplates: GrowthTemplate[];  // Converted from declarative templates
+  private templateInterpreter: TemplateInterpreter;  // Interprets declarative templates
   private graph: Graph;
   private currentEpoch: number;
-  private enrichmentService?: EnrichmentService;
-  private imageGenerationService?: ImageGenerationService;
+  private startTime: number = 0;  // Track simulation duration
   private templateSelector?: TemplateSelector;  // Optional statistical template selector
   private systemSelector?: SystemSelector;      // Optional statistical system weighting
   private distributionTracker?: DistributionTracker;  // Distribution measurement
   private statisticsCollector: StatisticsCollector;  // Statistics tracking for fitness evaluation
   private populationTracker: PopulationTracker;  // Population metrics for homeostatic control
   private dynamicWeightCalculator: DynamicWeightCalculator;  // Dynamic template weight adjustment
-  private feedbackAnalyzer: FeedbackAnalyzer;  // Feedback loop validation
   private contractEnforcer: ContractEnforcer;  // Active contract enforcement
-  private pendingEnrichments: Promise<void>[] = [];
-  private pendingNameEnrichments: Promise<void>[] = [];
-  private entityEnrichmentsUsed = 0;
-  private relationshipEnrichmentsUsed = 0;
-  private eraNarrativesUsed = 0;
-
-  // Entity enrichment batching queue
-  private entityEnrichmentQueue: HardState[] = [];
-  private readonly ENRICHMENT_BATCH_SIZE = 15;  // Batch size for accumulating entities
+  // Enrichment tracking moved to @illuminator
+  // private pendingEnrichments: Promise<void>[] = [];
+  // private pendingNameEnrichments: Promise<void>[] = [];
+  // private entityEnrichmentsUsed = 0;
+  // private relationshipEnrichmentsUsed = 0;
+  // private eraNarrativesUsed = 0;
+  // private entityEnrichmentQueue: HardState[] = [];
+  // private readonly ENRICHMENT_BATCH_SIZE = 15;
 
   // Engine-level safeguards
   private systemMetrics: Map<string, { relationshipsCreated: number; lastThrottleCheck: number }> = new Map();
   private lastRelationshipCount: number = 0;
-  private warningLogPath: string;
 
   // Template diversity tracking
   private templateRunCounts: Map<string, number> = new Map();
@@ -332,19 +80,9 @@ export class WorldEngine {
   // Coordinate context (shared across all templates/systems)
   private coordinateContext: CoordinateContext;
 
-  // Track entity state for change detection
-  private entitySnapshots = new Map<string, EntitySnapshot>();
-
-  // Enrichment analytics (tracks even when enrichment disabled)
-  private enrichmentAnalytics = {
-    locationEnrichments: 0,
-    factionEnrichments: 0,
-    ruleEnrichments: 0,
-    abilityEnrichments: 0,
-    npcEnrichments: 0,
-    occurrenceEnrichments: 0,
-    eraEnrichments: 0
-  };
+  // Change detection moved to @illuminator
+  // private entitySnapshots = new Map<string, EntitySnapshot>();
+  // private enrichmentAnalytics = { ... };
 
   // Meta-entity formation tracking
   private metaEntitiesFormed: Array<{
@@ -359,13 +97,50 @@ export class WorldEngine {
   
   constructor(
     config: EngineConfig,
-    initialState: HardState[],
-    enrichmentService?: EnrichmentService,
-    imageGenerationService?: ImageGenerationService
+    initialState: HardState[]
   ) {
+    // REQUIRED: Emitter must be provided - no fallback to console.log
+    if (!config.emitter) {
+      throw new Error(
+        'WorldEngine: emitter is required in EngineConfig. ' +
+        'Provide a SimulationEmitter instance that handles simulation events.'
+      );
+    }
+    this.emitter = config.emitter;
+
+    // Emit initializing progress
+    this.emitter.progress({
+      phase: 'initializing',
+      tick: 0,
+      maxTicks: config.maxTicks,
+      epoch: 0,
+      totalEpochs: config.eras.length * 2,
+      entityCount: initialState.length,
+      relationshipCount: 0
+    });
+
+    // Convert declarative pressures to runtime pressures
+    // If pressure already has a growth function, it's already a runtime Pressure - use as-is
+    this.runtimePressures = config.pressures.map(p => {
+      if (typeof (p as any).growth === 'function') {
+        // Already a runtime Pressure (e.g., from tests)
+        return p as unknown as Pressure;
+      }
+      return createPressureFromDeclarative(p);
+    });
+
+    // Convert declarative templates to runtime templates
+    // If template already has canApply function, it's already a GrowthTemplate - use as-is
+    this.templateInterpreter = new TemplateInterpreter();
+    this.runtimeTemplates = config.templates.map(t => {
+      if (typeof (t as any).canApply === 'function') {
+        // Already a GrowthTemplate (e.g., from tests)
+        return t as unknown as GrowthTemplate;
+      }
+      return createTemplateFromDeclarative(t, this.templateInterpreter);
+    });
+
     this.config = config;
-    this.enrichmentService = enrichmentService;
-    this.imageGenerationService = imageGenerationService;
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
 
@@ -380,53 +155,47 @@ export class WorldEngine {
       max: Math.ceil(25 * scale)
     };
 
+    // Emit validating progress
+    this.emitter.progress({
+      phase: 'validating',
+      tick: 0,
+      maxTicks: config.maxTicks,
+      epoch: 0,
+      totalEpochs: config.eras.length * 2,
+      entityCount: initialState.length,
+      relationshipCount: 0
+    });
+
     // Framework Validation
-    console.log('='.repeat(80));
-    console.log('FRAMEWORK VALIDATION');
-    console.log('='.repeat(80));
     const validator = new FrameworkValidator(config);
     const validationResult = validator.validate();
 
-    // Display errors
+    // Emit validation result
+    this.emitter.validation({
+      status: validationResult.errors.length > 0 ? 'failed' : 'success',
+      errors: validationResult.errors,
+      warnings: validationResult.warnings
+    });
+
+    // Throw on validation errors
     if (validationResult.errors.length > 0) {
-      console.error('\n❌ VALIDATION ERRORS:');
-      validationResult.errors.forEach(error => console.error(`  - ${error}`));
+      this.emitter.error({
+        message: `Framework validation failed with ${validationResult.errors.length} error(s)`,
+        phase: 'validation',
+        context: { errors: validationResult.errors }
+      });
       throw new Error(`Framework validation failed with ${validationResult.errors.length} error(s)`);
-    } else {
-      console.log('✓ No validation errors');
     }
 
-    // Display warnings
-    if (validationResult.warnings.length > 0) {
-      console.warn('\n⚠️  VALIDATION WARNINGS:');
-      validationResult.warnings.forEach(warning => console.warn(`  - ${warning}`));
-    } else {
-      console.log('✓ No validation warnings');
-    }
-
-    console.log('='.repeat(80));
-    console.log();
-
-    // Initialize warning log file
-    this.warningLogPath = path.join(process.cwd(), 'output', 'warnings.log');
-    try {
-      const dir = path.dirname(this.warningLogPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      // Clear previous log
-      fs.writeFileSync(this.warningLogPath, `World Generation Warnings Log\nStarted: ${new Date().toISOString()}\n${'='.repeat(80)}\n\n`);
-    } catch (error) {
-      console.warn('Could not initialize warning log file:', error);
-    }
+    this.emitter.log('info', 'Framework validation passed');
 
     // Initialize statistical distribution system if targets are provided
     if (config.distributionTargets) {
       this.distributionTracker = new DistributionTracker(config.distributionTargets);
-      this.templateSelector = new TemplateSelector(config.distributionTargets, config.templates);
+      this.templateSelector = new TemplateSelector(config.distributionTargets, this.runtimeTemplates);
       this.systemSelector = new SystemSelector(config.distributionTargets);
-      console.log('✓ Statistical template selection enabled');
-      console.log('✓ Statistical system weighting enabled');
+      this.emitter.log('info', 'Statistical template selection enabled');
+      this.emitter.log('info', 'Statistical system weighting enabled');
     }
 
     // Initialize homeostatic control system
@@ -435,22 +204,22 @@ export class WorldEngine {
       config.domain
     );
     this.dynamicWeightCalculator = new DynamicWeightCalculator();
-    const loops = config.feedbackLoops || [];
-    this.feedbackAnalyzer = new FeedbackAnalyzer(loops, config);
-    console.log('✓ Homeostatic feedback control enabled');
-    console.log(`  - Tracking ${loops.length} feedback loops`);
+    this.emitter.log('info', 'Population tracking enabled');
 
     // Initialize contract enforcement system
     this.contractEnforcer = new ContractEnforcer(config);
-    console.log('✓ Contract enforcement enabled');
-    console.log('  - Template filtering by enabledBy conditions');
-    console.log('  - Automatic lineage relationship creation');
-    console.log('  - Entity saturation control');
-    console.log('  - Contract affects validation');
+    this.emitter.log('info', 'Contract enforcement enabled', {
+      features: [
+        'Template filtering by enabledBy conditions',
+        'Automatic lineage relationship creation',
+        'Entity saturation control',
+        'Contract affects validation'
+      ]
+    });
 
     // Initialize target selector (prevents super-hub formation)
     this.targetSelector = new TargetSelector();
-    console.log('✓ Intelligent target selection enabled (anti-super-hub)');
+    this.emitter.log('info', 'Intelligent target selection enabled (anti-super-hub)');
 
     // Initialize coordinate context (REQUIRED - no fallbacks)
     if (!config.coordinateContextConfig) {
@@ -460,16 +229,17 @@ export class WorldEngine {
       );
     }
     this.coordinateContext = new CoordinateContext(config.coordinateContextConfig);
-    console.log(`✓ Coordinate context initialized`);
-    console.log(`  - ${this.coordinateContext.getCultureIds().length} cultures configured`);
-    console.log(`  - ${this.coordinateContext.getConfiguredKinds().length} entity kinds with region maps`);
+    this.emitter.log('info', 'Coordinate context initialized', {
+      cultures: this.coordinateContext.getCultureIds().length,
+      entityKinds: this.coordinateContext.getConfiguredKinds().length
+    });
 
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
 
     // Initialize graph from initial state using GraphStore
     this.graph = GraphStore.create(config, config.eras[0]);
-    this.graph.loreIndex = config.loreIndex;
+    // LLM loreIndex moved to @illuminator
     // Override discovery state defaults
     this.graph.discoveryState = {
       currentThreshold: 0.3,  // Base threshold
@@ -498,7 +268,7 @@ export class WorldEngine {
           };
         } else {
           // No valid coordinates - use default
-          console.warn(`Entity "${entity.name}" (${entity.kind}) has invalid coordinates format, using default`);
+          this.emitter.log('warn', `Entity "${entity.name}" (${entity.kind}) has invalid coordinates format, using default`);
           coordinates = { x: 50, y: 50, z: 50 };
         }
       }
@@ -518,7 +288,29 @@ export class WorldEngine {
       this.graph._loadEntity(id, loadedEntity);
     });
 
-    // Extract relationships from entity links
+    // Load relationships from two sources:
+    // 1. config.seedRelationships (canonry format - preferred)
+    // 2. entity.links (legacy format - for backwards compatibility)
+
+    // First, load from seedRelationships array (canonry format)
+    if (config.seedRelationships) {
+      config.seedRelationships.forEach(rel => {
+        const srcEntity = this.graph.getEntity(rel.src) || this.findEntityByName(rel.src);
+        const dstEntity = this.graph.getEntity(rel.dst) || this.findEntityByName(rel.dst);
+
+        if (srcEntity && dstEntity) {
+          this.graph.addRelationship(
+            rel.kind,
+            srcEntity.id,
+            dstEntity.id,
+            rel.strength,
+            rel.distance
+          );
+        }
+      });
+    }
+
+    // Also load from entity.links (legacy format)
     initialState.forEach(entity => {
       entity.links?.forEach(link => {
         // Find actual IDs from names
@@ -562,7 +354,7 @@ export class WorldEngine {
   }
 
   /**
-   * Write warning to log file instead of console
+   * Emit warning via emitter and record in statistics
    */
   private logWarning(message: string): void {
     // Record warning in statistics
@@ -577,26 +369,29 @@ export class WorldEngine {
       this.statisticsCollector.recordWarning('growth');
     }
 
-    try {
-      const timestamp = new Date().toISOString();
-      const logEntry = `[${timestamp}] [Tick ${this.graph.tick}] ${message}\n`;
-      fs.appendFileSync(this.warningLogPath, logEntry);
-    } catch (error) {
-      // Fallback to console if file write fails
-      console.warn(message);
-    }
+    this.emitter.log('warn', message, { tick: this.graph.tick });
   }
-  
+
   // Main execution loop
   public async run(): Promise<Graph> {
-    console.log('Starting world generation...');
-    console.log(`Initial state: ${this.graph.getEntityCount()} entities`);
+    this.startTime = Date.now();
+
+    this.emitter.log('info', 'Starting world generation...');
+    this.emitter.log('info', `Initial state: ${this.graph.getEntityCount()} entities`);
+
+    // Emit running progress
+    this.emitter.progress({
+      phase: 'running',
+      tick: this.graph.tick,
+      maxTicks: this.config.maxTicks,
+      epoch: this.currentEpoch,
+      totalEpochs: this.config.eras.length * 2,
+      entityCount: this.graph.getEntityCount(),
+      relationshipCount: this.graph.getRelationshipCount()
+    });
 
     // Reset coordinate statistics for this run
     coordinateStats.reset();
-
-    // Enrich initial entities (descriptions only, preserve canonical names)
-    this.enrichInitialEntities();
 
     while (this.shouldContinue()) {
       await this.runEpoch();
@@ -606,42 +401,26 @@ export class WorldEngine {
     // Link final era to prominent entities (since it never "ends")
     this.linkFinalEra();
 
-    console.log(`\nGeneration complete!`);
-    console.log(`Final state: ${this.graph.getEntityCount()} entities, ${this.graph.getRelationshipCount()} relationships`);
+    // Emit finalizing progress
+    this.emitter.progress({
+      phase: 'finalizing',
+      tick: this.graph.tick,
+      maxTicks: this.config.maxTicks,
+      epoch: this.currentEpoch,
+      totalEpochs: this.config.eras.length * 2,
+      entityCount: this.graph.getEntityCount(),
+      relationshipCount: this.graph.getRelationshipCount()
+    });
 
-    // Report enrichment analytics
-    const totalTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
-    console.log(`\n=== Atlas Enrichment Analytics ===`);
-    console.log(`Total enrichment triggers: ${totalTriggers}`);
-    console.log(`  Locations:    ${this.enrichmentAnalytics.locationEnrichments}`);
-    console.log(`  Factions:     ${this.enrichmentAnalytics.factionEnrichments}`);
-    console.log(`  Rules:        ${this.enrichmentAnalytics.ruleEnrichments}`);
-    console.log(`  Abilities:    ${this.enrichmentAnalytics.abilityEnrichments}`);
-    console.log(`  NPCs:         ${this.enrichmentAnalytics.npcEnrichments}`);
-    console.log(`  Occurrences:  ${this.enrichmentAnalytics.occurrenceEnrichments}`);
-    console.log(`  Eras:         ${this.enrichmentAnalytics.eraEnrichments}`);
-    if (!this.enrichmentService?.isEnabled()) {
-      console.log(`Note: Enrichment disabled - these are detected triggers only`);
-    }
+    this.emitter.log('info', 'Generation complete!');
+    this.emitter.log('info', `Final state: ${this.graph.getEntityCount()} entities, ${this.graph.getRelationshipCount()} relationships`);
 
-    // FINAL HOMEOSTATIC SYSTEM REPORT
-    this.printFinalFeedbackReport();
+    // Emit final reports
+    this.emitFinalFeedbackReport();
+    this.emitCoordinateStats();
 
-    // COORDINATE SYSTEM STATISTICS
-    coordinateStats.printSummary();
-
-    // Log warning file location
-    try {
-      const stats = fs.statSync(this.warningLogPath);
-      if (stats.size > 100) {  // If there are warnings beyond header
-        console.log(`\n⚠️  Warnings logged to: ${path.relative(process.cwd(), this.warningLogPath)}`);
-      }
-    } catch (error) {
-      // File doesn't exist or is empty - no warnings
-    }
-
-    // Final flush of any remaining queued entities
-    this.flushEntityEnrichmentQueue(true);
+    // Emit completion event
+    this.emitCompleteEvent();
 
     return this.graph;
   }
@@ -662,16 +441,16 @@ export class WorldEngine {
     // - Hit tick limit, OR
     // - Completed all eras AND (hit tick limit OR excessive growth)
     if (hitTickLimit) {
-      console.log(`\n⚠️  Stopped: Hit maximum tick limit (${this.config.maxTicks})`);
+      this.emitter.log('warn', `Stopped: Hit maximum tick limit (${this.config.maxTicks})`);
       return false;
     }
 
     if (allErasCompleted) {
       if (excessiveGrowth) {
-        console.log(`\n⚠️  Stopped: All eras complete + excessive growth (${this.graph.getEntityCount()} entities)`);
+        this.emitter.log('warn', `Stopped: All eras complete + excessive growth (${this.graph.getEntityCount()} entities)`);
         return false;
       }
-      console.log(`\n✓ All eras completed at epoch ${this.currentEpoch}`);
+      this.emitter.log('info', `All eras completed at epoch ${this.currentEpoch}`);
       return false;
     }
 
@@ -717,7 +496,7 @@ export class WorldEngine {
     });
 
     if (linkedCount > 0) {
-      console.log(`\n✓ Linked final era "${currentEra.name}" to ${linkedCount} prominent entities`);
+      this.emitter.log('info', `Linked final era "${currentEra.name}" to ${linkedCount} prominent entities`);
     }
   }
 
@@ -727,7 +506,16 @@ export class WorldEngine {
     const previousEra = this.graph.currentEra;
     const era = this.graph.currentEra;
 
-    console.log(`\n=== Epoch ${this.currentEpoch}: ${era.name} ===`);
+    // Emit epoch start event
+    this.emitter.epochStart({
+      epoch: this.currentEpoch,
+      era: {
+        id: era.id,
+        name: era.name,
+        description: era.description
+      },
+      tick: this.graph.tick
+    });
 
     // Reset discovery counter for new epoch
     this.graph.discoveryState.discoveriesThisEpoch = 0;
@@ -744,6 +532,19 @@ export class WorldEngine {
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
       await this.runSimulationTick(era);
       this.graph.tick++;
+
+      // Emit progress every few ticks
+      if (i % 5 === 0) {
+        this.emitter.progress({
+          phase: 'running',
+          tick: this.graph.tick,
+          maxTicks: this.config.maxTicks,
+          epoch: this.currentEpoch,
+          totalEpochs: this.config.eras.length * 2,
+          entityCount: this.graph.getEntityCount(),
+          relationshipCount: this.graph.getRelationshipCount()
+        });
+      }
     }
 
     // Apply era special rules if any
@@ -770,194 +571,203 @@ export class WorldEngine {
       growthTargets
     );
 
-    this.reportEpochStats();
+    // Emit epoch stats
+    this.emitEpochStats(era, entitiesCreated, relationshipsCreated, growthTargets);
 
     this.queueEraNarrative(previousEra, era);
 
     // Check for significant entity changes and enrich them
     this.queueChangeEnrichments();
-
-    // HOMEOSTATIC CONTROL: Validate feedback loops every 5 epochs
-    if (this.currentEpoch % 5 === 0 && this.currentEpoch > 0) {
-      this.validateFeedbackLoops();
-    }
   }
 
   /**
-   * Validate all declared feedback loops and report broken loops
+   * Emit epoch statistics via emitter
    */
-  private validateFeedbackLoops(): void {
-    const metrics = this.populationTracker.getMetrics();
-    const results = this.feedbackAnalyzer.validateAll(metrics, this.graph);
-    const brokenLoops = this.feedbackAnalyzer.getBrokenLoops(results);
+  private emitEpochStats(era: Era, entitiesCreated: number, relationshipsCreated: number, growthTarget: number): void {
+    const byKind: Record<string, number> = {};
+    this.graph.forEachEntity((entity) => {
+      byKind[entity.kind] = (byKind[entity.kind] || 0) + 1;
+    });
 
-    if (brokenLoops.length > 0) {
-      console.warn(`\n⚠️  ${brokenLoops.length} feedback loops not functioning correctly:`);
-      // Use enhanced diagnostics that check component contracts
-      this.feedbackAnalyzer.printDetailedDiagnostics(results);
-    } else {
-      console.log(`\n✓ All ${results.length} feedback loops functioning correctly`);
-    }
-
-    // Report population outliers
-    const outliers = this.populationTracker.getOutliers(0.3);
-    if (outliers.overpopulated.length > 0 || outliers.underpopulated.length > 0) {
-      console.log(`\n=== Population Deviations ===`);
-      if (outliers.overpopulated.length > 0) {
-        console.log(`Overpopulated (>30% above target):`);
-        outliers.overpopulated.forEach(metric => {
-          console.log(`  - ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (+${(metric.deviation * 100).toFixed(0)}%)`);
-        });
-      }
-      if (outliers.underpopulated.length > 0) {
-        console.log(`Underpopulated (>30% below target):`);
-        outliers.underpopulated.forEach(metric => {
-          console.log(`  - ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (${(metric.deviation * 100).toFixed(0)}%)`);
-        });
-      }
-    }
+    this.emitter.epochStats({
+      epoch: this.currentEpoch,
+      era: era.name,
+      entitiesByKind: byKind,
+      relationshipCount: this.graph.getRelationshipCount(),
+      pressures: Object.fromEntries(this.graph.pressures),
+      entitiesCreated,
+      relationshipsCreated,
+      growthTarget
+    });
   }
 
   /**
-   * Print comprehensive final feedback system report
+   * Emit final population report via emitter
    */
-  private printFinalFeedbackReport(): void {
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`HOMEOSTATIC FEEDBACK SYSTEM - FINAL REPORT`);
-    console.log('='.repeat(80));
-
+  private emitFinalFeedbackReport(): void {
     // Update metrics one final time
     this.populationTracker.update(this.graph);
     const metrics = this.populationTracker.getMetrics();
     const summary = this.populationTracker.getSummary();
+    const outliers = this.populationTracker.getOutliers(0.3);
 
-    // Validate feedback loops
-    const results = this.feedbackAnalyzer.validateAll(metrics, this.graph);
-    const brokenLoops = this.feedbackAnalyzer.getBrokenLoops(results);
-    const workingLoops = results.filter(r => r.valid);
-
-    // 1. Feedback Loop Health
-    console.log(`\n📊 FEEDBACK LOOP HEALTH`);
-    console.log(`  Total loops tracked: ${results.length}`);
-    console.log(`  ✓ Working correctly: ${workingLoops.length} (${((workingLoops.length / results.length) * 100).toFixed(0)}%)`);
-    console.log(`  ⚠️  Not functioning: ${brokenLoops.length} (${((brokenLoops.length / results.length) * 100).toFixed(0)}%)`);
-
-    // Use enhanced diagnostics that check component contracts
-    this.feedbackAnalyzer.printDetailedDiagnostics(results);
-
-    // 2. Population Metrics
-    console.log(`\n📈 POPULATION METRICS`);
-    console.log(`  Total entities: ${summary.totalEntities}`);
-    console.log(`  Total relationships: ${summary.totalRelationships}`);
-    console.log(`  Average deviation from targets: ${(summary.avgEntityDeviation * 100).toFixed(1)}%`);
-    console.log(`  Maximum deviation: ${(summary.maxEntityDeviation * 100).toFixed(1)}%`);
-
-    // 3. Entity Type Summary
-    console.log(`\n🎯 ENTITY POPULATIONS (vs targets)`);
+    // Build entity metrics array
     const entityMetrics = Array.from(metrics.entities.values())
       .filter(m => m.target > 0)
-      .sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+      .map(m => ({
+        kind: m.kind,
+        subtype: m.subtype,
+        count: m.count,
+        target: m.target,
+        deviation: m.deviation
+      }));
 
-    entityMetrics.forEach(metric => {
-      const status = Math.abs(metric.deviation) < 0.2 ? '✓' :
-                     Math.abs(metric.deviation) < 0.5 ? '⚠️' : '❌';
-      const sign = metric.deviation > 0 ? '+' : '';
-      console.log(`  ${status} ${metric.kind}:${metric.subtype.padEnd(20)} ${metric.count.toString().padStart(3)}/${metric.target.toString().padStart(3)} (${sign}${(metric.deviation * 100).toFixed(0)}%)`);
-    });
-
-    // 4. Critical Outliers
-    const outliers = this.populationTracker.getOutliers(0.3);
-    if (outliers.overpopulated.length > 0 || outliers.underpopulated.length > 0) {
-      console.log(`\n⚠️  CRITICAL DEVIATIONS (>30%)`);
-      if (outliers.overpopulated.length > 0) {
-        console.log(`  Overpopulated:`);
-        outliers.overpopulated.forEach(metric => {
-          console.log(`    • ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (+${(metric.deviation * 100).toFixed(0)}%)`);
-        });
-      }
-      if (outliers.underpopulated.length > 0) {
-        console.log(`  Underpopulated:`);
-        outliers.underpopulated.forEach(metric => {
-          console.log(`    • ${metric.kind}:${metric.subtype}: ${metric.count}/${metric.target} (${(metric.deviation * 100).toFixed(0)}%)`);
-        });
-      }
-    }
-
-    // 5. Pressure States
-    console.log(`\n🌡️  PRESSURE EQUILIBRIUM`);
+    // Build pressure metrics array
+    const pressureMetrics: Array<{ id: string; value: number; target: number; deviation: number }> = [];
     summary.pressureDeviations.forEach((deviation, pressureId) => {
       const metric = metrics.pressures.get(pressureId);
       if (metric) {
-        const status = Math.abs(deviation) < 0.2 ? '✓' :
-                       Math.abs(deviation) < 0.5 ? '⚠️' : '❌';
-        const sign = deviation > 0 ? '+' : '';
-        console.log(`  ${status} ${pressureId.padEnd(22)} ${metric.value.toFixed(1).padStart(5)}/${metric.target.toString().padStart(5)} (${sign}${(deviation * 100).toFixed(0)}%)`);
+        pressureMetrics.push({
+          id: pressureId,
+          value: metric.value,
+          target: metric.target,
+          deviation
+        });
       }
     });
 
-    // 6. Template Usage Statistics
-    console.log(`\n📋 TEMPLATE USAGE (Diversity Report)`);
+    this.emitter.populationReport({
+      totalEntities: summary.totalEntities,
+      totalRelationships: summary.totalRelationships,
+      avgDeviation: summary.avgEntityDeviation,
+      maxDeviation: summary.maxEntityDeviation,
+      entityMetrics,
+      pressureMetrics,
+      outliers: {
+        overpopulated: outliers.overpopulated.map(m => ({
+          kind: m.kind,
+          subtype: m.subtype,
+          count: m.count,
+          target: m.target,
+          deviation: m.deviation
+        })),
+        underpopulated: outliers.underpopulated.map(m => ({
+          kind: m.kind,
+          subtype: m.subtype,
+          count: m.count,
+          target: m.target,
+          deviation: m.deviation
+        }))
+      }
+    });
+
+    // Emit template usage report
     const sortedTemplates = Array.from(this.templateRunCounts.entries())
       .sort((a, b) => b[1] - a[1]);
+    const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
 
-    if (sortedTemplates.length > 0) {
-      const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
-      console.log(`  Total template applications: ${totalRuns}`);
-      console.log(`  Unique templates used: ${sortedTemplates.length}/${this.config.templates.length}`);
-      console.log(`\n  Top templates by usage:`);
+    const unusedTemplates = this.runtimeTemplates.filter(t => !this.templateRunCounts.has(t.id));
+    const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
-      sortedTemplates.slice(0, 10).forEach(([templateId, count]) => {
-        const percentage = ((count / totalRuns) * 100).toFixed(1);
-        const status = count >= this.maxRunsPerTemplate ? '🔴' :
-                       count >= this.maxRunsPerTemplate * 0.7 ? '🟡' : '🟢';
-        console.log(`    ${status} ${templateId.padEnd(35)} ${count.toString().padStart(3)}x (${percentage}%)`);
-      });
+    this.emitter.templateUsage({
+      totalApplications: totalRuns,
+      uniqueTemplatesUsed: sortedTemplates.length,
+      totalTemplates: this.runtimeTemplates.length,
+      maxRunsPerTemplate: this.maxRunsPerTemplate,
+      usage: sortedTemplates.slice(0, 20).map(([templateId, count]) => ({
+        templateId,
+        count,
+        percentage: totalRuns > 0 ? (count / totalRuns) * 100 : 0,
+        status: count >= this.maxRunsPerTemplate ? 'saturated' as const :
+                count >= this.maxRunsPerTemplate * 0.7 ? 'warning' as const : 'healthy' as const
+      })),
+      unusedTemplates: unusedTemplates.map(t => ({
+        templateId: t.id,
+        diagnostic: this.contractEnforcer.getDiagnostic(t, this.graph, diagnosticView)
+      }))
+    });
 
-      const unusedTemplates = this.config.templates.filter(t => !this.templateRunCounts.has(t.id));
-      if (unusedTemplates.length > 0) {
-        console.log(`\n  ⚠️  Unused templates (${unusedTemplates.length}) - Diagnostic Analysis:`);
-        unusedTemplates.forEach(t => {
-          // Test canApply to diagnose why it didn't run
-          const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
-
-          console.log(`    • ${t.id.padEnd(35)}`);
-          console.log(`      ${this.contractEnforcer.getDiagnostic(t, this.graph, diagnosticView)}`);
-        });
-      }
-    }
-
-    // 7. Overall System Health
-    const systemHealth = workingLoops.length / results.length;
-    const populationHealth = 1 - summary.avgEntityDeviation;
-    const overallHealth = (systemHealth + populationHealth) / 2;
-
-    console.log(`\n🏥 OVERALL SYSTEM HEALTH: ${(overallHealth * 100).toFixed(0)}%`);
-    console.log(`  Feedback loops: ${(systemHealth * 100).toFixed(0)}%`);
-    console.log(`  Population control: ${(populationHealth * 100).toFixed(0)}%`);
-
-    if (overallHealth > 0.8) {
-      console.log(`  ✓ System is STABLE - populations are well-regulated`);
-    } else if (overallHealth > 0.6) {
-      console.log(`  ⚠️  System is FUNCTIONAL - some tuning needed`);
-    } else {
-      console.log(`  ❌ System needs ATTENTION - significant deviations detected`);
-    }
-
-    // 8. Tag Health Report
-    console.log('');
+    // Emit tag health report
     const tagHealthReport = this.contractEnforcer.getTagAnalyzer().analyzeGraph(this.graph);
-    const tagHealthSummary = this.contractEnforcer.getTagAnalyzer().getSummary(tagHealthReport);
-    console.log(tagHealthSummary);
+    this.emitter.tagHealth({
+      coverage: {
+        totalEntities: tagHealthReport.coverage.totalEntities,
+        entitiesWithTags: tagHealthReport.coverage.entitiesWithTags,
+        coveragePercentage: tagHealthReport.coverage.coveragePercentage
+      },
+      diversity: {
+        uniqueTags: tagHealthReport.diversity.uniqueTags,
+        shannonIndex: tagHealthReport.diversity.shannonIndex,
+        evenness: tagHealthReport.diversity.evenness
+      },
+      issues: {
+        orphanTagCount: tagHealthReport.issues.orphanTags.length,
+        overusedTagCount: tagHealthReport.issues.overusedTags.length,
+        conflictCount: tagHealthReport.issues.conflicts.length
+      }
+    });
 
-    // Print detailed issues if there are any significant problems
-    if (tagHealthReport.issues.orphanTags.length > 10 ||
-        tagHealthReport.issues.overusedTags.length > 0 ||
-        tagHealthReport.issues.conflicts.length > 0) {
-      const detailedIssues = this.contractEnforcer.getTagAnalyzer().getDetailedIssues(tagHealthReport);
-      console.log(detailedIssues);
-    }
+    // Emit system health
+    const populationHealth = 1 - summary.avgEntityDeviation;
+    this.emitter.systemHealth({
+      populationHealth,
+      status: populationHealth > 0.8 ? 'stable' :
+              populationHealth > 0.6 ? 'functional' : 'needs_attention'
+    });
+  }
 
-    console.log('='.repeat(80));
+  /**
+   * Emit coordinate statistics via emitter
+   */
+  private emitCoordinateStats(): void {
+    const stats = coordinateStats.getSummary();
+    this.emitter.coordinateStats({
+      totalPlacements: stats.totalPlacements,
+      byKind: stats.placementsByKind,
+      regionUsage: stats.regionUsagePerKind,
+      cultureDistribution: Object.fromEntries(
+        stats.cultureClusterStats.map(cs => [cs.cultureId, cs.entityCount])
+      )
+    });
+  }
+
+  /**
+   * Emit simulation complete event
+   */
+  private emitCompleteEvent(): void {
+    const durationMs = Date.now() - this.startTime;
+
+    this.emitter.complete({
+      metadata: {
+        tick: this.graph.tick,
+        epoch: this.currentEpoch,
+        era: this.graph.currentEra.name,
+        entityCount: this.graph.getEntityCount(),
+        relationshipCount: this.graph.getRelationshipCount(),
+        historyEventCount: this.graph.history.length,
+        durationMs
+      },
+      hardState: this.graph.getEntities(),
+      relationships: this.graph.getRelationships(),
+      history: this.graph.history,
+      pressures: Object.fromEntries(this.graph.pressures),
+      distributionMetrics: this.templateSelector ? (() => {
+        const state = this.templateSelector.getState(this.graph);
+        const deviation = this.templateSelector.getDeviation(this.graph);
+        return {
+          entityKindRatios: state.entityKindRatios,
+          prominenceRatios: state.prominenceRatios,
+          deviation: {
+            overall: deviation.overall,
+            entityKind: deviation.entityKind.score,
+            prominence: deviation.prominence.score,
+            relationship: deviation.relationship.score,
+            connectivity: deviation.connectivity.score
+          }
+        };
+      })() : undefined,
+      coordinateState: this.coordinateContext.export()
+    });
   }
 
   private async runGrowthPhase(era: Era, growthTargets?: number): Promise<void> {
@@ -982,7 +792,7 @@ export class WorldEngine {
       const graphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
       // Re-filter applicable templates each iteration (graph state changes)
-      const applicableTemplates = this.config.templates.filter(t => {
+      const applicableTemplates = this.runtimeTemplates.filter(t => {
         // ENFORCEMENT 1: Contract-based filtering (enabledBy conditions)
         const contractCheck = this.contractEnforcer.checkContractEnabledBy(t, this.graph, graphView);
         if (!contractCheck.allowed) return false;
@@ -1002,7 +812,7 @@ export class WorldEngine {
       });
 
       if (applicableTemplates.length === 0) {
-        console.warn(`  No applicable templates remaining (${entitiesCreated}/${targets} entities created)`);
+        this.emitter.log('warn', `No applicable templates remaining (${entitiesCreated}/${targets} entities created)`);
         break;
       }
 
@@ -1010,7 +820,7 @@ export class WorldEngine {
       const template = this.sampleSingleTemplate(era, applicableTemplates, metrics);
       if (!template) {
         if (attempts < 5 || attempts % 50 === 0) {
-          console.warn(`  [Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
+          this.emitter.log('debug', `[Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
         }
         continue;
       }
@@ -1018,7 +828,7 @@ export class WorldEngine {
       // Check if template can apply
       if (!template.canApply(graphView)) {
         if (attempts < 5 || attempts % 50 === 0) {
-          console.warn(`  [Attempt ${attempts}] Template ${template.id} canApply returned false`);
+          this.emitter.log('debug', `[Attempt ${attempts}] Template ${template.id} canApply returned false`);
         }
         continue;
       }
@@ -1027,7 +837,7 @@ export class WorldEngine {
       const templateTargets = template.findTargets(graphView);
       if (templateTargets.length === 0) {
         if (attempts < 5 || attempts % 50 === 0) {
-          console.warn(`  [Attempt ${attempts}] Template ${template.id} found no targets`);
+          this.emitter.log('debug', `[Attempt ${attempts}] Template ${template.id} found no targets`);
         }
         continue;
       }
@@ -1044,7 +854,7 @@ export class WorldEngine {
         const tagSaturationCheck = this.contractEnforcer.checkTagSaturation(this.graph, allTagsToAdd);
 
         if (tagSaturationCheck.saturated) {
-          console.warn(`  ⚠️  Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
+          this.emitter.log('warn', `Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
           // Don't skip template, but log the warning for analysis
         }
 
@@ -1053,7 +863,7 @@ export class WorldEngine {
         if (orphanCheck.hasOrphans && orphanCheck.orphanTags.length > 0) {
           // Only warn if there are multiple orphan tags (single legendary tags are expected)
           if (orphanCheck.orphanTags.length >= 3) {
-            console.warn(`  ℹ️  Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
+            this.emitter.log('debug', `Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
           }
         }
 
@@ -1118,9 +928,8 @@ export class WorldEngine {
         for (const entity of clusterEntities) {
           const taxonomyCheck = this.contractEnforcer.validateTagTaxonomy(entity);
           if (!taxonomyCheck.valid) {
-            console.warn(`  ⚠️  Entity ${entity.name} has conflicting tags:`);
-            taxonomyCheck.conflicts.forEach(c => {
-              console.warn(`      "${c.tag1}" vs "${c.tag2}": ${c.reason}`);
+            this.emitter.log('warn', `Entity ${entity.name} has conflicting tags`, {
+              conflicts: taxonomyCheck.conflicts
             });
           }
         }
@@ -1135,8 +944,7 @@ export class WorldEngine {
         );
 
         if (warnings.length > 0) {
-          console.warn(`  ⚠️  Template ${template.id} contract violations:`);
-          warnings.forEach(w => console.warn(`      ${w}`));
+          this.emitter.log('warn', `Template ${template.id} contract violations`, { violations: warnings });
         }
 
         // Merge lineage relationships into history
@@ -1161,23 +969,29 @@ export class WorldEngine {
           this.templateRunCounts.set(template.id, currentCount + 1);
         }
 
-        // Queue enrichment for this template's cluster immediately
-        // Filter out eras - they get enriched separately and shouldn't go through entity enrichment
-        const enrichableEntities = clusterEntities.filter(e => e.kind !== FRAMEWORK_ENTITY_KINDS.ERA);
-        if (enrichableEntities.length > 0) {
-          this.queueEntityEnrichment(enrichableEntities);
-          this.queueDiscoveryEnrichment(enrichableEntities);
-        }
+        // Enrichment moved to @illuminator
+        // this.queueEntityEnrichment(enrichableEntities);
+        // this.queueDiscoveryEnrichment(enrichableEntities);
 
       } catch (error) {
-        console.error(`Template ${template.id} failed:`, error);
+        this.emitter.log('error', `Template ${template.id} failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    console.log(`  Growth: +${entitiesCreated} entities (target: ${targets})`);
+    // Emit growth phase completion
+    this.emitter.growthPhase({
+      epoch: this.currentEpoch,
+      entitiesCreated,
+      target: targets,
+      templatesApplied: Array.from(new Set(
+        Array.from(this.templateRunCounts.entries())
+          .filter(([_, count]) => count > 0)
+          .map(([id]) => id)
+      ))
+    });
 
-    // Flush any remaining entities in the enrichment queue
-    this.flushEntityEnrichmentQueue(true);
+    // Enrichment moved to @illuminator
+    // this.flushEntityEnrichmentQueue(true);
   }
 
   // Meta-entity formation is now handled by SimulationSystems:
@@ -1311,7 +1125,7 @@ export class WorldEngine {
     // Build template weights based on era and deficits
     const templateWeights: Array<{ template: GrowthTemplate; weight: number }> = [];
 
-    for (const template of this.config.templates) {
+    for (const template of this.runtimeTemplates) {
       // Get era weight
       const eraWeight = getTemplateWeight(era, template.id);
       if (eraWeight === 0) continue; // Template disabled in this era
@@ -1459,13 +1273,14 @@ export class WorldEngine {
         totalModifications += result.entitiesModified.length;
 
       } catch (error) {
-        console.error(`System ${system.id} failed:`, error);
+        this.emitter.log('error', `System ${system.id} failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    if (relationshipsThisTick.length > 0) {
-      this.queueRelationshipEnrichment(relationshipsThisTick);
-    }
+    // Enrichment moved to @illuminator
+    // if (relationshipsThisTick.length > 0) {
+    //   this.queueRelationshipEnrichment(relationshipsThisTick);
+    // }
 
     if (totalRelationships > 0 || totalModifications > 0) {
       // Record significant ticks only
@@ -1490,7 +1305,7 @@ export class WorldEngine {
       ? this.calculateDistributionPressureAdjustments()
       : {};
 
-    this.config.pressures.forEach(pressure => {
+    this.runtimePressures.forEach(pressure => {
       const current = this.graph.pressures.get(pressure.id) || pressure.value;
       const rawGrowth = pressure.growth(this.graph);
 
@@ -1639,690 +1454,37 @@ export class WorldEngine {
     });
   }
 
-  private reportEpochStats(): void {
-    const byKind = new Map<string, number>();
-    const bySubtype = new Map<string, number>();
+  // =============================================================================
+  // ENRICHMENT METHODS - Moved to @illuminator
+  // These are stubs/no-ops. Connect illuminator for LLM enrichment.
+  // =============================================================================
 
-    this.graph.forEachEntity((entity) => {
-      byKind.set(entity.kind, (byKind.get(entity.kind) || 0) + 1);
-      const key = `${entity.kind}:${entity.subtype}`;
-      bySubtype.set(key, (bySubtype.get(key) || 0) + 1);
-    });
-
-    console.log(`  Entities by kind:`, Object.fromEntries(byKind));
-    console.log(`  Relationships: ${this.graph.getRelationshipCount()}`);
-    console.log(`  Pressures:`, Object.fromEntries(this.graph.pressures));
-
-    // Report distribution statistics if using TemplateSelector
-    if (this.templateSelector) {
-      this.reportDistributionStats();
-    }
-  }
-
-  /**
-   * Report distribution statistics and deviation from targets
-   */
-  private reportDistributionStats(): void {
-    if (!this.templateSelector) return;
-
-    const state = this.templateSelector.getState(this.graph);
-    const deviation = this.templateSelector.getDeviation(this.graph);
-
-    // Entity kind distribution
-    console.log(`\n  === Distribution Statistics ===`);
-    console.log(`  Entity Kinds (current vs target):`);
-    Object.entries(state.entityKindRatios).forEach(([kind, ratio]) => {
-      const target = this.config.distributionTargets?.global.entityKindDistribution.targets[kind] || 0;
-      const delta = ratio - target;
-      const sign = delta > 0 ? '+' : '';
-      const status = Math.abs(delta) > 0.05 ? '⚠️' : '✓';
-      console.log(`    ${status} ${kind}: ${(ratio * 100).toFixed(1)}% (target: ${(target * 100).toFixed(1)}%, ${sign}${(delta * 100).toFixed(1)}%)`);
-    });
-
-    // Prominence distribution
-    console.log(`  Prominence (current vs target):`);
-    Object.entries(state.prominenceRatios).forEach(([level, ratio]) => {
-      const target = this.config.distributionTargets?.global.prominenceDistribution.targets[level as any] || 0;
-      const delta = ratio - target;
-      const sign = delta > 0 ? '+' : '';
-      const status = Math.abs(delta) > 0.05 ? '⚠️' : '✓';
-      console.log(`    ${status} ${level}: ${(ratio * 100).toFixed(1)}% (target: ${(target * 100).toFixed(1)}%, ${sign}${(delta * 100).toFixed(1)}%)`);
-    });
-
-    // Relationship diversity
-    const topRelTypes = Object.entries(state.relationshipTypeRatios)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-    console.log(`  Top relationship types:`);
-    topRelTypes.forEach(([type, ratio]) => {
-      const status = ratio > 0.15 ? '⚠️' : '✓';
-      console.log(`    ${status} ${type}: ${(ratio * 100).toFixed(1)}%`);
-    });
-
-    // Graph metrics
-    const avgDegree = (this.graph.getRelationshipCount() * 2) / state.totalEntities; // Each relationship connects 2 entities
-    console.log(`  Graph Connectivity:`);
-    console.log(`    Clusters: ${state.graphMetrics.clusters} (target: ${this.config.distributionTargets?.global.graphConnectivity.targetClusters.preferred || 5})`);
-    console.log(`    Avg cluster size: ${state.graphMetrics.avgClusterSize.toFixed(1)}`);
-    console.log(`    Avg connections/entity: ${avgDegree.toFixed(1)}`);
-    console.log(`    Isolated nodes: ${state.graphMetrics.isolatedNodes} (${(state.graphMetrics.isolatedNodeRatio * 100).toFixed(1)}%)`);
-
-    // Overall deviation score
-    console.log(`\n  Overall Deviation Score: ${deviation.overall.toFixed(3)}`);
-    if (deviation.overall > 0.15) {
-      console.log(`  ⚠️  HIGH DEVIATION - template selection will be heavily guided`);
-    } else if (deviation.overall < 0.08) {
-      console.log(`  ✓ CONVERGED - template selection is lightly guided`);
-    }
-  }
-  
-  private async waitForNameEnrichmentsSnapshot(): Promise<void> {
-    if (this.pendingNameEnrichments.length === 0) return;
-    const pending = [...this.pendingNameEnrichments];
-    await Promise.allSettled(pending);
-    this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => !pending.includes(p));
-  }
-  
   private syncNameTags(): void {
+    // Sync name tags from entity names
     this.graph.forEachEntity((entity) => {
       const hasNameTag = entity.tags?.name !== undefined;
       if (!hasNameTag) return;
-      // Note: This modifies a clone, need to use updateEntity
       this.graph.updateEntity(entity.id, { tags: { ...entity.tags, name: entity.name } });
     });
   }
 
-  private enrichInitialEntities(): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-
-    const initialEntities = this.graph.getEntities().filter(e => e.createdAt === 0);
-    if (initialEntities.length === 0) return;
-
-    console.log(`Enriching ${initialEntities.length} initial entities (descriptions only)...`);
-
-    const context = this.buildEnrichmentContext();
-    const enrichmentPromise = (async () => {
-      // Names are now generated at entity creation time via name-forge
-      const records = await this.enrichmentService!.enrichEntities(
-        initialEntities,
-        context
-      );
-      this.graph.loreRecords.push(...records);
-    })().catch(error => console.warn('Initial entity enrichment failed:', error));
-
-    const tracked = enrichmentPromise.then(() => undefined);
-    this.pendingEnrichments.push(tracked);
-    this.pendingNameEnrichments.push(tracked);
-    tracked.finally(() => {
-      this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => p !== tracked);
-    });
+  // Era narrative - no-op without illuminator
+  private queueEraNarrative(_fromEra: Era, _toEra: Era): void {
+    // Enrichment moved to @illuminator - this is a no-op
   }
 
-  private queueEntityEnrichment(entities: HardState[]): void {
-    if (!this.enrichmentService?.isEnabled() || entities.length === 0) return;
-
-    // Add entities to the batching queue
-    this.entityEnrichmentQueue.push(...entities);
-
-    // Track analytics for all queued entities
-    entities.forEach(entity => {
-      switch (entity.kind) {
-        case 'location':
-          this.enrichmentAnalytics.locationEnrichments++;
-          break;
-        case 'faction':
-          this.enrichmentAnalytics.factionEnrichments++;
-          break;
-        case 'rules':
-          this.enrichmentAnalytics.ruleEnrichments++;
-          break;
-        case 'abilities':
-          this.enrichmentAnalytics.abilityEnrichments++;
-          break;
-        case 'npc':
-          this.enrichmentAnalytics.npcEnrichments++;
-          break;
-        case FRAMEWORK_ENTITY_KINDS.OCCURRENCE:
-          this.enrichmentAnalytics.occurrenceEnrichments++;
-          break;
-        case FRAMEWORK_ENTITY_KINDS.ERA:
-          this.enrichmentAnalytics.eraEnrichments++;
-          break;
-      }
-    });
-
-    // Flush queue if it reaches batch size threshold
-    if (this.entityEnrichmentQueue.length >= this.ENRICHMENT_BATCH_SIZE) {
-      this.flushEntityEnrichmentQueue();
-    }
-  }
-
-  private flushEntityEnrichmentQueue(force: boolean = false): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-    if (this.entityEnrichmentQueue.length === 0) return;
-
-    // Only flush if we have enough entities, unless forced
-    if (!force && this.entityEnrichmentQueue.length < this.ENRICHMENT_BATCH_SIZE) return;
-
-    // Take all queued entities
-    const entitiesToEnrich = [...this.entityEnrichmentQueue];
-    this.entityEnrichmentQueue = [];
-
-    // Apply partial mode limits
-    const limit = this.config.enrichmentConfig?.maxEntityEnrichments;
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      const remaining = (limit ?? 0) - this.entityEnrichmentsUsed;
-      if (remaining <= 0) return;
-      entitiesToEnrich.splice(remaining); // Truncate to remaining budget
-      this.entityEnrichmentsUsed += entitiesToEnrich.length;
-    }
-
-    // CRITICAL: Wait for all previous name enrichments to complete before enriching new entities
-    // This ensures that lore references use final entity names, not placeholder names
-    const enrichmentPromise = this.waitForNameEnrichmentsSnapshot().then(async () => {
-      // Build context AFTER name enrichments complete, so snapshot has final names
-      const context = this.buildEnrichmentContext();
-      const records = await this.enrichmentService!.enrichEntities(entitiesToEnrich, context);
-      this.graph.loreRecords.push(...records);
-
-      // Abilities get an extra pass to keep tech/magic in bounds
-      const abilityRecords = await Promise.all(
-        entitiesToEnrich
-          .filter(e => e.kind === 'abilities')
-          .map(e => this.enrichmentService!.enrichAbility(e, context))
-      );
-
-      abilityRecords
-        .filter((r): r is LoreRecord => Boolean(r))
-        .forEach(r => this.graph.loreRecords.push(r));
-    }).catch(error => console.warn('Enrichment failed:', error));
-
-    const tracked = enrichmentPromise.then(() => undefined);
-    this.pendingEnrichments.push(tracked);
-    this.pendingNameEnrichments.push(tracked);
-    tracked.finally(() => {
-      this.pendingNameEnrichments = this.pendingNameEnrichments.filter(p => p !== tracked);
-    });
-  }
-  
-  private queueRelationshipEnrichment(newRelationships: Relationship[]): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-    
-    const notable = newRelationships.filter(rel => {
-      const a = this.graph.getEntity(rel.src);
-      const b = this.graph.getEntity(rel.dst);
-      if (!a || !b) return false;
-
-      return getProminenceValue(a.prominence) >= 3 && getProminenceValue(b.prominence) >= 3;
-    }).slice(0, 3); // keep batches small for quality
-
-    if (notable.length === 0) return;
-
-    const actors: Record<string, HardState> = {};
-    notable.forEach(rel => {
-      const a = this.graph.getEntity(rel.src);
-      const b = this.graph.getEntity(rel.dst);
-      if (a) actors[a.id] = a;
-      if (b) actors[b.id] = b;
-    });
-    
-    const context = this.buildEnrichmentContext();
-    let relationshipsToEnrich = notable;
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      const limit = this.config.enrichmentConfig?.maxRelationshipEnrichments ?? 0;
-      const remaining = limit - this.relationshipEnrichmentsUsed;
-      if (remaining <= 0) return;
-      relationshipsToEnrich = notable.slice(0, remaining);
-    }
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      this.relationshipEnrichmentsUsed += relationshipsToEnrich.length;
-    }
-    
-    const promise = this.waitForNameEnrichmentsSnapshot()
-      .then(() => this.enrichmentService!.enrichRelationships(relationshipsToEnrich, actors, context))
-      .then(records => {
-        this.graph.loreRecords.push(...records);
-      })
-      .catch(error => console.warn('Relationship enrichment failed:', error));
-    
-    this.pendingEnrichments.push(promise.then(() => undefined));
-  }
-
-  /**
-   * Queue occurrence enrichment
-   * Called after occurrence creation systems run
-   */
-  private queueOccurrenceEnrichment(occurrence: HardState, catalystId?: string): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-
-    const context: any = this.buildEnrichmentContext();
-    // Add catalyst info to context
-    if (catalystId) {
-      context.catalystInfo = { entityId: catalystId };
-    }
-
-    const enrichmentPromise = (async () => {
-      const record = await this.enrichmentService!.enrichOccurrence(occurrence, context);
-      if (record) {
-        this.graph.loreRecords.push(record);
-        // Update occurrence with enriched data
-        occurrence.name = (record.metadata?.name as string) || occurrence.name;
-        occurrence.description = record.text;
-      }
-    })().catch(error => console.warn('Occurrence enrichment failed:', error));
-
-    this.pendingEnrichments.push(enrichmentPromise.then(() => undefined));
-  }
-
-  /**
-   * Queue era enrichment
-   * Called after era transitions
-   */
-  private queueEraEnrichment(era: HardState): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-
-    const context = this.buildEnrichmentContext();
-
-    const enrichmentPromise = (async () => {
-      const record = await this.enrichmentService!.enrichEra(era, context);
-      if (record) {
-        this.graph.loreRecords.push(record);
-        // Update era with enriched data
-        era.name = (record.metadata?.name as string) || era.name;
-        era.description = record.text;
-      }
-    })().catch(error => console.warn('Era enrichment failed:', error));
-
-    this.pendingEnrichments.push(enrichmentPromise.then(() => undefined));
-  }
-
+  // Change enrichments - no-op without illuminator
   private queueChangeEnrichments(): void {
-    const changedEntities: Array<{ entity: HardState; changes: string[] }> = [];
-
-    // Check all entities for significant changes using kind-specific detection
-    this.graph.forEachEntity((entity) => {
-      const snapshot = this.entitySnapshots.get(entity.id);
-
-      // Skip if no snapshot (newly created entities already enriched)
-      if (!snapshot) {
-        // Create snapshot for next epoch
-        this.snapshotEntity(entity);
-        return;
-      }
-
-      // Use kind-specific detection functions
-      let changes: string[] = [];
-      switch (entity.kind) {
-        case 'location':
-          changes = detectLocationChanges(entity, snapshot, this.graph);
-          break;
-        case 'faction':
-          changes = detectFactionChanges(entity, snapshot, this.graph);
-          break;
-        case 'rules':
-          changes = detectRuleChanges(entity, snapshot, this.graph);
-          break;
-        case 'abilities':
-          changes = detectAbilityChanges(entity, snapshot, this.graph);
-          break;
-        case 'npc':
-          changes = detectNPCChanges(entity, snapshot, this.graph);
-          break;
-      }
-
-      // Track analytics even when enrichment disabled
-      if (changes.length > 0) {
-        switch (entity.kind) {
-          case 'location':
-            this.enrichmentAnalytics.locationEnrichments++;
-            break;
-          case 'faction':
-            this.enrichmentAnalytics.factionEnrichments++;
-            break;
-          case 'rules':
-            this.enrichmentAnalytics.ruleEnrichments++;
-            break;
-          case 'abilities':
-            this.enrichmentAnalytics.abilityEnrichments++;
-            break;
-          case 'npc':
-            this.enrichmentAnalytics.npcEnrichments++;
-            break;
-          case FRAMEWORK_ENTITY_KINDS.OCCURRENCE:
-            this.enrichmentAnalytics.occurrenceEnrichments++;
-            break;
-          case FRAMEWORK_ENTITY_KINDS.ERA:
-            this.enrichmentAnalytics.eraEnrichments++;
-            break;
-        }
-
-        changedEntities.push({ entity, changes });
-        // Update snapshot
-        this.snapshotEntity(entity);
-      }
-    });
-
-    // Only actually enrich if service is enabled
-    if (!this.enrichmentService?.isEnabled()) return;
-
-    // Enrich changed entities (batch by up to 3)
-    if (changedEntities.length > 0) {
-      const context = this.buildEnrichmentContext();
-
-      changedEntities.forEach(({ entity, changes }) => {
-        const promise = this.waitForNameEnrichmentsSnapshot()
-          .then(() => this.enrichmentService!.enrichEntityChanges(entity, changes, context))
-          .then(record => {
-            if (record) {
-              this.graph.loreRecords.push(record);
-            }
-          })
-          .catch(error => console.warn('Change enrichment failed:', error));
-
-        this.pendingEnrichments.push(promise.then(() => undefined));
-      });
-    }
+    // Enrichment moved to @illuminator - this is a no-op
   }
 
-  private snapshotEntity(entity: HardState): void {
-    const keyRelationshipIds = new Set(
-      entity.links
-        .filter(l => l.kind === 'member_of' || l.kind === 'resident_of' || l.kind === 'leader_of')
-        .map(l => `${l.kind}:${l.dst}`)
-    );
-
-    const snapshot: EntitySnapshot = {
-      tick: this.graph.tick,
-      status: entity.status,
-      prominence: entity.prominence,
-      keyRelationshipIds
-    };
-
-    // Add kind-specific metrics
-    switch (entity.kind) {
-      case 'location':
-        // Population (count of resident_of relationships pointing to this location)
-        snapshot.residentCount = this.graph.findRelationships({ kind: 'resident_of', dst: entity.id }).length;
-
-        // Controller (faction with stronghold_of or controls pointing to this location)
-        const locationRels = this.graph.getEntityRelationships(entity.id, 'dst');
-        const controller = locationRels.find(r =>
-          r.kind === 'stronghold_of' || r.kind === 'controls'
-        );
-        snapshot.controllerId = controller?.src;
-        break;
-
-      case 'faction':
-        // Leader (who has leader_of pointing to this faction)
-        const leaderRels = this.graph.findRelationships({ kind: 'leader_of', dst: entity.id });
-        const leader = leaderRels[0];
-        snapshot.leaderId = leader?.src;
-
-        // Territory count (stronghold_of or controls from this faction)
-        const factionRels = this.graph.getEntityRelationships(entity.id, 'src');
-        snapshot.territoryCount = factionRels.filter(r =>
-          r.kind === 'stronghold_of' || r.kind === 'controls'
-        ).length;
-
-        // Allies (allied_with from this faction)
-        snapshot.allyIds = new Set(
-          this.graph.findRelationships({ kind: 'allied_with', src: entity.id })
-            .map(r => r.dst)
-        );
-
-        // Enemies (at_war_with from this faction)
-        snapshot.enemyIds = new Set(
-          this.graph.findRelationships({ kind: 'at_war_with', src: entity.id })
-            .map(r => r.dst)
-        );
-        break;
-
-      case 'rules':
-        // Enforcers (factions with weaponized_by or kept_secret_by pointing to this rule)
-        const ruleRels = this.graph.getEntityRelationships(entity.id, 'dst');
-        snapshot.enforcerIds = new Set(
-          ruleRels
-            .filter(r => r.kind === 'weaponized_by' || r.kind === 'kept_secret_by')
-            .map(r => r.src)
-        );
-        break;
-
-      case 'abilities':
-        // Practitioner count (practitioner_of relationships pointing to this ability)
-        snapshot.practitionerCount = this.graph.findRelationships({ kind: 'practitioner_of', dst: entity.id }).length;
-
-        // Locations where it manifests (manifests_at from this ability)
-        snapshot.locationIds = new Set(
-          this.graph.findRelationships({ kind: 'manifests_at', src: entity.id })
-            .map(r => r.dst)
-        );
-        break;
-
-      case 'npc':
-        // Leadership positions (leader_of from this NPC)
-        snapshot.leadershipIds = new Set(
-          entity.links
-            .filter(l => l.kind === 'leader_of')
-            .map(l => l.dst)
-        );
-        break;
-    }
-
-    this.entitySnapshots.set(entity.id, snapshot);
-  }
-
-  private queueEraNarrative(fromEra: Era, toEra: Era): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-    if (fromEra.id === toEra.id) return;
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      const limit = this.config.enrichmentConfig?.maxEraNarratives ?? 0;
-      if (this.eraNarrativesUsed >= limit) return;
-    }
-    if (this.config.enrichmentConfig?.mode === 'partial') {
-      this.eraNarrativesUsed += 1;
-    }
-
-    const actors = this.graph.getEntities()
-      .filter(e => getProminenceValue(e.prominence) >= 3)
-      .slice(0, 5);
-
-    const pressures = Object.fromEntries(this.graph.pressures);
-    const currentTick = this.graph.tick; // Capture tick at time of era transition
-
-    const promise = this.waitForNameEnrichmentsSnapshot()
-      .then(() => this.enrichmentService!.generateEraNarrative({
-        fromEra: fromEra.name,
-        toEra: toEra.name,
-        pressures,
-        actors,
-        tick: currentTick
-      })).then(record => {
-        if (record) {
-          this.graph.loreRecords.push(record);
-          this.eraNarrativesUsed += 1;
-          this.graph.history.push({
-            tick: currentTick,
-            era: toEra.id,
-            type: 'special',
-            description: record.text,
-            entitiesCreated: [],
-            relationshipsCreated: [],
-            entitiesModified: []
-          });
-        }
-      }).catch(error => console.warn('Era narrative enrichment failed:', error));
-
-    this.pendingEnrichments.push(promise.then(() => undefined));
-  }
-
-  private queueDiscoveryEnrichment(entities: HardState[]): void {
-    if (!this.enrichmentService?.isEnabled()) return;
-
-    // Find newly created locations that were discovered
-    const discoveries = entities.filter(e => e.kind === 'location');
-    if (discoveries.length === 0) return;
-
-    discoveries.forEach(location => {
-      // Find the explorer via discovered_by or explorer_of relationships
-      const locationRels = this.graph.getEntityRelationships(location.id);
-      const discoveryRel = locationRels.find(r =>
-        (r.kind === 'discovered_by' && r.src === location.id) ||
-        (r.kind === 'explorer_of' && r.dst === location.id)
-      );
-
-      if (!discoveryRel) return;
-
-      const explorerId = discoveryRel.kind === 'discovered_by' ? discoveryRel.dst : discoveryRel.src;
-      const explorer = this.graph.getEntity(explorerId);
-      if (!explorer || explorer.kind !== 'npc') return;
-
-      // Capture tick at time of discovery
-      const discoveryTick = this.graph.tick;
-
-      // Determine discovery type based on tags and world state
-      let discoveryType: 'pressure' | 'exploration' | 'chain' = 'exploration';
-      let triggerContext: { pressure?: string; chainSource?: HardState } = {};
-
-      // Check if pressure-driven (resource, strategic, mystical locations)
-      if (location.subtype === 'geographic_feature' && hasTag(location.tags, 'resource')) {
-        discoveryType = 'pressure';
-        triggerContext.pressure = 'resource_scarcity';
-      } else if (hasTag(location.tags, 'strategic')) {
-        discoveryType = 'pressure';
-        triggerContext.pressure = 'conflict';
-      } else if (location.subtype === 'anomaly' || hasTag(location.tags, 'mystical')) {
-        discoveryType = 'pressure';
-        triggerContext.pressure = 'magical_instability';
-      }
-
-      // Check for chain discoveries (adjacent to other discovered locations)
-      const adjacentLocations = this.graph.findRelationships({ kind: 'adjacent_to', src: location.id })
-        .map(r => this.graph.getEntity(r.dst))
-        .filter((e): e is HardState => e !== undefined && e.kind === 'location');
-
-      if (adjacentLocations.length > 0) {
-        const recentlyDiscovered = adjacentLocations.find(loc =>
-          (this.graph.tick - loc.createdAt) <= 20
-        );
-        if (recentlyDiscovered) {
-          discoveryType = 'chain';
-          triggerContext.chainSource = recentlyDiscovered;
-        }
-      }
-
-      // Queue discovery event enrichment
-      const promise = this.waitForNameEnrichmentsSnapshot()
-        .then(() => this.enrichmentService!.enrichDiscoveryEvent({
-          location,
-          explorer,
-          discoveryType,
-          triggerContext,
-          tick: discoveryTick
-        }))
-        .then(record => {
-          if (record) {
-            this.graph.loreRecords.push(record);
-          }
-        })
-        .catch(error => console.warn('Discovery enrichment failed:', error));
-
-      this.pendingEnrichments.push(promise.then(() => undefined));
-
-      // If this was a chain discovery, also generate chain link explanation
-      if (discoveryType === 'chain' && triggerContext.chainSource) {
-        const chainPromise = this.waitForNameEnrichmentsSnapshot()
-          .then(() => this.enrichmentService!.generateChainLink({
-            sourceLocation: triggerContext.chainSource!,
-            revealedLocationTheme: location.subtype,
-            explorer
-          }))
-          .then(record => {
-            if (record) {
-              this.graph.loreRecords.push(record);
-            }
-          })
-          .catch(error => console.warn('Chain link enrichment failed:', error));
-
-        this.pendingEnrichments.push(chainPromise.then(() => undefined));
-      }
-    });
-  }
-
-  private buildEnrichmentContext() {
-    // Separate active and historical relationships for lore generation
-    const allRelationships = this.graph.getRelationships();
-    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
-    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
-
-    // Build entities map for enrichment context
-    const entitiesMap = new Map<string, HardState>();
-    this.graph.forEachEntity((entity, id) => {
-      entitiesMap.set(id, entity);
-    });
-
-    return {
-      graphSnapshot: {
-        tick: this.graph.tick,
-        era: this.graph.currentEra.name,
-        pressures: Object.fromEntries(this.graph.pressures),
-        entities: entitiesMap,
-        relationships: activeRelationships,  // Current state
-        historicalRelationships: historicalRelationships  // Past state for context
-      },
-      relatedHistory: this.graph.history.slice(-5).map(h => h.description)
-    };
-  }
-
-  /**
-   * Queue image generation for mythic entities
-   * Called at the end of world generation
-   */
-  public async generateMythicImages(): Promise<void> {
-    if (!this.imageGenerationService?.isEnabled()) {
-      return;
-    }
-
-    const entities = this.graph.getEntities();
-    const context = this.buildEnrichmentContext();
-
-    console.log(`\n=== Generating Images for Mythic Entities ===`);
-
-    const results = await this.imageGenerationService.generateImagesForMythicEntities(
-      entities,
-      context
-    );
-
-    const stats = this.imageGenerationService.getStats();
-    console.log(`✓ Generated ${stats.imagesGenerated} images`);
-    console.log(`  Output: ${path.relative(process.cwd(), stats.outputDir)}`);
-    console.log(`  Log: ${path.relative(process.cwd(), stats.logPath)}`);
-
-    // Export image metadata
-    const imageMetadata = {
-      generatedAt: new Date().toISOString(),
-      totalImages: stats.imagesGenerated,
-      results: results.map(r => ({
-        entityId: r.entityId,
-        entityName: r.entityName,
-        entityKind: r.entityKind,
-        prompt: r.prompt,
-        localPath: r.localPath ? path.relative(process.cwd(), r.localPath) : undefined,
-        error: r.error
-      }))
-    };
-
-    const metadataPath = path.join(stats.outputDir, 'image_metadata.json');
-    fs.writeFileSync(metadataPath, JSON.stringify(imageMetadata, null, 2));
-    console.log(`  Metadata: ${path.relative(process.cwd(), metadataPath)}`);
-  }
-  
   // Export methods
   public getGraph(): Graph {
     return this.graph;
   }
 
-  public getLoreRecords(): LoreRecord[] {
-    return this.graph.loreRecords;
+  public getHistory(): HistoryEvent[] {
+    return this.graph.history;
   }
 
   public finalizeNameLogging(): void {
@@ -2330,33 +1492,16 @@ export class WorldEngine {
     if (this.config?.nameForgeService) {
       this.config.nameForgeService.printStats();
     }
-
-    // Print enrichment name change stats
-    if (this.enrichmentService?.isEnabled()) {
-      this.enrichmentService.getNameLogger().writeFinalReport();
-    }
+    // LLM name logging moved to @illuminator
   }
 
-  public getHistory(): HistoryEvent[] {
-    return this.graph.history;
-  }
-  
   public async finalizeEnrichments(): Promise<void> {
-    if (this.pendingEnrichments.length === 0) {
-      await this.waitForNameEnrichmentsSnapshot();
-      this.syncNameTags();
-      return;
-    }
-    const pending = [...this.pendingEnrichments];
-    this.pendingEnrichments = [];
-    await Promise.allSettled(pending);
-    await this.waitForNameEnrichmentsSnapshot();
+    // Enrichment moved to @illuminator - just sync name tags
     this.syncNameTags();
   }
-  
+
   public exportState(): any {
     const entities = this.graph.getEntities();
-    const totalEnrichmentTriggers = Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0);
 
     // Filter historical relationships for day 0 coherence
     // Exported state represents the current moment, not accumulated history
@@ -2377,11 +1522,6 @@ export class WorldEngine {
         historicalRelationshipCount: historicalRelationships.length,
         historyEventCount: this.graph.history.length,
         metaEntityCount: metaEntities.length,
-        enrichmentTriggers: {
-          total: totalEnrichmentTriggers,
-          byKind: this.enrichmentAnalytics,
-          comment: 'Counts detected enrichment triggers (tracks even when enrichment disabled)'
-        },
         metaEntityFormation: {
           totalFormed: this.metaEntitiesFormed.length,
           formations: this.metaEntitiesFormed,
@@ -2392,8 +1532,8 @@ export class WorldEngine {
       relationships: activeRelationships,  // Only active relationships for day 0 game state
       historicalRelationships: historicalRelationships,  // Historical relationships for lore generation
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history,  // Export ALL events, not just last 50
-      loreRecords: this.graph.loreRecords
+      history: this.graph.history  // Export ALL events, not just last 50
+      // loreRecords moved to @illuminator
     };
 
     // Include distribution metrics if using statistical template selection
@@ -2425,26 +1565,31 @@ export class WorldEngine {
 
   /**
    * Import coordinate state from a previously exported world.
-   * Call this after loading entities to restore emergent regions.
+   *
+   * NOTE: With the new cosmographer-aligned CoordinateContext, coordinate config
+   * (semanticData, cultureVisuals) is provided at construction time and is immutable.
+   * Emergent regions are not yet supported. This method is a no-op placeholder.
    */
-  public importCoordinateState(coordinateState: ReturnType<CoordinateContext['export']>): void {
-    this.coordinateContext.import(coordinateState);
+  public importCoordinateState(_coordinateState: ReturnType<CoordinateContext['export']>): void {
+    // No-op: CoordinateContext is now initialized with immutable config from cosmographer.
+    // Emergent region restoration will be implemented when emergentConfig is added.
   }
 
   /**
    * Export statistics for fitness evaluation
    */
   public exportStatistics(validationResults: ValidationStats): SimulationStatistics {
+    // Enrichment analytics moved to @illuminator - pass zeros
     return this.statisticsCollector.generateStatistics(
       this.graph,
       this.config,
       {
-        locationEnrichments: this.enrichmentAnalytics.locationEnrichments,
-        factionEnrichments: this.enrichmentAnalytics.factionEnrichments,
-        ruleEnrichments: this.enrichmentAnalytics.ruleEnrichments,
-        abilityEnrichments: this.enrichmentAnalytics.abilityEnrichments,
-        npcEnrichments: this.enrichmentAnalytics.npcEnrichments,
-        totalEnrichments: Object.values(this.enrichmentAnalytics).reduce((a, b) => a + b, 0)
+        locationEnrichments: 0,
+        factionEnrichments: 0,
+        ruleEnrichments: 0,
+        abilityEnrichments: 0,
+        npcEnrichments: 0,
+        totalEnrichments: 0
       },
       validationResults
     );

@@ -2,67 +2,22 @@
  * Coordinate Context
  *
  * Centralized coordinate services with culture as first-class input.
- * Holds a single KindRegionService and SemanticEncoder, shared across all
- * templates and systems to ensure region state persists.
- *
- * CRITICAL: This replaces per-view instantiation of RegionMapper/SemanticEncoder.
- * All coordinate operations must go through this context.
+ * Works directly with canonry's entityKinds[] and cultures[] arrays.
  */
 
 import type { Point } from './types';
-import type { KindRegionServiceConfig } from './kindRegionService';
-import type { SemanticEncoderConfig, SemanticEncodingResult } from './types';
-import { KindRegionService } from './kindRegionService';
-import { SemanticEncoder } from './semanticEncoder';
 
 // =============================================================================
 // CULTURE CONFIGURATION TYPES
 // =============================================================================
 
 /**
- * Culture-specific coordinate configuration.
- * Defines how a culture influences placement and semantic encoding.
+ * Axis biases for a single entity kind.
  */
-export interface CultureCoordinateConfig {
-  /** Culture identifier (matches entity.culture field) */
-  cultureId: string;
-
-  /**
-   * Seed region IDs where this culture originates.
-   *
-   * IMPORTANT: Regions are per-entity-kind. Each entity kind has its own
-   * region map with its own region IDs. For seed regions to work for a given
-   * entity kind, that kind's region configuration must define regions with
-   * these IDs.
-   *
-   * Example: If seedRegionIds = ['aurora_stack'], then:
-   * - kindRegionConfig['location'].regions must include 'aurora_stack'
-   * - kindRegionConfig['npc'].regions must include 'aurora_stack'
-   * - kindRegionConfig['faction'].regions must include 'aurora_stack'
-   * - etc.
-   *
-   * If a seed region ID doesn't exist for a particular kind, placement
-   * falls back to reference entity proximity or random region sampling.
-   */
-  seedRegionIds: string[];
-
-  /** Preferred semantic axes with bias values (0-100) */
-  preferredAxes?: {
-    [axisName: string]: number;
-  };
-
-  /** Emergent region defaults for this culture */
-  emergentDefaults?: {
-    /** Label prefix for emergent regions */
-    labelPrefix?: string;
-    /** Default tags applied to emergent regions */
-    tags?: string[];
-    /** Preferred placement area bias */
-    preferredArea?: {
-      center: { x: number; y: number };
-      weight: number;
-    };
-  };
+export interface KindAxisBiases {
+  x: number;  // 0-100
+  y: number;  // 0-100
+  z: number;  // 0-100
 }
 
 /**
@@ -70,28 +25,23 @@ export interface CultureCoordinateConfig {
  * Culture data flows through this object to bias sampling and encoding.
  */
 export interface PlacementContext {
-  /** Culture driving placement biases (required for culture-aware placement) */
+  /** Culture driving placement biases */
   cultureId?: string;
 
-  /** Culture's founding/seed regions to bias placement toward */
-  seedRegionIds?: string[];
+  /** Entity kind being placed (needed to look up kind-specific biases/regions) */
+  entityKind?: string;
 
-  /** Culture-specific axis weight overrides */
-  preferredAxes?: {
-    [axisName: string]: number;
-  };
+  /** Culture's axis biases for this entity kind */
+  axisBiases?: KindAxisBiases;
+
+  /** Region IDs to bias placement toward (derived from regions with matching culture) */
+  seedRegionIds?: string[];
 
   /** Reference entity for proximity-based placement */
   referenceEntity?: {
     id: string;
     coordinates: Point;
   };
-
-  /** Whether to create emergent region if placement falls outside existing regions */
-  createEmergentRegion?: boolean;
-
-  /** Label for emergent region if created */
-  emergentRegionLabel?: string;
 }
 
 /**
@@ -127,23 +77,71 @@ export interface PlacementResult {
 }
 
 // =============================================================================
+// SEMANTIC PLANE (per entity kind)
+// =============================================================================
+
+/**
+ * Semantic plane definition for an entity kind.
+ */
+export interface SemanticPlane {
+  axes: {
+    x: { name: string; lowLabel: string; highLabel: string };
+    y: { name: string; lowLabel: string; highLabel: string };
+    z?: { name: string; lowLabel: string; highLabel: string };
+  };
+  regions: import('./types').Region[];
+}
+
+/**
+ * Entity kind definition from canonry.
+ * Contains id and optional semanticPlane.
+ */
+export interface EntityKindConfig {
+  id: string;
+  name?: string;
+  semanticPlane?: SemanticPlane;
+}
+
+/**
+ * Culture definition from canonry.
+ * Contains id and axisBiases keyed by entity kind.
+ */
+export interface CultureConfig {
+  id: string;
+  name?: string;
+  axisBiases?: {
+    [entityKindId: string]: KindAxisBiases;
+  };
+  homeRegions?: {
+    [entityKindId: string]: string[];
+  };
+}
+
+// =============================================================================
 // COORDINATE CONTEXT CONFIGURATION
 // =============================================================================
 
 /**
  * Configuration for CoordinateContext.
- * All fields are REQUIRED - no fallbacks.
+ * Accepts canonry's array-based format directly.
  */
 export interface CoordinateContextConfig {
-  /** Per-kind region service configuration */
-  kindRegionConfig: KindRegionServiceConfig;
+  /** Entity kinds array from canonry - each may have a semanticPlane */
+  entityKinds: EntityKindConfig[];
 
-  /** Semantic encoder configuration */
-  semanticConfig: SemanticEncoderConfig;
-
-  /** Culture coordinate configurations (keyed by cultureId) */
-  cultures: CultureCoordinateConfig[];
+  /** Cultures array from canonry - each has axisBiases keyed by entity kind */
+  cultures: CultureConfig[];
 }
+
+// =============================================================================
+// EMERGENT REGION DEFAULTS
+// =============================================================================
+
+const EMERGENT_DEFAULTS = {
+  radius: 10,
+  minDistanceFromExisting: 5,
+  maxAttempts: 50
+};
 
 // =============================================================================
 // COORDINATE CONTEXT
@@ -152,56 +150,79 @@ export interface CoordinateContextConfig {
 /**
  * CoordinateContext - Centralized coordinate services with culture support.
  *
- * This context is owned by the Graph and injected into TemplateGraphView.
- * It ensures that:
- * 1. Region state is shared and persists across all operations
- * 2. Culture biases are consistently applied to placement
- * 3. Semantic encoding uses culture-specific axis weights
+ * Works directly with canonry's entityKinds[] and cultures[] arrays.
+ * Derives seed regions by finding regions where region.culture matches the culture ID.
+ * Supports emergent region creation during simulation.
  */
 export class CoordinateContext {
-  private readonly kindRegionService: KindRegionService;
-  private readonly semanticEncoder: SemanticEncoder;
-  private readonly cultureConfigs: Map<string, CultureCoordinateConfig>;
+  /** Entity kinds from canonry (stored directly, no transformation) */
+  private readonly entityKinds: EntityKindConfig[];
+
+  /** Cultures from canonry (stored directly, no transformation) */
+  private readonly cultures: CultureConfig[];
+
+  /** Mutable region storage per entity kind (includes both seed and emergent regions) */
+  private regions: { [entityKind: string]: import('./types').Region[] } = {};
+
+  /** Counter for generating unique emergent region IDs */
+  private emergentRegionCounter = 0;
 
   constructor(config: CoordinateContextConfig) {
-    // Validate required config
-    if (!config.kindRegionConfig) {
-      throw new Error(
-        'CoordinateContext: kindRegionConfig is required. ' +
-        'Domain must provide per-kind map configurations.'
-      );
-    }
-    if (!config.semanticConfig) {
-      throw new Error(
-        'CoordinateContext: semanticConfig is required. ' +
-        'Domain must provide semantic axis configurations.'
-      );
-    }
-    if (!config.cultures || config.cultures.length === 0) {
-      throw new Error(
-        'CoordinateContext: at least one culture configuration is required. ' +
-        'Domain must define cultures with seed regions and axis preferences.'
-      );
-    }
+    this.entityKinds = config.entityKinds || [];
+    this.cultures = config.cultures || [];
 
-    this.kindRegionService = new KindRegionService(config.kindRegionConfig);
-    this.semanticEncoder = new SemanticEncoder(config.semanticConfig);
-
-    // Index cultures by ID
-    this.cultureConfigs = new Map();
-    for (const culture of config.cultures) {
-      if (!culture.cultureId) {
-        throw new Error(
-          'CoordinateContext: culture configuration missing cultureId.'
-        );
+    // Initialize mutable region storage from entity kinds' semantic planes
+    for (const entityKind of this.entityKinds) {
+      if (entityKind.semanticPlane?.regions) {
+        this.regions[entityKind.id] = [...entityKind.semanticPlane.regions];
       }
-      if (!culture.seedRegionIds || culture.seedRegionIds.length === 0) {
-        throw new Error(
-          `CoordinateContext: culture "${culture.cultureId}" must have at least one seedRegionId.`
-        );
-      }
-      this.cultureConfigs.set(culture.cultureId, culture);
     }
+  }
+
+  // ===========================================================================
+  // SEMANTIC DATA ACCESS
+  // ===========================================================================
+
+  /**
+   * Get semantic plane for an entity kind.
+   */
+  getSemanticPlane(entityKind: string): SemanticPlane | undefined {
+    const kind = this.entityKinds.find(k => k.id === entityKind);
+    return kind?.semanticPlane;
+  }
+
+  /**
+   * Get all configured entity kinds (those with semantic planes).
+   */
+  getConfiguredKinds(): string[] {
+    return this.entityKinds
+      .filter(k => k.semanticPlane)
+      .map(k => k.id);
+  }
+
+  /**
+   * Check if a kind has semantic data configured.
+   */
+  hasKindMap(kind: string): boolean {
+    return this.entityKinds.some(k => k.id === kind && k.semanticPlane);
+  }
+
+  /**
+   * Get regions for an entity kind (includes both seed and emergent regions).
+   */
+  getRegions(entityKind: string): import('./types').Region[] {
+    // Initialize kind if not present
+    if (!(entityKind in this.regions)) {
+      this.regions[entityKind] = [];
+    }
+    return this.regions[entityKind];
+  }
+
+  /**
+   * Get a specific region by ID within an entity kind.
+   */
+  getRegion(entityKind: string, regionId: string): import('./types').Region | undefined {
+    return this.getRegions(entityKind).find(r => r.id === regionId);
   }
 
   // ===========================================================================
@@ -210,123 +231,198 @@ export class CoordinateContext {
 
   /**
    * Get culture configuration by ID.
-   * Throws if culture not found (no fallbacks).
    */
-  getCultureConfig(cultureId: string): CultureCoordinateConfig {
-    const config = this.cultureConfigs.get(cultureId);
-    if (!config) {
-      throw new Error(
-        `CoordinateContext: culture "${cultureId}" not found. ` +
-        `Available cultures: ${Array.from(this.cultureConfigs.keys()).join(', ')}`
-      );
-    }
-    return config;
+  getCultureConfig(cultureId: string): CultureConfig | undefined {
+    return this.cultures.find(c => c.id === cultureId);
   }
 
   /**
    * Check if a culture is configured.
    */
   hasCulture(cultureId: string): boolean {
-    return this.cultureConfigs.has(cultureId);
+    return this.cultures.some(c => c.id === cultureId);
   }
 
   /**
    * Get all configured culture IDs.
    */
   getCultureIds(): string[] {
-    return Array.from(this.cultureConfigs.keys());
+    return this.cultures.map(c => c.id);
   }
 
   /**
-   * Build PlacementContext from culture ID.
-   * Loads culture's seed regions and axis preferences.
+   * Get seed region IDs for a culture within an entity kind.
+   * Derived from regions where region.culture === cultureId.
    */
-  buildPlacementContext(cultureId: string): PlacementContext {
-    const cultureConfig = this.getCultureConfig(cultureId);
+  getSeedRegionIds(cultureId: string, entityKind: string): string[] {
+    const regions = this.getRegions(entityKind);
+    return regions
+      .filter(r => r.culture === cultureId)
+      .map(r => r.id);
+  }
+
+  /**
+   * Get axis biases for a culture and entity kind.
+   */
+  getAxisBiases(cultureId: string, entityKind: string): KindAxisBiases | undefined {
+    const culture = this.cultures.find(c => c.id === cultureId);
+    return culture?.axisBiases?.[entityKind];
+  }
+
+  /**
+   * Build PlacementContext from culture ID and entity kind.
+   */
+  buildPlacementContext(cultureId: string, entityKind: string): PlacementContext {
     return {
       cultureId,
-      seedRegionIds: cultureConfig.seedRegionIds,
-      preferredAxes: cultureConfig.preferredAxes
+      entityKind,
+      axisBiases: this.getAxisBiases(cultureId, entityKind),
+      seedRegionIds: this.getSeedRegionIds(cultureId, entityKind)
     };
   }
 
   // ===========================================================================
-  // REGION SERVICE ACCESS
+  // EMERGENT REGION CREATION
   // ===========================================================================
 
   /**
-   * Get the shared KindRegionService instance.
-   */
-  getKindRegionService(): KindRegionService {
-    return this.kindRegionService;
-  }
-
-  /**
-   * Check if a kind has configured regions.
-   */
-  hasKindMap(kind: string): boolean {
-    return this.kindRegionService.hasKindMap(kind);
-  }
-
-  /**
-   * Get all configured entity kinds.
-   */
-  getConfiguredKinds(): string[] {
-    return this.kindRegionService.getConfiguredKinds();
-  }
-
-  // ===========================================================================
-  // SEMANTIC ENCODER ACCESS
-  // ===========================================================================
-
-  /**
-   * Get the shared SemanticEncoder instance.
-   */
-  getSemanticEncoder(): SemanticEncoder {
-    return this.semanticEncoder;
-  }
-
-  /**
-   * Encode tags into coordinates with optional culture bias.
+   * Create an emergent region near a point.
    *
-   * @param entityKind - Entity kind for axis selection
-   * @param tags - Tags to encode
-   * @param context - Optional placement context with culture biases
+   * Uses static defaults for radius and minimum distance from existing regions.
+   * Always enabled - emergent regions are created whenever placement occurs
+   * outside existing regions.
+   *
+   * @param entityKind - Entity kind for the region
+   * @param nearPoint - Point to create region near
+   * @param label - Human-readable label for the region
+   * @param description - Narrative description
+   * @param tick - Current simulation tick
+   * @param createdBy - Optional entity ID that triggered creation
+   * @returns Result with created region or failure reason
    */
-  encodeWithCulture(
+  createEmergentRegion(
     entityKind: string,
-    tags: Record<string, boolean> | string[],
-    context?: PlacementContext
-  ): SemanticEncodingResult {
-    // Base encoding
-    let result = this.semanticEncoder.encode(entityKind, tags);
+    nearPoint: Point,
+    label: string,
+    description: string,
+    tick: number,
+    createdBy?: string
+  ): import('./types').EmergentRegionResult {
+    const regions = this.getRegions(entityKind);
 
-    // Apply culture axis biases if provided
-    if (context?.preferredAxes) {
-      const axes = this.semanticEncoder.getAxes(entityKind);
-      if (axes) {
-        const coords = { ...result.coordinates };
+    // Check if point is too close to existing regions
+    for (const region of regions) {
+      if (region.bounds.shape === 'circle') {
+        const { center, radius } = region.bounds;
+        const dx = nearPoint.x - center.x;
+        const dy = nearPoint.y - center.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Blend culture preferences with semantic encoding
-        for (const [axisName, bias] of Object.entries(context.preferredAxes)) {
-          // Find which coordinate this axis maps to
-          if (axes.x.name === axisName) {
-            coords.x = coords.x * 0.7 + bias * 0.3; // 70% semantic, 30% culture
-          } else if (axes.y.name === axisName) {
-            coords.y = coords.y * 0.7 + bias * 0.3;
-          } else if (axes.z.name === axisName) {
-            coords.z = coords.z * 0.7 + bias * 0.3;
-          }
+        // Too close if within region or within min distance of edge
+        if (distance < radius + EMERGENT_DEFAULTS.minDistanceFromExisting) {
+          return {
+            success: false,
+            failureReason: `Point too close to existing region "${region.label}"`
+          };
         }
-
-        result = {
-          ...result,
-          coordinates: coords
-        };
       }
     }
 
-    return result;
+    // Create the emergent region
+    this.emergentRegionCounter++;
+    const regionId = `emergent_${entityKind}_${this.emergentRegionCounter}`;
+
+    const newRegion: import('./types').Region = {
+      id: regionId,
+      label,
+      description,
+      bounds: {
+        shape: 'circle',
+        center: { x: nearPoint.x, y: nearPoint.y },
+        radius: EMERGENT_DEFAULTS.radius
+      },
+      emergent: true,
+      createdAt: tick,
+      createdBy
+    };
+
+    // Add to mutable region storage
+    regions.push(newRegion);
+
+    return {
+      success: true,
+      region: newRegion
+    };
+  }
+
+  /**
+   * Check if a point is inside any existing region for an entity kind.
+   */
+  isPointInAnyRegion(entityKind: string, point: Point): boolean {
+    const regions = this.getRegions(entityKind);
+    return regions.some(r => this.pointInRegion(point, r));
+  }
+
+  // ===========================================================================
+  // REGION SAMPLING
+  // ===========================================================================
+
+  /**
+   * Sample a point within a specific region.
+   *
+   * @param entityKind - Entity kind whose regions to use
+   * @param regionId - Region to sample within
+   * @param existingPoints - Points to avoid
+   * @param minDistance - Minimum distance from existing points
+   * @returns Point or null if no valid point found
+   */
+  sampleInRegion(
+    entityKind: string,
+    regionId: string,
+    existingPoints: Point[] = [],
+    minDistance: number = 5
+  ): Point | null {
+    const region = this.getRegion(entityKind, regionId);
+    if (!region) return null;
+    return this.sampleCircleRegion(region, existingPoints, minDistance);
+  }
+
+  /**
+   * Sample a point near a reference point.
+   *
+   * @param referencePoint - Point to place near
+   * @param existingPoints - Points to avoid
+   * @param minDistance - Minimum distance from existing points
+   * @param maxSearchRadius - Maximum distance from reference
+   * @returns Point or null if no valid point found
+   */
+  sampleNearPoint(
+    referencePoint: Point,
+    existingPoints: Point[] = [],
+    minDistance: number = 5,
+    maxSearchRadius: number = 20
+  ): Point | null {
+    const maxAttempts = 50;
+
+    for (let i = 0; i < maxAttempts; i++) {
+      // Sample in a ring around the reference point
+      const r = minDistance + Math.random() * (maxSearchRadius - minDistance);
+      const theta = Math.random() * 2 * Math.PI;
+      const point: Point = {
+        x: referencePoint.x + r * Math.cos(theta),
+        y: referencePoint.y + r * Math.sin(theta),
+        z: referencePoint.z ?? 50
+      };
+
+      // Clamp to bounds
+      point.x = Math.max(0, Math.min(100, point.x));
+      point.y = Math.max(0, Math.min(100, point.y));
+
+      if (this.isValidPlacement(point, existingPoints, minDistance)) {
+        return point;
+      }
+    }
+    return null;
   }
 
   // ===========================================================================
@@ -334,124 +430,97 @@ export class CoordinateContext {
   // ===========================================================================
 
   /**
-   * Sample a point biased toward culture's seed regions.
-   *
-   * Flow:
-   * 1. Load culture's seed regions
-   * 2. Randomly pick a seed region (weighted by size or uniform)
-   * 3. Sample within that region with slight jitter
-   * 4. Fall back to semantic encoding if no seed regions have space
-   *
-   * @param kind - Entity kind for region mapper selection
-   * @param context - Placement context with culture and options
-   * @param existingPoints - Points to avoid
-   * @param minDistance - Minimum distance from existing points
+   * Sample a point within a region (circle bounds).
    */
-  sampleWithCulture(
-    kind: string,
-    context: PlacementContext,
-    existingPoints: Point[] = [],
-    minDistance: number = 5,
-    options: { enableNonRegionPlacement?: boolean } = {}
+  private sampleCircleRegion(
+    region: import('./types').Region,
+    existingPoints: Point[],
+    minDistance: number
   ): Point | null {
-    const { enableNonRegionPlacement = false } = options;
-    const mapper = this.kindRegionService.getMapper(kind);
+    if (region.bounds.shape !== 'circle') return null;
 
-    // Try to sample from seed regions
-    if (context.cultureId && context.seedRegionIds && context.seedRegionIds.length > 0) {
-      const shuffledSeeds = [...context.seedRegionIds].sort(() => Math.random() - 0.5);
+    const { center, radius } = region.bounds;
+    const maxAttempts = 50;
 
-      for (const seedRegionId of shuffledSeeds) {
-        const region = mapper.getRegion(seedRegionId);
-        if (!region) continue;
+    for (let i = 0; i < maxAttempts; i++) {
+      // Sample with center bias
+      const r = radius * Math.sqrt(Math.random()) * 0.8;
+      const theta = Math.random() * 2 * Math.PI;
+      const point: Point = {
+        x: center.x + r * Math.cos(theta),
+        y: center.y + r * Math.sin(theta),
+        z: 50 // default z
+      };
 
-        const point = mapper.sampleRegion(seedRegionId, {
-          avoid: existingPoints,
-          minDistance,
-          centerBias: 0.3
-        });
-
-        if (point && this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
-          return point;
-        }
-      }
-    }
-
-    // Try any region of this kind
-    const allRegions = mapper.getAllRegions();
-    for (const region of allRegions.sort(() => Math.random() - 0.5)) {
-      const point = mapper.sampleRegion(region.id, {
-        avoid: existingPoints,
-        minDistance
-      });
-
-      if (point && this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
+      if (this.isValidPlacement(point, existingPoints, minDistance)) {
         return point;
       }
     }
+    return null;
+  }
 
-    // No region placement available - fail unless fallback explicitly enabled
-    if (!enableNonRegionPlacement) {
-      throw new Error(
-        `[CoordinateContext] No regions configured for kind '${kind}'. ` +
-        `Culture '${context.cultureId ?? 'none'}' seed regions: [${context.seedRegionIds?.join(', ') ?? 'none'}]. ` +
-        `Configure regions in kindRegionConfig['${kind}'] or set enableNonRegionPlacement=true.`
+  /**
+   * Sample a point biased toward culture's seed regions or near a reference entity.
+   */
+  sampleWithCulture(
+    entityKind: string,
+    context: PlacementContext,
+    existingPoints: Point[] = [],
+    minDistance: number = 5
+  ): Point | null {
+    // If reference entity provided, sample near it
+    if (context.referenceEntity?.coordinates) {
+      const point = this.sampleNearPoint(
+        context.referenceEntity.coordinates,
+        existingPoints,
+        minDistance,
+        minDistance * 4  // maxSearchRadius
       );
+      if (point) return point;
     }
 
-    // FALLBACK (explicitly enabled): Reference entity proximity
-    console.warn(
-      `[CoordinateContext] FALLBACK (enableNonRegionPlacement=true): ` +
-      `Using non-region placement for '${kind}'. This is likely a contract violation.`
-    );
+    const regions = this.getRegions(entityKind);
 
-    if (context.referenceEntity?.coordinates) {
-      const ref = context.referenceEntity.coordinates;
-      const maxAttempts = 50;
+    // Try seed regions first (regions belonging to this culture)
+    if (context.seedRegionIds && context.seedRegionIds.length > 0) {
+      const shuffledSeeds = [...context.seedRegionIds].sort(() => Math.random() - 0.5);
 
-      for (let i = 0; i < maxAttempts; i++) {
-        const searchRadius = minDistance + i * 0.5;
-        const angle = Math.random() * 2 * Math.PI;
+      for (const regionId of shuffledSeeds) {
+        const region = regions.find(r => r.id === regionId);
+        if (!region) continue;
 
-        const point: Point = {
-          x: Math.max(0, Math.min(100, ref.x + searchRadius * Math.cos(angle))),
-          y: Math.max(0, Math.min(100, ref.y + searchRadius * Math.sin(angle))),
-          z: ref.z
-        };
-
-        if (this.isValidPlacement(point, existingPoints, minDistance, mapper)) {
-          return point;
-        }
+        const point = this.sampleCircleRegion(region, existingPoints, minDistance);
+        if (point) return point;
       }
     }
 
-    // Ultimate fallback: random coordinates
+    // Try any region
+    for (const region of regions.sort(() => Math.random() - 0.5)) {
+      const point = this.sampleCircleRegion(region, existingPoints, minDistance);
+      if (point) return point;
+    }
+
+    // Fallback: random point with culture bias applied
+    const biases = context.axisBiases || { x: 50, y: 50, z: 50 };
     return {
-      x: 10 + Math.random() * 80,
-      y: 10 + Math.random() * 80,
-      z: 30 + Math.random() * 40
+      x: biases.x + (Math.random() - 0.5) * 30,
+      y: biases.y + (Math.random() - 0.5) * 30,
+      z: biases.z
     };
   }
 
   /**
-   * Place an entity with full culture context.
-   *
-   * Complete flow:
-   * 1. Sample point biased by culture
-   * 2. Apply region mutations (create emergent if needed)
-   * 3. Derive tags from placement + culture
-   * 4. Return complete placement result
+   * Place an entity with culture context.
    */
   placeWithCulture(
-    kind: string,
-    entityId: string,
-    tick: number,
+    entityKind: string,
+    _entityId: string,
+    _tick: number,
     context: PlacementContext,
     existingPoints: Point[] = [],
     minDistance: number = 5
   ): PlacementResult {
-    // 1. Sample point with culture bias
-    const point = this.sampleWithCulture(kind, context, existingPoints, minDistance);
+    const point = this.sampleWithCulture(entityKind, context, existingPoints, minDistance);
     if (!point) {
       return {
         success: false,
@@ -459,45 +528,45 @@ export class CoordinateContext {
       };
     }
 
-    // 2. Process placement through KindRegionService (may create emergent region)
-    const placementResult = this.kindRegionService.processEntityPlacement(
-      kind,
-      entityId,
-      point,
-      tick,
-      context
-    );
-
-    // 3. Merge culture into derived tags
-    const derivedTags = { ...placementResult.tags };
-    if (context.cultureId) {
-      derivedTags.culture = context.cultureId;
-    }
+    // Find which region contains this point
+    const regions = this.getRegions(entityKind);
+    const containingRegion = regions.find(r => this.pointInRegion(point, r));
 
     return {
       success: true,
       coordinates: point,
-      regionId: placementResult.region?.id ?? null,
-      allRegionIds: placementResult.allRegions.map(r => r.id),
-      derivedTags,
-      cultureId: context.cultureId,
-      emergentRegionCreated: placementResult.emergentRegionCreated
-        ? { id: placementResult.emergentRegionCreated.id, label: placementResult.emergentRegionCreated.label }
-        : undefined
+      regionId: containingRegion?.id ?? null,
+      allRegionIds: regions.filter(r => this.pointInRegion(point, r)).map(r => r.id),
+      derivedTags: context.cultureId ? { culture: context.cultureId } : {},
+      cultureId: context.cultureId
     };
   }
 
   /**
-   * Check if a point is valid (maintains minimum distance from existing).
+   * Check if a point is inside a region.
+   */
+  private pointInRegion(point: Point, region: import('./types').Region): boolean {
+    if (region.bounds.shape === 'circle') {
+      const { center, radius } = region.bounds;
+      const dx = point.x - center.x;
+      const dy = point.y - center.y;
+      return Math.sqrt(dx * dx + dy * dy) <= radius;
+    }
+    return false; // Only circle supported for now
+  }
+
+  /**
+   * Check if a point maintains minimum distance from existing points.
    */
   private isValidPlacement(
     point: Point,
     existing: Point[],
-    minDistance: number,
-    mapper: import('./regionMapper').RegionMapper
+    minDistance: number
   ): boolean {
     for (const other of existing) {
-      if (mapper.distance(point, other) < minDistance) {
+      const dx = point.x - other.x;
+      const dy = point.y - other.y;
+      if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
         return false;
       }
     }
@@ -510,23 +579,39 @@ export class CoordinateContext {
 
   /**
    * Export coordinate state for world persistence.
+   * Returns the original canonry format plus emergent regions.
    */
   export(): {
-    kindRegionState: ReturnType<KindRegionService['export']>;
+    entityKinds: EntityKindConfig[];
+    cultures: CultureConfig[];
+    regions: { [entityKind: string]: import('./types').Region[] };
   } {
     return {
-      kindRegionState: this.kindRegionService.export()
+      entityKinds: this.entityKinds,
+      cultures: this.cultures,
+      regions: this.regions
     };
   }
 
   /**
-   * Import coordinate state from world persistence.
+   * Import coordinate state from a previously exported world.
+   * Restores emergent regions.
    */
-  import(state: {
-    kindRegionState?: { states: import('./types').EntityKindMapsState };
-  }): void {
-    if (state.kindRegionState?.states) {
-      this.kindRegionService.import(state.kindRegionState.states);
+  import(state: { regions?: { [entityKind: string]: import('./types').Region[] } }): void {
+    if (state.regions) {
+      for (const [kind, regions] of Object.entries(state.regions)) {
+        this.regions[kind] = [...regions];
+      }
+      // Update counter based on imported regions
+      const maxId = Object.values(this.regions)
+        .flat()
+        .filter(r => r.emergent)
+        .map(r => {
+          const match = r.id.match(/emergent_\w+_(\d+)/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .reduce((max, n) => Math.max(max, n), 0);
+      this.emergentRegionCounter = maxId;
     }
   }
 
@@ -540,12 +625,23 @@ export class CoordinateContext {
   getStats(): {
     cultures: number;
     kinds: number;
-    regions: ReturnType<KindRegionService['getAllStats']>;
+    totalRegions: number;
+    emergentRegions: number;
   } {
+    let totalRegions = 0;
+    let emergentRegions = 0;
+
+    for (const kind of Object.keys(this.regions)) {
+      const kindRegions = this.regions[kind] || [];
+      totalRegions += kindRegions.length;
+      emergentRegions += kindRegions.filter(r => r.emergent).length;
+    }
+
     return {
-      cultures: this.cultureConfigs.size,
-      kinds: this.kindRegionService.getConfiguredKinds().length,
-      regions: this.kindRegionService.getAllStats()
+      cultures: this.cultures.length,
+      kinds: this.entityKinds.filter(k => k.semanticPlane).length,
+      totalRegions,
+      emergentRegions
     };
   }
 }
@@ -556,7 +652,6 @@ export class CoordinateContext {
 
 /**
  * Create a CoordinateContext from configuration.
- * Validates all required configuration is provided.
  */
 export function createCoordinateContext(
   config: CoordinateContextConfig

@@ -12,6 +12,7 @@
     "apps/lore-weave/webui",
     "apps/canonry/webui",
     "apps/cosmographer/webui",
+    "apps/coherence-engine/webui",
     "packages/world-schema",
     "penguin-tales/lore"
   ],
@@ -33,7 +34,7 @@
     "ui:build": "npm run sync && cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
     "dev": "npm run generate:sync && npm run ui",
-    "canonry": "npx concurrently -n canonry,name-forge,cosmographer -c blue,yellow,magenta \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\"",
+    "canonry": "npx concurrently -n canonry,name-forge,cosmographer,coherence,lore-weave -c blue,yellow,magenta,cyan,green \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\"",
     "test": "npm run test:framework && npm run test:domain",
     "test:framework": "cd apps/lore-weave && npm test",
     "test:domain": "cd penguin-tales/lore && npm test",
@@ -42,7 +43,7 @@
     "clean:domain": "cd penguin-tales/lore && npm run clean",
     "clean:output": "rm -rf penguin-tales/lore/output/*",
     "install:all": "npm install && cd apps/lore-weave && npm install && cd ../name-forge && npm install && cd ../../penguin-tales/lore && npm install && cd ../../apps/lore-weave/webui && npm install",
-    "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../../packages/world-schema && npm install"
+    "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../coherence-engine/webui && npm install && cd ../../lore-weave/webui && npm install && cd ../../../packages/world-schema && npm install"
   },
   "keywords": [
     "procedural-generation",

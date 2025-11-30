@@ -38,7 +38,6 @@ describe('distributionCalculations', () => {
       history: [],
       config: {} as any,
       relationshipCooldowns: new Map(),
-      loreRecords: [],
       discoveryState: {
         currentThreshold: 1,
         lastDiscoveryTick: 0,

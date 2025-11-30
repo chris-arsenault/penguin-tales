@@ -51,14 +51,12 @@ describe('eraTransition', () => {
       } as any,
       discoveryState: {} as any,
       history: [],
-      loreIndex: {} as any,
       nameLogger: {} as any,
       tagRegistry: {} as any,
       loreValidator: {} as any,
       statistics: {} as any,
       enrichmentService: {} as any,
       growthMetrics: { relationshipsPerTick: [], averageGrowthRate: 0 },
-      loreRecords: [],
       // New Graph interface methods - entity read
       getEntity(id: string) { return _entities.get(id); },
       hasEntity(id: string) { return _entities.has(id); },
@@ -115,7 +113,13 @@ describe('eraTransition', () => {
       // Relationship mutation methods
       addRelationship(rel: any) { _relationships.push(rel); },
       _loadRelationship(rel: any) { _relationships.push(rel); },
-      _setRelationships(rels: any[]) { _relationships = rels; }
+      _setRelationships(rels: any[]) { _relationships = rels; },
+      // History methods
+      addHistoryEvent(event: any) { graph.history.push(event); },
+      // Era management
+      setCurrentEra(era: any) { graph.currentEra = era; },
+      // Pressure methods (for TemplateGraphView compatibility)
+      getPressure(id: string) { return graph.pressures.get(id) ?? 0; }
     } as any;
   });
 

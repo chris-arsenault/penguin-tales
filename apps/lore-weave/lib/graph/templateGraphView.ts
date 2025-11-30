@@ -1,9 +1,6 @@
 import { Graph } from '../engine/types';
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
-import { RegionMapper } from '../coordinates/regionMapper';
-import { RegionPlacementService } from '../coordinates/regionPlacement';
-import { SemanticEncoder } from '../coordinates/semanticEncoder';
 import { CoordinateContext, PlacementContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { addEntity, mergeTags, hasTag, addRelationship, updateEntity as updateEntityUtil, getRelated as getRelatedUtil, areRelationshipsCompatible as areRelationshipsCompatibleUtil, recordRelationshipFormation as recordRelationshipFormationUtil } from '../utils';
@@ -40,11 +37,6 @@ export class TemplateGraphView {
   // Shared coordinate context (REQUIRED - no internal instantiation)
   private readonly coordinateContext: CoordinateContext;
 
-  // Cached references to coordinate services (from context)
-  private readonly regionMapper: RegionMapper;
-  private readonly regionPlacement: RegionPlacementService;
-  private readonly semanticEncoder: SemanticEncoder;
-
   constructor(graph: Graph, targetSelector: TargetSelector, coordinateContext: CoordinateContext) {
     if (!coordinateContext) {
       throw new Error(
@@ -56,15 +48,6 @@ export class TemplateGraphView {
     this.graph = graph;
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
-
-    // Get shared services from context (no internal instantiation)
-    const kindRegionService = coordinateContext.getKindRegionService();
-
-    // For backward compatibility with existing region APIs, we use the location kind's mapper
-    // TODO: Update region APIs to be kind-aware using coordinateContext directly
-    this.regionMapper = kindRegionService.getMapper('location');
-    this.regionPlacement = new RegionPlacementService(this.regionMapper);
-    this.semanticEncoder = coordinateContext.getSemanticEncoder();
   }
 
   // ============================================================================
@@ -761,67 +744,45 @@ export class TemplateGraphView {
 
     let result: Point | undefined;
 
-    // Use region placement if available
-    if (this.regionPlacement) {
-      const maxDistance = (options?.maxDistance ?? 0.3) * 100;
-      const minDistance = (options?.minDistance ?? 0.05) * 100;
+    // Find position near centroid avoiding existing entities
+    const minDist = (options?.minDistance ?? 0.05) * 100;
+    const maxDist = (options?.maxDistance ?? 0.3) * 100;
 
-      const placementResult = this.regionPlacement.placeNear(
-        centroid,
-        existingPoints,
-        minDistance,
-        maxDistance
-      );
+    // Try up to 50 random positions
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = minDist + Math.random() * (maxDist - minDist);
 
-      if (placementResult.success && placementResult.point) {
-        result = placementResult.point;
-      }
-    }
+      const candidate: Point = {
+        x: Math.max(0, Math.min(100, centroid.x + Math.cos(angle) * distance)),
+        y: Math.max(0, Math.min(100, centroid.y + Math.sin(angle) * distance)),
+        z: Math.max(0, Math.min(100, centroid.z + (Math.random() - 0.5) * 10))
+      };
 
-    if (!result) {
-      // Fallback: find position near centroid avoiding existing entities
-      const minDist = (options?.minDistance ?? 0.05) * 100;
-      const maxDist = (options?.maxDistance ?? 0.3) * 100;
-
-      // Try up to 50 random positions
-      for (let attempt = 0; attempt < 50; attempt++) {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = minDist + Math.random() * (maxDist - minDist);
-
-        const candidate: Point = {
-          x: Math.max(0, Math.min(100, centroid.x + Math.cos(angle) * distance)),
-          y: Math.max(0, Math.min(100, centroid.y + Math.sin(angle) * distance)),
-          z: Math.max(0, Math.min(100, centroid.z + (Math.random() - 0.5) * 10))
-        };
-
-        // Check if this position is far enough from all existing entities
-        let valid = true;
-        for (const existing of existingPoints) {
-          const dx = candidate.x - existing.x;
-          const dy = candidate.y - existing.y;
-          const dz = candidate.z - existing.z;
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          if (dist < minDist) {
-            valid = false;
-            break;
-          }
-        }
-
-        if (valid) {
-          result = candidate;
+      // Check if this position is far enough from all existing entities
+      let valid = true;
+      for (const existing of existingPoints) {
+        const dx = candidate.x - existing.x;
+        const dy = candidate.y - existing.y;
+        const dz = candidate.z - existing.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist < minDist) {
+          valid = false;
           break;
         }
       }
+
+      if (valid) {
+        result = candidate;
+        break;
+      }
     }
 
     if (!result) {
-      // Last resort: return centroid with small jitter
-      usedFallback = true;
-      result = {
-        x: Math.max(0, Math.min(100, centroid.x + (Math.random() - 0.5) * 4)),
-        y: Math.max(0, Math.min(100, centroid.y + (Math.random() - 0.5) * 4)),
-        z: Math.max(0, Math.min(100, centroid.z + (Math.random() - 0.5) * 4))
-      };
+      throw new Error(
+        `deriveCoordinates: Could not find valid placement for '${entityKind ?? 'unknown'}' ` +
+        `after 50 attempts near centroid (${centroid.x.toFixed(1)}, ${centroid.y.toFixed(1)})`
+      );
     }
 
     // Record statistics
@@ -858,8 +819,8 @@ export class TemplateGraphView {
     entityKind: string,
     referenceEntities?: HardState[]
   ): { coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | undefined {
-    // Build context from culture
-    const context = this.coordinateContext.buildPlacementContext(cultureId);
+    // Build context from culture and entity kind
+    const context = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
 
     // Collect existing points for collision avoidance
     const existingPoints = this.getAllRegionPoints();
@@ -939,34 +900,37 @@ export class TemplateGraphView {
       return undefined;
     }
 
-    const axes = this.semanticEncoder.getAxes(entity.kind);
-    if (!axes) {
+    const semanticPlane = this.coordinateContext.getSemanticPlane(entity.kind);
+    if (!semanticPlane) {
       return undefined;
     }
 
+    const axes = semanticPlane.axes;
     const coords = entity.coordinates;
     const result: Record<string, { value: number; concept: string }> = {};
 
     // Interpret x-axis
     const xValue = coords.x;
-    const xConcept = xValue < 33 ? axes.x.lowConcept
-                   : xValue > 66 ? axes.x.highConcept
+    const xConcept = xValue < 33 ? axes.x.lowLabel
+                   : xValue > 66 ? axes.x.highLabel
                    : 'neutral';
     result[axes.x.name] = { value: xValue, concept: xConcept };
 
     // Interpret y-axis
     const yValue = coords.y;
-    const yConcept = yValue < 33 ? axes.y.lowConcept
-                   : yValue > 66 ? axes.y.highConcept
+    const yConcept = yValue < 33 ? axes.y.lowLabel
+                   : yValue > 66 ? axes.y.highLabel
                    : 'neutral';
     result[axes.y.name] = { value: yValue, concept: yConcept };
 
-    // Interpret z-axis
-    const zValue = coords.z ?? 50;
-    const zConcept = zValue < 33 ? axes.z.lowConcept
-                   : zValue > 66 ? axes.z.highConcept
-                   : 'neutral';
-    result[axes.z.name] = { value: zValue, concept: zConcept };
+    // Interpret z-axis (optional in semantic plane)
+    if (axes.z) {
+      const zValue = coords.z ?? 50;
+      const zConcept = zValue < 33 ? axes.z.lowLabel
+                     : zValue > 66 ? axes.z.highLabel
+                     : 'neutral';
+      result[axes.z.name] = { value: zValue, concept: zConcept };
+    }
 
     return result;
   }
@@ -987,58 +951,65 @@ export class TemplateGraphView {
    * Get the RegionMapper instance (for advanced region operations).
    * Uses the location kind's mapper by default.
    */
-  getRegionMapper(): RegionMapper {
-    return this.regionMapper;
-  }
-
   /**
-   * Get a region by ID.
+   * Get the CoordinateContext for direct access to coordinate services.
    */
-  getRegion(regionId: string): Region | undefined {
-    return this.regionMapper.getRegion(regionId);
+  getCoordinateContext(): CoordinateContext {
+    return this.coordinateContext;
   }
 
   /**
-   * Get all registered regions.
+   * Get a region by ID within an entity kind.
    */
-  getAllRegions(): Region[] {
-    return this.regionMapper.getAllRegions();
+  getRegion(entityKind: string, regionId: string): Region | undefined {
+    return this.coordinateContext.getRegion(entityKind, regionId);
   }
 
   /**
-   * Look up which region(s) contain a point.
+   * Get all registered regions for an entity kind.
    */
-  lookupRegion(point: Point): RegionLookupResult {
-    return this.regionMapper.lookup(point);
+  getAllRegions(entityKind: string): Region[] {
+    return this.coordinateContext.getRegions(entityKind);
   }
 
   /**
-   * Get the region an entity is in based on its coordinates.
+   * Look up which region(s) contain a point for an entity kind.
+   */
+  lookupRegion(entityKind: string, point: Point): RegionLookupResult {
+    const regions = this.coordinateContext.getRegions(entityKind);
+    const containing = regions.filter(r => this.pointInRegion(point, r));
+    return {
+      primary: containing[0] ?? null,
+      all: containing
+    };
+  }
+
+  /**
+   * Get the region an entity is in based on its coordinates and kind.
    * Returns the primary (most specific) region, or null if not in any region.
    */
   getEntityRegion(entity: HardState): Region | null {
-    if (!entity.coordinates) {
+    if (!entity.coordinates || !entity.kind) {
       return null;
     }
-    // Coordinates are now simple Point
-    const result = this.regionMapper.lookup(entity.coordinates);
+    const result = this.lookupRegion(entity.kind, entity.coordinates);
     return result.primary;
   }
 
   /**
    * Find all entities within a specific region.
+   * @param entityKind - Entity kind whose regions to search
+   * @param regionId - Region ID to search within
    */
-  findEntitiesInRegion(regionId: string, kind?: string): HardState[] {
-
-    const region = this.regionMapper.getRegion(regionId);
+  findEntitiesInRegion(entityKind: string, regionId: string): HardState[] {
+    const region = this.coordinateContext.getRegion(entityKind, regionId);
     if (!region) return [];
 
     const results: HardState[] = [];
     for (const entity of this.graph.getEntities()) {
-      if (kind && entity.kind !== kind) continue;
+      if (entity.kind !== entityKind) continue;
 
-      // Coordinates are now simple Point
-      if (entity.coordinates && this.regionMapper.containsPoint(region, entity.coordinates)) {
+      if (entity.coordinates && this.pointInRegion(entity.coordinates, region)) {
         results.push(entity);
       }
     }
@@ -1049,232 +1020,39 @@ export class TemplateGraphView {
    * Get tags that should be applied to an entity at a point.
    * Includes region-specific auto-tags as key-value pairs.
    */
-  getRegionTags(point: Point): EntityTags {
-    return this.regionMapper.getTagsForPoint(point);
+  getRegionTags(entityKind: string, point: Point): EntityTags {
+    const regions = this.coordinateContext.getRegions(entityKind);
+    const tags: EntityTags = {};
+
+    for (const region of regions) {
+      if (this.pointInRegion(point, region)) {
+        tags.region = region.id;
+        if (region.autoTags) {
+          for (const tag of region.autoTags) {
+            tags[tag] = true;
+          }
+        }
+        if (region.culture) {
+          tags.culture = region.culture;
+        }
+        break; // Use first matching region
+      }
+    }
+
+    return tags;
   }
 
   /**
-   * Add an entity placed within a specific region.
-   * Automatically applies region tags and emits placement event.
-   *
-   * @param entity - Entity data (region coordinates will be generated)
-   * @param regionId - Target region ID
-   * @param options - Placement options (minDistance, etc.)
-   * @returns Entity ID if successful, null if placement failed
-   *
-   * @example
-   * ```typescript
-   * const npcId = view.addEntityInRegion(
-   *   { kind: 'npc', subtype: 'merchant', name: 'Trader Piku' },
-   *   'northern_ice',
-   *   { minDistance: 3 }
-   * );
-   * ```
+   * Check if a point is inside a region.
    */
-  async addEntityInRegion(
-    entity: Omit<Partial<HardState>, 'coordinates'>,
-    regionId: string,
-    options?: { minDistance?: number; existingPoints?: Point[] }
-  ): Promise<string | null> {
-    const entityKind = entity.kind ?? 'npc';
-
-    // Warn: Legacy API without culture context
-    coordinateStats.warn(
-      `addEntityInRegion called for '${entityKind}' - this is a legacy API that doesn't use culture context. ` +
-      `Consider using placeInRegion() with PlacementContext instead.`
-    );
-
-    // Collect existing points in this region for spacing
-    const existingPoints = options?.existingPoints ?? this.getRegionPoints(regionId);
-
-    const result = this.regionPlacement.place({
-      regionId,
-      existingPoints,
-      minDistance: options?.minDistance ?? 5
-    });
-
-    if (!result.success || !result.point) {
-      coordinateStats.recordPlacement({
-        tick: this.graph.tick,
-        entityKind,
-        method: 'addEntityInRegion',
-        cultureId: undefined,
-        regionId,
-        hadReferenceEntities: false,
-        usedFallback: true,
-        coordinates: { x: 50, y: 50, z: 50 }
-      });
-      return null;
+  private pointInRegion(point: Point, region: Region): boolean {
+    if (region.bounds.shape === 'circle') {
+      const { center, radius } = region.bounds;
+      const dx = point.x - center.x;
+      const dy = point.y - center.y;
+      return Math.sqrt(dx * dx + dy * dy) <= radius;
     }
-
-    // Record statistics
-    coordinateStats.recordPlacement({
-      tick: this.graph.tick,
-      entityKind,
-      method: 'addEntityInRegion',
-      cultureId: undefined, // Legacy API doesn't use culture
-      regionId,
-      hadReferenceEntities: false,
-      usedFallback: false,
-      coordinates: result.point
-    });
-
-    // Get auto-tags from region (as EntityTags KVP)
-    const regionTags = this.regionMapper.processEntityPlacement(
-      entity.name ?? 'unknown',
-      result.point
-    );
-
-    // Merge entity tags with region tags
-    const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
-
-    // Create entity with coordinates (simple Point)
-    const entityWithCoords: Partial<HardState> = {
-      ...entity,
-      tags: mergedTags,
-      coordinates: result.point
-    };
-
-    return await addEntity(this.graph, entityWithCoords);
-  }
-
-  /**
-   * Add an entity near a reference entity in the same region.
-   *
-   * @param entity - Entity data
-   * @param referenceEntity - Entity to place near
-   * @param options - Placement options
-   * @returns Entity ID if successful, null if placement failed
-   *
-   * @example
-   * ```typescript
-   * const apprenticeId = view.addEntityNearEntity(
-   *   { kind: 'npc', subtype: 'apprentice', name: 'Young Pip' },
-   *   masterEntity,
-   *   { minDistance: 2, maxSearchRadius: 10 }
-   * );
-   * ```
-   */
-  async addEntityNearEntity(
-    entity: Omit<Partial<HardState>, 'coordinates'>,
-    referenceEntity: HardState,
-    options?: { minDistance?: number; maxSearchRadius?: number }
-  ): Promise<string | null> {
-    if (!referenceEntity.coordinates) {
-      throw new Error(
-        `addEntityNearEntity: Reference entity "${referenceEntity.name}" has no coordinates. ` +
-        `Entity kind: ${referenceEntity.kind}, id: ${referenceEntity.id}`
-      );
-    }
-
-    // Collect existing points for spacing
-    const existingPoints = this.getAllRegionPoints();
-
-    const result = this.regionPlacement.placeNear(
-      referenceEntity.coordinates,
-      existingPoints,
-      options?.minDistance ?? 5,
-      options?.maxSearchRadius ?? 20
-    );
-
-    if (!result.success || !result.point) {
-      return null;
-    }
-
-    // Get auto-tags from region (as EntityTags KVP)
-    const regionTags = this.regionMapper.processEntityPlacement(
-      entity.name ?? 'unknown',
-      result.point
-    );
-
-    // Merge entity tags with region tags
-    const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
-
-    // Create entity with coordinates (simple Point)
-    const entityWithCoords: Partial<HardState> = {
-      ...entity,
-      tags: mergedTags,
-      coordinates: result.point
-    };
-
-    return await addEntity(this.graph, entityWithCoords);
-  }
-
-  /**
-   * Add multiple entities to a region with automatic spacing.
-   *
-   * @param entities - Array of entity data
-   * @param regionId - Target region ID
-   * @param options - Batch placement options
-   * @returns Object with placed IDs and failure count
-   *
-   * @example
-   * ```typescript
-   * const colonists = Array(10).fill(null).map((_, i) => ({
-   *   kind: 'npc' as const,
-   *   subtype: 'colonist',
-   *   name: `Colonist ${i + 1}`
-   * }));
-   *
-   * const result = view.addEntitiesInRegion(colonists, 'southern_coast', {
-   *   minDistance: 3,
-   *   allowEmergentExpansion: true
-   * });
-   * ```
-   */
-  async addEntitiesInRegion(
-    entities: Array<Omit<Partial<HardState>, 'coordinates'>>,
-    regionId: string,
-    options?: {
-      minDistance?: number;
-      allowEmergentExpansion?: boolean;
-      emergentRegionLabel?: string;
-    }
-  ): Promise<{ placedIds: string[]; failed: number; emergentRegionsCreated: string[] }> {
-    const existingPoints = this.getRegionPoints(regionId);
-
-    const batchResult = this.regionPlacement.placeBatch({
-      count: entities.length,
-      regionId,
-      existingPoints,
-      minDistance: options?.minDistance ?? 5,
-      allowEmergentExpansion: options?.allowEmergentExpansion ?? false,
-      emergentRegionLabel: options?.emergentRegionLabel,
-      tick: this.graph.tick
-    });
-
-    const placedIds: string[] = [];
-
-    for (let i = 0; i < batchResult.placed.length; i++) {
-      const placement = batchResult.placed[i];
-      const entity = entities[i];
-      if (!entity) continue;
-
-      // Get auto-tags from region (as EntityTags KVP)
-      const regionTags = this.regionMapper.processEntityPlacement(
-        entity.name ?? 'unknown',
-        placement.point
-      );
-
-      // Merge entity tags with region tags
-      const mergedTags = mergeTags(entity.tags as EntityTags | undefined, regionTags);
-
-      // Create entity with coordinates (simple Point)
-      const entityWithCoords: Partial<HardState> = {
-        ...entity,
-        tags: mergedTags,
-        coordinates: placement.point
-      };
-
-      const id = await addEntity(this.graph, entityWithCoords);
-      placedIds.push(id);
-    }
-
-    return {
-      placedIds,
-      failed: batchResult.failed,
-      emergentRegionsCreated: batchResult.emergentRegionsCreated
-    };
+    return false; // Only circle supported for now
   }
 
   /**
@@ -1300,11 +1078,13 @@ export class TemplateGraphView {
    * ```
    */
   createEmergentRegion(
+    entityKind: string,
     nearPoint: Point,
     label: string,
     description: string
   ): EmergentRegionResult {
-    return this.regionMapper.createEmergentRegion(
+    return this.coordinateContext.createEmergentRegion(
+      entityKind,
       nearPoint,
       label,
       description,
@@ -1313,31 +1093,15 @@ export class TemplateGraphView {
   }
 
   /**
-   * Check if a region is saturated (density above threshold).
-   */
-  isRegionSaturated(regionId: string, threshold?: number): boolean {
-    const points = this.getRegionPoints(regionId);
-    return this.regionPlacement.isRegionSaturated(regionId, points, threshold);
-  }
-
-  /**
-   * Get density of entities in a region.
-   */
-  getRegionDensity(regionId: string): number {
-    const points = this.getRegionPoints(regionId);
-    return this.regionPlacement.getRegionDensity(regionId, points);
-  }
-
-  /**
    * Get region statistics for diagnostics.
    */
   getRegionStats(): {
+    cultures: number;
+    kinds: number;
     totalRegions: number;
     emergentRegions: number;
-    predefinedRegions: number;
-    totalArea: number;
   } {
-    return this.regionMapper.getStats();
+    return this.coordinateContext.getStats();
   }
 
   // ============================================================================
@@ -1358,7 +1122,7 @@ export class TemplateGraphView {
     context: PlacementContext
   ): Promise<string | null> {
     const kind = entity.kind ?? 'npc';
-    const existingPoints = this.getRegionPoints(regionId);
+    const existingPoints = this.getRegionPoints(kind, regionId);
 
     // Use CoordinateContext for culture-aware placement
     const placementResult = this.coordinateContext.placeWithCulture(
@@ -1449,33 +1213,30 @@ export class TemplateGraphView {
   }
 
   /**
-   * Spawn an emergent region and place an entity in it.
+   * Place an entity, optionally in a specific region.
    *
-   * @param regionLabel - Label for the new region
+   * NOTE: Emergent region creation is paused pending emergentConfig implementation.
+   * This method places the entity in an existing region or default location.
+   *
+   * @param _regionLabel - Ignored (was for emergent regions)
    * @param entity - Entity data
    * @param context - Placement context with culture data
    * @returns Entity ID and region info if successful
    */
   async spawnEmergentRegionAndPlace(
-    regionLabel: string,
+    _regionLabel: string,
     entity: Omit<Partial<HardState>, 'coordinates'>,
     context: PlacementContext
   ): Promise<{ entityId: string; regionId: string } | null> {
     const kind = entity.kind ?? 'npc';
     const existingPoints = this.getAllRegionPoints();
 
-    // Build context that forces emergent region creation
-    const fullContext: PlacementContext = {
-      ...context,
-      createEmergentRegion: true,
-      emergentRegionLabel: regionLabel
-    };
-
+    // Emergent region creation is paused - just place normally
     const placementResult = this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,
-      fullContext,
+      context,
       existingPoints,
       5
     );
@@ -1501,7 +1262,7 @@ export class TemplateGraphView {
 
     return {
       entityId,
-      regionId: placementResult.emergentRegionCreated?.id ?? placementResult.regionId ?? 'unknown'
+      regionId: placementResult.regionId ?? 'unknown'
     };
   }
 
@@ -1516,10 +1277,9 @@ export class TemplateGraphView {
     cultureId: string,
     entity: Omit<Partial<HardState>, 'coordinates'>
   ): Promise<string | null> {
-    // Build context from culture
-    const context = this.coordinateContext.buildPlacementContext(cultureId);
-
     const kind = entity.kind ?? 'npc';
+    // Build context from culture and entity kind
+    const context = this.coordinateContext.buildPlacementContext(cultureId, kind);
     const existingPoints = this.getAllRegionPoints();
 
     const placementResult = this.coordinateContext.placeWithCulture(
@@ -1577,16 +1337,16 @@ export class TemplateGraphView {
   // ============================================================================
 
   /**
-   * Get all region coordinates for entities in a specific region.
+   * Get all coordinates for entities in a specific region.
    */
-  private getRegionPoints(regionId: string): Point[] {
-    const region = this.regionMapper.getRegion(regionId);
+  private getRegionPoints(entityKind: string, regionId: string): Point[] {
+    const region = this.coordinateContext.getRegion(entityKind, regionId);
     if (!region) return [];
 
     const points: Point[] = [];
     for (const entity of this.graph.getEntities()) {
-      // Coordinates are now simple Point
-      if (entity.coordinates && this.regionMapper.containsPoint(region, entity.coordinates)) {
+      if (entity.kind !== entityKind) continue;
+      if (entity.coordinates && this.pointInRegion(entity.coordinates, region)) {
         points.push(entity.coordinates);
       }
     }

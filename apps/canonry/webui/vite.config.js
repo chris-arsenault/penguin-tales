@@ -22,6 +22,18 @@ export default defineConfig({
           entry: 'http://localhost:5002/remoteEntry.js',
           entryGlobalName: 'cosmographer',
         },
+        coherenceEngine: {
+          type: 'module',
+          name: 'coherenceEngine',
+          entry: 'http://localhost:5003/remoteEntry.js',
+          entryGlobalName: 'coherenceEngine',
+        },
+        loreWeave: {
+          type: 'module',
+          name: 'loreWeave',
+          entry: 'http://localhost:5004/remoteEntry.js',
+          entryGlobalName: 'loreWeave',
+        },
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },

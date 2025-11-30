@@ -1,0 +1,138 @@
+[
+  {
+    "kind": "npc",
+    "description": "NPCs",
+    "subtypes": [
+      { "id": "merchant", "name": "Merchant" },
+      { "id": "mayor", "name": "Mayor" },
+      { "id": "hero", "name": "Hero" },
+      { "id": "outlaw", "name": "Outlaw" },
+      { "id": "orca", "name": "Orca" }
+    ],
+    "statuses": [
+      { "id": "alive", "name": "Alive", "isTerminal": false },
+      { "id": "dead", "name": "Dead", "isTerminal": true },
+      { "id": "fictional", "name": "Fictional", "isTerminal": false },
+      { "id": "missing", "name": "Missing", "isTerminal": false }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": { "name": "Alignment", "lowLabel": "Hostile", "highLabel": "Friendly" },
+        "y": { "name": "Role", "lowLabel": "Follower", "highLabel": "Leader" },
+        "z": { "name": "Approach", "lowLabel": "Mundane", "highLabel": "Mystical" }
+      },
+      "regions": [
+        {
+          "id": "aurora_stack",
+          "label": "Aurora Stack",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "bounds": { "shape": "circle", "center": { "x": 70, "y": 60 }, "radius": 15 }
+        },
+        {
+          "id": "nightfall_shelf",
+          "label": "Nightfall Shelf",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "bounds": { "shape": "circle", "center": { "x": 35, "y": 45 }, "radius": 15 }
+        },
+        {
+          "id": "orca_waters",
+          "label": "Orca Waters",
+          "color": "#2F4F4F",
+          "culture": "orca",
+          "bounds": { "shape": "circle", "center": { "x": 15, "y": 55 }, "radius": 12 }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "location",
+    "description": "Locations",
+    "subtypes": [
+      { "id": "iceberg", "name": "Iceberg" },
+      { "id": "colony", "name": "Colony" },
+      { "id": "igloo", "name": "Igloo" },
+      { "id": "geographic_feature", "name": "Geographic Feature" },
+      { "id": "anomaly", "name": "Anomaly" }
+    ],
+    "statuses": [
+      { "id": "thriving", "name": "Thriving", "isTerminal": false },
+      { "id": "waning", "name": "Waning", "isTerminal": false },
+      { "id": "abandoned", "name": "Abandoned", "isTerminal": true }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": { "name": "Accessibility", "lowLabel": "Hidden", "highLabel": "Central" },
+        "y": { "name": "Nature", "lowLabel": "Mundane", "highLabel": "Anomalous" },
+        "z": { "name": "Safety", "lowLabel": "Dangerous", "highLabel": "Safe" }
+      },
+      "regions": [
+        {
+          "id": "aurora_berg",
+          "label": "Aurora Berg",
+          "color": "#4A90D9",
+          "bounds": { "shape": "circle", "center": { "x": 50, "y": 45 }, "radius": 30 }
+        },
+        {
+          "id": "aurora_stack_loc",
+          "label": "Aurora Stack",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "bounds": { "shape": "circle", "center": { "x": 65, "y": 25 }, "radius": 12 }
+        },
+        {
+          "id": "nightfall_shelf_loc",
+          "label": "Nightfall Shelf",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "bounds": { "shape": "circle", "center": { "x": 35, "y": 35 }, "radius": 12 }
+        },
+        {
+          "id": "glow_fissure",
+          "label": "The Glow-Fissure",
+          "color": "#FF6347",
+          "bounds": { "shape": "circle", "center": { "x": 30, "y": 65 }, "radius": 8 }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "faction",
+    "description": "Factions",
+    "subtypes": [
+      { "id": "political", "name": "Political" },
+      { "id": "criminal", "name": "Criminal" },
+      { "id": "cult", "name": "Cult" },
+      { "id": "company", "name": "Company" }
+    ],
+    "statuses": [
+      { "id": "active", "name": "Active", "isTerminal": false },
+      { "id": "disbanded", "name": "Disbanded", "isTerminal": true },
+      { "id": "waning", "name": "Waning", "isTerminal": false }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": { "name": "Structure", "lowLabel": "Chaotic", "highLabel": "Organized" },
+        "y": { "name": "Purpose", "lowLabel": "Destructive", "highLabel": "Constructive" },
+        "z": { "name": "Reach", "lowLabel": "Local", "highLabel": "Widespread" }
+      },
+      "regions": [
+        {
+          "id": "aurora_factions",
+          "label": "Aurora Stack",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "bounds": { "shape": "circle", "center": { "x": 75, "y": 70 }, "radius": 15 }
+        },
+        {
+          "id": "nightfall_factions",
+          "label": "Nightfall Shelf",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "bounds": { "shape": "circle", "center": { "x": 35, "y": 40 }, "radius": 15 }
+        }
+      ]
+    }
+  }
+]

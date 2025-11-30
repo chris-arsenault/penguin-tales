@@ -21,7 +21,6 @@ describe('ContractEnforcer', () => {
       domain: {} as any,
       templates: [],
       systems: [],
-      feedbackLoops: [],
       entityRegistries: [],
       epochLength: 20,
       simulationTicksPerGrowth: 10,

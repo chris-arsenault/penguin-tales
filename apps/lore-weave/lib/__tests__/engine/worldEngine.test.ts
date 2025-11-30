@@ -51,21 +51,30 @@ describe('WorldEngine', () => {
     mockConfig = {
       domain: {
         entityKinds: [
-          { kind: 'npc', subtypes: ['hero'], relationships: [] },
-          { kind: 'faction', subtypes: ['guild'], relationships: [] },
-          { kind: 'location', subtypes: ['colony'], relationships: [] }
+          { kind: 'npc', subtypes: [{ id: 'hero', name: 'Hero' }], statuses: [], relationships: [] },
+          { kind: 'faction', subtypes: [{ id: 'guild', name: 'Guild' }], statuses: [], relationships: [] },
+          { kind: 'location', subtypes: [{ id: 'colony', name: 'Colony' }], statuses: [], relationships: [] }
         ]
       } as DomainSchema,
       templates: [mockTemplate],
       systems: [mockSystem],
       eras: [mockEra],
-      feedbackLoops: [],
       pressures: [],
       entityRegistries: [],
       epochLength: 10,
       simulationTicksPerGrowth: 5,
       targetEntitiesPerKind: 20,
-      maxTicks: 100
+      maxTicks: 100,
+      coordinateContextConfig: {
+        entityKinds: [
+          { id: 'npc', semanticPlane: { bounds: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } }, regions: [] } },
+          { id: 'faction', semanticPlane: { bounds: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } }, regions: [] } },
+          { id: 'location', semanticPlane: { bounds: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } }, regions: [] } }
+        ],
+        cultures: [
+          { id: 'default', name: 'Default Culture', axisBiases: {} }
+        ]
+      }
     };
 
     // Initial state

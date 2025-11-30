@@ -50,11 +50,10 @@ export { ComponentPurpose, GraphStore } from './engine/types';
 export type {
   DomainSchema,
   RelationshipKindDefinition,
-  RelationshipConfig,
-  RelationshipLimits,
-  RelationshipCategory,
   SnapshotConfig,
   EntityKindDefinition,
+  SubtypeDefinition,
+  StatusDefinition,
   EntityKindStyle,
   DomainUIConfig,
   EmergentDiscoveryConfig,
@@ -67,12 +66,8 @@ export type {
 // BaseDomainSchema is a class, not just a type
 export { BaseDomainSchema } from './domainInterface/domainSchema';
 
-export type {
-  DomainLoreProvider,
-  CulturalGroup,
-  NamingRules,
-  GeographyConstraints
-} from './llm/types';
+// LLM types moved to @illuminator - import from there if needed
+// export type { DomainLoreProvider, CulturalGroup, NamingRules, GeographyConstraints } from './llm/types';
 
 export type {
   DistributionTargets
@@ -86,9 +81,9 @@ export { TemplateGraphView } from './graph/templateGraphView';
 export { TargetSelector } from './selection/targetSelector';
 export type { SelectionBias, SelectionResult } from './selection/targetSelector';
 
-// Services for optional LLM integration (domain configures these)
-export { EnrichmentService } from './llm/enrichmentService';
-export { ImageGenerationService } from './llm/imageGenerationService';
+// LLM services moved to @illuminator - import from there if needed
+// export { EnrichmentService } from './llm/enrichmentService';
+// export { ImageGenerationService } from './llm/imageGenerationService';
 
 // Cultural awareness analysis (debugging/reporting)
 export { CulturalAwarenessAnalyzer } from './statistics/culturalAwarenessAnalyzer';
@@ -136,7 +131,7 @@ export {
 
 // Name generation service (wraps name-forge)
 export { NameForgeService } from './naming/nameForgeService';
-export type { NameForgeConfig, NameForgeProjectFile, Culture } from './naming/nameForgeService';
+export type { Culture, CultureNamingConfig } from './naming/nameForgeService';
 
 // Validation
 export { validateWorld } from './engine/validators';
@@ -224,9 +219,6 @@ export type {
   FrameworkStatus
 } from './core/frameworkPrimitives';
 
-// Feedback loop types (domain provides feedback loop configuration)
-export type { FeedbackLoop } from './feedback/feedbackAnalyzer';
-
 // =============================================================================
 // REGION-BASED COORDINATE SYSTEM
 // =============================================================================
@@ -303,7 +295,10 @@ export {
 
 export type {
   CoordinateContextConfig,
-  CultureCoordinateConfig,
+  EntityKindConfig,
+  CultureConfig,
+  SemanticPlane,
+  KindAxisBiases,
   PlacementContext,
   PlacementResult
 } from './coordinates/coordinateContext';
@@ -350,3 +345,70 @@ export type {
   LineageSpec,
   RelationshipCondition
 } from './engine/declarativeTypes';
+
+// =============================================================================
+// DECLARATIVE PRESSURE SYSTEM
+// =============================================================================
+
+export {
+  createPressureFromDeclarative,
+  loadPressures,
+  loadPressure
+} from './engine/pressureInterpreter';
+
+export type {
+  DeclarativePressure,
+  PressuresFile,
+  FeedbackFactor,
+  EntityCountFactor,
+  RelationshipCountFactor,
+  TagCountFactor,
+  RatioFactor,
+  StatusRatioFactor,
+  CrossCultureRatioFactor,
+  SimpleCountFactor
+} from './engine/declarativePressureTypes';
+
+// =============================================================================
+// DECLARATIVE DOMAIN SCHEMA SYSTEM
+// =============================================================================
+
+export {
+  createDomainSchemaFromJSON,
+  loadDomainSchema
+} from './engine/domainSchemaInterpreter';
+
+export type {
+  JSONDomainSchema,
+  JSONEntityKind,
+  JSONRelationshipKind,
+  JSONCulture,
+  JSONSubtype,
+  JSONStatus
+} from './engine/domainSchemaInterpreter';
+
+// =============================================================================
+// OBSERVER PATTERN - Real-time simulation events
+// =============================================================================
+
+export { SimulationEmitter } from './observer/SimulationEmitter';
+export type {
+  ISimulationEmitter,
+  SimulationEvent,
+  ProgressPayload,
+  LogPayload,
+  ValidationPayload,
+  EpochStartPayload,
+  EpochStatsPayload,
+  GrowthPhasePayload,
+  PopulationPayload,
+  PopulationMetricPayload,
+  TemplateUsagePayload,
+  CoordinateStatsPayload,
+  TagHealthPayload,
+  SystemHealthPayload,
+  SimulationResultPayload,
+  ErrorPayload,
+  WorkerInboundMessage,
+  WorkerOutboundMessage
+} from './observer/types';

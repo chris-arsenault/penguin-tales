@@ -58,7 +58,6 @@ function createGraph(
     history: [],
     config: {} as any,
     relationshipCooldowns: new Map(),
-    loreRecords: [],
     discoveryState: {
       currentThreshold: 0,
       lastDiscoveryTick: 0,

@@ -4,6 +4,7 @@ import { TemplateGraphView } from '../../graph/templateGraphView';
 import { TargetSelector } from '../../selection/targetSelector';
 import { Graph, MetaEntityConfig } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
+import { CoordinateContext } from '../../coordinates/coordinateContext';
 import * as helpers from '../../utils';
 
 describe('MetaEntityFormation', () => {
@@ -208,7 +209,19 @@ describe('MetaEntityFormation', () => {
 
     // Create mock graph view with target selector
     const targetSelector = new TargetSelector();
-    mockGraphView = new TemplateGraphView(mockGraph, targetSelector);
+
+    // Create mock coordinate context
+    const mockCoordinateContext = {
+      place: () => ({ x: 0.5, y: 0.5 }),
+      placeWithCulture: () => ({ x: 0.5, y: 0.5 }),
+      getRegionAtPoint: () => null,
+      findOrCreateRegion: () => ({ id: 'test-region', name: 'Test', bounds: { type: 'circle', center: { x: 0.5, y: 0.5 }, radius: 0.1 } }),
+      sampleRegion: () => ({ x: 0.5, y: 0.5 }),
+      getRegions: () => [],
+      getRegionById: () => null,
+    } as unknown as CoordinateContext;
+
+    mockGraphView = new TemplateGraphView(mockGraph, targetSelector, mockCoordinateContext);
   });
 
   describe('registerConfig', () => {

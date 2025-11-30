@@ -75,6 +75,7 @@ export type RegionBounds = CircleBounds | RectBounds | PolygonBounds;
 
 /**
  * A named region in coordinate space.
+ * Matches cosmographer's region structure.
  */
 export interface Region {
   /** Unique identifier */
@@ -83,14 +84,20 @@ export interface Region {
   /** Human-readable name */
   label: string;
 
-  /** Narrative description */
-  description: string;
+  /** Display color (hex string) */
+  color?: string;
+
+  /** Culture that owns/inhabits this region (used to derive seedRegionIds) */
+  culture?: string | null;
 
   /** Spatial bounds */
   bounds: RegionBounds;
 
   /** Optional z-range constraint */
   zRange?: { min: number; max: number };
+
+  /** Narrative description (optional) */
+  description?: string;
 
   /** Tags to auto-apply to entities in this region */
   autoTags?: string[];
@@ -302,26 +309,17 @@ export type EntityKindMapsState = Record<string, EntityKindMapState>;
 
 /**
  * Definition of a single semantic axis.
+ * Matches cosmographer's axis structure.
  */
 export interface SemanticAxis {
   /** Axis identifier (e.g., 'source', 'scope', 'alignment') */
   name: string;
 
-  /** Concept at position 0 (e.g., 'physical', 'local', 'hostile') */
-  lowConcept: string;
+  /** Label at position 0 (e.g., 'Ancient', 'Weak', 'Surface') */
+  lowLabel: string;
 
-  /** Concept at position 100 (e.g., 'mystical', 'universal', 'friendly') */
-  highConcept: string;
-
-  /** Optional pressure this axis correlates with */
-  relatedPressure?: string;
-
-  /**
-   * How position affects pressure (-1 to 1).
-   * Positive: high position increases pressure
-   * Negative: high position decreases pressure
-   */
-  pressureCorrelation?: number;
+  /** Label at position 100 (e.g., 'Modern', 'Strong', 'Deep') */
+  highLabel: string;
 }
 
 /**

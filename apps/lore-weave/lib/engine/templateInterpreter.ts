@@ -213,7 +213,9 @@ export class TemplateInterpreter {
   // STEP 1: APPLICABILITY
   // ===========================================================================
 
-  private evaluateApplicability(rules: ApplicabilityRule[], context: ExecutionContext): boolean {
+  private evaluateApplicability(rules: ApplicabilityRule[] | undefined, context: ExecutionContext): boolean {
+    // No rules means always applicable
+    if (!rules || rules.length === 0) return true;
     // All rules must pass (AND logic)
     return rules.every(rule => this.evaluateApplicabilityRule(rule, context));
   }

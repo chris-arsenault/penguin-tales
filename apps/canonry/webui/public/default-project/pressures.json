@@ -1,0 +1,188 @@
+[
+  {
+    "id": "resource_scarcity",
+    "name": "Resource Scarcity",
+    "initialValue": 20,
+    "decay": 18,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "ratio",
+          "numerator": { "type": "entity_count", "kind": "npc" },
+          "denominator": { "type": "entity_count", "kind": "location", "subtype": "colony" },
+          "fallbackValue": 0,
+          "coefficient": 5,
+          "cap": 10
+        },
+        {
+          "type": "entity_count",
+          "kind": "location",
+          "subtype": "colony",
+          "coefficient": 0.5
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "entity_count",
+          "kind": "location",
+          "subtype": "geographic_feature",
+          "coefficient": 0.6
+        }
+      ]
+    }
+  },
+  {
+    "id": "conflict",
+    "name": "Conflict Tension",
+    "initialValue": 15,
+    "decay": 2,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "ratio",
+          "numerator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "rival_of", "at_war_with"] },
+          "denominator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "rival_of", "at_war_with", "allied_with", "trades_with", "member_of"] },
+          "fallbackValue": 0,
+          "coefficient": 10
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": ["at_war_with"],
+          "coefficient": 2,
+          "cap": 5
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "entity_count",
+          "kind": "npc",
+          "subtype": "hero",
+          "coefficient": 0.2
+        }
+      ]
+    }
+  },
+  {
+    "id": "magical_instability",
+    "name": "Magical Instability",
+    "initialValue": 30,
+    "decay": 6,
+    "growth": {
+      "baseGrowth": 2.0,
+      "positiveFeedback": [
+        {
+          "type": "ratio",
+          "numerator": { "type": "entity_count", "kind": "location", "subtype": "anomaly" },
+          "denominator": { "type": "total_entities" },
+          "fallbackValue": 0,
+          "coefficient": 50,
+          "cap": 5
+        },
+        {
+          "type": "entity_count",
+          "kind": "abilities",
+          "subtype": "magic",
+          "coefficient": 0.8,
+          "cap": 10
+        },
+        {
+          "type": "entity_count",
+          "kind": "faction",
+          "subtype": "cult",
+          "coefficient": 0.3
+        },
+        {
+          "type": "ratio",
+          "numerator": { "type": "entity_count", "kind": "abilities", "subtype": "magic" },
+          "denominator": { "type": "entity_count", "kind": "abilities" },
+          "fallbackValue": 0,
+          "coefficient": 5
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "entity_count",
+          "kind": "abilities",
+          "subtype": "technology",
+          "coefficient": 0.3
+        }
+      ]
+    }
+  },
+  {
+    "id": "stability",
+    "name": "Political Stability",
+    "initialValue": 50,
+    "decay": 3,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "ratio",
+          "numerator": { "type": "relationship_count", "relationshipKinds": ["allied_with"] },
+          "denominator": { "type": "relationship_count", "relationshipKinds": ["allied_with", "enemy_of", "rival_of", "at_war_with"] },
+          "fallbackValue": 0.5,
+          "coefficient": 7
+        },
+        {
+          "type": "status_ratio",
+          "kind": "npc",
+          "subtype": "mayor",
+          "aliveStatus": "alive",
+          "coefficient": 3
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": ["leader_of"],
+          "coefficient": 0.3
+        }
+      ],
+      "negativeFeedback": []
+    }
+  },
+  {
+    "id": "external_threat",
+    "name": "External Danger",
+    "initialValue": 0,
+    "decay": 6,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "tag_count",
+          "tags": ["external", "invader"],
+          "coefficient": 10
+        },
+        {
+          "type": "entity_count",
+          "kind": "npc",
+          "subtype": "orca",
+          "coefficient": 0.8
+        }
+      ],
+      "negativeFeedback": []
+    }
+  },
+  {
+    "id": "cultural_tension",
+    "name": "Cultural Divergence",
+    "initialValue": 5,
+    "decay": 15,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "cross_culture_ratio",
+          "relationshipKinds": ["follower_of", "rival_of", "lover_of", "enemy_of", "allied_with"],
+          "coefficient": 10
+        },
+        {
+          "type": "ratio",
+          "numerator": { "type": "relationship_count", "relationshipKinds": ["splinter_of"] },
+          "denominator": { "type": "entity_count", "kind": "faction" },
+          "fallbackValue": 0,
+          "coefficient": 5
+        }
+      ],
+      "negativeFeedback": [],
+      "maxGrowth": 10
+    }
+  }
+]

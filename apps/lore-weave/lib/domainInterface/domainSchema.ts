@@ -9,22 +9,6 @@ import { HardState, Relationship } from '../core/worldTypes';
 import { SemanticEncoderConfig } from '../coordinates/types';
 
 /**
- * Relationship mutability classification
- * - immutable: Facts that don't change over time (spatial, structural)
- * - mutable: Relationships that naturally evolve (social, political)
- */
-export type RelationshipMutability = 'immutable' | 'mutable';
-
-/**
- * Relationship category for behavior classification
- * - immutable_fact: Lineage and facts, set at creation, never change
- * - political: Political relationships that can change strength/be archived
- * - social: Social relationships that can change strength/be archived
- * - institutional: Membership/role relationships that can change
- */
-export type RelationshipCategory = 'immutable_fact' | 'political' | 'social' | 'institutional';
-
-/**
  * Definition of a relationship kind in the domain
  */
 export interface RelationshipKindDefinition {
@@ -39,80 +23,6 @@ export interface RelationshipKindDefinition {
 
   /** Entity kinds that can be the destination of this relationship */
   dstKinds: string[];
-
-  /** Whether this relationship changes over time or is a permanent fact */
-  mutability: RelationshipMutability;
-
-  /** If true, this relationship should never be culled (structural integrity) */
-  protected: boolean;
-
-  /** If true, this relationship is required for entity validity */
-  structural?: boolean;
-
-  // ===========================
-  // RELATIONSHIP BEHAVIOR CONFIG
-  // ===========================
-
-  /**
-   * Narrative strength/importance of this relationship (0.0-1.0)
-   * Higher values = more narratively significant
-   * Default: 0.5
-   */
-  strength?: number;
-
-  /**
-   * Behavioral category for this relationship
-   * Default: 'social'
-   */
-  category?: RelationshipCategory;
-
-  /**
-   * If true, this is a lineage relationship that requires cognitive/spatial distance
-   */
-  isLineage?: boolean;
-
-  /**
-   * Expected distance range for lineage relationships
-   * Only applies when isLineage is true
-   */
-  distanceRange?: { min: number; max: number };
-
-  /**
-   * Relationship kinds that conflict with this one
-   * (mutually exclusive - cannot exist between same entity pair)
-   */
-  conflictsWith?: string[];
-}
-
-/**
- * Per-entity-kind relationship limits
- * Defines warning thresholds for relationship counts
- */
-export interface RelationshipLimits {
-  /** Default limit for relationship types not explicitly specified */
-  default: number;
-  /** Per-relationship-kind limits */
-  perKind?: Record<string, number>;
-}
-
-/**
- * Complete relationship configuration for a domain
- */
-export interface RelationshipConfig {
-  /** Per-entity-kind relationship limits */
-  limits?: Record<string, RelationshipLimits>;
-
-  /**
-   * Default relationship strength for unknown kinds
-   * Default: 0.5
-   */
-  defaultStrength?: number;
-
-  /**
-   * Default relationship category for unknown kinds
-   * Default: 'social'
-   */
-  defaultCategory?: RelationshipCategory;
 }
 
 // ===========================
@@ -283,6 +193,28 @@ export interface EntityKindStyle {
 }
 
 /**
+ * Subtype definition for an entity kind
+ */
+export interface SubtypeDefinition {
+  /** Unique identifier for this subtype */
+  id: string;
+  /** Human-readable name */
+  name: string;
+}
+
+/**
+ * Status definition for an entity kind
+ */
+export interface StatusDefinition {
+  /** Unique identifier for this status */
+  id: string;
+  /** Human-readable name */
+  name: string;
+  /** Whether this status represents a terminal state (entity lifecycle end) */
+  isTerminal: boolean;
+}
+
+/**
  * Definition of an entity kind in the domain
  */
 export interface EntityKindDefinition {
@@ -293,16 +225,13 @@ export interface EntityKindDefinition {
   description?: string;
 
   /** Valid subtypes for this entity kind */
-  subtypes: string[];
+  subtypes: SubtypeDefinition[];
 
   /** Valid status values for this entity kind */
-  statusValues: string[];
+  statuses: StatusDefinition[];
 
   /** Relationships required for this entity kind to be valid */
   requiredRelationships?: EntityValidationRule[];
-
-  /** Default status for new entities of this kind */
-  defaultStatus?: string;
 
   /**
    * Configuration for entity snapshotting and change detection.
@@ -385,15 +314,6 @@ export interface DomainSchema {
   /** Optional: Get entity kind definition by kind */
   getEntityKind?(kind: string): EntityKindDefinition | undefined;
 
-  /** Optional: Get all protected (non-cullable) relationship kinds */
-  getProtectedRelationshipKinds?(): string[];
-
-  /** Optional: Get all immutable relationship kinds */
-  getImmutableRelationshipKinds?(): string[];
-
-  /** Optional: Get all mutable relationship kinds */
-  getMutableRelationshipKinds?(): string[];
-
   /** Optional: Get culture definition by id */
   getCulture?(id: string): CultureDefinition | undefined;
 
@@ -433,34 +353,6 @@ export interface DomainSchema {
    * @returns Array of action domain IDs
    */
   getActionDomainsForEntity?(entity: HardState): string[];
-
-  // ===========================
-  // RELATIONSHIP BEHAVIOR CONFIG
-  // ===========================
-
-  /** Optional: Relationship configuration (limits, defaults) */
-  relationshipConfig?: RelationshipConfig;
-
-  /** Get narrative strength for a relationship kind (0.0-1.0) */
-  getRelationshipStrength?(kind: string): number;
-
-  /** Get behavioral category for a relationship kind */
-  getRelationshipCategory?(kind: string): RelationshipCategory;
-
-  /** Get warning threshold for relationship count */
-  getRelationshipWarningThreshold?(entityKind: string, relationshipKind: string): number;
-
-  /** Check if a relationship kind requires distance (is a lineage relationship) */
-  isLineageRelationship?(kind: string): boolean;
-
-  /** Get expected distance range for a lineage relationship kind */
-  getExpectedDistanceRange?(kind: string): { min: number; max: number } | undefined;
-
-  /** Check if a new relationship conflicts with existing relationships */
-  checkRelationshipConflict?(existingKinds: string[], newKind: string): boolean;
-
-  /** Get all lineage relationship kinds */
-  getLineageRelationshipKinds?(): string[];
 
   // ===========================
   // EMERGENT DISCOVERY CONFIG
@@ -587,7 +479,6 @@ export class BaseDomainSchema implements DomainSchema {
   cultures: CultureDefinition[];
   uiConfig?: DomainUIConfig;
   nameGenerator?: NameGenerator;
-  relationshipConfig?: RelationshipConfig;
 
   constructor(config: {
     id: string;
@@ -598,7 +489,6 @@ export class BaseDomainSchema implements DomainSchema {
     cultures: CultureDefinition[];
     uiConfig?: DomainUIConfig;
     nameGenerator?: NameGenerator;
-    relationshipConfig?: RelationshipConfig;
   }) {
     this.id = config.id;
     this.name = config.name;
@@ -608,7 +498,6 @@ export class BaseDomainSchema implements DomainSchema {
     this.cultures = config.cultures;
     this.uiConfig = config.uiConfig;
     this.nameGenerator = config.nameGenerator;
-    this.relationshipConfig = config.relationshipConfig;
   }
 
   getRelationshipKind(kind: string): RelationshipKindDefinition | undefined {
@@ -617,24 +506,6 @@ export class BaseDomainSchema implements DomainSchema {
 
   getEntityKind(kind: string): EntityKindDefinition | undefined {
     return this.entityKinds.find(ek => ek.kind === kind);
-  }
-
-  getProtectedRelationshipKinds(): string[] {
-    return this.relationshipKinds
-      .filter(rk => rk.protected)
-      .map(rk => rk.kind);
-  }
-
-  getImmutableRelationshipKinds(): string[] {
-    return this.relationshipKinds
-      .filter(rk => rk.mutability === 'immutable')
-      .map(rk => rk.kind);
-  }
-
-  getMutableRelationshipKinds(): string[] {
-    return this.relationshipKinds
-      .filter(rk => rk.mutability === 'mutable')
-      .map(rk => rk.kind);
   }
 
   getCulture(id: string): CultureDefinition | undefined {
@@ -688,83 +559,5 @@ export class BaseDomainSchema implements DomainSchema {
       valid: missing.length === 0,
       missing
     };
-  }
-
-  // ===========================
-  // RELATIONSHIP BEHAVIOR METHODS
-  // ===========================
-
-  /**
-   * Get narrative strength for a relationship kind (0.0-1.0)
-   * Reads from RelationshipKindDefinition.strength, falls back to config default
-   */
-  getRelationshipStrength(kind: string): number {
-    const def = this.getRelationshipKind(kind);
-    if (def?.strength !== undefined) {
-      return def.strength;
-    }
-    return this.relationshipConfig?.defaultStrength ?? 0.5;
-  }
-
-  /**
-   * Get behavioral category for a relationship kind
-   * Reads from RelationshipKindDefinition.category, falls back to config default
-   */
-  getRelationshipCategory(kind: string): RelationshipCategory {
-    const def = this.getRelationshipKind(kind);
-    if (def?.category) {
-      return def.category;
-    }
-    return this.relationshipConfig?.defaultCategory ?? 'social';
-  }
-
-  /**
-   * Get warning threshold for relationship count
-   * Uses per-entity-kind limits from relationshipConfig
-   */
-  getRelationshipWarningThreshold(entityKind: string, relationshipKind: string): number {
-    const limits = this.relationshipConfig?.limits?.[entityKind];
-    if (!limits) {
-      return 10; // Sensible default
-    }
-    return limits.perKind?.[relationshipKind] ?? limits.default;
-  }
-
-  /**
-   * Check if a relationship kind requires distance (is a lineage relationship)
-   */
-  isLineageRelationship(kind: string): boolean {
-    const def = this.getRelationshipKind(kind);
-    return def?.isLineage === true;
-  }
-
-  /**
-   * Get expected distance range for a lineage relationship kind
-   * Returns undefined for non-lineage relationships
-   */
-  getExpectedDistanceRange(kind: string): { min: number; max: number } | undefined {
-    const def = this.getRelationshipKind(kind);
-    if (!def?.isLineage) return undefined;
-    return def.distanceRange;
-  }
-
-  /**
-   * Check if a new relationship conflicts with existing relationships
-   * Returns true if there is a conflict (should not create relationship)
-   */
-  checkRelationshipConflict(existingKinds: string[], newKind: string): boolean {
-    const def = this.getRelationshipKind(newKind);
-    if (!def?.conflictsWith) return false;
-
-    return existingKinds.some(existing => def.conflictsWith!.includes(existing));
-  }
-
-  /**
-   * Get all lineage relationship kinds
-   */
-  getLineageRelationshipKinds(): string[] {
-    return this.relationshipKinds
-      .filter(rk => rk.isLineage === true)
-      .map(rk => rk.kind);
   }
 }

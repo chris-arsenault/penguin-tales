@@ -17,11 +17,20 @@ describe('PopulationTracker', () => {
       entityKinds: [
         {
           kind: 'npc',
-          subtypes: ['hero', 'merchant', 'villain']
+          subtypes: [
+            { id: 'hero', name: 'Hero' },
+            { id: 'merchant', name: 'Merchant' },
+            { id: 'villain', name: 'Villain' }
+          ],
+          statuses: []
         },
         {
           kind: 'location',
-          subtypes: ['colony', 'landmark']
+          subtypes: [
+            { id: 'colony', name: 'Colony' },
+            { id: 'landmark', name: 'Landmark' }
+          ],
+          statuses: []
         }
       ]
     } as DomainSchema;

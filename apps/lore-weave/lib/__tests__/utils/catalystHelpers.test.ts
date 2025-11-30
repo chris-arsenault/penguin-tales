@@ -80,7 +80,6 @@ function createGraph(entities: HardState[], relationships: Relationship[] = []):
       }
     } as any,
     relationshipCooldowns: new Map(),
-    loreRecords: [],
     discoveryState: {
       currentThreshold: 0,
       lastDiscoveryTick: 0,

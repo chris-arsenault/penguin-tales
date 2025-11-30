@@ -14,6 +14,8 @@ import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
+import CoherenceEngineHost from './remotes/CoherenceEngineHost';
+import LoreWeaveHost from './remotes/LoreWeaveHost';
 import { colors, typography, spacing } from './theme';
 
 const styles = {
@@ -55,7 +57,8 @@ const VALID_SUBNAV = {
   enumerist: ['entityKinds', 'relationshipKinds', 'cultures'],
   names: ['workshop', 'optimizer', 'generate'],
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
-  simulation: [],
+  coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
+  simulation: ['configure', 'run', 'results'],
 };
 
 // URL state management
@@ -69,7 +72,7 @@ function getInitialState() {
     return { tab: null, section: null, showHome: true };
   }
 
-  const validTab = ['enumerist', 'names', 'cosmography', 'simulation'].includes(tab)
+  const validTab = ['enumerist', 'names', 'cosmography', 'coherence', 'simulation'].includes(tab)
     ? tab
     : 'enumerist';
 
@@ -166,6 +169,21 @@ export default function App() {
 
   const updateSeedRelationships = useCallback(
     (seedRelationships) => save({ seedRelationships }),
+    [save]
+  );
+
+  const updateEras = useCallback(
+    (eras) => save({ eras }),
+    [save]
+  );
+
+  const updatePressures = useCallback(
+    (pressures) => save({ pressures }),
+    [save]
+  );
+
+  const updateGenerators = useCallback(
+    (generators) => save({ generators }),
     [save]
   );
 
@@ -312,14 +330,36 @@ export default function App() {
           />
         );
 
+      case 'coherence':
+        return (
+          <CoherenceEngineHost
+            schema={schema}
+            eras={currentProject?.eras || []}
+            onErasChange={updateEras}
+            pressures={currentProject?.pressures || []}
+            onPressuresChange={updatePressures}
+            generators={currentProject?.generators || []}
+            onGeneratorsChange={updateGenerators}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
+        );
+
       case 'simulation':
         return (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-
-            </div>
-            <div>Lore Weave integration coming soon...</div>
-          </div>
+          <LoreWeaveHost
+            schema={schema}
+            eras={currentProject?.eras || []}
+            pressures={currentProject?.pressures || []}
+            generators={currentProject?.generators || []}
+            seedEntities={currentProject?.seedEntities || []}
+            seedRelationships={currentProject?.seedRelationships || []}
+            namingData={namingData}
+            semanticData={semanticData}
+            cultureVisuals={cultureVisuals}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+          />
         );
 
       default:
