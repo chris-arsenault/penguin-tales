@@ -1,7 +1,34 @@
+/**
+ * Faction Splinter Template
+ *
+ * Strategy-based template for faction schisms.
+ *
+ * Pipeline:
+ *   1. Applicability: entity_count_min(faction/members, 1)
+ *   2. Selection: by_kind(faction) with member count filter
+ *   3. Creation: faction + optional leader with lineage distance
+ *   4. Relationships: lineage(split_from), conflict(at_war_with), hierarchical(leader_of, member_of)
+ *   5. State: archive_relationship for defecting leader
+ */
+
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState, FactionSubtype, Relationship } from '@lore-weave/core';
-import { pickRandom } from '@lore-weave/core';
+import { pickRandom, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  createEntityPartial,
+  randomCount,
+  // Step 4: Relationships
+  createRelationship,
+  createLineageRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 function determineSplinterType(parentType: FactionSubtype): FactionSubtype {
   const transitions: Record<FactionSubtype, FactionSubtype[]> = {
@@ -21,27 +48,27 @@ export const factionSplinter: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'cultural_tension', threshold: 25 },  // FIXED: Lowered from 40 to 25
-        { name: 'conflict', threshold: 5 }  // FIXED: Lowered from 10 to 5 (conflict can be as low as 8.1)
+        { name: 'cultural_tension', threshold: 25 },
+        { name: 'conflict', threshold: 5 }
       ],
       entityCounts: [
-        { kind: 'faction', min: 1 }  // Need existing faction to split from
+        { kind: 'faction', min: 1 }
       ]
     },
     affects: {
       entities: [
         { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'npc', operation: 'create', count: { min: 0, max: 1 } }  // FIXED: May use existing NPC as leader (0-1)
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 1 } }
       ],
       relationships: [
-        { kind: 'split_from', operation: 'create', count: { min: 1, max: 1 } },  // Lineage
+        { kind: 'split_from', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'leader_of', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'member_of', operation: 'create', count: { min: 2, max: 5 } },
         { kind: 'enemy_of', operation: 'create', count: { min: 0, max: 1 } },
         { kind: 'rival_of', operation: 'create', count: { min: 0, max: 2 } }
       ],
       pressures: [
-        { name: 'conflict', delta: 3 },  // Splits create conflict
+        { name: 'conflict', delta: 3 },
         { name: 'cultural_tension', delta: 2 }
       ]
     }
@@ -89,89 +116,82 @@ export const factionSplinter: GrowthTemplate = {
     tags: ['conflict', 'faction-diversity'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - faction with members
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
     const factions = graphView.findEntities({ kind: 'faction' });
-    // FIXED: Lowered from 2 to 1 member (even single-member factions can splinter with new recruits)
     return factions.some(f => {
       const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
       return members.length >= 1;
     });
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - factions with members
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
+    // Strategy: by_kind(faction) with member count filter
     const factions = graphView.findEntities({ kind: 'faction' });
-    // FIXED: Lowered from 2 to 1 member (even single-member factions can splinter)
     return factions.filter(f => {
       const members = graphView.getRelatedEntities(f.id, 'member_of', 'dst');
       return members.length >= 1;
     });
   },
 
+  // =========================================================================
+  // STEPS 3-5: CREATION, RELATIONSHIPS, STATE
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    // Extract parameters from metadata
-    const params = factionSplinter.metadata?.parameters || {};
-    const leaderHeroChance = params.leaderHeroChance?.value ?? 0.5;
+    const { leaderHeroChance } = extractParams(factionSplinter.metadata, { leaderHeroChance: 0.5 });
 
     const parentFaction = target || pickRandom(graphView.findEntities({ kind: 'faction' }));
 
     if (!parentFaction) {
-      // No faction exists - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot create splinter - no factions exist'
-      };
+      return emptyResult('Cannot create splinter - no factions exist');
     }
+
+    // ------- STEP 3: CREATION -------
 
     const splinterType = determineSplinterType(parentFaction.subtype as FactionSubtype);
 
     // Determine ideological distance based on type change
-    // Same type = minor disagreement (0.15-0.35)
-    // Different type = major ideological shift (0.6-0.8)
     const isRadicalSplit = splinterType !== parentFaction.subtype;
-    const ideologicalDistance = isRadicalSplit
-      ? { min: 0.6, max: 0.8 }  // Revolutionary change
-      : { min: 0.15, max: 0.35 };  // Incremental difference
+    const distanceRange = isRadicalSplit
+      ? { min: 0.6, max: 0.8 }   // Revolutionary change
+      : { min: 0.15, max: 0.35 }; // Incremental difference
 
     const parentTags = Object.keys(parentFaction.tags || {}).slice(0, 2);
     const splinterTags: Record<string, boolean> = { splinter: true };
     parentTags.forEach(tag => { splinterTags[tag] = true; });
 
-    const splinter: Partial<HardState> = {
-      kind: 'faction',
-      subtype: splinterType,
-      description: `A splinter group that broke away from ${parentFaction.name}`,
+    // Strategy: createEntityPartial for splinter faction
+    const splinter = createEntityPartial('faction', splinterType, {
       status: 'waning',
       prominence: 'marginal',
-      culture: parentFaction.culture,  // Inherit culture from parent faction
+      culture: parentFaction.culture,
+      description: `A splinter group that broke away from ${parentFaction.name}`,
       tags: splinterTags
-    };
+    });
 
-    // Use targetSelector to find NPCs from the parent faction to lead the splinter
-    let leader: Partial<HardState> | undefined = undefined;
-    let leaderEntity: HardState | undefined = undefined;
-
+    // Try to find existing member to lead the splinter
     const members = graphView.getRelatedEntities(parentFaction.id, 'member_of', 'dst');
-
-    if (members.length > 0) {
-      // Select a member from the parent faction to lead the splinter
-      // Prefer non-leaders
-      const allRelationships = graphView.getAllRelationships();
-      const nonLeaders = members.filter(m => !allRelationships.filter(r => r.src === m.id && r.kind === 'leader_of').length);
-      leaderEntity = nonLeaders.length > 0 ? pickRandom(nonLeaders) : pickRandom(members);
-    }
+    const allRelationships = graphView.getAllRelationships();
+    const nonLeaders = members.filter(m =>
+      !allRelationships.some(r => r.src === m.id && r.kind === 'leader_of')
+    );
+    const leaderEntity = nonLeaders.length > 0 ? pickRandom(nonLeaders) : pickRandom(members);
 
     // If no suitable leader from faction, create a new one
+    let leader: Partial<HardState> | undefined = undefined;
     if (!leaderEntity) {
-      leader = {
-        kind: 'npc',
-        subtype: Math.random() < leaderHeroChance ? 'hero' : 'outlaw',
-        description: `Charismatic leader of a splinter faction that broke away from ${parentFaction.name}`,
+      leader = createEntityPartial('npc', Math.random() < leaderHeroChance ? 'hero' : 'outlaw', {
         status: 'alive',
         prominence: 'recognized',
-        culture: parentFaction.culture,  // Inherit culture from parent faction
+        culture: parentFaction.culture,
+        description: `Charismatic leader of a splinter faction that broke away from ${parentFaction.name}`,
         tags: { rebel: true, charismatic: true }
-      };
+      });
     }
 
     // Find parent faction's location
@@ -181,62 +201,59 @@ export const factionSplinter: GrowthTemplate = {
     let location = controlsRelations.length > 0 ? controlsRelations[0] :
                    occupiesRelations.length > 0 ? occupiesRelations[0] : undefined;
 
-    // Fallback: if parent has no location, use any colony
     if (!location) {
-      const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+      const colonies = selectByKind(graphView, 'location', ['colony']);
       location = colonies.length > 0 ? pickRandom(colonies) : undefined;
     }
 
     if (!location) {
-      // No location to splinter at - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: `${parentFaction.name} cannot splinter - no locations available`
-      };
+      return emptyResult(`${parentFaction.name} cannot splinter - no locations available`);
     }
 
-    // Create base relationships (distance will be added by engine using addRelationshipWithDistance)
-    // We can't call addRelationshipWithDistance here because we don't have the graph yet
-    // Instead, we store the distance range in a custom field that the engine will use
-    const relationships: Relationship[] = [
-      {
-        kind: 'split_from',
-        src: 'will-be-assigned-0',
-        dst: parentFaction.id,
-        // Store distance range as metadata - will be set by engine
-        distance: ideologicalDistance.min + Math.random() * (ideologicalDistance.max - ideologicalDistance.min)
-      },
-      { kind: 'at_war_with', src: 'will-be-assigned-0', dst: parentFaction.id },
-      { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id }
-    ];
+    // ------- STEP 4 & 5: RELATIONSHIPS & STATE -------
 
-    // Add leader relationships (either existing or new)
+    const relationships: Relationship[] = [];
+
+    // Strategy: lineage(split_from) with ideological distance
+    relationships.push(
+      createLineageRelationship('split_from', 'will-be-assigned-0', parentFaction.id, distanceRange)
+    );
+
+    // Strategy: conflict(at_war_with)
+    relationships.push(
+      createRelationship('at_war_with', 'will-be-assigned-0', parentFaction.id)
+    );
+
+    // Strategy: spatial(occupies)
+    relationships.push(
+      createRelationship('occupies', 'will-be-assigned-0', location.id)
+    );
+
+    // Add leader relationships
     if (leaderEntity) {
-      // Use existing NPC as leader - archive their old faction membership (full defection)
+      // Strategy: archive_relationship - defection from parent faction
       graphView.archiveRelationship(leaderEntity.id, parentFaction.id, 'member_of');
 
       relationships.push(
-        { kind: 'leader_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },
-        { kind: 'member_of', src: leaderEntity.id, dst: 'will-be-assigned-0' },
-        { kind: 'resident_of', src: leaderEntity.id, dst: location.id }
+        createRelationship('leader_of', leaderEntity.id, 'will-be-assigned-0'),
+        createRelationship('member_of', leaderEntity.id, 'will-be-assigned-0'),
+        createRelationship('resident_of', leaderEntity.id, location.id)
       );
     } else if (leader) {
-      // Use newly created leader
       relationships.push(
-        { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-        { kind: 'member_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-        { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
+        createRelationship('leader_of', 'will-be-assigned-1', 'will-be-assigned-0'),
+        createRelationship('member_of', 'will-be-assigned-1', 'will-be-assigned-0'),
+        createRelationship('resident_of', 'will-be-assigned-1', location.id)
       );
     }
 
     const entities = leader ? [splinter, leader] : [splinter];
     const leaderDesc = leaderEntity ? leaderEntity.name : 'a new leader';
 
-    return {
+    return templateResult(
       entities,
       relationships,
-      description: `${leaderDesc} leads a splinter faction in breaking away from ${parentFaction.name}`
-    };
+      `${leaderDesc} leads a splinter faction in breaking away from ${parentFaction.name}`
+    );
   }
 };

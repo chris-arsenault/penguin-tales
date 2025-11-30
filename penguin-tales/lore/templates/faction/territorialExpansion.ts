@@ -1,16 +1,31 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
-import { TemplateGraphView } from '@lore-weave/core';
-import { HardState } from '@lore-weave/core';
-
 /**
  * Territorial Expansion Template
  *
- * World-level template: Factions expand control to adjacent locations.
- * Creates 'controls' relationships with catalyst attribution.
+ * Strategy-based template for political power expansion.
  *
- * Pattern: Faction (with leader) → seizes control → Location
- * Result: World power dynamics shift, not NPC social networks
+ * Pipeline:
+ *   1. Applicability: entity_count_min(faction, 1) AND expansion_opportunity
+ *   2. Selection: by_kind(faction) with adjacent location filter
+ *   3. Creation: none (relationship-only template)
+ *   4. Relationships: hierarchical(controls) with catalyst attribution
  */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 export const territorialExpansion: GrowthTemplate = {
   id: 'territorial_expansion',
   name: 'Territorial Expansion',
@@ -62,13 +77,18 @@ export const territorialExpansion: GrowthTemplate = {
     tags: ['world-level', 'political', 'territorial']
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - entity_count_min AND expansion_opportunity
+  // =========================================================================
   canApply(graphView: TemplateGraphView): boolean {
-    // Need factions with leaders and available locations to control
-    const factions = graphView.findEntities({ kind: 'faction' });
+    // Strategy: entity_count_min(faction, 1)
+    if (!checkEntityCountMin(graphView, 'faction', undefined, 1)) {
+      return false;
+    }
 
-    if (factions.length === 0) return false;
+    // Strategy: check for expansion opportunities
+    const factions = selectByKind(graphView, 'faction');
 
-    // Check if any faction has expansion opportunities
     return factions.some(faction => {
       const controlled = graphView.getRelatedEntities(faction.id, 'controls', 'src');
 
@@ -82,9 +102,12 @@ export const territorialExpansion: GrowthTemplate = {
     });
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - factions with expansion opportunities
+  // =========================================================================
   findTargets(graphView: TemplateGraphView): HardState[] {
-    // Return factions with expansion opportunities
-    const factions = graphView.findEntities({ kind: 'faction' });
+    // Strategy: by_kind(faction) with adjacent location filter
+    const factions = selectByKind(graphView, 'faction');
 
     return factions.filter(faction => {
       const controlled = graphView.getRelatedEntities(faction.id, 'controls', 'src');
@@ -104,13 +127,12 @@ export const territorialExpansion: GrowthTemplate = {
     });
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'faction') {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No valid faction target'
-      };
+      return emptyResult('No valid faction target');
     }
 
     // Find locations this faction already controls
@@ -135,38 +157,31 @@ export const territorialExpansion: GrowthTemplate = {
         .map(id => graphView.getEntity(id))
         .filter((e): e is HardState => !!e && e.kind === 'location');
     } else {
-      // No controlled locations yet - can expand to any thriving location
-      candidates = graphView.findEntities({ kind: 'location', status: 'thriving' });
+      // Strategy: by_kind(location) with status filter - expand to any thriving location
+      candidates = selectByKind(graphView, 'location').filter(loc => loc.status === 'thriving');
     }
 
     if (candidates.length === 0) {
-      return {
-        entities: [],
-        relationships: [],
-        description: `${target.name} has no expansion opportunities`
-      };
+      return emptyResult(`${target.name} has no expansion opportunities`);
     }
 
     // Select target location
-    const targetLocation = candidates[Math.floor(Math.random() * candidates.length)];
+    const targetLocation = pickRandom(candidates);
 
     // Find catalyst (leader NPC if exists, otherwise faction itself)
     const leaders = graphView.getRelatedEntities(target.id, 'leader_of', 'dst');
-    const catalyst = leaders.length > 0 ? leaders[0] : target;
+    const catalyst = leaders.length > 0 ? pickRandom(leaders) : target;
 
-    // Create controls relationship with catalyst attribution
-    const controlsRel = {
-      kind: 'controls',
-      src: target.id,
-      dst: targetLocation.id,
-      strength: 0.75,
-      catalyzedBy: catalyst.id
-    };
+    // ------- STEP 4: RELATIONSHIPS -------
 
-    return {
-      entities: [],
-      relationships: [controlsRel],
-      description: `${target.name} expands control to ${targetLocation.name} (catalyzed by ${catalyst.name})`
-    };
+    // Strategy: hierarchical(controls) with catalyst attribution
+    const controlsRel = createRelationship('controls', target.id, targetLocation.id, { strength: 0.75 });
+    controlsRel.catalyzedBy = catalyst.id;
+
+    return templateResult(
+      [],
+      [controlsRel],
+      `${target.name} expands control to ${targetLocation.name} (catalyzed by ${catalyst.name})`
+    );
   }
 };

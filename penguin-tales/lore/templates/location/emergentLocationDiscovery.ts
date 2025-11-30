@@ -1,19 +1,39 @@
 /**
  * Emergent Location Discovery Template (UNIFIED)
  *
- * Combines strategic_location_discovery and mystical_location_discovery into one template.
- * Discovers different types of locations based on world state:
- * - Strategic locations (conflict-driven): vantage_point, choke_point, natural_fortification
- * - Mystical locations (magic-driven): anomaly, ley_nexus, mystical_shrine
- * - Resource locations (scarcity-driven): krill_fields, ice_quarry, thermal_vent
+ * Strategy-based template for discovering locations based on world state.
  *
- * Uses emergent discovery logic to generate thematically appropriate locations.
+ * Pipeline:
+ *   1. Applicability: pressure_any_above(10) OR random_chance(0.05)
+ *   2. Selection: by_preference_order(npc: hero > outlaw > merchant > mayor)
+ *   3. Creation: procedural_theme(pressure) with near_reference placement
+ *   4. Relationships: discovery(explorer_of, discovered_by), bidirectional(adjacent_to)
  */
 
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom, findEntities } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkAnyPressureAbove,
+  checkRandomChance,
+  // Step 2: Selection
+  selectByPreferenceOrder,
+  pickByPreferenceOrder,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  findNearbyLocationsForAdjacency,
+  selectThemeByPressure,
+  // Step 4: Relationships
+  createRelationship,
+  createBidirectionalRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const emergentLocationDiscovery: GrowthTemplate = {
   id: 'emergent_location_discovery',
@@ -23,8 +43,8 @@ export const emergentLocationDiscovery: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       entityCounts: [
-        { kind: 'npc', min: 1 },      // Need explorers
-        { kind: 'location', min: 1 }  // Need locations to be adjacent to
+        { kind: 'npc', min: 1 },
+        { kind: 'location', min: 1 }
       ]
     },
     affects: {
@@ -34,7 +54,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       relationships: [
         { kind: 'explorer_of', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'discovered_by', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 4 } }  // FIXED: Bidirectional (0-2 pairs = 0-4 relationships)
+        { kind: 'adjacent_to', operation: 'create', count: { min: 0, max: 4 } }
       ]
     }
   },
@@ -44,7 +64,7 @@ export const emergentLocationDiscovery: GrowthTemplate = {
       entityKinds: [
         {
           kind: 'location',
-          subtype: 'geographic_feature',  // Or 'anomaly' for mystical
+          subtype: 'geographic_feature',
           count: { min: 1, max: 1 },
           prominence: [{ level: 'recognized', probability: 1.0 }],
         },
@@ -64,206 +84,124 @@ export const emergentLocationDiscovery: GrowthTemplate = {
     tags: ['emergent', 'discovery', 'adaptive'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - pressure_any_above OR random_chance
+  // =========================================================================
   canApply: (graphView: TemplateGraphView): boolean => {
-    // Apply if there's any significant pressure
-    const conflict = graphView.getPressure('conflict') || 0;
-    const magicInstability = graphView.getPressure('magical_instability') || 0;
-    const resourceScarcity = graphView.getPressure('resource_scarcity') || 0;
+    // Strategy: pressure_any_above(10) OR random_chance(0.05)
+    const hasPressure = checkAnyPressureAbove(
+      graphView,
+      ['conflict', 'magical_instability', 'resource_scarcity'],
+      10
+    );
+    const randomTrigger = checkRandomChance(0.05);
 
-    // Need at least one pressure above 10 OR random 5% chance
-    return conflict > 10 || magicInstability > 10 || resourceScarcity > 10 || Math.random() < 0.05;
+    return hasPressure || randomTrigger;
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - by_preference_order for explorers
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView): HardState[] => {
-    // Find explorers (heroes, outlaws, mayors, merchants)
-    const npcs = graphView.findEntities({}).filter(
-      e => e.kind === 'npc' && e.status === 'alive'
-    );
-
-    return npcs.filter(npc =>
-      npc.subtype === 'hero' ||
-      npc.subtype === 'outlaw' ||
-      npc.subtype === 'mayor' ||
-      npc.subtype === 'merchant'
-    );
+    // Strategy: by_preference_order(hero > outlaw > merchant > mayor) with status filter
+    return selectByPreferenceOrder(graphView, 'npc', ['hero', 'outlaw', 'merchant', 'mayor'], 'alive');
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
-    const entities: Partial<HardState>[] = [];
-    const relationships: Relationship[] = [];
+    // Resolve target using preference order
+    const discoverer = explorer || pickByPreferenceOrder(
+      graphView, 'npc', ['hero', 'outlaw', 'merchant', 'mayor'], 'alive'
+    );
 
-    // Find or select explorer
-    let discoverer = explorer;
     if (!discoverer) {
-      const npcs = graphView.findEntities({}).filter(
-        e => e.kind === 'npc' && e.status === 'alive'
-      );
-      const heroes = npcs.filter(e => e.subtype === 'hero');
-      const outlaws = npcs.filter(e => e.subtype === 'outlaw');
-      const mayors = npcs.filter(e => e.subtype === 'mayor');
-      const merchants = npcs.filter(e => e.subtype === 'merchant');
+      return emptyResult('No eligible explorer found');
+    }
 
-      const targets = heroes.length > 0 ? heroes :
-                      outlaws.length > 0 ? outlaws :
-                      merchants.length > 0 ? merchants :
-                      mayors;
+    // ------- STEP 3: CREATION - procedural_theme based on pressure -------
 
-      if (targets.length > 0) {
-        discoverer = pickRandom(targets);
+    // Strategy: selectThemeByPressure
+    const pressureThemes = {
+      conflict: {
+        subtype: 'geographic_feature',
+        themes: ['Vantage Point', 'Choke Point', 'Natural Fortification', 'Strategic Ridge'],
+        tags: { strategic: true, defensive: true, conflict: true },
+        descriptionTemplate: 'A strategic {theme} providing tactical advantage'
+      },
+      magical_instability: {
+        subtype: 'anomaly',
+        themes: ['Ley Nexus', 'Mystical Shrine', 'Ethereal Cavern', 'Magical Convergence'],
+        tags: { mystical: true, magical: true, anomaly: true },
+        descriptionTemplate: 'A mystical {theme} manifesting magical energies'
+      },
+      resource_scarcity: {
+        subtype: 'geographic_feature',
+        themes: ['Krill Fields', 'Ice Quarry', 'Thermal Vent', 'Fishing Grounds'],
+        tags: { resource: true, valuable: true, economic: true },
+        descriptionTemplate: 'Rich {theme} providing essential resources'
       }
-    }
-    if (!discoverer) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No eligible explorer found'
-      };
-    }
+    };
 
-    // Determine discovery type based on pressures
-    const conflict = graphView.getPressure('conflict') || 0;
-    const magicInstability = graphView.getPressure('magical_instability') || 0;
-    const resourceScarcity = graphView.getPressure('resource_scarcity') || 0;
+    const themeOption = selectThemeByPressure(graphView, pressureThemes);
 
-    // Select dominant pressure
-    const pressures = [
-      { type: 'conflict', value: conflict },
-      { type: 'magic', value: magicInstability },
-      { type: 'resource', value: resourceScarcity }
-    ];
-    pressures.sort((a, b) => b.value - a.value);
-    const dominantPressure = pressures[0].type;
-
-    // Generate location based on dominant pressure
-    let locationType: 'geographic_feature' | 'anomaly';
-    let locationTheme: string;
-    let locationTags: Record<string, boolean>;
-    let description: string;
-
-    if (dominantPressure === 'conflict') {
-      // Strategic location
-      locationType = 'geographic_feature';
-      const themes = ['Vantage Point', 'Choke Point', 'Natural Fortification', 'Strategic Ridge'];
-      locationTheme = pickRandom(themes);
-      locationTags = { strategic: true, defensive: true, conflict: true };
-      description = `A strategic ${locationTheme.toLowerCase()} providing tactical advantage`;
-    } else if (dominantPressure === 'magic') {
-      // Mystical location
-      locationType = 'anomaly';
-      const themes = ['Ley Nexus', 'Mystical Shrine', 'Ethereal Cavern', 'Magical Convergence'];
-      locationTheme = pickRandom(themes);
-      locationTags = { mystical: true, magical: true, anomaly: true };
-      description = `A mystical ${locationTheme.toLowerCase()} manifesting magical energies`;
-    } else {
-      // Resource location
-      locationType = 'geographic_feature';
-      const themes = ['Krill Fields', 'Ice Quarry', 'Thermal Vent', 'Fishing Grounds'];
-      locationTheme = pickRandom(themes);
-      locationTags = { resource: true, valuable: true, economic: true };
-      description = `Rich ${locationTheme.toLowerCase()} providing essential resources`;
+    if (!themeOption) {
+      return emptyResult('No theme available for location discovery');
     }
 
-    // Derive coordinates - reference the discoverer and any nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    const locationTheme = pickRandom(themeOption.themes);
+    const dominantPressure = Object.entries(pressureThemes)
+      .find(([_, v]) => v === themeOption)?.[0] || 'exploration';
+
+    // Find nearby locations for coordinate derivation and adjacency
+    const nearbyLocations = findNearbyLocationsForAdjacency(graphView, discoverer);
     const referenceEntities: HardState[] = [discoverer];
     if (nearbyLocations.length > 0) {
-      referenceEntities.push(nearbyLocations[0]);  // Use first nearby location as reference
+      referenceEntities.push(nearbyLocations[0]);
     }
 
     const cultureId = discoverer.culture ?? 'default';
-    const locationPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'location',
-      referenceEntities
+
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(graphView, 'location', referenceEntities, cultureId);
+
+    // Strategy: createEntityPartial
+    const newLocation = createEntityPartial('location', themeOption.subtype, {
+      status: 'unspoiled',
+      prominence: 'recognized',
+      culture: discoverer.culture,
+      description: themeOption.descriptionTemplate.replace('{theme}', locationTheme.toLowerCase()),
+      tags: themeOption.tags,
+      coordinates: coords
+    });
+
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    const relationships: Relationship[] = [];
+
+    // Strategy: discovery(explorer_of)
+    relationships.push(
+      createRelationship('explorer_of', discoverer.id, 'will-be-assigned-0')
     );
 
-    if (!locationPlacement) {
-      throw new Error(
-        `emergent_location_discovery: Failed to derive coordinates for ${locationTheme} discovered by ${discoverer.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'location' entities.`
+    // Strategy: discovery(discovered_by)
+    relationships.push(
+      createRelationship('discovered_by', 'will-be-assigned-0', discoverer.id)
+    );
+
+    // Strategy: bidirectional(adjacent_to) if nearby locations exist
+    if (nearbyLocations.length > 0) {
+      const adjacentTo = pickRandom(nearbyLocations);
+      relationships.push(
+        ...createBidirectionalRelationship('adjacent_to', 'will-be-assigned-0', adjacentTo.id)
       );
     }
 
-    const conceptualCoords = locationPlacement.coordinates;
-
-    const newLocation: Partial<HardState> = {
-      kind: 'location',
-      subtype: locationType,
-      description: description,
-      status: 'unspoiled',
-      prominence: 'recognized',
-      culture: discoverer.culture,  // Inherit culture from discoverer
-      tags: locationTags,
-      coordinates: conceptualCoords,
-      links: []
-    };
-
-    entities.push(newLocation);
-
-    // Create discovery relationships
-    relationships.push({
-      kind: 'explorer_of',
-      src: discoverer.id,
-      dst: 'will-be-assigned-0'
-    });
-
-    relationships.push({
-      kind: 'discovered_by',
-      src: 'will-be-assigned-0',
-      dst: discoverer.id
-    });
-
-    // Make adjacent to nearby locations (reuse nearbyLocations from coordinate derivation)
-    if (nearbyLocations.length > 0) {
-      const adjacentTo = pickRandom(nearbyLocations);
-      relationships.push({
-        kind: 'adjacent_to',
-        src: 'will-be-assigned-0',
-        dst: adjacentTo.id
-      });
-      relationships.push({
-        kind: 'adjacent_to',
-        src: adjacentTo.id,
-        dst: 'will-be-assigned-0'
-      });
-    }
-
-    const discoveryDescription = `${discoverer.name} discovered a new ${locationTheme.toLowerCase()} driven by ${dominantPressure} pressure`;
-
-    return {
-      entities,
+    return templateResult(
+      [newLocation],
       relationships,
-      description: discoveryDescription
-    };
+      `${discoverer.name} discovered a new ${locationTheme.toLowerCase()} driven by ${dominantPressure} pressure`
+    );
   }
 };
-
-/**
- * Helper: Find nearby locations for adjacency
- */
-function findNearbyLocations(npc: HardState, graphView: TemplateGraphView): HardState[] {
-  // Find NPC's residence
-  const residences = npc.links.filter(l => l.kind === 'resident_of');
-  if (residences.length === 0) {
-    // No residence, return any location
-    return graphView.findEntities({ kind: 'location' });
-  }
-
-  const residence = graphView.getEntity(residences[0].dst);
-  if (!residence) {
-    return graphView.findEntities({ kind: 'location' });
-  }
-
-  // Find locations adjacent to residence
-  const adjacentLocations = residence.links
-    .filter(l => l.kind === 'adjacent_to')
-    .map(l => graphView.getEntity(l.dst))
-    .filter((loc): loc is HardState => !!loc);
-
-  if (adjacentLocations.length > 0) {
-    return adjacentLocations;
-  }
-
-  // Fall back to any location
-  return graphView.findEntities({ kind: 'location' });
-}

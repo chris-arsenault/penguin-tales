@@ -1,7 +1,33 @@
+/**
+ * Leadership Succession Template
+ *
+ * Strategy-based template for replacing dead/old leaders.
+ *
+ * Pipeline:
+ *   1. Applicability: status_match(mayor/dead) OR tick_threshold
+ *   2. Selection: by_kind(npc/mayor) with age/status filter
+ *   3. Creation: near_reference with culture inheritance
+ *   4. Relationships: hierarchical(leader_of, resident_of, member_of)
+ *   5. State: archive_relationship for old leader
+ */
+
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom, slugifyName } from '@lore-weave/core';
+import { pickRandom } from '@lore-weave/core';
+
+import {
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const succession: GrowthTemplate = {
   id: 'succession',
@@ -11,7 +37,7 @@ export const succession: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       entityCounts: [
-        { kind: 'npc', min: 1 }  // Requires existing NPCs
+        { kind: 'npc', min: 1 }
       ]
     },
     affects: {
@@ -22,10 +48,10 @@ export const succession: GrowthTemplate = {
         { kind: 'leader_of', operation: 'create', count: { min: 1, max: 2 } },
         { kind: 'resident_of', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'member_of', operation: 'create', count: { min: 0, max: 1 } },
-        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }
       ],
       pressures: [
-        { name: 'stability', delta: -1 }  // Succession creates brief instability
+        { name: 'stability', delta: -1 }
       ]
     }
   },
@@ -55,25 +81,33 @@ export const succession: GrowthTemplate = {
     tags: ['succession', 'leadership-change'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - status_match OR tick_threshold
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
+    // Strategy: status_match(dead) OR tick_threshold(50)
+    const mayors = selectByKind(graphView, 'npc', ['mayor']);
     return mayors.some(m => m.status === 'dead' || graphView.tick > 50);
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - mayors needing succession
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    const mayors = graphView.findEntities({ kind: 'npc', subtype: 'mayor' });
+    // Strategy: by_kind(npc/mayor) with age/status filter
+    const mayors = selectByKind(graphView, 'npc', ['mayor']);
     return mayors.filter(m => m.status === 'dead' || (graphView.tick - m.createdAt) > 40);
   },
 
+  // =========================================================================
+  // STEPS 3-5: CREATION, RELATIONSHIPS, STATE
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    const oldLeader = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'mayor' }));
+    // Resolve target
+    const oldLeader = target || pickRandom(selectByKind(graphView, 'npc', ['mayor']));
 
     if (!oldLeader) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No mayor to succeed'
-      };
+      return emptyResult('No mayor to succeed');
     }
 
     // Find the colony the old leader governed
@@ -81,86 +115,67 @@ export const succession: GrowthTemplate = {
       .filter(e => e.kind === 'location');
 
     if (leadsColonies.length === 0) {
-      // Old leader has no colony - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: `${oldLeader.name} had no colony to succeed`
-      };
+      return emptyResult(`${oldLeader.name} had no colony to succeed`);
     }
 
     const colony = leadsColonies[0];
 
-    // Archive old leader_of relationship to colony (temporal tracking)
+    // ------- STEP 5: STATE - archive old relationship -------
     graphView.archiveRelationship(oldLeader.id, colony.id, 'leader_of');
 
-    // Derive coordinates using culture-aware placement
-    const cultureId = colony.culture ?? 'default';
-    const placementResult = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'npc',
-      [colony]
-    );
+    // ------- STEP 3: CREATION -------
 
-    if (!placementResult) {
-      return {
-        entities: [],
-        relationships: [],
-        description: `Cannot place successor - ${colony.name} has no coordinates`
-      };
-    }
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(graphView, 'npc', [colony], colony.culture);
 
-    const coords = placementResult.coordinates;
-
-    const newLeader: Partial<HardState> = {
-      kind: 'npc',
-      subtype: 'mayor',
-      description: `Successor to ${oldLeader.name} in ${colony.name}`,
+    // Strategy: createEntityPartial
+    const newLeader = createEntityPartial('npc', 'mayor', {
       status: 'alive',
-      prominence: 'marginal', // New leaders start marginal, must earn respect
-      culture: colony.culture,  // Inherit culture from colony
+      prominence: 'marginal',
+      culture: colony.culture,
+      description: `Successor to ${oldLeader.name} in ${colony.name}`,
       tags: { successor: true },
       coordinates: coords
-    };
+    });
 
-    const relationships: Relationship[] = [
-      {
-        kind: 'leader_of',
-        src: 'will-be-assigned-0',
-        dst: colony.id
-      },
-      {
-        kind: 'resident_of',  // New mayor lives in the colony
-        src: 'will-be-assigned-0',
-        dst: colony.id
-      }
-    ];
+    // ------- STEP 4: RELATIONSHIPS -------
 
-    // Check for faction leadership too
+    const relationships: Relationship[] = [];
+
+    // Strategy: hierarchical(leader_of) - leads colony
+    relationships.push(
+      createRelationship('leader_of', 'will-be-assigned-0', colony.id)
+    );
+
+    // Strategy: hierarchical(resident_of) - lives in colony
+    relationships.push(
+      createRelationship('resident_of', 'will-be-assigned-0', colony.id)
+    );
+
+    // Check for faction leadership inheritance
     const leadsFactions = graphView.getRelatedEntities(oldLeader.id, 'leader_of', 'src')
       .filter(e => e.kind === 'faction');
 
     if (leadsFactions.length > 0) {
       const faction = leadsFactions[0];
-      // Archive old leader_of relationship to faction (temporal tracking)
+      // Archive old faction leadership
       graphView.archiveRelationship(oldLeader.id, faction.id, 'leader_of');
 
-      relationships.push({
-        kind: 'leader_of',
-        src: 'will-be-assigned-0',
-        dst: faction.id
-      });
-      relationships.push({
-        kind: 'member_of',  // New leader joins faction
-        src: 'will-be-assigned-0',
-        dst: faction.id
-      });
+      // Strategy: hierarchical(leader_of) - leads faction
+      relationships.push(
+        createRelationship('leader_of', 'will-be-assigned-0', faction.id)
+      );
+
+      // Strategy: hierarchical(member_of) - joins faction
+      relationships.push(
+        createRelationship('member_of', 'will-be-assigned-0', faction.id)
+      );
     }
 
-    return {
-      entities: [newLeader],
+    return templateResult(
+      [newLeader],
       relationships,
-      description: `New mayor succeeds ${oldLeader.name} in ${colony.name}`
-    };
+      `New mayor succeeds ${oldLeader.name} in ${colony.name}`
+    );
   }
 };

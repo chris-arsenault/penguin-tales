@@ -550,6 +550,23 @@ export class TemplateGraphView {
     archiveRel(this.graph, src, dst, kind);
   }
 
+  /**
+   * Modify a pressure value by delta.
+   * Used by templates and systems to affect world state.
+   */
+  modifyPressure(pressureId: string, delta: number): void {
+    const current = this.graph.pressures.get(pressureId) || 0;
+    this.graph.pressures.set(pressureId, Math.max(0, Math.min(100, current + delta)));
+  }
+
+  /**
+   * Update an entity's status.
+   * Used by templates and systems to change entity states.
+   */
+  updateEntityStatus(entityId: string, newStatus: string): void {
+    this.graph.updateEntity(entityId, { status: newStatus });
+  }
+
   // ============================================================================
   // META-ENTITY FORMATION UTILITIES
   // ============================================================================

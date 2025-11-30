@@ -1,11 +1,55 @@
-import { GrowthTemplate, TemplateResult } from '@lore-weave/core';
+/**
+ * Outlaw Recruitment Template
+ *
+ * Strategy-based template for criminal factions recruiting members.
+ *
+ * Pipeline:
+ *   1. Applicability: entity_count_min(faction/criminal, 1)
+ *   2. Selection: by_kind(faction/criminal)
+ *   3. Creation: selection_hybrid NPCs (prefer existing, create if needed)
+ *   4. Relationships: hierarchical(member_of), spatial(resident_of)
+ */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom } from '@lore-weave/core';
+import { pickRandom, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  randomCount,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const outlawRecruitment: GrowthTemplate = {
   id: 'outlaw_recruitment',
   name: 'Criminal Recruitment',
+
+  contract: {
+    purpose: ComponentPurpose.ENTITY_CREATION,
+    enabledBy: {
+      entityCounts: [
+        { kind: 'faction', min: 1 }
+      ]
+    },
+    affects: {
+      entities: [
+        { kind: 'npc', operation: 'create', count: { min: 0, max: 2 } }
+      ],
+      relationships: [
+        { kind: 'member_of', operation: 'create', count: { min: 1, max: 2 } },
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 2 } }
+      ]
+    }
+  },
 
   metadata: {
     produces: {
@@ -45,59 +89,65 @@ export const outlawRecruitment: GrowthTemplate = {
     tags: ['criminal', 'faction-expansion'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - criminal factions exist
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    const criminalFactions = graphView.getEntityCount('faction', 'criminal');
-    return criminalFactions > 0;
+    // Strategy: entity_count_min(faction/criminal, 1)
+    return checkEntityCountMin(graphView, 'faction', 'criminal', 1);
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - criminal factions
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    return graphView.findEntities({ kind: 'faction', subtype: 'criminal' });
+    // Strategy: by_kind(faction/criminal)
+    return selectByKind(graphView, 'faction', ['criminal']);
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    const faction = target || pickRandom(graphView.findEntities({ kind: 'faction', subtype: 'criminal' }));
+    const faction = target || pickRandom(selectByKind(graphView, 'faction', ['criminal']));
 
     if (!faction) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot recruit outlaws - no criminal factions exist'
-      };
+      return emptyResult('Cannot recruit outlaws - no criminal factions exist');
     }
 
-    // Extract parameters from metadata
-    const params = outlawRecruitment.metadata?.parameters || {};
-    const numOutlawsMin = params.numOutlawsMin?.value ?? 1;
-    const numOutlawsMax = params.numOutlawsMax?.value ?? 2;
+    const { numOutlawsMin, numOutlawsMax } = extractParams(
+      outlawRecruitment.metadata,
+      { numOutlawsMin: 1, numOutlawsMax: 2 }
+    );
 
-    const numOutlaws = Math.floor(Math.random() * (numOutlawsMax - numOutlawsMin + 1)) + numOutlawsMin;
+    const numOutlaws = randomCount(numOutlawsMin, numOutlawsMax);
 
-    // Use targetSelector to find existing NPCs or create new outlaws
-    // Criminal factions recruit from their own culture (trust networks)
+    // ------- STEP 3: CREATION - selection_hybrid -------
+
     const result = graphView.selectTargets('npc', numOutlaws, {
       prefer: {
-        subtypes: ['merchant', 'hero'], // People turning to crime
-        sameCultureAs: faction.culture, // Criminal networks are culturally bound
+        subtypes: ['merchant', 'hero'],
+        sameCultureAs: faction.culture,
         preferenceBoost: 1.5
       },
       avoid: {
-        relationshipKinds: ['member_of'], // Prefer NPCs not already in factions
+        relationshipKinds: ['member_of'],
         hubPenaltyStrength: 2.0,
         maxTotalRelationships: 12,
-        differentCulturePenalty: 0.4 // Cross-culture recruitment is risky
+        differentCulturePenalty: 0.4
       },
       createIfSaturated: {
         threshold: 0.2,
-        factory: (gv, ctx) => ({
+        factory: () => ({
           kind: 'npc',
           subtype: 'outlaw',
           description: `A shady character working for ${faction.name}`,
           status: 'alive',
           prominence: 'marginal',
-          culture: faction.culture,  // Inherit culture from recruiting faction
+          culture: faction.culture,
           tags: { criminal: true, recruit: true }
         }),
-        maxCreated: Math.ceil(numOutlaws * 0.7) // Max 70% new
+        maxCreated: Math.ceil(numOutlaws * 0.7)
       },
       diversityTracking: {
         trackingId: 'outlaw_recruitment',
@@ -112,36 +162,32 @@ export const outlawRecruitment: GrowthTemplate = {
     const controlled = graphView.getRelatedEntities(faction.id, 'controls', 'src');
     let location = controlled.length > 0 ? controlled[0] : undefined;
 
-    // Fallback: if faction has no stronghold, use any colony
     if (!location) {
-      const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+      const colonies = selectByKind(graphView, 'location', ['colony']);
       location = colonies.length > 0 ? pickRandom(colonies) : undefined;
     }
 
-    // If still no location, fail gracefully
     if (!location) {
-      return {
-        entities: [],
-        relationships: [],
-        description: `${faction.name} has nowhere to recruit outlaws`
-      };
+      return emptyResult(`${faction.name} has nowhere to recruit outlaws`);
     }
+
+    // ------- STEP 4: RELATIONSHIPS -------
 
     const relationships: Relationship[] = [];
 
     // Add relationships for recruited existing NPCs
     recruitedNpcs.forEach(npc => {
       relationships.push(
-        { kind: 'member_of', src: npc.id, dst: faction.id },
-        { kind: 'resident_of', src: npc.id, dst: location.id }
+        createRelationship('member_of', npc.id, faction.id),
+        createRelationship('resident_of', npc.id, location.id)
       );
     });
 
     // Add relationships for newly created outlaws
     newOutlaws.forEach((_, i) => {
       relationships.push(
-        { kind: 'member_of', src: `will-be-assigned-${i}`, dst: faction.id },
-        { kind: 'resident_of', src: `will-be-assigned-${i}`, dst: location.id }
+        createRelationship('member_of', `will-be-assigned-${i}`, faction.id),
+        createRelationship('resident_of', `will-be-assigned-${i}`, location.id)
       );
     });
 
@@ -150,10 +196,10 @@ export const outlawRecruitment: GrowthTemplate = {
       ? ` (${newOutlaws.length} new outlaws created)`
       : '';
 
-    return {
-      entities: newOutlaws,
+    return templateResult(
+      newOutlaws,
       relationships,
-      description: `${faction.name} recruits ${totalRecruits} new members${creationNote}`
-    };
+      `${faction.name} recruits ${totalRecruits} new members${creationNote}`
+    );
   }
 };

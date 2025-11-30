@@ -30,8 +30,18 @@ export {
   getAllCategories
 } from './config/relationshipCategories.js';
 
-// Templates
-export { allTemplates } from './templates/index.js';
+// Templates (declarative - loaded from JSON)
+export {
+  loadGrowthTemplates,
+  loadDeclarativeTemplate,
+  loadDeclarativeTemplates,
+  templateInterpreter,
+  type GrowthTemplatesFile
+} from './templates/index.js';
+
+import growthTemplatesData from './data/growthTemplates.json' with { type: 'json' };
+import { loadGrowthTemplates } from './templates/index.js';
+export const allTemplates = loadGrowthTemplates(growthTemplatesData as unknown as import('./templates/index.js').GrowthTemplatesFile);
 
 // Systems
 export { allSystems } from './systems/index.js';

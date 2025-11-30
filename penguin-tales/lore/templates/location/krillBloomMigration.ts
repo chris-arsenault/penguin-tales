@@ -1,30 +1,43 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
-import { TemplateGraphView } from '@lore-weave/core';
-import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom, pickMultiple, hasTag } from '@lore-weave/core';
-
 /**
  * Krill Bloom Migration Template
  *
- * Creates resource nodes (krill blooms) at frontier locations maximally distant from colonies.
- * Uses simplified Voronoi tessellation concept - places blooms at boundaries between territories.
+ * Strategy-based template for resource node creation at frontier locations.
+ *
+ * Pipeline:
+ *   1. Applicability: pressure_threshold(scarcity, 60) OR random_chance(0.05)
+ *                     AND entity_count_min(colony, 2) AND entity_count_max(bloom, 10)
+ *   2. Selection: by_kind(location/colony)
+ *   3. Creation: voronoi_frontier placement with batch_varied blooms
+ *   4. Relationships: spatial(adjacent_to), discovery(explorer_of, discoverer_of)
  *
  * Mathematical Foundation:
  * Voronoi cell boundary: V_i = {x : d(x, colony_i) < d(x, colony_j) ∀j ≠ i}
  * Placement score: score(x) = min_i(d(x, colony_i)) * resource_potential(x)
- *
- * Simplified Implementation:
- * - Find locations equidistant from multiple colonies
- * - Prefer locations with no existing blooms
- * - Create new paths (adjacent_to) to connect blooms
- *
- * SYSTEM_IMPLEMENTATION_GUIDE compliance:
- * - Throttled by pressure trigger (scarcity > 60) or 5% random
- * - Validates colony existence
- * - Graceful failure if no valid placement
- * - Creates 2-4 resource nodes to avoid spam
- * - NPCs get proper resident_of relationships
  */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, pickMultiple, hasTag, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkPressureThreshold,
+  checkRandomChance,
+  checkEntityCountMin,
+  checkNotSaturated,
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  createEntityPartial,
+  deriveCoordinatesNearReference,
+  randomCount,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 // Helper: Calculate graph distance (BFS)
 function graphDistance(graphView: TemplateGraphView, from: string, to: string): number {
@@ -147,50 +160,63 @@ export const krillBloomMigration: GrowthTemplate = {
     tags: ['resource', 'voronoi-placement', 'frontier'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - pressure OR random_chance AND entity counts
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    const params = krillBloomMigration.metadata?.parameters || {};
-    const activationChance = params.activationChance?.value ?? 0.05;
+    const { activationChance } = extractParams(krillBloomMigration.metadata, { activationChance: 0.05 });
 
-    const scarcity = graphView.getPressure('resource_scarcity') || 0;
-    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    // Strategy: pressure_threshold(scarcity, 60) OR random_chance
+    const scarcityTrigger = checkPressureThreshold(graphView, 'resource_scarcity', 60, 100);
+    const randomTrigger = checkRandomChance(activationChance);
+
+    if (!scarcityTrigger && !randomTrigger) {
+      return false;
+    }
+
+    // Strategy: entity_count_min(colony, 2)
+    if (!checkEntityCountMin(graphView, 'location', 'colony', 2)) {
+      return false;
+    }
+
+    // Strategy: entity_count_max(bloom, 10) - check existing blooms
     const existingBlooms = graphView.findEntities({ kind: 'location', subtype: 'geographic_feature' })
       .filter(gf => hasTag(gf.tags, 'krill') || hasTag(gf.tags, 'bloom'));
 
-    // Triggered by high scarcity or random chance
-    const triggered = scarcity > 60 || Math.random() < activationChance;
-
-    // Requires at least 2 colonies and not too many existing blooms
-    return triggered && colonies.length >= 2 && existingBlooms.length < 10;
+    return existingBlooms.length < 10;
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - colonies to place blooms between
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    // Targets are colonies (blooms appear between them)
-    return graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    // Strategy: by_kind(location/colony)
+    return selectByKind(graphView, 'location', ['colony']);
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    // Extract parameters from metadata
-    const params = krillBloomMigration.metadata?.parameters || {};
-    const bloomCountMin = params.bloomCountMin?.value ?? 2;
-    const bloomCountMax = params.bloomCountMax?.value ?? 4;
-    const techDiscoveryChance = params.techDiscoveryChance?.value ?? 0.1;
+    const { bloomCountMin, bloomCountMax, techDiscoveryChance } = extractParams(
+      krillBloomMigration.metadata,
+      { bloomCountMin: 2, bloomCountMax: 4, techDiscoveryChance: 0.1 }
+    );
 
-    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    // Strategy: by_kind(location/colony)
+    const colonies = selectByKind(graphView, 'location', ['colony']);
 
-    // VALIDATION: Need at least 2 colonies
     if (colonies.length < 2) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot create krill bloom - insufficient colonies for frontier'
-      };
+      return emptyResult('Cannot create krill bloom - insufficient colonies for frontier');
     }
+
+    // ------- STEP 3: CREATION - voronoi_frontier placement -------
 
     const entities: Partial<HardState>[] = [];
     const relationships: Relationship[] = [];
 
-    // Determine bloom count
-    const bloomCount = Math.floor(Math.random() * (bloomCountMax - bloomCountMin + 1)) + bloomCountMin;
+    // Strategy: randomCount for bloom creation
+    const bloomCount = randomCount(bloomCountMin, bloomCountMax);
 
     // === STEP 1: Find Frontier Locations ===
     // Score existing geographic features by distance from nearest colony
@@ -256,125 +282,91 @@ export const krillBloomMigration: GrowthTemplate = {
           });
         }
       } else {
-        // Create new geographic feature
+        // Strategy: createEntityPartial for new bloom
         const newBloomIndex = entities.length;
         bloomIds.push(`will-be-assigned-${newBloomIndex}`);
 
-        // Connect new bloom to 2 nearest colonies
-        // Since we don't have the new location's position yet, connect to random colonies
-        // (In a real Voronoi implementation, we'd place at cell boundaries)
         const selectedColonies = pickMultiple(colonies, Math.min(2, colonies.length));
 
-        // Derive coordinates for new bloom - place between selected colonies
-        const bloomCultureId = selectedColonies[0]?.culture || 'aurora-stack';
-        const bloomPlacement = graphView.deriveCoordinatesWithCulture(
-          bloomCultureId,
+        // Strategy: deriveCoordinatesNearReference for placement
+        const bloomCoords = deriveCoordinatesNearReference(
+          graphView,
           'location',
-          selectedColonies
+          selectedColonies,
+          selectedColonies[0]?.culture
         );
-        const bloomCoords = bloomPlacement?.coordinates;
 
-        entities.push({
-          kind: 'location',
-          subtype: 'geographic_feature',
-          description: `Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.`,
+        entities.push(createEntityPartial('location', 'geographic_feature', {
           status: 'thriving',
           prominence: 'recognized',
-          culture: selectedColonies[0]?.culture || 'aurora-stack',  // Inherit culture from nearest colony
+          culture: selectedColonies[0]?.culture || 'aurora-stack',
+          description: `Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.`,
           tags: { krill: true, bloom: true, resource: true },
           coordinates: bloomCoords
-        });
+        }));
 
+        // Strategy: spatial(adjacent_to)
         selectedColonies.forEach(colony => {
-          relationships.push({
-            kind: 'adjacent_to',
-            src: `will-be-assigned-${newBloomIndex}`,
-            dst: colony.id
-          });
+          relationships.push(
+            createRelationship('adjacent_to', `will-be-assigned-${newBloomIndex}`, colony.id)
+          );
         });
       }
     }
 
-    // === STEP 3: Create Explorers/Merchants ===
-    // 1-2 NPCs discover the blooms
+    // ------- STEP 4: RELATIONSHIPS - Create Explorers/Merchants -------
+
     const discovererCount = Math.min(2, actualBloomCount);
+    const allFactions = selectByKind(graphView, 'faction');
 
     for (let i = 0; i < discovererCount; i++) {
-      // FIXED: Don't filter by status='active' - use any faction
-      const allFactions = graphView.findEntities({ kind: 'faction' });
       const faction = allFactions.length > 0 ? pickRandom(allFactions) : undefined;
       const homeColony = pickRandom(colonies);
 
       if (!faction || !homeColony) continue;
 
-      // Derive coordinates for NPC near their home colony
-      const npcCultureId = homeColony.culture ?? 'default';
-      const npcPlacement = graphView.deriveCoordinatesWithCulture(
-        npcCultureId,
-        'npc',
-        [homeColony]
-      );
-      const npcCoords = npcPlacement?.coordinates;
+      // Strategy: deriveCoordinatesNearReference for NPC
+      const npcCoords = deriveCoordinatesNearReference(graphView, 'npc', [homeColony], homeColony.culture);
 
-      entities.push({
-        kind: 'npc',
-        subtype: 'merchant',
-        description: `An enterprising merchant who discovered the krill blooms and now leads expeditions to harvest them.`,
+      // Strategy: createEntityPartial for merchant
+      entities.push(createEntityPartial('npc', 'merchant', {
         status: 'alive',
-        prominence: 'marginal', // Discoverers start marginal
-        culture: homeColony.culture,  // Inherit culture from home colony
+        prominence: 'marginal',
+        culture: homeColony.culture,
+        description: `An enterprising merchant who discovered the krill blooms and now leads expeditions to harvest them.`,
         tags: { explorer: true, merchant: true, krill: true },
         coordinates: npcCoords
-      });
+      }));
 
       const npcIndex = entities.length - 1;
 
-      // REQUIRED: Add resident_of
-      relationships.push({
-        kind: 'resident_of',
-        src: `will-be-assigned-${npcIndex}`,
-        dst: homeColony.id
-      });
+      // Strategy: spatial(resident_of)
+      relationships.push(createRelationship('resident_of', `will-be-assigned-${npcIndex}`, homeColony.id));
 
-      // Add member_of
-      relationships.push({
-        kind: 'member_of',
-        src: `will-be-assigned-${npcIndex}`,
-        dst: faction.id
-      });
+      // Strategy: hierarchical(member_of)
+      relationships.push(createRelationship('member_of', `will-be-assigned-${npcIndex}`, faction.id));
 
-      // Add explorer_of relationship to a bloom
+      // Strategy: discovery(explorer_of)
       if (bloomIds.length > 0) {
         const bloomIndex = Math.min(i, bloomIds.length - 1);
-        relationships.push({
-          kind: 'explorer_of',
-          src: `will-be-assigned-${npcIndex}`,
-          dst: bloomIds[bloomIndex]
-        });
+        relationships.push(createRelationship('explorer_of', `will-be-assigned-${npcIndex}`, bloomIds[bloomIndex]));
       }
     }
 
-    // === STEP 4: Technology Innovation ===
-    // Chance to discover new fishing technology
-    if (Math.random() < techDiscoveryChance) {
-      // FIXED: Don't filter by status='active' - accept any status
-      const abilities = graphView.findEntities({ kind: 'abilities', subtype: 'technology' });
+    // Strategy: discovery(discoverer_of) - Technology Innovation
+    if (checkRandomChance(techDiscoveryChance)) {
+      const abilities = selectByKind(graphView, 'abilities', ['technology']);
       if (abilities.length > 0 && entities.length > 0) {
         const ability = pickRandom(abilities);
-        const discoverer = entities.length - 1; // Last NPC created
-
-        relationships.push({
-          kind: 'discoverer_of',
-          src: `will-be-assigned-${discoverer}`,
-          dst: ability.id
-        });
+        const discoverer = entities.length - 1;
+        relationships.push(createRelationship('discoverer_of', `will-be-assigned-${discoverer}`, ability.id));
       }
     }
 
-    return {
+    return templateResult(
       entities,
       relationships,
-      description: `Krill bloom discovered! ${actualBloomCount} new resource sites open frontier territories`
-    };
+      `Krill bloom discovered! ${actualBloomCount} new resource sites open frontier territories`
+    );
   }
 };

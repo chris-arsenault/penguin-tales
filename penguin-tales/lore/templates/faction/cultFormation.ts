@@ -1,14 +1,36 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
-import { TemplateGraphView } from '@lore-weave/core';
-import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom, findEntities } from '@lore-weave/core';
-
 /**
  * Cult Formation Template
  *
- * Mystical cults emerge near anomalies or where magic is present.
- * Creates cult faction, prophet leader, and 3 cultist followers.
+ * Strategy-based template for mystical cults emerging near anomalies.
+ *
+ * Pipeline:
+ *   1. Applicability: entity_count_min(anomaly|magic) AND NOT saturated(faction/cult)
+ *   2. Selection: by_kind(location) with anomaly adjacency expansion
+ *   3. Creation: faction + prophet + selection_hybrid cultists
+ *   4. Relationships: spatial(occupies), hierarchical(leader_of, member_of), cultural(seeks, practitioner_of)
  */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkNotSaturated,
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
+
 export const cultFormation: GrowthTemplate = {
   id: 'cult_formation',
   name: 'Cult Awakening',
@@ -17,10 +39,9 @@ export const cultFormation: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       entityCounts: [
-        { kind: 'location', min: 1 }  // Needs anomalies OR general locations (checked in canApply)
+        { kind: 'location', min: 1 }
       ],
       custom: (graphView) => {
-        // Requires anomalies OR magic (checked in canApply)
         const anomalyCount = graphView.getEntityCount('location', 'anomaly');
         const magicCount = graphView.getEntityCount('abilities', 'magic');
         return (anomalyCount > 0 || magicCount > 0);
@@ -29,12 +50,12 @@ export const cultFormation: GrowthTemplate = {
     affects: {
       entities: [
         { kind: 'faction', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }  // FIXED: Prophet + up to 1 new cultist (maxCreated=ceil(1/2)=1)
+        { kind: 'npc', operation: 'create', count: { min: 1, max: 2 } }
       ],
       relationships: [
         { kind: 'occupies', operation: 'create', count: { min: 1, max: 1 } },
         { kind: 'leader_of', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 4 } },  // Prophet + cultists
+        { kind: 'resident_of', operation: 'create', count: { min: 1, max: 4 } },
         { kind: 'member_of', operation: 'create', count: { min: 1, max: 3 } },
         { kind: 'seeks', operation: 'create', count: { min: 0, max: 1 } },
         { kind: 'practitioner_of', operation: 'create', count: { min: 0, max: 1 } }
@@ -76,38 +97,40 @@ export const cultFormation: GrowthTemplate = {
     },
     parameters: {
       numCultists: {
-        value: 1,               // Reduced from 3
-        min: 1,                 // Reduced from 2
-        max: 3,                 // Reduced from 8
+        value: 1,
+        min: 1,
+        max: 3,
         description: 'Number of initial cultist followers',
       },
     },
     tags: ['mystical', 'anomaly-driven', 'cluster-forming'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - entity_count_min(anomaly|magic) AND NOT saturated
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    // Prerequisite: anomalies or magic must exist
-    const anomalyCount = graphView.getEntityCount('location', 'anomaly');
-    const magicCount = graphView.getEntityCount('abilities', 'magic');
-    if (anomalyCount === 0 && magicCount === 0) {
+    // Strategy: entity_count_min - anomalies OR magic must exist
+    const hasAnomalies = checkEntityCountMin(graphView, 'location', 'anomaly', 1);
+    const hasMagic = checkEntityCountMin(graphView, 'abilities', 'magic', 1);
+    if (!hasAnomalies && !hasMagic) {
       return false;
     }
 
-    // SATURATION LIMIT: Check if cult count is at or above threshold
-    const existingCults = graphView.getEntityCount('faction', 'cult');
-    const targets = graphView.config.distributionTargets as any;
-    const target = targets?.entities?.faction?.cult?.target || 10;
-    const saturationThreshold = target * 1.5; // Allow 50% overshoot (15 cults with target=10)
-
-    if (existingCults >= saturationThreshold) {
-      return false; // Too many cults, suppress creation
+    // Strategy: NOT saturated(faction, cult)
+    if (!checkNotSaturated(graphView, 'faction', 'cult', 10)) {
+      return false;
     }
 
     return true;
   },
-  
+
+  // =========================================================================
+  // STEP 2: SELECTION - anomalies + adjacent locations
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
+    // Strategy: by_kind(location/anomaly) with adjacency expansion
+    const anomalies = selectByKind(graphView, 'location', ['anomaly']);
     const nearbyLocations: HardState[] = [];
 
     anomalies.forEach(anomaly => {
@@ -117,208 +140,160 @@ export const cultFormation: GrowthTemplate = {
 
     return [...anomalies, ...nearbyLocations];
   },
-  
-  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    // Extract parameters from metadata
-    const params = cultFormation.metadata?.parameters || {};
-    const numCultists = params.numCultists?.value ?? 3;
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
+  expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
+    const { numCultists } = extractParams(cultFormation.metadata, { numCultists: 1 });
+
+    // Resolve target location
     const location = target || pickRandom(graphView.findEntities({ kind: 'location' }));
 
     if (!location) {
-      // No location exists - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot form cult - no locations exist'
-      };
+      return emptyResult('Cannot form cult - no locations exist');
     }
 
-    // Find existing cults to place new cult in conceptual space
+    // ------- STEP 3: CREATION -------
+
+    // Find reference entities for coordinate placement
     const existingCults = graphView.findEntities({ kind: 'faction', subtype: 'cult' });
     const nearbyMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
 
-    // Derive conceptual coordinates - place cult near location and any related magic
     const referenceEntities: HardState[] = [location];
     if (nearbyMagic.length > 0) {
       referenceEntities.push(pickRandom(nearbyMagic));
     }
     if (existingCults.length > 0) {
-      // Place moderately far from existing cults (diverse mystical traditions)
       referenceEntities.push(pickRandom(existingCults));
     }
 
     const cultureId = location.culture ?? 'default';
-    const cultPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'faction',
-      referenceEntities
-    );
 
-    if (!cultPlacement) {
-      throw new Error(
-        `cult_formation: Failed to derive coordinates for cult near ${location.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'faction' entities.`
-      );
-    }
-
-    const conceptualCoords = cultPlacement.coordinates;
-
-    const cult: Partial<HardState> = {
-      kind: 'faction',
-      subtype: 'cult',
-      description: `A mystical cult drawn to the power near ${location.name}`,
+    // Strategy: createEntityPartial for cult faction
+    const cultCoords = deriveCoordinatesNearReference(graphView, 'faction', referenceEntities, cultureId);
+    const cult = createEntityPartial('faction', 'cult', {
       status: 'illegal',
       prominence: 'marginal',
-      culture: location.culture,  // Inherit culture from location
+      culture: location.culture,
+      description: `A mystical cult drawn to the power near ${location.name}`,
       tags: { mystical: true, secretive: true, cult: true },
-      coordinates: conceptualCoords
-    };
+      coordinates: cultCoords
+    });
 
-    // Derive coordinates for prophet (NPC near cult location)
-    const prophetPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'npc',
-      [location]
-    );
-
-    if (!prophetPlacement) {
-      throw new Error(
-        `cult_formation: Failed to derive coordinates for prophet near ${location.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'npc' entities.`
-      );
-    }
-
-    const prophetCoords = prophetPlacement.coordinates;
-
-    const prophet: Partial<HardState> = {
-      kind: 'npc',
-      subtype: 'hero',
-      description: `The enigmatic prophet of a mystical cult near ${location.name}`,
+    // Strategy: createEntityPartial for prophet (leader)
+    const prophetCoords = deriveCoordinatesNearReference(graphView, 'npc', [location], cultureId);
+    const prophet = createEntityPartial('npc', 'hero', {
       status: 'alive',
-      prominence: 'marginal', // Prophets start marginal
-      culture: location.culture,  // Inherit culture from location
+      prominence: 'marginal',
+      culture: location.culture,
+      description: `The enigmatic prophet of a mystical cult near ${location.name}`,
       tags: { prophet: true, mystical: true },
       coordinates: prophetCoords
-    };
+    });
 
-    // Pre-compute coordinates for potential new cultists (factory receives Graph, not TemplateGraphView)
-    const cultistPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'npc',
-      [location]
+    // Strategy: selection_hybrid for cultists (prefer existing, create if needed)
+    const newCultistCoords = deriveCoordinatesNearReference(graphView, 'npc', [location], cultureId);
+
+    const selectionResult = graphView.selectTargets('npc', numCultists, {
+      prefer: {
+        subtypes: ['merchant', 'outlaw', 'hero'],
+        sameLocationAs: location.id,
+        sameCultureAs: location.culture,
+        preferenceBoost: 2.0
+      },
+      avoid: {
+        relationshipKinds: ['member_of'],
+        hubPenaltyStrength: 2.0,
+        maxTotalRelationships: 15,
+        differentCulturePenalty: 0.3
+      },
+      createIfSaturated: {
+        threshold: 0.15,
+        factory: () => ({
+          kind: 'npc',
+          subtype: pickRandom(['merchant', 'outlaw']),
+          description: `A convert drawn to the cult's mystical teachings`,
+          status: 'alive',
+          prominence: 'marginal',
+          culture: location.culture,
+          tags: { cultist: true },
+          coordinates: newCultistCoords
+        }),
+        maxCreated: Math.ceil(numCultists / 2)
+      },
+      diversityTracking: {
+        trackingId: 'cult_recruitment',
+        strength: 1.5
+      }
+    });
+
+    const cultists = selectionResult.existing;
+    const newCultists = selectionResult.created;
+
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    const relationships: Relationship[] = [];
+
+    // Strategy: spatial(occupies) - cult occupies location
+    relationships.push(
+      createRelationship('occupies', 'will-be-assigned-0', location.id)
     );
 
-    if (!cultistPlacement) {
-      throw new Error(
-        `cult_formation: Failed to derive coordinates for potential new cultists near ${location.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'npc' entities.`
-      );
-    }
+    // Strategy: hierarchical(leader_of) - prophet leads cult
+    relationships.push(
+      createRelationship('leader_of', 'will-be-assigned-1', 'will-be-assigned-0')
+    );
 
-    const newCultistCoords = cultistPlacement.coordinates;
-
-    // Use targetSelector to intelligently select cultists (prevents super-hubs)
-    let cultists: HardState[] = [];
-    let newCultists: Array<Partial<HardState>> = [];
-
-    // Smart selection with hub penalties and cultural affinity
-    const result = graphView.selectTargets('npc', numCultists, {
-        prefer: {
-          subtypes: ['merchant', 'outlaw', 'hero'],
-          sameLocationAs: location.id, // Prefer local NPCs
-          sameCultureAs: location.culture, // Prefer same-culture recruits
-          preferenceBoost: 2.0
-        },
-        avoid: {
-          relationshipKinds: ['member_of'], // Penalize multi-faction NPCs
-          hubPenaltyStrength: 2.0, // Quadratic penalty: 1/(1+count^2)
-          maxTotalRelationships: 15, // Hard cap on super-hubs
-          differentCulturePenalty: 0.3 // Cross-culture recruitment is rare
-        },
-        createIfSaturated: {
-          threshold: 0.15, // If best score < 0.15, create new NPC
-          factory: () => ({
-            kind: 'npc',
-            subtype: pickRandom(['merchant', 'outlaw']),
-            description: `A convert drawn to the cult's mystical teachings`,
-            status: 'alive',
-            prominence: 'marginal',
-            culture: location.culture,  // Inherit culture from cult location
-            tags: { cultist: true },
-            coordinates: newCultistCoords
-          }),
-          maxCreated: Math.ceil(numCultists / 2) // Max 50% new NPCs
-        },
-        diversityTracking: {
-          trackingId: 'cult_recruitment',
-          strength: 1.5
-        }
-      });
-
-    cultists = result.existing;
-    newCultists = result.created;
-
-    const relationships: Relationship[] = [
-      { kind: 'occupies', src: 'will-be-assigned-0', dst: location.id },
-      { kind: 'leader_of', src: 'will-be-assigned-1', dst: 'will-be-assigned-0' },
-      { kind: 'resident_of', src: 'will-be-assigned-1', dst: location.id }
-    ];
+    // Strategy: spatial(resident_of) - prophet resides at location
+    relationships.push(
+      createRelationship('resident_of', 'will-be-assigned-1', location.id)
+    );
 
     // Add relationships for existing cultists
     cultists.forEach(cultist => {
-      relationships.push({
-        kind: 'member_of',
-        src: cultist.id,
-        dst: 'will-be-assigned-0'
-      });
-      relationships.push({
-        kind: 'resident_of',
-        src: cultist.id,
-        dst: location.id
-      });
+      relationships.push(
+        createRelationship('member_of', cultist.id, 'will-be-assigned-0')
+      );
+      relationships.push(
+        createRelationship('resident_of', cultist.id, location.id)
+      );
     });
 
     // Add relationships for newly created cultists
-    // Base index: 0=cult, 1=prophet, 2+ =new cultists
-    newCultists.forEach((newCultist, index) => {
+    // Placeholder indices: 0=cult, 1=prophet, 2+=new cultists
+    newCultists.forEach((_, index) => {
       const cultistPlaceholderId = `will-be-assigned-${2 + index}`;
-      relationships.push({
-        kind: 'member_of',
-        src: cultistPlaceholderId,
-        dst: 'will-be-assigned-0'
-      });
-      relationships.push({
-        kind: 'resident_of',
-        src: cultistPlaceholderId,
-        dst: location.id
-      });
+      relationships.push(
+        createRelationship('member_of', cultistPlaceholderId, 'will-be-assigned-0')
+      );
+      relationships.push(
+        createRelationship('resident_of', cultistPlaceholderId, location.id)
+      );
     });
 
+    // Strategy: conditional - cultural relationships if magic exists
     const magicAbilities = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
     if (magicAbilities.length > 0) {
       const magic = magicAbilities[0];
-      relationships.push({
-        kind: 'seeks',
-        src: 'will-be-assigned-0',
-        dst: magic.id
-      });
-      relationships.push({
-        kind: 'practitioner_of',
-        src: 'will-be-assigned-1',
-        dst: magic.id
-      });
+      relationships.push(
+        createRelationship('seeks', 'will-be-assigned-0', magic.id)
+      );
+      relationships.push(
+        createRelationship('practitioner_of', 'will-be-assigned-1', magic.id)
+      );
     }
 
+    // Build description
     const totalCultists = cultists.length + newCultists.length;
     const creationNote = newCultists.length > 0
       ? ` (${newCultists.length} new converts recruited)`
       : '';
 
-    return {
-      entities: [cult, prophet, ...newCultists], // Include new cultists
+    return templateResult(
+      [cult, prophet, ...newCultists],
       relationships,
-      description: `A mystical cult forms near ${location.name} with ${totalCultists} followers${creationNote}`
-    };
+      `A mystical cult forms near ${location.name} with ${totalCultists} followers${creationNote}`
+    );
   }
 };

@@ -1,14 +1,36 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
-import { TemplateGraphView } from '@lore-weave/core';
-import { HardState, Relationship } from '@lore-weave/core';
-import { pickRandom } from '@lore-weave/core';
-
 /**
  * Technology Innovation Template
  *
- * Merchant factions develop new technologies to improve efficiency.
- * Creates technology abilities linked to the developing faction.
+ * Strategy-based template for merchant factions developing technologies.
+ *
+ * Pipeline:
+ *   1. Applicability: entity_count_min(faction/company, 1)
+ *   2. Selection: by_kind(faction/company) with tech count limit
+ *   3. Creation: near_reference with culture inheritance
+ *   4. Relationships: wields(faction → tech), practitioner_of(members → tech)
  */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  selectByRelationship,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
+
 export const techInnovation: GrowthTemplate = {
   id: 'tech_innovation',
   name: 'Technology Development',
@@ -17,7 +39,7 @@ export const techInnovation: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       entityCounts: [
-        { kind: 'faction', min: 1 }  // Need company factions to innovate
+        { kind: 'faction', min: 1 }
       ]
     },
     affects: {
@@ -59,17 +81,33 @@ export const techInnovation: GrowthTemplate = {
         max: 10,
         description: 'Maximum number of faction members who practice new technology',
       },
+      maxTechPerFaction: {
+        value: 4,
+        min: 1,
+        max: 10,
+        description: 'Maximum technologies per faction',
+      },
     },
     tags: ['technology', 'ability-creation'],
   },
 
-  canApply: (graphView: TemplateGraphView) => graphView.findEntities({ kind: 'faction', subtype: 'company' }).length > 0,
+  // =========================================================================
+  // STEP 1: APPLICABILITY - company factions exist
+  // =========================================================================
+  canApply: (graphView: TemplateGraphView) => {
+    // Strategy: entity_count_min(faction/company, 1)
+    return checkEntityCountMin(graphView, 'faction', 'company', 1);
+  },
 
+  // =========================================================================
+  // STEP 2: SELECTION - companies with room for more tech
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    const maxTechPerFaction = 4; // Limit to 4 technologies per faction
-    const companies = graphView.findEntities({ kind: 'faction', subtype: 'company' });
+    const { maxTechPerFaction } = extractParams(techInnovation.metadata, { maxTechPerFaction: 4 });
 
-    // Filter out factions that have already developed too many technologies
+    // Strategy: by_kind(faction/company) with tech count filter
+    const companies = selectByKind(graphView, 'faction', ['company']);
+
     return companies.filter(faction => {
       const techCount = graphView.getAllRelationships().filter(r =>
         r.kind === 'wields' && r.src === faction.id
@@ -77,17 +115,18 @@ export const techInnovation: GrowthTemplate = {
       return techCount < maxTechPerFaction;
     });
   },
-  
+
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    const faction = target || pickRandom(graphView.findEntities({ kind: 'faction', subtype: 'company' }));
+    const { maxPractitioners } = extractParams(techInnovation.metadata, { maxPractitioners: 3 });
+
+    // Resolve target faction
+    const faction = target || pickRandom(selectByKind(graphView, 'faction', ['company']));
 
     if (!faction) {
-      // No company faction exists - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot develop technology - no company factions exist'
-      };
+      return emptyResult('Cannot develop technology - no company factions exist');
     }
 
     // Find faction members who can practice the new tech
@@ -96,71 +135,57 @@ export const techInnovation: GrowthTemplate = {
     );
 
     if (members.length === 0) {
-      // Faction has no members to practice the technology - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: `${faction.name} has no members to develop new technology`
-      };
+      return emptyResult(`${faction.name} has no members to develop new technology`);
     }
 
-    // Extract parameters from metadata
-    const params = techInnovation.metadata?.parameters || {};
-    const maxPractitioners = params.maxPractitioners?.value ?? 3;
+    // ------- STEP 3: CREATION -------
 
-    const relationships: any[] = [
-      { kind: 'wields', src: faction.id, dst: 'will-be-assigned-0' }
-    ];
-
-    // Add practitioner relationships for some faction members
-    const practitioners = members.slice(0, Math.min(maxPractitioners, members.length));
-    practitioners.forEach(npc => {
-      relationships.push({
-        kind: 'practitioner_of',
-        src: npc.id,
-        dst: 'will-be-assigned-0'
-      });
-    });
-
-    // Find existing tech from same faction to place new tech nearby in concept space
+    // Find existing tech from same faction for reference
     const existingTech = graphView.findEntities({ kind: 'abilities', subtype: 'technology' })
       .filter(tech => graphView.hasRelationship(faction.id, tech.id, 'wields'));
 
-    // Derive conceptual coordinates - place tech near faction's other tech
+    const practitioners = members.slice(0, Math.min(maxPractitioners, members.length));
+
     const referenceEntities: HardState[] = [faction, ...practitioners];
     if (existingTech.length > 0) {
       referenceEntities.push(existingTech[0]);
     }
 
     const cultureId = faction.culture ?? 'default';
-    const techPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'abilities',
-      referenceEntities
+
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(graphView, 'abilities', referenceEntities, cultureId);
+
+    // Strategy: createEntityPartial
+    const technology = createEntityPartial('abilities', 'technology', {
+      status: 'discovered',
+      prominence: 'marginal',
+      culture: faction.culture,
+      description: `Innovation developed by ${faction.name}`,
+      tags: { technology: true, innovation: true },
+      coordinates: coords
+    });
+
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    const relationships: Relationship[] = [];
+
+    // Strategy: wields - faction owns technology
+    relationships.push(
+      createRelationship('wields', faction.id, 'will-be-assigned-0')
     );
 
-    if (!techPlacement) {
-      throw new Error(
-        `tech_innovation: Failed to derive coordinates for technology from ${faction.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    // Strategy: practitioner_of - members practice technology
+    practitioners.forEach(npc => {
+      relationships.push(
+        createRelationship('practitioner_of', npc.id, 'will-be-assigned-0')
       );
-    }
+    });
 
-    const conceptualCoords = techPlacement.coordinates;
-
-    return {
-      entities: [{
-        kind: 'abilities',
-        subtype: 'technology',
-        description: `Innovation developed by ${faction.name}`,
-        status: 'discovered',
-        prominence: 'marginal',
-        culture: faction.culture,  // Inherit culture from developing faction
-        tags: { technology: true, innovation: true },
-        coordinates: conceptualCoords
-      }],
+    return templateResult(
+      [technology],
       relationships,
-      description: `${faction.name} develops new technology`
-    };
+      `${faction.name} develops new technology`
+    );
   }
 };

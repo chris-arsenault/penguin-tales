@@ -1,9 +1,14 @@
 /**
  * Resource Location Discovery Template
  *
- * EMERGENT: Generates resource locations based on actual world needs.
- * Analyzes colony status, population, and scarcity to procedurally create
- * appropriate resource sites.
+ * Strategy-based template for emergent resource location generation.
+ *
+ * Pipeline:
+ *   1. Applicability: pressure_analysis(scarcity) AND discovery_probability
+ *   2. Selection: by_preference_order(npc: hero > outlaw > merchant)
+ *   3. Creation: procedural_theme(deficit) with near_reference placement
+ *   4. Relationships: discovery(explorer_of, discovered_by), bidirectional(adjacent_to)
+ *   5. State: update_discovery_state
  */
 
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
@@ -16,6 +21,24 @@ import {
   shouldDiscoverLocation,
   findNearbyLocations
 } from '../../utils/emergentDiscovery';
+
+import {
+  // Step 2: Selection
+  selectByPreferenceOrder,
+  pickByPreferenceOrder,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  findNearbyLocationsForAdjacency,
+  // Step 4: Relationships
+  createRelationship,
+  createBidirectionalRelationship,
+  // Step 5: State
+  updateDiscoveryState,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const resourceLocationDiscovery: GrowthTemplate = {
   id: 'resource_location_discovery',
@@ -72,155 +95,108 @@ export const resourceLocationDiscovery: GrowthTemplate = {
     tags: ['emergent', 'resource', 'scarcity-driven'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - pressure_analysis AND discovery_probability
+  // =========================================================================
   canApply: (graphView: TemplateGraphView): boolean => {
-    // Must have resource deficit
+    // Strategy: pressure_analysis(scarcity)
     const deficit = analyzeResourceDeficit(graphView);
     if (!deficit) return false;
 
-    // Use emergent discovery probability
+    // Strategy: discovery_probability
     return shouldDiscoverLocation(graphView);
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - by_preference_order for explorers
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView): HardState[] => {
-    // Find explorers who could make the discovery
-    const npcs = graphView.findEntities({}).filter(
-      e => e.kind === 'npc' && e.status === 'alive'
-    );
-
-    // Prefer heroes and outlaws for exploration
-    const heroes = npcs.filter(e => e.subtype === 'hero');
-    const outlaws = npcs.filter(e => e.subtype === 'outlaw');
-    const merchants = npcs.filter(e => e.subtype === 'merchant');
-
-    if (heroes.length > 0) return heroes;
-    if (outlaws.length > 0) return outlaws;
-    return merchants;
+    // Strategy: by_preference_order(hero > outlaw > merchant)
+    return selectByPreferenceOrder(graphView, 'npc', ['hero', 'outlaw', 'merchant'], 'alive');
   },
 
+  // =========================================================================
+  // STEPS 3-5: CREATION, RELATIONSHIPS, STATE
+  // =========================================================================
   expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
-    const entities: Partial<HardState>[] = [];
-    const relationships: Relationship[] = [];
-
-    // Analyze what the world needs
+    // Strategy: pressure_analysis(scarcity)
     const deficit = analyzeResourceDeficit(graphView);
     if (!deficit) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No resource deficit detected'
-      };
+      return emptyResult('No resource deficit detected');
     }
 
-    // Find explorer
-    let discoverer = explorer;
+    // Strategy: pickByPreferenceOrder
+    const discoverer = explorer || pickByPreferenceOrder(
+      graphView, 'npc', ['hero', 'outlaw', 'merchant'], 'alive'
+    );
+
     if (!discoverer) {
-      const npcs = graphView.findEntities({}).filter(
-        e => e.kind === 'npc' && e.status === 'alive'
-      );
-      const heroes = npcs.filter(e => e.subtype === 'hero');
-      const outlaws = npcs.filter(e => e.subtype === 'outlaw');
-      const merchants = npcs.filter(e => e.subtype === 'merchant');
-
-      const targets = heroes.length > 0 ? heroes :
-                      outlaws.length > 0 ? outlaws :
-                      merchants;
-
-      if (targets.length > 0) {
-        discoverer = pickRandom(targets);
-      }
-    }
-    if (!discoverer) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No eligible explorer found'
-      };
+      return emptyResult('No eligible explorer found');
     }
 
-    // PROCEDURALLY GENERATE theme based on world state
+    // ------- STEP 3: CREATION - procedural_theme(deficit) -------
+
     const discoveryConfig = graphView.config?.domain?.emergentDiscoveryConfig;
     if (!discoveryConfig) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No emergent discovery config available'
-      };
+      return emptyResult('No emergent discovery config available');
     }
+
+    // Strategy: procedural_theme(deficit)
     const theme = generateResourceTheme(deficit, graphView.currentEra.id, discoveryConfig);
 
-    // Format theme for description
     const formattedTheme = theme.themeString.split('_').map(w =>
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
-    // Convert theme tags array to KVP
     const themeTags = Array.isArray(theme.tags)
       ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
       : theme.tags;
 
-    // Derive coordinates for new location - place near discoverer's location
-    const cultureId = discoverer.culture ?? 'default';
-    const locationPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'location',
-      [discoverer]
-    );
-    const locationCoords = locationPlacement?.coordinates;
+    // Strategy: findNearbyLocationsForAdjacency
+    const nearbyLocations = findNearbyLocationsForAdjacency(graphView, discoverer);
 
-    // Create the discovered location (name will be generated by addEntity)
-    const newLocation: Partial<HardState> = {
-      kind: 'location',
-      subtype: theme.subtype,
-      description: `A resource-rich ${formattedTheme.toLowerCase()} discovered to address ${deficit.specific} scarcity`,
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(
+      graphView, 'location', [discoverer], discoverer.culture
+    );
+
+    // Strategy: createEntityPartial
+    const newLocation = createEntityPartial('location', theme.subtype, {
       status: 'unspoiled',
       prominence: 'marginal',
-      culture: discoverer.culture,  // Inherit culture from discoverer
+      culture: discoverer.culture,
+      description: `A resource-rich ${formattedTheme.toLowerCase()} discovered to address ${deficit.specific} scarcity`,
       tags: themeTags,
-      links: [],
-      coordinates: locationCoords
-    };
-
-    entities.push(newLocation);
-
-    // Create discovery relationships
-    relationships.push({
-      kind: 'explorer_of',
-      src: discoverer.id,
-      dst: 'will-be-assigned-0'
+      coordinates: coords
     });
 
-    relationships.push({
-      kind: 'discovered_by',
-      src: 'will-be-assigned-0',
-      dst: discoverer.id
-    });
+    // ------- STEP 4: RELATIONSHIPS -------
 
-    // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    const relationships: Relationship[] = [];
+
+    // Strategy: discovery(explorer_of)
+    relationships.push(createRelationship('explorer_of', discoverer.id, 'will-be-assigned-0'));
+
+    // Strategy: discovery(discovered_by)
+    relationships.push(createRelationship('discovered_by', 'will-be-assigned-0', discoverer.id));
+
+    // Strategy: bidirectional(adjacent_to)
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
-      relationships.push({
-        kind: 'adjacent_to',
-        src: 'will-be-assigned-0',
-        dst: adjacentTo.id
-      });
-      relationships.push({
-        kind: 'adjacent_to',
-        src: adjacentTo.id,
-        dst: 'will-be-assigned-0'
-      });
+      relationships.push(
+        ...createBidirectionalRelationship('adjacent_to', 'will-be-assigned-0', adjacentTo.id)
+      );
     }
 
-    // Update discovery state
-    graphView.discoveryState.lastDiscoveryTick = graphView.tick;
-    graphView.discoveryState.discoveriesThisEpoch += 1;
+    // ------- STEP 5: STATE UPDATES -------
 
-    const description = `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} to address ${deficit.primary} scarcity`;
+    // Strategy: update_discovery_state
+    updateDiscoveryState(graphView);
 
-    return {
-      entities,
+    return templateResult(
+      [newLocation],
       relationships,
-      description
-    };
+      `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} to address ${deficit.primary} scarcity`
+    );
   }
 };

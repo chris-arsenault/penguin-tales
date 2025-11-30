@@ -1,9 +1,14 @@
 /**
  * Mystical Location Discovery Template
  *
- * EMERGENT: Generates anomaly locations based on magical instability.
- * Analyzes existing magic, anomaly count, and era to create thematically
- * appropriate mystical phenomena.
+ * Strategy-based template for emergent anomaly location generation.
+ *
+ * Pipeline:
+ *   1. Applicability: magic_analysis(instability) AND discovery_probability
+ *   2. Selection: by_relationship(practitioner_of) THEN by_preference_order(hero)
+ *   3. Creation: procedural_theme(magic) with near_reference placement
+ *   4. Relationships: discovery(explorer_of, discovered_by), bidirectional(adjacent_to)
+ *   5. State: update_discovery_state
  */
 
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
@@ -16,6 +21,24 @@ import {
   shouldDiscoverLocation,
   findNearbyLocations
 } from '../../utils/emergentDiscovery';
+
+import {
+  // Step 2: Selection
+  selectByRelationship,
+  selectByPreferenceOrder,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  findNearbyLocationsForAdjacency,
+  // Step 4: Relationships
+  createRelationship,
+  createBidirectionalRelationship,
+  // Step 5: State
+  updateDiscoveryState,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const mysticalLocationDiscovery: GrowthTemplate = {
   id: 'mystical_location_discovery',
@@ -73,153 +96,118 @@ export const mysticalLocationDiscovery: GrowthTemplate = {
     tags: ['emergent', 'mystical', 'magic-driven'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - magic_analysis AND discovery_probability
+  // =========================================================================
   canApply: (graphView: TemplateGraphView): boolean => {
-    // Must have magical instability
+    // Strategy: magic_analysis(instability)
     const magic = analyzeMagicPresence(graphView);
     if (!magic) return false;
 
-    // Use emergent discovery probability
+    // Strategy: discovery_probability
     return shouldDiscoverLocation(graphView);
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - by_relationship THEN by_preference_order
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView): HardState[] => {
-    // Find explorers, preferring those with magic connections
-    const npcs = graphView.findEntities({}).filter(
-      e => e.kind === 'npc' && e.status === 'alive'
-    );
-
-    // Find NPCs with magic relationships
-    const magicUsers = npcs.filter(npc =>
-      npc.links.some(r => r.kind === 'practitioner_of' || r.kind === 'discoverer_of')
-    );
+    // Strategy: by_relationship(practitioner_of) - prefer magic users
+    const magicUsers = selectByRelationship(graphView, 'npc', 'practitioner_of', true)
+      .filter(npc => npc.status === 'alive');
 
     if (magicUsers.length > 0) return magicUsers;
 
-    // Otherwise heroes are most likely
-    const heroes = npcs.filter(e => e.subtype === 'hero');
-    if (heroes.length > 0) return heroes;
-
-    return npcs;
+    // Strategy: by_preference_order(hero) fallback
+    return selectByPreferenceOrder(graphView, 'npc', ['hero'], 'alive');
   },
 
+  // =========================================================================
+  // STEPS 3-5: CREATION, RELATIONSHIPS, STATE
+  // =========================================================================
   expand: (graphView: TemplateGraphView, explorer?: HardState): TemplateResult => {
-    const entities: Partial<HardState>[] = [];
-    const relationships: Relationship[] = [];
-
-    // Analyze magical patterns
+    // Strategy: magic_analysis(instability)
     const magic = analyzeMagicPresence(graphView);
     if (!magic) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No magical instability detected'
-      };
+      return emptyResult('No magical instability detected');
     }
 
-    // Find explorer
+    // Strategy: resolve target using relationship then preference
     let discoverer = explorer;
     if (!discoverer) {
-      const npcs = graphView.findEntities({}).filter(
-        e => e.kind === 'npc' && e.status === 'alive'
-      );
+      const magicUsers = selectByRelationship(graphView, 'npc', 'practitioner_of', true)
+        .filter(npc => npc.status === 'alive');
 
-      // Prefer those connected to magic/abilities
-      const magical = npcs.filter(npc => {
-        return graphView.getAllRelationships().some(r =>
-          (r.src === npc.id || r.dst === npc.id) &&
-          graphView.getEntity(r.src === npc.id ? r.dst : r.src)?.kind === 'abilities'
-        );
-      });
-
-      const targets = magical.length > 0 ? magical : npcs;
-
-      if (targets.length > 0) {
-        discoverer = pickRandom(targets);
+      if (magicUsers.length > 0) {
+        discoverer = pickRandom(magicUsers);
+      } else {
+        const heroes = selectByPreferenceOrder(graphView, 'npc', ['hero'], 'alive');
+        discoverer = heroes.length > 0 ? pickRandom(heroes) : undefined;
       }
     }
+
     if (!discoverer) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No eligible seeker found'
-      };
+      return emptyResult('No eligible seeker found');
     }
 
-    // PROCEDURALLY GENERATE theme based on magical state
+    // ------- STEP 3: CREATION - procedural_theme(magic) -------
+
+    // Strategy: procedural_theme(magic)
     const theme = generateMysticalTheme(magic, graphView.currentEra.id);
 
     const formattedTheme = theme.themeString.split('_').map(w =>
       w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
 
-    // Convert theme tags array to KVP
     const themeTags = Array.isArray(theme.tags)
       ? theme.tags.reduce((acc, tag) => ({ ...acc, [tag]: true }), {} as Record<string, boolean>)
       : theme.tags;
 
-    // Derive coordinates for new location - place near discoverer's location
-    const cultureId = discoverer.culture ?? 'default';
-    const locationPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'location',
-      [discoverer]
+    // Strategy: findNearbyLocationsForAdjacency
+    const nearbyLocations = findNearbyLocationsForAdjacency(graphView, discoverer);
+
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(
+      graphView, 'location', [discoverer], discoverer.culture
     );
-    const locationCoords = locationPlacement?.coordinates;
 
-    // Create the discovered location
-    const newLocation: Partial<HardState> = {
-      kind: 'location',
-      subtype: theme.subtype,  // 'anomaly'
-      description: `A mystical ${formattedTheme.toLowerCase()} manifesting ${magic.manifestationType} energies`,
+    // Strategy: createEntityPartial
+    const newLocation = createEntityPartial('location', theme.subtype, {
       status: 'unspoiled',
-      prominence: 'recognized',  // Mystical places are notable
-      culture: discoverer.culture,  // Inherit culture from discoverer
+      prominence: 'recognized',
+      culture: discoverer.culture,
+      description: `A mystical ${formattedTheme.toLowerCase()} manifesting ${magic.manifestationType} energies`,
       tags: themeTags,
-      coordinates: locationCoords,
-      links: []
-    };
-
-    entities.push(newLocation);
-
-    // Create discovery relationships
-    relationships.push({
-      kind: 'explorer_of',
-      src: discoverer.id,
-      dst: 'will-be-assigned-0'
+      coordinates: coords
     });
 
-    relationships.push({
-      kind: 'discovered_by',
-      src: 'will-be-assigned-0',
-      dst: discoverer.id
-    });
+    // ------- STEP 4: RELATIONSHIPS -------
 
-    // Make adjacent to nearby locations
-    const nearbyLocations = findNearbyLocations(discoverer, graphView);
+    const relationships: Relationship[] = [];
+
+    // Strategy: discovery(explorer_of)
+    relationships.push(createRelationship('explorer_of', discoverer.id, 'will-be-assigned-0'));
+
+    // Strategy: discovery(discovered_by)
+    relationships.push(createRelationship('discovered_by', 'will-be-assigned-0', discoverer.id));
+
+    // Strategy: bidirectional(adjacent_to)
     if (nearbyLocations.length > 0) {
       const adjacentTo = pickRandom(nearbyLocations);
-      relationships.push({
-        kind: 'adjacent_to',
-        src: 'will-be-assigned-0',
-        dst: adjacentTo.id
-      });
-      relationships.push({
-        kind: 'adjacent_to',
-        src: adjacentTo.id,
-        dst: 'will-be-assigned-0'
-      });
+      relationships.push(
+        ...createBidirectionalRelationship('adjacent_to', 'will-be-assigned-0', adjacentTo.id)
+      );
     }
 
-    // Update discovery state
-    graphView.discoveryState.lastDiscoveryTick = graphView.tick;
-    graphView.discoveryState.discoveriesThisEpoch += 1;
+    // ------- STEP 5: STATE UPDATES -------
 
-    const description = `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} manifestation`;
+    // Strategy: update_discovery_state
+    updateDiscoveryState(graphView);
 
-    return {
-      entities,
+    return templateResult(
+      [newLocation],
       relationships,
-      description
-    };
+      `${discoverer.name} discovered ${theme.themeString.replace(/_/g, ' ')} manifestation`
+    );
   }
 };

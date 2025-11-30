@@ -1,7 +1,35 @@
+/**
+ * Hero Emergence Template
+ *
+ * Strategy-based template for creating heroes during times of conflict.
+ *
+ * Pipeline:
+ *   1. Applicability: pressure_threshold(conflict, 5-80) AND NOT saturated(npc/hero)
+ *   2. Selection: by_kind(location/colony) with status filter
+ *   3. Creation: near_reference with culture inheritance
+ *   4. Relationships: hierarchical(resident_of), optional practitioner_of
+ */
+
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState } from '@lore-weave/core';
 import { pickRandom } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkPressureThreshold,
+  checkNotSaturated,
+  // Step 2: Selection
+  selectByKind,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 
 export const heroEmergence: GrowthTemplate = {
   id: 'hero_emergence',
@@ -11,8 +39,8 @@ export const heroEmergence: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       pressures: [
-        { name: 'conflict', threshold: 5 },  // FIXED: Lowered from 10 to 5 (conflict can be as low as 8.1)
-        { name: 'external_threat', threshold: 5 }  // FIXED: Lowered from 10 to 5
+        { name: 'conflict', threshold: 5 },
+        { name: 'external_threat', threshold: 5 }
       ]
     },
     affects: {
@@ -22,10 +50,10 @@ export const heroEmergence: GrowthTemplate = {
       relationships: [
         { kind: 'practitioner_of', operation: 'create', count: { min: 0, max: 1 } },
         { kind: 'resident_of', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+        { kind: 'inspired_by', operation: 'create', count: { min: 0, max: 1 } }
       ],
       pressures: [
-        { name: 'conflict', delta: -2 }  // Heroes reduce conflict
+        { name: 'conflict', delta: -2 }
       ]
     }
   },
@@ -54,110 +82,89 @@ export const heroEmergence: GrowthTemplate = {
     tags: ['crisis-driven', 'individual'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - pressure_threshold AND NOT saturated
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    // Pressure-based trigger: need moderate conflict to spawn heroes
-    const conflictPressure = graphView.getPressure('conflict') || 0;
-    if (conflictPressure < 5 && graphView.getEntityCount() <= 20) {  // FIXED: Lowered from 10 to 5
+    // Skip pressure check at very low entity count (bootstrap phase)
+    if (graphView.getEntityCount() > 20) {
+      // Strategy: pressure_threshold(conflict, 5, 80, extremeChance=0.3)
+      if (!checkPressureThreshold(graphView, 'conflict', 5, 80, 0.3)) {
+        return false;
+      }
+    }
+
+    // Strategy: NOT saturated(npc, hero)
+    if (!checkNotSaturated(graphView, 'npc', 'hero')) {
       return false;
-    }
-
-    // BIDIRECTIONAL PRESSURE THRESHOLD: TOO much conflict suppresses hero creation
-    // (Extreme chaos prevents training, heroes get killed before emerging)
-    if (conflictPressure > 80) {
-      return Math.random() < 0.3; // Only 30% chance when conflict is extreme
-    }
-
-    // SATURATION LIMIT: Check if hero count is at or above threshold
-    const existingHeroes = graphView.getEntityCount('npc', 'hero');
-    const targets = graphView.config.distributionTargets as any;
-    const target = targets?.entities?.npc?.hero?.target || 20;
-    const saturationThreshold = target * 1.5; // Allow 50% overshoot
-
-    if (existingHeroes >= saturationThreshold) {
-      return false; // Too many heroes, suppress creation
     }
 
     return true;
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - by_kind(location/colony) with status filter
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    const colonies = graphView.findEntities({ kind: 'location', subtype: 'colony' });
+    // Strategy: by_kind with status filter
+    const colonies = selectByKind(graphView, 'location', ['colony']);
     return colonies.filter(c => c.status === 'thriving' || c.status === 'waning');
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: async (graphView: TemplateGraphView, target?: HardState): Promise<TemplateResult> => {
-    const colony = target || pickRandom(
-      graphView.findEntities({ kind: 'location', subtype: 'colony' })
-    );
+    // Resolve target
+    const colony = target || pickRandom(selectByKind(graphView, 'location', ['colony']));
 
     if (!colony) {
-      // No colony exists - fail gracefully
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot create hero - no colonies exist'
-      };
+      return emptyResult('Cannot create hero - no colonies exist');
     }
 
-    // Region-based placement within colony's region is REQUIRED
-    if (!graphView.hasRegionSystem()) {
-      throw new Error(
-        `hero_emergence: Region system is not configured. ` +
-        `Cannot place hero without spatial coordinates.`
-      );
-    }
+    // ------- STEP 3: CREATION - near_reference with culture inherit -------
 
-    // Place hero near the colony using culture-aware placement
-    const cultureId = colony.culture ?? 'default';
-    const placementResult = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'npc',
-      [colony]
-    );
+    // Strategy: deriveCoordinatesNearReference
+    const coords = deriveCoordinatesNearReference(graphView, 'npc', [colony], colony.culture);
 
-    if (!placementResult) {
-      throw new Error(
-        `hero_emergence: Failed to derive coordinates for hero near colony "${colony.name}". ` +
-        `Ensure coordinate system is properly configured for 'npc' entities.`
-      );
-    }
-
-    const entityId = await graphView.addEntity({
-      kind: 'npc',
-      subtype: 'hero',
-      description: `A brave penguin who emerged during troubled times in ${colony.name}`,
+    // Strategy: createEntityPartial
+    const heroEntity = createEntityPartial('npc', 'hero', {
       status: 'alive',
       prominence: 'marginal',
       culture: colony.culture,
+      description: `A brave penguin who emerged during troubled times in ${colony.name}`,
       tags: { brave: true, emergent: true },
-      coordinates: placementResult.coordinates
+      coordinates: coords
     });
 
+    // Add entity to graph
+    const entityId = await graphView.addEntity(heroEntity);
+
     if (!entityId) {
-      throw new Error(
-        `hero_emergence: Failed to create hero entity. ` +
-        `Entity creation unexpectedly returned no ID.`
+      throw new Error('hero_emergence: Failed to create hero entity.');
+    }
+
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    const relationships: any[] = [];
+
+    // Strategy: hierarchical(resident_of)
+    relationships.push(
+      createRelationship('resident_of', entityId, colony.id)
+    );
+
+    // Strategy: conditional - practitioner_of if abilities exist
+    const abilities = graphView.findEntities({ kind: 'abilities' });
+    if (abilities.length > 0) {
+      relationships.push(
+        createRelationship('practitioner_of', entityId, pickRandom(abilities).id)
       );
     }
 
-    const relationships: any[] = [
-      { kind: 'resident_of', src: entityId, dst: colony.id }
-    ];
-
-    // Add ability practice relationship if abilities exist
-    const abilities = graphView.findEntities({ kind: 'abilities' });
-    if (abilities.length > 0) {
-      relationships.push({
-        kind: 'practitioner_of',
-        src: entityId,
-        dst: pickRandom(abilities).id
-      });
-    }
-
-    return {
-      entities: [],  // Already added via addEntityInRegion
+    return templateResult(
+      [],  // Entity already added via addEntity
       relationships,
-      description: `A new hero emerges in ${colony.name}`
-    };
+      `A new hero emerges in ${colony.name}`
+    );
   }
 };

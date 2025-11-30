@@ -318,3 +318,35 @@ export type {
   CultureClusterStats,
   CoordinateStatsSummary
 } from './coordinates/coordinateStatistics';
+
+// =============================================================================
+// DECLARATIVE TEMPLATE SYSTEM
+// =============================================================================
+
+export { TemplateInterpreter, createTemplateFromDeclarative } from './engine/templateInterpreter';
+
+export type {
+  DeclarativeTemplate,
+  ApplicabilityRule,
+  SelectionRule,
+  SelectionFilter,
+  CreationRule,
+  RelationshipRule,
+  StateUpdateRule,
+  VariableDefinition,
+  ExecutionContext,
+  // Specific rule types
+  PressureThresholdRule,
+  EntityCountMinRule,
+  EntityCountMaxRule,
+  GraphPathApplicabilityRule,
+  GraphPathAssertion,
+  PathStep,
+  PathConstraint,
+  GraphPathSelectionFilter,
+  SubtypeSpec,
+  CultureSpec,
+  PlacementSpec,
+  LineageSpec,
+  RelationshipCondition
+} from './engine/declarativeTypes';

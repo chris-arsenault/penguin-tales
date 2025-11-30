@@ -1,14 +1,40 @@
+/**
+ * Magic Discovery Template
+ *
+ * Strategy-based template for heroes discovering magical abilities.
+ *
+ * Pipeline:
+ *   1. Applicability: pressure_threshold(magical_instability, 10-70) AND NOT saturated(abilities/magic)
+ *   2. Selection: by_kind(npc/hero) with relationship filter (max discoveries)
+ *   3. Creation: near_reference with lineage
+ *   4. Relationships: discovery(discoverer_of), spatial(manifests_at), lineage(related_to)
+ */
+
 import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
 import { TemplateGraphView } from '@lore-weave/core';
 import { HardState, Relationship } from '@lore-weave/core';
 import { pickRandom } from '@lore-weave/core';
 
-/**
- * Magic Discovery Template
- *
- * Heroes discover magical abilities near anomalies.
- * Creates magic abilities linked to the discoverer and manifestation location.
- */
+import {
+  // Step 1: Applicability
+  checkPressureThreshold,
+  checkNotSaturated,
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  selectByRelationship,
+  // Step 3: Creation
+  deriveCoordinatesNearReference,
+  createEntityPartial,
+  findLineageCandidates,
+  // Step 4: Relationships
+  createRelationship,
+  createLineageRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
+
 export const magicDiscovery: GrowthTemplate = {
   id: 'magic_discovery',
   name: 'Magical Discovery',
@@ -17,11 +43,11 @@ export const magicDiscovery: GrowthTemplate = {
     purpose: ComponentPurpose.ENTITY_CREATION,
     enabledBy: {
       entityCounts: [
-        { kind: 'location', min: 1 },  // Need anomalies for manifestation
-        { kind: 'npc', min: 1 }        // Need heroes to discover
+        { kind: 'location', min: 1 },
+        { kind: 'npc', min: 1 }
       ],
       pressures: [
-        { name: 'magical_instability', threshold: 10 }  // FIXED: Lowered from 15 to 10
+        { name: 'magical_instability', threshold: 10 }
       ]
     },
     affects: {
@@ -30,8 +56,8 @@ export const magicDiscovery: GrowthTemplate = {
       ],
       relationships: [
         { kind: 'discoverer_of', operation: 'create', count: { min: 1, max: 1 } },
-        { kind: 'manifests_at', operation: 'create', count: { min: 0, max: 1 } },  // FIXED: 0-1 (anomaly may not exist at high instability)
-        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }  // Lineage
+        { kind: 'manifests_at', operation: 'create', count: { min: 0, max: 1 } },
+        { kind: 'related_to', operation: 'create', count: { min: 0, max: 1 } }
       ]
     }
   },
@@ -58,50 +84,57 @@ export const magicDiscovery: GrowthTemplate = {
       diversityImpact: 0.9,
       comment: 'Creates mystical abilities linked to anomalies and heroes',
     },
+    parameters: {
+      maxDiscoveriesPerHero: {
+        value: 2,
+        min: 1,
+        max: 5,
+        description: 'Maximum abilities a single hero can discover',
+      },
+    },
     tags: ['mystical', 'ability-creation'],
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - pressure + entity requirements + saturation
+  // =========================================================================
   canApply: (graphView: TemplateGraphView) => {
-    // Prerequisite: anomalies must exist (but loosen this - let magic be discovered elsewhere)
-    const anomalies = graphView.findEntities({ kind: 'location', subtype: 'anomaly' });
-    // FIXED: Allow discovery even without anomalies if instability is high enough
-
-    // Enabled at moderate magical instability (10+)
-    // FIXED: Lowered threshold from 15 to 10
+    const anomalyCount = graphView.getEntityCount('location', 'anomaly');
     const magicalInstability = graphView.getPressure('magical_instability') || 0;
+
+    // Need at least 10 instability to discover magic
     if (magicalInstability < 10) {
-      return false; // Need at least 10 instability to discover magic
+      return false;
     }
 
-    // FIXED: Removed anomaly requirement when instability is very high (desperate measures)
-    if (anomalies.length === 0 && magicalInstability < 30) {
-      return false; // Need anomalies for low-instability discovery
+    // Need anomalies for low-instability discovery (unless very high instability)
+    if (anomalyCount === 0 && magicalInstability < 30) {
+      return false;
     }
 
-    // BIDIRECTIONAL PRESSURE THRESHOLD: High magical instability suppresses magic discovery
-    // (Too much magical energy makes new discoveries dangerous/unstable)
-    if (magicalInstability > 70) {
-      return Math.random() < 0.4; // Only 40% chance when instability is very high
+    // Strategy: pressure_threshold(magical_instability, 10, 70, extremeChance=0.4)
+    if (!checkPressureThreshold(graphView, 'magical_instability', 10, 70, 0.4)) {
+      return false;
     }
 
-    // SATURATION LIMIT: Check if magic count is at or above threshold
-    const existingMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' });
-    const targets = graphView.config.distributionTargets as any;
-    const target = targets?.entities?.abilities?.magic?.target || 15;
-    const saturationThreshold = target * 1.5; // Allow 50% overshoot
-
-    if (existingMagic.length >= saturationThreshold) {
-      return false; // Too much magic, suppress creation
+    // Strategy: NOT saturated(abilities, magic)
+    if (!checkNotSaturated(graphView, 'abilities', 'magic', 15)) {
+      return false;
     }
 
     return true;
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - heroes with discovery limit
+  // =========================================================================
   findTargets: (graphView: TemplateGraphView) => {
-    const maxDiscoveriesPerHero = 2; // Reduced from 3 to 2 discoveries per hero
-    const heroes = graphView.findEntities({ kind: 'npc', subtype: 'hero' });
+    const maxDiscoveriesPerHero = 2;
 
-    // Filter out heroes who have already discovered too many abilities
+    // Strategy: by_kind(npc/hero)
+    const heroes = selectByKind(graphView, 'npc', ['hero']);
+
+    // Strategy: by_relationship filter (max discoveries)
     return heroes.filter(hero => {
       const discoveryCount = graphView.getAllRelationships().filter(r =>
         r.kind === 'discoverer_of' && r.src === hero.id
@@ -109,100 +142,85 @@ export const magicDiscovery: GrowthTemplate = {
       return discoveryCount < maxDiscoveriesPerHero;
     });
   },
-  
+
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand: (graphView: TemplateGraphView, target?: HardState): TemplateResult => {
-    const hero = target || pickRandom(graphView.findEntities({ kind: 'npc', subtype: 'hero' }));
-    const anomaly = pickRandom(graphView.findEntities({ kind: 'location', subtype: 'anomaly' }));
+    // Resolve target
+    const hero = target || pickRandom(selectByKind(graphView, 'npc', ['hero']));
+    const anomaly = pickRandom(selectByKind(graphView, 'location', ['anomaly']));
 
     if (!hero) {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'Cannot discover magic - no heroes exist'
-      };
+      return emptyResult('Cannot discover magic - no heroes exist');
     }
 
-    // Find existing magic to establish lineage
-    const existingMagic = graphView.findEntities({ kind: 'abilities', subtype: 'magic' })
-      .filter(m => m.status !== 'lost');
+    // ------- STEP 3: CREATION - with lineage -------
 
-    // Find magic at same anomaly or any magic
-    let relatedMagic: HardState | undefined;
-    if (existingMagic.length > 0) {
-      // Prefer magic from same anomaly
-      const sameLocationMagic = existingMagic.filter(magic =>
-        graphView.getAllRelationships().some(r =>
-          r.kind === 'manifests_at' && r.src === magic.id && r.dst === anomaly.id
-        )
-      );
-
-      if (sameLocationMagic.length > 0) {
-        relatedMagic = pickRandom(sameLocationMagic);
-      } else {
-        // Otherwise, link to any existing magic (distinct traditions)
-        relatedMagic = pickRandom(existingMagic);
-      }
-    }
-
-    const relationships: Relationship[] = [
-      { kind: 'discoverer_of', src: hero.id, dst: 'will-be-assigned-0' }
-    ];
-
-    // Only add manifests_at if anomaly exists
-    if (anomaly) {
-      relationships.push({ kind: 'manifests_at', src: 'will-be-assigned-0', dst: anomaly.id });
-    }
-
-    // Add lineage relationship with higher distance (0.5-0.9) - magic is diverse
-    if (relatedMagic) {
-      relationships.push({
-        kind: 'related_to',
-        src: 'will-be-assigned-0',
-        dst: relatedMagic.id,
-        distance: 0.5 + Math.random() * 0.4,  // Distinct magical tradition
-        strength: 0.5
-      });
-    }
-
-    const lineageDesc = relatedMagic ? ` related to ${relatedMagic.name}` : '';
-    const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
-
-    // Derive conceptual coordinates - place magic near related magic/anomaly in concept space
-    const referenceEntities = [hero];
-    if (relatedMagic) referenceEntities.push(relatedMagic);
+    // Find reference entities for coordinate placement
+    const referenceEntities: HardState[] = [hero];
     if (anomaly) referenceEntities.push(anomaly);
 
-    const cultureId = hero.culture || anomaly?.culture || 'world';
-    const magicPlacement = graphView.deriveCoordinatesWithCulture(
-      cultureId,
-      'abilities',
-      referenceEntities
+    // Strategy: deriveCoordinatesNearReference
+    const culture = hero.culture || anomaly?.culture || 'world';
+    const coords = deriveCoordinatesNearReference(graphView, 'abilities', referenceEntities, culture);
+
+    // Strategy: findLineageCandidates for related_to
+    const lineageCandidates = findLineageCandidates(
+      graphView,
+      'abilities', 'magic',
+      ['lost'],  // Exclude lost abilities
+      hero      // Prefer same location
     );
 
-    if (!magicPlacement) {
-      throw new Error(
-        `magic_discovery: Failed to derive coordinates for magic discovered by ${hero.name}. ` +
-        `This indicates the coordinate system is not properly configured for 'abilities' entities.`
+    // Strategy: createEntityPartial
+    const magicAbility = createEntityPartial('abilities', 'magic', {
+      status: 'emergent',
+      prominence: 'recognized',
+      culture,
+      description: `Mystical ability discovered by ${hero.name}`,
+      tags: { magic: true, mystical: true },
+      coordinates: coords
+    });
+
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    const relationships: Relationship[] = [];
+
+    // Strategy: discovery(discoverer_of)
+    relationships.push(
+      createRelationship('discoverer_of', hero.id, 'will-be-assigned-0')
+    );
+
+    // Strategy: spatial(manifests_at) - conditional on anomaly
+    if (anomaly) {
+      relationships.push(
+        createRelationship('manifests_at', 'will-be-assigned-0', anomaly.id)
       );
     }
 
-    const conceptualCoords = magicPlacement.coordinates;
+    // Strategy: lineage(related_to) with distance 0.5-0.9 (diverse traditions)
+    if (lineageCandidates.length > 0) {
+      const lineageTarget = pickRandom(lineageCandidates);
+      relationships.push(
+        createLineageRelationship(
+          'related_to',
+          'will-be-assigned-0',
+          lineageTarget.id,
+          { min: 0.5, max: 0.9 },
+          0.5
+        )
+      );
+    }
 
-    const magicAbility: Partial<HardState> = {
-      kind: 'abilities',
-      subtype: 'magic',
-      description: `Mystical ability discovered by ${hero.name}${lineageDesc}`,
-      status: 'emergent',
-      prominence: 'recognized',
-      culture: hero.culture || anomaly?.culture || 'world',  // Inherit from discoverer or manifestation location
-      tags: { magic: true, mystical: true },
-      coordinates: conceptualCoords
-    };
+    // Build description
+    const locationDesc = anomaly ? ` at ${anomaly.name}` : ' through mystical insight';
+    const lineageDesc = lineageCandidates.length > 0 ? ' related to existing magic' : '';
 
-    return {
-      entities: [magicAbility],
+    return templateResult(
+      [magicAbility],
       relationships,
-      description: `${hero.name} discovers a mystical ability${locationDesc}${lineageDesc}`
-    };
+      `${hero.name} discovers a mystical ability${locationDesc}${lineageDesc}`
+    );
   }
 };

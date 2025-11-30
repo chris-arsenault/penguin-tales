@@ -1,16 +1,32 @@
-import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
-import { TemplateGraphView } from '@lore-weave/core';
-import { HardState, Relationship } from '@lore-weave/core';
-
 /**
  * Trade Route Establishment Template
  *
- * World-level template: Factions establish trade connections between locations.
- * Creates 'trades_with' relationships with catalyst attribution.
+ * Strategy-based template for economic network formation.
  *
- * Pattern: Faction (with leader) → establishes trade → Other faction/location
- * Result: Economic networks expand, not NPC count
+ * Pipeline:
+ *   1. Applicability: entity_count_min(faction, 2) AND NOT all_trading
+ *   2. Selection: by_kind(faction) with available partners filter
+ *   3. Creation: none (relationship-only template)
+ *   4. Relationships: bidirectional(trades_with) with catalyst attribution
  */
+
+import { GrowthTemplate, TemplateResult, ComponentPurpose } from '@lore-weave/core';
+import { TemplateGraphView } from '@lore-weave/core';
+import { HardState, Relationship } from '@lore-weave/core';
+import { pickRandom, extractParams } from '@lore-weave/core';
+
+import {
+  // Step 1: Applicability
+  checkEntityCountMin,
+  // Step 2: Selection
+  selectByKind,
+  selectByPreferenceOrder,
+  // Step 4: Relationships
+  createRelationship,
+  // Result helpers
+  emptyResult,
+  templateResult
+} from '../../utils/strategyExecutors';
 export const tradeRouteEstablishment: GrowthTemplate = {
   id: 'trade_route_establishment',
   name: 'Trade Route Establishment',
@@ -61,29 +77,36 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     tags: ['world-level', 'economic', 'trade']
   },
 
+  // =========================================================================
+  // STEP 1: APPLICABILITY - entity_count_min AND NOT all_trading
+  // =========================================================================
   canApply(graphView: TemplateGraphView): boolean {
-    // Need factions that aren't already trading
-    const factions = graphView.findEntities({ kind: 'faction' });
+    // Strategy: entity_count_min(faction, 2)
+    if (!checkEntityCountMin(graphView, 'faction', undefined, 2)) {
+      return false;
+    }
 
-    if (factions.length < 2) return false;
+    // Strategy: check for available trade partners
+    const factions = selectByKind(graphView, 'faction');
 
-    // Check if there are potential trade partners
     return factions.some(faction => {
       const tradingWith = graphView.getRelatedEntities(faction.id, 'trades_with', 'both');
       const tradingPartnerIds = new Set(tradingWith.map(t => t.id));
 
       const potentialPartners = factions.filter(f =>
-        f.id !== faction.id &&
-        !tradingPartnerIds.has(f.id)
+        f.id !== faction.id && !tradingPartnerIds.has(f.id)
       );
 
       return potentialPartners.length > 0;
     });
   },
 
+  // =========================================================================
+  // STEP 2: SELECTION - factions with available partners
+  // =========================================================================
   findTargets(graphView: TemplateGraphView): HardState[] {
-    // Return factions with potential trade partners
-    const factions = graphView.findEntities({ kind: 'faction' });
+    // Strategy: by_kind(faction) with partner availability filter
+    const factions = selectByKind(graphView, 'faction');
 
     return factions.filter(faction => {
       const tradingWith = graphView.getRelatedEntities(faction.id, 'trades_with', 'both');
@@ -105,21 +128,20 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     });
   },
 
+  // =========================================================================
+  // STEPS 3-4: CREATION & RELATIONSHIPS
+  // =========================================================================
   expand(graphView: TemplateGraphView, target?: HardState): TemplateResult {
     if (!target || target.kind !== 'faction') {
-      return {
-        entities: [],
-        relationships: [],
-        description: 'No valid faction target'
-      };
+      return emptyResult('No valid faction target');
     }
 
     // Find existing trade partners
     const tradingWith = graphView.getRelatedEntities(target.id, 'trades_with', 'both');
     const tradingPartnerIds = new Set(tradingWith.map(t => t.id));
 
-    // Find potential trade partners (factions that aren't at war)
-    const factions = graphView.findEntities({ kind: 'faction' });
+    // Strategy: by_kind(faction) - find potential partners
+    const factions = selectByKind(graphView, 'faction');
     const potentialPartners = factions.filter(faction => {
       if (faction.id === target.id || tradingPartnerIds.has(faction.id)) {
         return false;
@@ -133,11 +155,7 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     });
 
     if (potentialPartners.length === 0) {
-      return {
-        entities: [],
-        relationships: [],
-        description: `${target.name} has no available trade partners`
-      };
+      return emptyResult(`${target.name} has no available trade partners`);
     }
 
     // Prefer partners who are allied or neutral
@@ -147,42 +165,36 @@ export const tradeRouteEstablishment: GrowthTemplate = {
     );
 
     const partner = allies.length > 0
-      ? allies[Math.floor(Math.random() * allies.length)]
-      : potentialPartners[Math.floor(Math.random() * potentialPartners.length)];
+      ? pickRandom(allies)
+      : pickRandom(potentialPartners);
 
-    // Find catalyst (merchant NPC if exists, otherwise leader, otherwise faction)
+    // Strategy: by_preference_order for catalyst (merchant > leader > faction)
     const members = graphView.getRelatedEntities(target.id, 'member_of', 'dst');
     const merchants = members.filter(m => m.subtype === 'merchant');
     const leaders = graphView.getRelatedEntities(target.id, 'leader_of', 'dst');
 
     const catalyst = merchants.length > 0
-      ? merchants[0]
+      ? pickRandom(merchants)
       : leaders.length > 0
-        ? leaders[0]
+        ? pickRandom(leaders)
         : target;
 
-    // Create bidirectional trades_with relationships
+    // ------- STEP 4: RELATIONSHIPS -------
+
+    // Strategy: bidirectional(trades_with) with catalyst
     const relationships: Relationship[] = [
-      {
-        kind: 'trades_with',
-        src: target.id,
-        dst: partner.id,
-        strength: 0.6,
-        catalyzedBy: catalyst.id
-      },
-      {
-        kind: 'trades_with',
-        src: partner.id,
-        dst: target.id,
-        strength: 0.6,
-        catalyzedBy: catalyst.id
-      }
+      createRelationship('trades_with', target.id, partner.id, { strength: 0.6 }),
+      createRelationship('trades_with', partner.id, target.id, { strength: 0.6 })
     ];
 
-    return {
-      entities: [],
+    // Add catalyst attribution manually (not part of standard createRelationship)
+    relationships[0].catalyzedBy = catalyst.id;
+    relationships[1].catalyzedBy = catalyst.id;
+
+    return templateResult(
+      [],
       relationships,
-      description: `${target.name} establishes trade route with ${partner.name} (catalyzed by ${catalyst.name})`
-    };
+      `${target.name} establishes trade route with ${partner.name} (catalyzed by ${catalyst.name})`
+    );
   }
 };
