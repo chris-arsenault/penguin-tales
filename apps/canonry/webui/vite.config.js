@@ -34,6 +34,12 @@ export default defineConfig({
           entry: '/lore-weave/remoteEntry.js',
           entryGlobalName: 'loreWeave',
         },
+        archivist: {
+          type: 'module',
+          name: 'archivist',
+          entry: '/archivist/remoteEntry.js',
+          entryGlobalName: 'archivist',
+        },
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },

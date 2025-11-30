@@ -11,6 +11,7 @@
  *   /cosmographer/*      → cosmographer (5002)
  *   /coherence-engine/*  → coherenceEngine (5003)
  *   /lore-weave/*        → loreWeave (5004)
+ *   /archivist/*         → archivist (5005)
  */
 
 import http from 'node:http';
@@ -25,6 +26,7 @@ const routes = [
   { prefix: '/cosmographer', target: 'http://localhost:5002' },
   { prefix: '/coherence-engine', target: 'http://localhost:5003' },
   { prefix: '/lore-weave', target: 'http://localhost:5004' },
+  { prefix: '/archivist', target: 'http://localhost:5005' },
   { prefix: '/', target: 'http://localhost:5000' },
 ];
 
@@ -83,6 +85,7 @@ server.listen(PROXY_PORT, () => {
 ║    /cosmographer/*      → cosmographer (5002)             ║
 ║    /coherence-engine/*  → coherenceEngine (5003)          ║
 ║    /lore-weave/*        → loreWeave (5004)                ║
+║    /archivist/*         → archivist (5005)                ║
 ║                                                           ║
 ║  Make sure to run 'npm run canonry' first!                ║
 ╚═══════════════════════════════════════════════════════════╝

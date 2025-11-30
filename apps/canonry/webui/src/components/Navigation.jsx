@@ -70,6 +70,7 @@ const TABS = [
   { id: 'cosmography', label: 'Cosmographer', enabled: true },
   { id: 'coherence', label: 'Coherence Engine', enabled: true },
   { id: 'simulation', label: 'Lore Weave', enabled: true },
+  { id: 'archivist', label: 'Archivist', enabled: true },
 ];
 
 export default function Navigation({ activeTab, onTabChange, onHelpClick }) {

@@ -195,7 +195,7 @@ const styles = {
   },
 };
 
-export default function ResultsViewer({ results, schema, onNewRun }) {
+export default function ResultsViewer({ results, schema, onNewRun, onViewInArchivist }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Process results for display
@@ -284,7 +284,15 @@ export default function ResultsViewer({ results, schema, onNewRun }) {
         <button style={styles.exportButton} onClick={exportConfig}>
           Export Config
         </button>
-        <button style={styles.runButton} onClick={onNewRun}>
+        {onViewInArchivist && (
+          <button
+            style={styles.runButton}
+            onClick={() => onViewInArchivist(results)}
+          >
+            View in Archivist
+          </button>
+        )}
+        <button style={styles.exportButton} onClick={onNewRun}>
           Run New Simulation
         </button>
       </div>

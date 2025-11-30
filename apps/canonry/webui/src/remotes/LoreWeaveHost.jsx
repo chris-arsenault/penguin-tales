@@ -47,6 +47,7 @@ export default function LoreWeaveHost({
   cultureVisuals,
   activeSection,
   onSectionChange,
+  onViewInArchivist,
 }) {
   return (
     <div style={styles.container}>
@@ -63,6 +64,7 @@ export default function LoreWeaveHost({
           cultureVisuals={cultureVisuals}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
+          onViewInArchivist={onViewInArchivist}
         />
       </Suspense>
     </div>

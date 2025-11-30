@@ -16,6 +16,7 @@ import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
 import LoreWeaveHost from './remotes/LoreWeaveHost';
+import ArchivistHost from './remotes/ArchivistHost';
 import { colors, typography, spacing } from './theme';
 
 const styles = {
@@ -59,6 +60,7 @@ const VALID_SUBNAV = {
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
   coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
   simulation: ['configure', 'run', 'results'],
+  archivist: ['explorer'],
 };
 
 // URL state management
@@ -72,7 +74,7 @@ function getInitialState() {
     return { tab: null, section: null, showHome: true };
   }
 
-  const validTab = ['enumerist', 'names', 'cosmography', 'coherence', 'simulation'].includes(tab)
+  const validTab = ['enumerist', 'names', 'cosmography', 'coherence', 'simulation', 'archivist'].includes(tab)
     ? tab
     : 'enumerist';
 
@@ -105,6 +107,7 @@ export default function App() {
   const [activeSection, setActiveSection] = useState(initialState.section);
   const [showHome, setShowHome] = useState(initialState.showHome);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [archivistData, setArchivistData] = useState(null);
 
   // Handle tab change - reset section to first valid for new tab
   const handleTabChange = useCallback((newTab) => {
@@ -124,6 +127,25 @@ export default function App() {
     setActiveTab(tabId);
     const defaultSection = VALID_SUBNAV[tabId]?.[0] || null;
     setActiveSection(defaultSection);
+    setShowHome(false);
+  }, []);
+
+  // Handle viewing simulation results in Archivist
+  const handleViewInArchivist = useCallback((simulationResults) => {
+    // Transform simulation results to archivist WorldState format
+    const worldData = {
+      metadata: {
+        ...simulationResults.metadata,
+        enrichmentTriggers: {},
+      },
+      hardState: simulationResults.hardState || [],
+      relationships: simulationResults.relationships || [],
+      pressures: simulationResults.pressures || {},
+      history: simulationResults.history || [],
+    };
+    setArchivistData({ worldData, loreData: null, imageData: null });
+    setActiveTab('archivist');
+    setActiveSection('explorer');
     setShowHome(false);
   }, []);
 
@@ -359,6 +381,16 @@ export default function App() {
             cultureVisuals={cultureVisuals}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
+            onViewInArchivist={handleViewInArchivist}
+          />
+        );
+
+      case 'archivist':
+        return (
+          <ArchivistHost
+            worldData={archivistData?.worldData}
+            loreData={archivistData?.loreData}
+            imageData={archivistData?.imageData}
           />
         );
 

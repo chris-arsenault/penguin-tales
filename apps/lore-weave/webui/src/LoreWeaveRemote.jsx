@@ -98,6 +98,7 @@ export default function LoreWeaveRemote({
   cultureVisuals = {},
   activeSection,
   onSectionChange,
+  onViewInArchivist,
 }) {
   // Use passed-in section or default to 'configure'
   const activeTab = activeSection || 'configure';
@@ -207,6 +208,7 @@ export default function LoreWeaveRemote({
             results={simulationResults}
             schema={schema}
             onNewRun={() => setActiveTab('run')}
+            onViewInArchivist={onViewInArchivist}
           />
         );
       default:

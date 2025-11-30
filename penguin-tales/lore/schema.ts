@@ -19,15 +19,14 @@ import {
   EmergentDiscoveryConfig,
   ImageGenerationPromptConfig
 } from '@lore-weave/core';
-import { SemanticEncoderConfig } from '@lore-weave/core';
+// SemanticEncoderConfig now managed by canonry
 import { pickRandom } from '@lore-weave/core';
 import {
   getActionDomains,
   getActionDomainsForEntity,
   getPressureDomainMappings
 } from './config/actionDomains';
-import { penguinRegionConfig } from './config/regions';
-import { semanticAxes, tagSemanticWeights } from './config/semanticAxes';
+// Semantic axes and regions now managed by canonry
 
 // ===========================
 // SNAPSHOT CONFIGURATIONS
@@ -773,19 +772,7 @@ const penguinDiscoveryConfig: EmergentDiscoveryConfig = {
   }
 };
 
-// ===========================
-// SEMANTIC AXIS CONFIG
-// ===========================
-
-/**
- * Semantic encoder configuration for penguin domain.
- * Maps tags to positions on meaningful axes for coordinate derivation.
- */
-const penguinSemanticConfig: SemanticEncoderConfig = {
-  axes: semanticAxes,
-  tagWeights: tagSemanticWeights,
-  warnOnUnconfiguredTags: true  // Enable warnings for unconfigured tags
-};
+// Semantic axis config now managed by canonry
 
 // ===========================
 // IMAGE GENERATION CONFIG
@@ -902,8 +889,7 @@ const baseDomain = new BaseDomainSchema({
 
 // Extend with catalyst system methods and discovery config
 export const penguinDomain = Object.assign(baseDomain, {
-  // Region-based coordinate system configuration
-  regionConfig: penguinRegionConfig,
+  // Region config now managed by canonry
 
   // Image generation configuration
   imageGenerationConfig: penguinImageGenerationConfig,
@@ -916,8 +902,7 @@ export const penguinDomain = Object.assign(baseDomain, {
   // Emergent discovery configuration
   emergentDiscoveryConfig: penguinDiscoveryConfig,
 
-  // Semantic axis configuration for coordinate encoding
-  semanticConfig: penguinSemanticConfig,
+  // Semantic axis config now managed by canonry
 
   // Action domains for catalyst system
   getActionDomains() {

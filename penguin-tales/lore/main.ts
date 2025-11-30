@@ -38,8 +38,7 @@ import {
   penguinTagRegistry
 } from './index.js';
 
-import { penguinRegionConfig, penguinKindMaps, penguinKindRegionConfig } from './config/regions.js';
-import { penguinSemanticConfig } from './config/semanticAxes.js';
+// Regions and semantic config now managed by canonry
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
@@ -242,12 +241,11 @@ const config: EngineConfig = {
   // Tag registry for tag health analysis (penguin-specific)
   tagRegistry: penguinTagRegistry,
 
-  // Coordinate context configuration (culture-first placement system)
+  // Coordinate context configuration (now managed by canonry)
   coordinateContextConfig: {
-    kindRegionConfig: penguinKindRegionConfig,
-    semanticConfig: penguinSemanticConfig,
-    cultures: []  // Cultures now managed by canonry
-  } as CoordinateContextConfig
+    entityKinds: [],  // Entity kinds with semantic planes managed by canonry
+    cultures: []      // Cultures managed by canonry
+  }
 
   // Meta-entity formation is now handled by SimulationSystems:
   // magicSchoolFormation, legalCodeFormation, combatTechniqueFormation
@@ -431,46 +429,8 @@ async function generateWorld() {
       name: c.name,
       description: c.description
     })),
-    // Legacy global regions (for backward compatibility)
-    regions: penguinRegionConfig.regions.map(r => ({
-      id: r.id,
-      label: r.label,
-      description: r.description,
-      bounds: r.bounds,
-      zRange: r.zRange,
-      parentRegion: r.parentRegion,
-      metadata: r.metadata
-    })),
-    coordinateBounds: { min: 0, max: 100 },
-    // Per-entity-kind map configurations
-    perKindMaps: Object.fromEntries(
-      Object.entries(penguinKindMaps).map(([kind, config]) => [
-        kind,
-        {
-          entityKind: config.entityKind,
-          name: config.name,
-          description: config.description,
-          bounds: { min: 0, max: 100 },  // Flatten to simple bounds for UI
-          hasZAxis: config.hasZAxis,
-          zAxisLabel: config.zAxisLabel
-        }
-      ])
-    ),
-    // Per-entity-kind region lists
-    perKindRegions: Object.fromEntries(
-      Object.entries(penguinKindMaps).map(([kind, config]) => [
-        kind,
-        (config.seedRegions ?? []).map(r => ({
-          id: r.id,
-          label: r.label,
-          description: r.description,
-          bounds: r.bounds,
-          zRange: r.zRange,
-          parentRegion: r.parentRegion,
-          metadata: r.metadata
-        }))
-      ])
-    )
+    coordinateBounds: { min: 0, max: 100 }
+    // Regions and per-kind maps now managed by canonry
   };
 
   // Add validation results and UI schema to export
