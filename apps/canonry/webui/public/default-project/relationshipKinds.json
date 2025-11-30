@@ -1,12 +1,12 @@
 [
-  { "kind": "resident_of", "description": "Resident Of", "srcKinds": ["npc"], "dstKinds": ["location"] },
-  { "kind": "member_of", "description": "Member Of", "srcKinds": ["npc"], "dstKinds": ["faction"] },
-  { "kind": "leader_of", "description": "Leader Of", "srcKinds": ["npc"], "dstKinds": ["faction"] },
-  { "kind": "ally_of", "description": "Ally Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
-  { "kind": "enemy_of", "description": "Enemy Of", "srcKinds": ["npc"], "dstKinds": ["npc"] },
-  { "kind": "allied_with", "description": "Allied With", "srcKinds": ["faction"], "dstKinds": ["faction"] },
-  { "kind": "at_war_with", "description": "At War With", "srcKinds": ["faction"], "dstKinds": ["faction"] },
-  { "kind": "controls", "description": "Controls", "srcKinds": ["faction"], "dstKinds": ["location"] },
-  { "kind": "contains", "description": "Contains", "srcKinds": ["location"], "dstKinds": ["location"] },
-  { "kind": "adjacent_to", "description": "Adjacent To", "srcKinds": ["location"], "dstKinds": ["location"] }
+  { "kind": "resident_of", "description": "Resident Of", "srcKinds": ["npc"], "dstKinds": ["location"], "cullable": false, "decayRate": "slow" },
+  { "kind": "member_of", "description": "Member Of", "srcKinds": ["npc"], "dstKinds": ["faction"], "cullable": false, "decayRate": "slow" },
+  { "kind": "leader_of", "description": "Leader Of", "srcKinds": ["npc"], "dstKinds": ["faction"], "cullable": false, "decayRate": "slow" },
+  { "kind": "ally_of", "description": "Ally Of", "srcKinds": ["npc"], "dstKinds": ["npc"], "cullable": true, "decayRate": "medium" },
+  { "kind": "enemy_of", "description": "Enemy Of", "srcKinds": ["npc"], "dstKinds": ["npc"], "cullable": true, "decayRate": "medium" },
+  { "kind": "allied_with", "description": "Allied With", "srcKinds": ["faction"], "dstKinds": ["faction"], "cullable": true, "decayRate": "slow" },
+  { "kind": "at_war_with", "description": "At War With", "srcKinds": ["faction"], "dstKinds": ["faction"], "cullable": true, "decayRate": "slow" },
+  { "kind": "controls", "description": "Controls", "srcKinds": ["faction"], "dstKinds": ["location"], "cullable": true, "decayRate": "slow" },
+  { "kind": "contains", "description": "Contains", "srcKinds": ["location"], "dstKinds": ["location"], "cullable": false, "decayRate": "none" },
+  { "kind": "adjacent_to", "description": "Adjacent To", "srcKinds": ["location"], "dstKinds": ["location"], "cullable": false, "decayRate": "none" }
 ]

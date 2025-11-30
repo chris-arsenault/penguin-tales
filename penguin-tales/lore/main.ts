@@ -12,12 +12,11 @@ import { fileURLToPath } from 'url';
 // Framework imports from lore-weave
 import {
   WorldEngine,
-  EnrichmentService,
   ImageGenerationService,
   normalizeInitialState,
   validateWorld,
   applyParameterOverrides,
-  relationshipCulling
+  relationshipMaintenance
 } from '@lore-weave/core';
 
 import type {
@@ -34,9 +33,9 @@ import {
   allSystems as penguinSystems,
   initialState as penguinInitialState,
   penguinEntityRegistries,
-  penguinLoreProvider,
   penguinTagRegistry
 } from './index.js';
+// penguinLoreProvider moved to illuminator project
 
 // Regions and semantic config now managed by canonry
 
@@ -144,9 +143,9 @@ const enrichmentConfig = {
   maxRelationshipEnrichments: llmPartial ? 1 : undefined,
   maxEraNarratives: llmPartial ? 1 : undefined
 };
-const enrichmentService = llmEnabled
-  ? new EnrichmentService(llmConfig, penguinLoreProvider, enrichmentConfig)
-  : undefined;
+// EnrichmentService requires loreProvider which is now in illuminator project
+// Enrichment disabled until illuminator integration is complete
+const enrichmentService = undefined;
 
 // Image generation configuration (using OpenAI DALL-E)
 const imageGenEnv = sanitize(process.env.IMAGE_GENERATION_ENABLED).toLowerCase();
@@ -194,7 +193,7 @@ if (cliArgs.configPath) {
 }
 
 // Combine domain systems with framework systems
-const allSystemsCombined = [...penguinSystems, relationshipCulling];
+const allSystemsCombined = [...penguinSystems, relationshipMaintenance];
 
 // Apply parameter overrides from config file
 const { templates: configuredTemplates, systems: configuredSystems } = applyParameterOverrides(

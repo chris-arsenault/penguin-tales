@@ -531,3 +531,32 @@ button:active {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
+/* Position utilities */
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.top-6 {
+  top: 24px;
+}
+
+.bottom-6 {
+  bottom: 24px;
+}
+
+.left-6 {
+  left: 24px;
+}
+
+.right-6 {
+  right: 24px;
+}

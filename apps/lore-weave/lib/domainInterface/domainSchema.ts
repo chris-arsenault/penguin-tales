@@ -8,6 +8,9 @@
 import { HardState, Relationship } from '../core/worldTypes';
 import { SemanticEncoderConfig } from '../coordinates/types';
 
+/** Decay rate for relationship strength over time */
+export type DecayRate = 'none' | 'slow' | 'medium' | 'fast';
+
 /**
  * Definition of a relationship kind in the domain
  */
@@ -23,6 +26,23 @@ export interface RelationshipKindDefinition {
 
   /** Entity kinds that can be the destination of this relationship */
   dstKinds: string[];
+
+  /**
+   * Whether this relationship can be removed by maintenance systems.
+   * Set to false for immutable facts (geography, history, discoveries).
+   * Default: true
+   */
+  cullable?: boolean;
+
+  /**
+   * How quickly this relationship's strength decays over time.
+   * - 'none': Never decays (permanent relationships)
+   * - 'slow': Decays slowly (structural relationships like membership)
+   * - 'medium': Normal decay (social relationships)
+   * - 'fast': Decays quickly (temporary alliances, economic ties)
+   * Default: 'medium'
+   */
+  decayRate?: DecayRate;
 }
 
 // ===========================

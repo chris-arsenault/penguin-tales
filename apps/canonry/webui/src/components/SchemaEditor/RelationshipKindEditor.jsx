@@ -218,8 +218,8 @@ export default function RelationshipKindEditor({
 }) {
   const [expandedRels, setExpandedRels] = useState({});
 
-  // Use stable key for expand/collapse tracking (falls back to id for existing rels)
-  const getStableKey = (rel) => rel._key || rel.id;
+  // Use stable key for expand/collapse tracking (falls back to kind for existing rels)
+  const getStableKey = (rel) => rel._key || rel.kind;
 
   const toggleRel = (stableKey) => {
     setExpandedRels((prev) => ({ ...prev, [stableKey]: !prev[stableKey] }));
@@ -228,53 +228,53 @@ export default function RelationshipKindEditor({
   const addRelationship = () => {
     const stableKey = `rel_${Date.now()}`;
     const newRel = {
-      id: stableKey,
-      name: 'New Relationship',
-      description: '',
+      kind: stableKey,
+      description: 'New Relationship',
       srcKinds: [],
       dstKinds: [],
-      symmetric: false,
+      cullable: true,
+      decayRate: 'medium',
       _key: stableKey, // Stable key for React, never changes
     };
     onChange([...relationshipKinds, newRel]);
     setExpandedRels((prev) => ({ ...prev, [stableKey]: true }));
   };
 
-  const updateRel = (relId, updates) => {
+  const updateRel = (relKind, updates) => {
     onChange(
-      relationshipKinds.map((r) => (r.id === relId ? { ...r, ...updates } : r))
+      relationshipKinds.map((r) => (r.kind === relKind ? { ...r, ...updates } : r))
     );
   };
 
-  const deleteRel = (relId) => {
+  const deleteRel = (relKind) => {
     if (confirm('Delete this relationship kind?')) {
-      onChange(relationshipKinds.filter((r) => r.id !== relId));
+      onChange(relationshipKinds.filter((r) => r.kind !== relKind));
     }
   };
 
-  const toggleKind = (relId, field, kindId) => {
-    const rel = relationshipKinds.find((r) => r.id === relId);
+  const toggleEntityKind = (relKind, field, entityKindId) => {
+    const rel = relationshipKinds.find((r) => r.kind === relKind);
     if (!rel) return;
 
     const current = rel[field] || [];
-    const updated = current.includes(kindId)
-      ? current.filter((k) => k !== kindId)
-      : [...current, kindId];
+    const updated = current.includes(entityKindId)
+      ? current.filter((k) => k !== entityKindId)
+      : [...current, entityKindId];
 
-    updateRel(relId, { [field]: updated });
+    updateRel(relKind, { [field]: updated });
   };
 
   const getSummary = (rel) => {
     const srcNames =
       rel.srcKinds?.length > 0
         ? rel.srcKinds
-            .map((id) => entityKinds.find((k) => k.id === id)?.name || id)
+            .map((k) => entityKinds.find((ek) => ek.kind === k)?.description || k)
             .slice(0, 2)
         : ['Any'];
     const dstNames =
       rel.dstKinds?.length > 0
         ? rel.dstKinds
-            .map((id) => entityKinds.find((k) => k.id === id)?.name || id)
+            .map((k) => entityKinds.find((ek) => ek.kind === k)?.description || k)
             .slice(0, 2)
         : ['Any'];
 
@@ -326,11 +326,11 @@ export default function RelationshipKindEditor({
                     >
                       ▶
                     </span>
-                    <span style={styles.relName}>{rel.name}</span>
-                    <span style={styles.relId}>({rel.id})</span>
-                    {rel.symmetric && (
+                    <span style={styles.relName}>{rel.description}</span>
+                    <span style={styles.relId}>({rel.kind})</span>
+                    {rel.cullable === false && (
                       <span style={styles.symmetricLabel}>
-                        ↔ symmetric
+                        protected
                       </span>
                     )}
                   </div>
@@ -357,45 +357,31 @@ export default function RelationshipKindEditor({
 
                 {isExpanded && (
                   <div style={styles.relBody}>
-                    {/* Name and ID */}
+                    {/* Description (display name) and Kind (ID) */}
                     <div style={styles.formRow}>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>Name</label>
+                        <label style={styles.label}>Display Name</label>
                         <input
                           style={styles.input}
-                          value={rel.name}
+                          value={rel.description}
                           onChange={(e) =>
-                            updateRel(rel.id, { name: e.target.value })
+                            updateRel(rel.kind, { description: e.target.value })
                           }
-                          placeholder="Relationship name"
+                          placeholder="Relationship display name"
                         />
                       </div>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>ID</label>
+                        <label style={styles.label}>Kind ID</label>
                         <input
                           style={styles.input}
-                          value={rel.id}
+                          value={rel.kind}
                           onChange={(e) => {
-                            const newId = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                            if (newId && !relationshipKinds.some((r) => r.id === newId && r.id !== rel.id)) {
-                              updateRel(rel.id, { id: newId });
+                            const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                            if (newKind && !relationshipKinds.some((r) => r.kind === newKind && r.kind !== rel.kind)) {
+                              updateRel(rel.kind, { kind: newKind });
                             }
                           }}
-                          placeholder="relationship_id"
-                        />
-                      </div>
-                    </div>
-
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Description (optional)</label>
-                        <textarea
-                          style={styles.textarea}
-                          value={rel.description || ''}
-                          onChange={(e) =>
-                            updateRel(rel.id, { description: e.target.value })
-                          }
-                          placeholder="Describe what this relationship represents..."
+                          placeholder="relationship_kind_id"
                         />
                       </div>
                     </div>
@@ -420,20 +406,20 @@ export default function RelationshipKindEditor({
                               )}
                             </div>
                             <div style={styles.kindGrid}>
-                              {entityKinds.map((kind) => (
+                              {entityKinds.map((ek) => (
                                 <div
-                                  key={kind.id}
+                                  key={ek.kind}
                                   style={{
                                     ...styles.kindChip,
-                                    ...(rel.srcKinds?.includes(kind.id)
+                                    ...(rel.srcKinds?.includes(ek.kind)
                                       ? styles.kindChipActive
                                       : styles.kindChipInactive),
                                   }}
                                   onClick={() =>
-                                    toggleKind(rel.id, 'srcKinds', kind.id)
+                                    toggleEntityKind(rel.kind, 'srcKinds', ek.kind)
                                   }
                                 >
-                                  {kind.name}
+                                  {ek.description}
                                 </div>
                               ))}
                             </div>
@@ -449,20 +435,20 @@ export default function RelationshipKindEditor({
                               )}
                             </div>
                             <div style={styles.kindGrid}>
-                              {entityKinds.map((kind) => (
+                              {entityKinds.map((ek) => (
                                 <div
-                                  key={kind.id}
+                                  key={ek.kind}
                                   style={{
                                     ...styles.kindChip,
-                                    ...(rel.dstKinds?.includes(kind.id)
+                                    ...(rel.dstKinds?.includes(ek.kind)
                                       ? styles.kindChipActive
                                       : styles.kindChipInactive),
                                   }}
                                   onClick={() =>
-                                    toggleKind(rel.id, 'dstKinds', kind.id)
+                                    toggleEntityKind(rel.kind, 'dstKinds', ek.kind)
                                   }
                                 >
-                                  {kind.name}
+                                  {ek.description}
                                 </div>
                               ))}
                             </div>
@@ -471,22 +457,48 @@ export default function RelationshipKindEditor({
                       )}
                     </div>
 
-                    {/* Options */}
-                    <div style={styles.optionsRow}>
-                      <label style={styles.checkbox}>
-                        <input
-                          type="checkbox"
-                          checked={rel.symmetric || false}
-                          onChange={(e) =>
-                            updateRel(rel.id, { symmetric: e.target.checked })
-                          }
-                        />
-                        Symmetric (A→B implies B→A)
-                      </label>
+                    {/* Maintenance Settings */}
+                    <div style={styles.constraintsSection}>
+                      <div style={styles.constraintsTitle}>
+                        Maintenance Settings
+                      </div>
+                      <div style={styles.formRow}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Decay Rate</label>
+                          <select
+                            style={styles.input}
+                            value={rel.decayRate || 'medium'}
+                            onChange={(e) =>
+                              updateRel(rel.kind, { decayRate: e.target.value })
+                            }
+                          >
+                            <option value="none">None (permanent)</option>
+                            <option value="slow">Slow</option>
+                            <option value="medium">Medium</option>
+                            <option value="fast">Fast</option>
+                          </select>
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.checkbox}>
+                            <input
+                              type="checkbox"
+                              checked={rel.cullable !== false}
+                              onChange={(e) =>
+                                updateRel(rel.kind, { cullable: e.target.checked })
+                              }
+                            />
+                            Cullable (can be removed when weak)
+                          </label>
+                        </div>
+                      </div>
+                    </div>
 
+                    {/* Delete */}
+                    <div style={styles.optionsRow}>
+                      <div />
                       <button
                         style={styles.deleteButton}
-                        onClick={() => deleteRel(rel.id)}
+                        onClick={() => deleteRel(rel.kind)}
                       >
                         Delete Relationship
                       </button>

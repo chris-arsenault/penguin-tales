@@ -411,7 +411,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
   }, [selectedNodeId]);
 
   return (
-    <div className="relative w-full h-full">
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <div ref={containerRef} className="cytoscape-container" />
 
       {/* Legend - Dynamic from uiSchema */}

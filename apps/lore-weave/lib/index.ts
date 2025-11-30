@@ -50,6 +50,7 @@ export { ComponentPurpose, GraphStore } from './engine/types';
 export type {
   DomainSchema,
   RelationshipKindDefinition,
+  DecayRate,
   SnapshotConfig,
   EntityKindDefinition,
   SubtypeDefinition,
@@ -198,7 +199,7 @@ export {
 // FRAMEWORK SYSTEMS - Domain registers these with engine config
 // =============================================================================
 
-export { relationshipCulling } from './systems/relationshipCulling';
+export { relationshipMaintenance } from './systems/relationshipMaintenance';
 export { eraSpawner } from './systems/eraSpawner';
 export { eraTransition } from './systems/eraTransition';
 export { universalCatalyst } from './systems/universalCatalyst';

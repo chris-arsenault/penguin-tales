@@ -3,13 +3,32 @@ import type { EntityKind, Filters, Prominence, WorldState } from '../types/world
 import { getAllTags, getAllRelationshipTypes, getRelationshipTypeCounts } from '../utils/dataTransform.ts';
 import './FilterPanel.css';
 
+export type EdgeMetric = 'strength' | 'distance' | 'none';
+export type ViewMode = 'graph3d' | 'graph2d' | 'map';
+
 interface FilterPanelProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
   worldData: WorldState;
+  viewMode: ViewMode;
+  edgeMetric: EdgeMetric;
+  onViewModeChange: (mode: ViewMode) => void;
+  onEdgeMetricChange: (metric: EdgeMetric) => void;
+  onRecalculateLayout: () => void;
+  onToggleStats: () => void;
 }
 
-export default function FilterPanel({ filters, onChange, worldData }: FilterPanelProps) {
+export default function FilterPanel({
+  filters,
+  onChange,
+  worldData,
+  viewMode,
+  edgeMetric,
+  onViewModeChange,
+  onEdgeMetricChange,
+  onRecalculateLayout,
+  onToggleStats,
+}: FilterPanelProps) {
   const allTags = getAllTags(worldData);
   const allRelationshipTypes = getAllRelationshipTypes(worldData);
   const relationshipTypeCounts = getRelationshipTypeCounts(worldData);
@@ -73,12 +92,77 @@ export default function FilterPanel({ filters, onChange, worldData }: FilterPane
 
   return (
     <div className="filter-panel">
-      <div>
-        <h2 className="filter-panel-title">
-          Filters
-        </h2>
-        <div className="filter-panel-divider"></div>
+      {/* View Controls */}
+      <div className="view-controls">
+        <div className="view-mode-buttons">
+          <button
+            className={`view-mode-btn ${viewMode === 'graph3d' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('graph3d')}
+            title="3D Graph View"
+          >
+            3D
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'graph2d' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('graph2d')}
+            title="2D Graph View"
+          >
+            2D
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'map' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('map')}
+            title="Coordinate Map View"
+          >
+            Map
+          </button>
+        </div>
+        <div className="view-actions">
+          <button
+            className="view-action-btn"
+            onClick={onRecalculateLayout}
+            title="Recalculate Layout"
+          >
+            ♻️
+          </button>
+          <button
+            className="view-action-btn"
+            onClick={onToggleStats}
+            title="Toggle Stats Panel"
+          >
+            📊
+          </button>
+        </div>
       </div>
+
+      {/* Edge Metric (for graph views) */}
+      {(viewMode === 'graph3d' || viewMode === 'graph2d') && (
+        <div className="edge-metric-section">
+          <label className="filter-section-label">Edge Spring</label>
+          <div className="edge-metric-buttons">
+            <button
+              className={`edge-metric-btn ${edgeMetric === 'strength' ? 'active' : ''}`}
+              onClick={() => onEdgeMetricChange('strength')}
+            >
+              Strength
+            </button>
+            <button
+              className={`edge-metric-btn ${edgeMetric === 'distance' ? 'active' : ''}`}
+              onClick={() => onEdgeMetricChange('distance')}
+            >
+              Distance
+            </button>
+            <button
+              className={`edge-metric-btn ${edgeMetric === 'none' ? 'active' : ''}`}
+              onClick={() => onEdgeMetricChange('none')}
+            >
+              Equal
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="filter-panel-divider"></div>
 
       {/* Search */}
       <div className="filter-section">

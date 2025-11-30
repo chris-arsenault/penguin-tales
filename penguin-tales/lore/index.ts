@@ -18,18 +18,10 @@ export {
   getPressureDomainMappings
 } from './config/actionDomains.js';
 
-// Relationship Categories
-export {
-  relationshipCategories,
-  getCategoryForRelationship,
-  getImmutableRelationshipKinds,
-  getProtectedRelationshipKinds,
-  getRelationshipKindsByCategory,
-  getAllCategories
-} from './config/relationshipCategories.js';
+// Relationship categories now handled by framework's relationshipMaintenance system
+// using cullable and decayRate fields on RelationshipKindDefinition
 
-// Lore Provider
-export { penguinLoreProvider } from './config/loreProvider.js';
+// Lore Provider moved to illuminator project
 
 // Tag Registry
 export { penguinTagRegistry } from './config/tagRegistry.js';

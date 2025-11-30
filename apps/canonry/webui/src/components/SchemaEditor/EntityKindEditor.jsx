@@ -190,13 +190,18 @@ const styles = {
   },
 };
 
+// Generate ID from name (lowercase, underscores)
+function generateId(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
 export default function EntityKindEditor({ entityKinds, onChange }) {
   const [expandedKinds, setExpandedKinds] = useState({});
   const [newSubtype, setNewSubtype] = useState({});
   const [newStatus, setNewStatus] = useState({});
 
-  // Use stable key for expand/collapse tracking (falls back to id for existing kinds)
-  const getStableKey = (kind) => kind._key || kind.id;
+  // Use stable key for expand/collapse tracking (falls back to kind for existing kinds)
+  const getStableKey = (ek) => ek._key || ek.kind;
 
   const toggleKind = (stableKey) => {
     setExpandedKinds((prev) => ({ ...prev, [stableKey]: !prev[stableKey] }));
@@ -205,9 +210,8 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
   const addEntityKind = () => {
     const stableKey = `kind_${Date.now()}`;
     const newKind = {
-      id: stableKey,
-      name: 'New Entity Kind',
-      description: '',
+      kind: stableKey,
+      description: 'New Entity Kind',
       subtypes: [],
       statuses: [{ id: 'active', name: 'Active', isTerminal: false }],
       defaultStatus: 'active',
@@ -217,63 +221,63 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
     setExpandedKinds((prev) => ({ ...prev, [stableKey]: true }));
   };
 
-  const updateKind = (kindId, updates) => {
+  const updateKind = (kindKey, updates) => {
     onChange(
-      entityKinds.map((k) => (k.id === kindId ? { ...k, ...updates } : k))
+      entityKinds.map((k) => (k.kind === kindKey ? { ...k, ...updates } : k))
     );
   };
 
-  const deleteKind = (kindId) => {
+  const deleteKind = (kindKey) => {
     if (confirm('Delete this entity kind? This cannot be undone.')) {
-      onChange(entityKinds.filter((k) => k.id !== kindId));
+      onChange(entityKinds.filter((k) => k.kind !== kindKey));
     }
   };
 
-  const addSubtype = (kindId) => {
-    const name = newSubtype[kindId]?.trim();
+  const addSubtype = (kindKey) => {
+    const name = newSubtype[kindKey]?.trim();
     if (!name) return;
 
-    const kind = entityKinds.find((k) => k.id === kindId);
-    if (!kind) return;
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
 
     const subtype = { id: generateId(name), name };
-    updateKind(kindId, { subtypes: [...kind.subtypes, subtype] });
-    setNewSubtype((prev) => ({ ...prev, [kindId]: '' }));
+    updateKind(kindKey, { subtypes: [...ek.subtypes, subtype] });
+    setNewSubtype((prev) => ({ ...prev, [kindKey]: '' }));
   };
 
-  const removeSubtype = (kindId, subtypeId) => {
-    const kind = entityKinds.find((k) => k.id === kindId);
-    if (!kind) return;
-    updateKind(kindId, {
-      subtypes: kind.subtypes.filter((s) => s.id !== subtypeId),
+  const removeSubtype = (kindKey, subtypeId) => {
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      subtypes: ek.subtypes.filter((s) => s.id !== subtypeId),
     });
   };
 
-  const addStatus = (kindId) => {
-    const name = newStatus[kindId]?.trim();
+  const addStatus = (kindKey) => {
+    const name = newStatus[kindKey]?.trim();
     if (!name) return;
 
-    const kind = entityKinds.find((k) => k.id === kindId);
-    if (!kind) return;
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
 
     const status = { id: generateId(name), name, isTerminal: false };
-    updateKind(kindId, { statuses: [...kind.statuses, status] });
-    setNewStatus((prev) => ({ ...prev, [kindId]: '' }));
+    updateKind(kindKey, { statuses: [...ek.statuses, status] });
+    setNewStatus((prev) => ({ ...prev, [kindKey]: '' }));
   };
 
-  const removeStatus = (kindId, statusId) => {
-    const kind = entityKinds.find((k) => k.id === kindId);
-    if (!kind) return;
-    updateKind(kindId, {
-      statuses: kind.statuses.filter((s) => s.id !== statusId),
+  const removeStatus = (kindKey, statusId) => {
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      statuses: ek.statuses.filter((s) => s.id !== statusId),
     });
   };
 
-  const toggleStatusTerminal = (kindId, statusId) => {
-    const kind = entityKinds.find((k) => k.id === kindId);
-    if (!kind) return;
-    updateKind(kindId, {
-      statuses: kind.statuses.map((s) =>
+  const toggleStatusTerminal = (kindKey, statusId) => {
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      statuses: ek.statuses.map((s) =>
         s.id === statusId ? { ...s, isTerminal: !s.isTerminal } : s
       ),
     });
@@ -303,8 +307,8 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
         </div>
       ) : (
         <div style={styles.kindList}>
-          {entityKinds.map((kind) => {
-            const stableKey = getStableKey(kind);
+          {entityKinds.map((ek) => {
+            const stableKey = getStableKey(ek);
             const isExpanded = expandedKinds[stableKey];
             return (
               <div key={stableKey} style={styles.kindCard}>
@@ -321,56 +325,41 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                     >
                       ▶
                     </span>
-                    <span style={styles.kindName}>{kind.name}</span>
-                    <span style={styles.kindId}>({kind.id})</span>
+                    <span style={styles.kindName}>{ek.description}</span>
+                    <span style={styles.kindId}>({ek.kind})</span>
                   </div>
                   <div style={styles.kindSummary}>
-                    {kind.subtypes.length} subtypes, {kind.statuses.length} statuses
+                    {ek.subtypes.length} subtypes, {ek.statuses.length} statuses
                   </div>
                 </div>
 
                 {isExpanded && (
                   <div style={styles.kindBody}>
-                    {/* Name and ID */}
+                    {/* Description (display name) and Kind (ID) */}
                     <div style={styles.formRow}>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>Name</label>
+                        <label style={styles.label}>Display Name</label>
                         <input
                           style={styles.input}
-                          value={kind.name}
+                          value={ek.description}
                           onChange={(e) =>
-                            updateKind(kind.id, { name: e.target.value })
+                            updateKind(ek.kind, { description: e.target.value })
                           }
-                          placeholder="Entity kind name"
+                          placeholder="Entity kind display name"
                         />
                       </div>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>ID</label>
+                        <label style={styles.label}>Kind ID</label>
                         <input
                           style={styles.input}
-                          value={kind.id}
+                          value={ek.kind}
                           onChange={(e) => {
-                            const newId = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                            if (newId && !entityKinds.some((k) => k.id === newId && k.id !== kind.id)) {
-                              updateKind(kind.id, { id: newId });
+                            const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                            if (newKind && !entityKinds.some((k) => k.kind === newKind && k.kind !== ek.kind)) {
+                              updateKind(ek.kind, { kind: newKind });
                             }
                           }}
                           placeholder="entity_kind_id"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Description</label>
-                        <input
-                          style={styles.input}
-                          value={kind.description || ''}
-                          onChange={(e) =>
-                            updateKind(kind.id, { description: e.target.value })
-                          }
-                          placeholder="Optional description"
                         />
                       </div>
                     </div>
@@ -379,12 +368,12 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                     <div style={styles.section}>
                       <div style={styles.sectionTitle}>Subtypes</div>
                       <div style={styles.itemList}>
-                        {kind.subtypes.map((subtype) => (
+                        {ek.subtypes.map((subtype) => (
                           <div key={subtype.id} style={styles.item}>
                             <span>{subtype.name}</span>
                             <button
                               style={styles.itemRemove}
-                              onClick={() => removeSubtype(kind.id, subtype.id)}
+                              onClick={() => removeSubtype(ek.kind, subtype.id)}
                             >
                               ×
                             </button>
@@ -394,21 +383,21 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                       <div style={styles.addItemRow}>
                         <input
                           style={styles.addItemInput}
-                          value={newSubtype[kind.id] || ''}
+                          value={newSubtype[ek.kind] || ''}
                           onChange={(e) =>
                             setNewSubtype((prev) => ({
                               ...prev,
-                              [kind.id]: e.target.value,
+                              [ek.kind]: e.target.value,
                             }))
                           }
                           placeholder="New subtype name"
                           onKeyDown={(e) =>
-                            e.key === 'Enter' && addSubtype(kind.id)
+                            e.key === 'Enter' && addSubtype(ek.kind)
                           }
                         />
                         <button
                           style={styles.addItemButton}
-                          onClick={() => addSubtype(kind.id)}
+                          onClick={() => addSubtype(ek.kind)}
                         >
                           Add
                         </button>
@@ -419,14 +408,14 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                     <div style={styles.section}>
                       <div style={styles.sectionTitle}>Statuses</div>
                       <div style={styles.itemList}>
-                        {kind.statuses.map((status) => (
+                        {ek.statuses.map((status) => (
                           <div key={status.id} style={styles.item}>
                             <input
                               type="checkbox"
                               style={styles.checkbox}
                               checked={status.isTerminal}
                               onChange={() =>
-                                toggleStatusTerminal(kind.id, status.id)
+                                toggleStatusTerminal(ek.kind, status.id)
                               }
                               title="Terminal status"
                             />
@@ -442,7 +431,7 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                             </span>
                             <button
                               style={styles.itemRemove}
-                              onClick={() => removeStatus(kind.id, status.id)}
+                              onClick={() => removeStatus(ek.kind, status.id)}
                             >
                               ×
                             </button>
@@ -452,21 +441,21 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                       <div style={styles.addItemRow}>
                         <input
                           style={styles.addItemInput}
-                          value={newStatus[kind.id] || ''}
+                          value={newStatus[ek.kind] || ''}
                           onChange={(e) =>
                             setNewStatus((prev) => ({
                               ...prev,
-                              [kind.id]: e.target.value,
+                              [ek.kind]: e.target.value,
                             }))
                           }
                           placeholder="New status name"
                           onKeyDown={(e) =>
-                            e.key === 'Enter' && addStatus(kind.id)
+                            e.key === 'Enter' && addStatus(ek.kind)
                           }
                         />
                         <button
                           style={styles.addItemButton}
-                          onClick={() => addStatus(kind.id)}
+                          onClick={() => addStatus(ek.kind)}
                         >
                           Add
                         </button>
@@ -482,13 +471,13 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                         <label style={styles.label}>Default Status</label>
                         <select
                           style={styles.input}
-                          value={kind.defaultStatus || ''}
+                          value={ek.defaultStatus || ''}
                           onChange={(e) =>
-                            updateKind(kind.id, { defaultStatus: e.target.value })
+                            updateKind(ek.kind, { defaultStatus: e.target.value })
                           }
                         >
                           <option value="">-- Select --</option>
-                          {kind.statuses.map((s) => (
+                          {ek.statuses.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
                             </option>
@@ -501,7 +490,7 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                     <div style={styles.actionsRow}>
                       <button
                         style={styles.deleteButton}
-                        onClick={() => deleteKind(kind.id)}
+                        onClick={() => deleteKind(ek.kind)}
                       >
                         Delete Entity Kind
                       </button>
