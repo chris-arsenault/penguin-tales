@@ -191,7 +191,7 @@ const styles = {
   },
   tabActive: {
     color: ACCENT_COLOR,
-    borderBottomColor: ACCENT_COLOR,
+    borderBottom: `2px solid ${ACCENT_COLOR}`,
   },
 };
 

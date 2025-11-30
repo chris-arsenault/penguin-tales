@@ -188,6 +188,48 @@ const styles = {
     cursor: 'pointer',
     marginLeft: '8px',
   },
+  stepButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: 500,
+    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  resetButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: 500,
+    backgroundColor: 'transparent',
+    color: '#f59e0b',
+    border: '1px solid #f59e0b',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '8px',
+  },
+  stepIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '8px 16px',
+    backgroundColor: '#1e1e2e',
+    borderRadius: '6px',
+    fontSize: '13px',
+    color: '#b0b0c0',
+  },
 };
 
 /**
@@ -245,9 +287,14 @@ export default function SimulationRunner({
   const {
     state: simState,
     start: startWorker,
+    startStepping: startSteppingWorker,
+    step: stepWorker,
+    runToCompletion: runToCompletionWorker,
+    reset: resetWorker,
     abort: abortWorker,
     clearLogs,
-    isRunning: workerIsRunning
+    isRunning: workerIsRunning,
+    isPaused: workerIsPaused
   } = useSimulationWorker();
 
   // Sync running state with parent
@@ -360,6 +407,20 @@ export default function SimulationRunner({
     startWorker(fullConfig, initialEntities);
   }, [validation, engineConfig, seedEntities, startWorker]);
 
+  // Start in step mode (initialize but pause)
+  const startStepMode = useCallback(() => {
+    if (!validation.isValid) return;
+
+    const domain = createDomainSchemaFromJSON(engineConfig.domain);
+    const fullConfig = {
+      ...engineConfig,
+      domain,
+    };
+
+    const initialEntities = seedEntities || [];
+    startSteppingWorker(fullConfig, initialEntities);
+  }, [validation, engineConfig, seedEntities, startSteppingWorker]);
+
   const handleParamChange = (field, value) => {
     setParams(prev => ({ ...prev, [field]: value }));
   };
@@ -368,8 +429,9 @@ export default function SimulationRunner({
     navigator.clipboard.writeText(JSON.stringify(engineConfig, null, 2));
   }, [engineConfig]);
 
-  // Show dashboard when running or has run
+  // Show dashboard when running, paused, or has run
   const showDashboard = workerIsRunning ||
+    workerIsPaused ||
     simState.status === 'complete' ||
     simState.status === 'error' ||
     simState.logs.length > 0;
@@ -398,23 +460,47 @@ export default function SimulationRunner({
 
       {/* Parameters Card - Compact when running */}
       <div style={styles.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: workerIsRunning ? 0 : '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (workerIsRunning && !workerIsPaused) ? 0 : '16px' }}>
           <div style={styles.cardTitle}>
             Simulation Parameters
           </div>
           <div style={styles.buttonRow}>
-            {!workerIsRunning ? (
+            {workerIsRunning && !workerIsPaused ? (
+              /* Running state - show stop button */
+              <button
+                style={styles.abortButton}
+                onClick={abortWorker}
+              >
+                ◼ Stop
+              </button>
+            ) : workerIsPaused ? (
+              /* Paused state - show step controls */
               <>
-                <button
-                  style={{
-                    ...styles.runButton,
-                    ...(!validation.isValid ? styles.runButtonDisabled : {}),
-                  }}
-                  onClick={runSimulation}
-                  disabled={!validation.isValid}
-                >
-                  ▶ Run Simulation
-                </button>
+                <div style={styles.stepIndicator}>
+                  <span>Epoch {simState.progress?.epoch || 0} / {simState.progress?.totalEpochs || 0}</span>
+                  <span style={{ color: '#f59e0b' }}>PAUSED</span>
+                </div>
+                <div style={styles.buttonGroup}>
+                  <button
+                    style={styles.stepButton}
+                    onClick={stepWorker}
+                  >
+                    ⏭ Next Epoch
+                  </button>
+                  <button
+                    style={styles.runButton}
+                    onClick={runToCompletionWorker}
+                    title="Continue running all remaining epochs"
+                  >
+                    ▶ Continue
+                  </button>
+                  <button
+                    style={styles.resetButton}
+                    onClick={resetWorker}
+                  >
+                    ↻ Reset
+                  </button>
+                </div>
                 {simState.status === 'complete' && onViewResults && (
                   <button
                     style={styles.viewResultsButton}
@@ -425,12 +511,40 @@ export default function SimulationRunner({
                 )}
               </>
             ) : (
-              <button
-                style={styles.abortButton}
-                onClick={abortWorker}
-              >
-                ◼ Stop
-              </button>
+              /* Idle or complete state - show run/step buttons */
+              <>
+                <div style={styles.buttonGroup}>
+                  <button
+                    style={{
+                      ...styles.runButton,
+                      ...(!validation.isValid ? styles.runButtonDisabled : {}),
+                    }}
+                    onClick={runSimulation}
+                    disabled={!validation.isValid}
+                  >
+                    ▶ Run All
+                  </button>
+                  <button
+                    style={{
+                      ...styles.stepButton,
+                      ...(!validation.isValid ? styles.runButtonDisabled : {}),
+                    }}
+                    onClick={startStepMode}
+                    disabled={!validation.isValid}
+                    title="Run one epoch at a time"
+                  >
+                    ⏯ Step Mode
+                  </button>
+                </div>
+                {simState.status === 'complete' && onViewResults && (
+                  <button
+                    style={styles.viewResultsButton}
+                    onClick={onViewResults}
+                  >
+                    ✓ View Results
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -397,16 +397,35 @@ export class WorldEngine {
     this.emitter.log('warn', message, { tick: this.graph.tick });
   }
 
-  // Main execution loop
-  public async run(): Promise<Graph> {
+  // Simulation state tracking
+  private simulationStarted: boolean = false;
+  private simulationComplete: boolean = false;
+
+  /**
+   * Initialize simulation (called once before stepping or running)
+   */
+  private initializeSimulation(): void {
+    if (this.simulationStarted) return;
+
     this.startTime = Date.now();
+    this.simulationStarted = true;
 
     this.emitter.log('info', 'Starting world generation...');
     this.emitter.log('info', `Initial state: ${this.graph.getEntityCount()} entities`);
 
+    // Reset coordinate statistics for this run
+    coordinateStats.reset();
+
     // Emit running progress
+    this.emitProgress('running');
+  }
+
+  /**
+   * Emit current progress state
+   */
+  private emitProgress(phase: 'initializing' | 'validating' | 'running' | 'finalizing'): void {
     this.emitter.progress({
-      phase: 'running',
+      phase,
       tick: this.graph.tick,
       maxTicks: this.config.maxTicks,
       epoch: this.currentEpoch,
@@ -414,28 +433,56 @@ export class WorldEngine {
       entityCount: this.graph.getEntityCount(),
       relationshipCount: this.graph.getRelationshipCount()
     });
+  }
 
-    // Reset coordinate statistics for this run
-    coordinateStats.reset();
+  /**
+   * Run a single epoch (step mode)
+   * @returns true if more epochs remain, false if simulation should end
+   */
+  public async step(): Promise<boolean> {
+    // Initialize on first step
+    this.initializeSimulation();
 
-    while (this.shouldContinue()) {
-      await this.runEpoch();
-      this.currentEpoch++;
+    if (this.simulationComplete) {
+      return false;
     }
+
+    if (!this.shouldContinue()) {
+      // Simulation naturally ended
+      await this.finalize();
+      return false;
+    }
+
+    // Run one epoch
+    await this.runEpoch();
+    this.currentEpoch++;
+
+    // Check if we should continue
+    if (!this.shouldContinue()) {
+      await this.finalize();
+      return false;
+    }
+
+    // Emit progress after epoch
+    this.emitProgress('running');
+    return true;
+  }
+
+  /**
+   * Finalize the simulation (call after last step or automatically at end of run)
+   */
+  public async finalize(): Promise<Graph> {
+    if (this.simulationComplete) {
+      return this.graph;
+    }
+
+    this.simulationComplete = true;
 
     // Link final era to prominent entities (since it never "ends")
     this.linkFinalEra();
 
     // Emit finalizing progress
-    this.emitter.progress({
-      phase: 'finalizing',
-      tick: this.graph.tick,
-      maxTicks: this.config.maxTicks,
-      epoch: this.currentEpoch,
-      totalEpochs: this.config.eras.length * 2,
-      entityCount: this.graph.getEntityCount(),
-      relationshipCount: this.graph.getRelationshipCount()
-    });
+    this.emitProgress('finalizing');
 
     this.emitter.log('info', 'Generation complete!');
     this.emitter.log('info', `Final state: ${this.graph.getEntityCount()} entities, ${this.graph.getRelationshipCount()} relationships`);
@@ -448,6 +495,145 @@ export class WorldEngine {
     this.emitCompleteEvent();
 
     return this.graph;
+  }
+
+  /**
+   * Check if simulation is complete
+   */
+  public isComplete(): boolean {
+    return this.simulationComplete;
+  }
+
+  /**
+   * Get current epoch number
+   */
+  public getCurrentEpoch(): number {
+    return this.currentEpoch;
+  }
+
+  /**
+   * Get total expected epochs
+   */
+  public getTotalEpochs(): number {
+    return this.config.eras.length * 2;
+  }
+
+  /**
+   * Reset simulation to initial state (for step mode)
+   * Allows re-running the simulation from the beginning
+   */
+  public reset(initialState: HardState[]): void {
+    // Reset simulation state
+    this.simulationStarted = false;
+    this.simulationComplete = false;
+    this.currentEpoch = 0;
+    this.startTime = 0;
+
+    // Reset tracking maps
+    this.templateRunCounts.clear();
+    this.systemMetrics.clear();
+    this.metaEntitiesFormed = [];
+    this.lastRelationshipCount = 0;
+
+    // Reset coordinate statistics
+    coordinateStats.reset();
+
+    // Recreate graph from initial state
+    this.graph = GraphStore.create(this.config, this.config.eras[0]);
+    this.graph.discoveryState = {
+      currentThreshold: 0.3,
+      lastDiscoveryTick: -999,
+      discoveriesThisEpoch: 0
+    };
+
+    // Reload initial entities
+    initialState.forEach(entity => {
+      const id = entity.id || generateId(entity.kind);
+
+      // Convert legacy 6D coordinates to simple Point format
+      let coordinates = entity.coordinates;
+      if (coordinates && !('x' in coordinates && typeof (coordinates as any).x === 'number')) {
+        const physical = (coordinates as any).physical;
+        if (physical) {
+          const zBandValues: Record<string, number> = {
+            'sky': 90, 'surface': 70, 'shallow_water': 50,
+            'deep_water': 30, 'ice_caverns': 10
+          };
+          coordinates = {
+            x: typeof physical.sector_x === 'number' ? physical.sector_x : 50,
+            y: typeof physical.sector_y === 'number' ? physical.sector_y : 50,
+            z: typeof physical.z_band === 'string' ? (zBandValues[physical.z_band] ?? 50) : 50
+          };
+        } else {
+          coordinates = { x: 50, y: 50, z: 50 };
+        }
+      }
+
+      const loadedEntity: HardState = {
+        ...entity,
+        id,
+        coordinates,
+        createdAt: 0,
+        updatedAt: 0
+      };
+
+      initializeCatalystSmart(loadedEntity, this.graph);
+      this.graph._loadEntity(id, loadedEntity);
+    });
+
+    // Reload seed relationships
+    if (this.config.seedRelationships) {
+      this.config.seedRelationships.forEach(rel => {
+        const srcEntity = this.graph.getEntity(rel.src) || this.findEntityByName(rel.src);
+        const dstEntity = this.graph.getEntity(rel.dst) || this.findEntityByName(rel.dst);
+
+        if (srcEntity && dstEntity) {
+          this.graph.addRelationship(
+            rel.kind,
+            srcEntity.id,
+            dstEntity.id,
+            rel.strength,
+            rel.distance
+          );
+        }
+      });
+    }
+
+    // Record initial state as first history event
+    const initialEntityIds = this.graph.getEntityIds();
+    const initialRelationships = this.graph.getRelationships();
+    this.graph.history.push({
+      tick: 0,
+      era: this.config.eras[0].id,
+      type: 'special',
+      description: `World reset: ${initialEntityIds.length} entities, ${initialRelationships.length} relationships`,
+      entitiesCreated: initialEntityIds,
+      relationshipsCreated: initialRelationships,
+      entitiesModified: []
+    });
+
+    this.emitter.log('info', 'Simulation reset to initial state');
+    this.emitter.progress({
+      phase: 'initializing',
+      tick: 0,
+      maxTicks: this.config.maxTicks,
+      epoch: 0,
+      totalEpochs: this.config.eras.length * 2,
+      entityCount: this.graph.getEntityCount(),
+      relationshipCount: this.graph.getRelationshipCount()
+    });
+  }
+
+  // Main execution loop - runs all epochs to completion
+  public async run(): Promise<Graph> {
+    this.initializeSimulation();
+
+    while (this.shouldContinue()) {
+      await this.runEpoch();
+      this.currentEpoch++;
+    }
+
+    return this.finalize();
   }
   
   private shouldContinue(): boolean {

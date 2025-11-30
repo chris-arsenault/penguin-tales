@@ -33,7 +33,7 @@ import type { HardState } from '../../../lib/core/worldTypes';
 const MAX_LOG_ENTRIES = 1000;
 
 export interface SimulationState {
-  status: 'idle' | 'initializing' | 'validating' | 'running' | 'finalizing' | 'complete' | 'error';
+  status: 'idle' | 'initializing' | 'validating' | 'running' | 'finalizing' | 'paused' | 'complete' | 'error';
   progress: ProgressPayload | null;
   validation: ValidationPayload | null;
   currentEpoch: EpochStartPayload | null;
@@ -52,9 +52,14 @@ export interface SimulationState {
 export interface UseSimulationWorkerReturn {
   state: SimulationState;
   start: (config: EngineConfig, initialState: HardState[]) => void;
+  startStepping: (config: EngineConfig, initialState: HardState[]) => void;
+  step: () => void;
+  runToCompletion: () => void;
+  reset: () => void;
   abort: () => void;
   clearLogs: () => void;
   isRunning: boolean;
+  isPaused: boolean;
 }
 
 const initialState: SimulationState = {
@@ -94,9 +99,11 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     setState(prev => {
       switch (message.type) {
         case 'progress':
+          // Map progress phase to status (includes 'paused')
+          const status = message.payload.phase as SimulationState['status'];
           return {
             ...prev,
-            status: message.payload.phase,
+            status,
             progress: message.payload
           };
 
@@ -229,6 +236,81 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     });
   }, [handleMessage]);
 
+  const startStepping = useCallback((config: EngineConfig, initialEntities: HardState[]) => {
+    // Terminate existing worker if any
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+
+    // Reset state
+    setState({
+      ...initialState as unknown as SimulationState,
+      status: 'initializing',
+      epochStats: [],
+      growthPhases: [],
+      logs: []
+    });
+
+    // Create new worker
+    workerRef.current = new Worker(
+      new URL('../workers/simulation.worker.ts', import.meta.url),
+      { type: 'module' }
+    );
+
+    workerRef.current.onmessage = handleMessage;
+
+    workerRef.current.onerror = (error) => {
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: {
+          message: error.message || 'Worker error',
+          phase: 'worker',
+          context: {}
+        }
+      }));
+    };
+
+    // Initialize for stepping (doesn't run automatically)
+    workerRef.current.postMessage({
+      type: 'startStepping',
+      config,
+      initialState: initialEntities
+    });
+  }, [handleMessage]);
+
+  const step = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'step' });
+    }
+  }, []);
+
+  const runToCompletion = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'runToCompletion' });
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    if (workerRef.current) {
+      // Reset state but keep worker
+      setState(prev => ({
+        ...prev,
+        status: 'initializing',
+        epochStats: [],
+        growthPhases: [],
+        populationReport: null,
+        templateUsage: null,
+        coordinateStats: null,
+        tagHealth: null,
+        systemHealth: null,
+        result: null,
+        error: null
+      }));
+      workerRef.current.postMessage({ type: 'reset' });
+    }
+  }, []);
+
   const abort = useCallback(() => {
     if (workerRef.current) {
       workerRef.current.terminate();
@@ -252,11 +334,18 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
                    state.status === 'running' ||
                    state.status === 'finalizing';
 
+  const isPaused = state.status === 'paused';
+
   return {
     state,
     start,
+    startStepping,
+    step,
+    runToCompletion,
+    reset,
     abort,
     clearLogs,
-    isRunning
+    isRunning,
+    isPaused
   };
 }

@@ -13,7 +13,7 @@ import { Era, HistoryEvent } from '../engine/types';
 // =============================================================================
 
 export interface ProgressPayload {
-  phase: 'initializing' | 'validating' | 'running' | 'finalizing';
+  phase: 'initializing' | 'validating' | 'running' | 'finalizing' | 'paused';
   tick: number;
   maxTicks: number;
   epoch: number;
@@ -229,6 +229,10 @@ export interface ISimulationEmitter {
  */
 export type WorkerInboundMessage =
   | { type: 'start'; config: unknown; initialState: HardState[] }
+  | { type: 'startStepping'; config: unknown; initialState: HardState[] }
+  | { type: 'step' }
+  | { type: 'runToCompletion' }
+  | { type: 'reset' }
   | { type: 'abort' };
 
 /**
