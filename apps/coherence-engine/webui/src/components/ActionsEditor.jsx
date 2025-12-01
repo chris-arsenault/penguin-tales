@@ -12,7 +12,8 @@
  * - Probability: Success chance, weight, pressure modifiers
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { getElementValidation } from '../utils/schemaUsageMap';
 
 // ============================================================================
 // CSS HOVER STYLES (injected once)
@@ -73,9 +74,37 @@ const COLORS = {
   accent: ACCENT_COLOR,
   success: '#22c55e',
   danger: '#ef4444',
+  warning: '#f59e0b',
   purple: '#a855f7',
   pink: '#ec4899',
   teal: '#14b8a6',
+};
+
+// Validation indicator styles
+const validationStyles = {
+  invalidBorder: {
+    borderColor: COLORS.danger,
+    boxShadow: `0 0 0 1px ${COLORS.danger}`,
+  },
+  warningBorder: {
+    borderColor: COLORS.warning,
+    boxShadow: `0 0 0 1px ${COLORS.warning}`,
+  },
+  validationBadge: {
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: '10px',
+    marginLeft: '8px',
+  },
+  errorBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    color: COLORS.danger,
+  },
+  compatibilityBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    color: COLORS.warning,
+  },
 };
 
 const TABS = [
@@ -1734,10 +1763,19 @@ function ActionModal({ action, onChange, onClose, onDelete, schema, pressures })
 // MAIN COMPONENT
 // ============================================================================
 
-function ActionListCard({ action, onClick, onToggle }) {
+function ActionListCard({ action, onClick, onToggle, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const isEnabled = action.enabled !== false;
   const pressureMods = action.probability?.pressureModifiers || [];
+
+  // Get validation info
+  const validation = useMemo(() =>
+    usageMap ? getElementValidation(usageMap, 'action', action.id) : { invalidRefs: [], compatibility: [], isOrphan: false },
+    [usageMap, action.id]
+  );
+
+  const hasErrors = validation.invalidRefs.length > 0;
+  const hasCompatibilityIssues = validation.compatibility?.length > 0;
 
   const formatActorKinds = () => {
     if (!action.actor?.kinds) return 'any';
@@ -1751,14 +1789,32 @@ function ActionListCard({ action, onClick, onToggle }) {
 
   return (
     <div
-      style={{ ...styles.actionCard, ...(hovering ? styles.actionCardHover : {}), ...(isEnabled ? {} : styles.actionCardDisabled) }}
+      style={{
+        ...styles.actionCard,
+        ...(hovering ? styles.actionCardHover : {}),
+        ...(isEnabled ? {} : styles.actionCardDisabled),
+        ...(hasErrors ? validationStyles.invalidBorder : {}),
+        ...(hasCompatibilityIssues && !hasErrors ? validationStyles.warningBorder : {}),
+      }}
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
       <div style={styles.cardHeader}>
         <div>
-          <div style={styles.cardTitle}>{action.name || action.id}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={styles.cardTitle}>{action.name || action.id}</span>
+            {hasErrors && (
+              <span style={{ ...validationStyles.validationBadge, ...validationStyles.errorBadge, marginLeft: 0 }}>
+                {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {hasCompatibilityIssues && !hasErrors && (
+              <span style={{ ...validationStyles.validationBadge, ...validationStyles.compatibilityBadge, marginLeft: 0 }}>
+                {validation.compatibility.length} warning{validation.compatibility.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <div style={styles.cardId}>{action.id}</div>
         </div>
         <div
@@ -1790,7 +1846,7 @@ function ActionListCard({ action, onClick, onToggle }) {
   );
 }
 
-export default function ActionsEditor({ actions = [], onChange, schema, pressures = [] }) {
+export default function ActionsEditor({ actions = [], onChange, schema, pressures = [], usageMap }) {
   useHoverStyles();
   const [selectedAction, setSelectedAction] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
@@ -1872,6 +1928,7 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
             action={action}
             onClick={() => setSelectedAction(action)}
             onToggle={() => handleToggle(action)}
+            usageMap={usageMap}
           />
         ))}
 

@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { getElementValidation } from '../utils/schemaUsageMap';
 
 // ============================================================================
 // CSS HOVER STYLES (injected once)
@@ -72,9 +73,47 @@ const COLORS = {
   accent: ACCENT_COLOR,
   success: '#22c55e',
   danger: '#ef4444',
+  warning: '#f59e0b',
   purple: '#a855f7',
   pink: '#ec4899',
   teal: '#14b8a6',
+};
+
+// Validation indicator styles
+const validationStyles = {
+  invalidBorder: {
+    borderColor: COLORS.danger,
+    boxShadow: `0 0 0 1px ${COLORS.danger}`,
+  },
+  warningBorder: {
+    borderColor: COLORS.warning,
+    boxShadow: `0 0 0 1px ${COLORS.warning}`,
+  },
+  validationBadge: {
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: '10px',
+    marginLeft: '8px',
+  },
+  errorBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    color: COLORS.danger,
+  },
+  orphanBadge: {
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    color: '#9ca3af',
+  },
+  eraBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    color: '#60a5fa',
+    fontSize: '10px',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
 };
 
 const SYSTEM_TYPES = {
@@ -2663,22 +2702,50 @@ function SystemModal({ system, onChange, onClose, onDelete, schema, pressures })
 // MAIN COMPONENT
 // ============================================================================
 
-function SystemListCard({ system, onClick, onToggle }) {
+function SystemListCard({ system, onClick, onToggle, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const config = system.config || {};
+  const sysId = config.id;
   const isEnabled = system.enabled !== false;
   const typeConfig = SYSTEM_TYPES[system.systemType] || {};
 
+  // Get validation and usage info
+  const validation = useMemo(() =>
+    usageMap ? getElementValidation(usageMap, 'system', sysId) : { invalidRefs: [], isOrphan: false },
+    [usageMap, sysId]
+  );
+
+  const eraUsage = useMemo(() => {
+    if (!usageMap?.systems?.[sysId]) return [];
+    return usageMap.systems[sysId].eras || [];
+  }, [usageMap, sysId]);
+
+  const hasErrors = validation.invalidRefs.length > 0;
+  const isOrphan = validation.isOrphan;
+
   return (
     <div
-      style={{ ...styles.systemCard, ...(hovering ? styles.systemCardHover : {}), ...(isEnabled ? {} : styles.systemCardDisabled) }}
+      style={{
+        ...styles.systemCard,
+        ...(hovering ? styles.systemCardHover : {}),
+        ...(isEnabled ? {} : styles.systemCardDisabled),
+        ...(hasErrors ? validationStyles.invalidBorder : {}),
+        ...(isOrphan && !hasErrors ? validationStyles.warningBorder : {}),
+      }}
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
       <div style={styles.cardHeader}>
         <div>
-          <div style={styles.cardTitle}>{config.name || config.id}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={styles.cardTitle}>{config.name || config.id}</span>
+            {hasErrors && (
+              <span style={{ ...validationStyles.validationBadge, ...validationStyles.errorBadge, marginLeft: 0 }}>
+                {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <div style={styles.cardId}>{config.id}</div>
         </div>
         <div
@@ -2698,11 +2765,34 @@ function SystemListCard({ system, onClick, onToggle }) {
       {config.description && (
         <div style={styles.cardDesc}>{config.description}</div>
       )}
+
+      {/* Era usage badges */}
+      {eraUsage.length > 0 && (
+        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {eraUsage.slice(0, 3).map((era) => (
+            <span key={era.id} style={validationStyles.eraBadge}>
+              <span style={{ opacity: 0.7 }}>🕰️</span> {era.name || era.id}
+            </span>
+          ))}
+          {eraUsage.length > 3 && (
+            <span style={{ ...validationStyles.eraBadge, backgroundColor: 'transparent' }}>
+              +{eraUsage.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+      {isOrphan && (
+        <div style={{ marginTop: '8px' }}>
+          <span style={{ ...validationStyles.validationBadge, ...validationStyles.orphanBadge, marginLeft: 0 }}>
+            Not in any era
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function SystemsEditor({ systems = [], onChange, schema, pressures = [] }) {
+export default function SystemsEditor({ systems = [], onChange, schema, pressures = [], usageMap }) {
   useHoverStyles();
   const [selectedSystem, setSelectedSystem] = useState(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
@@ -2762,6 +2852,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
             system={system}
             onClick={() => setSelectedSystem(system)}
             onToggle={() => handleToggle(system)}
+            usageMap={usageMap}
           />
         ))}
 

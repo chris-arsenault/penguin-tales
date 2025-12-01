@@ -16,6 +16,36 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
+// Validation indicator styles
+const validationStyles = {
+  warningBadge: {
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: '10px',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    color: '#f59e0b',
+    marginLeft: '8px',
+  },
+  errorBadge: {
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: '10px',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    color: '#ef4444',
+    marginLeft: '8px',
+  },
+  orphanItem: {
+    opacity: 0.6,
+    borderStyle: 'dashed',
+  },
+  invalidRefText: {
+    color: '#ef4444',
+    fontStyle: 'italic',
+  },
+};
+
 // Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
@@ -635,10 +665,25 @@ function WeightItem({ id, name, value, onChange, onRemove }) {
 // ERA CARD COMPONENT
 // ============================================================================
 
-function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems }) {
+function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const [addGenHover, setAddGenHover] = useState(false);
   const [addSysHover, setAddSysHover] = useState(false);
+
+  // Compute validation status for this era
+  const validation = useMemo(() => {
+    const generatorIds = new Set(generators.map(g => g.id));
+    const systemIds = new Set(systems.map(s => s.config?.id));
+
+    const invalidGenerators = Object.keys(era.templateWeights || {}).filter(id => !generatorIds.has(id));
+    const invalidSystems = Object.keys(era.systemModifiers || {}).filter(id => !systemIds.has(id));
+
+    return {
+      invalidGenerators,
+      invalidSystems,
+      totalInvalid: invalidGenerators.length + invalidSystems.length,
+    };
+  }, [era, generators, systems]);
 
   const handleFieldChange = useCallback((field, value) => {
     onChange({
@@ -756,6 +801,11 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
           <div style={styles.eraTitle}>
             <span style={styles.eraName}>{era.name}</span>
             <span style={styles.eraId}>{era.id}</span>
+            {validation.totalInvalid > 0 && (
+              <span style={validationStyles.errorBadge}>
+                {validation.totalInvalid} invalid ref{validation.totalInvalid !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
           <div style={styles.eraDescription}>{era.description}</div>
         </div>
@@ -914,7 +964,7 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
 // MAIN COMPONENT
 // ============================================================================
 
-export default function ErasEditor({ eras = [], onChange, generators = [], systems = [] }) {
+export default function ErasEditor({ eras = [], onChange, generators = [], systems = [], usageMap }) {
   const [expandedEra, setExpandedEra] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
 
@@ -1003,6 +1053,7 @@ export default function ErasEditor({ eras = [], onChange, generators = [], syste
             onDelete={() => handleDeleteEra(index)}
             generators={generators}
             systems={systems}
+            usageMap={usageMap}
           />
         ))}
 

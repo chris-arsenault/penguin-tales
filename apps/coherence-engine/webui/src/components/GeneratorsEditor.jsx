@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { getElementValidation, getUsageSummary } from '../utils/schemaUsageMap';
 
 // ============================================================================
 // CSS HOVER STYLES (injected once)
@@ -69,9 +70,58 @@ const COLORS = {
   accent: ACCENT_COLOR,
   success: '#22c55e',
   danger: '#ef4444',
+  warning: '#f59e0b',
   purple: '#a855f7',
   pink: '#ec4899',
   teal: '#14b8a6',
+};
+
+// Validation indicator styles
+const validationStyles = {
+  invalidBorder: {
+    borderColor: COLORS.danger,
+    boxShadow: `0 0 0 1px ${COLORS.danger}`,
+  },
+  warningBorder: {
+    borderColor: COLORS.warning,
+    boxShadow: `0 0 0 1px ${COLORS.warning}`,
+  },
+  validationBadge: {
+    fontSize: '10px',
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: '10px',
+    marginLeft: '8px',
+  },
+  errorBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    color: COLORS.danger,
+  },
+  warningBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    color: COLORS.warning,
+  },
+  orphanBadge: {
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    color: '#9ca3af',
+  },
+  usageBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    color: COLORS.success,
+    fontSize: '10px',
+    padding: '2px 6px',
+    borderRadius: '4px',
+  },
+  eraBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    color: '#60a5fa',
+    fontSize: '10px',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
 };
 
 const TABS = [
@@ -2050,8 +2100,50 @@ function EffectsTab({ generator, onChange, pressures, schema }) {
 // GENERATOR MODAL
 // ============================================================================
 
-function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras }) {
+// Helper to compute validation issues per generator tab
+function computeTabValidation(generator, usageMap) {
+  const validation = usageMap ? getElementValidation(usageMap, 'generator', generator.id) : { invalidRefs: [], isOrphan: false };
+
+  // Group errors by tab
+  const tabErrors = {
+    overview: 0,
+    applicability: 0,
+    target: 0,
+    variables: 0,
+    creation: 0,
+    relationships: 0,
+    effects: 0,
+  };
+
+  validation.invalidRefs.forEach(ref => {
+    if (ref.field.includes('applicability')) tabErrors.applicability++;
+    else if (ref.field.includes('selection') || ref.field.includes('target')) tabErrors.target++;
+    else if (ref.field.includes('creation')) tabErrors.creation++;
+    else if (ref.field.includes('relationships')) tabErrors.relationships++;
+    else if (ref.field.includes('stateUpdates') || ref.field.includes('pressure')) tabErrors.effects++;
+  });
+
+  return { tabErrors, isOrphan: validation.isOrphan, totalErrors: validation.invalidRefs.length };
+}
+
+// Validation badge component for tabs
+function TabValidationBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span style={{ ...validationStyles.validationBadge, ...validationStyles.errorBadge }}>
+      {count}
+    </span>
+  );
+}
+
+function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap }) {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Compute validation for this generator
+  const tabValidation = useMemo(() =>
+    computeTabValidation(generator, usageMap),
+    [generator, usageMap]
+  );
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -2101,8 +2193,16 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
               >
                 <span style={styles.tabIcon}>{tab.icon}</span>
                 <span>{tab.label}</span>
+                <TabValidationBadge count={tabValidation.tabErrors[tab.id]} />
               </button>
             ))}
+            {tabValidation.isOrphan && (
+              <div style={{ padding: '12px', marginTop: '12px', borderTop: `1px solid ${COLORS.border}` }}>
+                <span style={{ ...validationStyles.validationBadge, ...validationStyles.orphanBadge, marginLeft: 0 }}>
+                  Not in any era
+                </span>
+              </div>
+            )}
           </div>
           <div style={styles.tabContent}>{renderTabContent()}</div>
         </div>
@@ -2115,7 +2215,7 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
 // MAIN COMPONENT
 // ============================================================================
 
-function GeneratorListCard({ generator, onClick, onToggle }) {
+function GeneratorListCard({ generator, onClick, onToggle, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const isEnabled = generator.enabled !== false;
 
@@ -2126,16 +2226,43 @@ function GeneratorListCard({ generator, onClick, onToggle }) {
     return { creates, rels, effects };
   }, [generator]);
 
+  // Get validation and usage info
+  const validation = useMemo(() =>
+    usageMap ? getElementValidation(usageMap, 'generator', generator.id) : { invalidRefs: [], isOrphan: false },
+    [usageMap, generator.id]
+  );
+
+  const eraUsage = useMemo(() => {
+    if (!usageMap?.generators?.[generator.id]) return [];
+    return usageMap.generators[generator.id].eras || [];
+  }, [usageMap, generator.id]);
+
+  const hasErrors = validation.invalidRefs.length > 0;
+  const isOrphan = validation.isOrphan;
+
   return (
     <div
-      style={{ ...styles.generatorCard, ...(hovering ? styles.generatorCardHover : {}), ...(isEnabled ? {} : styles.generatorCardDisabled) }}
+      style={{
+        ...styles.generatorCard,
+        ...(hovering ? styles.generatorCardHover : {}),
+        ...(isEnabled ? {} : styles.generatorCardDisabled),
+        ...(hasErrors ? validationStyles.invalidBorder : {}),
+        ...(isOrphan && !hasErrors ? validationStyles.warningBorder : {}),
+      }}
       onClick={onClick}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
       <div style={styles.cardHeader}>
         <div>
-          <div style={styles.cardTitle}>{generator.name || generator.id}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={styles.cardTitle}>{generator.name || generator.id}</span>
+            {hasErrors && (
+              <span style={{ ...validationStyles.validationBadge, ...validationStyles.errorBadge, marginLeft: 0 }}>
+                {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <div style={styles.cardId}>{generator.id}</div>
         </div>
         <div
@@ -2157,11 +2284,34 @@ function GeneratorListCard({ generator, onClick, onToggle }) {
           <span key={kind} style={{ ...styles.badge, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa' }}>+ {kind}</span>
         ))}
       </div>
+
+      {/* Era usage badges */}
+      {eraUsage.length > 0 && (
+        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {eraUsage.slice(0, 3).map((era) => (
+            <span key={era.id} style={validationStyles.eraBadge}>
+              <span style={{ opacity: 0.7 }}>🕰️</span> {era.name || era.id}
+            </span>
+          ))}
+          {eraUsage.length > 3 && (
+            <span style={{ ...validationStyles.eraBadge, backgroundColor: 'transparent' }}>
+              +{eraUsage.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+      {isOrphan && (
+        <div style={{ marginTop: '8px' }}>
+          <span style={{ ...validationStyles.validationBadge, ...validationStyles.orphanBadge, marginLeft: 0 }}>
+            Not in any era
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [] }) {
+export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap }) {
   useHoverStyles();
   const [selectedGenerator, setSelectedGenerator] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
@@ -2221,6 +2371,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
             generator={generator}
             onClick={() => setSelectedGenerator(generator)}
             onToggle={() => handleToggle(generator)}
+            usageMap={usageMap}
           />
         ))}
 
@@ -2244,6 +2395,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
           schema={schema}
           pressures={pressures}
           eras={eras}
+          usageMap={usageMap}
         />
       )}
     </div>

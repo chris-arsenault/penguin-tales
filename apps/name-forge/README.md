@@ -258,14 +258,14 @@ Generate lexeme lists and templates using LLMs:
 # Set API key
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Generate a lexeme list
-npm run generate -- lexeme specs/examples/elven-nouns-lexeme.json -v
+# Generate a lexeme list from a spec file
+npm run generate -- lexeme path/to/lexeme-spec.json -v
 
-# Generate templates
-npm run generate -- template specs/examples/orcish-battle-template.json -v
+# Generate templates from a spec file
+npm run generate -- template path/to/template-spec.json -v
 
 # Generate batch (multiple lexemes + templates)
-npm run generate -- batch specs/examples/penguin-imperial-batch.json -v
+npm run generate -- batch path/to/batch-spec.json -v
 ```
 
 ## Project Structure

@@ -19,6 +19,7 @@ import GeneratorsEditor from './components/GeneratorsEditor';
 import ActionsEditor from './components/ActionsEditor';
 import SystemsEditor from './components/SystemsEditor';
 import ValidationEditor, { getValidationStatus } from './components/ValidationEditor';
+import { computeUsageMap } from './utils/schemaUsageMap';
 
 const TABS = [
   { id: 'validation', label: 'Validation' },
@@ -185,6 +186,12 @@ export default function CoherenceEngineRemote({
     [schema, eras, pressures, generators, systems]
   );
 
+  // Compute usage map for cross-reference tracking and validation
+  const usageMap = useMemo(() =>
+    computeUsageMap(schema, pressures, eras, generators, systems, actions),
+    [schema, pressures, eras, generators, systems, actions]
+  );
+
   // Navigate to generators tab and optionally select a specific generator
   const handleNavigateToGenerator = (generatorId) => {
     setActiveTab('generators');
@@ -201,6 +208,7 @@ export default function CoherenceEngineRemote({
             pressures={pressures}
             generators={generators}
             systems={systems}
+            usageMap={usageMap}
             onNavigateToGenerator={handleNavigateToGenerator}
           />
         );
@@ -210,6 +218,7 @@ export default function CoherenceEngineRemote({
             pressures={pressures}
             onChange={onPressuresChange || (() => {})}
             schema={schema}
+            usageMap={usageMap}
           />
         );
       case 'eras':
@@ -219,6 +228,7 @@ export default function CoherenceEngineRemote({
             onChange={onErasChange || (() => {})}
             generators={generators}
             systems={systems}
+            usageMap={usageMap}
           />
         );
       case 'generators':
@@ -229,6 +239,7 @@ export default function CoherenceEngineRemote({
             schema={schema}
             pressures={pressures}
             eras={eras}
+            usageMap={usageMap}
           />
         );
       case 'actions':
@@ -237,6 +248,8 @@ export default function CoherenceEngineRemote({
             actions={actions}
             onChange={onActionsChange || (() => {})}
             schema={schema}
+            pressures={pressures}
+            usageMap={usageMap}
           />
         );
       case 'systems':
@@ -244,6 +257,9 @@ export default function CoherenceEngineRemote({
           <SystemsEditor
             systems={systems}
             onChange={onSystemsChange || (() => {})}
+            schema={schema}
+            pressures={pressures}
+            usageMap={usageMap}
           />
         );
       default:

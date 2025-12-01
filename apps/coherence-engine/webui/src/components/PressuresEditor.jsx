@@ -14,6 +14,42 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { getElementValidation, getUsageSummary } from '../utils/schemaUsageMap';
+
+// Validation indicator styles
+const validationStyles = {
+  usageBadge: {
+    fontSize: '10px',
+    fontWeight: 500,
+    padding: '2px 8px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    color: '#22c55e',
+    marginLeft: '8px',
+  },
+  orphanBadge: {
+    fontSize: '10px',
+    fontWeight: 500,
+    padding: '2px 8px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    color: '#9ca3af',
+    marginLeft: '8px',
+  },
+  errorBadge: {
+    fontSize: '10px',
+    fontWeight: 500,
+    padding: '2px 8px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    color: '#ef4444',
+    marginLeft: '8px',
+  },
+  warningBorder: {
+    borderColor: '#f59e0b',
+    boxShadow: '0 0 0 1px #f59e0b',
+  },
+};
 
 // Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
@@ -1257,11 +1293,26 @@ function FactorCard({ factor, feedbackType, onEdit, onDelete, schema }) {
 // PRESSURE CARD COMPONENT
 // ============================================================================
 
-function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema }) {
+function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const [editingFactor, setEditingFactor] = useState(null);
   const [addingFactorType, setAddingFactorType] = useState(null);
   const [addButtonHover, setAddButtonHover] = useState({ positive: false, negative: false });
+
+  // Get validation and usage info
+  const validation = useMemo(() =>
+    usageMap ? getElementValidation(usageMap, 'pressure', pressure.id) : { invalidRefs: [], isOrphan: false },
+    [usageMap, pressure.id]
+  );
+
+  const usage = useMemo(() => {
+    if (!usageMap?.pressures?.[pressure.id]) return null;
+    return usageMap.pressures[pressure.id];
+  }, [usageMap, pressure.id]);
+
+  const hasErrors = validation.invalidRefs.length > 0;
+  const isOrphan = validation.isOrphan;
+  const usedByCount = usage ? (usage.generators?.length || 0) + (usage.systems?.length || 0) + (usage.actions?.length || 0) : 0;
 
   const handleFieldChange = useCallback((field, value) => {
     onChange({
@@ -1310,6 +1361,28 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
   const negativeFeedback = pressure.growth?.negativeFeedback || [];
   const totalFactors = positiveFeedback.length + negativeFeedback.length;
 
+  // Compute feedback loop balance status
+  const feedbackStatus = useMemo(() => {
+    const hasPositive = positiveFeedback.length > 0;
+    const hasNegative = negativeFeedback.length > 0;
+    const hasDecay = (pressure.decay || 0) > 0;
+
+    if (!hasPositive && !hasNegative && !hasDecay) {
+      return { icon: '⚪', color: '#9ca3af', label: 'Static', description: 'No feedback - pressure stays constant' };
+    }
+    if (!hasPositive && !hasNegative && hasDecay) {
+      return { icon: '📉', color: '#ef4444', label: 'Decay Only', description: 'Will decrease over time' };
+    }
+    if (hasPositive && !hasNegative) {
+      return { icon: '📈', color: '#f59e0b', label: 'Runaway', description: 'May grow unbounded - consider adding negative feedback' };
+    }
+    if (!hasPositive && hasNegative) {
+      return { icon: '📉', color: '#3b82f6', label: 'Diminishing', description: 'Will trend toward zero' };
+    }
+    // Both present - balanced
+    return { icon: '⚖️', color: '#22c55e', label: 'Balanced', description: 'Has both growth and decay factors' };
+  }, [positiveFeedback.length, negativeFeedback.length, pressure.decay]);
+
   return (
     <div style={styles.pressureCard}>
       <div
@@ -1324,6 +1397,21 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
         <div style={styles.pressureTitle}>
           <span style={styles.pressureName}>{pressure.name}</span>
           <span style={styles.pressureId}>{pressure.id}</span>
+          {hasErrors && (
+            <span style={validationStyles.errorBadge}>
+              {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {usedByCount > 0 && (
+            <span style={validationStyles.usageBadge}>
+              Used by {usedByCount}
+            </span>
+          )}
+          {isOrphan && !hasErrors && (
+            <span style={validationStyles.orphanBadge}>
+              Not used
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <div style={styles.pressureStats}>
@@ -1350,6 +1438,13 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
                 <span style={{ color: '#86efac' }}>+{positiveFeedback.length}</span>
                 {' / '}
                 <span style={{ color: '#fca5a5' }}>−{negativeFeedback.length}</span>
+              </span>
+            </div>
+            <div style={styles.stat} title={feedbackStatus.description}>
+              <span style={styles.statLabel}>Balance</span>
+              <span style={{ ...styles.statValue, color: feedbackStatus.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>{feedbackStatus.icon}</span>
+                <span style={{ fontSize: '11px' }}>{feedbackStatus.label}</span>
               </span>
             </div>
           </div>
@@ -1560,7 +1655,7 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
 // MAIN COMPONENT
 // ============================================================================
 
-export default function PressuresEditor({ pressures = [], onChange, schema }) {
+export default function PressuresEditor({ pressures = [], onChange, schema, usageMap }) {
   const [expandedPressure, setExpandedPressure] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
 
@@ -1651,6 +1746,7 @@ export default function PressuresEditor({ pressures = [], onChange, schema }) {
             onChange={(updatedPressure) => handlePressureChange(index, updatedPressure)}
             onDelete={() => handleDeletePressure(index)}
             schema={schema}
+            usageMap={usageMap}
           />
         ))}
 

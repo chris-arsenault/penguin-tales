@@ -12,6 +12,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import DependencyViewer from './DependencyViewer';
 
 // Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
@@ -1207,12 +1208,23 @@ export default function ValidationEditor({
   pressures = [],
   generators = [],
   systems = [],
+  usageMap = null,
   onNavigateToGenerator,
 }) {
   const validationResults = useMemo(() =>
     runValidations(schema, eras, pressures, generators, systems),
     [schema, eras, pressures, generators, systems]
   );
+
+  // Count orphans from usageMap for summary
+  const orphanCounts = useMemo(() => {
+    if (!usageMap?.validation?.orphans) return { generators: 0, systems: 0, pressures: 0, total: 0 };
+    const orphans = usageMap.validation.orphans;
+    const generators = orphans.filter(o => o.type === 'generator').length;
+    const systems = orphans.filter(o => o.type === 'system').length;
+    const pressures = orphans.filter(o => o.type === 'pressure').length;
+    return { generators, systems, pressures, total: generators + systems + pressures };
+  }, [usageMap]);
 
   const overallStatus = getOverallStatus(validationResults);
   const totalIssues = validationResults.errors.length + validationResults.warnings.length;
@@ -1251,7 +1263,7 @@ export default function ValidationEditor({
       </div>
 
       {/* Summary Cards */}
-      <div style={styles.summaryCards}>
+      <div style={{ ...styles.summaryCards, gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: STATUS_COLORS.error }}>
             {validationResults.errors.length}
@@ -1263,6 +1275,12 @@ export default function ValidationEditor({
             {validationResults.warnings.length}
           </div>
           <div style={styles.summaryLabel}>Warnings</div>
+        </div>
+        <div style={styles.summaryCard}>
+          <div style={{ ...styles.summaryValue, color: orphanCounts.total > 0 ? '#9ca3af' : '#60a5fa' }}>
+            {orphanCounts.total}
+          </div>
+          <div style={styles.summaryLabel}>Unused</div>
         </div>
         <div style={styles.summaryCard}>
           <div style={{ ...styles.summaryValue, color: '#60a5fa' }}>
@@ -1328,6 +1346,13 @@ export default function ValidationEditor({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Dependency Viewer */}
+      {usageMap && (
+        <div style={{ marginBottom: '24px' }}>
+          <DependencyViewer usageMap={usageMap} />
         </div>
       )}
 
