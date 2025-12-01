@@ -276,8 +276,8 @@ export default function ConfigurationSummary({
         ) : (
           <div style={styles.itemList}>
             {schema.entityKinds.map((ek) => (
-              <span key={ek.id} style={styles.itemBadge}>
-                {ek.name || ek.id}
+              <span key={ek.kind || ek.id} style={styles.itemBadge}>
+                {ek.name || ek.kind || ek.id}
               </span>
             ))}
           </div>

@@ -117,7 +117,7 @@ function buildInternalProject(
   // Build entity kinds with embedded semantic planes
   const entityKinds = (schema?.entityKinds || []).map((ek) => ({
     ...ek,
-    semanticPlane: semanticData?.[ek.id] || ek.semanticPlane || {
+    semanticPlane: semanticData?.[ek.kind] || ek.semanticPlane || {
       axes: {
         x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
         y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' },
@@ -144,6 +144,7 @@ function buildInternalProject(
     cultures,
     seedEntities: seedEntities || [],
     seedRelationships: seedRelationships || [],
+    tagRegistry: schema?.tagRegistry || [],
   };
 }
 
@@ -158,6 +159,7 @@ export default function CosmographerRemote({
   onCultureVisualsChange,
   onSeedEntitiesChange,
   onSeedRelationshipsChange,
+  onAddTag,
   activeSection,
   onSectionChange,
 }) {
@@ -185,14 +187,14 @@ export default function CosmographerRemote({
       // Handle entity kind updates (semantic plane changes)
       if (updates.entityKinds) {
         updates.entityKinds.forEach((ek) => {
-          const original = schema?.entityKinds?.find((o) => o.id === ek.id);
+          const original = schema?.entityKinds?.find((o) => o.kind === ek.kind);
           // Only update if semantic plane changed
           if (
             ek.semanticPlane &&
             JSON.stringify(ek.semanticPlane) !==
-              JSON.stringify(original?.semanticPlane || semanticData?.[ek.id])
+              JSON.stringify(original?.semanticPlane || semanticData?.[ek.kind])
           ) {
-            onSemanticDataChange?.(ek.id, ek.semanticPlane);
+            onSemanticDataChange?.(ek.kind, ek.semanticPlane);
           }
         });
       }
@@ -258,7 +260,7 @@ export default function CosmographerRemote({
       case 'cultures':
         return <CultureEditor project={project} onSave={handleSave} />;
       case 'entities':
-        return <EntityEditor project={project} onSave={handleSave} />;
+        return <EntityEditor project={project} onSave={handleSave} onAddTag={onAddTag} />;
       case 'relationships':
         return <RelationshipEditor project={project} onSave={handleSave} />;
       default:

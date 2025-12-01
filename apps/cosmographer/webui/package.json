@@ -11,6 +11,7 @@
     "serve": "serve dist -l 3001"
   },
   "dependencies": {
+    "@penguin-tales/shared-components": "file:../../../packages/shared-components",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "seedrandom": "^3.0.5",

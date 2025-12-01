@@ -40,6 +40,7 @@ export default function NameForgeHost({
   schema,
   namingData,
   onNamingDataChange,
+  onAddTag,
   activeSection,
   onSectionChange,
 }) {
@@ -50,6 +51,7 @@ export default function NameForgeHost({
           schema={schema}
           namingData={namingData}
           onNamingDataChange={onNamingDataChange}
+          onAddTag={onAddTag}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
         />

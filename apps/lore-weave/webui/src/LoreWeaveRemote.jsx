@@ -91,6 +91,7 @@ export default function LoreWeaveRemote({
   eras = [],
   pressures = [],
   generators = [],
+  systems = [],
   seedEntities = [],
   seedRelationships = [],
   namingData = {},
@@ -190,6 +191,7 @@ export default function LoreWeaveRemote({
             eras={eras}
             pressures={pressures}
             generators={generators}
+            systems={systems}
             seedEntities={seedEntities}
             seedRelationships={seedRelationships}
             namingData={namingData}

@@ -259,7 +259,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
   const seedEntities = project?.seedEntities || [];
 
   // Select first kind by default
-  const selectedKind = entityKinds.find(k => k.id === selectedKindId) || entityKinds[0];
+  const selectedKind = entityKinds.find(k => k.kind === selectedKindId) || entityKinds[0];
   const semanticPlane = selectedKind?.semanticPlane || {
     axes: {
       x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
@@ -267,11 +267,11 @@ export default function SemanticPlaneEditor({ project, onSave }) {
     },
     regions: []
   };
-  const planeEntities = seedEntities.filter(e => e.kind === selectedKind?.id);
+  const planeEntities = seedEntities.filter(e => e.kind === selectedKind?.kind);
 
   const updateEntityKind = (kindId, updates) => {
     const newKinds = entityKinds.map(k =>
-      k.id === kindId ? { ...k, ...updates } : k
+      k.kind === kindId ? { ...k, ...updates } : k
     );
     onSave({ entityKinds: newKinds });
   };
@@ -301,7 +301,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       regions: [...(semanticPlane.regions || []), region]
     };
 
-    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    updateEntityKind(selectedKind.kind, { semanticPlane: updatedPlane });
     setShowNewRegionModal(false);
     setNewRegion({ label: '', x: 50, y: 50, radius: 15, culture: '' });
   };
@@ -314,7 +314,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       regions: (semanticPlane.regions || []).filter(r => r.id !== regionId)
     };
 
-    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    updateEntityKind(selectedKind.kind, { semanticPlane: updatedPlane });
   };
 
   const handleMoveEntity = (entityId, coords) => {
@@ -347,7 +347,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       regions: updatedRegions
     };
 
-    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    updateEntityKind(selectedKind.kind, { semanticPlane: updatedPlane });
   };
 
   const handleResizeRegion = (regionId, newRadius) => {
@@ -370,7 +370,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       regions: updatedRegions
     };
 
-    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    updateEntityKind(selectedKind.kind, { semanticPlane: updatedPlane });
   };
 
   const getCultureColor = (cultureId) => {
@@ -400,7 +400,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       axes: updatedAxes
     };
 
-    updateEntityKind(selectedKind.id, { semanticPlane: updatedPlane });
+    updateEntityKind(selectedKind.kind, { semanticPlane: updatedPlane });
     setShowAxisModal(false);
     setEditingAxis(null);
   };
@@ -433,7 +433,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       <div style={styles.toolbar}>
         <select
           style={styles.select}
-          value={selectedKind?.id || ''}
+          value={selectedKind?.kind || ''}
           onChange={(e) => {
             setSelectedKindId(e.target.value);
             setSelectedEntityId(null);
@@ -441,8 +441,8 @@ export default function SemanticPlaneEditor({ project, onSave }) {
           }}
         >
           {entityKinds.map(k => (
-            <option key={k.id} value={k.id}>
-              {k.name} ({seedEntities.filter(e => e.kind === k.id).length} entities)
+            <option key={k.kind} value={k.kind}>
+              {k.description || k.kind} ({seedEntities.filter(e => e.kind === k.kind).length} entities)
             </option>
           ))}
         </select>
@@ -540,7 +540,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
             </div>
             {planeEntities.length === 0 ? (
               <div style={styles.emptyText}>
-                No {selectedKind?.name || 'entities'} yet
+                No {selectedKind?.description || selectedKind?.kind || 'entities'} yet
               </div>
             ) : (
               <>
@@ -578,7 +578,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       {showNewRegionModal && (
         <div style={styles.modal} onClick={() => setShowNewRegionModal(false)}>
           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalTitle}>Add Region to {selectedKind?.name}</div>
+            <div style={styles.modalTitle}>Add Region to {selectedKind?.description || selectedKind?.kind}</div>
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Label</label>
@@ -663,7 +663,7 @@ export default function SemanticPlaneEditor({ project, onSave }) {
         <div style={styles.modal} onClick={() => setShowAxisModal(false)}>
           <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
             <div style={styles.modalTitle}>
-              Edit {editingAxis.key.toUpperCase()} Axis for {selectedKind?.name}
+              Edit {editingAxis.key.toUpperCase()} Axis for {selectedKind?.description || selectedKind?.kind}
             </div>
 
             <div style={styles.formGroup}>

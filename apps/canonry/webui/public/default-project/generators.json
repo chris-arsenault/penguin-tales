@@ -3464,5 +3464,456 @@
         "frontier"
       ]
     }
+  },
+  {
+    "id": "war_outbreak",
+    "name": "War Outbreak",
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "faction",
+        "tag": "war_brewing",
+        "minCount": 2
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "war_brewing"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$war",
+        "kind": "occurrence",
+        "subtype": "war",
+        "status": "active",
+        "prominence": "renowned",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A devastating war has erupted involving {factionName} and their rivals",
+          "replacements": {
+            "factionName": "$target.name"
+          }
+        },
+        "tags": {
+          "conflict": true,
+          "military": true,
+          "devastating": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "active_during",
+        "src": "$war",
+        "dst": "$currentEra",
+        "strength": 1.0
+      },
+      {
+        "kind": "participant_in",
+        "src": "$target",
+        "dst": "$war",
+        "strength": 0.9
+      },
+      {
+        "kind": "participant_in",
+        "src": "$enemy",
+        "dst": "$war",
+        "strength": 0.9,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$enemy"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "war_brewing"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "at_war",
+        "value": true
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "conflict",
+        "delta": 15
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "stability",
+        "delta": -10
+      }
+    ],
+    "variables": {
+      "$currentEra": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "era",
+          "filters": [
+            {
+              "type": "status_equals",
+              "status": "current"
+            }
+          ],
+          "pickStrategy": "first"
+        }
+      },
+      "$enemy": {
+        "select": {
+          "from": "relationships",
+          "entity": "$target",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "contract": {
+      "purpose": "ENTITY_CREATION",
+      "enabledBy": {
+        "graphConditions": ["Factions tagged with war_brewing"]
+      },
+      "affects": {
+        "entities": [
+          {
+            "kind": "occurrence",
+            "operation": "create",
+            "count": { "min": 1, "max": 1 }
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "active_during",
+            "operation": "create"
+          },
+          {
+            "kind": "participant_in",
+            "operation": "create"
+          }
+        ],
+        "pressures": [
+          { "name": "conflict", "delta": 15 },
+          { "name": "stability", "delta": -10 }
+        ]
+      }
+    },
+    "metadata": {
+      "description": "Creates war occurrence when factions are tagged as war_brewing by the threshold system",
+      "tags": ["threshold-triggered", "occurrence", "war"]
+    }
+  },
+  {
+    "id": "succession_crisis",
+    "name": "Succession Crisis",
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "faction",
+        "tag": "power_vacuum",
+        "minCount": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "power_vacuum"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$crisis",
+        "kind": "occurrence",
+        "subtype": "succession_crisis",
+        "status": "active",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A bitter succession crisis has erupted in {factionName} following the death of their leader",
+          "replacements": {
+            "factionName": "$target.name"
+          }
+        },
+        "tags": {
+          "political": true,
+          "internal_strife": true,
+          "leadership": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "active_during",
+        "src": "$crisis",
+        "dst": "$currentEra",
+        "strength": 1.0
+      },
+      {
+        "kind": "affects",
+        "src": "$crisis",
+        "dst": "$target",
+        "strength": 0.9
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "power_vacuum"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "succession_crisis",
+        "value": true
+      },
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "waning"
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "stability",
+        "delta": -20
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "conflict",
+        "delta": 10
+      }
+    ],
+    "variables": {
+      "$currentEra": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "era",
+          "filters": [
+            {
+              "type": "status_equals",
+              "status": "current"
+            }
+          ],
+          "pickStrategy": "first"
+        }
+      }
+    },
+    "contract": {
+      "purpose": "ENTITY_CREATION",
+      "enabledBy": {
+        "graphConditions": ["Factions tagged with power_vacuum"]
+      },
+      "affects": {
+        "entities": [
+          {
+            "kind": "occurrence",
+            "operation": "create",
+            "count": { "min": 1, "max": 1 }
+          },
+          {
+            "kind": "faction",
+            "operation": "modify"
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "active_during",
+            "operation": "create"
+          },
+          {
+            "kind": "affects",
+            "operation": "create"
+          }
+        ],
+        "pressures": [
+          { "name": "stability", "delta": -20 },
+          { "name": "conflict", "delta": 10 }
+        ]
+      }
+    },
+    "metadata": {
+      "description": "Creates succession crisis occurrence when factions are tagged as power_vacuum by the threshold system",
+      "tags": ["threshold-triggered", "occurrence", "political"]
+    }
+  },
+  {
+    "id": "legend_crystallization",
+    "name": "Legend Crystallization",
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "npc",
+        "tag": "legend_ripe",
+        "minCount": 1
+      },
+      {
+        "type": "entity_count_max",
+        "kind": "npc",
+        "status": "fictional",
+        "max": 10,
+        "overshootFactor": 1.2
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "legend_ripe"
+        },
+        {
+          "type": "prominence_min",
+          "prominence": "renowned"
+        }
+      ],
+      "pickStrategy": "weighted_by_prominence"
+    },
+    "creation": [
+      {
+        "entityRef": "$memorial",
+        "kind": "rules",
+        "subtype": "memorial",
+        "status": "enacted",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A sacred tradition honoring the memory of {heroName}, whose deeds have passed into legend",
+          "replacements": {
+            "heroName": "$target.name"
+          }
+        },
+        "tags": {
+          "memorial": true,
+          "tradition": true,
+          "cultural": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$location"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "commemorates",
+        "src": "$memorial",
+        "dst": "$target",
+        "strength": 1.0
+      },
+      {
+        "kind": "originated_in",
+        "src": "$memorial",
+        "dst": "$location",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$location"
+        }
+      },
+      {
+        "kind": "commemorates",
+        "src": "$location",
+        "dst": "$target",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$location"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "legend_ripe"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "legendary",
+        "value": true
+      },
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "fictional"
+      }
+    ],
+    "variables": {
+      "$location": {
+        "select": {
+          "from": "relationships",
+          "entity": "$target",
+          "relationshipKind": "resident_of",
+          "direction": "src",
+          "pickStrategy": "first"
+        }
+      }
+    },
+    "contract": {
+      "purpose": "ENTITY_CREATION",
+      "enabledBy": {
+        "graphConditions": ["Dead NPCs tagged with legend_ripe"]
+      },
+      "affects": {
+        "entities": [
+          {
+            "kind": "rules",
+            "operation": "create",
+            "count": { "min": 1, "max": 1 }
+          },
+          {
+            "kind": "npc",
+            "operation": "modify"
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "commemorates",
+            "operation": "create"
+          },
+          {
+            "kind": "originated_in",
+            "operation": "create"
+          }
+        ]
+      }
+    },
+    "metadata": {
+      "description": "Transforms dead heroes into legends when tagged as legend_ripe by the threshold system. Creates memorial traditions and updates NPC status to fictional.",
+      "tags": ["threshold-triggered", "cultural", "legend"]
+    }
   }
 ]

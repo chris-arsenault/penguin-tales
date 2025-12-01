@@ -15,6 +15,7 @@
     "apps/coherence-engine/webui",
     "apps/archivist/webui",
     "packages/world-schema",
+    "packages/shared-components",
     "penguin-tales/lore"
   ],
   "scripts": {

@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { getEffectiveDomain, getStrategyColor, getStrategyBorder } from '../utils';
 import { generateTestNames } from '../../lib/browser-generator.js';
+import { TagSelector } from '@penguin-tales/shared-components';
 
-function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema }) {
+function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, onAddTag }) {
+  // Extract tag registry from world schema
+  const tagRegistry = worldSchema?.tagRegistry || [];
   const [mode, setMode] = useState('view'); // 'view', 'edit'
   const [editingProfileId, setEditingProfileId] = useState(null);
   const [editedProfile, setEditedProfile] = useState(null);
@@ -22,7 +25,7 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema })
   const lexemeLists = cultureConfig?.lexemeLists || {};
   const effectiveDomain = getEffectiveDomain(cultureConfig);
 
-  // Get entity kinds from schema
+  // Get entity kinds from schema - extract just the kind IDs for MultiSelectPills
   const entityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
 
   // Prominence levels
@@ -357,6 +360,7 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema })
           grammars={grammars}
           entityKinds={entityKinds}
           prominenceLevels={prominenceLevels}
+          tagRegistry={tagRegistry}
           editedProfile={editedProfile}
           setEditedProfile={setEditedProfile}
           onDeleteGroup={handleDeleteGroup}
@@ -364,6 +368,7 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema })
           onDeleteStrategy={handleDeleteStrategy}
           onWeightChange={handleWeightChange}
           onConditionChange={handleGroupConditionChange}
+          onAddTag={onAddTag}
         />
       ))}
 
@@ -534,13 +539,15 @@ function StrategyGroupEditor({
   grammars,
   entityKinds,
   prominenceLevels,
+  tagRegistry,
   editedProfile,
   setEditedProfile,
   onDeleteGroup,
   onAddStrategy,
   onDeleteStrategy,
   onWeightChange,
-  onConditionChange
+  onConditionChange,
+  onAddTag
 }) {
   const groupTotalWeight = group.strategies.reduce((sum, s) => sum + s.weight, 0);
   const hasConditions = !!group.conditions;
@@ -678,22 +685,18 @@ function StrategyGroupEditor({
 
             {/* Tags */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                <label style={{ fontSize: '0.7rem', color: 'var(--arctic-frost)' }}>Tags</label>
-                <label style={{ fontSize: '0.65rem', color: 'var(--arctic-frost)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={group.conditions?.tagMatchAll || false}
-                    onChange={(e) => onConditionChange(groupIdx, 'tagMatchAll', e.target.checked)}
-                    style={{ width: '12px', height: '12px' }}
-                  />
-                  Match all
-                </label>
-              </div>
-              <TagsInput
+              <label style={{ fontSize: '0.7rem', color: 'var(--arctic-frost)', marginBottom: '0.25rem', display: 'block' }}>
+                Tags
+              </label>
+              <TagSelector
                 value={group.conditions?.tags || []}
                 onChange={(val) => onConditionChange(groupIdx, 'tags', val)}
-                placeholder="Type and press space..."
+                tagRegistry={tagRegistry}
+                placeholder="Select tags..."
+                matchAllEnabled={true}
+                matchAll={group.conditions?.tagMatchAll || false}
+                onMatchAllChange={(val) => onConditionChange(groupIdx, 'tagMatchAll', val)}
+                onAddToRegistry={onAddTag}
               />
             </div>
           </div>

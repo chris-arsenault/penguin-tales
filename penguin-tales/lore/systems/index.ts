@@ -1,12 +1,19 @@
-import { TemplateGraphView } from '@lore-weave/core';
 /**
  * Penguin Simulation Systems
  *
  * Domain-specific systems that govern penguin world dynamics.
  * Each system runs every tick and modifies the world state.
  *
- * Note: relationshipCulling is framework-level (src/systems/relationshipCulling.ts)
- * and should be added separately in the engine configuration.
+ * NOTE: Many systems have been migrated to declarative configs in the Canonry default project:
+ * - conflictContagion → conflict_contagion (graphContagion)
+ * - allianceFormation → alliance_formation (connectionEvolution)
+ * - prominenceEvolution → prominence_evolution (connectionEvolution)
+ * - warBrewingDetector → war_brewing_detector (thresholdTrigger)
+ * - powerVacuumDetector → power_vacuum_detector (thresholdTrigger)
+ * - legendRipeDetector → legend_ripe_detector (thresholdTrigger)
+ * - occurrenceCreation → war_outbreak generator (thresholdTrigger)
+ * - successionVacuum → succession_crisis generator (thresholdTrigger)
+ * - legendCrystallization → legend_crystallization generator (thresholdTrigger)
  */
 
 import { SimulationSystem } from '@lore-weave/core';
@@ -16,22 +23,11 @@ import { eraSpawner } from '@lore-weave/core';
 import { universalCatalyst } from '@lore-weave/core';
 import { eraTransition } from '@lore-weave/core';
 
-// Import domain-specific occurrence system (moved from framework)
-import { occurrenceCreation } from './occurrenceCreation';
-
-// Import all penguin-specific systems
-export { relationshipFormation } from './relationshipFormation';
-export { conflictContagion } from './conflictContagion';
+// Import all penguin-specific systems (remaining after migration)
 export { resourceFlow } from './resourceFlow';
 export { culturalDrift } from './culturalDrift';
-export { prominenceEvolution } from './prominenceEvolution';
-export { allianceFormation } from './allianceFormation';
-export { legendCrystallization } from './legendCrystallization';
 export { thermalCascade } from './thermalCascade';
 export { beliefContagion } from './beliefContagion';
-export { successionVacuum } from './successionVacuum';
-export { relationshipDecay } from './relationshipDecay';
-export { relationshipReinforcement } from './relationshipReinforcement';
 
 // Meta-entity formation systems (run at epoch end)
 export { magicSchoolFormation } from './magicSchoolFormation';
@@ -39,18 +35,10 @@ export { legalCodeFormation } from './legalCodeFormation';
 export { combatTechniqueFormation } from './combatTechniqueFormation';
 
 // Import for aggregation
-import { relationshipFormation } from './relationshipFormation';
-import { conflictContagion } from './conflictContagion';
 import { resourceFlow } from './resourceFlow';
 import { culturalDrift } from './culturalDrift';
-import { prominenceEvolution } from './prominenceEvolution';
-import { allianceFormation } from './allianceFormation';
-import { legendCrystallization } from './legendCrystallization';
 import { thermalCascade } from './thermalCascade';
 import { beliefContagion } from './beliefContagion';
-import { successionVacuum } from './successionVacuum';
-import { relationshipDecay } from './relationshipDecay';
-import { relationshipReinforcement } from './relationshipReinforcement';
 import { magicSchoolFormation } from './magicSchoolFormation';
 import { legalCodeFormation } from './legalCodeFormation';
 import { combatTechniqueFormation } from './combatTechniqueFormation';
@@ -64,12 +52,10 @@ import { combatTechniqueFormation } from './combatTechniqueFormation';
  * 1. Era spawning (create era entities if they don't exist)
  * 2. Era transition (check if world state triggers new era)
  * 3. Agent actions (catalyst system - NPCs/factions/abilities act)
- * 4. Relationship dynamics (decay, reinforcement, formation)
- * 5. Domain systems (conflicts, resources, culture, prominence)
- * 6. Occurrence creation (wars, disasters emerge from accumulated state)
+ * 4. Domain systems (resources, culture, environment)
  *
- * NOTE: relationshipCulling is NOT included here as it's framework-level.
- * It will be added by the engine configuration automatically.
+ * NOTE: Many systems have been migrated to declarative configs loaded from the project.
+ * The systems below are either framework systems or domain systems not yet migrated.
  */
 export const allSystems: SimulationSystem[] = [
   // Phase 1: Era & Agent Actions
@@ -77,26 +63,13 @@ export const allSystems: SimulationSystem[] = [
   eraTransition,               // Check for era transitions
   universalCatalyst,           // Agents take actions (seize control, declare war, etc.)
 
-  // Phase 2: Relationship Dynamics
-  relationshipDecay,           // Decay weak relationships
-  relationshipReinforcement,   // Reinforce strong relationships
-  // relationshipFormation,    // REMOVED: Created social drama (follower_of, lover_of) that we eliminated
-
-  // Phase 3: Domain Dynamics
-  conflictContagion,           // Conflicts spread through networks
+  // Phase 2: Domain Dynamics (remaining after migration)
   resourceFlow,                // Resources move through world
   culturalDrift,               // Cultural evolution
-  prominenceEvolution,         // Fame and obscurity
-  allianceFormation,           // Diplomatic alliances
-  legendCrystallization,       // Heroes become legends
   thermalCascade,              // Environmental effects
   beliefContagion,             // Ideologies spread
-  successionVacuum,            // Leadership transitions
 
-  // Phase 4: Occurrence Creation
-  occurrenceCreation,          // Create war/disaster occurrences based on accumulated state
-
-  // Phase 5: Meta-Entity Formation (epoch end only)
+  // Phase 3: Meta-Entity Formation (epoch end only)
   magicSchoolFormation,        // Cluster abilities into schools
   legalCodeFormation,          // Cluster rules into legal codes
   combatTechniqueFormation     // Cluster combat abilities into fighting styles

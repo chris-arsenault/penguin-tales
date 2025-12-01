@@ -202,6 +202,39 @@ export { relationshipMaintenance } from './systems/relationshipMaintenance';
 export { eraSpawner } from './systems/eraSpawner';
 export { eraTransition } from './systems/eraTransition';
 export { universalCatalyst } from './systems/universalCatalyst';
+export { createConnectionEvolutionSystem } from './systems/connectionEvolution';
+export type {
+  ConnectionEvolutionConfig,
+  MetricType,
+  MetricConfig,
+  EvolutionRule,
+  ActionType,
+  ConditionOperator,
+  ThresholdValue,
+  SubtypeBonus
+} from './systems/connectionEvolution';
+
+export { createGraphContagionSystem } from './systems/graphContagion';
+export type {
+  GraphContagionConfig,
+  MarkerType,
+  ContagionMarker,
+  TransmissionVector,
+  TransmissionConfig,
+  RecoveryConfig,
+  ContagionAction,
+  PhaseTransition
+} from './systems/graphContagion';
+
+export { createThresholdTriggerSystem } from './systems/thresholdTrigger';
+export type {
+  ThresholdTriggerConfig,
+  TriggerCondition,
+  TriggerAction,
+  TriggerActionType,
+  ConditionType,
+  EntityFilter
+} from './systems/thresholdTrigger';
 
 // =============================================================================
 // FRAMEWORK PRIMITIVES - Minimal constants needed by domain
@@ -334,6 +367,8 @@ export type {
   PressureThresholdRule,
   EntityCountMinRule,
   EntityCountMaxRule,
+  TagExistsApplicabilityRule,
+  TagAbsentApplicabilityRule,
   GraphPathApplicabilityRule,
   GraphPathAssertion,
   PathStep,
@@ -368,6 +403,23 @@ export type {
   CrossCultureRatioFactor,
   SimpleCountFactor
 } from './engine/declarativePressureTypes';
+
+// =============================================================================
+// DECLARATIVE SYSTEM INTERPRETER
+// =============================================================================
+
+export {
+  createSystemFromDeclarative,
+  loadSystems,
+  isDeclarativeSystem
+} from './engine/systemInterpreter';
+
+export type {
+  DeclarativeSystem,
+  DeclarativeConnectionEvolutionSystem,
+  DeclarativeGraphContagionSystem,
+  DeclarativeThresholdTriggerSystem
+} from './engine/systemInterpreter';
 
 // =============================================================================
 // DECLARATIVE DOMAIN SCHEMA SYSTEM

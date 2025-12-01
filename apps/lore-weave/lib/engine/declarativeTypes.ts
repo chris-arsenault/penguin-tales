@@ -72,6 +72,8 @@ export type ApplicabilityRule =
   | CooldownElapsedRule
   | CreationsPerEpochRule
   | GraphPathApplicabilityRule
+  | TagExistsApplicabilityRule
+  | TagAbsentApplicabilityRule
   | CompositeApplicabilityRule;
 
 export interface PressureThresholdRule {
@@ -122,6 +124,40 @@ export interface CooldownElapsedRule {
 export interface CreationsPerEpochRule {
   type: 'creations_per_epoch';
   maxPerEpoch: number;
+}
+
+/**
+ * Tag existence rule - checks if any entity of a kind has a specific tag.
+ * Used for threshold-trigger patterns where systems set tags that templates react to.
+ *
+ * Example: { type: 'tag_exists', kind: 'faction', tag: 'power_vacuum' }
+ *   - Template can run when at least one faction has the 'power_vacuum' tag set
+ */
+export interface TagExistsApplicabilityRule {
+  type: 'tag_exists';
+  kind: string;
+  subtype?: string;
+  status?: string;
+  tag: string;
+  /** If specified, tag value must match (for cluster ID tags) */
+  tagValue?: string | boolean;
+  /** Minimum number of entities with the tag (default 1) */
+  minCount?: number;
+}
+
+/**
+ * Tag absence rule - checks that no entity of a kind has a specific tag.
+ * Useful for preventing duplicate processing.
+ *
+ * Example: { type: 'tag_absent', kind: 'faction', tag: 'war_processed' }
+ *   - Template can run when no faction has been processed yet
+ */
+export interface TagAbsentApplicabilityRule {
+  type: 'tag_absent';
+  kind: string;
+  subtype?: string;
+  status?: string;
+  tag: string;
 }
 
 /**
@@ -401,7 +437,9 @@ export type StateUpdateRule =
   | { type: 'update_rate_limit' }
   | { type: 'archive_relationship'; entity: string; relationshipKind: string; with: string }
   | { type: 'modify_pressure'; pressureId: string; delta: number }
-  | { type: 'update_entity_status'; entity: string; newStatus: string };
+  | { type: 'update_entity_status'; entity: string; newStatus: string }
+  | { type: 'set_tag'; entity: string; tag: string; value?: string | boolean }
+  | { type: 'remove_tag'; entity: string; tag: string };
 
 // =============================================================================
 // VARIABLE DEFINITIONS

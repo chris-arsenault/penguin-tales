@@ -12,6 +12,7 @@ import { createDomainSchemaFromJSON } from '@lib';
 import { useSimulationWorker } from '../hooks/useSimulationWorker';
 import SimulationDashboard from './SimulationDashboard';
 
+// Arctic Blue base theme with purple accent
 const ACCENT_COLOR = '#6d28d9';
 
 const styles = {
@@ -24,24 +25,24 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   card: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '24px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     marginBottom: '24px',
   },
   cardTitle: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '16px',
   },
   formGrid: {
@@ -55,7 +56,7 @@ const styles = {
   label: {
     display: 'block',
     fontSize: '12px',
-    color: '#909090',
+    color: '#93c5fd',
     marginBottom: '6px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -64,10 +65,10 @@ const styles = {
     width: '100%',
     padding: '10px 12px',
     fontSize: '14px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     boxSizing: 'border-box',
   },
   buttonRow: {
@@ -90,8 +91,8 @@ const styles = {
     transition: 'all 0.15s',
   },
   runButtonDisabled: {
-    background: '#3d3d4d',
-    color: '#707080',
+    background: '#1e3a5f',
+    color: '#60a5fa',
     cursor: 'not-allowed',
   },
   abortButton: {
@@ -116,8 +117,8 @@ const styles = {
     fontSize: '15px',
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: '#b0b0c0',
-    border: '1px solid #3d3d4d',
+    color: '#93c5fd',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'all 0.15s',
@@ -161,18 +162,18 @@ const styles = {
     marginTop: '16px',
     padding: '8px 0',
     fontSize: '13px',
-    color: '#808090',
+    color: '#93c5fd',
     cursor: 'pointer',
-    borderTop: '1px solid #3d3d4d',
+    borderTop: '1px solid rgba(59, 130, 246, 0.3)',
   },
   configOutput: {
     marginTop: '16px',
-    backgroundColor: '#12121a',
+    backgroundColor: '#0c1f2e',
     borderRadius: '6px',
     padding: '16px',
     fontFamily: 'monospace',
     fontSize: '11px',
-    color: '#808090',
+    color: '#93c5fd',
     overflow: 'auto',
     maxHeight: '300px',
     whiteSpace: 'pre-wrap',
@@ -181,9 +182,9 @@ const styles = {
   copyButton: {
     padding: '4px 12px',
     fontSize: '12px',
-    backgroundColor: '#252535',
-    color: '#b0b0c0',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#1e3a5f',
+    color: '#93c5fd',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '4px',
     cursor: 'pointer',
     marginLeft: '8px',
@@ -225,10 +226,10 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '8px 16px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     fontSize: '13px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
 };
 
@@ -261,6 +262,7 @@ export default function SimulationRunner({
   eras,
   pressures,
   generators,
+  systems,
   seedEntities,
   seedRelationships,
   namingData,
@@ -377,8 +379,9 @@ export default function SimulationRunner({
         pressureModifiers: era.pressureModifiers || {},
       })),
       pressures: pressures,
-      templates: generators,
-      systems: [],
+      // Filter out disabled generators and systems
+      templates: (generators || []).filter(g => g.enabled !== false),
+      systems: (systems || []).filter(s => s.enabled !== false),
       epochLength: params.epochLength,
       simulationTicksPerGrowth: params.simulationTicksPerGrowth,
       targetEntitiesPerKind: params.targetEntitiesPerKind,
@@ -388,7 +391,7 @@ export default function SimulationRunner({
       coordinateContextConfig,
       seedRelationships: seedRelationships || [],
     };
-  }, [schema, eras, pressures, generators, params, coordinateContextConfig, seedRelationships, namingData]);
+  }, [schema, eras, pressures, generators, systems, params, coordinateContextConfig, seedRelationships, namingData]);
 
   // Run simulation using web worker
   const runSimulation = useCallback(() => {

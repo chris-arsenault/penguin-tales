@@ -225,12 +225,12 @@ export default function RelationshipEditor({ project, onSave }) {
   };
 
   const getRelKindName = (kindId) => {
-    const kind = relationshipKinds.find(k => k.id === kindId);
-    return kind?.name || kindId;
+    const kind = relationshipKinds.find(k => k.kind === kindId);
+    return kind?.description || kind?.kind || kindId;
   };
 
   // Filter entities by allowed source/dest kinds for the selected relationship
-  const selectedRelKind = relationshipKinds.find(k => k.id === newRel.kind);
+  const selectedRelKind = relationshipKinds.find(k => k.kind === newRel.kind);
   const allowedSrcEntities = selectedRelKind?.srcKinds?.length
     ? entities.filter(e => selectedRelKind.srcKinds.includes(e.kind))
     : entities;
@@ -255,8 +255,8 @@ export default function RelationshipEditor({ project, onSave }) {
         >
           <option value="">All kinds ({relationships.length})</option>
           {relationshipKinds.map(k => (
-            <option key={k.id} value={k.id}>
-              {k.name} ({relationships.filter(r => r.kind === k.id).length})
+            <option key={k.kind} value={k.kind}>
+              {k.description || k.kind} ({relationships.filter(r => r.kind === k.kind).length})
             </option>
           ))}
         </select>
@@ -342,7 +342,7 @@ export default function RelationshipEditor({ project, onSave }) {
               >
                 <option value="">Select kind...</option>
                 {relationshipKinds.map(k => (
-                  <option key={k.id} value={k.id}>{k.name}</option>
+                  <option key={k.kind} value={k.kind}>{k.description || k.kind}</option>
                 ))}
               </select>
             </div>

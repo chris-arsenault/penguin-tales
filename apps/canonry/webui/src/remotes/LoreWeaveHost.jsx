@@ -40,6 +40,7 @@ export default function LoreWeaveHost({
   eras,
   pressures,
   generators,
+  systems,
   seedEntities,
   seedRelationships,
   namingData,
@@ -57,6 +58,7 @@ export default function LoreWeaveHost({
           eras={eras}
           pressures={pressures}
           generators={generators}
+          systems={systems}
           seedEntities={seedEntities}
           seedRelationships={seedRelationships}
           namingData={namingData}

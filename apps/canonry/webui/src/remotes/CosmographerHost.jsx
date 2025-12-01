@@ -47,6 +47,7 @@ export default function CosmographerHost({
   onCultureVisualsChange,
   onSeedEntitiesChange,
   onSeedRelationshipsChange,
+  onAddTag,
   activeSection,
   onSectionChange,
 }) {
@@ -64,6 +65,7 @@ export default function CosmographerHost({
           onCultureVisualsChange={onCultureVisualsChange}
           onSeedEntitiesChange={onSeedEntitiesChange}
           onSeedRelationshipsChange={onSeedRelationshipsChange}
+          onAddTag={onAddTag}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
         />

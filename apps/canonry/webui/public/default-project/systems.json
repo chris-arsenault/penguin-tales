@@ -1,0 +1,185 @@
+[
+  {
+    "systemType": "graphContagion",
+    "config": {
+      "id": "conflict_contagion",
+      "name": "Conflict Spread",
+      "description": "Spreads conflicts through alliance networks - allies of enemies become enemies",
+      "entityKind": "npc",
+      "contagion": {
+        "type": "relationship",
+        "relationshipKind": "enemy_of"
+      },
+      "vectors": [
+        { "relationshipKind": "allied_with", "direction": "both", "minStrength": 0.5 },
+        { "relationshipKind": "member_of", "direction": "both", "minStrength": 0.5 }
+      ],
+      "transmission": {
+        "baseRate": 0.15,
+        "contactMultiplier": 0.05,
+        "maxProbability": 0.5
+      },
+      "infectionAction": {
+        "type": "create_relationship",
+        "relationshipKind": "enemy_of",
+        "strength": 0.4
+      },
+      "throttleChance": 0.2,
+      "cooldown": 8,
+      "pressureChanges": { "conflict": 5 }
+    }
+  },
+  {
+    "systemType": "connectionEvolution",
+    "config": {
+      "id": "alliance_formation",
+      "name": "Alliance Formation",
+      "description": "Factions with shared enemies may form alliances",
+      "entityKind": "faction",
+      "metric": {
+        "type": "shared_relationship",
+        "sharedRelationshipKind": "enemy_of",
+        "sharedDirection": "src"
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 1
+          },
+          "probability": 0.15,
+          "action": {
+            "type": "create_relationship",
+            "kind": "allied_with",
+            "strength": 0.5
+          },
+          "betweenMatching": true
+        }
+      ],
+      "throttleChance": 0.3,
+      "pressureChanges": { "diplomacy": 3 }
+    }
+  },
+  {
+    "systemType": "connectionEvolution",
+    "config": {
+      "id": "prominence_evolution",
+      "name": "Prominence Evolution",
+      "description": "NPCs with many connections gain prominence over time",
+      "entityKind": "npc",
+      "entityStatus": "alive",
+      "metric": {
+        "type": "connection_count",
+        "direction": "both"
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": "prominence_scaled",
+            "multiplier": 6
+          },
+          "probability": 0.1,
+          "action": {
+            "type": "adjust_prominence",
+            "direction": "up"
+          }
+        }
+      ],
+      "throttleChance": 0.2
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "war_brewing_detector",
+      "name": "War Brewing Detector",
+      "description": "Detects factions engaged in conflict and marks them as war_brewing",
+      "entityFilter": {
+        "kind": "faction",
+        "status": "active",
+        "notHasTag": "at_war"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "relationshipDirection": "both",
+          "minCount": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_cluster_tag",
+          "tag": "war_brewing"
+        }
+      ],
+      "clusterMode": "by_relationship",
+      "clusterRelationshipKind": "at_war_with",
+      "minClusterSize": 2,
+      "throttleChance": 0.3,
+      "cooldownTag": "war_brewing_cooldown",
+      "pressureChanges": { "conflict": 5 }
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "power_vacuum_detector",
+      "name": "Power Vacuum Detector",
+      "description": "Detects factions with dead leaders and marks them as power_vacuum",
+      "entityFilter": {
+        "kind": "faction",
+        "status": "active",
+        "notHasTag": "power_vacuum"
+      },
+      "conditions": [
+        {
+          "type": "relationship_exists",
+          "relationshipKind": "leader_of",
+          "relationshipDirection": "dst",
+          "targetKind": "npc",
+          "targetStatus": "dead"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "power_vacuum",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.2,
+      "pressureChanges": { "stability": -15, "conflict": 10 }
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "legend_ripe_detector",
+      "name": "Legend Ripe Detector",
+      "description": "Detects dead heroes ready to become legends",
+      "entityFilter": {
+        "kind": "npc",
+        "status": "dead",
+        "notHasTag": "legend_ripe"
+      },
+      "conditions": [
+        {
+          "type": "time_since_update",
+          "minTicks": 50
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "legend_ripe",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.2
+    }
+  }
+]

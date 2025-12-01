@@ -10,6 +10,7 @@
 
 import React, { useState, useMemo } from 'react';
 
+// Arctic Blue base theme with purple accent
 const ACCENT_COLOR = '#6d28d9';
 
 const styles = {
@@ -22,12 +23,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   emptyState: {
     display: 'flex',
@@ -36,7 +37,7 @@ const styles = {
     justifyContent: 'center',
     padding: '80px 40px',
     textAlign: 'center',
-    color: '#707080',
+    color: '#60a5fa',
   },
   emptyIcon: {
     fontSize: '64px',
@@ -46,7 +47,7 @@ const styles = {
   emptyTitle: {
     fontSize: '18px',
     fontWeight: 500,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   emptyText: {
@@ -75,14 +76,14 @@ const styles = {
     marginBottom: '24px',
   },
   statCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '16px 20px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   statLabel: {
     fontSize: '12px',
-    color: '#707080',
+    color: '#60a5fa',
     marginBottom: '4px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
@@ -90,19 +91,19 @@ const styles = {
   statValue: {
     fontSize: '28px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   section: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
     padding: '24px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     marginBottom: '24px',
   },
   sectionTitle: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '16px',
   },
   entityList: {
@@ -112,11 +113,11 @@ const styles = {
   },
   entityBadge: {
     padding: '6px 12px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
     fontSize: '13px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   pressureRow: {
     display: 'flex',
@@ -127,12 +128,12 @@ const styles = {
   pressureName: {
     width: '150px',
     fontSize: '14px',
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   pressureBar: {
     flex: 1,
     height: '8px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '4px',
     overflow: 'hidden',
   },
@@ -145,7 +146,7 @@ const styles = {
     width: '50px',
     textAlign: 'right',
     fontSize: '14px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   exportButton: {
     display: 'inline-flex',
@@ -153,20 +154,20 @@ const styles = {
     gap: '6px',
     padding: '8px 16px',
     fontSize: '13px',
-    backgroundColor: '#1e1e2e',
-    color: '#b0b0c0',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    color: '#93c5fd',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
     cursor: 'pointer',
     marginRight: '8px',
   },
   codeBlock: {
-    backgroundColor: '#1a1a28',
+    backgroundColor: '#0c1f2e',
     borderRadius: '6px',
     padding: '16px',
     fontFamily: 'monospace',
     fontSize: '12px',
-    color: '#b0b0c0',
+    color: '#93c5fd',
     overflow: 'auto',
     maxHeight: '400px',
     whiteSpace: 'pre-wrap',
@@ -176,7 +177,7 @@ const styles = {
     display: 'flex',
     gap: '4px',
     marginBottom: '16px',
-    borderBottom: '1px solid #3d3d4d',
+    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
   },
   tab: {
     padding: '10px 16px',
@@ -185,7 +186,7 @@ const styles = {
     backgroundColor: 'transparent',
     border: 'none',
     borderBottom: '2px solid transparent',
-    color: '#707080',
+    color: '#60a5fa',
     cursor: 'pointer',
     transition: 'all 0.15s',
   },
@@ -349,7 +350,7 @@ export default function ResultsViewer({ results, schema, onNewRun, onViewInArchi
                 </span>
               ))}
               {Object.keys(processedData.entityGroups).length === 0 && (
-                <span style={{ color: '#707080', fontStyle: 'italic' }}>
+                <span style={{ color: '#60a5fa', fontStyle: 'italic' }}>
                   No entities generated (mock run)
                 </span>
               )}
@@ -368,7 +369,7 @@ export default function ResultsViewer({ results, schema, onNewRun, onViewInArchi
                 </span>
               ))}
               {Object.keys(processedData.relationshipGroups).length === 0 && (
-                <span style={{ color: '#707080', fontStyle: 'italic' }}>
+                <span style={{ color: '#60a5fa', fontStyle: 'italic' }}>
                   No relationships generated (mock run)
                 </span>
               )}
@@ -381,7 +382,7 @@ export default function ResultsViewer({ results, schema, onNewRun, onViewInArchi
         <div style={styles.section}>
           <div style={styles.sectionTitle}>Generated Entities</div>
           {(results.hardState || []).length === 0 ? (
-            <div style={{ color: '#707080', fontStyle: 'italic' }}>
+            <div style={{ color: '#60a5fa', fontStyle: 'italic' }}>
               Entity generation is a mock in the current version.
               Run the CLI for actual entity generation.
             </div>
@@ -397,7 +398,7 @@ export default function ResultsViewer({ results, schema, onNewRun, onViewInArchi
         <div style={styles.section}>
           <div style={styles.sectionTitle}>Final Pressure States</div>
           {Object.entries(processedData.pressures).length === 0 ? (
-            <div style={{ color: '#707080', fontStyle: 'italic' }}>
+            <div style={{ color: '#60a5fa', fontStyle: 'italic' }}>
               No pressure data available
             </div>
           ) : (

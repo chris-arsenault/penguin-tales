@@ -350,21 +350,21 @@ export default function CultureEditor({ project, onSave }) {
                     ) : (
                       entityKinds.map((kind) => {
                         const axes = kind.semanticPlane?.axes || {};
-                        const biases = culture.axisBiases?.[kind.id] || { x: 50, y: 50, z: 50 };
-                        const kindExpanded = isKindExpanded(culture.id, kind.id);
+                        const biases = culture.axisBiases?.[kind.kind] || { x: 50, y: 50, z: 50 };
+                        const kindExpanded = isKindExpanded(culture.id, kind.kind);
 
                         return (
-                          <div key={kind.id} style={styles.accordion}>
+                          <div key={kind.kind} style={styles.accordion}>
                             <div
                               style={styles.accordionHeader}
-                              onClick={() => toggleKind(culture.id, kind.id)}
+                              onClick={() => toggleKind(culture.id, kind.kind)}
                             >
                               <div style={styles.accordionHeaderLeft}>
                                 <span style={{
                                   ...styles.accordionIcon,
                                   transform: kindExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
                                 }}>▶</span>
-                                <span>{kind.name}</span>
+                                <span>{kind.description || kind.kind}</span>
                               </div>
                               <span style={{ fontSize: '11px', color: '#666' }}>
                                 X:{biases.x} Y:{biases.y} Z:{biases.z}
@@ -386,7 +386,7 @@ export default function CultureEditor({ project, onSave }) {
                                         min="0"
                                         max="100"
                                         value={biases[axis] ?? 50}
-                                        onChange={(e) => setAxisBias(culture.id, kind.id, axis, e.target.value)}
+                                        onChange={(e) => setAxisBias(culture.id, kind.kind, axis, e.target.value)}
                                         style={styles.slider}
                                       />
                                       <span style={styles.highLabel}>{axisConfig.highLabel}</span>

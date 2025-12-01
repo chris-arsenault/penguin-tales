@@ -12,6 +12,7 @@ import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
 import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
+import { computeTagUsage } from './components/UsageBadges';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
@@ -55,7 +56,7 @@ const styles = {
 
 // Valid sub-nav values for each tab
 const VALID_SUBNAV = {
-  enumerist: ['entityKinds', 'relationshipKinds', 'cultures'],
+  enumerist: ['entityKinds', 'relationshipKinds', 'cultures', 'tags'],
   names: ['workshop', 'optimizer', 'generate'],
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
   coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
@@ -209,6 +210,28 @@ export default function App() {
     [save]
   );
 
+  const updateSystems = useCallback(
+    (systems) => save({ systems }),
+    [save]
+  );
+
+  const updateTagRegistry = useCallback(
+    (tagRegistry) => save({ tagRegistry }),
+    [save]
+  );
+
+  // Add a single tag to the registry (for remotes)
+  const addTag = useCallback(
+    (newTag) => {
+      if (!currentProject) return;
+      const existingRegistry = currentProject.tagRegistry || [];
+      // Don't add if already exists
+      if (existingRegistry.some(t => t.tag === newTag.tag)) return;
+      save({ tagRegistry: [...existingRegistry, newTag] });
+    },
+    [currentProject, save]
+  );
+
   // Update a single culture's naming data (for Name Forge)
   const updateCultureNaming = useCallback(
     (cultureId, namingData) => {
@@ -226,7 +249,7 @@ export default function App() {
     (entityKindId, semanticPlane) => {
       if (!currentProject) return;
       const entityKinds = currentProject.entityKinds.map((ek) =>
-        ek.id === entityKindId ? { ...ek, semanticPlane } : ek
+        ek.kind === entityKindId ? { ...ek, semanticPlane } : ek
       );
       save({ entityKinds });
     },
@@ -259,13 +282,13 @@ export default function App() {
     return data;
   }, [currentProject?.cultures]);
 
-  // Extract semantic data for Cosmographer (keyed by entity kind ID)
+  // Extract semantic data for Cosmographer (keyed by entity kind)
   const semanticData = useMemo(() => {
     if (!currentProject) return {};
     const data = {};
     currentProject.entityKinds.forEach((ek) => {
       if (ek.semanticPlane) {
-        data[ek.id] = ek.semanticPlane;
+        data[ek.kind] = ek.semanticPlane;
       }
     });
     return data;
@@ -286,7 +309,7 @@ export default function App() {
 
   // Derived data for remotes (read-only schema)
   const schema = useMemo(() => {
-    if (!currentProject) return { entityKinds: [], relationshipKinds: [], cultures: [] };
+    if (!currentProject) return { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] };
     return {
       entityKinds: currentProject.entityKinds,
       relationshipKinds: currentProject.relationshipKinds,
@@ -296,8 +319,15 @@ export default function App() {
         description: c.description,
         color: c.color,
       })),
+      tagRegistry: currentProject.tagRegistry || [],
     };
-  }, [currentProject?.entityKinds, currentProject?.relationshipKinds, currentProject?.cultures]);
+  }, [currentProject?.entityKinds, currentProject?.relationshipKinds, currentProject?.cultures, currentProject?.tagRegistry]);
+
+  // Compute tag usage across all tools
+  const tagUsage = useMemo(() => {
+    if (!currentProject) return {};
+    return computeTagUsage(currentProject.cultures, currentProject.seedEntities);
+  }, [currentProject?.cultures, currentProject?.seedEntities]);
 
   const renderContent = () => {
     // Show landing page if explicitly on home or no project selected
@@ -320,6 +350,8 @@ export default function App() {
             onUpdateEntityKinds={updateEntityKinds}
             onUpdateRelationshipKinds={updateRelationshipKinds}
             onUpdateCultures={updateCultures}
+            onUpdateTagRegistry={updateTagRegistry}
+            tagUsage={tagUsage}
           />
         );
 
@@ -329,6 +361,7 @@ export default function App() {
             schema={schema}
             namingData={namingData}
             onNamingDataChange={updateCultureNaming}
+            onAddTag={addTag}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
           />
@@ -347,6 +380,7 @@ export default function App() {
             onCultureVisualsChange={updateCultureVisuals}
             onSeedEntitiesChange={updateSeedEntities}
             onSeedRelationshipsChange={updateSeedRelationships}
+            onAddTag={addTag}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
           />
@@ -362,6 +396,8 @@ export default function App() {
             onPressuresChange={updatePressures}
             generators={currentProject?.generators || []}
             onGeneratorsChange={updateGenerators}
+            systems={currentProject?.systems || []}
+            onSystemsChange={updateSystems}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
           />
@@ -374,6 +410,7 @@ export default function App() {
             eras={currentProject?.eras || []}
             pressures={currentProject?.pressures || []}
             generators={currentProject?.generators || []}
+            systems={currentProject?.systems || []}
             seedEntities={currentProject?.seedEntities || []}
             seedRelationships={currentProject?.seedRelationships || []}
             namingData={namingData}

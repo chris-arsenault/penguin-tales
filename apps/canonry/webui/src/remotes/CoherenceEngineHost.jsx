@@ -43,6 +43,8 @@ export default function CoherenceEngineHost({
   onPressuresChange,
   generators,
   onGeneratorsChange,
+  systems,
+  onSystemsChange,
   activeSection,
   onSectionChange,
 }) {
@@ -57,6 +59,8 @@ export default function CoherenceEngineHost({
           onPressuresChange={onPressuresChange}
           generators={generators}
           onGeneratorsChange={onGeneratorsChange}
+          systems={systems}
+          onSystemsChange={onSystemsChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
         />

@@ -1,8 +1,9 @@
-import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent, Pressure } from '../engine/types';
+import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent, Pressure, SimulationSystem } from '../engine/types';
 import { createPressureFromDeclarative } from './pressureInterpreter';
 import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
 import { DeclarativeTemplate } from './declarativeTypes';
+import { createSystemFromDeclarative, DeclarativeSystem } from './systemInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
@@ -44,6 +45,7 @@ export class WorldEngine {
   private emitter: ISimulationEmitter;  // REQUIRED - emits all simulation events
   private runtimePressures: Pressure[];  // Converted from declarative pressures
   private runtimeTemplates: GrowthTemplate[];  // Converted from declarative templates
+  private runtimeSystems: SimulationSystem[];  // Converted from declarative systems
   private templateInterpreter: TemplateInterpreter;  // Interprets declarative templates
   private graph: Graph;
   private currentEpoch: number;
@@ -145,6 +147,16 @@ export class WorldEngine {
       return createTemplateFromDeclarative(t, this.templateInterpreter);
     });
 
+    // Convert declarative systems to runtime systems
+    // If system already has apply function, it's already a SimulationSystem - use as-is
+    this.runtimeSystems = config.systems.map(s => {
+      if (typeof (s as any).apply === 'function') {
+        // Already a SimulationSystem (e.g., from tests or domain code)
+        return s as SimulationSystem;
+      }
+      return createSystemFromDeclarative(s as DeclarativeSystem);
+    });
+
     this.config = config;
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
@@ -184,12 +196,13 @@ export class WorldEngine {
 
     // Throw on validation errors
     if (validationResult.errors.length > 0) {
+      const errorDetails = validationResult.errors.join('\n  - ');
       this.emitter.error({
-        message: `Framework validation failed with ${validationResult.errors.length} error(s)`,
+        message: `Framework validation failed with ${validationResult.errors.length} error(s):\n  - ${errorDetails}`,
         phase: 'validation',
         context: { errors: validationResult.errors }
       });
-      throw new Error(`Framework validation failed with ${validationResult.errors.length} error(s)`);
+      throw new Error(`Framework validation failed with ${validationResult.errors.length} error(s):\n  - ${errorDetails}`);
     }
 
     this.emitter.log('info', 'Framework validation passed');
@@ -1424,7 +1437,7 @@ export class WorldEngine {
     // Create a TemplateGraphView for systems to use
     const systemGraphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
-    for (const system of this.config.systems) {
+    for (const system of this.runtimeSystems) {
       const baseModifier = getSystemModifier(era, system.id);
       if (baseModifier === 0) continue; // System disabled by era
 
@@ -1553,13 +1566,13 @@ export class WorldEngine {
 
     // Build era modifiers map
     const eraModifiers: Record<string, number> = {};
-    this.config.systems.forEach(system => {
+    this.runtimeSystems.forEach(system => {
       eraModifiers[system.id] = getSystemModifier(era, system.id);
     });
 
     return this.systemSelector.calculateSystemModifiers(
       this.graph,
-      this.config.systems,
+      this.runtimeSystems,
       eraModifiers
     );
   }

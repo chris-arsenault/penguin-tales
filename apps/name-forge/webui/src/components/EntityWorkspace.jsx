@@ -9,6 +9,7 @@ function EntityWorkspace({
   activeTab = 'domain',
   onTabChange,
   onCultureChange,
+  onAddTag,
   apiKey
 }) {
   const [error, setError] = useState(null);
@@ -185,6 +186,7 @@ function EntityWorkspace({
             cultureConfig={cultureConfig}
             onProfilesChange={handleProfilesChange}
             worldSchema={worldSchema}
+            onAddTag={onAddTag}
           />
         )}
       </div>

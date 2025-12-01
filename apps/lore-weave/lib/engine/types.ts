@@ -384,7 +384,9 @@ export interface EngineConfig {
   // WorldEngine converts these to runtime GrowthTemplate objects internally
   templates: import('./declarativeTypes').DeclarativeTemplate[];
 
-  systems: SimulationSystem[];
+  // Systems - declarative JSON format from UI or runtime SimulationSystem objects
+  // WorldEngine converts declarative systems to runtime objects internally
+  systems: (SimulationSystem | import('./systemInterpreter').DeclarativeSystem)[];
 
   // Pressures - declarative JSON format from UI
   // WorldEngine converts these to runtime Pressure objects internally

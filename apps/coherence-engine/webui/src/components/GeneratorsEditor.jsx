@@ -14,6 +14,7 @@
 
 import React, { useState, useCallback } from 'react';
 
+// Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
 
@@ -28,12 +29,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
     marginBottom: '8px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#808090',
+    color: '#93c5fd',
   },
   generatorList: {
     display: 'flex',
@@ -41,9 +42,9 @@ const styles = {
     gap: '12px',
   },
   generatorCard: {
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '8px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     overflow: 'hidden',
   },
   generatorHeader: {
@@ -55,7 +56,7 @@ const styles = {
     transition: 'background-color 0.15s',
   },
   generatorHeaderHover: {
-    backgroundColor: '#2a2a3a',
+    backgroundColor: '#2d4a6f',
   },
   generatorTitle: {
     display: 'flex',
@@ -65,12 +66,12 @@ const styles = {
   generatorName: {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: '#ffffff',
   },
   generatorId: {
     fontSize: '12px',
-    color: '#707080',
-    backgroundColor: '#1a1a28',
+    color: '#60a5fa',
+    backgroundColor: '#0c1f2e',
     padding: '2px 8px',
     borderRadius: '4px',
     fontFamily: 'monospace',
@@ -98,9 +99,47 @@ const styles = {
     backgroundColor: 'rgba(245, 158, 11, 0.2)',
     color: '#fbbf24',
   },
+  badgeDisabled: {
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    color: '#9ca3af',
+  },
+  toggleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginRight: '16px',
+  },
+  toggle: {
+    position: 'relative',
+    width: '40px',
+    height: '22px',
+    backgroundColor: '#374151',
+    borderRadius: '11px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  toggleEnabled: {
+    backgroundColor: '#22c55e',
+  },
+  toggleKnob: {
+    position: 'absolute',
+    top: '2px',
+    left: '2px',
+    width: '18px',
+    height: '18px',
+    backgroundColor: '#ffffff',
+    borderRadius: '50%',
+    transition: 'transform 0.2s',
+  },
+  toggleKnobEnabled: {
+    transform: 'translateX(18px)',
+  },
+  disabledOverlay: {
+    opacity: 0.5,
+  },
   expandIcon: {
     fontSize: '18px',
-    color: '#707080',
+    color: '#60a5fa',
     transition: 'transform 0.2s',
   },
   expandIconOpen: {
@@ -108,7 +147,7 @@ const styles = {
   },
   generatorContent: {
     padding: '0 20px 20px',
-    borderTop: '1px solid #3d3d4d',
+    borderTop: '1px solid rgba(59, 130, 246, 0.3)',
   },
   section: {
     marginTop: '20px',
@@ -116,7 +155,7 @@ const styles = {
   sectionTitle: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#b0b0c0',
+    color: '#93c5fd',
     marginBottom: '12px',
     display: 'flex',
     alignItems: 'center',
@@ -126,12 +165,12 @@ const styles = {
     fontSize: '14px',
   },
   codeBlock: {
-    backgroundColor: '#1a1a28',
+    backgroundColor: '#0c1f2e',
     borderRadius: '6px',
     padding: '12px',
     fontFamily: 'monospace',
     fontSize: '12px',
-    color: '#c0c0d0',
+    color: '#93c5fd',
     overflow: 'auto',
     maxHeight: '300px',
     whiteSpace: 'pre-wrap',
@@ -143,21 +182,21 @@ const styles = {
     gap: '12px',
   },
   infoCard: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     padding: '12px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   infoLabel: {
     fontSize: '11px',
-    color: '#707080',
+    color: '#60a5fa',
     marginBottom: '4px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   infoValue: {
     fontSize: '14px',
-    color: '#e0e0f0',
+    color: '#ffffff',
     fontWeight: 500,
   },
   tagList: {
@@ -168,17 +207,17 @@ const styles = {
   },
   tag: {
     fontSize: '12px',
-    backgroundColor: '#2a2a3a',
-    color: '#b0b0c0',
+    backgroundColor: '#2d4a6f',
+    color: '#93c5fd',
     padding: '2px 8px',
     borderRadius: '4px',
   },
   creationItem: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     padding: '12px',
     marginBottom: '8px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   creationHeader: {
     display: 'flex',
@@ -199,22 +238,23 @@ const styles = {
     borderRadius: '4px',
   },
   relationshipItem: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     borderRadius: '6px',
     padding: '10px 12px',
     marginBottom: '6px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     fontSize: '13px',
+    color: '#ffffff',
   },
   relationshipKind: {
     color: '#c084fc',
     fontWeight: 500,
   },
   relationshipArrow: {
-    color: '#606070',
+    color: '#60a5fa',
   },
   relationshipEntity: {
     fontFamily: 'monospace',
@@ -230,9 +270,9 @@ const styles = {
     fontSize: '14px',
     fontWeight: 500,
     backgroundColor: 'transparent',
-    border: '2px dashed #3d3d4d',
+    border: '2px dashed rgba(59, 130, 246, 0.3)',
     borderRadius: '8px',
-    color: '#707080',
+    color: '#60a5fa',
     cursor: 'pointer',
     transition: 'all 0.15s',
   },
@@ -243,7 +283,7 @@ const styles = {
   emptyState: {
     textAlign: 'center',
     padding: '48px 24px',
-    color: '#707080',
+    color: '#60a5fa',
   },
   emptyIcon: {
     fontSize: '48px',
@@ -262,17 +302,17 @@ const styles = {
     display: 'block',
     fontSize: '12px',
     fontWeight: 500,
-    color: '#909090',
+    color: '#93c5fd',
     marginBottom: '6px',
   },
   input: {
     width: '100%',
     padding: '8px 12px',
     fontSize: '14px',
-    backgroundColor: '#1e1e2e',
-    border: '1px solid #3d3d4d',
+    backgroundColor: '#0a1929',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
     borderRadius: '6px',
-    color: '#f0f0f0',
+    color: '#ffffff',
     boxSizing: 'border-box',
   },
 };
@@ -320,6 +360,7 @@ function getGeneratorSummary(generator) {
 function GeneratorCard({ generator, expanded, onToggle, onChange }) {
   const [hovering, setHovering] = useState(false);
   const summary = getGeneratorSummary(generator);
+  const isEnabled = generator.enabled !== false; // Default to enabled
 
   const handleFieldChange = useCallback((field, value) => {
     onChange({
@@ -327,6 +368,14 @@ function GeneratorCard({ generator, expanded, onToggle, onChange }) {
       [field]: value,
     });
   }, [generator, onChange]);
+
+  const handleToggleEnabled = useCallback((e) => {
+    e.stopPropagation();
+    onChange({
+      ...generator,
+      enabled: !isEnabled,
+    });
+  }, [generator, isEnabled, onChange]);
 
   return (
     <div style={styles.generatorCard}>
@@ -339,10 +388,15 @@ function GeneratorCard({ generator, expanded, onToggle, onChange }) {
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
-        <div>
+        <div style={isEnabled ? {} : styles.disabledOverlay}>
           <div style={styles.generatorTitle}>
             <span style={styles.generatorName}>{generator.name || generator.id}</span>
             <span style={styles.generatorId}>{generator.id}</span>
+            {!isEnabled && (
+              <span style={{ ...styles.badge, ...styles.badgeDisabled }}>
+                disabled
+              </span>
+            )}
           </div>
           <div style={{ ...styles.badges, marginTop: '8px' }}>
             {summary.creates.map(kind => (
@@ -362,12 +416,27 @@ function GeneratorCard({ generator, expanded, onToggle, onChange }) {
             ))}
           </div>
         </div>
-        <span style={{
-          ...styles.expandIcon,
-          ...(expanded ? styles.expandIconOpen : {}),
-        }}>
-          ▼
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              ...styles.toggle,
+              ...(isEnabled ? styles.toggleEnabled : {}),
+            }}
+            onClick={handleToggleEnabled}
+            title={isEnabled ? 'Click to disable' : 'Click to enable'}
+          >
+            <div style={{
+              ...styles.toggleKnob,
+              ...(isEnabled ? styles.toggleKnobEnabled : {}),
+            }} />
+          </div>
+          <span style={{
+            ...styles.expandIcon,
+            ...(expanded ? styles.expandIconOpen : {}),
+          }}>
+            ▼
+          </span>
+        </div>
       </div>
 
       {expanded && (
@@ -507,7 +576,7 @@ function GeneratorCard({ generator, expanded, onToggle, onChange }) {
                   <span style={styles.relationshipArrow}>→</span>
                   <span style={styles.relationshipEntity}>{rel.dst}</span>
                   {rel.strength && (
-                    <span style={{ color: '#707080', marginLeft: 'auto' }}>
+                    <span style={{ color: '#60a5fa', marginLeft: 'auto' }}>
                       strength: {rel.strength}
                     </span>
                   )}

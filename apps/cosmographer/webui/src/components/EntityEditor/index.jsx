@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { generateEntityName } from '../../lib/name-generator.js';
+import { TagSelector } from '@penguin-tales/shared-components';
 
 // Arctic Blue base theme with frost blue accent (Cosmographer)
 const ACCENT_COLOR = '#60a5fa';
@@ -210,39 +211,6 @@ const styles = {
     color: '#60a5fa',
     cursor: 'not-allowed'
   },
-  tagsContainer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px',
-    marginBottom: '8px'
-  },
-  tag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    backgroundColor: '#0c1f2e',
-    borderRadius: '4px',
-    fontSize: '12px',
-    color: '#ffffff'
-  },
-  tagRemove: {
-    cursor: 'pointer',
-    color: '#93c5fd',
-    fontSize: '14px',
-    lineHeight: 1
-  },
-  tagInput: {
-    flex: 1,
-    minWidth: '100px',
-    padding: '6px 8px',
-    fontSize: '12px',
-    backgroundColor: '#2d4a6f',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-    borderRadius: '4px',
-    color: '#ffffff',
-    fontFamily: 'inherit'
-  },
   coordsDisplay: {
     display: 'flex',
     gap: '16px',
@@ -271,24 +239,24 @@ const styles = {
   }
 };
 
-export default function EntityEditor({ project, onSave }) {
+export default function EntityEditor({ project, onSave, onAddTag }) {
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [filterKind, setFilterKind] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState(null);
-  const [newTag, setNewTag] = useState('');
 
   const entities = project?.seedEntities || [];
   // Schema v2: entityKinds at project root
   const entityKinds = project?.entityKinds || [];
   const cultures = project?.cultures || [];
+  const tagRegistry = project?.tagRegistry || [];
 
   const filteredEntities = filterKind
     ? entities.filter(e => e.kind === filterKind)
     : entities;
 
   const selectedEntity = entities.find(e => e.id === selectedEntityId);
-  const selectedKindDef = entityKinds.find(k => k.id === selectedEntity?.kind);
+  const selectedKindDef = entityKinds.find(k => k.kind === selectedEntity?.kind);
 
   const updateEntities = (newEntities) => {
     onSave({ seedEntities: newEntities });
@@ -303,7 +271,7 @@ export default function EntityEditor({ project, onSave }) {
 
     const newEntity = {
       id: `entity_${Date.now()}`,
-      kind: defaultKind.id,
+      kind: defaultKind.kind,
       subtype: defaultKind.subtypes[0]?.id || '',
       name: 'New Entity',
       description: '',
@@ -326,7 +294,7 @@ export default function EntityEditor({ project, onSave }) {
 
     // If kind changed, reset subtype and status
     if (updates.kind && updates.kind !== selectedEntity.kind) {
-      const newKind = entityKinds.find(k => k.id === updates.kind);
+      const newKind = entityKinds.find(k => k.kind === updates.kind);
       updates.subtype = newKind?.subtypes[0]?.id || '';
       updates.status = newKind?.statuses[0]?.id || 'active';
     }
@@ -389,37 +357,20 @@ export default function EntityEditor({ project, onSave }) {
     return culture && culture.profiles && culture.profiles.length > 0;
   };
 
-  // Tags are stored as { key: true } for boolean flags or { key: "value" } for categorized
-  const getTagKeys = () => {
+  // Convert tags from object format { tag: true } to array format ['tag']
+  const getTagsAsArray = () => {
     const tags = selectedEntity?.tags || {};
     return Object.keys(tags);
   };
 
-  const addTag = () => {
-    if (!selectedEntity || !newTag.trim()) return;
-    const tag = newTag.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
-    if (!tag) return;
-    const currentTags = selectedEntity.tags || {};
-    if (tag in currentTags) {
-      setNewTag('');
-      return;
-    }
-    updateEntity({ tags: { ...currentTags, [tag]: true } });
-    setNewTag('');
-  };
-
-  const removeTag = (tagToRemove) => {
+  // Update tags from array format back to object format
+  const handleTagsChange = (tagArray) => {
     if (!selectedEntity) return;
-    const currentTags = selectedEntity.tags || {};
-    const { [tagToRemove]: _, ...rest } = currentTags;
-    updateEntity({ tags: rest });
-  };
-
-  const handleTagKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
+    const tagsObj = {};
+    tagArray.forEach(tag => {
+      tagsObj[tag] = true;
+    });
+    updateEntity({ tags: tagsObj });
   };
 
   return (
@@ -440,8 +391,8 @@ export default function EntityEditor({ project, onSave }) {
           >
             <option value="">All kinds ({entities.length})</option>
             {entityKinds.map(k => (
-              <option key={k.id} value={k.id}>
-                {k.name} ({entities.filter(e => e.kind === k.id).length})
+              <option key={k.kind} value={k.kind}>
+                {k.description || k.kind} ({entities.filter(e => e.kind === k.kind).length})
               </option>
             ))}
           </select>
@@ -525,7 +476,7 @@ export default function EntityEditor({ project, onSave }) {
                   onChange={(e) => updateEntity({ kind: e.target.value })}
                 >
                   {entityKinds.map(k => (
-                    <option key={k.id} value={k.id}>{k.name}</option>
+                    <option key={k.kind} value={k.kind}>{k.description || k.kind}</option>
                   ))}
                 </select>
               </div>
@@ -591,28 +542,13 @@ export default function EntityEditor({ project, onSave }) {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Tags</label>
-              <div style={styles.tagsContainer}>
-                {getTagKeys().map(tag => (
-                  <span key={tag} style={styles.tag}>
-                    {tag}
-                    <span
-                      style={styles.tagRemove}
-                      onClick={() => removeTag(tag)}
-                      title="Remove tag"
-                    >
-                      ×
-                    </span>
-                  </span>
-                ))}
-                <input
-                  style={styles.tagInput}
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  onBlur={addTag}
-                  placeholder="Add tag..."
-                />
-              </div>
+              <TagSelector
+                value={getTagsAsArray()}
+                onChange={handleTagsChange}
+                tagRegistry={tagRegistry}
+                placeholder="Select tags..."
+                onAddToRegistry={onAddTag}
+              />
             </div>
 
             <div style={styles.formGroup}>

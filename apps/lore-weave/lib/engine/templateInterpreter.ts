@@ -8,7 +8,7 @@
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { TemplateGraphView } from '../graph/templateGraphView';
 import type { TemplateResult } from './types';
-import { pickRandom } from '../utils';
+import { pickRandom, hasTag, getTagValue } from '../utils';
 import type { Point } from '../coordinates/types';
 
 import type {
@@ -292,6 +292,42 @@ export class TemplateInterpreter {
           pathContext.target = startEntity;
           return this.evaluateGraphPath(startEntity, rule.assert, pathContext);
         });
+      }
+
+      case 'tag_exists': {
+        // Find entities matching the filter criteria
+        let entities = graphView.findEntities({ kind: rule.kind });
+        if (rule.subtype) {
+          entities = entities.filter(e => e.subtype === rule.subtype);
+        }
+        if (rule.status) {
+          entities = entities.filter(e => e.status === rule.status);
+        }
+        // Filter to those with the tag
+        const entitiesWithTag = entities.filter(e => {
+          if (!hasTag(e.tags, rule.tag)) return false;
+          // If specific value required, check it matches
+          if (rule.tagValue !== undefined) {
+            const value = getTagValue(e.tags, rule.tag);
+            return value === rule.tagValue;
+          }
+          return true;
+        });
+        const minCount = rule.minCount ?? 1;
+        return entitiesWithTag.length >= minCount;
+      }
+
+      case 'tag_absent': {
+        // Find entities matching the filter criteria
+        let entities = graphView.findEntities({ kind: rule.kind });
+        if (rule.subtype) {
+          entities = entities.filter(e => e.subtype === rule.subtype);
+        }
+        if (rule.status) {
+          entities = entities.filter(e => e.status === rule.status);
+        }
+        // Check that NO entities have the tag
+        return entities.every(e => !hasTag(e.tags, rule.tag));
       }
 
       case 'and': {
@@ -1014,6 +1050,25 @@ export class TemplateInterpreter {
         const entity = context.resolveEntity(rule.entity);
         if (entity) {
           graphView.updateEntityStatus(entity.id, rule.newStatus);
+        }
+        break;
+      }
+
+      case 'set_tag': {
+        const entity = context.resolveEntity(rule.entity);
+        if (entity) {
+          const newTags = { ...entity.tags, [rule.tag]: rule.value ?? true };
+          graphView.updateEntity(entity.id, { tags: newTags });
+        }
+        break;
+      }
+
+      case 'remove_tag': {
+        const entity = context.resolveEntity(rule.entity);
+        if (entity) {
+          const newTags = { ...entity.tags };
+          delete newTags[rule.tag];
+          graphView.updateEntity(entity.id, { tags: newTags });
         }
         break;
       }

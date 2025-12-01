@@ -16,6 +16,7 @@ import React from 'react';
 import ErasEditor from './components/ErasEditor';
 import PressuresEditor from './components/PressuresEditor';
 import GeneratorsEditor from './components/GeneratorsEditor';
+import SystemsEditor from './components/SystemsEditor';
 
 const TABS = [
   { id: 'pressures', label: 'Pressures' },
@@ -139,6 +140,8 @@ export default function CoherenceEngineRemote({
   onPressuresChange,
   generators = [],
   onGeneratorsChange,
+  systems = [],
+  onSystemsChange,
   activeSection,
   onSectionChange,
 }) {
@@ -169,6 +172,13 @@ export default function CoherenceEngineRemote({
           <GeneratorsEditor
             generators={generators}
             onChange={onGeneratorsChange || (() => {})}
+          />
+        );
+      case 'systems':
+        return (
+          <SystemsEditor
+            systems={systems}
+            onChange={onSystemsChange || (() => {})}
           />
         );
       default:

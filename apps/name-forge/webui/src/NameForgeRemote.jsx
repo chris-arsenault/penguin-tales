@@ -24,13 +24,17 @@ function convertSchemaToInternal(schema) {
   if (!schema) return null;
 
   // Convert entityKinds array to hardState format
+  // Schema uses 'kind' as ID field and 'description' as display name
   const hardState = (schema.entityKinds || []).map((ek) => ({
-    kind: ek.id,
+    kind: ek.kind,
     subtype: (ek.subtypes || []).map((s) => s.id),
     status: (ek.statuses || []).map((s) => s.id),
   }));
 
-  return { hardState };
+  return {
+    hardState,
+    tagRegistry: schema.tagRegistry || [],
+  };
 }
 
 /**
@@ -67,7 +71,7 @@ function extractNamingData(culture) {
   };
 }
 
-// Name Forge accent gradient
+// Name Forge accent gradient (gold) - Arctic Blue base theme
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #ffb366 0%, #ffc080 100%)';
 const HOVER_BG = 'rgba(255, 179, 102, 0.15)';
 const ACCENT_COLOR = '#ffb366';
@@ -76,20 +80,20 @@ const styles = {
   container: {
     display: 'flex',
     height: '100%',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: '#0a1929',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   sidebar: {
     width: '200px',
-    backgroundColor: '#1a1a28',
-    borderRight: '1px solid #3d3d4d',
+    backgroundColor: '#0c1f2e',
+    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
   },
   nav: {
     padding: '12px',
-    borderBottom: '1px solid #3d3d4d',
+    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
   },
   navButton: {
     display: 'block',
@@ -107,16 +111,16 @@ const styles = {
   },
   navButtonInactive: {
     backgroundColor: 'transparent',
-    color: '#b0b0c0',
+    color: '#93c5fd',
   },
   navButtonActive: {
     background: ACCENT_GRADIENT,
-    color: '#1a1a28',
+    color: '#0a1929',
     fontWeight: 600,
   },
   apiSection: {
     padding: '12px',
-    borderBottom: '1px solid #3d3d4d',
+    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
   },
   apiButton: {
     width: '100%',
@@ -130,9 +134,9 @@ const styles = {
   apiDropdown: {
     marginTop: '8px',
     padding: '12px',
-    backgroundColor: '#252535',
+    backgroundColor: '#1e3a5f',
     borderRadius: '6px',
-    border: '1px solid #3d3d4d',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
   },
   cultureSection: {
     flex: 1,
@@ -155,7 +159,7 @@ const styles = {
     justifyContent: 'center',
     padding: '40px',
     textAlign: 'center',
-    color: '#707080',
+    color: '#60a5fa',
   },
 };
 
@@ -169,6 +173,7 @@ export default function NameForgeRemote({
   schema,
   namingData,
   onNamingDataChange,
+  onAddTag,
   activeSection,
   onSectionChange,
 }) {
@@ -246,10 +251,10 @@ export default function NameForgeRemote({
         <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>
 
         </div>
-        <div style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px', color: '#ffffff' }}>
           No Cultures Defined
         </div>
-        <div style={{ fontSize: '14px', maxWidth: '400px' }}>
+        <div style={{ fontSize: '14px', maxWidth: '400px', color: '#93c5fd' }}>
           Add cultures in the <strong>Enumerist</strong> tab first, then return here
           to configure naming domains, grammars, and profiles.
         </div>
@@ -284,18 +289,18 @@ export default function NameForgeRemote({
             onClick={() => setShowApiKeyInput(!showApiKeyInput)}
             style={{
               ...styles.apiButton,
-              backgroundColor: apiKey ? '#ffb366' : '#2d2d3d',
-              color: apiKey ? '#1a1a28' : '#a0a0b0',
+              backgroundColor: apiKey ? '#ffb366' : '#1e3a5f',
+              color: apiKey ? '#0a1929' : '#93c5fd',
             }}
           >
             {apiKey ? '✓ API Key Set' : 'Set API Key'}
           </button>
           {showApiKeyInput && (
             <div style={styles.apiDropdown}>
-              <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#f0f0f0' }}>
+              <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>
                 Anthropic API Key
               </div>
-              <p style={{ fontSize: '11px', color: '#a0a0b0', marginBottom: '8px' }}>
+              <p style={{ fontSize: '11px', color: '#93c5fd', marginBottom: '8px' }}>
                 Required for LLM lexeme generation.
               </p>
               <input
@@ -308,10 +313,10 @@ export default function NameForgeRemote({
                   padding: '8px',
                   marginBottom: '8px',
                   fontSize: '12px',
-                  backgroundColor: '#2d2d3d',
-                  border: '1px solid #3d3d4d',
+                  backgroundColor: '#2d4a6f',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
                   borderRadius: '4px',
-                  color: '#f0f0f0',
+                  color: '#ffffff',
                   boxSizing: 'border-box',
                 }}
               />
@@ -320,7 +325,7 @@ export default function NameForgeRemote({
                 style={{
                   ...styles.apiButton,
                   backgroundColor: '#ffb366',
-                  color: '#1a1a28',
+                  color: '#0a1929',
                 }}
               >
                 Done
@@ -353,6 +358,7 @@ export default function NameForgeRemote({
               activeTab={workspaceTab}
               onTabChange={setWorkspaceTab}
               onCultureChange={handleCultureChange}
+              onAddTag={onAddTag}
               apiKey={apiKey}
             />
           </div>
