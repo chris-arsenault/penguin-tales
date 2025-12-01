@@ -447,6 +447,53 @@ function collectPressureIdRefs(generators, systems) {
 
 const validationRules = {
   /**
+   * 0. Generator format must be declarative (ERROR)
+   */
+  invalidGeneratorFormat: (_schema, generators) => {
+    const invalid = [];
+
+    for (const gen of generators) {
+      if (gen.enabled === false) continue;
+
+      const problems = [];
+      if (gen.template) {
+        problems.push('uses legacy "template" wrapper');
+      }
+      if (!gen.selection) {
+        problems.push('missing selection');
+      } else {
+        if (!gen.selection.strategy) problems.push('missing selection.strategy');
+        if (!gen.selection.kind) problems.push('missing selection.kind');
+      }
+      if (!Array.isArray(gen.creation)) problems.push('creation must be an array');
+      if (!Array.isArray(gen.relationships)) problems.push('relationships must be an array');
+      if (!Array.isArray(gen.stateUpdates)) problems.push('stateUpdates must be an array');
+
+      if (problems.length > 0) {
+        invalid.push({
+          id: gen.id,
+          name: gen.name || gen.id,
+          detail: problems.join('; '),
+        });
+      }
+    }
+
+    if (invalid.length === 0) return null;
+
+    return {
+      id: 'invalid-generator-format',
+      title: 'Generators use legacy or invalid shape',
+      message: 'Generators must use the declarative template shape (selection/creation/relationships/stateUpdates). Legacy wrappers will crash the simulation.',
+      severity: 'error',
+      affectedItems: invalid.map(g => ({
+        id: g.id,
+        label: g.name,
+        detail: g.detail,
+      })),
+    };
+  },
+
+  /**
    * 1. Invalid Entity Kind References (ERROR)
    */
   invalidEntityKind: (schema, generators, pressures, systems) => {
@@ -1042,6 +1089,7 @@ function runValidations(schema, eras, pressures, generators, systems) {
 
   // Run each validation rule
   const rules = [
+    () => validationRules.invalidGeneratorFormat(schema, generators),
     () => validationRules.invalidEntityKind(schema, generators, pressures, systems),
     () => validationRules.invalidRelationshipKind(schema, generators, pressures, systems),
     () => validationRules.invalidPressureId(pressures, generators, systems),
@@ -1289,7 +1337,7 @@ export default function ValidationEditor({
         <ul style={styles.ruleList}>
           <li style={styles.ruleItem}>
             <span style={{ ...styles.ruleBullet, color: STATUS_COLORS.error }}>●</span>
-            <strong>Reference Validation:</strong> Entity kinds, relationship kinds, pressure IDs, era references
+            <strong>Format & Reference Validation:</strong> Generator shape, entity kinds, relationship kinds, pressure IDs, era references
           </li>
           <li style={styles.ruleItem}>
             <span style={{ ...styles.ruleBullet, color: STATUS_COLORS.warning }}>●</span>

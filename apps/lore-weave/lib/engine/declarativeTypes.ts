@@ -271,6 +271,8 @@ export type SelectionFilter =
   | ExcludeEntitiesFilter
   | HasRelationshipFilter
   | LacksRelationshipFilter
+  | HasTagSelectionFilter
+  | HasAnyTagSelectionFilter
   | SameLocationFilter
   | NotAtWarFilter
   | GraphPathSelectionFilter;
@@ -299,6 +301,17 @@ export interface LacksRelationshipFilter {
   type: 'lacks_relationship';
   kind: string;
   with?: string;  // Variable reference (optional)
+}
+
+export interface HasTagSelectionFilter {
+  type: 'has_tag';
+  tag: string;
+  value?: string | boolean;
+}
+
+export interface HasAnyTagSelectionFilter {
+  type: 'has_any_tag';
+  tags: string[];
 }
 
 export interface SameLocationFilter {

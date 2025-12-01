@@ -692,6 +692,20 @@ export class TemplateInterpreter {
         );
       }
 
+      case 'has_tag': {
+        return entities.filter(entity => {
+          if (!hasTag(entity.tags, filter.tag)) return false;
+          if (filter.value === undefined) return true;
+          return getTagValue(entity.tags, filter.tag) === filter.value;
+        });
+      }
+
+      case 'has_any_tag': {
+        const tagList = filter.tags || [];
+        if (tagList.length === 0) return entities;
+        return entities.filter(entity => tagList.some(tag => hasTag(entity.tags, tag)));
+      }
+
       case 'same_location': {
         const refEntity = context.resolveEntity(filter.as);
         if (!refEntity) return entities;

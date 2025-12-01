@@ -4887,44 +4887,50 @@
     "id": "thermal_colony_decline",
     "name": "Colony Thermal Decline",
     "description": "Colonies in extreme temperature zones begin to wane",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "location",
+        "subtype": "colony",
+        "status": "thriving",
+        "tag": "thermal_stress"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "statusFilter": "thriving",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "thermal_stress"
+          "type": "has_tag",
+          "tag": "thermal_stress"
         }
       ],
-      "selection": [
-        {
-          "variable": "stressed_colony",
-          "kind": "location",
-          "subtype": "colony",
-          "status": "thriving",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "thermal_stress"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        }
-      ],
-      "creation": [],
-      "relationships": [],
-      "stateUpdates": [
-        {
-          "target": "$stressed_colony",
-          "status": "waning",
-          "addTags": [
-            "climate_displaced"
-          ],
-          "removeTags": [
-            "thermal_stress"
-          ]
-        }
-      ]
+      "pickStrategy": "random"
     },
+    "creation": [],
+    "relationships": [],
+    "stateUpdates": [
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "waning"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "climate_displaced",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "thermal_stress"
+      }
+    ],
     "effects": {
       "graphDensity": 0,
       "clusterFormation": 0,
@@ -4941,45 +4947,55 @@
     "id": "thermal_colony_recovery",
     "name": "Colony Thermal Recovery",
     "description": "Waning colonies in temperate zones recover",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "location",
+        "subtype": "colony",
+        "status": "waning",
+        "tag": "recovery_ready"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "statusFilter": "waning",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "recovery_ready"
+          "type": "has_tag",
+          "tag": "recovery_ready"
         }
       ],
-      "selection": [
-        {
-          "variable": "recovering_colony",
-          "kind": "location",
-          "subtype": "colony",
-          "status": "waning",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "recovery_ready"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        }
-      ],
-      "creation": [],
-      "relationships": [],
-      "stateUpdates": [
-        {
-          "target": "$recovering_colony",
-          "status": "thriving",
-          "addTags": [
-            "climate_adapted"
-          ],
-          "removeTags": [
-            "recovery_ready",
-            "climate_displaced"
-          ]
-        }
-      ]
+      "pickStrategy": "random"
     },
+    "creation": [],
+    "relationships": [],
+    "stateUpdates": [
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "thriving"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "climate_adapted",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "recovery_ready"
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "climate_displaced"
+      }
+    ],
     "effects": {
       "graphDensity": 0,
       "clusterFormation": 0,
@@ -4996,46 +5012,53 @@
     "id": "thermal_migration",
     "name": "Thermal Migration",
     "description": "NPCs flee extreme temperatures for temperate refuges",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "or",
+        "rules": [
+          {
+            "type": "tag_exists",
+            "kind": "location",
+            "tag": "extreme_hot"
+          },
+          {
+            "type": "tag_exists",
+            "kind": "location",
+            "tag": "extreme_cold"
+          }
+        ]
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "extreme_hot"
+          "type": "has_any_tag",
+          "tags": [
+            "extreme_hot",
+            "extreme_cold"
+          ]
         }
       ],
-      "selection": [
-        {
-          "variable": "extreme_location",
-          "kind": "location",
-          "filters": [
-            {
-              "type": "has_any_tag",
-              "tags": [
-                "extreme_hot",
-                "extreme_cold"
-              ]
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        },
-        {
-          "variable": "migrant",
+      "pickStrategy": "random"
+    },
+    "variables": {
+      "$migrant": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "resident_of",
+            "direction": "dst"
+          },
           "kind": "npc",
-          "status": "alive",
-          "filters": [
-            {
-              "type": "has_relationship",
-              "relationshipKind": "resident_of",
-              "target": "$extreme_location",
-              "direction": "src"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        },
-        {
-          "variable": "refuge",
+          "statusFilter": "alive",
+          "pickStrategy": "random"
+        }
+      },
+      "$refuge": {
+        "select": {
+          "strategy": "by_kind",
           "kind": "location",
           "filters": [
             {
@@ -5043,34 +5066,37 @@
               "tag": "temperate"
             },
             {
-              "type": "not_entity",
-              "entity": "$extreme_location"
+              "type": "exclude",
+              "entities": [
+                "$target"
+              ]
             }
           ],
-          "count": 1,
-          "bias": "random"
+          "pickStrategy": "random"
         }
-      ],
-      "creation": [],
-      "relationships": [
-        {
-          "kind": "resident_of",
-          "src": "$migrant",
-          "dst": "$refuge",
-          "category": "spatial",
-          "probability": 0.5,
-          "comment": "NPC migrates to temperate refuge"
-        }
-      ],
-      "stateUpdates": [
-        {
-          "target": "$migrant",
-          "addTags": [
-            "climate_refugee"
-          ]
-        }
-      ]
+      }
     },
+    "creation": [],
+    "relationships": [
+      {
+        "kind": "resident_of",
+        "src": "$migrant",
+        "dst": "$refuge",
+        "strength": 0.7,
+        "condition": {
+          "type": "random_chance",
+          "chance": 0.5
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "set_tag",
+        "entity": "$migrant",
+        "tag": "climate_refugee",
+        "value": true
+      }
+    ],
     "effects": {
       "graphDensity": 0.2,
       "clusterFormation": 0.3,
@@ -5087,65 +5113,67 @@
     "id": "ice_memory_thaw",
     "name": "Ice Memory Thaw",
     "description": "Warming reveals frozen abilities at thaw candidate locations",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "location",
+        "tag": "thaw_candidate"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "thaw_candidate"
+          "type": "has_tag",
+          "tag": "thaw_candidate"
         }
       ],
-      "selection": [
-        {
-          "variable": "thaw_location",
-          "kind": "location",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "thaw_candidate"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        },
-        {
-          "variable": "frozen_ability",
-          "kind": "abilities",
-          "status": "active",
-          "filters": [
-            {
-              "type": "no_relationship",
-              "relationshipKind": "manifests_at",
-              "target": "$thaw_location",
-              "direction": "src"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        }
-      ],
-      "creation": [],
-      "relationships": [
-        {
-          "kind": "manifests_at",
-          "src": "$frozen_ability",
-          "dst": "$thaw_location",
-          "category": "spatial",
-          "probability": 0.1,
-          "comment": "Frozen ability revealed by warming"
-        }
-      ],
-      "stateUpdates": [
-        {
-          "target": "$thaw_location",
-          "addTags": [
-            "recently_thawed"
-          ],
-          "removeTags": [
-            "thaw_candidate"
-          ]
-        }
-      ]
+      "pickStrategy": "random"
     },
+    "variables": {
+      "$frozen_ability": {
+        "select": {
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "statusFilter": "active",
+          "filters": [
+            {
+              "type": "lacks_relationship",
+              "kind": "manifests_at",
+              "with": "$target"
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "creation": [],
+    "relationships": [
+      {
+        "kind": "manifests_at",
+        "src": "$frozen_ability",
+        "dst": "$target",
+        "strength": 0.6,
+        "condition": {
+          "type": "random_chance",
+          "chance": 0.1
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "recently_thawed",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "thaw_candidate"
+      }
+    ],
     "effects": {
       "graphDensity": 0.3,
       "clusterFormation": 0.2,
@@ -5162,44 +5190,50 @@
     "id": "economic_colony_decline",
     "name": "Colony Economic Decline",
     "description": "Colonies with resource scarcity begin to wane",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "location",
+        "subtype": "colony",
+        "status": "thriving",
+        "tag": "economic_stress"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "statusFilter": "thriving",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "economic_stress"
+          "type": "has_tag",
+          "tag": "economic_stress"
         }
       ],
-      "selection": [
-        {
-          "variable": "stressed_colony",
-          "kind": "location",
-          "subtype": "colony",
-          "status": "thriving",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "economic_stress"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        }
-      ],
-      "creation": [],
-      "relationships": [],
-      "stateUpdates": [
-        {
-          "target": "$stressed_colony",
-          "status": "waning",
-          "addTags": [
-            "resource_depleted"
-          ],
-          "removeTags": [
-            "economic_stress"
-          ]
-        }
-      ]
+      "pickStrategy": "random"
     },
+    "creation": [],
+    "relationships": [],
+    "stateUpdates": [
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "waning"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "resource_depleted",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "economic_stress"
+      }
+    ],
     "effects": {
       "graphDensity": 0,
       "clusterFormation": 0,
@@ -5216,45 +5250,55 @@
     "id": "economic_colony_recovery",
     "name": "Colony Economic Recovery",
     "description": "Waning colonies with abundant resources recover",
-    "template": {
-      "applicability": [
+    "applicability": [
+      {
+        "type": "tag_exists",
+        "kind": "location",
+        "subtype": "colony",
+        "status": "waning",
+        "tag": "prosperity_ready"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "statusFilter": "waning",
+      "filters": [
         {
-          "type": "tag_exists",
-          "tagName": "prosperity_ready"
+          "type": "has_tag",
+          "tag": "prosperity_ready"
         }
       ],
-      "selection": [
-        {
-          "variable": "recovering_colony",
-          "kind": "location",
-          "subtype": "colony",
-          "status": "waning",
-          "filters": [
-            {
-              "type": "has_tag",
-              "tag": "prosperity_ready"
-            }
-          ],
-          "count": 1,
-          "bias": "random"
-        }
-      ],
-      "creation": [],
-      "relationships": [],
-      "stateUpdates": [
-        {
-          "target": "$recovering_colony",
-          "status": "thriving",
-          "addTags": [
-            "economically_recovered"
-          ],
-          "removeTags": [
-            "prosperity_ready",
-            "resource_depleted"
-          ]
-        }
-      ]
+      "pickStrategy": "random"
     },
+    "creation": [],
+    "relationships": [],
+    "stateUpdates": [
+      {
+        "type": "update_entity_status",
+        "entity": "$target",
+        "newStatus": "thriving"
+      },
+      {
+        "type": "set_tag",
+        "entity": "$target",
+        "tag": "economically_recovered",
+        "value": true
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "prosperity_ready"
+      },
+      {
+        "type": "remove_tag",
+        "entity": "$target",
+        "tag": "resource_depleted"
+      }
+    ],
     "effects": {
       "graphDensity": 0,
       "clusterFormation": 0,
