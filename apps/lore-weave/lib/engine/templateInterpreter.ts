@@ -24,6 +24,9 @@ import type {
   CultureSpec,
   DescriptionSpec,
   PlacementSpec,
+  NearAncestorPlacement,
+  AncestorFilterSpec,
+  LineageSpec,
   CountRange,
   RelationshipCondition,
   GraphPathAssertion,
@@ -183,15 +186,17 @@ export class TemplateInterpreter {
     // Execute creation rules
     const entities: Partial<HardState>[] = [];
     const entityRefs: Map<string, string[]> = new Map();  // Track created entity placeholders
+    const lineageRelationships: Relationship[] = [];  // Relationships from near_ancestor placement
 
     for (const rule of template.creation) {
       const created = await this.executeCreation(rule, context, entities.length);
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
+      lineageRelationships.push(...created.lineageRelationships);
     }
 
     // Execute relationship rules
-    const relationships: Relationship[] = [];
+    const relationships: Relationship[] = [...lineageRelationships];
     for (const rule of template.relationships) {
       const rels = this.executeRelationship(rule, context, entityRefs);
       relationships.push(...rels);
@@ -726,9 +731,10 @@ export class TemplateInterpreter {
     rule: CreationRule,
     context: ExecutionContext,
     startIndex: number
-  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[] }> {
+  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; lineageRelationships: Relationship[] }> {
     const entities: Partial<HardState>[] = [];
     const placeholders: string[] = [];
+    const lineageRelationships: Relationship[] = [];
 
     // Determine count
     const count = this.resolveCount(rule.count);
@@ -746,8 +752,8 @@ export class TemplateInterpreter {
       // Resolve description
       const description = this.resolveDescription(rule.description, context);
 
-      // Resolve placement
-      const coordinates = this.resolvePlacement(rule.placement, context, culture);
+      // Resolve placement (may also create lineage relationship for near_ancestor)
+      const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder);
 
       const entity: Partial<HardState> = {
         kind: rule.kind,
@@ -757,14 +763,66 @@ export class TemplateInterpreter {
         culture,
         description,
         tags: rule.tags || {},
-        coordinates,
+        coordinates: placementResult.coordinates,
         links: []
       };
 
       entities.push(entity);
+
+      // Collect lineage relationship from near_ancestor placement
+      if (placementResult.lineageRelationship) {
+        lineageRelationships.push(placementResult.lineageRelationship);
+      }
+
+      // Process inline lineage spec (separate from placement)
+      if (rule.lineage) {
+        const lineageRel = this.resolveLineage(rule.lineage, context, entity, placeholder);
+        if (lineageRel) {
+          lineageRelationships.push(lineageRel);
+        }
+      }
     }
 
-    return { entities, placeholders };
+    return { entities, placeholders, lineageRelationships };
+  }
+
+  /**
+   * Resolve lineage spec: find ancestor and create lineage relationship.
+   */
+  private resolveLineage(
+    spec: LineageSpec,
+    context: ExecutionContext,
+    newEntity: Partial<HardState>,
+    placeholder: string
+  ): Relationship | undefined {
+    const { graphView } = context;
+
+    // Find ancestor using filters (try each in order)
+    let ancestor: HardState | undefined;
+    for (const filter of spec.ancestorFilter) {
+      const candidates = this.findAncestorCandidates(graphView, filter, newEntity.culture || '');
+      if (candidates.length > 0) {
+        ancestor = pickRandom(candidates);
+        break;
+      }
+    }
+
+    // No ancestor found - skip lineage
+    if (!ancestor) {
+      return undefined;
+    }
+
+    // Calculate distance within specified range (0-100 scale)
+    const { min, max } = spec.distanceRange;
+    const distance = min + Math.random() * (max - min);
+
+    // Create lineage relationship
+    return {
+      kind: spec.relationshipKind,
+      src: placeholder,  // Will be resolved to real ID by worldEngine
+      dst: ancestor.id,
+      distance
+    };
   }
 
   private resolveCount(count: number | CountRange | undefined): number {
@@ -841,11 +899,16 @@ export class TemplateInterpreter {
     return result;
   }
 
+  /**
+   * Result of placement resolution.
+   * Includes coordinates and optionally a lineage relationship (for near_ancestor).
+   */
   private resolvePlacement(
     spec: PlacementSpec,
     context: ExecutionContext,
-    culture: string
-  ): Point {
+    culture: string,
+    placeholder: string
+  ): { coordinates: Point; lineageRelationship?: Relationship } {
     const { graphView } = context;
 
     switch (spec.type) {
@@ -854,9 +917,11 @@ export class TemplateInterpreter {
         if (refEntity?.coordinates) {
           const offset = spec.maxDistance || 10;
           return {
-            x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
-            y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
-            z: refEntity.coordinates.z
+            coordinates: {
+              x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
+              y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
+              z: refEntity.coordinates.z
+            }
           };
         }
         break;
@@ -866,7 +931,7 @@ export class TemplateInterpreter {
         const cultureId = context.resolveString(spec.culture);
         const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', []);
         if (result) {
-          return result.coordinates;
+          return { coordinates: result.coordinates };
         }
         break;
       }
@@ -874,7 +939,7 @@ export class TemplateInterpreter {
       case 'at_location': {
         const location = context.resolveEntity(spec.location);
         if (location?.coordinates) {
-          return { ...location.coordinates };
+          return { coordinates: { ...location.coordinates } };
         }
         break;
       }
@@ -886,7 +951,7 @@ export class TemplateInterpreter {
         const cultureId = spec.culture ? context.resolveString(spec.culture) : culture;
         const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', refs);
         if (result) {
-          return result.coordinates;
+          return { coordinates: result.coordinates };
         }
         break;
       }
@@ -894,19 +959,118 @@ export class TemplateInterpreter {
       case 'random_in_bounds': {
         const bounds = spec.bounds || { x: [0, 100], y: [0, 100] };
         return {
-          x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
-          y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
-          z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
+          coordinates: {
+            x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
+            y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
+            z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
+          }
         };
+      }
+
+      case 'near_ancestor': {
+        return this.resolveNearAncestorPlacement(spec, context, culture, placeholder);
       }
     }
 
     // Fallback
     return {
-      x: 50 + (Math.random() - 0.5) * 20,
-      y: 50 + (Math.random() - 0.5) * 20,
-      z: 50
+      coordinates: {
+        x: 50 + (Math.random() - 0.5) * 20,
+        y: 50 + (Math.random() - 0.5) * 20,
+        z: 50
+      }
     };
+  }
+
+  /**
+   * Handle near_ancestor placement: find ancestor, place nearby, create lineage relationship.
+   */
+  private resolveNearAncestorPlacement(
+    spec: NearAncestorPlacement,
+    context: ExecutionContext,
+    culture: string,
+    placeholder: string
+  ): { coordinates: Point; lineageRelationship?: Relationship } {
+    const { graphView } = context;
+
+    // Find ancestor using filters (try each in order)
+    let ancestor: HardState | undefined;
+    for (const filter of spec.ancestorFilter) {
+      const candidates = this.findAncestorCandidates(graphView, filter, culture);
+      if (candidates.length > 0) {
+        ancestor = pickRandom(candidates);
+        break;
+      }
+    }
+
+    // If no ancestor found, fall back to random placement
+    if (!ancestor || !ancestor.coordinates) {
+      return {
+        coordinates: {
+          x: 50 + (Math.random() - 0.5) * 20,
+          y: 50 + (Math.random() - 0.5) * 20,
+          z: 50
+        }
+      };
+    }
+
+    // Calculate distance within specified range (0-100 scale)
+    const { min, max } = spec.distanceRange;
+    const targetDistance = min + Math.random() * (max - min);
+
+    // Place at target distance from ancestor (random direction)
+    const angle = Math.random() * 2 * Math.PI;
+    const phi = Math.random() * Math.PI;  // For 3D placement
+
+    const coordinates: Point = {
+      x: Math.max(0, Math.min(100, ancestor.coordinates.x + targetDistance * Math.cos(angle) * Math.sin(phi))),
+      y: Math.max(0, Math.min(100, ancestor.coordinates.y + targetDistance * Math.sin(angle) * Math.sin(phi))),
+      z: Math.max(0, Math.min(100, ancestor.coordinates.z + targetDistance * Math.cos(phi)))
+    };
+
+    // Calculate actual Euclidean distance (may differ from target due to clamping)
+    const dx = coordinates.x - ancestor.coordinates.x;
+    const dy = coordinates.y - ancestor.coordinates.y;
+    const dz = coordinates.z - ancestor.coordinates.z;
+    const actualDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // Create lineage relationship with actual distance
+    const lineageRelationship: Relationship = {
+      kind: spec.relationshipKind,
+      src: placeholder,  // Will be resolved to real ID by worldEngine
+      dst: ancestor.id,
+      distance: actualDistance
+    };
+
+    return { coordinates, lineageRelationship };
+  }
+
+  /**
+   * Find candidate ancestors matching a filter.
+   */
+  private findAncestorCandidates(
+    graphView: TemplateGraphView,
+    filter: AncestorFilterSpec,
+    newEntityCulture: string
+  ): HardState[] {
+    // Build criteria
+    const criteria: { kind: string; subtype?: string; status?: string } = {
+      kind: filter.kind
+    };
+    if (filter.subtype) criteria.subtype = filter.subtype;
+    if (filter.status) criteria.status = filter.status;
+
+    let candidates = graphView.findEntities(criteria);
+
+    // Filter by same culture if specified
+    if (filter.sameCulture && newEntityCulture) {
+      const sameCultureCandidates = candidates.filter(c => c.culture === newEntityCulture);
+      if (sameCultureCandidates.length > 0) {
+        candidates = sameCultureCandidates;
+      }
+    }
+
+    return candidates;
   }
 
   // ===========================================================================

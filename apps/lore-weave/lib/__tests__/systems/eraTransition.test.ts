@@ -129,11 +129,7 @@ describe('eraTransition', () => {
       expect(eraTransition.name).toBe('Era Progression');
     });
 
-    it('should have metadata with parameters', () => {
-      expect(eraTransition.metadata).toBeDefined();
-      expect(eraTransition.metadata!.parameters).toBeDefined();
-      expect(eraTransition.metadata!.parameters!.minEraLength).toBeDefined();
-    });
+    // Note: metadata removed - parameters are now passed via config
   });
 
   describe('transition logic', () => {

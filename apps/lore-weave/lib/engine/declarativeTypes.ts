@@ -369,13 +369,55 @@ export type DescriptionSpec =
 
 /**
  * How to place the new entity.
+ *
+ * Distance values are on 0-100 scale (Euclidean distance on semantic plane).
  */
 export type PlacementSpec =
   | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }
   | { type: 'in_culture_region'; culture: string }
   | { type: 'at_location'; location: string }
   | { type: 'derived_from_references'; references: string[]; culture?: string }
-  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } };
+  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } }
+  | NearAncestorPlacement;
+
+/**
+ * Place entity near an ancestor and create a lineage relationship.
+ *
+ * This placement type unifies coordinate placement with lineage relationship creation:
+ * 1. Finds an ancestor using ancestorFilter (tries each filter in order)
+ * 2. Places the new entity at the specified distance from the ancestor
+ * 3. Creates a relationship of relationshipKind from new entity to ancestor
+ * 4. Sets relationship.distance to the actual Euclidean distance
+ *
+ * Distance values are on 0-100 scale (same as coordinates).
+ */
+export interface NearAncestorPlacement {
+  type: 'near_ancestor';
+
+  /** Relationship kind for the lineage link (e.g., 'inspired_by', 'derived_from') */
+  relationshipKind: string;
+
+  /** Distance range from ancestor on the semantic plane (0-100 scale) */
+  distanceRange: { min: number; max: number };
+
+  /**
+   * Filters to find an ancestor, tried in order.
+   * First filter that returns results is used, then one entity is picked randomly.
+   */
+  ancestorFilter: AncestorFilterSpec[];
+}
+
+/**
+ * Filter criteria for finding ancestor entities.
+ * All specified fields must match (AND logic).
+ */
+export interface AncestorFilterSpec {
+  kind: string;
+  subtype?: string;
+  status?: string;
+  /** If true, prefer ancestors with same culture as the new entity */
+  sameCulture?: boolean;
+}
 
 export interface CountRange {
   min: number;
@@ -383,18 +425,30 @@ export interface CountRange {
 }
 
 /**
- * How to connect to existing similar entities (lineage).
+ * Lineage specification for automatic ancestor linking.
+ *
+ * When specified on a CreationRule, the framework will:
+ * 1. Search for an ancestor using ancestorFilter (tries each filter in order)
+ * 2. Create a relationship of relationshipKind from new entity to ancestor
+ * 3. Set relationship.distance randomly within distanceRange (0-100 scale)
+ *
+ * This is separate from placement - the entity is placed according to its
+ * placement spec, and the lineage relationship is created afterward.
  */
 export interface LineageSpec {
-  relationshipKind: string;  // e.g., "inspired_by", "derived_from", "split_from"
-  findTarget: LineageTargetSpec;
+  /** Relationship kind for the lineage link (e.g., 'inspired_by', 'derived_from') */
+  relationshipKind: string;
+
+  /**
+   * Filters to find an ancestor, tried in order.
+   * First filter that returns results is used, then one entity is picked randomly.
+   * If no filter returns results, no lineage relationship is created.
+   */
+  ancestorFilter: AncestorFilterSpec[];
+
+  /** Distance range for the lineage relationship (0-100 scale, Euclidean distance) */
   distanceRange: { min: number; max: number };
 }
-
-export type LineageTargetSpec =
-  | { type: 'same_kind_subtype'; excludeStatuses?: string[] }
-  | { type: 'from_variable'; variable: string }
-  | { type: 'custom'; filterId: string; params?: Record<string, unknown> };
 
 // =============================================================================
 // STEP 4: RELATIONSHIP RULES

@@ -41,8 +41,9 @@ export const allTemplates: import('@lore-weave/core').GrowthTemplate[] = [];
 // Systems
 export { allSystems } from './systems/index.js';
 
-// Entity Registries (domain-specific entity operator configs)
-export { penguinEntityRegistries } from './config/entityRegistries.js';
+// Entity Registries removed - lineage/saturation now handled via:
+// - contract.lineage in generators (for ancestor relationships)
+// - applicability rules: entity_count_max (for saturation)
 
 // Initial State
 import initialStateData from './data/initialState.json' with { type: 'json' };

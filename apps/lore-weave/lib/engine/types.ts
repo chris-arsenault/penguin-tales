@@ -255,42 +255,29 @@ export enum ComponentPurpose {
   BEHAVIORAL_MODIFIER = 'Modifies template weights or system frequencies'
 }
 
-// Component Contract
-// Bidirectional declaration of inputs (what enables component) and outputs (what component affects)
+// Component Contract - DEPRECATED
+// All contract functionality has been removed:
+// - Input conditions: Handled via applicability rules in templateInterpreter.ts
+// - Output validation: Declarative templates already define what they create
+// - Lineage: Merged into placement system (use 'near_ancestor' placement type)
+// This interface is kept empty for backward compatibility during migration.
 export interface ComponentContract {
-  purpose: ComponentPurpose;
+  // Empty - all fields removed
+}
 
-  // INPUT CONTRACT: What enables this component
-  enabledBy?: {
-    pressures?: Array<{ name: string; threshold: number }>;
-    entityCounts?: Array<{ kind: string; subtype?: string; min: number; max?: number }>;
-    era?: string[];
-    custom?: (graphView: import('../graph/templateGraphView').TemplateGraphView) => boolean;
-  };
-
-  // OUTPUT CONTRACT: What this component affects
-  affects: {
-    entities?: Array<{
-      kind: string;
-      subtype?: string;
-      operation: 'create' | 'modify' | 'delete';
-      count?: { min: number; max: number };
-    }>;
-    relationships?: Array<{
-      kind: string;
-      operation: 'create' | 'delete';
-      count?: { min: number; max: number };
-    }>;
-    pressures?: Array<{
-      name: string;
-      delta?: number;
-      formula?: string;
-    }>;
-    tags?: Array<{
-      operation: 'add' | 'remove' | 'propagate';
-      pattern: string;
-    }>;
-  };
+/**
+ * Filter criteria for finding ancestor entities.
+ * Used by 'near_ancestor' placement type.
+ * All specified fields must match (AND logic).
+ */
+export interface AncestorFilter {
+  kind: string;
+  subtype?: string;
+  status?: string;
+  /** If true, prefer ancestors with same culture as the new entity */
+  sameCulture?: boolean;
+  /** If true, exclude the new entity itself from results */
+  excludeSelf?: boolean;
 }
 
 // Pressure Contract
@@ -391,6 +378,15 @@ export interface EngineConfig {
   // Pressures - declarative JSON format from UI
   // WorldEngine converts these to runtime Pressure objects internally
   pressures: import('./declarativePressureTypes').DeclarativePressure[];
+
+  // Actions - declarative JSON format from UI
+  // WorldEngine converts these to runtime ExecutableActionDomain objects for universalCatalyst
+  actions?: import('./actionInterpreter').DeclarativeAction[];
+
+  // Runtime action domains - populated by WorldEngine from declarative actions
+  // Used by universalCatalyst system to execute agent actions
+  actionDomains?: import('./actionInterpreter').ExecutableActionDomain[];
+
   entityRegistries?: EntityOperatorRegistry[];
 
   // Configuration

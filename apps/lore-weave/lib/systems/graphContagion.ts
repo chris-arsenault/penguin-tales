@@ -90,6 +90,24 @@ export interface PhaseTransition {
   descriptionSuffix?: string;
 }
 
+/**
+ * Multi-source contagion configuration.
+ * When enabled, the system tracks multiple independent contagion sources
+ * (e.g., multiple ideologies that can spread independently).
+ */
+export interface MultiSourceConfig {
+  /** Entity kind that acts as contagion source (e.g., 'rules') */
+  sourceKind: string;
+  /** Status filter for sources (e.g., 'proposed') */
+  sourceStatus?: string;
+  /** Immunity tag prefix - will be suffixed with source ID (e.g., 'immune' → 'immune:{sourceId}') */
+  immunityTagPrefix?: string;
+  /** Low adoption threshold - sources below this are marked forgotten */
+  lowAdoptionThreshold?: number;
+  /** Low adoption status - what to set when below threshold */
+  lowAdoptionStatus?: string;
+}
+
 export interface GraphContagionConfig {
   /** Unique system identifier */
   id: string;
@@ -135,6 +153,17 @@ export interface GraphContagionConfig {
 
   /** Pressure changes when contagion spreads */
   pressureChanges?: Record<string, number>;
+
+  /**
+   * Multi-source mode: when configured, the system tracks multiple independent
+   * contagion sources. Each source entity spreads independently through the
+   * same population using the configured vectors and transmission settings.
+   *
+   * Example: Multiple ideologies (rules with status='proposed') spreading
+   * through NPCs via social networks. Each NPC can believe in some ideologies
+   * but not others.
+   */
+  multiSource?: MultiSourceConfig;
 }
 
 // =============================================================================
@@ -248,21 +277,7 @@ export function createGraphContagionSystem(
     id: config.id,
     name: config.name,
 
-    contract: {
-      purpose: ComponentPurpose.TAG_PROPAGATION,
-      enabledBy: {
-        entityCounts: [{ kind: config.entityKind, min: 1 }]
-      },
-      affects: {
-        entities: [{ kind: config.entityKind, operation: 'modify' }],
-        relationships: config.infectionAction.type === 'create_relationship'
-          ? [{ kind: config.infectionAction.relationshipKind || 'unknown', operation: 'create', count: { min: 0, max: 100 } }]
-          : undefined,
-        tags: config.infectionAction.type === 'add_tag'
-          ? [{ operation: 'add', pattern: config.infectionAction.tagKey || '*' }]
-          : undefined
-      }
-    },
+    // Note: contract removed - systems don't need lineage and affects is redundant
 
     metadata: {
       produces: {
@@ -299,166 +314,356 @@ export function createGraphContagionSystem(
         }
       }
 
-      const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
-      const relationships: Relationship[] = [];
-
-      // Find entities to evaluate
-      let entities = graphView.findEntities({ kind: config.entityKind });
-      if (config.entityStatus) {
-        entities = entities.filter(e => e.status === config.entityStatus);
+      // Use multi-source mode if configured, otherwise single-source mode
+      if (config.multiSource) {
+        return applyMultiSourceContagion(config, graphView, modifier);
+      } else {
+        return applySingleSourceContagion(config, graphView, modifier);
       }
-
-      // Categorize entities: infected, susceptible, immune
-      const infected: HardState[] = [];
-      const susceptible: HardState[] = [];
-      const immune: HardState[] = [];
-
-      for (const entity of entities) {
-        if (isInfected(entity, config.contagion, graphView)) {
-          infected.push(entity);
-        } else if (config.recovery?.immunityTag && isImmune(entity, config.recovery.immunityTag)) {
-          immune.push(entity);
-        } else {
-          susceptible.push(entity);
-        }
-      }
-
-      // If no infected entities, nothing to spread
-      if (infected.length === 0) {
-        return {
-          relationshipsAdded: [],
-          entitiesModified: [],
-          pressureChanges: {},
-          description: `${config.name}: no carriers`
-        };
-      }
-
-      // === TRANSMISSION PHASE ===
-      for (const entity of susceptible) {
-        const contacts = getContacts(entity, config.vectors, graphView);
-        const infectedContacts = contacts.filter(c => isInfected(c, config.contagion, graphView));
-
-        if (infectedContacts.length === 0) continue;
-
-        // Calculate susceptibility modifier
-        const susceptibilityMod = calculateSusceptibility(entity, config.susceptibilityModifiers);
-
-        // Calculate infection probability
-        const baseProb = config.transmission.baseRate +
-          (infectedContacts.length * config.transmission.contactMultiplier);
-        const modifiedProb = baseProb * (1 - susceptibilityMod);
-        const maxProb = config.transmission.maxProbability ?? 0.95;
-        const infectionProb = Math.min(maxProb, Math.max(0, modifiedProb));
-
-        if (rollProbability(infectionProb, modifier)) {
-          // Check cooldown if configured
-          if (config.cooldown && config.infectionAction.relationshipKind) {
-            if (!graphView.canFormRelationship(entity.id, config.infectionAction.relationshipKind, config.cooldown)) {
-              continue;
-            }
-          }
-
-          // Apply infection action
-          if (config.infectionAction.type === 'create_relationship') {
-            // Pick a random infected contact as the source
-            const source = infectedContacts[Math.floor(Math.random() * infectedContacts.length)];
-            relationships.push({
-              kind: config.infectionAction.relationshipKind!,
-              src: entity.id,
-              dst: source.id,
-              strength: config.infectionAction.strength ?? 0.5,
-              catalyzedBy: source.id
-            });
-
-            if (config.infectionAction.relationshipKind) {
-              graphView.recordRelationshipFormation(entity.id, config.infectionAction.relationshipKind);
-            }
-          } else if (config.infectionAction.type === 'add_tag') {
-            const newTags = { ...entity.tags };
-            newTags[config.infectionAction.tagKey!] = config.infectionAction.tagValue ?? true;
-            modifications.push({
-              id: entity.id,
-              changes: { tags: newTags }
-            });
-          }
-        }
-      }
-
-      // === RECOVERY PHASE ===
-      if (config.recovery) {
-        for (const entity of infected) {
-          // Calculate recovery probability with trait bonuses
-          let recoveryProb = config.recovery.baseRate;
-          if (config.recovery.recoveryBonusTraits) {
-            for (const trait of config.recovery.recoveryBonusTraits) {
-              if (hasTag(entity.tags, trait.tag)) {
-                recoveryProb += trait.bonus;
-              }
-            }
-          }
-          recoveryProb = Math.min(0.95, Math.max(0, recoveryProb));
-
-          if (rollProbability(recoveryProb, modifier)) {
-            // Add immunity tag if configured
-            if (config.recovery.immunityTag) {
-              const newTags = { ...entity.tags };
-              newTags[config.recovery.immunityTag] = true;
-
-              // Remove infection tag if using tag-based contagion
-              if (config.contagion.type === 'tag' && config.contagion.tagPattern) {
-                delete newTags[config.contagion.tagPattern];
-              }
-
-              modifications.push({
-                id: entity.id,
-                changes: { tags: newTags }
-              });
-            }
-
-            // Note: For relationship-based contagion, recovery would need to
-            // delete/archive the relationship - this is handled by returning
-            // a separate relationshipsRemoved array (not currently supported)
-          }
-        }
-      }
-
-      // === PHASE TRANSITIONS ===
-      if (config.phaseTransitions) {
-        const adoptionRate = infected.length / entities.length;
-
-        for (const transition of config.phaseTransitions) {
-          if (adoptionRate >= transition.adoptionThreshold) {
-            // Find entities matching the transition criteria
-            const candidates = graphView.findEntities({
-              kind: transition.entityKind,
-              status: transition.fromStatus
-            });
-
-            for (const candidate of candidates) {
-              const changes: Partial<HardState> = { status: transition.toStatus };
-              if (transition.descriptionSuffix) {
-                changes.description = `${candidate.description} ${transition.descriptionSuffix}`;
-              }
-              modifications.push({
-                id: candidate.id,
-                changes
-              });
-            }
-          }
-        }
-      }
-
-      // Calculate pressure changes
-      const pressureChanges = (relationships.length > 0 || modifications.length > 0)
-        ? (config.pressureChanges ?? {})
-        : {};
-
-      return {
-        relationshipsAdded: relationships,
-        entitiesModified: modifications,
-        pressureChanges,
-        description: `${config.name}: ${relationships.length} new infections, ${modifications.length} modifications`
-      };
     }
+  };
+}
+
+/**
+ * Single-source contagion: original behavior where one marker indicates infection
+ */
+function applySingleSourceContagion(
+  config: GraphContagionConfig,
+  graphView: TemplateGraphView,
+  modifier: number
+): SystemResult {
+  const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+  const relationships: Relationship[] = [];
+
+  // Find entities to evaluate
+  let entities = graphView.findEntities({ kind: config.entityKind });
+  if (config.entityStatus) {
+    entities = entities.filter(e => e.status === config.entityStatus);
+  }
+
+  // Categorize entities: infected, susceptible, immune
+  const infected: HardState[] = [];
+  const susceptible: HardState[] = [];
+
+  for (const entity of entities) {
+    if (isInfected(entity, config.contagion, graphView)) {
+      infected.push(entity);
+    } else if (config.recovery?.immunityTag && isImmune(entity, config.recovery.immunityTag)) {
+      // immune - skip
+    } else {
+      susceptible.push(entity);
+    }
+  }
+
+  // If no infected entities, nothing to spread
+  if (infected.length === 0) {
+    return {
+      relationshipsAdded: [],
+      entitiesModified: [],
+      pressureChanges: {},
+      description: `${config.name}: no carriers`
+    };
+  }
+
+  // === TRANSMISSION PHASE ===
+  for (const entity of susceptible) {
+    const contacts = getContacts(entity, config.vectors, graphView);
+    const infectedContacts = contacts.filter(c => isInfected(c, config.contagion, graphView));
+
+    if (infectedContacts.length === 0) continue;
+
+    // Calculate susceptibility modifier
+    const susceptibilityMod = calculateSusceptibility(entity, config.susceptibilityModifiers);
+
+    // Calculate infection probability
+    const baseProb = config.transmission.baseRate +
+      (infectedContacts.length * config.transmission.contactMultiplier);
+    const modifiedProb = baseProb * (1 - susceptibilityMod);
+    const maxProb = config.transmission.maxProbability ?? 0.95;
+    const infectionProb = Math.min(maxProb, Math.max(0, modifiedProb));
+
+    if (rollProbability(infectionProb, modifier)) {
+      // Check cooldown if configured
+      if (config.cooldown && config.infectionAction.relationshipKind) {
+        if (!graphView.canFormRelationship(entity.id, config.infectionAction.relationshipKind, config.cooldown)) {
+          continue;
+        }
+      }
+
+      // Apply infection action
+      if (config.infectionAction.type === 'create_relationship') {
+        // Pick a random infected contact as the source
+        const source = infectedContacts[Math.floor(Math.random() * infectedContacts.length)];
+        relationships.push({
+          kind: config.infectionAction.relationshipKind!,
+          src: entity.id,
+          dst: source.id,
+          strength: config.infectionAction.strength ?? 0.5,
+          catalyzedBy: source.id
+        });
+
+        if (config.infectionAction.relationshipKind) {
+          graphView.recordRelationshipFormation(entity.id, config.infectionAction.relationshipKind);
+        }
+      } else if (config.infectionAction.type === 'add_tag') {
+        const newTags = { ...entity.tags };
+        newTags[config.infectionAction.tagKey!] = config.infectionAction.tagValue ?? true;
+        modifications.push({
+          id: entity.id,
+          changes: { tags: newTags }
+        });
+      }
+    }
+  }
+
+  // === RECOVERY PHASE ===
+  if (config.recovery) {
+    for (const entity of infected) {
+      // Calculate recovery probability with trait bonuses
+      let recoveryProb = config.recovery.baseRate;
+      if (config.recovery.recoveryBonusTraits) {
+        for (const trait of config.recovery.recoveryBonusTraits) {
+          if (hasTag(entity.tags, trait.tag)) {
+            recoveryProb += trait.bonus;
+          }
+        }
+      }
+      recoveryProb = Math.min(0.95, Math.max(0, recoveryProb));
+
+      if (rollProbability(recoveryProb, modifier)) {
+        // Add immunity tag if configured
+        if (config.recovery.immunityTag) {
+          const newTags = { ...entity.tags };
+          newTags[config.recovery.immunityTag] = true;
+
+          // Remove infection tag if using tag-based contagion
+          if (config.contagion.type === 'tag' && config.contagion.tagPattern) {
+            delete newTags[config.contagion.tagPattern];
+          }
+
+          modifications.push({
+            id: entity.id,
+            changes: { tags: newTags }
+          });
+        }
+      }
+    }
+  }
+
+  // === PHASE TRANSITIONS ===
+  if (config.phaseTransitions) {
+    const adoptionRate = infected.length / entities.length;
+
+    for (const transition of config.phaseTransitions) {
+      if (adoptionRate >= transition.adoptionThreshold) {
+        const candidates = graphView.findEntities({
+          kind: transition.entityKind,
+          status: transition.fromStatus
+        });
+
+        for (const candidate of candidates) {
+          const changes: Partial<HardState> = { status: transition.toStatus };
+          if (transition.descriptionSuffix) {
+            changes.description = `${candidate.description} ${transition.descriptionSuffix}`;
+          }
+          modifications.push({
+            id: candidate.id,
+            changes
+          });
+        }
+      }
+    }
+  }
+
+  // Calculate pressure changes
+  const pressureChanges = (relationships.length > 0 || modifications.length > 0)
+    ? (config.pressureChanges ?? {})
+    : {};
+
+  return {
+    relationshipsAdded: relationships,
+    entitiesModified: modifications,
+    pressureChanges,
+    description: `${config.name}: ${relationships.length} new infections, ${modifications.length} modifications`
+  };
+}
+
+/**
+ * Multi-source contagion: each source entity spreads independently
+ * Example: Multiple ideologies spreading through a population
+ */
+function applyMultiSourceContagion(
+  config: GraphContagionConfig,
+  graphView: TemplateGraphView,
+  modifier: number
+): SystemResult {
+  const multiSource = config.multiSource!;
+  const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+  const relationships: Relationship[] = [];
+  const modifiedTags = new Map<string, Record<string, boolean | string>>();
+
+  // Find all contagion sources (e.g., proposed rules)
+  let sources = graphView.findEntities({ kind: multiSource.sourceKind });
+  if (multiSource.sourceStatus) {
+    sources = sources.filter(s => s.status === multiSource.sourceStatus);
+  }
+
+  // Natural throttling: if no sources, nothing to spread
+  if (sources.length === 0) {
+    return {
+      relationshipsAdded: [],
+      entitiesModified: [],
+      pressureChanges: {},
+      description: `${config.name}: no active sources`
+    };
+  }
+
+  // Find entities to evaluate (the population)
+  let entities = graphView.findEntities({ kind: config.entityKind });
+  if (config.entityStatus) {
+    entities = entities.filter(e => e.status === config.entityStatus);
+  }
+
+  // Process each source independently
+  for (const source of sources) {
+    // Categorize entities for this specific source
+    const infected: HardState[] = [];
+    const susceptible: HardState[] = [];
+
+    for (const entity of entities) {
+      const isInfectedWithSource = isInfectedWith(entity, config.contagion, source.id, graphView);
+      const isImmuneToSource = multiSource.immunityTagPrefix
+        ? hasTag(entity.tags, `${multiSource.immunityTagPrefix}:${source.id}`)
+        : false;
+
+      if (isInfectedWithSource) {
+        infected.push(entity);
+      } else if (!isImmuneToSource) {
+        susceptible.push(entity);
+      }
+    }
+
+    // === TRANSMISSION PHASE for this source ===
+    for (const entity of susceptible) {
+      const contacts = getContacts(entity, config.vectors, graphView);
+      const infectedContacts = contacts.filter(c =>
+        isInfectedWith(c, config.contagion, source.id, graphView)
+      );
+
+      if (infectedContacts.length === 0) continue;
+
+      // Calculate susceptibility modifier
+      const susceptibilityMod = calculateSusceptibility(entity, config.susceptibilityModifiers);
+
+      // Calculate infection probability
+      const baseProb = config.transmission.baseRate +
+        (infectedContacts.length * config.transmission.contactMultiplier);
+      const modifiedProb = baseProb * (1 - susceptibilityMod);
+      const maxProb = config.transmission.maxProbability ?? 0.95;
+      const infectionProb = Math.min(maxProb, Math.max(0, modifiedProb));
+
+      if (rollProbability(infectionProb, modifier)) {
+        // Apply infection action - relationship to source entity
+        if (config.infectionAction.type === 'create_relationship') {
+          relationships.push({
+            kind: config.infectionAction.relationshipKind!,
+            src: entity.id,
+            dst: source.id,
+            strength: config.infectionAction.strength ?? 0.5
+          });
+        } else if (config.infectionAction.type === 'add_tag') {
+          // Tag-based: add source-specific tag
+          const tagKey = `${config.infectionAction.tagKey}:${source.id}`;
+          const currentTags = modifiedTags.get(entity.id) || { ...entity.tags };
+          currentTags[tagKey] = config.infectionAction.tagValue ?? true;
+          modifiedTags.set(entity.id, currentTags);
+        }
+      }
+    }
+
+    // === RECOVERY PHASE for this source ===
+    if (config.recovery) {
+      for (const entity of infected) {
+        let recoveryProb = config.recovery.baseRate;
+        if (config.recovery.recoveryBonusTraits) {
+          for (const trait of config.recovery.recoveryBonusTraits) {
+            if (hasTag(entity.tags, trait.tag)) {
+              recoveryProb += trait.bonus;
+            }
+          }
+        }
+        recoveryProb = Math.min(0.95, Math.max(0, recoveryProb));
+
+        if (rollProbability(recoveryProb, modifier)) {
+          // Add source-specific immunity tag
+          if (multiSource.immunityTagPrefix) {
+            const currentTags = modifiedTags.get(entity.id) || { ...entity.tags };
+            currentTags[`${multiSource.immunityTagPrefix}:${source.id}`] = true;
+            modifiedTags.set(entity.id, currentTags);
+          }
+        }
+      }
+    }
+
+    // === PHASE TRANSITIONS for this source ===
+    if (config.phaseTransitions && entities.length > 0) {
+      const adoptionRate = infected.length / entities.length;
+
+      for (const transition of config.phaseTransitions) {
+        // Only apply to this specific source entity
+        if (source.kind === transition.entityKind &&
+            source.status === transition.fromStatus &&
+            adoptionRate >= transition.adoptionThreshold) {
+          const changes: Partial<HardState> = { status: transition.toStatus };
+          if (transition.descriptionSuffix) {
+            changes.description = `${source.description} ${transition.descriptionSuffix}`;
+          }
+          modifications.push({
+            id: source.id,
+            changes
+          });
+        }
+      }
+
+      // Handle low adoption threshold (source fades away)
+      if (multiSource.lowAdoptionThreshold !== undefined &&
+          adoptionRate < multiSource.lowAdoptionThreshold &&
+          source.status === multiSource.sourceStatus) {
+        modifications.push({
+          id: source.id,
+          changes: {
+            status: multiSource.lowAdoptionStatus || 'forgotten'
+          }
+        });
+      }
+    }
+  }
+
+  // Convert tag modifications to entity modifications
+  for (const [entityId, tags] of modifiedTags) {
+    // Keep only the most recent tags (limit to 10)
+    const tagKeys = Object.keys(tags);
+    if (tagKeys.length > 10) {
+      const excessCount = tagKeys.length - 10;
+      for (let i = 0; i < excessCount; i++) {
+        delete tags[tagKeys[i]];
+      }
+    }
+    modifications.push({
+      id: entityId,
+      changes: { tags }
+    });
+  }
+
+  // Calculate pressure changes
+  const pressureChanges = (relationships.length > 0 || modifications.length > 0)
+    ? (config.pressureChanges ?? {})
+    : {};
+
+  return {
+    relationshipsAdded: relationships,
+    entitiesModified: modifications,
+    pressureChanges,
+    description: `${config.name}: ${relationships.length} new believers, ${modifications.length} modifications across ${sources.length} sources`
   };
 }

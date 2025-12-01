@@ -94,6 +94,22 @@ const styles = {
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
     color: '#4ade80',
   },
+  typeClusterFormation: {
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    color: '#c084fc',
+  },
+  typeTagDiffusion: {
+    backgroundColor: 'rgba(236, 72, 153, 0.2)',
+    color: '#f472b6',
+  },
+  typePlaneDiffusion: {
+    backgroundColor: 'rgba(14, 165, 233, 0.2)',
+    color: '#38bdf8',
+  },
+  typeFramework: {
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
+    color: '#fbbf24',
+  },
   badges: {
     display: 'flex',
     gap: '8px',
@@ -281,6 +297,16 @@ function getTypeStyle(systemType) {
       return styles.typeGraphContagion;
     case 'thresholdTrigger':
       return styles.typeThresholdTrigger;
+    case 'eraSpawner':
+    case 'eraTransition':
+    case 'universalCatalyst':
+      return styles.typeFramework;
+    case 'clusterFormation':
+      return styles.typeClusterFormation;
+    case 'tagDiffusion':
+      return styles.typeTagDiffusion;
+    case 'planeDiffusion':
+      return styles.typePlaneDiffusion;
     default:
       return {};
   }
@@ -295,6 +321,18 @@ function getTypeName(systemType) {
       return 'Graph Contagion';
     case 'thresholdTrigger':
       return 'Threshold Trigger';
+    case 'clusterFormation':
+      return 'Cluster Formation';
+    case 'tagDiffusion':
+      return 'Tag Diffusion';
+    case 'planeDiffusion':
+      return 'Plane Diffusion';
+    case 'eraSpawner':
+      return 'Era Spawner';
+    case 'eraTransition':
+      return 'Era Transition';
+    case 'universalCatalyst':
+      return 'Agent Actions';
     default:
       return systemType;
   }

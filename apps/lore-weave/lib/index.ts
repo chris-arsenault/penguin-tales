@@ -38,7 +38,9 @@ export type {
   MetaEntityConfig,
   EntityOperatorRegistry,
   NameGenerationService,
-  TagMetadata
+  TagMetadata,
+  ComponentContract,
+  AncestorFilter
 } from './engine/types';
 
 export { ComponentPurpose, GraphStore } from './engine/types';
@@ -137,10 +139,6 @@ export type { Culture, CultureNamingConfig } from './naming/nameForgeService';
 export { validateWorld } from './engine/validators';
 export type { ValidationResult, ValidationReport } from './engine/validators';
 
-// Parameter configuration
-export { applyParameterOverrides } from './engine/parameterOverrides';
-export { extractParams } from './engine/parameterExtractor';
-
 // Entity clustering (for meta-entity formation systems)
 export {
   calculateSimilarity,
@@ -195,8 +193,12 @@ export {
 } from './systems/catalystHelpers';
 
 // =============================================================================
-// FRAMEWORK SYSTEMS - Domain registers these with engine config
+// FRAMEWORK SYSTEMS - Included via declarative shells in systems.json
 // =============================================================================
+
+// Framework systems are exposed via thin declarative shells (systemType: 'eraSpawner', etc.)
+// This makes them visible in the Canonry UI and allows enable/disable toggling.
+// The actual implementations are imperative TypeScript that access engine internals.
 
 export { relationshipMaintenance } from './systems/relationshipMaintenance';
 export { eraSpawner } from './systems/eraSpawner';
@@ -223,7 +225,8 @@ export type {
   TransmissionConfig,
   RecoveryConfig,
   ContagionAction,
-  PhaseTransition
+  PhaseTransition,
+  MultiSourceConfig
 } from './systems/graphContagion';
 
 export { createThresholdTriggerSystem } from './systems/thresholdTrigger';
@@ -235,6 +238,50 @@ export type {
   ConditionType,
   EntityFilter
 } from './systems/thresholdTrigger';
+
+export { createClusterFormationSystem } from './systems/clusterFormation';
+export type {
+  ClusterFormationConfig,
+  EntityFilter as ClusterEntityFilter,
+  DeclarativeClusterCriterion,
+  DeclarativeClusterConfig,
+  MetaEntityConfig as ClusterMetaEntityConfig,
+  PostProcessConfig
+} from './systems/clusterFormation';
+
+export { createTagDiffusionSystem } from './systems/tagDiffusion';
+export type {
+  TagDiffusionConfig,
+  ConvergenceConfig,
+  DivergenceConfig
+} from './systems/tagDiffusion';
+
+export { createPlaneDiffusionSystem } from './systems/planeDiffusion';
+export type {
+  PlaneDiffusionConfig,
+  DiffusionSourceConfig,
+  DiffusionSinkConfig,
+  DiffusionParams,
+  DiffusionOutputTag,
+  FalloffType
+} from './systems/planeDiffusion';
+
+// =============================================================================
+// DECLARATIVE ACTIONS - Agent action definitions for universalCatalyst
+// =============================================================================
+
+export { loadActions, createExecutableAction, DEFAULT_PRESSURE_DOMAIN_MAPPINGS, getDefaultActionDomainsForEntity } from './engine/actionInterpreter';
+export type {
+  DeclarativeAction,
+  ActionActorConfig,
+  ActionActorResolution,
+  ActionTargetConfig,
+  ActionOutcomeConfig,
+  ActionProbabilityConfig,
+  ExecutableAction,
+  ExecutableActionDomain,
+  ActionResult
+} from './engine/actionInterpreter';
 
 // =============================================================================
 // FRAMEWORK PRIMITIVES - Minimal constants needed by domain
@@ -377,6 +424,8 @@ export type {
   SubtypeSpec,
   CultureSpec,
   PlacementSpec,
+  NearAncestorPlacement,
+  AncestorFilterSpec,
   LineageSpec,
   RelationshipCondition
 } from './engine/declarativeTypes';
@@ -418,7 +467,15 @@ export type {
   DeclarativeSystem,
   DeclarativeConnectionEvolutionSystem,
   DeclarativeGraphContagionSystem,
-  DeclarativeThresholdTriggerSystem
+  DeclarativeThresholdTriggerSystem,
+  DeclarativeClusterFormationSystem,
+  DeclarativeTagDiffusionSystem,
+  DeclarativePlaneDiffusionSystem,
+  // Framework system declarative shells
+  FrameworkSystemConfig,
+  DeclarativeEraSpawnerSystem,
+  DeclarativeEraTransitionSystem,
+  DeclarativeUniversalCatalystSystem
 } from './engine/systemInterpreter';
 
 // =============================================================================

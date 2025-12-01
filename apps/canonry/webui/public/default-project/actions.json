@@ -1,0 +1,586 @@
+[
+  {
+    "id": "seize_control",
+    "name": "Seize Control",
+    "description": "Take control of a location adjacent to territory already controlled",
+    "domain": "political",
+
+    "actor": {
+      "kinds": ["npc", "faction"],
+      "minProminence": "recognized",
+      "requiredRelationships": ["leader_of"]
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "leader_of",
+      "targetKind": "faction"
+    },
+
+    "targeting": {
+      "kind": "location",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "controls",
+          "direction": "dst"
+        }
+      },
+      "require": {
+        "adjacentTo": {
+          "relationshipKind": "adjacent_to",
+          "actorControlsVia": "controls"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "controls",
+          "src": "resolved_actor",
+          "dst": "target",
+          "strength": 0.8
+        }
+      ],
+      "descriptionTemplate": "seized control of {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.3,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "form_alliance",
+    "name": "Form Alliance",
+    "description": "Create alliance between factions that are not already allied or at war",
+    "domain": "political",
+
+    "actor": {
+      "kinds": ["npc", "faction"],
+      "minProminence": "recognized"
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "leader_of",
+      "targetKind": "faction"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "allied_with",
+          "direction": "both"
+        }
+      },
+      "excludeMultiple": [
+        {
+          "existingRelationship": {
+            "kind": "at_war_with",
+            "direction": "both"
+          }
+        }
+      ],
+      "excludeSelf": true
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "allied_with",
+          "src": "resolved_actor",
+          "dst": "target",
+          "strength": 0.7,
+          "bidirectional": true
+        }
+      ],
+      "descriptionTemplate": "forged alliance with {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.4,
+      "baseWeight": 0.8
+    }
+  },
+
+  {
+    "id": "declare_war",
+    "name": "Declare War",
+    "description": "Create enemy relationship between factions",
+    "domain": "political",
+
+    "actor": {
+      "kinds": ["npc", "faction"],
+      "minProminence": "renowned"
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "leader_of",
+      "targetKind": "faction"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "at_war_with",
+          "direction": "both"
+        }
+      },
+      "excludeSelf": true
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "at_war_with",
+          "src": "resolved_actor",
+          "dst": "target",
+          "strength": 0.9,
+          "bidirectional": true
+        }
+      ],
+      "pressureChanges": {
+        "conflict": 10
+      },
+      "descriptionTemplate": "declared war on {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.6,
+      "baseWeight": 0.5
+    }
+  },
+
+  {
+    "id": "raid",
+    "name": "Raid",
+    "description": "Attack an enemy faction",
+    "domain": "military",
+
+    "actor": {
+      "kinds": ["npc", "faction"]
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "leader_of",
+      "targetKind": "faction"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "require": {
+        "hasRelationship": {
+          "kind": "at_war_with",
+          "direction": "src",
+          "fromResolvedActor": true
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "enemy_of",
+          "src": "actor",
+          "dst": "target",
+          "strength": 0.8
+        }
+      ],
+      "pressureChanges": {
+        "conflict": 5
+      },
+      "descriptionTemplate": "raided {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "establish_trade",
+    "name": "Establish Trade Route",
+    "description": "Create trade connection between two thriving locations",
+    "domain": "economic",
+
+    "actor": {
+      "kinds": ["npc", "faction"]
+    },
+
+    "targeting": {
+      "kind": "location",
+      "statuses": ["thriving"],
+      "selectTwo": true,
+      "exclude": {
+        "existingRelationship": {
+          "kind": "trades_with",
+          "direction": "both"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "trades_with",
+          "src": "target",
+          "dst": "target2",
+          "strength": 0.6,
+          "bidirectional": true
+        }
+      ],
+      "pressureChanges": {
+        "resource_scarcity": -5
+      },
+      "descriptionTemplate": "established trade route between {target.name} and {target2.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 1.2
+    }
+  },
+
+  {
+    "id": "corrupt_location",
+    "name": "Corrupt Location",
+    "description": "Spread magical corruption to a location",
+    "domain": "magical",
+
+    "actor": {
+      "kinds": ["npc", "abilities"],
+      "requiredRelationships": ["practitioner_of"],
+      "requiredPressures": {
+        "magical_instability": 50
+      }
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "practitioner_of",
+      "targetKind": "abilities",
+      "requireSubtype": "magic"
+    },
+
+    "targeting": {
+      "kind": "location",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "corrupted_by",
+          "direction": "src"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "corrupted_by",
+          "src": "target",
+          "dst": "resolved_actor",
+          "strength": 0.7
+        }
+      ],
+      "pressureChanges": {
+        "magical_instability": 5
+      },
+      "descriptionTemplate": "corrupted {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.25,
+      "baseWeight": 0.8
+    }
+  },
+
+  {
+    "id": "manifest_magic",
+    "name": "Manifest Magic",
+    "description": "Magic manifests at a location",
+    "domain": "magical",
+
+    "actor": {
+      "kinds": ["abilities"],
+      "subtypes": ["magic"]
+    },
+
+    "actorResolution": {
+      "type": "self"
+    },
+
+    "targeting": {
+      "kind": "location",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "manifests_at",
+          "direction": "dst"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "manifests_at",
+          "src": "actor",
+          "dst": "target",
+          "strength": 0.8
+        }
+      ],
+      "descriptionTemplate": "manifested at {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.3,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "spread_innovation",
+    "name": "Spread Innovation",
+    "description": "Technology spreads to new practitioners",
+    "domain": "technological",
+
+    "actor": {
+      "kinds": ["abilities"],
+      "subtypes": ["technology"]
+    },
+
+    "actorResolution": {
+      "type": "self"
+    },
+
+    "targeting": {
+      "kind": "npc",
+      "statuses": ["alive"],
+      "exclude": {
+        "existingRelationship": {
+          "kind": "practitioner_of",
+          "direction": "dst"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "practitioner_of",
+          "src": "target",
+          "dst": "actor",
+          "strength": 0.6
+        }
+      ],
+      "pressureChanges": {
+        "magical_instability": -2
+      },
+      "descriptionTemplate": "spread to {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.4,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "convert_faction",
+    "name": "Convert Faction",
+    "description": "Spread cultural/religious belief to faction",
+    "domain": "cultural",
+
+    "actor": {
+      "kinds": ["npc"]
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "weaponized_by",
+      "targetKind": "rules"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "weaponized_by",
+          "direction": "src",
+          "toResolvedActor": true
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "weaponized_by",
+          "src": "target",
+          "dst": "resolved_actor",
+          "strength": 0.7
+        }
+      ],
+      "pressureChanges": {
+        "cultural_tension": -5,
+        "stability": 3
+      },
+      "descriptionTemplate": "converted {target.name} to {resolved_actor.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.3,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "draw_in_faction",
+    "name": "Draw In Faction",
+    "description": "Neutral faction becomes war participant",
+    "domain": "conflict_escalation",
+
+    "actor": {
+      "kinds": ["occurrence"],
+      "subtypes": ["war"]
+    },
+
+    "actorResolution": {
+      "type": "self"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "exclude": {
+        "existingRelationship": {
+          "kind": "participant_in",
+          "direction": "src"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "participant_in",
+          "src": "target",
+          "dst": "actor",
+          "strength": 0.8
+        }
+      ],
+      "pressureChanges": {
+        "conflict": 8
+      },
+      "descriptionTemplate": "drew {target.name} into the war"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.3,
+      "baseWeight": 1.5
+    }
+  },
+
+  {
+    "id": "escalate_war",
+    "name": "Escalate War",
+    "description": "War intensifies, strengthening participant relationships",
+    "domain": "conflict_escalation",
+
+    "actor": {
+      "kinds": ["occurrence"],
+      "subtypes": ["war"]
+    },
+
+    "actorResolution": {
+      "type": "self"
+    },
+
+    "targeting": {
+      "kind": "faction",
+      "require": {
+        "hasRelationship": {
+          "kind": "participant_in",
+          "direction": "src",
+          "toActor": true
+        }
+      }
+    },
+
+    "outcome": {
+      "strengthenRelationships": [
+        {
+          "kind": "participant_in",
+          "amount": 0.1
+        }
+      ],
+      "pressureChanges": {
+        "conflict": 5
+      },
+      "descriptionTemplate": "escalated in intensity"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.4,
+      "baseWeight": 1.0
+    }
+  },
+
+  {
+    "id": "spread_corruption",
+    "name": "Spread Corruption",
+    "description": "Disaster corrupts adjacent locations",
+    "domain": "disaster_spread",
+
+    "actor": {
+      "kinds": ["occurrence"],
+      "subtypes": ["magical_disaster"]
+    },
+
+    "actorResolution": {
+      "type": "via_relationship",
+      "relationshipKind": "epicenter_of",
+      "targetKind": "location"
+    },
+
+    "targeting": {
+      "kind": "location",
+      "require": {
+        "adjacentTo": {
+          "relationshipKind": "adjacent_to",
+          "toResolvedActor": true
+        }
+      },
+      "exclude": {
+        "existingRelationship": {
+          "kind": "corrupted_by",
+          "direction": "src"
+        }
+      }
+    },
+
+    "outcome": {
+      "relationships": [
+        {
+          "kind": "corrupted_by",
+          "src": "target",
+          "dst": "corruption_source",
+          "strength": 0.8
+        }
+      ],
+      "pressureChanges": {
+        "magical_instability": 10
+      },
+      "descriptionTemplate": "spread corruption to {target.name}"
+    },
+
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 1.2
+    }
+  }
+]

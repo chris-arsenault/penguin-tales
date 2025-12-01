@@ -112,10 +112,7 @@ describe('eraSpawner', () => {
       expect(eraSpawner.name).toBe('Era Initialization');
     });
 
-    it('should have metadata defined', () => {
-      expect(eraSpawner.metadata).toBeDefined();
-      expect(eraSpawner.metadata!.parameters).toBeDefined();
-    });
+    // Note: metadata removed - parameters are now passed via config
   });
 
   describe('spawning behavior', () => {

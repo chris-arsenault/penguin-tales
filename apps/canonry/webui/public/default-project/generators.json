@@ -74,6 +74,14 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "inspired_by",
+          "ancestorFilter": [
+            { "kind": "npc", "subtype": "hero", "status": "alive" },
+            { "kind": "npc", "status": "alive" }
+          ],
+          "distanceRange": { "min": 40, "max": 70 }
         }
       }
     ],
@@ -110,57 +118,6 @@
           "kind": "abilities",
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "conflict",
-            "threshold": 5
-          },
-          {
-            "name": "external_threat",
-            "threshold": 5
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "npc",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "practitioner_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          },
-          {
-            "kind": "resident_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "conflict",
-            "delta": -2
-          }
-        ]
       }
     },
     "metadata": {
@@ -345,61 +302,6 @@
           "kind": "faction",
           "pickStrategy": "first"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "npc",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "npc",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "leader_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 2
-            }
-          },
-          {
-            "kind": "resident_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "member_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "stability",
-            "delta": -1
-          }
-        ]
       }
     },
     "metadata": {
@@ -619,68 +521,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "external_threat",
-            "threshold": 0
-          }
-        ],
-        "era": [
-          "invasion"
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "npc",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "enemy_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 2
-            }
-          },
-          {
-            "kind": "practitioner_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          },
-          {
-            "kind": "inspired_by",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "external_threat",
-            "delta": 10
-          },
-          {
-            "name": "conflict",
-            "delta": 5
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [
@@ -792,21 +632,16 @@
         "placement": {
           "type": "at_location",
           "location": "$location"
-        },
-        "lineage": {
-          "relationshipKind": "split_from",
-          "findTarget": {
-            "type": "from_variable",
-            "variable": "$target"
-          },
-          "distanceRange": {
-            "min": 0.15,
-            "max": 0.8
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "split_from",
+        "src": "$splinter",
+        "dst": "$target",
+        "distance": { "min": 15, "max": 80 }
+      },
       {
         "kind": "at_war_with",
         "src": "$splinter",
@@ -938,91 +773,6 @@
           ],
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "cultural_tension",
-            "threshold": 25
-          },
-          {
-            "name": "conflict",
-            "threshold": 5
-          }
-        ],
-        "entityCounts": [
-          {
-            "kind": "faction",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "faction",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "split_from",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "leader_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "member_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "at_war_with",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "occupies",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "conflict",
-            "delta": 3
-          },
-          {
-            "name": "cultural_tension",
-            "delta": 2
-          }
-        ]
       }
     },
     "metadata": {
@@ -1202,34 +952,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "faction",
-            "min": 1
-          },
-          {
-            "kind": "location",
-            "min": 2
-          }
-        ]
-      },
-      "affects": {
-        "entities": [],
-        "relationships": [
-          {
-            "kind": "controls",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [],
@@ -1381,30 +1103,6 @@
           "pickStrategy": "first",
           "fallback": "$target"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "faction",
-            "min": 2
-          }
-        ]
-      },
-      "affects": {
-        "entities": [],
-        "relationships": [
-          {
-            "kind": "trades_with",
-            "operation": "create",
-            "count": {
-              "min": 2,
-              "max": 2
-            }
-          }
-        ]
       }
     },
     "metadata": {
@@ -1625,59 +1323,6 @@
           ],
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "npc",
-            "min": 2
-          },
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "faction",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "controls",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "member_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          },
-          {
-            "kind": "resident_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          }
-        ]
       }
     },
     "metadata": {
@@ -1915,87 +1560,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "faction",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "npc",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "occupies",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "leader_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "resident_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 2
-            }
-          },
-          {
-            "kind": "member_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          },
-          {
-            "kind": "seeks",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          },
-          {
-            "kind": "practitioner_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [
@@ -2167,43 +1731,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "location",
-            "min": 1
-          },
-          {
-            "kind": "npc",
-            "min": 20
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "contained_by",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [
@@ -2350,53 +1877,6 @@
           ],
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "magical_instability",
-            "threshold": 30
-          }
-        ],
-        "entityCounts": [
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "adjacent_to",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          },
-          {
-            "kind": "discovered_by",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          }
-        ]
       }
     },
     "metadata": {
@@ -2566,71 +2046,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "resource_scarcity",
-            "threshold": 0
-          }
-        ],
-        "entityCounts": [
-          {
-            "kind": "npc",
-            "min": 1
-          },
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "discovered_by",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "adjacent_to",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "resource_scarcity",
-            "delta": -5
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [
@@ -2776,59 +2191,6 @@
           "kind": "location",
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "entityCounts": [
-          {
-            "kind": "npc",
-            "min": 1
-          },
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "discovered_by",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "adjacent_to",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          }
-        ]
       }
     },
     "metadata": {
@@ -2986,64 +2348,6 @@
           "kind": "location",
           "pickStrategy": "random"
         }
-      }
-    },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "era": [
-          "expansion",
-          "reconstruction",
-          "innovation"
-        ],
-        "entityCounts": [
-          {
-            "kind": "npc",
-            "min": 1
-          },
-          {
-            "kind": "location",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "discovered_by",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "adjacent_to",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 2
-            }
-          }
-        ]
       }
     },
     "metadata": {
@@ -3284,95 +2588,6 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "pressures": [
-          {
-            "name": "resource_scarcity",
-            "threshold": 60
-          }
-        ],
-        "entityCounts": [
-          {
-            "kind": "location",
-            "min": 2
-          },
-          {
-            "kind": "faction",
-            "min": 1
-          }
-        ]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "location",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "npc",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "adjacent_to",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 2
-            }
-          },
-          {
-            "kind": "resident_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "member_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          },
-          {
-            "kind": "explorer_of",
-            "operation": "create",
-            "count": {
-              "min": 1,
-              "max": 1
-            }
-          },
-          {
-            "kind": "discoverer_of",
-            "operation": "create",
-            "count": {
-              "min": 0,
-              "max": 1
-            }
-          }
-        ],
-        "pressures": [
-          {
-            "name": "resource_scarcity",
-            "delta": -10
-          }
-        ]
-      }
-    },
     "metadata": {
       "produces": {
         "entityKinds": [
@@ -3519,7 +2734,7 @@
         "kind": "active_during",
         "src": "$war",
         "dst": "$currentEra",
-        "strength": 1.0
+        "strength": 1
       },
       {
         "kind": "participant_in",
@@ -3586,38 +2801,13 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "graphConditions": ["Factions tagged with war_brewing"]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "occurrence",
-            "operation": "create",
-            "count": { "min": 1, "max": 1 }
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "active_during",
-            "operation": "create"
-          },
-          {
-            "kind": "participant_in",
-            "operation": "create"
-          }
-        ],
-        "pressures": [
-          { "name": "conflict", "delta": 15 },
-          { "name": "stability", "delta": -10 }
-        ]
-      }
-    },
     "metadata": {
       "description": "Creates war occurrence when factions are tagged as war_brewing by the threshold system",
-      "tags": ["threshold-triggered", "occurrence", "war"]
+      "tags": [
+        "threshold-triggered",
+        "occurrence",
+        "war"
+      ]
     }
   },
   {
@@ -3674,7 +2864,7 @@
         "kind": "active_during",
         "src": "$crisis",
         "dst": "$currentEra",
-        "strength": 1.0
+        "strength": 1
       },
       {
         "kind": "affects",
@@ -3727,42 +2917,13 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "graphConditions": ["Factions tagged with power_vacuum"]
-      },
-      "affects": {
-        "entities": [
-          {
-            "kind": "occurrence",
-            "operation": "create",
-            "count": { "min": 1, "max": 1 }
-          },
-          {
-            "kind": "faction",
-            "operation": "modify"
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "active_during",
-            "operation": "create"
-          },
-          {
-            "kind": "affects",
-            "operation": "create"
-          }
-        ],
-        "pressures": [
-          { "name": "stability", "delta": -20 },
-          { "name": "conflict", "delta": 10 }
-        ]
-      }
-    },
     "metadata": {
       "description": "Creates succession crisis occurrence when factions are tagged as power_vacuum by the threshold system",
-      "tags": ["threshold-triggered", "occurrence", "political"]
+      "tags": [
+        "threshold-triggered",
+        "occurrence",
+        "political"
+      ]
     }
   },
   {
@@ -3830,7 +2991,7 @@
         "kind": "commemorates",
         "src": "$memorial",
         "dst": "$target",
-        "strength": 1.0
+        "strength": 1
       },
       {
         "kind": "originated_in",
@@ -3882,38 +3043,2228 @@
         }
       }
     },
-    "contract": {
-      "purpose": "ENTITY_CREATION",
-      "enabledBy": {
-        "graphConditions": ["Dead NPCs tagged with legend_ripe"]
-      },
-      "affects": {
-        "entities": [
+    "metadata": {
+      "description": "Transforms dead heroes into legends when tagged as legend_ripe by the threshold system. Creates memorial traditions and updates NPC status to fictional.",
+      "tags": [
+        "threshold-triggered",
+        "cultural",
+        "legend"
+      ]
+    }
+  },
+  {
+    "id": "crisis_legislation",
+    "name": "Crisis Law",
+    "applicability": [
+      {
+        "type": "or",
+        "rules": [
           {
-            "kind": "rules",
-            "operation": "create",
-            "count": { "min": 1, "max": 1 }
+            "type": "pressure_threshold",
+            "pressureId": "conflict",
+            "min": 10,
+            "max": 100,
+            "extremeChance": 0.5
           },
           {
-            "kind": "npc",
-            "operation": "modify"
+            "type": "pressure_threshold",
+            "pressureId": "resource_scarcity",
+            "min": 10,
+            "max": 100,
+            "extremeChance": 0.5
+          }
+        ]
+      },
+      {
+        "type": "entity_count_min",
+        "kind": "location",
+        "subtype": "colony",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$rule",
+        "kind": "rules",
+        "subtype": {
+          "random": [
+            "edict",
+            "taboo",
+            "social"
+          ]
+        },
+        "status": "enacted",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "Emergency measure enacted in {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "crisis": true,
+          "emergency": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "applies_in",
+        "src": "$rule",
+        "dst": "$target",
+        "strength": 0.8
+      },
+      {
+        "kind": "supersedes",
+        "src": "$rule",
+        "dst": "$existingRule",
+        "strength": 0.7,
+        "distance": {
+          "min": 0.1,
+          "max": 0.2
+        },
+        "condition": {
+          "type": "random_chance",
+          "chance": 0.4
+        }
+      },
+      {
+        "kind": "related_to",
+        "src": "$rule",
+        "dst": "$existingRule",
+        "strength": 0.5,
+        "distance": {
+          "min": 0.3,
+          "max": 0.5
+        },
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$existingRule"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "cultural_tension",
+        "delta": 2
+      }
+    ],
+    "variables": {
+      "$existingRule": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "applies_in",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "lacks_relationship",
+              "kind": "repealed"
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "rules",
+            "subtype": "various",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
           }
         ],
         "relationships": [
           {
-            "kind": "commemorates",
-            "operation": "create"
+            "kind": "applies_in",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Law applies in colony"
           },
           {
-            "kind": "originated_in",
-            "operation": "create"
+            "kind": "supersedes",
+            "category": "immutable_fact",
+            "probability": 0.4,
+            "comment": "Supersedes existing law"
+          },
+          {
+            "kind": "related_to",
+            "category": "immutable_fact",
+            "probability": 0.6,
+            "comment": "Related to existing rule"
           }
         ]
+      },
+      "effects": {
+        "graphDensity": 0.2,
+        "clusterFormation": 0.3,
+        "diversityImpact": 0.5,
+        "comment": "Creates emergency laws in response to crises"
+      },
+      "tags": [
+        "crisis-driven",
+        "legislation"
+      ]
+    }
+  },
+  {
+    "id": "great_festival",
+    "name": "Great Festival",
+    "applicability": [
+      {
+        "type": "entity_count_min",
+        "kind": "faction",
+        "min": 2
+      },
+      {
+        "type": "entity_count_min",
+        "kind": "location",
+        "subtype": "colony",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "colony"
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$festival",
+        "kind": "rules",
+        "subtype": "social",
+        "status": "enacted",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A great festival celebrating prosperity and unity, held in {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "festival": true,
+          "cultural": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "originated_in",
+        "src": "$festival",
+        "dst": "$target",
+        "strength": 0.9
+      },
+      {
+        "kind": "celebrated_by",
+        "src": "$festival",
+        "dst": "$faction1",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction1"
+        }
+      },
+      {
+        "kind": "celebrated_by",
+        "src": "$festival",
+        "dst": "$faction2",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction2"
+        }
+      },
+      {
+        "kind": "celebrated_by",
+        "src": "$festival",
+        "dst": "$faction3",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction3"
+        }
+      },
+      {
+        "kind": "celebrated_by",
+        "src": "$festival",
+        "dst": "$faction4",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction4"
+        }
+      },
+      {
+        "kind": "allied_with",
+        "src": "$faction1",
+        "dst": "$faction2",
+        "strength": 0.5,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction2"
+        }
+      },
+      {
+        "kind": "allied_with",
+        "src": "$faction1",
+        "dst": "$faction3",
+        "strength": 0.5,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction3"
+        }
+      },
+      {
+        "kind": "allied_with",
+        "src": "$faction2",
+        "dst": "$faction3",
+        "strength": 0.5,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction3"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "conflict",
+        "delta": -10
+      }
+    ],
+    "variables": {
+      "$allFactions": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "faction",
+          "pickStrategy": "all"
+        }
+      },
+      "$faction1": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "faction",
+          "pickStrategy": "random"
+        }
+      },
+      "$faction2": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "faction",
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$faction1"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$faction3": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "faction",
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$faction1",
+                "$faction2"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$faction4": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "faction",
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$faction1",
+                "$faction2",
+                "$faction3"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
       }
     },
     "metadata": {
-      "description": "Transforms dead heroes into legends when tagged as legend_ripe by the threshold system. Creates memorial traditions and updates NPC status to fictional.",
-      "tags": ["threshold-triggered", "cultural", "legend"]
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "rules",
+            "subtype": "social",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 0.7
+              },
+              {
+                "level": "renowned",
+                "probability": 0.3
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "originated_in",
+            "category": "spatial",
+            "probability": 1,
+            "comment": "Festival originated in colony"
+          },
+          {
+            "kind": "celebrated_by",
+            "category": "cultural",
+            "probability": 3,
+            "comment": "2-4 factions celebrate"
+          },
+          {
+            "kind": "allied_with",
+            "category": "political",
+            "probability": 6,
+            "comment": "Temporary festival alliances"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.8,
+        "clusterFormation": 0.7,
+        "diversityImpact": 0.6,
+        "comment": "Creates festivals that unite factions and reduce conflict"
+      },
+      "parameters": {
+        "stableActivationChance": {
+          "value": 0.05,
+          "min": 0.01,
+          "max": 0.2,
+          "description": "Probability when conflict is low (peaceful festivals)"
+        }
+      },
+      "tags": [
+        "festival",
+        "unity",
+        "cultural"
+      ]
     }
+  },
+  {
+    "id": "tech_breakthrough",
+    "name": "Technological Breakthrough",
+    "applicability": [
+      {
+        "type": "entity_count_min",
+        "kind": "faction",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "has_relationship",
+          "kind": "controls",
+          "direction": "src"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$tech",
+        "kind": "abilities",
+        "subtype": "technology",
+        "status": "active",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A technological breakthrough developed by {factionName} at {locationName}",
+          "replacements": {
+            "factionName": "$target.name",
+            "locationName": "$location.name"
+          }
+        },
+        "tags": {
+          "technology": true,
+          "innovation": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "practitioner_of",
+        "src": "$target",
+        "dst": "$tech",
+        "strength": 0.9,
+        "catalyzedBy": "$leader"
+      },
+      {
+        "kind": "originated_in",
+        "src": "$tech",
+        "dst": "$location",
+        "strength": 0.7
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$leader",
+        "dst": "$tech",
+        "strength": 1,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$leader"
+        }
+      },
+      {
+        "kind": "derived_from",
+        "src": "$tech",
+        "dst": "$existingTech",
+        "strength": 0.6,
+        "distance": {
+          "min": 0.1,
+          "max": 0.3
+        },
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$existingTech"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$location": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "controls",
+            "direction": "src"
+          },
+          "pickStrategy": "random"
+        }
+      },
+      "$leader": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "leader_of",
+            "direction": "dst"
+          },
+          "pickStrategy": "first"
+        }
+      },
+      "$existingTech": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "practitioner_of",
+            "direction": "src"
+          },
+          "filters": [
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "exists",
+                "path": [],
+                "where": [
+                  {
+                    "type": "kind_equals",
+                    "kind": "abilities"
+                  },
+                  {
+                    "type": "subtype_equals",
+                    "subtype": "technology"
+                  }
+                ]
+              }
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "abilities",
+            "subtype": "technology",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "practitioner_of",
+            "category": "institutional",
+            "probability": 1,
+            "comment": "Faction adopts new tech"
+          },
+          {
+            "kind": "originated_in",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Tech originated at location"
+          },
+          {
+            "kind": "derived_from",
+            "category": "immutable_fact",
+            "probability": 0.8,
+            "comment": "Tech lineage from existing tech"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.4,
+        "clusterFormation": 0.5,
+        "diversityImpact": 0.8,
+        "comment": "Expands technological capabilities"
+      },
+      "parameters": {
+        "innovationRate": {
+          "value": 0.5,
+          "min": 0.2,
+          "max": 0.9,
+          "description": "How frequently technological breakthroughs occur"
+        }
+      },
+      "tags": [
+        "world-level",
+        "technological",
+        "innovation"
+      ]
+    }
+  },
+  {
+    "id": "magical_site_discovery",
+    "name": "Magical Site Discovery",
+    "applicability": [
+      {
+        "type": "entity_count_min",
+        "kind": "abilities",
+        "subtype": "magic",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_relationship",
+      "kind": "abilities",
+      "subtypes": [
+        "magic"
+      ],
+      "relationshipKind": "practitioner_of",
+      "mustHave": true,
+      "direction": "dst",
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$site",
+        "kind": "location",
+        "subtype": "anomaly",
+        "status": "thriving",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$practitioner"
+        },
+        "description": {
+          "template": "A mystical site where {magicName} manifests with unusual intensity",
+          "replacements": {
+            "magicName": "$target.name"
+          }
+        },
+        "tags": {
+          "anomaly": true,
+          "magical": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$practitioner"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "manifests_at",
+        "src": "$target",
+        "dst": "$site",
+        "strength": 0.8,
+        "catalyzedBy": "$practitioner"
+      },
+      {
+        "kind": "discovered_by",
+        "src": "$site",
+        "dst": "$practitioner",
+        "strength": 1
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$practitioner": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "practitioner_of",
+            "direction": "dst"
+          },
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "location",
+            "subtype": "anomaly",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "manifests_at",
+            "category": "magical",
+            "probability": 1,
+            "comment": "Magic manifests at discovered location"
+          },
+          {
+            "kind": "discovered_by",
+            "category": "attribution",
+            "probability": 1,
+            "comment": "Practitioner discovers site"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.4,
+        "clusterFormation": 0.5,
+        "diversityImpact": 0.7,
+        "comment": "Expands magical landscape with new anomaly locations"
+      },
+      "parameters": {
+        "discoveryRate": {
+          "value": 0.4,
+          "min": 0.1,
+          "max": 0.8,
+          "description": "How frequently practitioners discover new magical sites"
+        }
+      },
+      "tags": [
+        "world-level",
+        "magical",
+        "discovery"
+      ]
+    }
+  },
+  {
+    "id": "orca_combat_technique",
+    "name": "Orca Combat Technique",
+    "applicability": [
+      {
+        "type": "entity_count_min",
+        "kind": "npc",
+        "subtype": "orca",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": [
+        "orca"
+      ],
+      "filters": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "count": 1,
+            "path": [
+              {
+                "via": "practitioner_of",
+                "direction": "out",
+                "targetKind": "abilities"
+              }
+            ]
+          }
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$technique",
+        "kind": "abilities",
+        "subtype": "combat",
+        "status": "active",
+        "prominence": {
+          "random": [
+            "recognized",
+            "renowned"
+          ]
+        },
+        "culture": "orca",
+        "description": {
+          "template": "A devastating combat technique used by orca raiders, witnessed when {orcaName} attacked",
+          "replacements": {
+            "orcaName": "$target.name"
+          }
+        },
+        "tags": {
+          "combat": true,
+          "orca": true,
+          "offensive": true,
+          "external": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "practitioner_of",
+        "src": "$target",
+        "dst": "$technique",
+        "strength": 0.9
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$otherOrca",
+        "dst": "$technique",
+        "strength": 0.8,
+        "condition": {
+          "type": "random_chance",
+          "chance": 0.6
+        }
+      },
+      {
+        "kind": "related_to",
+        "src": "$technique",
+        "dst": "$existingCombat",
+        "strength": 0.5,
+        "distance": {
+          "min": 0.2,
+          "max": 0.4
+        },
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$existingCombat"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$otherOrca": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "npc",
+          "subtypes": [
+            "orca"
+          ],
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$target"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$existingCombat": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "subtypes": [
+            "combat"
+          ],
+          "statusFilter": "active",
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "abilities",
+            "subtype": "combat",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 0.6
+              },
+              {
+                "level": "renowned",
+                "probability": 0.4
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "practitioner_of",
+            "category": "institutional",
+            "probability": 1,
+            "comment": "Orcas practice technique"
+          },
+          {
+            "kind": "related_to",
+            "category": "immutable_fact",
+            "probability": 0.5,
+            "comment": "Related to existing combat technique"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.2,
+        "clusterFormation": 0.3,
+        "diversityImpact": 0.7,
+        "comment": "Creates fearsome orca combat techniques"
+      },
+      "tags": [
+        "combat",
+        "external-threat",
+        "ability-creation"
+      ]
+    }
+  },
+  {
+    "id": "tech_innovation",
+    "name": "Technology Development",
+    "applicability": [
+      {
+        "type": "entity_count_min",
+        "kind": "faction",
+        "subtype": "company",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "subtypes": [
+        "company"
+      ],
+      "filters": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "count": 3,
+            "path": [
+              {
+                "via": "wields",
+                "direction": "out",
+                "targetKind": "abilities"
+              }
+            ]
+          }
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$technology",
+        "kind": "abilities",
+        "subtype": "technology",
+        "status": "discovered",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "Innovation developed by {factionName}",
+          "replacements": {
+            "factionName": "$target.name"
+          }
+        },
+        "tags": {
+          "technology": true,
+          "innovation": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            { "kind": "abilities", "subtype": "technology", "status": "discovered" },
+            { "kind": "abilities", "status": "discovered" }
+          ],
+          "distanceRange": { "min": 10, "max": 30 }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "wields",
+        "src": "$target",
+        "dst": "$technology",
+        "strength": 0.8
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$member1",
+        "dst": "$technology",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$member1"
+        }
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$member2",
+        "dst": "$technology",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$member2"
+        }
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$member3",
+        "dst": "$technology",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$member3"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$member1": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "pickStrategy": "random"
+        }
+      },
+      "$member2": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$member1"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$member3": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$member1",
+                "$member2"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "abilities",
+            "subtype": "technology",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "marginal",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "wields",
+            "category": "cultural",
+            "probability": 1,
+            "comment": "Faction wields technology"
+          },
+          {
+            "kind": "practitioner_of",
+            "category": "cultural",
+            "probability": 2,
+            "comment": "1-3 faction members practice"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.4,
+        "clusterFormation": 0.5,
+        "diversityImpact": 0.7,
+        "comment": "Creates technology abilities developed by merchant factions"
+      },
+      "parameters": {
+        "maxPractitioners": {
+          "value": 3,
+          "min": 1,
+          "max": 10,
+          "description": "Maximum number of faction members who practice new technology"
+        },
+        "maxTechPerFaction": {
+          "value": 4,
+          "min": 1,
+          "max": 10,
+          "description": "Maximum technologies per faction"
+        }
+      },
+      "tags": [
+        "technology",
+        "ability-creation"
+      ]
+    }
+  },
+  {
+    "id": "magic_discovery",
+    "name": "Magical Discovery",
+    "applicability": [
+      {
+        "type": "pressure_threshold",
+        "pressureId": "magical_instability",
+        "min": 10,
+        "max": 70,
+        "extremeChance": 0.4
+      },
+      {
+        "type": "entity_count_max",
+        "kind": "abilities",
+        "subtype": "magic",
+        "max": 15
+      },
+      {
+        "type": "entity_count_min",
+        "kind": "npc",
+        "subtype": "hero",
+        "min": 1
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "subtypes": [
+        "hero"
+      ],
+      "filters": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "count": 1,
+            "path": [
+              {
+                "via": "discoverer_of",
+                "direction": "out",
+                "targetKind": "abilities"
+              }
+            ]
+          }
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$magic",
+        "kind": "abilities",
+        "subtype": "magic",
+        "status": "emergent",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "Mystical ability discovered by {heroName}",
+          "replacements": {
+            "heroName": "$target.name"
+          }
+        },
+        "tags": {
+          "magic": true,
+          "mystical": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            { "kind": "abilities", "subtype": "magic", "status": "discovered" },
+            { "kind": "abilities", "status": "discovered" }
+          ],
+          "distanceRange": { "min": 20, "max": 50 }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "discoverer_of",
+        "src": "$target",
+        "dst": "$magic",
+        "strength": 1
+      },
+      {
+        "kind": "manifests_at",
+        "src": "$magic",
+        "dst": "$anomaly",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$anomaly"
+        }
+      },
+      {
+        "kind": "related_to",
+        "src": "$magic",
+        "dst": "$existingMagic",
+        "strength": 0.5,
+        "distance": {
+          "min": 50,
+          "max": 90
+        },
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$existingMagic"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$anomaly": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "location",
+          "subtypes": [
+            "anomaly"
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$existingMagic": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "subtypes": [
+            "magic"
+          ],
+          "filters": [
+            {
+              "type": "lacks_relationship",
+              "kind": "lost"
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "abilities",
+            "subtype": "magic",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "discoverer_of",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Hero discovers magic"
+          },
+          {
+            "kind": "manifests_at",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Magic manifests at anomaly"
+          },
+          {
+            "kind": "related_to",
+            "category": "immutable_fact",
+            "probability": 0.7,
+            "comment": "Related to existing magic"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.3,
+        "clusterFormation": 0.4,
+        "diversityImpact": 0.9,
+        "comment": "Creates mystical abilities linked to anomalies and heroes"
+      },
+      "parameters": {
+        "maxDiscoveriesPerHero": {
+          "value": 2,
+          "min": 1,
+          "max": 5,
+          "description": "Maximum abilities a single hero can discover"
+        }
+      },
+      "tags": [
+        "mystical",
+        "ability-creation"
+      ]
+    }
+  },
+  {
+    "id": "ideology_emergence",
+    "name": "Ideological Movement",
+    "applicability": [
+      {
+        "type": "or",
+        "rules": [
+          {
+            "type": "pressure_threshold",
+            "pressureId": "cultural_tension",
+            "min": 30,
+            "max": 100,
+            "extremeChance": 0.5
+          },
+          {
+            "type": "pressure_threshold",
+            "pressureId": "stability",
+            "min": 0,
+            "max": 40,
+            "extremeChance": 0.3
+          }
+        ]
+      },
+      {
+        "type": "entity_count_min",
+        "kind": "npc",
+        "min": 10
+      }
+    ],
+    "selection": {
+      "strategy": "by_preference_order",
+      "kind": "npc",
+      "subtypePreferences": [
+        "hero"
+      ],
+      "statusFilter": "alive",
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$ideology",
+        "kind": "rules",
+        "subtype": {
+          "random": [
+            "edict",
+            "taboo",
+            "social"
+          ]
+        },
+        "status": "proposed",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "An ideology championed by {championName}. This belief is spreading through whispered conversations and passionate debates.",
+          "replacements": {
+            "championName": "$target.name"
+          }
+        },
+        "tags": {
+          "ideology": true,
+          "cultural": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "champion_of",
+        "src": "$target",
+        "dst": "$ideology",
+        "strength": 1
+      },
+      {
+        "kind": "originated_in",
+        "src": "$ideology",
+        "dst": "$championLocation",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$championLocation"
+        }
+      },
+      {
+        "kind": "believer_of",
+        "src": "$factionMember1",
+        "dst": "$ideology",
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$factionMember1"
+        }
+      },
+      {
+        "kind": "believer_of",
+        "src": "$factionMember2",
+        "dst": "$ideology",
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$factionMember2"
+        }
+      },
+      {
+        "kind": "believer_of",
+        "src": "$factionMember3",
+        "dst": "$ideology",
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$factionMember3"
+        }
+      },
+      {
+        "kind": "related_to",
+        "src": "$ideology",
+        "dst": "$existingIdeology",
+        "strength": 0.5,
+        "distance": {
+          "min": 0.4,
+          "max": 0.7
+        },
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$existingIdeology"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "cultural_tension",
+        "delta": 3
+      }
+    ],
+    "variables": {
+      "$championLocation": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "resident_of",
+            "direction": "src"
+          },
+          "pickStrategy": "first"
+        }
+      },
+      "$championFaction": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "member_of",
+            "direction": "src"
+          },
+          "pickStrategy": "first"
+        }
+      },
+      "$factionMember1": {
+        "select": {
+          "from": {
+            "relatedTo": "$championFaction",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$target"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$factionMember2": {
+        "select": {
+          "from": {
+            "relatedTo": "$championFaction",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$target",
+                "$factionMember1"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$factionMember3": {
+        "select": {
+          "from": {
+            "relatedTo": "$championFaction",
+            "relationship": "member_of",
+            "direction": "dst"
+          },
+          "filters": [
+            {
+              "type": "exclude",
+              "entities": [
+                "$target",
+                "$factionMember1",
+                "$factionMember2"
+              ]
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      },
+      "$existingIdeology": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "rules",
+          "filters": [
+            {
+              "type": "lacks_relationship",
+              "kind": "repealed"
+            },
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "exists",
+                "path": [],
+                "where": [
+                  {
+                    "type": "subtype_equals",
+                    "subtype": "social"
+                  }
+                ]
+              }
+            }
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "rules",
+            "subtype": "various",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "marginal",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "champion_of",
+            "category": "social",
+            "probability": 1,
+            "comment": "Champion promotes ideology"
+          },
+          {
+            "kind": "originated_in",
+            "category": "immutable_fact",
+            "probability": 0.8,
+            "comment": "Ideology originated in location"
+          },
+          {
+            "kind": "believer_of",
+            "category": "social",
+            "probability": 7,
+            "comment": "3-8 initial believers"
+          },
+          {
+            "kind": "related_to",
+            "category": "immutable_fact",
+            "probability": 0.5,
+            "comment": "Related to existing ideology"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.6,
+        "clusterFormation": 0.7,
+        "diversityImpact": 0.8,
+        "comment": "Creates ideological movements that spread through social networks"
+      },
+      "parameters": {
+        "unstableActivationChance": {
+          "value": 0.3,
+          "min": 0.1,
+          "max": 0.7,
+          "description": "Probability when stability is low"
+        }
+      },
+      "tags": [
+        "ideology",
+        "cultural-shift",
+        "belief-driven"
+      ]
+    }
+  },
+  {
+    "id": "strategic_location_discovery",
+    "name": "Strategic Site Discovery",
+    "applicability": [
+      {
+        "type": "pressure_threshold",
+        "pressureId": "conflict",
+        "min": 15,
+        "max": 90,
+        "extremeChance": 0.3
+      }
+    ],
+    "selection": {
+      "strategy": "by_preference_order",
+      "kind": "npc",
+      "subtypePreferences": [
+        "hero",
+        "outlaw",
+        "mayor"
+      ],
+      "statusFilter": "alive",
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$site",
+        "kind": "location",
+        "subtype": "geographic_feature",
+        "status": "unspoiled",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A strategic position discovered by {discovererName} providing tactical advantage",
+          "replacements": {
+            "discovererName": "$target.name"
+          }
+        },
+        "tags": {
+          "strategic": true,
+          "tactical": true,
+          "discovered": true
+        },
+        "placement": {
+          "type": "near_entity",
+          "entity": "$target"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "explorer_of",
+        "src": "$target",
+        "dst": "$site",
+        "strength": 0.9
+      },
+      {
+        "kind": "discovered_by",
+        "src": "$site",
+        "dst": "$target",
+        "strength": 0.9
+      },
+      {
+        "kind": "adjacent_to",
+        "src": "$site",
+        "dst": "$nearbyLocation",
+        "bidirectional": true,
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$nearbyLocation"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {
+      "$nearbyLocation": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "location",
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "location",
+            "subtype": "geographic_feature",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "explorer_of",
+            "category": "spatial",
+            "probability": 1,
+            "comment": "Scout finds strategic position"
+          },
+          {
+            "kind": "discovered_by",
+            "category": "spatial",
+            "probability": 1,
+            "comment": "Strategic location discovered"
+          },
+          {
+            "kind": "adjacent_to",
+            "category": "spatial",
+            "probability": 0.8,
+            "comment": "Adjacent to nearby location"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.4,
+        "clusterFormation": 0.4,
+        "diversityImpact": 0.7,
+        "comment": "Creates strategic locations discovered during conflict"
+      },
+      "tags": [
+        "emergent",
+        "strategic",
+        "conflict-driven"
+      ]
+    }
+  },
+  {
+    "id": "thermal_colony_decline",
+    "name": "Colony Thermal Decline",
+    "description": "Colonies in extreme temperature zones begin to wane",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "thermal_stress"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "stressed_colony",
+          "kind": "location",
+          "subtype": "colony",
+          "status": "thriving",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "thermal_stress"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [],
+      "stateUpdates": [
+        {
+          "target": "$stressed_colony",
+          "status": "waning",
+          "addTags": [
+            "climate_displaced"
+          ],
+          "removeTags": [
+            "thermal_stress"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0,
+      "clusterFormation": 0,
+      "diversityImpact": 0.3,
+      "comment": "Colonies in extreme temperatures decline"
+    },
+    "tags": [
+      "thermal",
+      "colony",
+      "status-change"
+    ]
+  },
+  {
+    "id": "thermal_colony_recovery",
+    "name": "Colony Thermal Recovery",
+    "description": "Waning colonies in temperate zones recover",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "recovery_ready"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "recovering_colony",
+          "kind": "location",
+          "subtype": "colony",
+          "status": "waning",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "recovery_ready"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [],
+      "stateUpdates": [
+        {
+          "target": "$recovering_colony",
+          "status": "thriving",
+          "addTags": [
+            "climate_adapted"
+          ],
+          "removeTags": [
+            "recovery_ready",
+            "climate_displaced"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0,
+      "clusterFormation": 0,
+      "diversityImpact": 0.2,
+      "comment": "Colonies recover in temperate zones"
+    },
+    "tags": [
+      "thermal",
+      "colony",
+      "recovery"
+    ]
+  },
+  {
+    "id": "thermal_migration",
+    "name": "Thermal Migration",
+    "description": "NPCs flee extreme temperatures for temperate refuges",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "extreme_hot"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "extreme_location",
+          "kind": "location",
+          "filters": [
+            {
+              "type": "has_any_tag",
+              "tags": [
+                "extreme_hot",
+                "extreme_cold"
+              ]
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        },
+        {
+          "variable": "migrant",
+          "kind": "npc",
+          "status": "alive",
+          "filters": [
+            {
+              "type": "has_relationship",
+              "relationshipKind": "resident_of",
+              "target": "$extreme_location",
+              "direction": "src"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        },
+        {
+          "variable": "refuge",
+          "kind": "location",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "temperate"
+            },
+            {
+              "type": "not_entity",
+              "entity": "$extreme_location"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [
+        {
+          "kind": "resident_of",
+          "src": "$migrant",
+          "dst": "$refuge",
+          "category": "spatial",
+          "probability": 0.5,
+          "comment": "NPC migrates to temperate refuge"
+        }
+      ],
+      "stateUpdates": [
+        {
+          "target": "$migrant",
+          "addTags": [
+            "climate_refugee"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0.2,
+      "clusterFormation": 0.3,
+      "diversityImpact": 0.4,
+      "comment": "Population displacement due to temperature"
+    },
+    "tags": [
+      "thermal",
+      "migration",
+      "npc"
+    ]
+  },
+  {
+    "id": "ice_memory_thaw",
+    "name": "Ice Memory Thaw",
+    "description": "Warming reveals frozen abilities at thaw candidate locations",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "thaw_candidate"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "thaw_location",
+          "kind": "location",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "thaw_candidate"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        },
+        {
+          "variable": "frozen_ability",
+          "kind": "abilities",
+          "status": "active",
+          "filters": [
+            {
+              "type": "no_relationship",
+              "relationshipKind": "manifests_at",
+              "target": "$thaw_location",
+              "direction": "src"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [
+        {
+          "kind": "manifests_at",
+          "src": "$frozen_ability",
+          "dst": "$thaw_location",
+          "category": "spatial",
+          "probability": 0.1,
+          "comment": "Frozen ability revealed by warming"
+        }
+      ],
+      "stateUpdates": [
+        {
+          "target": "$thaw_location",
+          "addTags": [
+            "recently_thawed"
+          ],
+          "removeTags": [
+            "thaw_candidate"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0.3,
+      "clusterFormation": 0.2,
+      "diversityImpact": 0.5,
+      "comment": "Ice memory thaw reveals frozen abilities"
+    },
+    "tags": [
+      "thermal",
+      "discovery",
+      "abilities"
+    ]
+  },
+  {
+    "id": "economic_colony_decline",
+    "name": "Colony Economic Decline",
+    "description": "Colonies with resource scarcity begin to wane",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "economic_stress"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "stressed_colony",
+          "kind": "location",
+          "subtype": "colony",
+          "status": "thriving",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "economic_stress"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [],
+      "stateUpdates": [
+        {
+          "target": "$stressed_colony",
+          "status": "waning",
+          "addTags": [
+            "resource_depleted"
+          ],
+          "removeTags": [
+            "economic_stress"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0,
+      "clusterFormation": 0,
+      "diversityImpact": 0.3,
+      "comment": "Resource-scarce colonies decline"
+    },
+    "tags": [
+      "economic",
+      "colony",
+      "status-change"
+    ]
+  },
+  {
+    "id": "economic_colony_recovery",
+    "name": "Colony Economic Recovery",
+    "description": "Waning colonies with abundant resources recover",
+    "template": {
+      "applicability": [
+        {
+          "type": "tag_exists",
+          "tagName": "prosperity_ready"
+        }
+      ],
+      "selection": [
+        {
+          "variable": "recovering_colony",
+          "kind": "location",
+          "subtype": "colony",
+          "status": "waning",
+          "filters": [
+            {
+              "type": "has_tag",
+              "tag": "prosperity_ready"
+            }
+          ],
+          "count": 1,
+          "bias": "random"
+        }
+      ],
+      "creation": [],
+      "relationships": [],
+      "stateUpdates": [
+        {
+          "target": "$recovering_colony",
+          "status": "thriving",
+          "addTags": [
+            "economically_recovered"
+          ],
+          "removeTags": [
+            "prosperity_ready",
+            "resource_depleted"
+          ]
+        }
+      ]
+    },
+    "effects": {
+      "graphDensity": 0,
+      "clusterFormation": 0,
+      "diversityImpact": 0.2,
+      "comment": "Colonies recover with abundant resources"
+    },
+    "tags": [
+      "economic",
+      "colony",
+      "recovery"
+    ]
   }
 ]

@@ -194,36 +194,11 @@ describe('universalCatalyst', () => {
       expect(universalCatalyst.id).toBe('universal_catalyst');
     });
 
-    it('should have STATE_MODIFICATION purpose', () => {
-      expect(universalCatalyst.contract?.purpose).toBe(ComponentPurpose.STATE_MODIFICATION);
-    });
-
-    it('should require minimum NPCs', () => {
-      const contract = universalCatalyst.contract;
-      expect(contract?.enabledBy?.entityCounts).toBeDefined();
-      const npcReq = contract?.enabledBy?.entityCounts?.find(ec => ec.kind === 'npc');
-      expect(npcReq?.min).toBeGreaterThan(0);
-    });
+    // Note: contract.purpose and contract.affects removed - contracts now only contain lineage config
+    // Systems don't need contracts since they don't create entities that need ancestor linking
   });
 
-  describe('parameters', () => {
-    it('should have actionAttemptRate', () => {
-      expect(universalCatalyst.metadata?.parameters?.actionAttemptRate).toBeDefined();
-      expect(universalCatalyst.metadata?.parameters?.actionAttemptRate?.value).toBeGreaterThan(0);
-    });
-
-    it('should have influenceGain', () => {
-      expect(universalCatalyst.metadata?.parameters?.influenceGain).toBeDefined();
-    });
-
-    it('should have influenceLoss', () => {
-      expect(universalCatalyst.metadata?.parameters?.influenceLoss).toBeDefined();
-    });
-
-    it('should have pressureMultiplier', () => {
-      expect(universalCatalyst.metadata?.parameters?.pressureMultiplier).toBeDefined();
-    });
-  });
+  // Note: Parameters are now passed via config, not metadata. See systemInterpreter.ts
 
   describe('apply', () => {
     it('should return valid SystemResult', () => {
@@ -284,15 +259,6 @@ describe('universalCatalyst', () => {
   });
 
   describe('agent actions', () => {
-    it('should enable agents to act', () => {
-      expect(universalCatalyst.metadata).toBeDefined();
-    });
-
-    it('should track influence', () => {
-      expect(universalCatalyst.metadata?.parameters?.influenceGain).toBeDefined();
-      expect(universalCatalyst.metadata?.parameters?.influenceLoss).toBeDefined();
-    });
-
     it('should consider prominence', () => {
       const renownedNpc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
@@ -308,30 +274,7 @@ describe('universalCatalyst', () => {
     });
   });
 
-  describe('effects', () => {
-    it('should have positive graph density effect', () => {
-      expect(universalCatalyst.metadata?.effects?.graphDensity).toBeGreaterThan(0);
-    });
-
-    it('should have positive cluster formation effect', () => {
-      expect(universalCatalyst.metadata?.effects?.clusterFormation).toBeGreaterThan(0);
-    });
-  });
-
-  describe('parameter bounds', () => {
-    it('should have sensible parameter bounds', () => {
-      const params = universalCatalyst.metadata?.parameters;
-
-      if (params) {
-        Object.entries(params).forEach(([key, config]) => {
-          if ('min' in config && 'max' in config && 'value' in config) {
-            expect(config.value).toBeGreaterThanOrEqual(config.min);
-            expect(config.value).toBeLessThanOrEqual(config.max);
-          }
-        });
-      }
-    });
-  });
+  // Note: Effects and parameter bounds are now defined in the config, not metadata
 
   describe('action domains', () => {
     it('should work with empty action domains', () => {
@@ -437,25 +380,8 @@ describe('universalCatalyst', () => {
     });
   });
 
-  describe('entity modification', () => {
-    it('should modify NPCs', () => {
-      const contract = universalCatalyst.contract;
-      const npcModify = contract?.affects?.entities?.find(e => e.kind === 'npc');
-      expect(npcModify?.operation).toBe('modify');
-    });
-
-    it('should modify factions', () => {
-      const contract = universalCatalyst.contract;
-      const factionModify = contract?.affects?.entities?.find(e => e.kind === 'faction');
-      expect(factionModify?.operation).toBe('modify');
-    });
-
-    it('should modify occurrences', () => {
-      const contract = universalCatalyst.contract;
-      const occurrenceModify = contract?.affects?.entities?.find(e => e.kind === 'occurrence');
-      expect(occurrenceModify?.operation).toBe('modify');
-    });
-  });
+  // Note: entity modification tests removed - contract.affects has been removed
+  // Systems describe their effects via metadata.produces, not contracts
 
   describe('action execution with domain handlers', () => {
     it('should execute successful actions', () => {
@@ -471,11 +397,16 @@ describe('universalCatalyst', () => {
         entitiesModified: [agent.id]
       });
 
-      mockGraph.config.domain.getActionDomains = () => [{
+      mockGraph.config.actionDomains = [{
         id: 'diplomatic',
+        name: 'Diplomatic Actions',
+        description: 'Diplomatic actions',
+        validActors: ['npc'],
         actions: [{
-          id: 'form_alliance',
           type: 'form_alliance',
+          name: 'Form Alliance',
+          description: 'Form alliance',
+          domain: 'diplomatic',
           baseSuccessChance: 0.8,
           baseWeight: 1.0,
           handler: mockActionHandler
@@ -507,11 +438,16 @@ describe('universalCatalyst', () => {
     });
 
     it('should handle action without handler', () => {
-      mockGraph.config.domain.getActionDomains = () => [{
+      mockGraph.config.actionDomains = [{
         id: 'military',
+        name: 'Military Actions',
+        description: 'Military actions',
+        validActors: ['npc'],
         actions: [{
-          id: 'attack',
           type: 'attack',
+          name: 'Attack',
+          description: 'Attack',
+          domain: 'military',
           baseSuccessChance: 0.7,
           baseWeight: 1.0
           // No handler - should fail gracefully

@@ -60,7 +60,7 @@ const VALID_SUBNAV = {
   names: ['workshop', 'optimizer', 'generate'],
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
   coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
-  simulation: ['configure', 'run', 'results'],
+  simulation: ['configure', 'targets', 'run', 'results'],
   archivist: ['explorer'],
 };
 
@@ -215,8 +215,18 @@ export default function App() {
     [save]
   );
 
+  const updateActions = useCallback(
+    (actions) => save({ actions }),
+    [save]
+  );
+
   const updateTagRegistry = useCallback(
     (tagRegistry) => save({ tagRegistry }),
+    [save]
+  );
+
+  const updateDistributionTargets = useCallback(
+    (distributionTargets) => save({ distributionTargets }),
     [save]
   );
 
@@ -396,6 +406,8 @@ export default function App() {
             onPressuresChange={updatePressures}
             generators={currentProject?.generators || []}
             onGeneratorsChange={updateGenerators}
+            actions={currentProject?.actions || []}
+            onActionsChange={updateActions}
             systems={currentProject?.systems || []}
             onSystemsChange={updateSystems}
             activeSection={activeSection}
@@ -416,6 +428,8 @@ export default function App() {
             namingData={namingData}
             semanticData={semanticData}
             cultureVisuals={cultureVisuals}
+            distributionTargets={currentProject?.distributionTargets || null}
+            onDistributionTargetsChange={updateDistributionTargets}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
             onViewInArchivist={handleViewInArchivist}

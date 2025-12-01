@@ -46,7 +46,7 @@ describe('connectionEvolution', () => {
       expect(system.id).toBe('test_evolution');
       expect(system.name).toBe('Test Evolution');
       expect(system.apply).toBeDefined();
-      expect(system.contract).toBeDefined();
+      // Note: contract removed from systems - only generators need lineage config
     });
   });
 

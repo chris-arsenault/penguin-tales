@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
+import { SimulationSystem, SystemResult } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import {
   FRAMEWORK_ENTITY_KINDS,
@@ -6,6 +6,7 @@ import {
   FRAMEWORK_RELATIONSHIP_KINDS
 } from '../core/frameworkPrimitives';
 import { TemplateGraphView } from '../graph/templateGraphView';
+import type { EraTransitionConfig } from '../engine/systemInterpreter';
 
 /**
  * Era Transition System
@@ -23,205 +24,155 @@ import { TemplateGraphView } from '../graph/templateGraphView';
  * 4. Create historical event for era transition
  * 5. Apply era-specific effects (optional)
  */
-export const eraTransition: SimulationSystem = {
-  id: 'era_transition',
-  name: 'Era Progression',
 
-  contract: {
-    purpose: ComponentPurpose.PHASE_TRANSITION,
-    affects: {
-      entities: [
-        {
-          kind: FRAMEWORK_ENTITY_KINDS.ERA,
-          operation: 'modify',
-          count: { min: 2, max: 2 }
-        }
-      ],
-      relationships: [
-        {
-          kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
-          operation: 'create',
-          count: { min: 0, max: 10 }
-        }
-      ]
-    }
-  },
+/**
+ * Create an Era Transition system with the given configuration.
+ */
+export function createEraTransitionSystem(config: EraTransitionConfig): SimulationSystem {
+  // Extract config with defaults
+  const minEraLength = config.minEraLength ?? 50;
+  const transitionCooldown = config.transitionCooldown ?? 10;
 
-  metadata: {
-    produces: {
-      relationships: [],
-      modifications: [
-        { type: 'status', frequency: 'rare', comment: 'Era status changes (current → past → future → current)' }
-      ]
-    },
-    effects: {
-      graphDensity: 0.0,
-      clusterFormation: 0.0,
-      diversityImpact: 0.8,
-      comment: 'Era transitions reshape world dynamics via template weights and system modifiers'
-    },
-    parameters: {
-      minEraLength: {
-        value: 50,
-        min: 20,
-        max: 200,
-        description: 'Minimum ticks before era can transition'
-      },
-      transitionCooldown: {
-        value: 10,
-        min: 5,
-        max: 50,
-        description: 'Ticks between transitions to prevent rapid cycling'
+  return {
+    id: config.id || 'era_transition',
+    name: config.name || 'Era Progression',
+
+    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+      // Find current era entity
+      const currentEra = graphView.findEntities({
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
+        status: FRAMEWORK_STATUS.CURRENT
+      })[0];
+
+      if (!currentEra) {
+        // No current era - try to activate first future era
+        return activateFirstEra(graphView);
       }
-    },
-    triggers: {
-      graphConditions: [
-        'Era minimum length met',
-        'Domain transition conditions satisfied'
-      ],
-      comment: 'Runs every tick, checks transition conditions'
-    }
-  },
 
-  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
-    const params = eraTransition.metadata?.parameters || {};
-    const minEraLength = params.minEraLength?.value ?? 50;
-    const transitionCooldown = params.transitionCooldown?.value ?? 10;
+      // Check minimum era length
+      const eraAge = graphView.tick - currentEra.createdAt;
+      if (eraAge < minEraLength) {
+        return {
+          relationshipsAdded: [],
+          entitiesModified: [],
+          pressureChanges: {},
+          description: `${currentEra.name} continues (${eraAge}/${minEraLength} ticks)`
+        };
+      }
 
-    // Find current era entity
-    const currentEra = graphView.findEntities({
-      kind: FRAMEWORK_ENTITY_KINDS.ERA,
-      status: FRAMEWORK_STATUS.CURRENT
-    })[0];
+      // Check transition cooldown (prevent rapid cycling)
+      if (!currentEra.temporal?.startTick) {
+        // Initialize temporal tracking if missing
+        currentEra.temporal = {
+          startTick: graphView.tick - eraAge,
+          endTick: null
+        };
+      }
 
-    if (!currentEra) {
-      // No current era - try to activate first future era
-      return activateFirstEra(graphView);
-    }
+      const timeSinceStart = graphView.tick - currentEra.temporal.startTick;
+      if (timeSinceStart < transitionCooldown) {
+        return {
+          relationshipsAdded: [],
+          entitiesModified: [],
+          pressureChanges: {},
+          description: `${currentEra.name} stabilizing`
+        };
+      }
 
-    // Check minimum era length
-    const eraAge = graphView.tick - currentEra.createdAt;
-    if (eraAge < minEraLength) {
-      return {
-        relationshipsAdded: [],
-        entitiesModified: [],
-        pressureChanges: {},
-        description: `${currentEra.name} continues (${eraAge}/${minEraLength} ticks)`
-      };
-    }
+      // Check domain-defined transition conditions
+      const shouldTransition = checkTransitionConditions(currentEra, graphView, minEraLength);
 
-    // Check transition cooldown (prevent rapid cycling)
-    if (!currentEra.temporal?.startTick) {
-      // Initialize temporal tracking if missing
-      currentEra.temporal = {
-        startTick: graphView.tick - eraAge,
+      if (!shouldTransition) {
+        return {
+          relationshipsAdded: [],
+          entitiesModified: [],
+          pressureChanges: {},
+          description: `${currentEra.name} persists`
+        };
+      }
+
+      // Find next era (first entity with status: 'future')
+      const nextEra = graphView.findEntities({
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
+        status: FRAMEWORK_STATUS.FUTURE
+      })[0];
+
+      if (!nextEra) {
+        // No more eras - current era continues indefinitely
+        return {
+          relationshipsAdded: [],
+          entitiesModified: [],
+          pressureChanges: {},
+          description: `${currentEra.name} endures (final era)`
+        };
+      }
+
+      // Perform transition
+      currentEra.status = FRAMEWORK_STATUS.HISTORICAL;
+      currentEra.temporal!.endTick = graphView.tick;
+      currentEra.updatedAt = graphView.tick;
+
+      nextEra.status = FRAMEWORK_STATUS.CURRENT;
+      nextEra.temporal = {
+        startTick: graphView.tick,
         endTick: null
       };
-    }
+      nextEra.updatedAt = graphView.tick;
 
-    const timeSinceStart = graphView.tick - currentEra.temporal.startTick;
-    if (timeSinceStart < transitionCooldown) {
-      return {
-        relationshipsAdded: [],
-        entitiesModified: [],
-        pressureChanges: {},
-        description: `${currentEra.name} stabilizing`
-      };
-    }
+      // Update graph's currentEra reference
+      // Find matching era in config
+      const configEra = graphView.config.eras.find(e => e.id === nextEra.subtype);
+      if (configEra) {
+        graphView.setCurrentEra(configEra);
+      }
 
-    // Check domain-defined transition conditions
-    const shouldTransition = checkTransitionConditions(currentEra, graphView);
+      // Create active_during relationships for prominent entities in the ending era
+      const relationshipsAdded: any[] = [];
+      const prominentEntities = graphView.getEntities().filter(e =>
+        (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
+        e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
+        e.createdAt >= currentEra.temporal!.startTick &&
+        e.createdAt < graphView.tick
+      );
 
-    if (!shouldTransition) {
-      return {
-        relationshipsAdded: [],
-        entitiesModified: [],
-        pressureChanges: {},
-        description: `${currentEra.name} persists`
-      };
-    }
-
-    // Find next era (first entity with status: 'future')
-    const nextEra = graphView.findEntities({
-      kind: FRAMEWORK_ENTITY_KINDS.ERA,
-      status: FRAMEWORK_STATUS.FUTURE
-    })[0];
-
-    if (!nextEra) {
-      // No more eras - current era continues indefinitely
-      return {
-        relationshipsAdded: [],
-        entitiesModified: [],
-        pressureChanges: {},
-        description: `${currentEra.name} endures (final era)`
-      };
-    }
-
-    // Perform transition
-    currentEra.status = FRAMEWORK_STATUS.HISTORICAL;
-    currentEra.temporal!.endTick = graphView.tick;
-    currentEra.updatedAt = graphView.tick;
-
-    nextEra.status = FRAMEWORK_STATUS.CURRENT;
-    nextEra.temporal = {
-      startTick: graphView.tick,
-      endTick: null
-    };
-    nextEra.updatedAt = graphView.tick;
-
-    // Update graph's currentEra reference
-    // Find matching era in config
-    const configEra = graphView.config.eras.find(e => e.id === nextEra.subtype);
-    if (configEra) {
-      graphView.setCurrentEra(configEra);
-    }
-
-    // Create active_during relationships for prominent entities in the ending era
-    const relationshipsAdded: any[] = [];
-    const prominentEntities = graphView.getEntities().filter(e =>
-      (e.prominence === 'recognized' || e.prominence === 'renowned' || e.prominence === 'mythic') &&
-      e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
-      e.createdAt >= currentEra.temporal!.startTick &&
-      e.createdAt < graphView.tick
-    );
-
-    // Link up to 10 most prominent entities to the ending era
-    prominentEntities.slice(0, 10).forEach(entity => {
-      relationshipsAdded.push({
-        kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
-        src: entity.id,
-        dst: currentEra.id,
-        strength: 1.0,
-        createdAt: graphView.tick
+      // Link up to 10 most prominent entities to the ending era
+      prominentEntities.slice(0, 10).forEach(entity => {
+        relationshipsAdded.push({
+          kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
+          src: entity.id,
+          dst: currentEra.id,
+          strength: 1.0,
+          createdAt: graphView.tick
+        });
+        // Note: entity.links will be updated by addRelationship() in worldEngine
       });
-      // Note: entity.links will be updated by addRelationship() in worldEngine
-    });
 
-    // Create history event
-    graphView.addHistoryEvent({
-      tick: graphView.tick,
-      era: nextEra.subtype,
-      type: 'special',
-      description: `The ${currentEra.name} ends. The ${nextEra.name} begins.`,
-      entitiesCreated: [],
-      relationshipsCreated: relationshipsAdded,
-      entitiesModified: [currentEra.id, nextEra.id]
-    });
+      // Create history event
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: nextEra.subtype,
+        type: 'special',
+        description: `The ${currentEra.name} ends. The ${nextEra.name} begins.`,
+        entitiesCreated: [],
+        relationshipsCreated: relationshipsAdded,
+        entitiesModified: [currentEra.id, nextEra.id]
+      });
 
-    // Apply era transition effects (domain-specific)
-    const transitionEffects = graphView.config.domain.getEraTransitionEffects?.(currentEra, nextEra, graphView) || {};
+      // Apply era transition effects (domain-specific)
+      const transitionEffects = graphView.config.domain.getEraTransitionEffects?.(currentEra, nextEra, graphView) || {};
 
-    return {
-      relationshipsAdded,
-      entitiesModified: [
-        { id: currentEra.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEra.temporal } },
-        { id: nextEra.id, changes: { status: FRAMEWORK_STATUS.CURRENT, temporal: nextEra.temporal } }
-      ],
-      pressureChanges: transitionEffects.pressureChanges || {},
-      description: `Era transition: ${currentEra.name} → ${nextEra.name} (${prominentEntities.length} entities linked)`
-    };
-  }
-};
+      return {
+        relationshipsAdded,
+        entitiesModified: [
+          { id: currentEra.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEra.temporal } },
+          { id: nextEra.id, changes: { status: FRAMEWORK_STATUS.CURRENT, temporal: nextEra.temporal } }
+        ],
+        pressureChanges: transitionEffects.pressureChanges || {},
+        description: `Era transition: ${currentEra.name} → ${nextEra.name} (${prominentEntities.length} entities linked)`
+      };
+    }
+  };
+}
 
 /**
  * Activate the first era if no current era exists
@@ -265,13 +216,13 @@ function activateFirstEra(graphView: TemplateGraphView): SystemResult {
  * Check if conditions are met for era transition
  * Uses domain-defined transition logic
  */
-function checkTransitionConditions(currentEra: HardState, graphView: TemplateGraphView): boolean {
+function checkTransitionConditions(currentEra: HardState, graphView: TemplateGraphView, minEraLength: number): boolean {
   // Get domain-specific transition conditions
   const transitionConditions = graphView.config.domain.getEraTransitionConditions?.(currentEra.subtype);
 
   if (!transitionConditions) {
     // No domain-specific conditions - use default heuristics
-    return checkDefaultTransitionConditions(currentEra, graphView);
+    return checkDefaultTransitionConditions(currentEra, graphView, minEraLength);
   }
 
   // Check each condition
@@ -294,14 +245,13 @@ function checkTransitionConditions(currentEra: HardState, graphView: TemplateGra
 /**
  * Default transition conditions (if domain doesn't define custom logic)
  */
-function checkDefaultTransitionConditions(currentEra: HardState, graphView: TemplateGraphView): boolean {
+function checkDefaultTransitionConditions(currentEra: HardState, graphView: TemplateGraphView, minEraLength: number): boolean {
   const eraAge = currentEra.temporal
     ? graphView.tick - currentEra.temporal.startTick
     : graphView.tick - currentEra.createdAt;
 
   // Simple heuristic: transition after era has lasted 2x minimum length
-  const minLength = eraTransition.metadata?.parameters?.minEraLength?.value ?? 50;
-  return eraAge > minLength * 2;
+  return eraAge > minEraLength * 2;
 }
 
 /**
@@ -375,3 +325,12 @@ function checkTimeCondition(condition: any, currentEra: HardState, graphView: Te
 
   return eraAge > condition.minTicks;
 }
+
+/**
+ * Default Era Transition instance (for backwards compatibility).
+ * @deprecated Use createEraTransitionSystem() instead.
+ */
+export const eraTransition = createEraTransitionSystem({
+  id: 'era_transition',
+  name: 'Era Progression'
+});

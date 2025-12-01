@@ -68,9 +68,8 @@ export class ValidationOrchestrator {
   ): void {
     // Contract enforcement
     console.log('✓ Contract enforcement enabled');
-    console.log('  - Template filtering by enabledBy conditions');
+    console.log('  - Template filtering by applicability rules');
     console.log('  - Automatic lineage relationship creation');
-    console.log('  - Entity saturation control');
     console.log('  - Contract affects validation');
 
     // Target selection

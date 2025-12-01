@@ -1,5 +1,49 @@
 [
   {
+    "systemType": "eraSpawner",
+    "config": {
+      "id": "era_spawner",
+      "name": "Era Initialization",
+      "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
+      "ticksPerEra": 30
+    }
+  },
+  {
+    "systemType": "eraTransition",
+    "config": {
+      "id": "era_transition",
+      "name": "Era Progression",
+      "description": "Handles transitions between eras based on world state and domain-defined conditions. Updates era status from future → current → historical.",
+      "minEraLength": 50,
+      "transitionCooldown": 10
+    }
+  },
+  {
+    "systemType": "universalCatalyst",
+    "config": {
+      "id": "universal_catalyst",
+      "name": "Agent Actions",
+      "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection, success/failure, and influence tracking.",
+      "actionAttemptRate": 0.3,
+      "influenceGain": 0.1,
+      "influenceLoss": 0.05,
+      "pressureMultiplier": 1.5
+    }
+  },
+  {
+    "systemType": "relationshipMaintenance",
+    "config": {
+      "id": "relationship_maintenance",
+      "name": "Relationship Maintenance",
+      "description": "Handles decay, reinforcement, and culling of relationships. Maintains relationship health over time.",
+      "maintenanceFrequency": 5,
+      "cullThreshold": 0.15,
+      "gracePeriod": 20,
+      "reinforcementBonus": 0.02,
+      "maxStrength": 1.0
+    }
+  },
+  {
     "systemType": "graphContagion",
     "config": {
       "id": "conflict_contagion",
@@ -180,6 +224,430 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.2
+    }
+  },
+  {
+    "systemType": "clusterFormation",
+    "config": {
+      "id": "magic_school_formation",
+      "name": "Magic School Formation",
+      "description": "Clusters magic abilities into unified schools to create narrative density",
+      "entityFilter": {
+        "kind": "abilities",
+        "excludeSubtypes": ["combat", "physical"]
+      },
+      "runAtEpochEnd": true,
+      "clustering": {
+        "minSize": 3,
+        "maxSize": 8,
+        "criteria": [
+          { "type": "shared_relationship", "weight": 5.0, "relationshipKind": "practitioner_of", "direction": "dst" },
+          { "type": "same_culture", "weight": 4.0 },
+          { "type": "shared_tags", "weight": 2.0, "threshold": 0.3 },
+          { "type": "temporal_proximity", "weight": 1.5, "threshold": 50 }
+        ],
+        "minimumScore": 5.0
+      },
+      "metaEntity": {
+        "kind": "abilities",
+        "subtypeFromMajority": true,
+        "status": "active",
+        "prominenceFromSize": { "marginal": 3, "recognized": 4, "renowned": 6 },
+        "additionalTags": [],
+        "descriptionTemplate": "A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins."
+      },
+      "postProcess": {
+        "pressureChanges": { "stability": 2 }
+      }
+    }
+  },
+  {
+    "systemType": "clusterFormation",
+    "config": {
+      "id": "combat_technique_formation",
+      "name": "Combat Technique Formation",
+      "description": "Clusters combat abilities into unified fighting styles",
+      "entityFilter": {
+        "kind": "abilities",
+        "subtypes": ["combat", "physical"]
+      },
+      "runAtEpochEnd": true,
+      "clustering": {
+        "minSize": 3,
+        "maxSize": 8,
+        "criteria": [
+          { "type": "shared_relationship", "weight": 5.0, "relationshipKind": "practitioner_of", "direction": "dst" },
+          { "type": "same_culture", "weight": 4.0 },
+          { "type": "shared_tags", "weight": 2.0, "threshold": 0.3 },
+          { "type": "temporal_proximity", "weight": 1.5, "threshold": 50 }
+        ],
+        "minimumScore": 5.0
+      },
+      "metaEntity": {
+        "kind": "abilities",
+        "subtypeFromMajority": true,
+        "status": "active",
+        "prominenceFromSize": { "marginal": 3, "recognized": 4, "renowned": 6 },
+        "additionalTags": ["combat-style"],
+        "descriptionTemplate": "A unified combat tradition encompassing {names}. Mastered by warriors who practice {count} techniques in harmony."
+      },
+      "postProcess": {
+        "pressureChanges": { "stability": 2 }
+      }
+    }
+  },
+  {
+    "systemType": "clusterFormation",
+    "config": {
+      "id": "legal_code_formation",
+      "name": "Legal Code Formation",
+      "description": "Clusters rules into unified legal codes with governance factions",
+      "entityFilter": {
+        "kind": "rules"
+      },
+      "runAtEpochEnd": true,
+      "clustering": {
+        "minSize": 4,
+        "criteria": [
+          { "type": "same_culture", "weight": 5.0 },
+          { "type": "temporal_proximity", "weight": 2.0, "threshold": 40 }
+        ],
+        "minimumScore": 5.0
+      },
+      "metaEntity": {
+        "kind": "rules",
+        "subtypeFromMajority": true,
+        "status": "enacted",
+        "prominenceFromSize": { "marginal": 4, "recognized": 5, "renowned": 7 },
+        "additionalTags": [],
+        "descriptionTemplate": "A unified legal system encompassing {names}. Codified from {count} related rules."
+      },
+      "postProcess": {
+        "createGovernanceFaction": true,
+        "governanceFactionSubtype": "political",
+        "governanceRelationship": "weaponized_by",
+        "pressureChanges": { "stability": 5 }
+      }
+    }
+  },
+  {
+    "systemType": "graphContagion",
+    "config": {
+      "id": "belief_contagion",
+      "name": "Ideological Spread",
+      "description": "Models ideological spread through social networks using SIR epidemic model",
+      "entityKind": "npc",
+      "entityStatus": "alive",
+      "contagion": {
+        "type": "relationship",
+        "relationshipKind": "believer_of"
+      },
+      "vectors": [
+        { "relationshipKind": "follower_of", "direction": "both", "minStrength": 0.3 },
+        { "relationshipKind": "member_of", "direction": "src", "minStrength": 0.3 }
+      ],
+      "transmission": {
+        "baseRate": 0.15,
+        "contactMultiplier": 0.05,
+        "maxProbability": 0.95
+      },
+      "infectionAction": {
+        "type": "create_relationship",
+        "relationshipKind": "believer_of",
+        "strength": 0.5
+      },
+      "recovery": {
+        "baseRate": 0.03,
+        "recoveryBonusTraits": [
+          { "tag": "traditional", "bonus": 0.15 },
+          { "tag": "conservative", "bonus": 0.15 }
+        ]
+      },
+      "susceptibilityModifiers": [
+        { "tag": "traditional", "modifier": 0.3 },
+        { "tag": "conservative", "modifier": 0.3 },
+        { "tag": "radical", "modifier": -0.2 },
+        { "tag": "innovator", "modifier": -0.2 }
+      ],
+      "phaseTransitions": [
+        {
+          "entityKind": "rules",
+          "fromStatus": "proposed",
+          "toStatus": "enacted",
+          "adoptionThreshold": 0.2,
+          "descriptionSuffix": "This belief has spread widely and is now established tradition."
+        }
+      ],
+      "multiSource": {
+        "sourceKind": "rules",
+        "sourceStatus": "proposed",
+        "immunityTagPrefix": "immune",
+        "lowAdoptionThreshold": 0.05,
+        "lowAdoptionStatus": "forgotten"
+      },
+      "pressureChanges": { "cultural_tension": -10, "stability": 5 }
+    }
+  },
+  {
+    "systemType": "tagDiffusion",
+    "config": {
+      "id": "cultural_drift",
+      "name": "Cultural Evolution",
+      "description": "Connected colonies become more similar, isolated colonies diverge",
+      "entityKind": "location",
+      "entitySubtype": "colony",
+      "connectionKind": "adjacent_to",
+      "connectionDirection": "both",
+      "convergence": {
+        "tags": ["unified", "trading", "peaceful"],
+        "minConnections": 1,
+        "probability": 0.3,
+        "maxSharedTags": 2
+      },
+      "divergence": {
+        "tags": ["isolated", "unique", "divergent"],
+        "maxConnections": 0,
+        "probability": 0.3
+      },
+      "maxTags": 10,
+      "divergencePressure": {
+        "pressureName": "cultural_tension",
+        "minDivergent": 2,
+        "delta": 10
+      }
+    }
+  },
+  {
+    "systemType": "planeDiffusion",
+    "config": {
+      "id": "thermal_diffusion",
+      "name": "Thermal Diffusion",
+      "description": "Heat spreads from volcanic sources, absorbed by deep ice sinks",
+      "entityKind": "location",
+      "sources": {
+        "tagFilter": "volcanic",
+        "defaultStrength": 1.0
+      },
+      "sinks": {
+        "tagFilter": "deep_ice",
+        "defaultStrength": 0.5
+      },
+      "diffusion": {
+        "rate": 0.1,
+        "falloff": "inverse_square",
+        "maxRadius": 50
+      },
+      "outputTags": [
+        { "tag": "extreme_hot", "minValue": 0.85 },
+        { "tag": "hot_zone", "minValue": 0.6, "maxValue": 0.85 },
+        { "tag": "temperate", "minValue": 0.3, "maxValue": 0.6 },
+        { "tag": "cold_zone", "minValue": 0.15, "maxValue": 0.3 },
+        { "tag": "extreme_cold", "maxValue": 0.15 }
+      ],
+      "valueTag": "temperature"
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "thermal_stress_detector",
+      "name": "Thermal Stress Detector",
+      "description": "Detects colonies in extreme temperature zones and marks them as stressed",
+      "entityFilter": {
+        "kind": "location",
+        "subtype": "colony",
+        "status": "thriving"
+      },
+      "conditions": [
+        {
+          "type": "has_any_tag",
+          "tags": ["extreme_hot", "extreme_cold"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "thermal_stress",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "thermal_recovery_detector",
+      "name": "Thermal Recovery Detector",
+      "description": "Detects waning colonies in temperate zones ready to recover",
+      "entityFilter": {
+        "kind": "location",
+        "subtype": "colony",
+        "status": "waning",
+        "hasTag": "temperate"
+      },
+      "conditions": [
+        {
+          "type": "tag_absent",
+          "tag": "thermal_stress"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "recovery_ready",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "thermal_discovery_detector",
+      "name": "Thermal Discovery Detector",
+      "description": "Detects warming locations where ice memory may thaw",
+      "entityFilter": {
+        "kind": "location",
+        "hasTag": "hot_zone",
+        "notHasTag": "recently_thawed"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "manifests_at",
+          "relationshipDirection": "dst",
+          "maxCount": 2
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "thaw_candidate",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5
+    }
+  },
+  {
+    "systemType": "planeDiffusion",
+    "config": {
+      "id": "resource_diffusion",
+      "name": "Resource Diffusion",
+      "description": "Resource availability spreads from resource-rich locations",
+      "entityKind": "location",
+      "sources": {
+        "tagFilter": "resource",
+        "defaultStrength": 1.0
+      },
+      "diffusion": {
+        "rate": 0.15,
+        "falloff": "inverse_square",
+        "maxRadius": 40
+      },
+      "outputTags": [
+        { "tag": "resource_abundant", "minValue": 0.6 },
+        { "tag": "resource_moderate", "minValue": 0.3, "maxValue": 0.6 },
+        { "tag": "resource_scarce", "maxValue": 0.3 }
+      ],
+      "valueTag": "resource_level"
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "economic_stress_detector",
+      "name": "Economic Stress Detector",
+      "description": "Detects colonies with resource scarcity and high population",
+      "entityFilter": {
+        "kind": "location",
+        "subtype": "colony",
+        "status": "thriving",
+        "hasTag": "resource_scarce"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "resident_of",
+          "relationshipDirection": "dst",
+          "minCount": 3
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "economic_stress",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3,
+      "pressureChanges": { "resource_scarcity": 15 }
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "economic_prosperity_detector",
+      "name": "Economic Prosperity Detector",
+      "description": "Detects waning colonies with abundant resources ready to recover",
+      "entityFilter": {
+        "kind": "location",
+        "subtype": "colony",
+        "status": "waning",
+        "hasTag": "resource_abundant"
+      },
+      "conditions": [
+        {
+          "type": "tag_absent",
+          "tag": "economic_stress"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "prosperity_ready",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3,
+      "pressureChanges": { "resource_scarcity": -5 }
+    }
+  },
+  {
+    "systemType": "connectionEvolution",
+    "config": {
+      "id": "merchant_prosperity",
+      "name": "Merchant Prosperity",
+      "description": "Merchant factions controlling abundant colonies gain prominence",
+      "entityKind": "faction",
+      "entitySubtype": "company",
+      "metric": {
+        "type": "tagged_connection_count",
+        "relationshipKind": "controls",
+        "direction": "src",
+        "targetTag": "resource_abundant"
+      },
+      "rules": [
+        {
+          "condition": {
+            "operator": ">=",
+            "threshold": 1
+          },
+          "probability": 0.2,
+          "action": {
+            "type": "adjust_prominence",
+            "direction": "up"
+          }
+        }
+      ],
+      "throttleChance": 0.3
     }
   }
 ]

@@ -15,7 +15,6 @@ import {
   ImageGenerationService,
   normalizeInitialState,
   validateWorld,
-  applyParameterOverrides,
   relationshipMaintenance
 } from '@lore-weave/core';
 
@@ -32,7 +31,6 @@ import {
   allTemplates,
   allSystems as penguinSystems,
   initialState as penguinInitialState,
-  penguinEntityRegistries,
   penguinTagRegistry
 } from './index.js';
 // penguinLoreProvider moved to illuminator project
@@ -41,7 +39,6 @@ import {
 
 // Import configuration (domain-specific parameters)
 import distributionTargetsData from './config/json/distributionTargets.json' with { type: 'json' };
-import parameterOverridesData from './config/json/templateSystemParameters.json' with { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,51 +73,23 @@ function scaleDistributionTargets(targets: any, scale: number): any {
 
 const scaledDistributionTargets = scaleDistributionTargets(distributionTargetsData, SCALE_FACTOR);
 
-// Scale entity registries (shallow clone that preserves functions)
-function scaleEntityRegistries(registries: any[], scale: number): any[] {
-  return registries.map(registry => {
-    // Shallow clone the registry, preserving functions
-    const scaled = { ...registry };
-
-    // Scale creators targetCount (create new array to avoid mutating original)
-    if (registry.creators) {
-      scaled.creators = registry.creators.map((creator: any) => ({
-        ...creator,
-        targetCount: creator.targetCount ? Math.ceil(creator.targetCount * scale) : creator.targetCount
-      }));
-    }
-
-    // Scale expectedDistribution.targetCount (create new object to avoid mutating original)
-    if (registry.expectedDistribution?.targetCount) {
-      scaled.expectedDistribution = {
-        ...registry.expectedDistribution,
-        targetCount: Math.ceil(registry.expectedDistribution.targetCount * scale)
-      };
-    }
-
-    return scaled;
-  });
-}
-
-const scaledEntityRegistries = scaleEntityRegistries(penguinEntityRegistries, SCALE_FACTOR);
+// Entity registries removed - lineage and saturation now handled via:
+// - contract.lineage in generators (for ancestor relationships)
+// - applicability rules: entity_count_max (for saturation)
 
 // Parse CLI arguments
-function parseArgs(): { runId?: string; configPath?: string } {
+function parseArgs(): { runId?: string } {
   const args = process.argv.slice(2);
   let runId: string | undefined;
-  let configPath: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--run-id' && i + 1 < args.length) {
       runId = args[i + 1];
       i++;
-    } else if (args[i] === '--config' && i + 1 < args.length) {
-      configPath = args[i + 1];
-      i++;
     }
   }
 
-  return { runId, configPath };
+  return { runId };
 }
 
 // LLM / lore configuration (default disabled to prevent accidents)
@@ -162,45 +131,11 @@ const imageGenerationService = imageGenEnabled
   ? new ImageGenerationService(imageGenConfig)
   : undefined;
 
-// Parse CLI arguments and load appropriate config
+// Parse CLI arguments
 const cliArgs = parseArgs();
-let parameterOverrides = parameterOverridesData;
-
-// Load config in priority order:
-// 1. Explicit --config path
-// 2. Run-specific config (./config/runs/{runId}/templateSystemParameters.json)
-// 3. Default config (./config/templateSystemParameters.json)
-if (cliArgs.configPath) {
-  // Explicit config path provided
-  const customConfigPath = path.join(__dirname, 'config/json', cliArgs.configPath);
-  if (fs.existsSync(customConfigPath)) {
-    parameterOverrides = JSON.parse(fs.readFileSync(customConfigPath, 'utf-8'));
-    console.log(`📂 Using config: ${cliArgs.configPath}`);
-  } else {
-    console.warn(`⚠️  Custom config not found: ${customConfigPath}, using default`);
-  }
-} else if (cliArgs.runId) {
-  // Check for run-specific config
-  const runConfigPath = path.join(__dirname, `config/json/runs/${cliArgs.runId}/templateSystemParameters.json`);
-  if (fs.existsSync(runConfigPath)) {
-    parameterOverrides = JSON.parse(fs.readFileSync(runConfigPath, 'utf-8'));
-    console.log(`📂 Using run-specific config: config/json/runs/${cliArgs.runId}/templateSystemParameters.json`);
-  } else {
-    console.log(`📂 Using default config (no run-specific config found)`);
-  }
-} else {
-  console.log(`📂 Using default config`);
-}
 
 // Combine domain systems with framework systems
 const allSystemsCombined = [...penguinSystems, relationshipMaintenance];
-
-// Apply parameter overrides from config file
-const { templates: configuredTemplates, systems: configuredSystems } = applyParameterOverrides(
-  allTemplates,
-  allSystemsCombined,
-  parameterOverrides as any
-);
 
 // Configuration
 const config: EngineConfig = {
@@ -208,10 +143,10 @@ const config: EngineConfig = {
   domain: penguinDomain,
 
   eras: [],  // Eras now managed by canonry
-  templates: configuredTemplates,
-  systems: configuredSystems,
+  templates: allTemplates,
+  systems: allSystemsCombined,
   pressures: [],  // Pressures now managed by canonry
-  entityRegistries: scaledEntityRegistries,  // Framework formalization: entity operator registry (scaled)
+  // entityRegistries removed - lineage/saturation now in generator contracts
   llmConfig,
   enrichmentConfig,
 

@@ -248,35 +248,17 @@ export interface DomainSchema {
   validateEntityStructure?(entity: HardState): { valid: boolean; missing: string[] };
 
   // ===========================
-  // CATALYST SYSTEM EXTENSIONS
+  // CATALYST SYSTEM EXTENSIONS (LEGACY - use actions.json instead)
   // ===========================
 
-  /** Optional: Get action domains for catalyst system */
-  getActionDomains?(): any[];
-
-  /** Optional: Get pressure-domain mappings */
-  getPressureDomainMappings?(): Record<string, string[]>;
-
-  /** Optional: Get occurrence creation triggers */
+  /** @deprecated Use getOccurrenceTriggers via declarative systems */
   getOccurrenceTriggers?(): Record<string, any>;
 
-  /** Optional: Get era transition conditions */
+  /** @deprecated Use era transition conditions via declarative systems */
   getEraTransitionConditions?(eraSubtype: string): any[];
 
-  /** Optional: Get era transition effects */
+  /** @deprecated Use era transition effects via declarative systems */
   getEraTransitionEffects?(fromEra: HardState, toEra: HardState, graph: any): any;
-
-  // ===========================
-  // CATALYST SYSTEM - ENTITY ACTION DOMAINS
-  // ===========================
-
-  /**
-   * Get action domains for an entity based on its kind and subtype.
-   * This is domain-specific logic that maps entity types to their capabilities.
-   * @param entity - The entity to check
-   * @returns Array of action domain IDs
-   */
-  getActionDomainsForEntity?(entity: HardState): string[];
 
   // ===========================
   // SEMANTIC AXIS CONFIG

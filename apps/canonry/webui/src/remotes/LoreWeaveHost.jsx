@@ -46,6 +46,8 @@ export default function LoreWeaveHost({
   namingData,
   semanticData,
   cultureVisuals,
+  distributionTargets,
+  onDistributionTargetsChange,
   activeSection,
   onSectionChange,
   onViewInArchivist,
@@ -64,6 +66,8 @@ export default function LoreWeaveHost({
           namingData={namingData}
           semanticData={semanticData}
           cultureVisuals={cultureVisuals}
+          distributionTargets={distributionTargets}
+          onDistributionTargetsChange={onDistributionTargetsChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
           onViewInArchivist={onViewInArchivist}

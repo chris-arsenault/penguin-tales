@@ -7,12 +7,25 @@
  * Runs at startup to catch configuration errors before generation begins.
  */
 
-import { EngineConfig, ComponentPurpose, Pressure, EntityOperatorRegistry } from '../engine/types';
+import { EngineConfig, Pressure, EntityOperatorRegistry, SimulationSystem } from '../engine/types';
+import { DeclarativeSystem } from './systemInterpreter';
 
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+/**
+ * Get the ID from a system, handling both SimulationSystem and DeclarativeSystem
+ */
+function getSystemId(system: SimulationSystem | DeclarativeSystem): string {
+  if ('systemType' in system) {
+    // DeclarativeSystem has config.id
+    return system.config.id;
+  }
+  // SimulationSystem has direct id
+  return system.id;
 }
 
 export class FrameworkValidator {
@@ -69,7 +82,7 @@ export class FrameworkValidator {
 
       // Validate modifiers exist in systems
       for (const modifier of registry.modifiers) {
-        const system = this.config.systems.find(s => s.id === modifier.systemId);
+        const system = this.config.systems.find(s => getSystemId(s) === modifier.systemId);
         if (!system) {
           errors.push(`Entity kind '${registry.kind}' references non-existent system: ${modifier.systemId}`);
         }
@@ -211,80 +224,12 @@ export class FrameworkValidator {
   /**
    * Validate Contracts
    *
-   * Validates that component contracts are consistent:
-   * - Purpose matches component type
-   * - Affects declarations are valid
-   * - EnabledBy references exist
+   * Note: Contract validation removed. Contracts are now empty.
+   * Lineage is now handled via inline lineage specs on CreationRule
+   * in declarative templates.
    */
   private validateContracts(errors: string[], warnings: string[]): void {
-    // Validate template contracts
-    for (const template of this.config.templates) {
-      if (!template.contract) {
-        warnings.push(`Template '${template.id}' has no contract`);
-        continue;
-      }
-
-      // Template contracts should have ENTITY_CREATION or RELATIONSHIP_CREATION purpose
-      if (template.contract.purpose !== ComponentPurpose.ENTITY_CREATION &&
-          template.contract.purpose !== ComponentPurpose.RELATIONSHIP_CREATION) {
-        warnings.push(
-          `Template '${template.id}' has purpose ${template.contract.purpose}, ` +
-          `expected ENTITY_CREATION or RELATIONSHIP_CREATION`
-        );
-      }
-
-      // Validate enabledBy pressures exist
-      if (template.contract.enabledBy?.pressures) {
-        for (const p of template.contract.enabledBy.pressures) {
-          if (!this.config.pressures.find(pressure => pressure.id === p.name || pressure.name === p.name)) {
-            errors.push(`Template '${template.id}' references non-existent pressure: ${p.name}`);
-          }
-        }
-      }
-
-      // Validate enabledBy entity kinds exist
-      if (template.contract.enabledBy?.entityCounts) {
-        for (const e of template.contract.enabledBy.entityCounts) {
-          if (!this.entityKindExists(e.kind)) {
-            errors.push(`Template '${template.id}' references non-existent entity kind: ${e.kind}`);
-          }
-        }
-      }
-
-      // Validate affects entities
-      if (template.contract.affects.entities) {
-        for (const e of template.contract.affects.entities) {
-          if (!this.entityKindExists(e.kind)) {
-            errors.push(`Template '${template.id}' affects non-existent entity kind: ${e.kind}`);
-          }
-        }
-      }
-    }
-
-    // Validate system contracts
-    for (const system of this.config.systems) {
-      if (!system.contract) {
-        warnings.push(`System '${system.id}' has no contract`);
-        continue;
-      }
-
-      // System contracts should not be ENTITY_CREATION
-      if (system.contract.purpose === ComponentPurpose.ENTITY_CREATION) {
-        errors.push(
-          `System '${system.id}' has purpose ENTITY_CREATION - ` +
-          `systems should not create entities, use templates instead`
-        );
-      }
-
-      // Validate similar fields as templates
-      if (system.contract.enabledBy?.pressures) {
-        for (const p of system.contract.enabledBy.pressures) {
-          if (!this.config.pressures.find(pressure => pressure.id === p.name || pressure.name === p.name)) {
-            errors.push(`System '${system.id}' references non-existent pressure: ${p.name}`);
-          }
-        }
-      }
-    }
+    // Contracts are now empty - no validation needed
   }
 
   /**
@@ -298,7 +243,7 @@ export class FrameworkValidator {
       case 'template':
         return this.config.templates.some(t => t.id === id);
       case 'system':
-        return this.config.systems.some(s => s.id === id);
+        return this.config.systems.some(s => getSystemId(s) === id);
       case 'pressure':
         return this.config.pressures.some(p => p.name === id || p.id === id);
       case 'time':
@@ -332,5 +277,18 @@ export class FrameworkValidator {
 
     // Fallback: assume standard kinds
     return ['npc', 'faction', 'location', 'abilities', 'rules'].includes(kind);
+  }
+
+  /**
+   * Check if a relationship kind exists in the domain schema
+   */
+  private relationshipKindExists(kind: string): boolean {
+    // Check domain schema
+    if (this.config.domain && this.config.domain.relationshipKinds) {
+      return this.config.domain.relationshipKinds.some(rkd => rkd.kind === kind);
+    }
+
+    // Fallback: assume common relationship kinds
+    return ['member_of', 'leader_of', 'ally_of', 'enemy_of', 'resident_of', 'inspired_by'].includes(kind);
   }
 }

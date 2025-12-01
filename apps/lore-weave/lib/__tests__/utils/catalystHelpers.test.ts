@@ -558,7 +558,8 @@ describe('initializeCatalystSmart', () => {
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
     expect(entity.catalyst?.actionDomains).toContain('political');
-    expect(entity.catalyst?.actionDomains).toContain('military');
+    expect(entity.catalyst?.actionDomains).toContain('economic');
+    expect(entity.catalyst?.actionDomains).toContain('cultural');
     expect(entity.catalyst?.influence).toBe(0.5); // Recognized prominence
   });
 
@@ -622,7 +623,7 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('conflict_escalation');
-    expect(entity.catalyst?.actionDomains).toContain('military');
+    expect(entity.catalyst?.actionDomains).toContain('disaster_spread');
   });
 
   it('should handle anomaly locations', () => {
@@ -633,7 +634,6 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.actionDomains).toContain('environmental');
-    expect(entity.catalyst?.actionDomains).toContain('magical');
   });
 });
 

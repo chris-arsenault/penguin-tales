@@ -26,7 +26,8 @@ export function addRelationship(
 }
 
 /**
- * Add a relationship with a bounded random distance.
+ * Add a relationship with a bounded random distance (0-100 scale).
+ * Distance represents Euclidean distance on the semantic plane.
  */
 export function addRelationshipWithDistance(
   graph: Graph,
@@ -36,10 +37,10 @@ export function addRelationshipWithDistance(
   distanceRange: { min: number; max: number },
   strength: number = 0.5
 ): void {
-  // Validate range
-  if (distanceRange.min < 0 || distanceRange.max > 1 || distanceRange.min > distanceRange.max) {
-    console.warn(`Invalid distance range: [${distanceRange.min}, ${distanceRange.max}]. Using [0, 1].`);
-    distanceRange = { min: 0, max: 1 };
+  // Validate range (0-100 scale, same as coordinates)
+  if (distanceRange.min < 0 || distanceRange.max > 100 || distanceRange.min > distanceRange.max) {
+    console.warn(`Invalid distance range: [${distanceRange.min}, ${distanceRange.max}]. Using [0, 100].`);
+    distanceRange = { min: 0, max: 100 };
   }
 
   const distance = distanceRange.min + Math.random() * (distanceRange.max - distanceRange.min);

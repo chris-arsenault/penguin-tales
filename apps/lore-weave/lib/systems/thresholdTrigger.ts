@@ -460,21 +460,7 @@ export function createThresholdTriggerSystem(
     id: config.id,
     name: config.name,
 
-    contract: {
-      purpose: ComponentPurpose.STATE_MODIFICATION,
-      enabledBy: {
-        entityCounts: [{ kind: config.entityFilter.kind, min: 1 }]
-      },
-      affects: {
-        entities: [{ kind: config.entityFilter.kind, operation: 'modify' }],
-        tags: config.actions.some(a => a.type === 'set_tag' || a.type === 'set_cluster_tag')
-          ? [{ operation: 'add', pattern: '*' }]
-          : undefined,
-        relationships: config.actions.some(a => a.type === 'create_relationship')
-          ? [{ kind: 'any', operation: 'create', count: { min: 0, max: 50 } }]
-          : undefined
-      }
-    },
+    // Note: contract removed - systems don't need lineage and affects is redundant
 
     metadata: {
       produces: {

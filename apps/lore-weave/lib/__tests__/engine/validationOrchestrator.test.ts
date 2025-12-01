@@ -289,9 +289,8 @@ describe('ValidationOrchestrator', () => {
       ValidationOrchestrator.displayServiceStatus([], false);
 
       expect(consoleLogSpy).toHaveBeenCalledWith('✓ Contract enforcement enabled');
-      expect(consoleLogSpy).toHaveBeenCalledWith('  - Template filtering by enabledBy conditions');
+      expect(consoleLogSpy).toHaveBeenCalledWith('  - Template filtering by applicability rules');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Automatic lineage relationship creation');
-      expect(consoleLogSpy).toHaveBeenCalledWith('  - Entity saturation control');
       expect(consoleLogSpy).toHaveBeenCalledWith('  - Contract affects validation');
     });
 

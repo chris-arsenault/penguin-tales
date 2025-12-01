@@ -4,6 +4,7 @@ import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
 import { DeclarativeTemplate } from './declarativeTypes';
 import { createSystemFromDeclarative, DeclarativeSystem } from './systemInterpreter';
+import { loadActions, ExecutableActionDomain } from './actionInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
@@ -149,6 +150,8 @@ export class WorldEngine {
 
     // Convert declarative systems to runtime systems
     // If system already has apply function, it's already a SimulationSystem - use as-is
+    // Framework systems (eraSpawner, eraTransition, universalCatalyst) are now included
+    // via declarative shells in systems.json, making them visible and toggleable in the UI.
     this.runtimeSystems = config.systems.map(s => {
       if (typeof (s as any).apply === 'function') {
         // Already a SimulationSystem (e.g., from tests or domain code)
@@ -156,6 +159,12 @@ export class WorldEngine {
       }
       return createSystemFromDeclarative(s as DeclarativeSystem);
     });
+
+    // Convert declarative actions to runtime action domains
+    // These are used by the universalCatalyst system
+    if (config.actions && config.actions.length > 0) {
+      config.actionDomains = loadActions(config.actions);
+    }
 
     this.config = config;
     this.statisticsCollector = new StatisticsCollector();
@@ -228,9 +237,8 @@ export class WorldEngine {
     this.contractEnforcer = new ContractEnforcer(config);
     this.emitter.log('info', 'Contract enforcement enabled', {
       features: [
-        'Template filtering by enabledBy conditions',
+        'Template filtering by applicability rules',
         'Automatic lineage relationship creation',
-        'Entity saturation control',
         'Contract affects validation'
       ]
     });
@@ -907,7 +915,7 @@ export class WorldEngine {
       })),
       unusedTemplates: unusedTemplates.map(t => ({
         templateId: t.id,
-        diagnostic: this.contractEnforcer.getDiagnostic(t, this.graph, diagnosticView)
+        diagnostic: this.contractEnforcer.getDiagnostic(t, diagnosticView)
       }))
     });
 
@@ -1016,16 +1024,9 @@ export class WorldEngine {
       const graphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
 
       // Re-filter applicable templates each iteration (graph state changes)
+      // Note: Input conditions (enabledBy) are now handled via applicability rules in canApply()
       const applicableTemplates = this.runtimeTemplates.filter(t => {
-        // ENFORCEMENT 1: Contract-based filtering (enabledBy conditions)
-        const contractCheck = this.contractEnforcer.checkContractEnabledBy(t, this.graph, graphView);
-        if (!contractCheck.allowed) return false;
-
-        // ENFORCEMENT 3: Registry-based saturation control
-        const saturationCheck = this.contractEnforcer.checkSaturation(t, this.graph);
-        if (saturationCheck.saturated) return false;
-
-        // Original canApply check (template-specific logic)
+        // canApply includes all applicability rule evaluation
         if (!t.canApply(graphView)) return false;
 
         // DIVERSITY PRESSURE: Hard cap on template runs
@@ -1129,13 +1130,9 @@ export class WorldEngine {
           }
         });
 
-        // ENFORCEMENT 2: Automatic lineage enforcement
-        // Add lineage relationships for newly created entities
-        const lineageRelationships = this.contractEnforcer.enforceLineage(
-          this.graph,
-          graphView,
-          clusterEntities
-        );
+        // NOTE: Lineage enforcement removed - lineage is now handled via:
+        // 1. near_ancestor placement type in templates (creates relationship during placement)
+        // 2. Explicit relationships in template's relationships array
 
         // ENFORCEMENT: Tag coverage validation
         // Check that entities have appropriate tag count (3-5 tags)
@@ -1158,21 +1155,8 @@ export class WorldEngine {
           }
         }
 
-        // ENFORCEMENT 4: Contract affects validation
-        // Validate that template effects match contract declarations
-        const warnings = this.contractEnforcer.validateAffects(
-          template,
-          result.entities.length,
-          result.relationships.length + lineageRelationships.length,
-          new Map() // TODO: Track pressure changes
-        );
-
-        if (warnings.length > 0) {
-          this.emitter.log('warn', `Template ${template.id} contract violations`, { violations: warnings });
-        }
-
-        // Merge lineage relationships into history
-        const allRelationships = [...result.relationships, ...lineageRelationships] as Relationship[];
+        // NOTE: Contract affects validation removed - declarative templates already
+        // define what they create, making separate validation redundant
 
         // Record history
         this.graph.history.push({
@@ -1181,7 +1165,7 @@ export class WorldEngine {
           type: 'growth',
           description: result.description,
           entitiesCreated: newIds,
-          relationshipsCreated: allRelationships,
+          relationshipsCreated: result.relationships as Relationship[],
           entitiesModified: []
         });
 

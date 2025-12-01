@@ -49,10 +49,10 @@
   --card-border: var(--border-color);
   --input-bg: var(--bg-tertiary);
 
-  /* Semantic colors */
-  --danger: #ff6b7a;
-  --success: #66ddb3;
-  --warning: #ffcc66;
+  /* Semantic colors - consistent with theme.js */
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
 
   /* Buttons */
   --button-primary: #5588ee;
@@ -88,7 +88,7 @@ body {
 .app-header {
   position: relative;
   background: var(--bg-sidebar);
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -248,11 +248,11 @@ body {
   min-width: 0;
 }
 
-/* Right Sidebar (Guide) */
+/* Right Sidebar (Guide) - responsive */
 .guide-sidebar {
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   background: var(--bg-sidebar);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
@@ -489,12 +489,12 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Cards */
+/* Cards - standardized to 16px padding */
 .card {
   background: var(--card-bg);
   border-radius: 6px;
   padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-md);
   border: 1px solid var(--card-border);
 }
 
@@ -832,6 +832,32 @@ button.sm {
 }
 
 /* ============================================
+   LARGE TABLET BREAKPOINT (1200px and below)
+   ============================================ */
+@media (max-width: 1200px) {
+  /* Narrower guide sidebar */
+  .guide-sidebar {
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+  }
+
+  /* Narrower workshop sidebar */
+  .workshop-sidebar {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+  }
+
+  /* Narrower left sidebar */
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+  }
+}
+
+/* ============================================
    TABLET BREAKPOINT (1024px and below)
    ============================================ */
 @media (max-width: 1024px) {
@@ -842,9 +868,16 @@ button.sm {
 
   /* Narrower left sidebar */
   .sidebar {
-    width: 200px;
-    min-width: 200px;
-    max-width: 200px;
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+  }
+
+  /* Narrower workshop sidebar */
+  .workshop-sidebar {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
   }
 
   /* Adjust tab nav for smaller space */

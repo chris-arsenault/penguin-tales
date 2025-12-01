@@ -16,11 +16,26 @@
 
 import React, { useState, useMemo } from 'react';
 
-const ACCENT_COLOR = '#6d28d9';
-const SUCCESS_COLOR = '#22c55e';
-const WARNING_COLOR = '#f59e0b';
-const ERROR_COLOR = '#ef4444';
-const INFO_COLOR = '#3b82f6';
+// Use Canonry theme colors for consistency
+const ACCENT_COLOR = '#a78bfa';  // Lore Weave purple (from theme.accentSimulation)
+const ACCENT_LIGHT = '#c4b5fd';  // Light purple (from theme.accentSimulationLight)
+const SUCCESS_COLOR = '#22c55e'; // theme.success
+const WARNING_COLOR = '#f59e0b'; // theme.warning
+const ERROR_COLOR = '#ef4444';   // theme.danger
+const INFO_COLOR = '#3b82f6';    // theme.accent
+
+// Background colors from theme
+const BG_PRIMARY = '#0a1929';    // theme.bgPrimary
+const BG_SECONDARY = '#1e3a5f';  // theme.bgSecondary
+const BG_TERTIARY = '#2d4a6f';   // theme.bgTertiary
+
+// Text colors from theme
+const TEXT_PRIMARY = '#ffffff';   // theme.textPrimary
+const TEXT_SECONDARY = '#93c5fd'; // theme.textSecondary
+const TEXT_MUTED = '#60a5fa';     // theme.textMuted
+
+// Border color from theme
+const BORDER_COLOR = 'rgba(59, 130, 246, 0.3)';
 
 // Shared styles
 const styles = {
@@ -29,9 +44,9 @@ const styles = {
     flexDirection: 'column',
     gap: '16px',
     padding: '16px',
-    backgroundColor: '#1a1a28',
+    backgroundColor: BG_SECONDARY,
     borderRadius: '12px',
-    border: '1px solid #2d2d3d',
+    border: `1px solid ${BORDER_COLOR}`,
   },
   overviewBar: {
     display: 'grid',
@@ -39,7 +54,7 @@ const styles = {
     gap: '16px',
     alignItems: 'center',
     padding: '16px 20px',
-    backgroundColor: '#252535',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '8px',
   },
   statusBadge: {
@@ -58,13 +73,13 @@ const styles = {
   },
   progressBar: {
     height: '8px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '4px',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    background: `linear-gradient(90deg, ${ACCENT_COLOR} 0%, #8b5cf6 100%)`,
+    background: `linear-gradient(90deg, ${ACCENT_COLOR} 0%, ${ACCENT_LIGHT} 100%)`,
     borderRadius: '4px',
     transition: 'width 0.3s ease',
   },
@@ -72,7 +87,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: '12px',
-    color: '#808090',
+    color: TEXT_MUTED,
   },
   statsRow: {
     display: 'flex',
@@ -85,11 +100,11 @@ const styles = {
   statValue: {
     fontSize: '18px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
   },
   statLabel: {
     fontSize: '11px',
-    color: '#808090',
+    color: TEXT_MUTED,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
@@ -100,7 +115,7 @@ const styles = {
     minHeight: '400px',
   },
   panel: {
-    backgroundColor: '#252535',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '8px',
     padding: '16px',
     display: 'flex',
@@ -112,12 +127,12 @@ const styles = {
     alignItems: 'center',
     marginBottom: '12px',
     paddingBottom: '12px',
-    borderBottom: '1px solid #3d3d4d',
+    borderBottom: `1px solid ${BORDER_COLOR}`,
   },
   panelTitle: {
     fontSize: '14px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
@@ -127,7 +142,7 @@ const styles = {
     overflow: 'auto',
   },
   logPanel: {
-    backgroundColor: '#252535',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '8px',
     overflow: 'hidden',
   },
@@ -136,7 +151,7 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 16px',
-    backgroundColor: '#2d2d3d',
+    backgroundColor: BG_SECONDARY,
     cursor: 'pointer',
   },
   logContent: {
@@ -148,7 +163,7 @@ const styles = {
   },
   logEntry: {
     padding: '2px 0',
-    color: '#b0b0c0',
+    color: TEXT_SECONDARY,
   },
   // Metric card styles
   metricGrid: {
@@ -157,7 +172,7 @@ const styles = {
     gap: '12px',
   },
   metricCard: {
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '8px',
     padding: '12px',
   },
@@ -169,16 +184,16 @@ const styles = {
   },
   metricName: {
     fontSize: '12px',
-    color: '#808090',
+    color: TEXT_MUTED,
   },
   metricValue: {
     fontSize: '20px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
   },
   metricBar: {
     height: '4px',
-    backgroundColor: '#3d3d4d',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '2px',
     overflow: 'hidden',
     marginTop: '8px',
@@ -194,7 +209,7 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '10px 12px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '6px',
     borderLeft: '3px solid',
   },
@@ -213,11 +228,11 @@ const styles = {
   timelineTitle: {
     fontSize: '13px',
     fontWeight: 500,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
   },
   timelineSubtitle: {
     fontSize: '11px',
-    color: '#808090',
+    color: TEXT_MUTED,
   },
   // Template list styles
   templateList: {
@@ -230,13 +245,13 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '8px 12px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '6px',
   },
   templateBar: {
     flex: 1,
     height: '6px',
-    backgroundColor: '#3d3d4d',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '3px',
     overflow: 'hidden',
   },
@@ -247,7 +262,7 @@ const styles = {
   },
   templateName: {
     fontSize: '12px',
-    color: '#b0b0c0',
+    color: TEXT_SECONDARY,
     width: '180px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -256,7 +271,7 @@ const styles = {
   templateCount: {
     fontSize: '12px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
     width: '40px',
     textAlign: 'right',
   },
@@ -270,9 +285,9 @@ const styles = {
     padding: '6px 12px',
     fontSize: '12px',
     backgroundColor: 'transparent',
-    border: '1px solid #3d3d4d',
+    border: `1px solid ${BORDER_COLOR}`,
     borderRadius: '4px',
-    color: '#808090',
+    color: TEXT_MUTED,
     cursor: 'pointer',
   },
   filterTabActive: {
@@ -286,7 +301,7 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     padding: '12px 16px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '8px',
   },
   healthDot: {
@@ -296,7 +311,7 @@ const styles = {
   },
   healthText: {
     fontSize: '14px',
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
   },
   // Pressure gauge
   pressureGauge: {
@@ -304,18 +319,18 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '8px 12px',
-    backgroundColor: '#1e1e2e',
+    backgroundColor: BG_PRIMARY,
     borderRadius: '6px',
   },
   pressureName: {
     fontSize: '12px',
-    color: '#b0b0c0',
+    color: TEXT_SECONDARY,
     width: '120px',
   },
   pressureBar: {
     flex: 1,
     height: '8px',
-    backgroundColor: '#3d3d4d',
+    backgroundColor: BG_TERTIARY,
     borderRadius: '4px',
     overflow: 'hidden',
     position: 'relative',
@@ -328,7 +343,7 @@ const styles = {
   pressureValue: {
     fontSize: '12px',
     fontWeight: 600,
-    color: '#f0f0f0',
+    color: TEXT_PRIMARY,
     width: '50px',
     textAlign: 'right',
   },
@@ -338,7 +353,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#606070',
+    color: TEXT_MUTED,
     fontSize: '14px',
     gap: '8px',
   },
@@ -353,13 +368,13 @@ function StatusBadge({ status }) {
   const getStatusConfig = (status) => {
     switch (status) {
       case 'idle':
-        return { bg: '#3d3d4d', color: '#808090', label: 'Ready', icon: '○' };
+        return { bg: BG_TERTIARY, color: TEXT_MUTED, label: 'Ready', icon: '○' };
       case 'initializing':
         return { bg: '#3b82f620', color: INFO_COLOR, label: 'Initializing', icon: '◐' };
       case 'validating':
         return { bg: '#f59e0b20', color: WARNING_COLOR, label: 'Validating', icon: '◑' };
       case 'running':
-        return { bg: '#6d28d920', color: ACCENT_COLOR, label: 'Running', icon: '●' };
+        return { bg: `${ACCENT_COLOR}20`, color: ACCENT_COLOR, label: 'Running', icon: '●' };
       case 'finalizing':
         return { bg: '#3b82f620', color: INFO_COLOR, label: 'Finalizing', icon: '◕' };
       case 'complete':
@@ -367,7 +382,7 @@ function StatusBadge({ status }) {
       case 'error':
         return { bg: '#ef444420', color: ERROR_COLOR, label: 'Error', icon: '✕' };
       default:
-        return { bg: '#3d3d4d', color: '#808090', label: status, icon: '○' };
+        return { bg: BG_TERTIARY, color: TEXT_MUTED, label: status, icon: '○' };
     }
   };
 
@@ -458,7 +473,7 @@ function EpochTimeline({ epochStats, currentEpoch, pressures }) {
           Epoch Timeline
         </div>
         {currentEpoch && (
-          <span style={{ fontSize: '12px', color: '#808090' }}>
+          <span style={{ fontSize: '12px', color: TEXT_MUTED }}>
             Era: {currentEpoch.era.name}
           </span>
         )}
@@ -477,14 +492,14 @@ function EpochTimeline({ epochStats, currentEpoch, pressures }) {
                   key={epoch.epoch}
                   style={{
                     ...styles.timelineItem,
-                    borderLeftColor: i === 0 ? ACCENT_COLOR : '#3d3d4d',
+                    borderLeftColor: i === 0 ? ACCENT_COLOR : BORDER_COLOR,
                     opacity: i === 0 ? 1 : 0.7
                   }}
                 >
                   <div style={{
                     ...styles.timelineIcon,
-                    backgroundColor: i === 0 ? `${ACCENT_COLOR}30` : '#3d3d4d',
-                    color: i === 0 ? ACCENT_COLOR : '#808090'
+                    backgroundColor: i === 0 ? `${ACCENT_COLOR}30` : BG_TERTIARY,
+                    color: i === 0 ? ACCENT_COLOR : TEXT_MUTED
                   }}>
                     {epoch.epoch}
                   </div>
@@ -501,7 +516,7 @@ function EpochTimeline({ epochStats, currentEpoch, pressures }) {
             {/* Pressure Gauges */}
             {pressures && Object.keys(pressures).length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <div style={{ fontSize: '12px', color: '#808090', marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', color: TEXT_MUTED, marginBottom: '8px' }}>
                   Current Pressures
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -587,7 +602,7 @@ function PopulationMetrics({ populationReport, epochStats }) {
         {/* Population deviations */}
         {populationReport && populationReport.entityMetrics.length > 0 && (
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#808090', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: TEXT_MUTED, marginBottom: '8px' }}>
               Population Health
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -650,7 +665,7 @@ function TemplateUsage({ templateUsage, systemHealth }) {
           <span>🔧</span>
           Template Usage
         </div>
-        <span style={{ fontSize: '12px', color: '#808090' }}>
+        <span style={{ fontSize: '12px', color: TEXT_MUTED }}>
           {templateUsage.uniqueTemplatesUsed}/{templateUsage.totalTemplates} used
         </span>
       </div>
@@ -668,7 +683,7 @@ function TemplateUsage({ templateUsage, systemHealth }) {
             </span>
             <span style={{
               fontSize: '12px',
-              color: '#808090',
+              color: TEXT_MUTED,
               marginLeft: 'auto'
             }}>
               {systemHealth.status}
@@ -704,12 +719,12 @@ function TemplateUsage({ templateUsage, systemHealth }) {
           <div style={{
             marginTop: '12px',
             padding: '8px 12px',
-            backgroundColor: '#f59e0b15',
+            backgroundColor: `${WARNING_COLOR}15`,
             borderRadius: '6px',
             fontSize: '12px',
             color: WARNING_COLOR
           }}>
-            ⚠ {templateUsage.unusedTemplates.length} templates never used
+            {templateUsage.unusedTemplates.length} templates never used
           </div>
         )}
       </div>
@@ -738,8 +753,8 @@ function LogStream({ logs, onClear }) {
     switch (level) {
       case 'error': return ERROR_COLOR;
       case 'warn': return WARNING_COLOR;
-      case 'debug': return '#6b7280';
-      default: return '#b0b0c0';
+      case 'debug': return TEXT_MUTED;
+      default: return TEXT_SECONDARY;
     }
   };
 
@@ -750,10 +765,10 @@ function LogStream({ logs, onClear }) {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 500, color: '#f0f0f0' }}>
+          <span style={{ fontSize: '14px', fontWeight: 500, color: TEXT_PRIMARY }}>
             {isExpanded ? '▼' : '▶'} Log Stream
           </span>
-          <span style={{ fontSize: '12px', color: '#808090' }}>
+          <span style={{ fontSize: '12px', color: TEXT_MUTED }}>
             {logs.length} entries
           </span>
           {logCounts.error > 0 && (
@@ -786,9 +801,9 @@ function LogStream({ logs, onClear }) {
               padding: '4px 12px',
               fontSize: '12px',
               backgroundColor: 'transparent',
-              border: '1px solid #3d3d4d',
+              border: `1px solid ${BORDER_COLOR}`,
               borderRadius: '4px',
-              color: '#808090',
+              color: TEXT_MUTED,
               cursor: 'pointer'
             }}
           >
@@ -798,7 +813,7 @@ function LogStream({ logs, onClear }) {
       </div>
       {isExpanded && logs.length > 0 && (
         <>
-          <div style={{ padding: '8px 16px', borderBottom: '1px solid #3d3d4d' }}>
+          <div style={{ padding: '8px 16px', borderBottom: `1px solid ${BORDER_COLOR}` }}>
             <div style={styles.filterTabs}>
               {['all', 'info', 'warn', 'error'].map(f => (
                 <button

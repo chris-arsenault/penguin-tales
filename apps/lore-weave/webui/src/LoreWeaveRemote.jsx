@@ -20,11 +20,13 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import ConfigurationSummary from './components/ConfigurationSummary';
+import DistributionTargetsEditor from './components/DistributionTargetsEditor';
 import SimulationRunner from './components/SimulationRunner';
 import ResultsViewer from './components/ResultsViewer';
 
 const TABS = [
   { id: 'configure', label: 'Configure' },
+  { id: 'targets', label: 'Targets' },
   { id: 'run', label: 'Run' },
   { id: 'results', label: 'Results' },
 ];
@@ -97,6 +99,8 @@ export default function LoreWeaveRemote({
   namingData = {},
   semanticData = {},
   cultureVisuals = {},
+  distributionTargets = null,
+  onDistributionTargetsChange,
   activeSection,
   onSectionChange,
   onViewInArchivist,
@@ -182,6 +186,14 @@ export default function LoreWeaveRemote({
             cultureVisuals={cultureVisuals}
             validation={configValidation}
             onNavigateToRun={() => setActiveTab('run')}
+          />
+        );
+      case 'targets':
+        return (
+          <DistributionTargetsEditor
+            distributionTargets={distributionTargets}
+            schema={schema}
+            onDistributionTargetsChange={onDistributionTargetsChange}
           />
         );
       case 'run':

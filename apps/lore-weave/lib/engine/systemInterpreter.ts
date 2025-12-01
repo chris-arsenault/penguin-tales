@@ -8,12 +8,23 @@
  * - connectionEvolution: Handles relationship strength changes over time
  * - graphContagion: Spreads states/relationships through network connections
  * - thresholdTrigger: Detects conditions and sets tags/pressures for templates
+ * - clusterFormation: Clusters similar entities into meta-entities
+ * - tagDiffusion: Propagates/diverges tags based on entity connectivity
+ * - planeDiffusion: Computes diffusion fields on semantic planes
  */
 
 import { SimulationSystem } from './types';
 import { createConnectionEvolutionSystem, ConnectionEvolutionConfig } from '../systems/connectionEvolution';
 import { createGraphContagionSystem, GraphContagionConfig } from '../systems/graphContagion';
 import { createThresholdTriggerSystem, ThresholdTriggerConfig } from '../systems/thresholdTrigger';
+import { createClusterFormationSystem, ClusterFormationConfig } from '../systems/clusterFormation';
+import { createTagDiffusionSystem, TagDiffusionConfig } from '../systems/tagDiffusion';
+import { createPlaneDiffusionSystem, PlaneDiffusionConfig } from '../systems/planeDiffusion';
+// Framework systems (configurable via factory functions)
+import { createEraSpawnerSystem } from '../systems/eraSpawner';
+import { createEraTransitionSystem } from '../systems/eraTransition';
+import { createUniversalCatalystSystem } from '../systems/universalCatalyst';
+import { createRelationshipMaintenanceSystem } from '../systems/relationshipMaintenance';
 
 // =============================================================================
 // DECLARATIVE SYSTEM TYPES
@@ -26,7 +37,14 @@ import { createThresholdTriggerSystem, ThresholdTriggerConfig } from '../systems
 export type DeclarativeSystem =
   | DeclarativeConnectionEvolutionSystem
   | DeclarativeGraphContagionSystem
-  | DeclarativeThresholdTriggerSystem;
+  | DeclarativeThresholdTriggerSystem
+  | DeclarativeClusterFormationSystem
+  | DeclarativeTagDiffusionSystem
+  | DeclarativePlaneDiffusionSystem
+  | DeclarativeEraSpawnerSystem
+  | DeclarativeEraTransitionSystem
+  | DeclarativeUniversalCatalystSystem
+  | DeclarativeRelationshipMaintenanceSystem;
 
 export interface DeclarativeConnectionEvolutionSystem {
   systemType: 'connectionEvolution';
@@ -41,6 +59,109 @@ export interface DeclarativeGraphContagionSystem {
 export interface DeclarativeThresholdTriggerSystem {
   systemType: 'thresholdTrigger';
   config: ThresholdTriggerConfig;
+}
+
+export interface DeclarativeClusterFormationSystem {
+  systemType: 'clusterFormation';
+  config: ClusterFormationConfig;
+}
+
+export interface DeclarativeTagDiffusionSystem {
+  systemType: 'tagDiffusion';
+  config: TagDiffusionConfig;
+}
+
+export interface DeclarativePlaneDiffusionSystem {
+  systemType: 'planeDiffusion';
+  config: PlaneDiffusionConfig;
+}
+
+// =============================================================================
+// FRAMEWORK SYSTEM TYPES (Configurable via JSON)
+// =============================================================================
+
+/**
+ * Base framework system config - all framework systems have id, name, description.
+ */
+export interface FrameworkSystemConfig {
+  /** Unique identifier for this system instance */
+  id: string;
+  /** Human-readable name */
+  name: string;
+  /** Optional description */
+  description?: string;
+}
+
+/**
+ * Era Spawner system config.
+ * Creates era entities at simulation start with lineage relationships.
+ */
+export interface EraSpawnerConfig extends FrameworkSystemConfig {
+  /** Expected ticks per era (for lineage distance calculation). Default: 30 */
+  ticksPerEra?: number;
+}
+
+/**
+ * Era Transition system config.
+ * Handles transitions between eras based on world state.
+ */
+export interface EraTransitionConfig extends FrameworkSystemConfig {
+  /** Minimum ticks before era can transition. Default: 50 */
+  minEraLength?: number;
+  /** Ticks between transitions to prevent rapid cycling. Default: 10 */
+  transitionCooldown?: number;
+}
+
+/**
+ * Universal Catalyst system config.
+ * Enables agents to perform domain-defined actions.
+ */
+export interface UniversalCatalystConfig extends FrameworkSystemConfig {
+  /** Base chance per tick that agents attempt actions. Default: 0.3 */
+  actionAttemptRate?: number;
+  /** Influence gain on successful action. Default: 0.1 */
+  influenceGain?: number;
+  /** Influence loss on failed action. Default: 0.05 */
+  influenceLoss?: number;
+  /** How much pressures amplify action attempt rates. Default: 1.5 */
+  pressureMultiplier?: number;
+}
+
+/**
+ * Relationship Maintenance system config.
+ * Handles decay, reinforcement, and culling of relationships.
+ */
+export interface RelationshipMaintenanceConfig extends FrameworkSystemConfig {
+  /** Run maintenance every N ticks. Default: 5 */
+  maintenanceFrequency?: number;
+  /** Remove cullable relationships below this strength. Default: 0.15 */
+  cullThreshold?: number;
+  /** Don't decay or cull relationships younger than this many ticks. Default: 20 */
+  gracePeriod?: number;
+  /** Strength increase when reinforcement conditions are met. Default: 0.02 */
+  reinforcementBonus?: number;
+  /** Maximum relationship strength. Default: 1.0 */
+  maxStrength?: number;
+}
+
+export interface DeclarativeEraSpawnerSystem {
+  systemType: 'eraSpawner';
+  config: EraSpawnerConfig;
+}
+
+export interface DeclarativeEraTransitionSystem {
+  systemType: 'eraTransition';
+  config: EraTransitionConfig;
+}
+
+export interface DeclarativeUniversalCatalystSystem {
+  systemType: 'universalCatalyst';
+  config: UniversalCatalystConfig;
+}
+
+export interface DeclarativeRelationshipMaintenanceSystem {
+  systemType: 'relationshipMaintenance';
+  config: RelationshipMaintenanceConfig;
 }
 
 // =============================================================================
@@ -63,6 +184,28 @@ export function createSystemFromDeclarative(declarative: DeclarativeSystem): Sim
 
     case 'thresholdTrigger':
       return createThresholdTriggerSystem(declarative.config);
+
+    case 'clusterFormation':
+      return createClusterFormationSystem(declarative.config);
+
+    case 'tagDiffusion':
+      return createTagDiffusionSystem(declarative.config);
+
+    case 'planeDiffusion':
+      return createPlaneDiffusionSystem(declarative.config);
+
+    // Framework systems - create configured instances
+    case 'eraSpawner':
+      return createEraSpawnerSystem(declarative.config);
+
+    case 'eraTransition':
+      return createEraTransitionSystem(declarative.config);
+
+    case 'universalCatalyst':
+      return createUniversalCatalystSystem(declarative.config);
+
+    case 'relationshipMaintenance':
+      return createRelationshipMaintenanceSystem(declarative.config);
 
     default:
       // TypeScript should catch this, but just in case
@@ -114,6 +257,13 @@ export function isDeclarativeSystem(value: unknown): value is DeclarativeSystem 
   return (
     sys.systemType === 'connectionEvolution' ||
     sys.systemType === 'graphContagion' ||
-    sys.systemType === 'thresholdTrigger'
+    sys.systemType === 'thresholdTrigger' ||
+    sys.systemType === 'clusterFormation' ||
+    sys.systemType === 'tagDiffusion' ||
+    sys.systemType === 'planeDiffusion' ||
+    sys.systemType === 'eraSpawner' ||
+    sys.systemType === 'eraTransition' ||
+    sys.systemType === 'universalCatalyst' ||
+    sys.systemType === 'relationshipMaintenance'
   ) && sys.config !== undefined;
 }

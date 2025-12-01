@@ -997,11 +997,12 @@ describe('Graph Modification', () => {
       graph._loadEntity(e1.id, e1);
       graph._loadEntity(e2.id, e2);
 
-      addRelationshipWithDistance(graph, 'derived_from', 'e1', 'e2', { min: 0.3, max: 0.5 });
+      // Distance is now on 0-100 scale (Euclidean distance on semantic plane)
+      addRelationshipWithDistance(graph, 'derived_from', 'e1', 'e2', { min: 30, max: 50 });
 
       const rel = graph.getRelationships()[0];
-      expect(rel.distance).toBeGreaterThanOrEqual(0.3);
-      expect(rel.distance).toBeLessThanOrEqual(0.5);
+      expect(rel.distance).toBeGreaterThanOrEqual(30);
+      expect(rel.distance).toBeLessThanOrEqual(50);
     });
 
     it('should handle invalid range', () => {
@@ -1012,11 +1013,11 @@ describe('Graph Modification', () => {
       graph._loadEntity(e1.id, e1);
       graph._loadEntity(e2.id, e2);
 
-      // Should clamp to [0, 1]
-      addRelationshipWithDistance(graph, 'test', 'e1', 'e2', { min: -1, max: 2 });
+      // Should clamp to [0, 100] (now uses 0-100 scale)
+      addRelationshipWithDistance(graph, 'test', 'e1', 'e2', { min: -1, max: 200 });
 
       expect(graph.getRelationships()[0].distance).toBeGreaterThanOrEqual(0);
-      expect(graph.getRelationships()[0].distance).toBeLessThanOrEqual(1);
+      expect(graph.getRelationships()[0].distance).toBeLessThanOrEqual(100);
     });
   });
 

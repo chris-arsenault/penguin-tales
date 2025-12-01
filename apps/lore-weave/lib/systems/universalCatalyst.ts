@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
+import { SimulationSystem, SystemResult } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   calculateAttemptChance,
@@ -6,8 +6,9 @@ import {
   updateInfluence,
   getInfluence
 } from '../systems/catalystHelpers';
-import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
 import { TemplateGraphView } from '../graph/templateGraphView';
+import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
+import { DEFAULT_PRESSURE_DOMAIN_MAPPINGS, type ExecutableActionDomain } from '../engine/actionInterpreter';
 
 /**
  * Universal Catalyst System
@@ -22,223 +23,139 @@ import { TemplateGraphView } from '../graph/templateGraphView';
  * 4. Execute action via domain-defined handler
  * 5. Record catalyzedBy attribution and update influence
  */
-export const universalCatalyst: SimulationSystem = {
-  id: 'universal_catalyst',
-  name: 'Agent Actions',
 
-  contract: {
-    purpose: ComponentPurpose.STATE_MODIFICATION,
-    enabledBy: {
-      entityCounts: [
-        { kind: 'npc', min: 1 }
-      ]
-    },
-    affects: {
-      relationships: [
-        {
-          kind: 'various',
-          operation: 'create',
-          count: { min: 0, max: 50 }
-        }
-      ],
-      entities: [
-        {
-          kind: 'npc',
-          operation: 'modify',
-          count: { min: 0, max: 20 }
-        },
-        {
-          kind: 'faction',
-          operation: 'modify',
-          count: { min: 0, max: 10 }
-        },
-        {
-          kind: FRAMEWORK_ENTITY_KINDS.OCCURRENCE,
-          operation: 'modify',
-          count: { min: 0, max: 5 }
-        }
-      ]
-    }
-  },
+/**
+ * Create a Universal Catalyst system with the given configuration.
+ */
+export function createUniversalCatalystSystem(config: UniversalCatalystConfig): SimulationSystem {
+  // Extract config with defaults
+  const actionAttemptRate = config.actionAttemptRate ?? 0.3;
+  const influenceGain = config.influenceGain ?? 0.1;
+  const influenceLoss = config.influenceLoss ?? 0.05;
+  const pressureMultiplier = config.pressureMultiplier ?? 1.5;
 
-  metadata: {
-    produces: {
-      relationships: [
-        { kind: 'various', frequency: 'common', comment: 'Agents create world relationships via actions' }
-      ],
-      modifications: [
-        { type: 'prominence', frequency: 'common', comment: 'Agent influence and catalyzedEvents updated' }
-      ]
-    },
-    effects: {
-      graphDensity: 0.8,
-      clusterFormation: 0.6,
-      diversityImpact: 0.4,
-      comment: 'Agents shape the world through political, military, magical, and other actions'
-    },
-    parameters: {
-      actionAttemptRate: {
-        value: 0.3,
-        min: 0.1,
-        max: 0.8,
-        description: 'Base chance per tick that agents attempt actions'
-      },
-      influenceGain: {
-        value: 0.1,
-        min: 0.05,
-        max: 0.3,
-        description: 'Influence gain on successful action'
-      },
-      influenceLoss: {
-        value: 0.05,
-        min: 0.01,
-        max: 0.15,
-        description: 'Influence loss on failed action'
-      },
-      pressureMultiplier: {
-        value: 1.5,
-        min: 1.0,
-        max: 3.0,
-        description: 'How much pressures amplify action attempt rates'
+  return {
+    id: config.id || 'universal_catalyst',
+    name: config.name || 'Agent Actions',
+
+    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+      // Get action domain definitions from declarative config
+      const actionDomains: ExecutableActionDomain[] = graphView.config.actionDomains || [];
+
+      if (actionDomains.length === 0) {
+        return {
+          relationshipsAdded: [],
+          entitiesModified: [],
+          pressureChanges: {},
+          description: 'Catalyst system dormant (no actions configured in actions.json)'
+        };
       }
-    },
-    triggers: {
-      graphConditions: ['Entities with catalyst.canAct = true'],
-      comment: 'Runs every tick, agents attempt actions probabilistically'
-    }
-  },
 
-  apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
-    const params = universalCatalyst.metadata?.parameters || {};
-    const actionAttemptRate = params.actionAttemptRate?.value ?? 0.3;
-    const influenceGain = params.influenceGain?.value ?? 0.1;
-    const influenceLoss = params.influenceLoss?.value ?? 0.05;
-    const pressureMultiplier = params.pressureMultiplier?.value ?? 1.5;
+      // Find all agents (entities that can act)
+      const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
 
-    // Get action domain definitions from domain config
-    // These define what actions are available and how to execute them
-    const actionDomains = graphView.config.domain.getActionDomains?.() || [];
+      const relationshipsAdded: Relationship[] = [];
+      const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
+      let actionsAttempted = 0;
+      let actionsSucceeded = 0;
 
-    if (actionDomains.length === 0) {
-      // No action domains defined - catalyst system not configured yet
+      allAgents.forEach(agent => {
+        if (!agent.catalyst?.canAct) return;
+
+        // Calculate action attempt chance
+        const attemptChance = calculateAttemptChance(agent, actionAttemptRate);
+
+        // Apply pressure multiplier - high pressures increase action rates
+        const relevantPressures = getRelevantPressures(graphView, agent.catalyst.actionDomains);
+        const pressureBonus = relevantPressures * (pressureMultiplier - 1.0);
+        const finalAttemptChance = Math.min(1.0, (attemptChance + pressureBonus) * modifier);
+
+        if (Math.random() > finalAttemptChance) return;
+
+        actionsAttempted++;
+
+        // Select action from agent's available domains
+        const selectedAction = selectAction(agent, graphView, actionDomains);
+        if (!selectedAction) return;
+
+        // Attempt to execute action
+        const outcome = executeAction(agent, selectedAction, graphView);
+
+        if (outcome.success) {
+          actionsSucceeded++;
+
+          // Add created relationships with catalyst attribution
+          outcome.relationships.forEach(rel => {
+            rel.catalyzedBy = agent.id;
+            rel.createdAt = graphView.tick;
+            relationshipsAdded.push(rel);
+          });
+
+          // Update agent influence (success)
+          updateInfluence(agent, true, influenceGain);
+
+          // Record catalyzed event
+          addCatalyzedEvent(agent, {
+            relationshipId: outcome.relationships[0]?.kind || undefined,
+            action: outcome.description,
+            tick: graphView.tick
+          });
+
+          entitiesModified.push({
+            id: agent.id,
+            changes: {
+              catalyst: agent.catalyst,
+              updatedAt: graphView.tick
+            }
+          });
+
+          // Create history event
+          graphView.addHistoryEvent({
+            tick: graphView.tick,
+            era: graphView.currentEra.id,
+            type: 'simulation',
+            description: `${agent.name} ${outcome.description}`,
+            entitiesCreated: outcome.entitiesCreated || [],
+            relationshipsCreated: outcome.relationships,
+            entitiesModified: outcome.entitiesModified || [agent.id]
+          });
+        } else {
+          // Failed action - influence decreases
+          updateInfluence(agent, false, influenceLoss);
+
+          entitiesModified.push({
+            id: agent.id,
+            changes: {
+              catalyst: agent.catalyst,
+              updatedAt: graphView.tick
+            }
+          });
+        }
+      });
+
       return {
-        relationshipsAdded: [],
-        entitiesModified: [],
+        relationshipsAdded,
+        entitiesModified,
         pressureChanges: {},
-        description: 'Catalyst system dormant (no action domains configured)'
+        description: actionsSucceeded > 0
+          ? `Agents shape the world (${actionsSucceeded}/${actionsAttempted} actions succeeded)`
+          : actionsAttempted > 0
+          ? `Agents attempt to act (all ${actionsAttempted} failed)`
+          : 'Agents dormant this cycle'
       };
     }
-
-    // Find all agents (entities that can act)
-    const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
-
-    const relationshipsAdded: Relationship[] = [];
-    const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
-    let actionsAttempted = 0;
-    let actionsSucceeded = 0;
-
-    allAgents.forEach(agent => {
-      if (!agent.catalyst?.canAct) return;
-
-      // Calculate action attempt chance
-      const attemptChance = calculateAttemptChance(agent, actionAttemptRate);
-
-      // Apply pressure multiplier - high pressures increase action rates
-      const relevantPressures = getRelevantPressures(graphView, agent.catalyst.actionDomains);
-      const pressureBonus = relevantPressures * (pressureMultiplier - 1.0);
-      const finalAttemptChance = Math.min(1.0, (attemptChance + pressureBonus) * modifier);
-
-      if (Math.random() > finalAttemptChance) return;
-
-      actionsAttempted++;
-
-      // Select action from agent's available domains
-      const selectedAction = selectAction(agent, graphView, actionDomains);
-      if (!selectedAction) return;
-
-      // Attempt to execute action
-      const outcome = executeAction(agent, selectedAction, graphView);
-
-      if (outcome.success) {
-        actionsSucceeded++;
-
-        // Add created relationships with catalyst attribution
-        outcome.relationships.forEach(rel => {
-          rel.catalyzedBy = agent.id;
-          rel.createdAt = graphView.tick;
-          relationshipsAdded.push(rel);
-        });
-
-        // Update agent influence (success)
-        updateInfluence(agent, true, influenceGain);
-
-        // Record catalyzed event
-        addCatalyzedEvent(agent, {
-          relationshipId: outcome.relationships[0]?.kind || undefined,
-          action: outcome.description,
-          tick: graphView.tick
-        });
-
-        entitiesModified.push({
-          id: agent.id,
-          changes: {
-            catalyst: agent.catalyst,
-            updatedAt: graphView.tick
-          }
-        });
-
-        // Create history event
-        graphView.addHistoryEvent({
-          tick: graphView.tick,
-          era: graphView.currentEra.id,
-          type: 'simulation',
-          description: `${agent.name} ${outcome.description}`,
-          entitiesCreated: outcome.entitiesCreated || [],
-          relationshipsCreated: outcome.relationships,
-          entitiesModified: outcome.entitiesModified || [agent.id]
-        });
-      } else {
-        // Failed action - influence decreases
-        updateInfluence(agent, false, influenceLoss);
-
-        entitiesModified.push({
-          id: agent.id,
-          changes: {
-            catalyst: agent.catalyst,
-            updatedAt: graphView.tick
-          }
-        });
-      }
-    });
-
-    return {
-      relationshipsAdded,
-      entitiesModified,
-      pressureChanges: {},
-      description: actionsSucceeded > 0
-        ? `Agents shape the world (${actionsSucceeded}/${actionsAttempted} actions succeeded)`
-        : actionsAttempted > 0
-        ? `Agents attempt to act (all ${actionsAttempted} failed)`
-        : 'Agents dormant this cycle'
-    };
-  }
-};
+  };
+}
 
 /**
  * Get average pressure for relevant domains
- * @param graphView - The graph view
- * @param actionDomains - Domains the agent can act in
- * @returns Average pressure (0-1)
  */
 function getRelevantPressures(graphView: TemplateGraphView, actionDomains: string[]): number {
-  // Domain can define pressure mappings (e.g., 'conflict' pressure → 'military' domain)
-  const pressureMappings = graphView.config.domain.getPressureDomainMappings?.() || {};
-
   let totalPressure = 0;
   let count = 0;
 
   actionDomains.forEach(domain => {
-    const pressureIds = pressureMappings[domain] || [];
+    const pressureIds = DEFAULT_PRESSURE_DOMAIN_MAPPINGS[domain] || [];
     pressureIds.forEach(pressureId => {
       const pressure = graphView.getPressure(pressureId);
       totalPressure += pressure / 100; // Normalize to 0-1
@@ -252,10 +169,6 @@ function getRelevantPressures(graphView: TemplateGraphView, actionDomains: strin
 /**
  * Select an action for the agent to attempt
  * Weighted by era modifiers and pressure levels
- * @param agent - The acting agent
- * @param graphView - The graph view
- * @param actionDomains - Available action domain definitions
- * @returns Selected action or null
  */
 function selectAction(
   agent: HardState,
@@ -300,10 +213,6 @@ function selectAction(
 
 /**
  * Check if agent meets action requirements
- * @param agent - The acting agent
- * @param action - The action definition
- * @param graphView - The graph view
- * @returns True if requirements met
  */
 function meetsRequirements(agent: HardState, action: any, graphView: TemplateGraphView): boolean {
   if (!action.requirements) return true;
@@ -340,10 +249,6 @@ function meetsRequirements(agent: HardState, action: any, graphView: TemplateGra
 
 /**
  * Calculate action weight based on era and pressures
- * @param action - The action definition
- * @param domain - The action domain ID
- * @param graphView - The graph view
- * @returns Weight for selection
  */
 function calculateActionWeight(action: any, domain: string, graphView: TemplateGraphView): number {
   let weight = action.baseWeight || 1.0;
@@ -353,8 +258,7 @@ function calculateActionWeight(action: any, domain: string, graphView: TemplateG
   weight *= eraModifier;
 
   // Apply pressure boost
-  const pressureMappings = graphView.config.domain.getPressureDomainMappings?.() || {};
-  const relevantPressures = pressureMappings[domain] || [];
+  const relevantPressures = DEFAULT_PRESSURE_DOMAIN_MAPPINGS[domain] || [];
 
   relevantPressures.forEach((pressureId: string) => {
     const pressure = graphView.getPressure(pressureId);
@@ -368,10 +272,6 @@ function calculateActionWeight(action: any, domain: string, graphView: TemplateG
 
 /**
  * Execute an action via domain-defined handler
- * @param agent - The acting agent
- * @param action - The action definition
- * @param graphView - The graph view
- * @returns Action outcome
  */
 function executeAction(
   agent: HardState,
@@ -420,3 +320,12 @@ interface ActionOutcome {
   entitiesCreated?: string[];
   entitiesModified?: string[];
 }
+
+/**
+ * Default Universal Catalyst instance (for backwards compatibility).
+ * @deprecated Use createUniversalCatalystSystem() instead.
+ */
+export const universalCatalyst = createUniversalCatalystSystem({
+  id: 'universal_catalyst',
+  name: 'Agent Actions'
+});

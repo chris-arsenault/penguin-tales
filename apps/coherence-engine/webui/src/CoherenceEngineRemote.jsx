@@ -12,13 +12,16 @@
  * world simulation parameters: pressures, eras, generators, actions, and systems.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import ErasEditor from './components/ErasEditor';
 import PressuresEditor from './components/PressuresEditor';
 import GeneratorsEditor from './components/GeneratorsEditor';
+import ActionsEditor from './components/ActionsEditor';
 import SystemsEditor from './components/SystemsEditor';
+import ValidationEditor, { getValidationStatus } from './components/ValidationEditor';
 
 const TABS = [
+  { id: 'validation', label: 'Validation' },
   { id: 'pressures', label: 'Pressures' },
   { id: 'eras', label: 'Eras' },
   { id: 'generators', label: 'Generators' },
@@ -29,6 +32,13 @@ const TABS = [
 // Coherence Engine accent gradient (amber) - Arctic Blue base theme
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
 const ACCENT_COLOR = '#f59e0b';
+
+// Validation status colors
+const STATUS_COLORS = {
+  clean: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+};
 
 const styles = {
   container: {
@@ -71,6 +81,18 @@ const styles = {
     color: '#0a1929',
     fontWeight: 600,
   },
+  navButtonContent: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  statusDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
   main: {
     flex: 1,
     display: 'flex',
@@ -110,6 +132,10 @@ const styles = {
 
 // Placeholder descriptions for each section
 const SECTION_INFO = {
+  validation: {
+    title: 'Validation',
+    description: 'Pre-run validation checks for your world configuration. View and fix issues before running the simulation.',
+  },
   pressures: {
     title: 'Pressures',
     description: 'Configure environmental and social pressures that drive world evolution. Pressures create constraints and opportunities that shape entity behavior.',
@@ -140,24 +166,50 @@ export default function CoherenceEngineRemote({
   onPressuresChange,
   generators = [],
   onGeneratorsChange,
+  actions = [],
+  onActionsChange,
   systems = [],
   onSystemsChange,
   activeSection,
   onSectionChange,
 }) {
-  // Use passed-in section or default to 'pressures'
-  const activeTab = activeSection || 'pressures';
+  // Use passed-in section or default to 'validation'
+  const activeTab = activeSection || 'validation';
   const setActiveTab = onSectionChange || (() => {});
 
-  const currentSection = SECTION_INFO[activeTab] || SECTION_INFO.pressures;
+  const currentSection = SECTION_INFO[activeTab] || SECTION_INFO.validation;
+
+  // Calculate validation status for the nav indicator
+  const validationStatus = useMemo(() =>
+    getValidationStatus(schema, eras, pressures, generators, systems),
+    [schema, eras, pressures, generators, systems]
+  );
+
+  // Navigate to generators tab and optionally select a specific generator
+  const handleNavigateToGenerator = (generatorId) => {
+    setActiveTab('generators');
+    // TODO: Could add logic to expand the specific generator
+  };
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'validation':
+        return (
+          <ValidationEditor
+            schema={schema}
+            eras={eras}
+            pressures={pressures}
+            generators={generators}
+            systems={systems}
+            onNavigateToGenerator={handleNavigateToGenerator}
+          />
+        );
       case 'pressures':
         return (
           <PressuresEditor
             pressures={pressures}
             onChange={onPressuresChange || (() => {})}
+            schema={schema}
           />
         );
       case 'eras':
@@ -165,6 +217,8 @@ export default function CoherenceEngineRemote({
           <ErasEditor
             eras={eras}
             onChange={onErasChange || (() => {})}
+            generators={generators}
+            systems={systems}
           />
         );
       case 'generators':
@@ -172,6 +226,17 @@ export default function CoherenceEngineRemote({
           <GeneratorsEditor
             generators={generators}
             onChange={onGeneratorsChange || (() => {})}
+            schema={schema}
+            pressures={pressures}
+            eras={eras}
+          />
+        );
+      case 'actions':
+        return (
+          <ActionsEditor
+            actions={actions}
+            onChange={onActionsChange || (() => {})}
+            schema={schema}
           />
         );
       case 'systems':
@@ -197,32 +262,52 @@ export default function CoherenceEngineRemote({
       {/* Left sidebar with nav */}
       <div style={styles.sidebar}>
         <nav style={styles.nav}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                ...styles.navButton,
-                ...(activeTab === tab.id
-                  ? styles.navButtonActive
-                  : styles.navButtonInactive),
-              }}
-              onMouseEnter={(e) => {
-                if (activeTab !== tab.id) {
-                  e.target.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
-                  e.target.style.color = ACCENT_COLOR;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== tab.id) {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#93c5fd';
-                }
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {TABS.map((tab) => {
+            // Show status indicator for validation tab
+            const showStatus = tab.id === 'validation';
+            const statusColor = STATUS_COLORS[validationStatus.status];
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  ...styles.navButton,
+                  ...(activeTab === tab.id
+                    ? styles.navButtonActive
+                    : styles.navButtonInactive),
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.target.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+                    e.target.style.color = ACCENT_COLOR;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.target.style.backgroundColor = 'transparent';
+                    e.target.style.color = '#93c5fd';
+                  }
+                }}
+              >
+                <span style={styles.navButtonContent}>
+                  <span>{tab.label}</span>
+                  {showStatus && (
+                    <span
+                      style={{
+                        ...styles.statusDot,
+                        backgroundColor: statusColor,
+                      }}
+                      title={validationStatus.status === 'clean'
+                        ? 'All validations passed'
+                        : `${validationStatus.totalIssues} issue${validationStatus.totalIssues === 1 ? '' : 's'}`
+                      }
+                    />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </div>
 

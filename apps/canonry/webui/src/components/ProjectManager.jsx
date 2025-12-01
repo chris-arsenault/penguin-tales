@@ -10,7 +10,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: `${spacing.md} ${spacing.lg}`,
+    padding: `${spacing.sm} ${spacing.lg}`,
     backgroundColor: colors.bgSidebar,
     borderBottom: `1px solid ${colors.border}`,
     flexShrink: 0,
@@ -199,7 +199,8 @@ const styles = {
     backgroundColor: colors.bgSecondary,
     padding: spacing.xxl,
     borderRadius: radius.lg,
-    width: '400px',
+    width: '90vw',
+    maxWidth: '400px',
     border: `1px solid ${colors.border}`,
   },
   modalTitle: {

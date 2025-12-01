@@ -251,10 +251,9 @@ export function initializeCatalyst(
 /**
  * Smart catalyst initialization based on entity type and prominence.
  * Automatically determines action domains and influence based on entity properties.
- * Requires graph with domain schema for action domain mapping.
  *
  * @param entity - The entity to initialize
- * @param graph - Graph with domain schema
+ * @param graph - Graph (used for context, action domains determined by entity kind)
  */
 export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
   // Only prominent entities can act
@@ -262,8 +261,8 @@ export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
     return;
   }
 
-  // Determine which action domains this entity can use from domain schema
-  const actionDomains = graph.config?.domain?.getActionDomainsForEntity?.(entity) ?? [];
+  // Determine which action domains this entity can use based on entity kind
+  const actionDomains = getDefaultActionDomainsForEntity(entity);
 
   if (actionDomains.length === 0) {
     return;
@@ -275,6 +274,21 @@ export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
     influence: prominenceToInfluence(entity.prominence),
     catalyzedEvents: []
   };
+}
+
+/**
+ * Get default action domains for an entity based on its kind.
+ */
+function getDefaultActionDomainsForEntity(entity: HardState): string[] {
+  const kindDomains: Record<string, string[]> = {
+    npc: ['political', 'economic', 'cultural'],
+    faction: ['political', 'economic', 'cultural', 'military'],
+    abilities: ['magical', 'technological'],
+    occurrence: ['conflict_escalation', 'disaster_spread'],
+    location: ['environmental']
+  };
+
+  return kindDomains[entity.kind] || [];
 }
 
 /**

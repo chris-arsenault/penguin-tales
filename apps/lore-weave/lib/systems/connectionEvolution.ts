@@ -253,18 +253,7 @@ export function createConnectionEvolutionSystem(
     id: config.id,
     name: config.name,
 
-    contract: {
-      purpose: ComponentPurpose.PROMINENCE_EVOLUTION,
-      enabledBy: {
-        entityCounts: [{ kind: config.entityKind, min: 1 }]
-      },
-      affects: {
-        entities: [{ kind: config.entityKind, operation: 'modify' }],
-        relationships: config.rules.some(r => r.action.type === 'create_relationship')
-          ? [{ kind: 'any', operation: 'create', count: { min: 0, max: 50 } }]
-          : undefined
-      }
-    },
+    // Note: contract removed - systems don't need lineage and affects is redundant
 
     metadata: {
       produces: {

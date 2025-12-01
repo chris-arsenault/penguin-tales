@@ -1,6 +1,12 @@
 function Modal({ isOpen, onClose, title, children, width = '500px' }) {
   if (!isOpen) return null;
 
+  // Use theme colors for consistency
+  const bgPrimary = '#0a1929';
+  const bgSecondary = '#1e3a5f';
+  const borderColor = 'rgba(59, 130, 246, 0.3)';
+  const textPrimary = '#ffffff';
+
   return (
     <div
       onClick={onClose}
@@ -20,11 +26,11 @@ function Modal({ isOpen, onClose, title, children, width = '500px' }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#1a2a3a',
-          border: '1px solid #3b5068',
+          background: bgSecondary,
+          border: `1px solid ${borderColor}`,
           borderRadius: '8px',
-          width,
-          maxWidth: '90vw',
+          width: '90vw',
+          maxWidth: width,
           maxHeight: '85vh',
           overflow: 'hidden',
           display: 'flex',
@@ -36,17 +42,17 @@ function Modal({ isOpen, onClose, title, children, width = '500px' }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1rem 1.25rem',
-          borderBottom: '1px solid #3b5068',
-          background: '#1e3a5f'
+          padding: '12px 16px',
+          borderBottom: `1px solid ${borderColor}`,
+          background: bgSecondary
         }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{title}</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: textPrimary }}>{title}</h3>
           <button
             onClick={onClose}
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--text-color)',
+              color: textPrimary,
               fontSize: '1.5rem',
               cursor: 'pointer',
               padding: '0.25rem',
@@ -54,7 +60,7 @@ function Modal({ isOpen, onClose, title, children, width = '500px' }) {
             }}
           >×</button>
         </div>
-        <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1, background: '#1a2a3a' }}>
+        <div style={{ padding: '16px', overflowY: 'auto', flex: 1, background: bgSecondary }}>
           {children}
         </div>
       </div>
