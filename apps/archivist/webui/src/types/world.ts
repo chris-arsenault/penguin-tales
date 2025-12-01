@@ -1,55 +1,18 @@
+import type {
+  RegionBounds,
+  EntityKindDefinition,
+  RelationshipKindDefinition,
+  CultureDefinition,
+} from '@canonry/world-schema';
+
 // Prominence is now dynamic from uiSchema, but we keep a type alias for compatibility
 export type Prominence = string;
 
 // EntityKind is now dynamic from uiSchema
 export type EntityKind = string;
 
-// UI Schema types - populated from domain configuration
-export interface EntityKindSchema {
-  kind: string;
-  displayName: string;
-  color: string;
-  shape: string;
-  subtypes: string[];
-  statusValues: string[];
-}
-
-export interface RelationshipKindSchema {
-  kind: string;
-  description?: string;
-  srcKinds: string[];
-  dstKinds: string[];
-  category: string;
-}
-
-export interface CultureSchema {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-// Region types for coordinate map visualization
-export interface CircleBounds {
-  shape: 'circle';
-  center: { x: number; y: number };
-  radius: number;
-}
-
-export interface RectBounds {
-  shape: 'rect';
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
-
-export interface PolygonBounds {
-  shape: 'polygon';
-  points: Array<{ x: number; y: number }>;
-}
-
-export type RegionBounds = CircleBounds | RectBounds | PolygonBounds;
-
+// Region schema for coordinate map visualization
+// (extends semantic region concept with UI-specific fields)
 export interface RegionSchema {
   id: string;
   label: string;
@@ -80,10 +43,10 @@ export interface EntityKindMapConfig {
 export interface UISchema {
   worldName: string;
   worldIcon: string;
-  entityKinds: EntityKindSchema[];
-  relationshipKinds: RelationshipKindSchema[];
+  entityKinds: EntityKindDefinition[];
+  relationshipKinds: RelationshipKindDefinition[];
   prominenceLevels: string[];
-  cultures: CultureSchema[];
+  cultures: CultureDefinition[];
   regions?: RegionSchema[];  // Global regions (deprecated - use perKindMaps)
   coordinateBounds?: { min: number; max: number };  // Global bounds (deprecated - use perKindMaps)
   perKindMaps?: Record<string, EntityKindMapConfig>;  // Per-entity-kind map configurations

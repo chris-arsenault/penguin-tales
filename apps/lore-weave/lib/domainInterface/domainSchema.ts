@@ -310,13 +310,13 @@ export interface DomainSchema {
 export interface CultureImageConfig {
   /**
    * Base visual identity for this culture (species, environment, aesthetic).
-   * Example: "Anthropomorphic emperor penguin from the Aurora Stack colony"
+   * Example: "Noble highland elf from the mountain kingdoms"
    */
   visualIdentity: string;
 
   /**
    * Color palette and artistic style for this culture.
-   * Example: "Warm golden aurora tones, organized composition"
+   * Example: "Cool silver and blue tones, elegant composition"
    */
   styleModifiers: string;
 
@@ -337,7 +337,7 @@ export interface CultureImageConfig {
 export interface ImageGenerationPromptConfig {
   /**
    * Base world context describing the setting.
-   * Example: "Geographic atlas illustration from a frozen Antarctic world"
+   * Example: "Geographic atlas illustration from a high fantasy world"
    */
   worldContext: string;
 

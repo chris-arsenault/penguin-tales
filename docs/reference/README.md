@@ -33,7 +33,7 @@ Overview of algorithmic foundations: Ising model for kinship, conflict contagion
 
 ## Cross-References
 
-- System architecture: `/world-gen/ARCHITECTURE.md`
-- Project overview: `/world-gen/CLAUDE.md` (for Claude Code)
-- Domain encapsulation: `/world-gen/DOMAIN_ENCAPSULATION.md`
-- Completed implementations: `/docs/archive/completed/`
+- Framework core: `apps/lore-weave/lib/`
+- Framework documentation: `apps/lore-weave/README.md`
+- Domain configuration: JSON files in your domain directory
+- Completed implementations: `docs/archive/completed/`

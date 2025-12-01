@@ -69,9 +69,9 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
 
   // Get subkinds for selected entity kind
   const subKinds = useMemo(() => {
-    if (!selectedKind || !worldSchema?.hardState) return [];
-    const entity = worldSchema.hardState.find(e => e.kind === selectedKind);
-    return entity?.subtype || [];
+    if (!selectedKind || !worldSchema?.entityKinds) return [];
+    const entity = worldSchema.entityKinds.find(e => e.id === selectedKind);
+    return entity?.subtypes?.map(s => s.id) || [];
   }, [selectedKind, worldSchema]);
 
   // Prominence levels

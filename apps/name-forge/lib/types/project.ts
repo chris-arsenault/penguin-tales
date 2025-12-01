@@ -11,6 +11,7 @@
 import { z } from "zod";
 import type { NamingDomain } from "./domain.js";
 import type { Capitalization } from "../utils/helpers.js";
+import type { EntityKindDefinition } from "@canonry/world-schema";
 
 // ============================================================================
 // Lexeme Types
@@ -203,19 +204,10 @@ export interface Culture {
 // ============================================================================
 
 /**
- * Entity kind definition - defines valid kinds, subtypes, statuses
- */
-export interface EntityKindDefinition {
-  kind: string;
-  subtype: string[];
-  status: string[];
-}
-
-/**
  * World schema - defines the entity types in the world
  */
 export interface WorldSchema {
-  hardState: EntityKindDefinition[];
+  entityKinds: EntityKindDefinition[];
 }
 
 // ============================================================================

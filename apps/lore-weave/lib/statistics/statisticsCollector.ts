@@ -60,7 +60,7 @@ export class StatisticsCollector {
     }
 
     // Store subtype counts for feedback loop tracking
-    // This ensures metrics like "npc:orca.count" are available
+    // This ensures metrics like "npc:merchant.count" are available
     if (!graph.subtypeMetrics) {
       graph.subtypeMetrics = new Map();
     }

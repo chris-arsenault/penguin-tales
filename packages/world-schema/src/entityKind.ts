@@ -55,6 +55,19 @@ export interface RectBounds {
 }
 
 /**
+ * Polygon-shaped region bounds
+ */
+export interface PolygonBounds {
+  shape: 'polygon';
+  points: Array<{ x: number; y: number }>;
+}
+
+/**
+ * Union type for all region bound shapes
+ */
+export type RegionBounds = CircleBounds | RectBounds | PolygonBounds;
+
+/**
  * A region within a semantic plane
  */
 export interface SemanticRegion {
@@ -63,7 +76,7 @@ export interface SemanticRegion {
   color: string;
   /** Culture that "owns" this region (optional) */
   culture?: string;
-  bounds: CircleBounds | RectBounds;
+  bounds: RegionBounds;
 }
 
 /**
@@ -96,6 +109,8 @@ export interface EntityKindDefinition {
   id: string;
   /** Display name (e.g., "NPCs", "Locations") */
   name: string;
+  /** Alternative display name (optional alias for UI) */
+  displayName?: string;
   /** Human-readable description */
   description?: string;
   /** Valid subtypes for this entity kind */

@@ -22,18 +22,18 @@ describe('CoordinateContext', () => {
   // Regions for location kind (with culture associations)
   const locationRegions: Region[] = [
     {
-      id: 'aurora_stack',
-      label: 'Aurora Stack',
-      culture: 'aurora-stack',  // Culture association via region.culture
+      id: 'highlands',
+      label: 'Highlands',
+      culture: 'highland',  // Culture association via region.culture
       bounds: { shape: 'circle', center: { x: 30, y: 70 }, radius: 15 },
-      autoTags: ['cold', 'aurora']
+      autoTags: ['cold', 'mountainous']
     },
     {
-      id: 'nightshelf',
-      label: 'Nightshelf',
-      culture: 'nightshelf',
+      id: 'coastal',
+      label: 'Coastal',
+      culture: 'coastal',
       bounds: { shape: 'circle', center: { x: 70, y: 50 }, radius: 12 },
-      autoTags: ['dark', 'shelf']
+      autoTags: ['temperate', 'maritime']
     }
   ];
 
@@ -42,7 +42,7 @@ describe('CoordinateContext', () => {
     {
       id: 'merchant_district',
       label: 'Merchant District',
-      culture: 'aurora-stack',
+      culture: 'highland',
       bounds: { shape: 'circle', center: { x: 40, y: 60 }, radius: 10 }
     }
   ];
@@ -78,16 +78,16 @@ describe('CoordinateContext', () => {
   // Cultures array (canonry format)
   const cultures: CultureConfig[] = [
     {
-      id: 'aurora-stack',
-      name: 'Aurora Stack',
+      id: 'highland',
+      name: 'Highland',
       axisBiases: {
         location: { x: 20, y: 70, z: 50 },  // Cold, dense
         npc: { x: 30, y: 60, z: 50 }  // Lawful, friendly
       }
     },
     {
-      id: 'nightshelf',
-      name: 'Nightshelf',
+      id: 'coastal',
+      name: 'Coastal',
       axisBiases: {
         location: { x: 40, y: 40, z: 50 },  // Cool, moderate
         npc: { x: 60, y: 50, z: 50 }  // Neutral alignment
@@ -151,19 +151,19 @@ describe('CoordinateContext', () => {
     it('should return regions for kind', () => {
       const regions = context.getRegions('location');
       expect(regions).toHaveLength(2);
-      expect(regions[0].id).toBe('aurora_stack');
+      expect(regions[0].id).toBe('highlands');
     });
 
     it('should get specific region by ID', () => {
-      const region = context.getRegion('location', 'aurora_stack');
+      const region = context.getRegion('location', 'highlands');
       expect(region).toBeDefined();
-      expect(region!.label).toBe('Aurora Stack');
+      expect(region!.label).toBe('Highlands');
     });
   });
 
   describe('Culture Queries', () => {
     it('should return culture config by ID', () => {
-      const config = context.getCultureConfig('aurora-stack');
+      const config = context.getCultureConfig('highland');
       expect(config).toBeDefined();
       expect(config!.axisBiases!.location.x).toBe(20);
     });
@@ -174,26 +174,26 @@ describe('CoordinateContext', () => {
     });
 
     it('should check if culture exists', () => {
-      expect(context.hasCulture('aurora-stack')).toBe(true);
-      expect(context.hasCulture('nightshelf')).toBe(true);
+      expect(context.hasCulture('highland')).toBe(true);
+      expect(context.hasCulture('coastal')).toBe(true);
       expect(context.hasCulture('unknown')).toBe(false);
     });
 
     it('should list all culture IDs', () => {
       const ids = context.getCultureIds();
-      expect(ids).toContain('aurora-stack');
-      expect(ids).toContain('nightshelf');
+      expect(ids).toContain('highland');
+      expect(ids).toContain('coastal');
       expect(ids).toHaveLength(2);
     });
 
     it('should derive seed regions from region.culture field', () => {
-      const seedIds = context.getSeedRegionIds('aurora-stack', 'location');
-      expect(seedIds).toContain('aurora_stack');
+      const seedIds = context.getSeedRegionIds('highland', 'location');
+      expect(seedIds).toContain('highlands');
       expect(seedIds).toHaveLength(1);
     });
 
     it('should get axis biases for culture and kind', () => {
-      const biases = context.getAxisBiases('aurora-stack', 'location');
+      const biases = context.getAxisBiases('highland', 'location');
       expect(biases).toBeDefined();
       expect(biases!.x).toBe(20);
       expect(biases!.y).toBe(70);
@@ -202,11 +202,11 @@ describe('CoordinateContext', () => {
 
   describe('Placement Context Building', () => {
     it('should build placement context from culture and kind', () => {
-      const ctx = context.buildPlacementContext('aurora-stack', 'location');
-      expect(ctx.cultureId).toBe('aurora-stack');
+      const ctx = context.buildPlacementContext('highland', 'location');
+      expect(ctx.cultureId).toBe('highland');
       expect(ctx.entityKind).toBe('location');
       expect(ctx.axisBiases?.x).toBe(20);
-      expect(ctx.seedRegionIds).toContain('aurora_stack');
+      expect(ctx.seedRegionIds).toContain('highlands');
     });
 
     it('should return context with undefined biases for unknown culture', () => {
@@ -219,13 +219,13 @@ describe('CoordinateContext', () => {
 
   describe('Culture-Aware Sampling', () => {
     it('should sample from seed regions when culture specified', () => {
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
 
-      // Should sample from aurora_stack region (center: 30, 70)
+      // Should sample from highlands region (center: 30, 70)
       const point = context.sampleWithCulture('location', placementContext);
 
       expect(point).toBeDefined();
-      // Should be within or near aurora_stack region (radius 15)
+      // Should be within or near highlands region (radius 15)
       expect(point!.x).toBeGreaterThan(10);
       expect(point!.x).toBeLessThan(50);
       expect(point!.y).toBeGreaterThan(50);
@@ -234,7 +234,7 @@ describe('CoordinateContext', () => {
 
     it('should respect minimum distance from existing points', () => {
       const existingPoints = [{ x: 30, y: 70, z: 50 }];
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
 
       const point = context.sampleWithCulture('location', placementContext, existingPoints, 10);
 
@@ -248,7 +248,7 @@ describe('CoordinateContext', () => {
     });
 
     it('should fall back to axis biases when no seed regions available', () => {
-      const placementContext = context.buildPlacementContext('aurora-stack', 'faction');
+      const placementContext = context.buildPlacementContext('highland', 'faction');
 
       // faction has no regions, should use axis biases (or default)
       const point = context.sampleWithCulture('faction', placementContext);
@@ -258,7 +258,7 @@ describe('CoordinateContext', () => {
 
   describe('Culture-Aware Placement', () => {
     it('should place with full culture context', () => {
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
 
       const result = context.placeWithCulture(
         'location',
@@ -269,11 +269,11 @@ describe('CoordinateContext', () => {
 
       expect(result.success).toBe(true);
       expect(result.coordinates).toBeDefined();
-      expect(result.cultureId).toBe('aurora-stack');
+      expect(result.cultureId).toBe('highland');
     });
 
     it('should derive tags including culture', () => {
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
 
       const result = context.placeWithCulture(
         'location',
@@ -282,11 +282,11 @@ describe('CoordinateContext', () => {
         placementContext
       );
 
-      expect(result.derivedTags?.culture).toBe('aurora-stack');
+      expect(result.derivedTags?.culture).toBe('highland');
     });
 
     it('should identify region containing placed point', () => {
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
 
       const result = context.placeWithCulture(
         'location',
@@ -295,8 +295,8 @@ describe('CoordinateContext', () => {
         placementContext
       );
 
-      // Should be placed in aurora_stack region
-      expect(result.regionId).toBe('aurora_stack');
+      // Should be placed in highlands region
+      expect(result.regionId).toBe('highlands');
     });
   });
 
@@ -317,8 +317,8 @@ describe('CoordinateContext', () => {
     it('should export cultures with all cultures', () => {
       const exported = context.export();
       const cultureIds = exported.cultures.map(c => c.id);
-      expect(cultureIds).toContain('aurora-stack');
-      expect(cultureIds).toContain('nightshelf');
+      expect(cultureIds).toContain('highland');
+      expect(cultureIds).toContain('coastal');
     });
   });
 
@@ -335,7 +335,7 @@ describe('CoordinateContext', () => {
     it('should create context via factory', () => {
       const ctx = createCoordinateContext(validConfig);
       expect(ctx).toBeInstanceOf(CoordinateContext);
-      expect(ctx.hasCulture('aurora-stack')).toBe(true);
+      expect(ctx.hasCulture('highland')).toBe(true);
     });
   });
 
@@ -379,16 +379,16 @@ describe('CoordinateContext', () => {
     it('should use referenceEntity in PlacementContext for sampleWithCulture', () => {
       const referenceEntity = {
         id: 'ref_entity',
-        coordinates: { x: 70, y: 50, z: 50 } // In nightshelf region
+        coordinates: { x: 70, y: 50, z: 50 } // In coastal region
       };
 
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
       placementContext.referenceEntity = referenceEntity;
 
       const point = context.sampleWithCulture('location', placementContext, [], 5);
 
       expect(point).toBeDefined();
-      // Should be near the reference entity, not in aurora-stack region
+      // Should be near the reference entity, not in highland region
       const dx = point!.x - 70;
       const dy = point!.y - 50;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -399,10 +399,10 @@ describe('CoordinateContext', () => {
     it('should place entity near reference via placeWithCulture with referenceEntity', () => {
       const referenceEntity = {
         id: 'ref_entity',
-        coordinates: { x: 30, y: 70, z: 50 } // In aurora_stack region
+        coordinates: { x: 30, y: 70, z: 50 } // In highlands region
       };
 
-      const placementContext = context.buildPlacementContext('aurora-stack', 'location');
+      const placementContext = context.buildPlacementContext('highland', 'location');
       placementContext.referenceEntity = referenceEntity;
 
       const result = context.placeWithCulture(

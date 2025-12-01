@@ -12,6 +12,8 @@ export type {
   SemanticAxis,
   CircleBounds,
   RectBounds,
+  PolygonBounds,
+  RegionBounds,
   SemanticRegion,
   SemanticPlane,
   EntityKindStyle,

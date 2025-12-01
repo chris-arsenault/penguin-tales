@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import type { WorldState, HardState, RegionSchema, Point, EntityKindSchema, EntityKindMapConfig } from '../types/world.ts';
+import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig } from '../types/world.ts';
+import type { EntityKindDefinition } from '@canonry/world-schema';
 import './CoordinateMapView.css';
 
 interface CoordinateMapViewProps {
@@ -9,12 +10,12 @@ interface CoordinateMapViewProps {
 }
 
 // Default entity styles for when uiSchema is not present
-const DEFAULT_ENTITY_STYLES: EntityKindSchema[] = [
-  { kind: 'npc', displayName: 'NPCs', color: '#6FB1FC', shape: 'ellipse', subtypes: [], statusValues: [] },
-  { kind: 'faction', displayName: 'Factions', color: '#FC6B6B', shape: 'diamond', subtypes: [], statusValues: [] },
-  { kind: 'location', displayName: 'Locations', color: '#6BFC9C', shape: 'hexagon', subtypes: [], statusValues: [] },
-  { kind: 'rules', displayName: 'Rules', color: '#FCA86B', shape: 'rectangle', subtypes: [], statusValues: [] },
-  { kind: 'abilities', displayName: 'Abilities', color: '#C76BFC', shape: 'star', subtypes: [], statusValues: [] },
+const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
+  { id: 'npc', name: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
+  { id: 'faction', name: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
+  { id: 'location', name: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
+  { id: 'rules', name: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
+  { id: 'abilities', name: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
 ];
 
 // Generate a default map config for any entity kind
@@ -154,7 +155,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
   // Get entity kind schemas
   const entityKindSchemas = data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
-  const entityKinds = entityKindSchemas.map(ek => ek.kind);
+  const entityKinds = entityKindSchemas.map(ek => ek.id);
 
   // Get per-kind map config and regions
   const mapConfig = data.uiSchema?.perKindMaps?.[mapKind] ?? getDefaultMapConfig(mapKind);
@@ -188,7 +189,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   // Build entity color map
   const entityColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    entityKindSchemas.forEach(ek => map.set(ek.kind, ek.color));
+    entityKindSchemas.forEach(ek => map.set(ek.id, ek.style?.color || '#999'));
     return map;
   }, [entityKindSchemas]);
 
@@ -520,7 +521,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
           >
             {entityKinds.map(kind => (
               <option key={kind} value={kind}>
-                {entityKindSchemas.find(ek => ek.kind === kind)?.displayName ?? kind}
+                {entityKindSchemas.find(ek => ek.id === kind)?.displayName ?? entityKindSchemas.find(ek => ek.id === kind)?.name ?? kind}
               </option>
             ))}
           </select>
@@ -559,16 +560,16 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       <div className="coordinate-map-legend">
         <div className="legend-title">Entity Types</div>
         {entityKindSchemas.map(ek => (
-          <div key={ek.kind} className="legend-item">
+          <div key={ek.id} className="legend-item">
             <div
               className="legend-dot"
               style={{
-                backgroundColor: ek.color,
-                border: ek.kind === mapKind ? '2px solid white' : 'none'
+                backgroundColor: ek.style?.color || '#999',
+                border: ek.id === mapKind ? '2px solid white' : 'none'
               }}
             />
-            <span>{ek.displayName}</span>
-            {ek.kind === mapKind && <span className="anchor-badge">primary</span>}
+            <span>{ek.displayName || ek.name}</span>
+            {ek.id === mapKind && <span className="anchor-badge">primary</span>}
           </div>
         ))}
         {regions.length > 0 && (

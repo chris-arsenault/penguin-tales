@@ -320,7 +320,7 @@ export interface PressureContract extends Omit<ComponentContract, 'affects'> {
 // Can be at kind-level (e.g., 'npc') or subtype-level (e.g., 'npc:hero')
 export interface EntityOperatorRegistry {
   kind: string;      // e.g., 'npc', 'faction', 'abilities'
-  subtype?: string;  // Optional: e.g., 'hero', 'cult', 'orca' (for subtype-specific registries)
+  subtype?: string;  // Optional: e.g., 'hero', 'cult', 'merchant' (for subtype-specific registries)
 
   // Templates that create this entity
   creators: Array<{

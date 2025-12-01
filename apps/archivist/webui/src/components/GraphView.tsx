@@ -3,29 +3,30 @@ import cytoscape from 'cytoscape';
 import type { Core, NodeSingular } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
-import type { WorldState, EntityKindSchema } from '../types/world.ts';
+import type { WorldState } from '../types/world.ts';
+import type { EntityKindDefinition } from '@canonry/world-schema';
 import { transformWorldData } from '../utils/dataTransform.ts';
 
 cytoscape.use(coseBilkent);
 
 // Default entity kind styles (fallback when uiSchema not present)
-const DEFAULT_ENTITY_STYLES: EntityKindSchema[] = [
-  { kind: 'npc', displayName: 'NPCs', color: '#6FB1FC', shape: 'ellipse', subtypes: [], statusValues: [] },
-  { kind: 'faction', displayName: 'Factions', color: '#FC6B6B', shape: 'diamond', subtypes: [], statusValues: [] },
-  { kind: 'location', displayName: 'Locations', color: '#6BFC9C', shape: 'hexagon', subtypes: [], statusValues: [] },
-  { kind: 'rules', displayName: 'Rules', color: '#FCA86B', shape: 'rectangle', subtypes: [], statusValues: [] },
-  { kind: 'abilities', displayName: 'Abilities', color: '#C76BFC', shape: 'star', subtypes: [], statusValues: [] },
-  { kind: 'era', displayName: 'Eras', color: '#FFD700', shape: 'octagon', subtypes: [], statusValues: [] },
-  { kind: 'occurrence', displayName: 'Occurrences', color: '#FF69B4', shape: 'triangle', subtypes: [], statusValues: [] }
+const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
+  { id: 'npc', name: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
+  { id: 'faction', name: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
+  { id: 'location', name: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
+  { id: 'rules', name: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
+  { id: 'abilities', name: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
+  { id: 'era', name: 'Eras', subtypes: [], statuses: [], style: { color: '#FFD700', shape: 'octagon' } },
+  { id: 'occurrence', name: 'Occurrences', subtypes: [], statuses: [], style: { color: '#FF69B4', shape: 'triangle' } }
 ];
 
-// Generate Cytoscape style array from entity kind schemas
-function generateEntityKindStyles(entityKinds: EntityKindSchema[]) {
+// Generate Cytoscape style array from entity kind definitions
+function generateEntityKindStyles(entityKinds: EntityKindDefinition[]) {
   return entityKinds.map(ek => ({
-    selector: `node[kind="${ek.kind}"]`,
+    selector: `node[kind="${ek.id}"]`,
     style: {
-      'background-color': ek.color,
-      'shape': ek.shape as any
+      'background-color': ek.style?.color || '#999',
+      'shape': (ek.style?.shape || 'ellipse') as any
     }
   }));
 }
@@ -423,15 +424,15 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
         </div>
         <div className="px-5 py-4 space-y-3">
           {entityKindSchemas.map(ek => (
-            <div key={ek.kind} className="flex items-center gap-3">
+            <div key={ek.id} className="flex items-center gap-3">
               <div
                 className="w-5 h-5 shadow-lg flex-shrink-0"
                 style={{
-                  backgroundColor: ek.color,
-                  ...shapeToLegendStyle(ek.shape)
+                  backgroundColor: ek.style?.color || '#999',
+                  ...shapeToLegendStyle(ek.style?.shape || 'ellipse')
                 }}
               ></div>
-              <span className="font-medium">{ek.displayName}</span>
+              <span className="font-medium">{ek.displayName || ek.name}</span>
             </div>
           ))}
         </div>

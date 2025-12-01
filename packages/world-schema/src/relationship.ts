@@ -20,4 +20,6 @@ export interface RelationshipKindDefinition {
   dstKinds: string[];
   /** If true, A→B implies B→A */
   symmetric?: boolean;
+  /** Optional category for grouping (e.g., "social", "political", "economic") */
+  category?: string;
 }

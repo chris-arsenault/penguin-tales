@@ -13,7 +13,7 @@ export type Prominence =
  *
  * Keys are semantic categories, values are either:
  * - `true` for boolean flags (e.g., { mystical: true })
- * - strings for categorized attributes (e.g., { region: 'aurora_stack' })
+ * - strings for categorized attributes (e.g., { region: 'highlands' })
  *
  * Common keys:
  * - `region`: Region ID where entity is located
@@ -32,7 +32,7 @@ export interface HardState {
     description: string;
     status: string;
     prominence: Prominence;
-    culture: string;  // Domain-defined cultural affiliation (e.g., 'aurora-stack', 'nightshelf', 'orca', 'world')
+    culture: string;  // Domain-defined cultural affiliation (e.g., 'highland', 'coastal', 'nomadic', 'world')
     tags: EntityTags;        // Key-value pairs for semantic tagging
     links: Relationship[];
     createdAt: number;       // tick or epoch index

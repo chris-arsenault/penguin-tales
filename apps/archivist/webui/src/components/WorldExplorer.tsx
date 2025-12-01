@@ -29,7 +29,7 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
   const recalculateLayoutRef = useRef<(() => void) | null>(null);
 
   // Get UI configuration from schema (with fallbacks)
-  const entityKinds = worldData.uiSchema?.entityKinds?.map(ek => ek.kind)
+  const entityKinds = worldData.uiSchema?.entityKinds?.map(ek => ek.id)
     ?? ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
   const defaultMinProminence = worldData.uiSchema?.prominenceLevels?.[0] ?? 'forgotten';
 

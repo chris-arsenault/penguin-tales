@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@canonry/world-schema": "file:../../../packages/world-schema",
     "@types/cytoscape": "^3.21.9",
     "cytoscape": "^3.33.1",
     "cytoscape-cose-bilkent": "^4.1.0",

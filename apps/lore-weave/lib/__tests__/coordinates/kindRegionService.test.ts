@@ -19,18 +19,18 @@ describe('KindRegionService', () => {
   // Test seed regions for locations
   const locationRegions: Region[] = [
     {
-      id: 'aurora_stack',
-      label: 'Aurora Stack',
-      description: 'Northern penguin colony',
+      id: 'highlands',
+      label: 'Highlands',
+      description: 'Northern mountain region',
       bounds: { shape: 'circle', center: { x: 30, y: 70 }, radius: 15 },
-      autoTags: ['cold', 'aurora']
+      autoTags: ['cold', 'mountainous']
     },
     {
-      id: 'nightshelf',
-      label: 'Nightshelf',
-      description: 'Eastern shelf colony',
+      id: 'coastal',
+      label: 'Coastal',
+      description: 'Eastern coastal region',
       bounds: { shape: 'circle', center: { x: 70, y: 50 }, radius: 12 },
-      autoTags: ['dark', 'shelf']
+      autoTags: ['temperate', 'maritime']
     }
   ];
 
@@ -61,7 +61,7 @@ describe('KindRegionService', () => {
   const kindMaps: EntityKindMaps = {
     location: {
       entityKind: 'location',
-      name: 'Penguin Lands',
+      name: 'World Map',
       description: 'Geographic coordinate space',
       bounds: { x: { min: 0, max: 100 }, y: { min: 0, max: 100 } },
       hasZAxis: true,
@@ -113,8 +113,8 @@ describe('KindRegionService', () => {
     it('should return seed regions for configured kinds', () => {
       const locationRegs = service.getRegions('location');
       expect(locationRegs).toHaveLength(2);
-      expect(locationRegs.map(r => r.id)).toContain('aurora_stack');
-      expect(locationRegs.map(r => r.id)).toContain('nightshelf');
+      expect(locationRegs.map(r => r.id)).toContain('highlands');
+      expect(locationRegs.map(r => r.id)).toContain('coastal');
     });
 
     it('should return empty regions for unconfigured kinds', () => {
@@ -123,14 +123,14 @@ describe('KindRegionService', () => {
     });
 
     it('should find specific region by ID', () => {
-      const region = service.getRegion('location', 'aurora_stack');
+      const region = service.getRegion('location', 'highlands');
       expect(region).toBeDefined();
-      expect(region?.label).toBe('Aurora Stack');
+      expect(region?.label).toBe('Highlands');
     });
 
     it('should lookup region containing point', () => {
       const result = service.lookupRegion('location', { x: 30, y: 70, z: 50 });
-      expect(result.primary?.id).toBe('aurora_stack');
+      expect(result.primary?.id).toBe('highlands');
     });
 
     it('should return null for point outside all regions', () => {
@@ -180,9 +180,9 @@ describe('KindRegionService', () => {
       const result = service.processEntityPlacement('location', 'entity_1', point, 100);
 
       expect(result.tags.cold).toBeTruthy();
-      expect(result.tags.aurora).toBeTruthy();
-      expect(result.tags.region).toBe('aurora_stack');
-      expect(result.region?.id).toBe('aurora_stack');
+      expect(result.tags.mountainous).toBeTruthy();
+      expect(result.tags.region).toBe('highlands');
+      expect(result.region?.id).toBe('highlands');
     });
 
     // NOTE: Emergent region creation via PlacementContext is paused.
@@ -196,24 +196,24 @@ describe('KindRegionService', () => {
         point,
         100,
         {
-          cultureId: 'aurora-stack'
+          cultureId: 'highland'
         }
       );
 
-      expect(result.cultureId).toBe('aurora-stack');
+      expect(result.cultureId).toBe('highland');
     });
 
     it('should identify region when point is inside', () => {
-      const point: Point = { x: 30, y: 70, z: 50 }; // Inside aurora_stack
+      const point: Point = { x: 30, y: 70, z: 50 }; // Inside highlands
       const result = service.processEntityPlacement(
         'location',
         'entity_1',
         point,
         100,
-        { cultureId: 'aurora-stack' }
+        { cultureId: 'highland' }
       );
 
-      expect(result.region?.id).toBe('aurora_stack');
+      expect(result.region?.id).toBe('highlands');
     });
   });
 

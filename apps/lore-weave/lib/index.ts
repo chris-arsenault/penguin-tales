@@ -69,7 +69,6 @@ export type {
 export { BaseDomainSchema } from './domainInterface/domainSchema';
 
 // LLM types moved to @illuminator - import from there if needed
-// export type { DomainLoreProvider, CulturalGroup, NamingRules, GeographyConstraints } from './llm/types';
 
 export type {
   DistributionTargets
@@ -84,8 +83,6 @@ export { TargetSelector } from './selection/targetSelector';
 export type { SelectionBias, SelectionResult } from './selection/targetSelector';
 
 // LLM services moved to @illuminator - import from there if needed
-// export { EnrichmentService } from './llm/enrichmentService';
-// export { ImageGenerationService } from './llm/imageGenerationService';
 
 // Cultural awareness analysis (debugging/reporting)
 export { CulturalAwarenessAnalyzer } from './statistics/culturalAwarenessAnalyzer';

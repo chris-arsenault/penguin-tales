@@ -768,7 +768,7 @@ describe('Name Tag Helpers', () => {
     });
 
     it('should replace spaces with hyphens', () => {
-      expect(slugifyName('the great penguin')).toBe('the-great-penguin');
+      expect(slugifyName('the great warrior')).toBe('the-great-warrior');
     });
 
     it('should remove special characters', () => {
