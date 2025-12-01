@@ -8,19 +8,19 @@ import {
 } from '../systems/catalystHelpers';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
-import { DEFAULT_PRESSURE_DOMAIN_MAPPINGS, type ExecutableActionDomain } from '../engine/actionInterpreter';
+import type { ExecutableAction } from '../engine/actionInterpreter';
 
 /**
  * Universal Catalyst System
  *
- * Framework-level system that enables agents to perform domain-defined actions.
+ * Framework-level system that enables agents to perform actions.
  * This is domain-agnostic - all domain-specific logic lives in action handlers.
  *
  * Flow:
  * 1. Find all entities that can act (catalyst.canAct = true)
  * 2. For each agent, roll for action attempt based on influence/prominence
- * 3. Select action from available actions, weighted by era and pressures
- * 4. Execute action via domain-defined handler
+ * 3. Select action from available actions, weighted by pressures
+ * 4. Execute action via declarative handler
  * 5. Record catalyzedBy attribution and update influence
  */
 
@@ -39,10 +39,10 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
     name: config.name || 'Agent Actions',
 
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
-      // Get action domain definitions from declarative config
-      const actionDomains: ExecutableActionDomain[] = graphView.config.actionDomains || [];
+      // Get executable actions from declarative config
+      const actions: ExecutableAction[] = graphView.config.executableActions || [];
 
-      if (actionDomains.length === 0) {
+      if (actions.length === 0) {
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -65,8 +65,9 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
         // Calculate action attempt chance
         const attemptChance = calculateAttemptChance(agent, actionAttemptRate);
 
-        // Apply pressure multiplier - high pressures increase action rates
-        const relevantPressures = getRelevantPressures(graphView, agent.catalyst.actionDomains);
+        // Apply pressure multiplier based on available actions for this agent
+        const availableActions = getAvailableActions(agent, actions, graphView);
+        const relevantPressures = getRelevantPressuresFromActions(graphView, availableActions);
         const pressureBonus = relevantPressures * (pressureMultiplier - 1.0);
         const finalAttemptChance = Math.min(1.0, (attemptChance + pressureBonus) * modifier);
 
@@ -74,8 +75,8 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
         actionsAttempted++;
 
-        // Select action from agent's available domains
-        const selectedAction = selectAction(agent, graphView, actionDomains);
+        // Select action from available actions
+        const selectedAction = selectAction(agent, availableActions, graphView);
         if (!selectedAction) return;
 
         // Attempt to execute action
@@ -148,73 +149,72 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 }
 
 /**
- * Get average pressure for relevant domains
+ * Get available actions for an agent based on requirements
  */
-function getRelevantPressures(graphView: TemplateGraphView, actionDomains: string[]): number {
-  let totalPressure = 0;
-  let count = 0;
+function getAvailableActions(
+  agent: HardState,
+  actions: ExecutableAction[],
+  graphView: TemplateGraphView
+): ExecutableAction[] {
+  return actions.filter(action => meetsRequirements(agent, action, graphView));
+}
 
-  actionDomains.forEach(domain => {
-    const pressureIds = DEFAULT_PRESSURE_DOMAIN_MAPPINGS[domain] || [];
-    pressureIds.forEach(pressureId => {
-      const pressure = graphView.getPressure(pressureId);
-      totalPressure += pressure / 100; // Normalize to 0-1
-      count++;
-    });
+/**
+ * Get average pressure from actions' pressureModifiers
+ */
+function getRelevantPressuresFromActions(graphView: TemplateGraphView, actions: ExecutableAction[]): number {
+  const allPressureIds = new Set<string>();
+
+  actions.forEach(action => {
+    action.pressureModifiers.forEach(p => allPressureIds.add(p));
   });
 
-  return count > 0 ? totalPressure / count : 0;
+  if (allPressureIds.size === 0) return 0;
+
+  let totalPressure = 0;
+  allPressureIds.forEach(pressureId => {
+    const pressure = graphView.getPressure(pressureId);
+    totalPressure += pressure / 100; // Normalize to 0-1
+  });
+
+  return totalPressure / allPressureIds.size;
 }
 
 /**
  * Select an action for the agent to attempt
- * Weighted by era modifiers and pressure levels
+ * Weighted by pressure levels
  */
 function selectAction(
   agent: HardState,
-  graphView: TemplateGraphView,
-  actionDomains: any[]
-): any | null {
-  if (!agent.catalyst) return null;
+  availableActions: ExecutableAction[],
+  graphView: TemplateGraphView
+): ExecutableAction | null {
+  if (!agent.catalyst || availableActions.length === 0) return null;
 
-  // Find actions available to this agent
-  const availableActions: any[] = [];
-
-  actionDomains.forEach(domain => {
-    if (!agent.catalyst?.actionDomains.includes(domain.id)) return;
-
-    domain.actions?.forEach((action: any) => {
-      // Check if action requirements are met
-      if (meetsRequirements(agent, action, graphView)) {
-        availableActions.push({
-          ...action,
-          domain: domain.id,
-          weight: calculateActionWeight(action, domain.id, graphView)
-        });
-      }
-    });
-  });
-
-  if (availableActions.length === 0) return null;
+  // Calculate weights for each action
+  const weightedActions = availableActions.map(action => ({
+    action,
+    weight: calculateActionWeight(action, graphView)
+  }));
 
   // Weighted random selection
-  const totalWeight = availableActions.reduce((sum, a) => sum + a.weight, 0);
+  const totalWeight = weightedActions.reduce((sum, a) => sum + a.weight, 0);
   let random = Math.random() * totalWeight;
 
-  for (const action of availableActions) {
-    random -= action.weight;
+  for (const { action, weight } of weightedActions) {
+    random -= weight;
     if (random <= 0) {
       return action;
     }
   }
 
-  return availableActions[0]; // Fallback
+  return weightedActions[0]?.action || null; // Fallback
 }
 
 /**
  * Check if agent meets action requirements
  */
-function meetsRequirements(agent: HardState, action: any, graphView: TemplateGraphView): boolean {
+function meetsRequirements(agent: HardState, action: ExecutableAction, graphView: TemplateGraphView): boolean {
   if (!action.requirements) return true;
 
   const reqs = action.requirements;
@@ -248,19 +248,13 @@ function meetsRequirements(agent: HardState, action: any, graphView: TemplateGra
 }
 
 /**
- * Calculate action weight based on era and pressures
+ * Calculate action weight based on pressures
  */
-function calculateActionWeight(action: any, domain: string, graphView: TemplateGraphView): number {
+function calculateActionWeight(action: ExecutableAction, graphView: TemplateGraphView): number {
   let weight = action.baseWeight || 1.0;
 
-  // Apply era modifier if defined
-  const eraModifier = graphView.currentEra.systemModifiers?.[domain] || 1.0;
-  weight *= eraModifier;
-
-  // Apply pressure boost
-  const relevantPressures = DEFAULT_PRESSURE_DOMAIN_MAPPINGS[domain] || [];
-
-  relevantPressures.forEach((pressureId: string) => {
+  // Apply pressure boost from action's direct pressureModifiers
+  action.pressureModifiers.forEach((pressureId: string) => {
     const pressure = graphView.getPressure(pressureId);
     if (pressure > 50) {
       weight *= (1 + (pressure - 50) / 100); // Up to 2x at 100 pressure
@@ -271,14 +265,14 @@ function calculateActionWeight(action: any, domain: string, graphView: TemplateG
 }
 
 /**
- * Execute an action via domain-defined handler
+ * Execute an action via declarative handler
  */
 function executeAction(
   agent: HardState,
-  action: any,
+  action: ExecutableAction,
   graphView: TemplateGraphView
 ): ActionOutcome {
-  // Action handler is domain-defined
+  // Action handler is created from declarative config
   if (!action.handler) {
     return {
       success: false,
@@ -291,13 +285,13 @@ function executeAction(
 
   // Calculate success chance
   const baseChance = action.baseSuccessChance || 0.5;
-  const influence = getInfluence(agent, action.domain);
+  const influence = getInfluence(agent);
   const successChance = Math.min(0.95, baseChance * (1 + influence));
 
   const success = Math.random() < successChance;
 
   if (success) {
-    // Execute domain handler - pass graphView instead of graph
+    // Execute declarative handler
     return action.handler(graphView, agent);
   } else {
     return {

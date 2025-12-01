@@ -7,8 +7,8 @@ Cosmographer should **read the domain schema** and **infer** coordinate spaces, 
 ## Input: Domain Schema (already exists)
 
 ```typescript
-// From penguin-tales/lore/schema.ts
-const penguinDomain = {
+// Example domain schema (from JSON configuration)
+const exampleDomain = {
   entityKinds: {
     location: {
       subtypes: ['colony', 'hunting_ground', 'sacred_site', 'underwater_cave', 'ice_tunnel'],
@@ -146,7 +146,7 @@ Use `accessibilityWeight` and `categoryDistance()` to generate the distance matr
 
 ```bash
 # During domain development
-cosmographer infer ./penguin-tales/lore/schema.ts -o ./penguin-tales/lore/coordinates.json
+cosmographer infer ./domain/schema.json -o ./domain/coordinates.json
 
 # Schema imports generated coordinates
 import coordinates from './coordinates.json';
@@ -156,7 +156,7 @@ import coordinates from './coordinates.json';
 
 ```typescript
 // In WorldEngine initialization
-const coordinates = await Cosmographer.inferFromSchema(penguinDomain);
+const coordinates = await Cosmographer.inferFromSchema(domainSchema);
 const engine = new WorldEngine({ ...config, coordinateSpaces: coordinates });
 ```
 

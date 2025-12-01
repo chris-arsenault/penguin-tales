@@ -11,6 +11,7 @@ export default defineConfig({
     federation({
       name: 'coherenceEngine',
       filename: 'remoteEntry.js',
+      manifest: true,
       exposes: {
         './CoherenceEngineRemote': './src/CoherenceEngineRemote.jsx',
       },

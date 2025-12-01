@@ -17,6 +17,7 @@ export default defineConfig({
     federation({
       name: 'loreWeave',
       filename: 'remoteEntry.js',
+      manifest: true,
       exposes: {
         './LoreWeaveRemote': './src/LoreWeaveRemote.jsx',
       },

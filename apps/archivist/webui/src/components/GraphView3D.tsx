@@ -33,7 +33,7 @@ interface GraphLink {
 }
 
 export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCatalyzedBy = false, edgeMetric = 'strength' }: GraphView3DProps) {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
@@ -195,10 +195,6 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
     return link.strength * 2; // 0-2px width based on strength
   }, []);
 
-  const linkOpacity = useCallback((link: any) => {
-    return link.catalyzed ? 0.9 : link.strength * 0.6;
-  }, []);
-
   // Set initial camera position (once)
   useEffect(() => {
     if (fgRef.current) {
@@ -253,7 +249,8 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
         linkTarget="target"
         linkColor={linkColor}
         linkWidth={linkWidth}
-        linkOpacity={linkOpacity}
+        linkOpacity={0.6}
+        // @ts-expect-error react-force-graph supports linkDistance
         linkDistance={linkDistance}
         linkDirectionalArrowLength={3}
         linkDirectionalArrowRelPos={1}

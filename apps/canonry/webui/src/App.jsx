@@ -451,6 +451,7 @@ export default function App() {
   };
 
   if (loading) {
+    console.log('[Canonry] Project storage still loading');
     return (
       <div style={{ ...styles.app, alignItems: 'center', justifyContent: 'center' }}>
         <div style={styles.loading}>Loading...</div>

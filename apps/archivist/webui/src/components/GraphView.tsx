@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import cytoscape from 'cytoscape';
-import type { Core, NodeSingular, Stylesheet } from 'cytoscape';
+import type { Core, NodeSingular } from 'cytoscape';
 // @ts-ignore
 import coseBilkent from 'cytoscape-cose-bilkent';
 import type { WorldState, EntityKindSchema } from '../types/world.ts';
@@ -20,7 +20,7 @@ const DEFAULT_ENTITY_STYLES: EntityKindSchema[] = [
 ];
 
 // Generate Cytoscape style array from entity kind schemas
-function generateEntityKindStyles(entityKinds: EntityKindSchema[]): Stylesheet[] {
+function generateEntityKindStyles(entityKinds: EntityKindSchema[]) {
   return entityKinds.map(ek => ({
     selector: `node[kind="${ek.kind}"]`,
     style: {
@@ -137,7 +137,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
           }
         },
         // Dynamic entity kind styles from uiSchema
-        ...entityStyles,
+        // Dynamic entity kind styles from uiSchema
+        ...entityStyles as any,
         {
           selector: 'node:selected',
           style: {

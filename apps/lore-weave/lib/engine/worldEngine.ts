@@ -4,7 +4,7 @@ import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
 import { DeclarativeTemplate } from './declarativeTypes';
 import { createSystemFromDeclarative, DeclarativeSystem } from './systemInterpreter';
-import { loadActions, ExecutableActionDomain } from './actionInterpreter';
+import { loadActions } from './actionInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
@@ -160,10 +160,10 @@ export class WorldEngine {
       return createSystemFromDeclarative(s as DeclarativeSystem);
     });
 
-    // Convert declarative actions to runtime action domains
+    // Convert declarative actions to runtime executable actions
     // These are used by the universalCatalyst system
     if (config.actions && config.actions.length > 0) {
-      config.actionDomains = loadActions(config.actions);
+      config.executableActions = loadActions(config.actions);
     }
 
     this.config = config;
@@ -806,6 +806,9 @@ export class WorldEngine {
     // Emit epoch stats
     this.emitEpochStats(era, entitiesCreated, relationshipsCreated, growthTargets);
 
+    // Emit diagnostics (updated each epoch for visibility during stepping)
+    this.emitDiagnostics();
+
     this.queueEraNarrative(previousEra, era);
 
     // Check for significant entity changes and enrich them
@@ -945,6 +948,105 @@ export class WorldEngine {
       populationHealth,
       status: populationHealth > 0.8 ? 'stable' :
               populationHealth > 0.6 ? 'functional' : 'needs_attention'
+    });
+  }
+
+  /**
+   * Emit diagnostics (entity breakdown, catalyst stats, etc.)
+   * Called after each epoch so diagnostics are visible during step mode.
+   */
+  private emitDiagnostics(): void {
+    const entities = this.graph.getEntities();
+    const relationships = this.graph.getRelationships();
+
+    // Entity breakdown by kind:subtype
+    const byKind: Record<string, { total: number; bySubtype: Record<string, number> }> = {};
+    entities.forEach(e => {
+      if (!byKind[e.kind]) {
+        byKind[e.kind] = { total: 0, bySubtype: {} };
+      }
+      byKind[e.kind].total++;
+      byKind[e.kind].bySubtype[e.subtype] = (byKind[e.kind].bySubtype[e.subtype] || 0) + 1;
+    });
+
+    this.emitter.entityBreakdown({
+      totalEntities: entities.length,
+      byKind
+    });
+
+    // Catalyst statistics
+    const agents = entities.filter(e => e.catalyst?.canAct);
+    const activeAgents = agents.filter(e => e.catalyst && e.catalyst.catalyzedEvents.length > 0);
+    const agentActions = new Map<string, { name: string; kind: string; count: number }>();
+
+    entities.forEach(e => {
+      if (e.catalyst?.catalyzedEvents?.length) {
+        agentActions.set(e.id, {
+          name: e.name,
+          kind: e.kind,
+          count: e.catalyst.catalyzedEvents.length
+        });
+      }
+    });
+
+    const topAgents = Array.from(agentActions.entries())
+      .map(([id, data]) => ({ id, name: data.name, kind: data.kind, actionCount: data.count }))
+      .sort((a, b) => b.actionCount - a.actionCount)
+      .slice(0, 10);
+
+    const totalActions = Array.from(agentActions.values()).reduce((sum, a) => sum + a.count, 0);
+
+    this.emitter.catalystStats({
+      totalAgents: agents.length,
+      activeAgents: activeAgents.length,
+      totalActions,
+      uniqueActors: agentActions.size,
+      topAgents
+    });
+
+    // Relationship breakdown
+    const relCounts = new Map<string, number>();
+    relationships.forEach(r => {
+      relCounts.set(r.kind, (relCounts.get(r.kind) || 0) + 1);
+    });
+
+    const relBreakdown = Array.from(relCounts.entries())
+      .map(([kind, count]) => ({
+        kind,
+        count,
+        percentage: relationships.length > 0 ? (count / relationships.length) * 100 : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    this.emitter.relationshipBreakdown({
+      totalRelationships: relationships.length,
+      byKind: relBreakdown
+    });
+
+    // Notable entities (mythic and renowned)
+    const mythic = entities
+      .filter(e => e.prominence === 'mythic')
+      .map(e => ({ id: e.id, name: e.name, kind: e.kind, subtype: e.subtype }));
+
+    const renowned = entities
+      .filter(e => e.prominence === 'renowned')
+      .map(e => ({ id: e.id, name: e.name, kind: e.kind, subtype: e.subtype }));
+
+    this.emitter.notableEntities({ mythic, renowned });
+
+    // Sample history events (last 10)
+    const history = this.graph.history;
+    const recentEvents = history.slice(-10).map(h => ({
+      tick: h.tick,
+      type: h.type,
+      summary: h.description,
+      entityIds: h.entitiesCreated || []
+    }));
+
+    this.emitter.sampleHistory({
+      totalEvents: history.length,
+      recentEvents
     });
   }
 

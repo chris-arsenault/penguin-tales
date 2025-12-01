@@ -3,7 +3,6 @@
     "id": "seize_control",
     "name": "Seize Control",
     "description": "Take control of a location adjacent to territory already controlled",
-    "domain": "political",
 
     "actor": {
       "kinds": ["npc", "faction"],
@@ -47,7 +46,8 @@
 
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["conflict", "stability"]
     }
   },
 
@@ -55,7 +55,6 @@
     "id": "form_alliance",
     "name": "Form Alliance",
     "description": "Create alliance between factions that are not already allied or at war",
-    "domain": "political",
 
     "actor": {
       "kinds": ["npc", "faction"],
@@ -102,7 +101,8 @@
 
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 0.8
+      "baseWeight": 0.8,
+      "pressureModifiers": ["conflict", "stability"]
     }
   },
 
@@ -110,7 +110,6 @@
     "id": "declare_war",
     "name": "Declare War",
     "description": "Create enemy relationship between factions",
-    "domain": "political",
 
     "actor": {
       "kinds": ["npc", "faction"],
@@ -152,7 +151,8 @@
 
     "probability": {
       "baseSuccessChance": 0.6,
-      "baseWeight": 0.5
+      "baseWeight": 0.5,
+      "pressureModifiers": ["conflict", "stability"]
     }
   },
 
@@ -160,7 +160,6 @@
     "id": "raid",
     "name": "Raid",
     "description": "Attack an enemy faction",
-    "domain": "military",
 
     "actor": {
       "kinds": ["npc", "faction"]
@@ -200,7 +199,8 @@
 
     "probability": {
       "baseSuccessChance": 0.35,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["conflict", "external_threat"]
     }
   },
 
@@ -208,7 +208,6 @@
     "id": "establish_trade",
     "name": "Establish Trade Route",
     "description": "Create trade connection between two thriving locations",
-    "domain": "economic",
 
     "actor": {
       "kinds": ["npc", "faction"]
@@ -244,7 +243,8 @@
 
     "probability": {
       "baseSuccessChance": 0.5,
-      "baseWeight": 1.2
+      "baseWeight": 1.2,
+      "pressureModifiers": ["resource_scarcity", "stability"]
     }
   },
 
@@ -252,7 +252,6 @@
     "id": "corrupt_location",
     "name": "Corrupt Location",
     "description": "Spread magical corruption to a location",
-    "domain": "magical",
 
     "actor": {
       "kinds": ["npc", "abilities"],
@@ -296,7 +295,8 @@
 
     "probability": {
       "baseSuccessChance": 0.25,
-      "baseWeight": 0.8
+      "baseWeight": 0.8,
+      "pressureModifiers": ["magical_instability"]
     }
   },
 
@@ -304,7 +304,6 @@
     "id": "manifest_magic",
     "name": "Manifest Magic",
     "description": "Magic manifests at a location",
-    "domain": "magical",
 
     "actor": {
       "kinds": ["abilities"],
@@ -339,7 +338,8 @@
 
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["magical_instability"]
     }
   },
 
@@ -347,7 +347,6 @@
     "id": "spread_innovation",
     "name": "Spread Innovation",
     "description": "Technology spreads to new practitioners",
-    "domain": "technological",
 
     "actor": {
       "kinds": ["abilities"],
@@ -386,7 +385,8 @@
 
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["resource_scarcity", "magical_instability"]
     }
   },
 
@@ -394,7 +394,6 @@
     "id": "convert_faction",
     "name": "Convert Faction",
     "description": "Spread cultural/religious belief to faction",
-    "domain": "cultural",
 
     "actor": {
       "kinds": ["npc"]
@@ -435,7 +434,8 @@
 
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["cultural_tension", "stability"]
     }
   },
 
@@ -443,7 +443,6 @@
     "id": "draw_in_faction",
     "name": "Draw In Faction",
     "description": "Neutral faction becomes war participant",
-    "domain": "conflict_escalation",
 
     "actor": {
       "kinds": ["occurrence"],
@@ -481,7 +480,8 @@
 
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1.5
+      "baseWeight": 1.5,
+      "pressureModifiers": ["conflict", "external_threat"]
     }
   },
 
@@ -489,7 +489,6 @@
     "id": "escalate_war",
     "name": "Escalate War",
     "description": "War intensifies, strengthening participant relationships",
-    "domain": "conflict_escalation",
 
     "actor": {
       "kinds": ["occurrence"],
@@ -526,7 +525,8 @@
 
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 1.0
+      "baseWeight": 1.0,
+      "pressureModifiers": ["conflict", "external_threat"]
     }
   },
 
@@ -534,7 +534,6 @@
     "id": "spread_corruption",
     "name": "Spread Corruption",
     "description": "Disaster corrupts adjacent locations",
-    "domain": "disaster_spread",
 
     "actor": {
       "kinds": ["occurrence"],
@@ -580,7 +579,8 @@
 
     "probability": {
       "baseSuccessChance": 0.35,
-      "baseWeight": 1.2
+      "baseWeight": 1.2,
+      "pressureModifiers": ["magical_instability"]
     }
   }
 ]

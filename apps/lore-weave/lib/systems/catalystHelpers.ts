@@ -36,34 +36,20 @@ export function getAgentsByCategory(
 }
 
 /**
- * Check if an entity can perform an action in a specific domain
+ * Check if an entity can perform actions
  * @param entity - The entity to check
- * @param actionDomain - The action domain (e.g., 'political', 'magical')
- * @returns True if entity can act in this domain
+ * @returns True if entity can act
  */
-export function canPerformAction(
-  entity: HardState,
-  actionDomain: string
-): boolean {
-  if (!entity.catalyst?.canAct) {
-    return false;
-  }
-
-  return entity.catalyst.actionDomains.includes(actionDomain);
+export function canPerformAction(entity: HardState): boolean {
+  return entity.catalyst?.canAct === true;
 }
 
 /**
- * Get entity's influence in a specific domain
- * Default implementation returns base influence.
- * Domains can override to provide domain-specific influence calculations.
+ * Get entity's influence score
  * @param entity - The entity
- * @param actionDomain - The action domain
  * @returns Influence score (0-1)
  */
-export function getInfluence(
-  entity: HardState,
-  actionDomain: string
-): number {
+export function getInfluence(entity: HardState): number {
   if (!entity.catalyst) {
     return 0;
   }
@@ -72,7 +58,7 @@ export function getInfluence(
   let influence = entity.catalyst.influence;
 
   // Prominence bonus: renowned/mythic entities have more influence
-  const prominenceBonus = {
+  const prominenceBonus: Record<string, number> = {
     'forgotten': -0.2,
     'marginal': -0.1,
     'recognized': 0,
@@ -231,18 +217,15 @@ export function calculateAttemptChance(
  * This is a helper for domain code to set up catalyst properties
  * @param entity - The entity to initialize
  * @param canAct - Can this entity perform actions?
- * @param actionDomains - Which domains can it act in?
  * @param initialInfluence - Starting influence (default 0.5)
  */
 export function initializeCatalyst(
   entity: HardState,
   canAct: boolean,
-  actionDomains: string[] = [],
   initialInfluence: number = 0.5
 ): void {
   entity.catalyst = {
     canAct,
-    actionDomains,
     influence: initialInfluence,
     catalyzedEvents: []
   };
@@ -250,10 +233,10 @@ export function initializeCatalyst(
 
 /**
  * Smart catalyst initialization based on entity type and prominence.
- * Automatically determines action domains and influence based on entity properties.
+ * Automatically determines influence based on entity properties.
  *
  * @param entity - The entity to initialize
- * @param graph - Graph (used for context, action domains determined by entity kind)
+ * @param graph - Graph (used for context)
  */
 export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
   // Only prominent entities can act
@@ -261,34 +244,17 @@ export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
     return;
   }
 
-  // Determine which action domains this entity can use based on entity kind
-  const actionDomains = getDefaultActionDomainsForEntity(entity);
-
-  if (actionDomains.length === 0) {
+  // Entity kinds that can act
+  const actorKinds = ['npc', 'faction', 'abilities', 'occurrence', 'location'];
+  if (!actorKinds.includes(entity.kind)) {
     return;
   }
 
   entity.catalyst = {
     canAct: true,
-    actionDomains,
     influence: prominenceToInfluence(entity.prominence),
     catalyzedEvents: []
   };
-}
-
-/**
- * Get default action domains for an entity based on its kind.
- */
-function getDefaultActionDomainsForEntity(entity: HardState): string[] {
-  const kindDomains: Record<string, string[]> = {
-    npc: ['political', 'economic', 'cultural'],
-    faction: ['political', 'economic', 'cultural', 'military'],
-    abilities: ['magical', 'technological'],
-    occurrence: ['conflict_escalation', 'disaster_spread'],
-    location: ['environmental']
-  };
-
-  return kindDomains[entity.kind] || [];
 }
 
 /**

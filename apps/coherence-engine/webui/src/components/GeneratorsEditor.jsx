@@ -11,7 +11,44 @@
  * - Effects: Pressure modifications and archives
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+
+// ============================================================================
+// CSS HOVER STYLES (injected once)
+// ============================================================================
+
+const HOVER_STYLES_ID = 'generators-editor-hover-styles';
+
+const hoverCSS = `
+  .ge-tab-btn:not(.ge-tab-btn-active):hover {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+  }
+  .ge-tab-btn:not(.ge-tab-btn-active) {
+    background-color: transparent !important;
+  }
+  .ge-add-item-btn:hover {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+  }
+  .ge-add-item-btn {
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    color: #60a5fa !important;
+  }
+  .ge-card-option:hover {
+    border-color: #f59e0b !important;
+  }
+`;
+
+function useHoverStyles() {
+  useEffect(() => {
+    if (!document.getElementById(HOVER_STYLES_ID)) {
+      const style = document.createElement('style');
+      style.id = HOVER_STYLES_ID;
+      style.textContent = hoverCSS;
+      document.head.appendChild(style);
+    }
+  }, []);
+}
 
 // ============================================================================
 // THEME & CONSTANTS
@@ -1104,10 +1141,9 @@ function AddRuleButton({ onAdd, depth = 0 }) {
   return (
     <div style={{ position: 'relative' }}>
       <button
+        className="ge-add-item-btn"
         style={styles.addItemBtn}
         onClick={() => setShowPicker(!showPicker)}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
       >
         + Add Rule
       </button>
@@ -1119,10 +1155,9 @@ function AddRuleButton({ onAdd, depth = 0 }) {
             .map(([type, config]) => (
               <div
                 key={type}
+                className="ge-card-option"
                 style={styles.typeOption}
                 onClick={() => { onAdd(type); setShowPicker(false); }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; }}
               >
                 <div style={styles.typeOptionIcon}>{config.icon}</div>
                 <div style={styles.typeOptionLabel}>{config.label}</div>
@@ -1476,10 +1511,9 @@ function VariablesTab({ generator, onChange, schema }) {
           </div>
         ) : (
           <button
+            className="ge-add-item-btn"
             style={styles.addItemBtn}
             onClick={() => setShowAddForm(true)}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
           >
             + Add Variable
           </button>
@@ -1685,10 +1719,9 @@ function CreationTab({ generator, onChange, schema }) {
         )}
 
         <button
+          className="ge-add-item-btn"
           style={styles.addItemBtn}
           onClick={handleAdd}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
         >
           + Add Entity Creation
         </button>
@@ -1861,10 +1894,9 @@ function RelationshipsTab({ generator, onChange, schema }) {
         )}
 
         <button
+          className="ge-add-item-btn"
           style={styles.addItemBtn}
           onClick={handleAdd}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
         >
           + Add Relationship
         </button>
@@ -1949,10 +1981,9 @@ function EffectsTab({ generator, onChange, pressures, schema }) {
         })}
 
         <button
+          className="ge-add-item-btn"
           style={styles.addItemBtn}
           onClick={handleAddPressure}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
         >
           + Add Pressure Modification
         </button>
@@ -2004,10 +2035,9 @@ function EffectsTab({ generator, onChange, pressures, schema }) {
         })}
 
         <button
+          className="ge-add-item-btn"
           style={styles.addItemBtn}
           onClick={handleAddArchive}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = ACCENT_COLOR; e.currentTarget.style.color = ACCENT_COLOR; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textDim; }}
         >
           + Add Archive Rule
         </button>
@@ -2065,10 +2095,9 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
             {TABS.map((tab) => (
               <button
                 key={tab.id}
+                className={`ge-tab-btn ${activeTab === tab.id ? 'ge-tab-btn-active' : ''}`}
                 style={{ ...styles.tabBtn, ...(activeTab === tab.id ? styles.tabBtnActive : {}) }}
                 onClick={() => setActiveTab(tab.id)}
-                onMouseEnter={(e) => { if (activeTab !== tab.id) e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'; }}
-                onMouseLeave={(e) => { if (activeTab !== tab.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
               >
                 <span style={styles.tabIcon}>{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -2133,6 +2162,7 @@ function GeneratorListCard({ generator, onClick, onToggle }) {
 }
 
 export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [] }) {
+  useHoverStyles();
   const [selectedGenerator, setSelectedGenerator] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
 

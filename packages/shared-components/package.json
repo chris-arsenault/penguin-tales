@@ -1,5 +1,5 @@
 {
-  "name": "@penguin-tales/shared-components",
+  "name": "@lore-weave/shared-components",
   "version": "1.0.0",
   "description": "Shared React components for Canonry MFEs",
   "type": "module",

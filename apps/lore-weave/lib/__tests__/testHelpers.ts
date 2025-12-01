@@ -24,6 +24,12 @@ export function createMockEmitter(): ISimulationEmitter {
     coordinateStats: () => {},
     tagHealth: () => {},
     systemHealth: () => {},
+    // Final diagnostics
+    entityBreakdown: () => {},
+    catalystStats: () => {},
+    relationshipBreakdown: () => {},
+    notableEntities: () => {},
+    sampleHistory: () => {},
     complete: () => {},
     error: () => {},
   };

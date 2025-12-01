@@ -4,7 +4,7 @@
 
 A dramatically over-engineered procedural name generator for fantasy worlds, games, and fiction. Instead of a simple random name picker, we've built a system with phonological domains, context-free grammars, Markov chains, genetic algorithm optimization, and multi-culture support. You know, the essentials.
 
-**[Try it live at penguin-tales.com/name-forge](https://penguin-tales.com/name-forge/)**
+**[Try it live at lore-weave.dev/name-forge](https://lore-weave.dev/name-forge/)**
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-purple.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)

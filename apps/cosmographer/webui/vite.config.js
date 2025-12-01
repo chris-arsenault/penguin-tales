@@ -12,6 +12,7 @@ export default defineConfig({
     federation({
       name: 'cosmographer',
       filename: 'remoteEntry.js',
+      manifest: true,
       exposes: {
         './CosmographerRemote': './src/CosmographerRemote.jsx',
       },

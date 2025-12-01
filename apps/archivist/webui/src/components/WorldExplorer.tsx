@@ -1,8 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
 import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
-import GraphView from './GraphView.tsx';
-import GraphView3D from './GraphView3D.tsx';
 import CoordinateMapView from './CoordinateMapView.tsx';
 import FilterPanel from './FilterPanel.tsx';
 import EntityDetail from './EntityDetail.tsx';
@@ -18,6 +16,9 @@ interface WorldExplorerProps {
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
 export type ViewMode = 'graph3d' | 'graph2d' | 'map';
+
+const GraphView = lazy(() => import('./GraphView.tsx'));
+const GraphView3D = lazy(() => import('./GraphView3D.tsx'));
 
 export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
@@ -67,26 +68,28 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
 
         {/* Graph View */}
         <main className="world-graph-container">
-          {viewMode === 'graph3d' && (
-            <GraphView3D
-              key={`3d-view-${edgeMetric}`}
-              data={filteredData}
-              selectedNodeId={selectedEntityId}
-              onNodeSelect={setSelectedEntityId}
-              showCatalyzedBy={filters.showCatalyzedBy}
-              edgeMetric={edgeMetric}
-            />
-          )}
-          {viewMode === 'graph2d' && (
-            <GraphView
-              key="2d-view"
-              data={filteredData}
-              selectedNodeId={selectedEntityId}
-              onNodeSelect={setSelectedEntityId}
-              showCatalyzedBy={filters.showCatalyzedBy}
-              onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
-            />
-          )}
+          <Suspense fallback={<div className="world-loading">Loading view…</div>}>
+            {viewMode === 'graph3d' && (
+              <GraphView3D
+                key={`3d-view-${edgeMetric}`}
+                data={filteredData}
+                selectedNodeId={selectedEntityId}
+                onNodeSelect={setSelectedEntityId}
+                showCatalyzedBy={filters.showCatalyzedBy}
+                edgeMetric={edgeMetric}
+              />
+            )}
+            {viewMode === 'graph2d' && (
+              <GraphView
+                key="2d-view"
+                data={filteredData}
+                selectedNodeId={selectedEntityId}
+                onNodeSelect={setSelectedEntityId}
+                showCatalyzedBy={filters.showCatalyzedBy}
+                onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
+              />
+            )}
+          </Suspense>
           {viewMode === 'map' && (
             <CoordinateMapView
               key="map-view"

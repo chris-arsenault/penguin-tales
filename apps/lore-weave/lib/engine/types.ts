@@ -380,12 +380,12 @@ export interface EngineConfig {
   pressures: import('./declarativePressureTypes').DeclarativePressure[];
 
   // Actions - declarative JSON format from UI
-  // WorldEngine converts these to runtime ExecutableActionDomain objects for universalCatalyst
+  // WorldEngine converts these to runtime ExecutableAction objects for universalCatalyst
   actions?: import('./actionInterpreter').DeclarativeAction[];
 
-  // Runtime action domains - populated by WorldEngine from declarative actions
+  // Runtime executable actions - populated by WorldEngine from declarative actions
   // Used by universalCatalyst system to execute agent actions
-  actionDomains?: import('./actionInterpreter').ExecutableActionDomain[];
+  executableActions?: import('./actionInterpreter').ExecutableAction[];
 
   entityRegistries?: EntityOperatorRegistry[];
 

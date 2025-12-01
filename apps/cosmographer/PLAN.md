@@ -344,7 +344,7 @@ The exported JSON should be clean and self-documenting:
 
 ```json
 {
-  "$schema": "https://penguin-tales.dev/schemas/world-seed-v1.json",
+  "$schema": "https://lore-weave.dev/schemas/world-seed-v1.json",
   "version": "1.0",
   "name": "My World",
   "exportedAt": "2025-11-28T12:00:00Z",

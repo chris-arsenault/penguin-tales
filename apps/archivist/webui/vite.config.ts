@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 
@@ -11,6 +11,7 @@ export default defineConfig({
     federation({
       name: 'archivist',
       filename: 'remoteEntry.js',
+      manifest: true,
       exposes: {
         './ArchivistRemote': './src/ArchivistRemote.tsx',
       },
@@ -18,13 +19,13 @@ export default defineConfig({
         react: { singleton: true, requiredVersion: '^19.0.0' },
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
-    }),
+    }) as PluginOption,
   ],
   // Base path - use /archivist/ in dev (via proxy) and production
   base: '/archivist/',
   build: {
     target: 'esnext',
-    minify: false,
+    minify: true,
   },
   server: {
     port: 5005,

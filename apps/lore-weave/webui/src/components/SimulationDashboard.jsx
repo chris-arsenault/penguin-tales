@@ -732,6 +732,308 @@ function TemplateUsage({ templateUsage, systemHealth }) {
   );
 }
 
+// Final Diagnostics component (shown after simulation completes)
+function FinalDiagnostics({
+  entityBreakdown,
+  catalystStats,
+  relationshipBreakdown,
+  notableEntities,
+  sampleHistory
+}) {
+  const [activeTab, setActiveTab] = useState('entities');
+
+  const hasDiagnostics = entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
+
+  if (!hasDiagnostics) {
+    return null;
+  }
+
+  return (
+    <div style={styles.panel}>
+      <div style={styles.panelHeader}>
+        <div style={styles.panelTitle}>
+          <span>📋</span>
+          Final Diagnostics
+        </div>
+      </div>
+
+      {/* Tab navigation */}
+      <div style={styles.filterTabs}>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(activeTab === 'entities' ? styles.filterTabActive : {})
+          }}
+          onClick={() => setActiveTab('entities')}
+        >
+          Entities
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(activeTab === 'relationships' ? styles.filterTabActive : {})
+          }}
+          onClick={() => setActiveTab('relationships')}
+        >
+          Relationships
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(activeTab === 'agents' ? styles.filterTabActive : {})
+          }}
+          onClick={() => setActiveTab('agents')}
+        >
+          Agents
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(activeTab === 'notable' ? styles.filterTabActive : {})
+          }}
+          onClick={() => setActiveTab('notable')}
+        >
+          Notable
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(activeTab === 'history' ? styles.filterTabActive : {})
+          }}
+          onClick={() => setActiveTab('history')}
+        >
+          History
+        </button>
+      </div>
+
+      <div style={styles.panelContent}>
+        {/* Entity Breakdown Tab */}
+        {activeTab === 'entities' && entityBreakdown && (
+          <div>
+            <div style={{ marginBottom: '12px', fontSize: '13px', color: TEXT_SECONDARY }}>
+              Total: {entityBreakdown.totalEntities} entities
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(entityBreakdown.byKind).map(([kind, data]) => (
+                <div key={kind} style={styles.metricCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 600, color: TEXT_PRIMARY }}>{kind}</span>
+                    <span style={{ color: ACCENT_COLOR }}>{data.total}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {Object.entries(data.bySubtype).map(([subtype, count]) => (
+                      <span key={subtype} style={{
+                        padding: '2px 8px',
+                        backgroundColor: BG_TERTIARY,
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        color: TEXT_MUTED
+                      }}>
+                        {subtype}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Relationship Breakdown Tab */}
+        {activeTab === 'relationships' && relationshipBreakdown && (
+          <div>
+            <div style={{ marginBottom: '12px', fontSize: '13px', color: TEXT_SECONDARY }}>
+              Total: {relationshipBreakdown.totalRelationships} relationships
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {relationshipBreakdown.byKind.map((rel) => (
+                <div key={rel.kind} style={styles.pressureGauge}>
+                  <span style={{ ...styles.pressureName, width: '180px' }}>{rel.kind}</span>
+                  <div style={styles.pressureBar}>
+                    <div style={{
+                      ...styles.pressureFill,
+                      width: `${rel.percentage}%`,
+                      backgroundColor: ACCENT_COLOR
+                    }} />
+                  </div>
+                  <span style={styles.pressureValue}>
+                    {rel.count} ({rel.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Catalyst/Agents Tab */}
+        {activeTab === 'agents' && catalystStats && (
+          <div>
+            <div style={styles.metricGrid}>
+              <div style={styles.metricCard}>
+                <div style={styles.metricName}>Total Agents</div>
+                <div style={styles.metricValue}>{catalystStats.totalAgents}</div>
+              </div>
+              <div style={styles.metricCard}>
+                <div style={styles.metricName}>Active Agents</div>
+                <div style={styles.metricValue}>{catalystStats.activeAgents}</div>
+              </div>
+              <div style={styles.metricCard}>
+                <div style={styles.metricName}>Total Actions</div>
+                <div style={styles.metricValue}>{catalystStats.totalActions}</div>
+              </div>
+              <div style={styles.metricCard}>
+                <div style={styles.metricName}>Unique Actors</div>
+                <div style={styles.metricValue}>{catalystStats.uniqueActors}</div>
+              </div>
+            </div>
+
+            {catalystStats.topAgents.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ fontSize: '12px', color: TEXT_MUTED, marginBottom: '8px' }}>
+                  Top Agents by Actions
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {catalystStats.topAgents.map((agent, i) => (
+                    <div key={agent.id} style={{
+                      ...styles.templateItem,
+                      borderLeft: `3px solid ${i === 0 ? ACCENT_COLOR : BORDER_COLOR}`
+                    }}>
+                      <span style={{
+                        ...styles.templateName,
+                        width: 'auto',
+                        flex: 1
+                      }}>
+                        {agent.name}
+                        <span style={{ marginLeft: '8px', fontSize: '11px', color: TEXT_MUTED }}>
+                          ({agent.kind})
+                        </span>
+                      </span>
+                      <span style={styles.templateCount}>{agent.actionCount}×</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Notable Entities Tab */}
+        {activeTab === 'notable' && notableEntities && (
+          <div>
+            {notableEntities.mythic.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#fbbf24',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>⭐</span> Mythic ({notableEntities.mythic.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {notableEntities.mythic.map(e => (
+                    <div key={e.id} style={{
+                      ...styles.templateItem,
+                      borderLeft: '3px solid #fbbf24'
+                    }}>
+                      <span style={{ flex: 1, color: TEXT_PRIMARY }}>{e.name}</span>
+                      <span style={{ fontSize: '11px', color: TEXT_MUTED }}>
+                        {e.kind}:{e.subtype}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {notableEntities.renowned.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#a78bfa',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>★</span> Renowned ({notableEntities.renowned.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {notableEntities.renowned.slice(0, 10).map(e => (
+                    <div key={e.id} style={{
+                      ...styles.templateItem,
+                      borderLeft: '3px solid #a78bfa'
+                    }}>
+                      <span style={{ flex: 1, color: TEXT_PRIMARY }}>{e.name}</span>
+                      <span style={{ fontSize: '11px', color: TEXT_MUTED }}>
+                        {e.kind}:{e.subtype}
+                      </span>
+                    </div>
+                  ))}
+                  {notableEntities.renowned.length > 10 && (
+                    <div style={{ fontSize: '12px', color: TEXT_MUTED, textAlign: 'center' }}>
+                      +{notableEntities.renowned.length - 10} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {notableEntities.mythic.length === 0 && notableEntities.renowned.length === 0 && (
+              <div style={styles.emptyState}>
+                <span style={styles.emptyIcon}>🌟</span>
+                <span>No notable entities yet</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sample History Tab */}
+        {activeTab === 'history' && sampleHistory && (
+          <div>
+            <div style={{ marginBottom: '12px', fontSize: '13px', color: TEXT_SECONDARY }}>
+              Total: {sampleHistory.totalEvents} events (showing last {sampleHistory.recentEvents.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {sampleHistory.recentEvents.slice().reverse().map((event, i) => (
+                <div key={i} style={{
+                  ...styles.metricCard,
+                  padding: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', color: ACCENT_COLOR }}>
+                      Tick {event.tick}
+                    </span>
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '1px 6px',
+                      backgroundColor: BG_TERTIARY,
+                      borderRadius: '4px',
+                      color: TEXT_MUTED
+                    }}>
+                      {event.type}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: TEXT_PRIMARY }}>
+                    {event.summary}
+                  </div>
+                  {event.entityIds.length > 0 && (
+                    <div style={{ fontSize: '10px', color: TEXT_MUTED, marginTop: '4px' }}>
+                      {event.entityIds.length} entit{event.entityIds.length === 1 ? 'y' : 'ies'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Log stream component
 function LogStream({ logs, onClear }) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -858,11 +1160,20 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
     populationReport,
     templateUsage,
     systemHealth,
+    entityBreakdown,
+    catalystStats,
+    relationshipBreakdown,
+    notableEntities,
+    sampleHistory,
     logs
   } = simState;
 
   // Extract pressures from latest epoch stats
   const pressures = epochStats.length > 0 ? epochStats[epochStats.length - 1].pressures : null;
+
+  // Show final diagnostics when simulation is complete or we have diagnostic data
+  const showFinalDiagnostics = status === 'complete' ||
+    entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
 
   return (
     <div style={styles.dashboard}>
@@ -890,6 +1201,17 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
           />
         </div>
       </div>
+
+      {/* Final Diagnostics (shown after completion) */}
+      {showFinalDiagnostics && (
+        <FinalDiagnostics
+          entityBreakdown={entityBreakdown}
+          catalystStats={catalystStats}
+          relationshipBreakdown={relationshipBreakdown}
+          notableEntities={notableEntities}
+          sampleHistory={sampleHistory}
+        />
+      )}
 
       {/* Log Stream */}
       <LogStream logs={logs} onClear={onClearLogs} />

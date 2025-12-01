@@ -153,6 +153,8 @@ export interface ActionProbabilityConfig {
   baseSuccessChance: number;
   /** Selection weight for weighted random */
   baseWeight: number;
+  /** Pressure IDs that affect this action's weight (high pressure = more likely) */
+  pressureModifiers?: string[];
 }
 
 /**
@@ -165,8 +167,6 @@ export interface DeclarativeAction {
   name: string;
   /** Description of what this action does */
   description: string;
-  /** Action domain (political, military, etc.) */
-  domain: string;
 
   /** Who can attempt this action */
   actor: ActionActorConfig;
@@ -187,9 +187,10 @@ export interface ExecutableAction {
   type: string;
   name: string;
   description: string;
-  domain: string;
   baseSuccessChance: number;
   baseWeight: number;
+  /** Pressure IDs that affect this action's weight */
+  pressureModifiers: string[];
   requirements?: {
     minProminence?: string;
     requiredRelationships?: string[];
@@ -209,16 +210,6 @@ export interface ActionResult {
   entitiesModified?: string[];
 }
 
-/**
- * Action domain (grouping of related actions)
- */
-export interface ExecutableActionDomain {
-  id: string;
-  name: string;
-  description: string;
-  validActors: string[];
-  actions: ExecutableAction[];
-}
 
 // =============================================================================
 // ACTION INTERPRETATION
@@ -647,9 +638,9 @@ export function createExecutableAction(action: DeclarativeAction): ExecutableAct
     type: action.id,
     name: action.name,
     description: action.description,
-    domain: action.domain,
     baseSuccessChance: action.probability.baseSuccessChance,
     baseWeight: action.probability.baseWeight,
+    pressureModifiers: action.probability.pressureModifiers || [],
     requirements: {
       minProminence: action.actor.minProminence,
       requiredRelationships: action.actor.requiredRelationships,
@@ -660,108 +651,30 @@ export function createExecutableAction(action: DeclarativeAction): ExecutableAct
 }
 
 /**
- * Load declarative actions and group them by domain.
+ * Load declarative actions and convert them to executable actions.
  */
-export function loadActions(actions: DeclarativeAction[]): ExecutableActionDomain[] {
+export function loadActions(actions: DeclarativeAction[]): ExecutableAction[] {
   if (!Array.isArray(actions)) {
     console.warn('loadActions: expected array, got', typeof actions);
     return [];
   }
 
-  // Group actions by domain
-  const domainMap = new Map<string, ExecutableAction[]>();
+  const executableActions: ExecutableAction[] = [];
 
   for (const action of actions) {
-    if (!action || !action.domain || !action.id) {
+    if (!action || !action.id) {
       console.warn('loadActions: skipping invalid action', action);
       continue;
     }
 
     try {
       const executable = createExecutableAction(action);
-
-      if (!domainMap.has(action.domain)) {
-        domainMap.set(action.domain, []);
-      }
-      domainMap.get(action.domain)!.push(executable);
+      executableActions.push(executable);
     } catch (error) {
       console.error(`Failed to create action ${action.id}:`, error);
     }
   }
 
-  // Create domain objects
-  const domains: ExecutableActionDomain[] = [];
-
-  for (const [domainId, domainActions] of domainMap.entries()) {
-    // Collect all valid actor kinds from actions in this domain
-    const validActors = new Set<string>();
-    for (const action of domainActions) {
-      // Get the original declarative action to access actor kinds
-      const declAction = actions.find(a => a.id === action.type);
-      if (declAction) {
-        declAction.actor.kinds.forEach(k => validActors.add(k));
-      }
-    }
-
-    domains.push({
-      id: domainId,
-      name: domainIdToName(domainId),
-      description: `Actions in the ${domainId} domain`,
-      validActors: Array.from(validActors),
-      actions: domainActions
-    });
-  }
-
-  return domains;
+  return executableActions;
 }
 
-/**
- * Convert domain ID to display name.
- */
-function domainIdToName(domainId: string): string {
-  const names: Record<string, string> = {
-    political: 'Political Actions',
-    military: 'Military Actions',
-    economic: 'Economic Actions',
-    magical: 'Magical Actions',
-    technological: 'Technological Actions',
-    environmental: 'Environmental Actions',
-    cultural: 'Cultural Actions',
-    conflict_escalation: 'Conflict Escalation',
-    disaster_spread: 'Disaster Spread'
-  };
-  return names[domainId] || `${domainId} Actions`;
-}
-
-/**
- * Pressure-domain mappings (which pressures affect which domains).
- * This is domain-agnostic default; can be overridden in domain schema.
- */
-export const DEFAULT_PRESSURE_DOMAIN_MAPPINGS: Record<string, string[]> = {
-  political: ['conflict', 'stability'],
-  military: ['conflict', 'external_threat'],
-  economic: ['resource_scarcity', 'stability'],
-  magical: ['magical_instability'],
-  technological: ['resource_scarcity', 'magical_instability'],
-  environmental: ['magical_instability'],
-  cultural: ['cultural_tension', 'stability'],
-  conflict_escalation: ['conflict', 'external_threat'],
-  disaster_spread: ['magical_instability']
-};
-
-/**
- * Get action domains for an entity based on its kind.
- * This is domain-agnostic default; can be overridden in domain schema.
- */
-export function getDefaultActionDomainsForEntity(entity: HardState): string[] {
-  // Default mapping based on entity kind
-  const kindDomains: Record<string, string[]> = {
-    npc: ['political', 'economic', 'cultural'],
-    faction: ['political', 'economic', 'cultural', 'military'],
-    abilities: ['magical', 'technological'],
-    occurrence: ['conflict_escalation', 'disaster_spread'],
-    location: ['environmental']
-  };
-
-  return kindDomains[entity.kind] || [];
-}

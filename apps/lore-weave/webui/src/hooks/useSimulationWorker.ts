@@ -23,6 +23,11 @@ import type {
   CoordinateStatsPayload,
   TagHealthPayload,
   SystemHealthPayload,
+  EntityBreakdownPayload,
+  CatalystStatsPayload,
+  RelationshipBreakdownPayload,
+  NotableEntitiesPayload,
+  SampleHistoryPayload,
   SimulationResultPayload,
   ErrorPayload
 } from '../../../lib/observer/types';
@@ -44,6 +49,12 @@ export interface SimulationState {
   coordinateStats: CoordinateStatsPayload | null;
   tagHealth: TagHealthPayload | null;
   systemHealth: SystemHealthPayload | null;
+  // Final diagnostics
+  entityBreakdown: EntityBreakdownPayload | null;
+  catalystStats: CatalystStatsPayload | null;
+  relationshipBreakdown: RelationshipBreakdownPayload | null;
+  notableEntities: NotableEntitiesPayload | null;
+  sampleHistory: SampleHistoryPayload | null;
   result: SimulationResultPayload | null;
   error: ErrorPayload | null;
   logs: LogPayload[];
@@ -74,6 +85,11 @@ const initialState: SimulationState = {
   coordinateStats: null,
   tagHealth: null,
   systemHealth: null,
+  entityBreakdown: null,
+  catalystStats: null,
+  relationshipBreakdown: null,
+  notableEntities: null,
+  sampleHistory: null,
   result: null,
   error: null,
   logs: []
@@ -170,6 +186,36 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           return {
             ...prev,
             systemHealth: message.payload
+          };
+
+        case 'entity_breakdown':
+          return {
+            ...prev,
+            entityBreakdown: message.payload
+          };
+
+        case 'catalyst_stats':
+          return {
+            ...prev,
+            catalystStats: message.payload
+          };
+
+        case 'relationship_breakdown':
+          return {
+            ...prev,
+            relationshipBreakdown: message.payload
+          };
+
+        case 'notable_entities':
+          return {
+            ...prev,
+            notableEntities: message.payload
+          };
+
+        case 'sample_history':
+          return {
+            ...prev,
+            sampleHistory: message.payload
           };
 
         case 'complete':
@@ -304,6 +350,11 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
         coordinateStats: null,
         tagHealth: null,
         systemHealth: null,
+        entityBreakdown: null,
+        catalystStats: null,
+        relationshipBreakdown: null,
+        notableEntities: null,
+        sampleHistory: null,
         result: null,
         error: null
       }));

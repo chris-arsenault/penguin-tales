@@ -159,6 +159,65 @@ export interface TagHealthPayload {
   };
 }
 
+// =============================================================================
+// Final Diagnostic Payloads (emitted at simulation end)
+// =============================================================================
+
+export interface EntityBreakdownPayload {
+  totalEntities: number;
+  byKind: Record<string, {
+    total: number;
+    bySubtype: Record<string, number>;
+  }>;
+}
+
+export interface CatalystStatsPayload {
+  totalAgents: number;
+  activeAgents: number;
+  totalActions: number;
+  uniqueActors: number;
+  topAgents: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    actionCount: number;
+  }>;
+}
+
+export interface RelationshipBreakdownPayload {
+  totalRelationships: number;
+  byKind: Array<{
+    kind: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+export interface NotableEntitiesPayload {
+  mythic: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    subtype: string;
+  }>;
+  renowned: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    subtype: string;
+  }>;
+}
+
+export interface SampleHistoryPayload {
+  totalEvents: number;
+  recentEvents: Array<{
+    tick: number;
+    type: string;
+    summary: string;
+    entityIds: string[];
+  }>;
+}
+
 export interface GrowthPhasePayload {
   epoch: number;
   entitiesCreated: number;
@@ -187,6 +246,11 @@ export type SimulationEvent =
   | { type: 'coordinate_stats'; payload: CoordinateStatsPayload }
   | { type: 'tag_health'; payload: TagHealthPayload }
   | { type: 'system_health'; payload: SystemHealthPayload }
+  | { type: 'entity_breakdown'; payload: EntityBreakdownPayload }
+  | { type: 'catalyst_stats'; payload: CatalystStatsPayload }
+  | { type: 'relationship_breakdown'; payload: RelationshipBreakdownPayload }
+  | { type: 'notable_entities'; payload: NotableEntitiesPayload }
+  | { type: 'sample_history'; payload: SampleHistoryPayload }
   | { type: 'complete'; payload: SimulationResultPayload }
   | { type: 'error'; payload: ErrorPayload };
 
@@ -216,6 +280,12 @@ export interface ISimulationEmitter {
   coordinateStats(payload: CoordinateStatsPayload): void;
   tagHealth(payload: TagHealthPayload): void;
   systemHealth(payload: SystemHealthPayload): void;
+  // Final diagnostics (emitted at simulation end)
+  entityBreakdown(payload: EntityBreakdownPayload): void;
+  catalystStats(payload: CatalystStatsPayload): void;
+  relationshipBreakdown(payload: RelationshipBreakdownPayload): void;
+  notableEntities(payload: NotableEntitiesPayload): void;
+  sampleHistory(payload: SampleHistoryPayload): void;
   complete(payload: SimulationResultPayload): void;
   error(payload: ErrorPayload): void;
 }

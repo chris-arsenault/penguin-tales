@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getEffectiveDomain, getStrategyColor, getStrategyBorder } from '../utils';
 import { generateTestNames } from '../../lib/browser-generator.js';
-import { TagSelector } from '@penguin-tales/shared-components';
+import { TagSelector } from '@lore-weave/shared-components';
 
 function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, onAddTag }) {
   // Extract tag registry from world schema

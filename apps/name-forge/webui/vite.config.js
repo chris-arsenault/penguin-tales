@@ -12,6 +12,7 @@ export default defineConfig({
     federation({
       name: 'nameForge',
       filename: 'remoteEntry.js',
+      manifest: true,
       exposes: {
         './NameForgeRemote': './src/NameForgeRemote.jsx',
       },

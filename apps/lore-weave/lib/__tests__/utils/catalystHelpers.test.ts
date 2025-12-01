@@ -45,7 +45,6 @@ function createEntity(
   if (catalyst) {
     entity.catalyst = {
       canAct: catalyst.canAct ?? false,
-      actionDomains: catalyst.actionDomains ?? [],
       influence: catalyst.influence ?? 0.5,
       catalyzedEvents: catalyst.catalyzedEvents ?? []
     };
@@ -148,9 +147,9 @@ function createGraph(entities: HardState[], relationships: Relationship[] = []):
 
 describe('getAgentsByCategory', () => {
   it('should return all agents when category is "all"', () => {
-    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true, actionDomains: ['military'] });
-    const faction = createEntity('faction1', 'faction', 'guild', 'recognized', { canAct: true, actionDomains: ['political'] });
-    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true, actionDomains: ['military'] });
+    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true });
+    const faction = createEntity('faction1', 'faction', 'guild', 'recognized', { canAct: true });
+    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true });
     const nonAgent = createEntity('npc2', 'npc', 'citizen', 'marginal');
 
     const graph = createGraph([npc, faction, occurrence, nonAgent]);
@@ -163,8 +162,8 @@ describe('getAgentsByCategory', () => {
   });
 
   it('should return only first-order agents', () => {
-    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true, actionDomains: ['military'] });
-    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true, actionDomains: ['military'] });
+    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true });
+    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true });
 
     const graph = createGraph([npc, occurrence]);
     const agents = getAgentsByCategory(graph, 'first-order');
@@ -174,8 +173,8 @@ describe('getAgentsByCategory', () => {
   });
 
   it('should return only second-order agents', () => {
-    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true, actionDomains: ['military'] });
-    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true, actionDomains: ['military'] });
+    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true });
+    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true });
 
     const graph = createGraph([npc, occurrence]);
     const agents = getAgentsByCategory(graph, 'second-order');
@@ -193,8 +192,8 @@ describe('getAgentsByCategory', () => {
   });
 
   it('should default to "all" category', () => {
-    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true, actionDomains: ['military'] });
-    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true, actionDomains: ['military'] });
+    const npc = createEntity('npc1', 'npc', 'hero', 'renowned', { canAct: true });
+    const occurrence = createEntity('occ1', 'occurrence', 'war', 'recognized', { canAct: true });
 
     const graph = createGraph([npc, occurrence]);
     const agents = getAgentsByCategory(graph);
@@ -206,36 +205,32 @@ describe('getAgentsByCategory', () => {
 describe('canPerformAction', () => {
   it('should return true when entity can act in the domain', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      actionDomains: ['political', 'military']
+      canAct: true
     });
 
-    expect(canPerformAction(entity, 'political')).toBe(true);
-    expect(canPerformAction(entity, 'military')).toBe(true);
+    expect(canPerformAction(entity)).toBe(true);
   });
 
   it('should return false when entity cannot act in the domain', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      actionDomains: ['political']
+      canAct: false
     });
 
-    expect(canPerformAction(entity, 'military')).toBe(false);
+    expect(canPerformAction(entity)).toBe(false);
   });
 
   it('should return false when entity cannot act', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'marginal', {
-      canAct: false,
-      actionDomains: ['political']
+      canAct: false
     });
 
-    expect(canPerformAction(entity, 'political')).toBe(false);
+    expect(canPerformAction(entity)).toBe(false);
   });
 
   it('should return false when entity has no catalyst properties', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'marginal');
 
-    expect(canPerformAction(entity, 'political')).toBe(false);
+    expect(canPerformAction(entity)).toBe(false);
   });
 });
 
@@ -243,68 +238,62 @@ describe('getInfluence', () => {
   it('should return base influence for recognized entities', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'recognized', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
-    const influence = getInfluence(entity, 'military');
+    const influence = getInfluence(entity);
     expect(influence).toBe(0.5); // 0.5 base + 0 prominence bonus
   });
 
   it('should add prominence bonus for renowned entities', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
-    const influence = getInfluence(entity, 'military');
+    const influence = getInfluence(entity);
     expect(influence).toBe(0.65); // 0.5 base + 0.15 prominence bonus
   });
 
   it('should add prominence bonus for mythic entities', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
-    const influence = getInfluence(entity, 'military');
+    const influence = getInfluence(entity);
     expect(influence).toBe(0.8); // 0.5 base + 0.3 prominence bonus
   });
 
   it('should subtract prominence penalty for forgotten entities', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'forgotten', {
       canAct: true,
-      actionDomains: ['economic'],
       influence: 0.5
     });
 
-    const influence = getInfluence(entity, 'economic');
+    const influence = getInfluence(entity);
     expect(influence).toBe(0.3); // 0.5 base - 0.2 prominence penalty
   });
 
   it('should clamp influence to [0, 1]', () => {
     const highEntity = createEntity('npc1', 'npc', 'hero', 'mythic', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.9
     });
 
     const lowEntity = createEntity('npc2', 'npc', 'citizen', 'forgotten', {
       canAct: true,
-      actionDomains: ['economic'],
       influence: 0.1
     });
 
-    expect(getInfluence(highEntity, 'military')).toBe(1.0); // Clamped to max
-    expect(getInfluence(lowEntity, 'economic')).toBe(0); // Clamped to min
+    expect(getInfluence(highEntity)).toBe(1.0); // Clamped to max
+    expect(getInfluence(lowEntity)).toBe(0); // Clamped to min
   });
 
   it('should return 0 when entity has no catalyst', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'marginal');
 
-    expect(getInfluence(entity, 'economic')).toBe(0);
+    expect(getInfluence(entity)).toBe(0);
   });
 });
 
@@ -375,7 +364,6 @@ describe('getCatalyzedEventCount', () => {
   it('should return count from catalyst properties', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       catalyzedEvents: [
         { action: 'formed alliance', tick: 10 },
         { action: 'started rivalry', tick: 20 }
@@ -408,7 +396,6 @@ describe('addCatalyzedEvent', () => {
   it('should add event to catalyst record', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       catalyzedEvents: []
     });
 
@@ -471,7 +458,6 @@ describe('calculateAttemptChance', () => {
   it('should calculate chance with base rate and prominence', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'recognized', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
@@ -482,13 +468,11 @@ describe('calculateAttemptChance', () => {
   it('should apply prominence multipliers', () => {
     const mythic = createEntity('npc1', 'npc', 'hero', 'mythic', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 1.0
     });
 
     const forgotten = createEntity('npc2', 'npc', 'citizen', 'forgotten', {
       canAct: true,
-      actionDomains: ['economic'],
       influence: 1.0
     });
 
@@ -498,8 +482,7 @@ describe('calculateAttemptChance', () => {
 
   it('should return 0 when entity cannot act', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'marginal', {
-      canAct: false,
-      actionDomains: []
+      canAct: false
     });
 
     expect(calculateAttemptChance(entity, 0.1)).toBe(0);
@@ -508,7 +491,6 @@ describe('calculateAttemptChance', () => {
   it('should clamp result to [0, 1]', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 1.0
     });
 
@@ -521,11 +503,10 @@ describe('initializeCatalyst', () => {
   it('should initialize catalyst with given parameters', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned');
 
-    initializeCatalyst(entity, true, ['political', 'military'], 0.7);
+    initializeCatalyst(entity, true, 0.7);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.actionDomains).toEqual(['political', 'military']);
     expect(entity.catalyst?.influence).toBe(0.7);
     expect(entity.catalyst?.catalyzedEvents).toEqual([]);
   });
@@ -533,18 +514,17 @@ describe('initializeCatalyst', () => {
   it('should use default influence when not provided', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned');
 
-    initializeCatalyst(entity, true, ['political']);
+    initializeCatalyst(entity, true);
 
     expect(entity.catalyst?.influence).toBe(0.5);
   });
 
-  it('should handle empty action domains', () => {
+  it('should handle canAct false', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'marginal');
 
-    initializeCatalyst(entity, false, []);
+    initializeCatalyst(entity, false);
 
     expect(entity.catalyst?.canAct).toBe(false);
-    expect(entity.catalyst?.actionDomains).toEqual([]);
   });
 });
 
@@ -557,9 +537,6 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.actionDomains).toContain('political');
-    expect(entity.catalyst?.actionDomains).toContain('economic');
-    expect(entity.catalyst?.actionDomains).toContain('cultural');
     expect(entity.catalyst?.influence).toBe(0.5); // Recognized prominence
   });
 
@@ -570,8 +547,7 @@ describe('initializeCatalystSmart', () => {
     initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
-    expect(entity.catalyst?.actionDomains).toContain('political');
-    expect(entity.catalyst?.actionDomains).toContain('economic');
+    expect(entity.catalyst?.canAct).toBe(true);
     expect(entity.catalyst?.influence).toBe(0.7); // Renowned prominence
   });
 
@@ -600,8 +576,7 @@ describe('initializeCatalystSmart', () => {
     initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
-    expect(entity.catalyst?.actionDomains).toContain('political');
-    expect(entity.catalyst?.actionDomains).toContain('economic');
+    expect(entity.catalyst?.canAct).toBe(true);
     expect(entity.catalyst?.influence).toBe(0.9); // Mythic prominence
   });
 
@@ -612,7 +587,7 @@ describe('initializeCatalystSmart', () => {
     initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
-    expect(entity.catalyst?.actionDomains).toContain('magical');
+    expect(entity.catalyst?.canAct).toBe(true);
   });
 
   it('should initialize catalyst for occurrences', () => {
@@ -622,8 +597,7 @@ describe('initializeCatalystSmart', () => {
     initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
-    expect(entity.catalyst?.actionDomains).toContain('conflict_escalation');
-    expect(entity.catalyst?.actionDomains).toContain('disaster_spread');
+    expect(entity.catalyst?.canAct).toBe(true);
   });
 
   it('should handle anomaly locations', () => {
@@ -633,7 +607,7 @@ describe('initializeCatalystSmart', () => {
     initializeCatalystSmart(entity, graph);
 
     expect(entity.catalyst).toBeDefined();
-    expect(entity.catalyst?.actionDomains).toContain('environmental');
+    expect(entity.catalyst?.canAct).toBe(true);
   });
 });
 
@@ -641,7 +615,6 @@ describe('updateInfluence', () => {
   it('should increase influence on success', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
@@ -653,7 +626,6 @@ describe('updateInfluence', () => {
   it('should decrease influence on failure', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 
@@ -665,7 +637,6 @@ describe('updateInfluence', () => {
   it('should clamp influence to maximum 1.0', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.95
     });
 
@@ -677,7 +648,6 @@ describe('updateInfluence', () => {
   it('should clamp influence to minimum 0', () => {
     const entity = createEntity('npc1', 'npc', 'citizen', 'forgotten', {
       canAct: true,
-      actionDomains: ['economic'],
       influence: 0.02
     });
 
@@ -695,7 +665,6 @@ describe('updateInfluence', () => {
   it('should use default magnitude when not provided', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
       canAct: true,
-      actionDomains: ['military'],
       influence: 0.5
     });
 

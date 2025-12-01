@@ -109,8 +109,7 @@ export class TemplateGraphView {
    * Direct graph access is provided ONLY for framework systems that need
    * internal operations (era management, relationship culling, etc.).
    *
-   * DOMAIN CODE MUST NOT USE THIS. The pre-commit hook will block any
-   * usage in penguin-tales/lore/. Use TemplateGraphView methods instead.
+   * DOMAIN CODE MUST NOT USE THIS. Use TemplateGraphView methods instead.
    */
   getInternalGraph(): Graph {
     return this.graph;

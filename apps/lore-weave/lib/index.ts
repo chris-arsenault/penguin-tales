@@ -270,7 +270,7 @@ export type {
 // DECLARATIVE ACTIONS - Agent action definitions for universalCatalyst
 // =============================================================================
 
-export { loadActions, createExecutableAction, DEFAULT_PRESSURE_DOMAIN_MAPPINGS, getDefaultActionDomainsForEntity } from './engine/actionInterpreter';
+export { loadActions, createExecutableAction } from './engine/actionInterpreter';
 export type {
   DeclarativeAction,
   ActionActorConfig,
@@ -279,7 +279,6 @@ export type {
   ActionOutcomeConfig,
   ActionProbabilityConfig,
   ExecutableAction,
-  ExecutableActionDomain,
   ActionResult
 } from './engine/actionInterpreter';
 
@@ -516,6 +515,11 @@ export type {
   CoordinateStatsPayload,
   TagHealthPayload,
   SystemHealthPayload,
+  EntityBreakdownPayload,
+  CatalystStatsPayload,
+  RelationshipBreakdownPayload,
+  NotableEntitiesPayload,
+  SampleHistoryPayload,
   SimulationResultPayload,
   ErrorPayload,
   WorkerInboundMessage,

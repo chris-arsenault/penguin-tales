@@ -280,7 +280,6 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     // Draw grid
     ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
     ctx.lineWidth = 1;
-    const padding = 40;
     const gridStep = 10;
 
     for (let i = bounds.min; i <= bounds.max; i += gridStep) {
@@ -479,7 +478,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     setHoveredEntity(foundEntity);
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleClick = () => {
     if (hoveredEntity) {
       onNodeSelect(hoveredEntity.id);
     } else {

@@ -20,6 +20,11 @@ import {
   CoordinateStatsPayload,
   TagHealthPayload,
   SystemHealthPayload,
+  EntityBreakdownPayload,
+  CatalystStatsPayload,
+  RelationshipBreakdownPayload,
+  NotableEntitiesPayload,
+  SampleHistoryPayload,
   SimulationResultPayload,
   ErrorPayload,
 } from './types';
@@ -95,6 +100,26 @@ export class SimulationEmitter implements ISimulationEmitter {
 
   systemHealth(payload: SystemHealthPayload): void {
     this.emit({ type: 'system_health', payload });
+  }
+
+  entityBreakdown(payload: EntityBreakdownPayload): void {
+    this.emit({ type: 'entity_breakdown', payload });
+  }
+
+  catalystStats(payload: CatalystStatsPayload): void {
+    this.emit({ type: 'catalyst_stats', payload });
+  }
+
+  relationshipBreakdown(payload: RelationshipBreakdownPayload): void {
+    this.emit({ type: 'relationship_breakdown', payload });
+  }
+
+  notableEntities(payload: NotableEntitiesPayload): void {
+    this.emit({ type: 'notable_entities', payload });
+  }
+
+  sampleHistory(payload: SampleHistoryPayload): void {
+    this.emit({ type: 'sample_history', payload });
   }
 
   complete(payload: SimulationResultPayload): void {
