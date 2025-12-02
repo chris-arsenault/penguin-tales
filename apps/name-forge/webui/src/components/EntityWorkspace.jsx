@@ -10,7 +10,8 @@ function EntityWorkspace({
   onTabChange,
   onCultureChange,
   onAddTag,
-  apiKey
+  apiKey,
+  generators = []
 }) {
   const [error, setError] = useState(null);
 
@@ -187,6 +188,7 @@ function EntityWorkspace({
             onProfilesChange={handleProfilesChange}
             worldSchema={worldSchema}
             onAddTag={onAddTag}
+            generators={generators}
           />
         )}
       </div>

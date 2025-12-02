@@ -162,6 +162,7 @@ export default function CosmographerRemote({
   onAddTag,
   activeSection,
   onSectionChange,
+  schemaUsage,
 }) {
   // Use passed-in section or default to 'planes'
   const activeTab = activeSection || 'planes';
@@ -260,7 +261,7 @@ export default function CosmographerRemote({
       case 'cultures':
         return <CultureEditor project={project} onSave={handleSave} />;
       case 'entities':
-        return <EntityEditor project={project} onSave={handleSave} onAddTag={onAddTag} />;
+        return <EntityEditor project={project} onSave={handleSave} onAddTag={onAddTag} schemaUsage={schemaUsage} />;
       case 'relationships':
         return <RelationshipEditor project={project} onSave={handleSave} />;
       default:

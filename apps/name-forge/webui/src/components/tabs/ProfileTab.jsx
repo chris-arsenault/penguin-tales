@@ -1,9 +1,125 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getEffectiveDomain, getStrategyColor, getStrategyBorder } from '../utils';
 import { generateTestNames } from '../../lib/browser-generator.js';
 import { TagSelector } from '@lore-weave/shared-components';
 
-function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, onAddTag }) {
+/**
+ * Analyze which generators will match a specific strategy group's conditions
+ */
+function findMatchingGenerators(generators, cultureId, conditions) {
+  if (!generators || generators.length === 0) return [];
+
+  const matches = [];
+
+  for (const gen of generators) {
+    if (gen.enabled === false) continue;
+    const creations = gen.creation || [];
+
+    for (const creation of creations) {
+      // Check if this creation could use this culture
+      let matchesCulture = false;
+      if (creation.culture) {
+        if (typeof creation.culture === 'string') {
+          matchesCulture = creation.culture === cultureId;
+        } else if (creation.culture.inherit || creation.culture.from) {
+          // Inherited culture - could be any culture
+          matchesCulture = true;
+        }
+      } else {
+        // No culture specified - could be any
+        matchesCulture = true;
+      }
+
+      if (!matchesCulture) continue;
+
+      // Check if conditions match (if any)
+      if (!conditions) {
+        // No conditions = default group, matches everything
+        matches.push({
+          generatorId: gen.id,
+          generatorName: gen.name || gen.id,
+          entityKind: creation.kind,
+          subtype: typeof creation.subtype === 'string' ? creation.subtype : null,
+          isDefault: true,
+        });
+        continue;
+      }
+
+      // Check entity kind condition
+      const entityKinds = conditions.entityKinds || [];
+      if (entityKinds.length > 0 && !entityKinds.includes(creation.kind)) {
+        continue;
+      }
+
+      // Check subtype condition
+      const subtypes = conditions.subtypes || [];
+      const creationSubtype = typeof creation.subtype === 'string' ? creation.subtype : null;
+      if (subtypes.length > 0) {
+        if (!creationSubtype || !subtypes.includes(creationSubtype)) {
+          continue;
+        }
+      }
+
+      // Check prominence condition
+      const prominence = conditions.prominence || [];
+      if (prominence.length > 0 && creation.prominence) {
+        if (!prominence.includes(creation.prominence)) {
+          continue;
+        }
+      }
+
+      // Check tags condition
+      const conditionTags = conditions.tags || [];
+      if (conditionTags.length > 0) {
+        const creationTags = creation.tags ? Object.keys(creation.tags) : [];
+        if (conditions.tagMatchAll) {
+          if (!conditionTags.every(t => creationTags.includes(t))) {
+            continue;
+          }
+        } else {
+          if (!conditionTags.some(t => creationTags.includes(t))) {
+            continue;
+          }
+        }
+      }
+
+      // Matches!
+      matches.push({
+        generatorId: gen.id,
+        generatorName: gen.name || gen.id,
+        entityKind: creation.kind,
+        subtype: creationSubtype,
+        isDefault: false,
+      });
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Compute generator usage for all profiles in a culture
+ */
+function computeProfileGeneratorUsage(profiles, generators, cultureId) {
+  const usage = {};
+
+  for (const profile of profiles) {
+    usage[profile.id] = {
+      totalMatches: 0,
+      groups: {},
+    };
+
+    for (const group of (profile.strategyGroups || [])) {
+      const matches = findMatchingGenerators(generators, cultureId, group.conditions);
+      usage[profile.id].groups[group.name || 'Default'] = matches;
+      usage[profile.id].totalMatches += matches.length;
+    }
+  }
+
+  return usage;
+}
+
+function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, onAddTag, generators = [] }) {
   // Extract tag registry from world schema
   const tagRegistry = worldSchema?.tagRegistry || [];
   const [mode, setMode] = useState('view'); // 'view', 'edit'
@@ -24,6 +140,12 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, o
   const grammars = cultureConfig?.grammars || [];
   const lexemeLists = cultureConfig?.lexemeLists || {};
   const effectiveDomain = getEffectiveDomain(cultureConfig);
+
+  // Compute generator usage for each profile
+  const generatorUsage = useMemo(
+    () => computeProfileGeneratorUsage(profiles, generators, cultureId),
+    [profiles, generators, cultureId]
+  );
 
   // Get entity kinds from schema - extract just the kind IDs for MultiSelectPills
   const entityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
@@ -270,38 +392,65 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, o
             {/* Profile list */}
             <div style={{ flex: selectedProfileId ? '0 0 55%' : '1' }}>
               <div style={{ display: 'grid', gap: '0.5rem' }}>
-                {profiles.map((profile) => (
-                  <div
-                    key={profile.id}
-                    onClick={() => setSelectedProfileId(profile.id)}
-                    style={{
-                      background: selectedProfileId === profile.id ? 'rgba(212, 175, 55, 0.1)' : 'rgba(30, 58, 95, 0.3)',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '6px',
-                      border: selectedProfileId === profile.id ? '1px solid var(--gold-accent)' : '1px solid rgba(59, 130, 246, 0.3)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <strong>{profile.id}</strong>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.35rem' }}>
-                          {profile.strategyGroups?.length || 0} groups
-                          ({countConditionalGroups(profile)} conditional),
-                          {' '}{profile.strategyGroups?.reduce((sum, g) => sum + g.strategies.length, 0) || 0} strategies
+                {profiles.map((profile) => {
+                  const usage = generatorUsage[profile.id];
+                  const matchCount = usage?.totalMatches || 0;
+                  return (
+                    <div
+                      key={profile.id}
+                      onClick={() => setSelectedProfileId(profile.id)}
+                      style={{
+                        background: selectedProfileId === profile.id ? 'rgba(212, 175, 55, 0.1)' : 'rgba(30, 58, 95, 0.3)',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '6px',
+                        border: selectedProfileId === profile.id ? '1px solid var(--gold-accent)' : '1px solid rgba(59, 130, 246, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <strong>{profile.id}</strong>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--arctic-frost)', marginTop: '0.35rem' }}>
+                            {profile.strategyGroups?.length || 0} groups
+                            ({countConditionalGroups(profile)} conditional),
+                            {' '}{profile.strategyGroups?.reduce((sum, g) => sum + g.strategies.length, 0) || 0} strategies
+                          </div>
+                          {generators.length > 0 && (
+                            <div style={{
+                              fontSize: '0.7rem',
+                              marginTop: '0.35rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: matchCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                border: matchCount > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                                color: matchCount > 0 ? '#f59e0b' : '#ef4444',
+                              }}>
+                                <span style={{ fontSize: '10px' }}>⚙</span>
+                                <span>{matchCount} generator match{matchCount !== 1 ? 'es' : ''}</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="secondary" style={{ fontSize: '0.75rem' }} onClick={(e) => { e.stopPropagation(); handleEditProfile(profile); }}>
+                            Edit
+                          </button>
+                          <button className="danger" style={{ fontSize: '0.75rem' }} onClick={(e) => { e.stopPropagation(); handleDeleteProfile(profile.id); }}>
+                            Delete
+                          </button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button className="secondary" style={{ fontSize: '0.75rem' }} onClick={(e) => { e.stopPropagation(); handleEditProfile(profile); }}>
-                          Edit
-                        </button>
-                        <button className="danger" style={{ fontSize: '0.75rem' }} onClick={(e) => { e.stopPropagation(); handleDeleteProfile(profile.id); }}>
-                          Delete
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

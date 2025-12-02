@@ -43,6 +43,7 @@ export default function NameForgeHost({
   onAddTag,
   activeSection,
   onSectionChange,
+  generators,
 }) {
   return (
     <div style={styles.container}>
@@ -54,6 +55,7 @@ export default function NameForgeHost({
           onAddTag={onAddTag}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
+          generators={generators}
         />
       </Suspense>
     </div>

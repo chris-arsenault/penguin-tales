@@ -104,13 +104,19 @@ export default function LoreWeaveRemote({
   activeSection,
   onSectionChange,
   onViewInArchivist,
+  simulationResults: externalSimulationResults,
+  onSimulationResultsChange,
+  simulationState: externalSimulationState,
+  onSimulationStateChange,
 }) {
   // Use passed-in section or default to 'configure'
   const activeTab = activeSection || 'configure';
   const setActiveTab = onSectionChange || (() => {});
 
-  // Simulation state
-  const [simulationResults, setSimulationResults] = useState(null);
+  // Simulation state - use external state if provided, otherwise use local state
+  const [localSimulationResults, setLocalSimulationResults] = useState(null);
+  const simulationResults = externalSimulationResults !== undefined ? externalSimulationResults : localSimulationResults;
+  const setSimulationResults = onSimulationResultsChange || setLocalSimulationResults;
   const [isRunning, setIsRunning] = useState(false);
 
   // Validate configuration completeness
@@ -214,6 +220,8 @@ export default function LoreWeaveRemote({
             setIsRunning={setIsRunning}
             onComplete={handleSimulationComplete}
             onViewResults={() => setActiveTab('results')}
+            externalSimulationState={externalSimulationState}
+            onSimulationStateChange={onSimulationStateChange}
           />
         );
       case 'results':

@@ -273,6 +273,8 @@ export default function SimulationRunner({
   setIsRunning,
   onComplete,
   onViewResults,
+  externalSimulationState,
+  onSimulationStateChange,
 }) {
   // Simulation parameters
   const [params, setParams] = useState({
@@ -287,17 +289,38 @@ export default function SimulationRunner({
 
   // Use the simulation worker hook
   const {
-    state: simState,
+    state: workerSimState,
     start: startWorker,
     startStepping: startSteppingWorker,
     step: stepWorker,
     runToCompletion: runToCompletionWorker,
     reset: resetWorker,
     abort: abortWorker,
-    clearLogs,
+    clearLogs: workerClearLogs,
     isRunning: workerIsRunning,
     isPaused: workerIsPaused
   } = useSimulationWorker();
+
+  // Use external state if provided and worker is idle, otherwise use worker state
+  // This preserves dashboard data when navigating away and back
+  const simState = (workerSimState.status === 'idle' && externalSimulationState)
+    ? externalSimulationState
+    : workerSimState;
+
+  // Sync worker state changes to external state
+  useEffect(() => {
+    if (onSimulationStateChange && workerSimState.status !== 'idle') {
+      onSimulationStateChange(workerSimState);
+    }
+  }, [workerSimState, onSimulationStateChange]);
+
+  // Wrap clearLogs to also clear external state
+  const clearLogs = useCallback(() => {
+    workerClearLogs();
+    if (onSimulationStateChange && externalSimulationState) {
+      onSimulationStateChange({ ...externalSimulationState, logs: [] });
+    }
+  }, [workerClearLogs, onSimulationStateChange, externalSimulationState]);
 
   // Sync running state with parent
   useEffect(() => {

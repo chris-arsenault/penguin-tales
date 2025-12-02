@@ -1577,9 +1577,44 @@ function VariablesTab({ generator, onChange, schema }) {
 // CREATION TAB
 // ============================================================================
 
-function CreationCard({ item, index, onChange, onRemove, schema, availableRefs }) {
+function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, namingData = {}, cultureIds = [] }) {
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
+
+  // Determine which culture this creation would use
+  const getCultureId = () => {
+    if (!item.culture) return null;
+    if (typeof item.culture === 'string') return item.culture;
+    if (item.culture.fixed) return item.culture.fixed;
+    // For inherit, we can't determine the exact culture at config time
+    // Show all cultures as potential matches
+    return null;
+  };
+
+  const cultureId = getCultureId();
+  const subtype = typeof item.subtype === 'string' ? item.subtype : null;
+
+  // Compute naming profile matches
+  const profileMatches = useMemo(() => {
+    const targetCultures = cultureId ? [cultureId] : cultureIds;
+    const matches = [];
+
+    for (const cid of targetCultures) {
+      const match = findMatchingNamingProfile(
+        namingData,
+        cid,
+        item.kind,
+        subtype,
+        item.prominence,
+        item.tags
+      );
+      if (match) {
+        matches.push({ cultureId: cid, ...match });
+      }
+    }
+
+    return matches;
+  }, [namingData, cultureId, cultureIds, item.kind, subtype, item.prominence, item.tags]);
 
   const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
     value: ek.kind,
@@ -1620,6 +1655,46 @@ function CreationCard({ item, index, onChange, onRemove, schema, availableRefs }
           <div style={styles.itemCardSubtitle}>
             {item.kind}{subtypeDisplay ? `:${subtypeDisplay}` : ''} • {item.prominence || 'no prominence'}
           </div>
+          {/* Naming profile indicator */}
+          {cultureIds.length > 0 && (
+            <div style={{ marginTop: '4px' }}>
+              {profileMatches.length > 0 ? (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.4)',
+                  color: '#22c55e',
+                }}>
+                  <span>✓</span>
+                  <span>
+                    {profileMatches.length === 1
+                      ? profileMatches[0].profileId
+                      : `${profileMatches.length} profiles`}
+                  </span>
+                </span>
+              ) : (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#ef4444',
+                }}>
+                  <span>!</span>
+                  <span>No naming profile</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div style={styles.itemCardActions}>
           <button style={styles.iconBtn}>{expanded ? '▲' : '▼'}</button>
@@ -1715,7 +1790,7 @@ function CreationCard({ item, index, onChange, onRemove, schema, availableRefs }
   );
 }
 
-function CreationTab({ generator, onChange, schema }) {
+function CreationTab({ generator, onChange, schema, namingData = {} }) {
   const creation = generator.creation || [];
 
   const availableRefs = useMemo(() => {
@@ -1724,6 +1799,9 @@ function CreationTab({ generator, onChange, schema }) {
     creation.forEach((c) => { if (c.entityRef && !refs.includes(c.entityRef)) refs.push(c.entityRef); });
     return refs;
   }, [generator.variables, creation]);
+
+  // Get all available culture IDs from naming data
+  const cultureIds = useMemo(() => Object.keys(namingData), [namingData]);
 
   const handleAdd = () => {
     const nextNum = creation.length + 1;
@@ -1764,6 +1842,8 @@ function CreationTab({ generator, onChange, schema }) {
               onRemove={() => onChange({ ...generator, creation: creation.filter((_, i) => i !== index) })}
               schema={schema}
               availableRefs={availableRefs}
+              namingData={namingData}
+              cultureIds={cultureIds}
             />
           ))
         )}
@@ -2136,7 +2216,7 @@ function TabValidationBadge({ count }) {
   );
 }
 
-function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap }) {
+function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap, namingData }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Compute validation for this generator
@@ -2156,7 +2236,7 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
       case 'variables':
         return <VariablesTab generator={generator} onChange={onChange} schema={schema} />;
       case 'creation':
-        return <CreationTab generator={generator} onChange={onChange} schema={schema} />;
+        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} />;
       case 'relationships':
         return <RelationshipsTab generator={generator} onChange={onChange} schema={schema} />;
       case 'effects':
@@ -2311,7 +2391,72 @@ function GeneratorListCard({ generator, onClick, onToggle, usageMap }) {
   );
 }
 
-export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap }) {
+/**
+ * Find which naming profile matches a creation entry's conditions
+ */
+function findMatchingNamingProfile(namingData, cultureId, entityKind, subtype, prominence, tags = {}) {
+  if (!cultureId || !namingData) return null;
+
+  const cultureConfig = namingData[cultureId];
+  if (!cultureConfig?.profiles) return null;
+
+  for (const profile of cultureConfig.profiles) {
+    for (const group of (profile.strategyGroups || [])) {
+      const cond = group.conditions || {};
+
+      // Check entity kind
+      if (cond.entityKinds?.length > 0 && !cond.entityKinds.includes(entityKind)) {
+        continue;
+      }
+
+      // Check subtype
+      if (cond.subtypes?.length > 0) {
+        if (!subtype || !cond.subtypes.includes(subtype)) continue;
+      }
+
+      // Check prominence
+      if (cond.prominence?.length > 0 && !cond.prominence.includes(prominence)) {
+        continue;
+      }
+
+      // Check tags
+      if (cond.tags?.length > 0) {
+        const entityTags = Object.keys(tags || {});
+        if (cond.tagMatchAll) {
+          if (!cond.tags.every(t => entityTags.includes(t))) continue;
+        } else {
+          if (!cond.tags.some(t => entityTags.includes(t))) continue;
+        }
+      }
+
+      // Found a match!
+      return {
+        profileId: profile.id,
+        groupName: group.name,
+      };
+    }
+  }
+
+  // No conditional group matched - check for default (no conditions)
+  for (const profile of cultureConfig.profiles) {
+    for (const group of (profile.strategyGroups || [])) {
+      if (!group.conditions || Object.keys(group.conditions).every(k => {
+        const val = group.conditions[k];
+        return !val || (Array.isArray(val) && val.length === 0);
+      })) {
+        return {
+          profileId: profile.id,
+          groupName: group.name || 'Default',
+          isDefault: true,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
   useHoverStyles();
   const [selectedGenerator, setSelectedGenerator] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
@@ -2396,6 +2541,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
           pressures={pressures}
           eras={eras}
           usageMap={usageMap}
+          namingData={namingData}
         />
       )}
     </div>

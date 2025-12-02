@@ -12,7 +12,7 @@ import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
 import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
-import { computeTagUsage } from './components/UsageBadges';
+import { computeTagUsage, computeSchemaUsage } from './components/UsageBadges';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
@@ -109,6 +109,8 @@ export default function App() {
   const [showHome, setShowHome] = useState(initialState.showHome);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [archivistData, setArchivistData] = useState(null);
+  const [simulationResults, setSimulationResults] = useState(null);
+  const [simulationState, setSimulationState] = useState(null);
 
   // Handle tab change - reset section to first valid for new tab
   const handleTabChange = useCallback((newTab) => {
@@ -339,6 +341,24 @@ export default function App() {
     return computeTagUsage(currentProject.cultures, currentProject.seedEntities);
   }, [currentProject?.cultures, currentProject?.seedEntities]);
 
+  // Compute schema element usage across Coherence Engine
+  const schemaUsage = useMemo(() => {
+    if (!currentProject) return {};
+    return computeSchemaUsage({
+      generators: currentProject.generators || [],
+      systems: currentProject.systems || [],
+      actions: currentProject.actions || [],
+      pressures: currentProject.pressures || [],
+      seedEntities: currentProject.seedEntities || [],
+    });
+  }, [
+    currentProject?.generators,
+    currentProject?.systems,
+    currentProject?.actions,
+    currentProject?.pressures,
+    currentProject?.seedEntities,
+  ]);
+
   const renderContent = () => {
     // Show landing page if explicitly on home or no project selected
     if (showHome || !currentProject) {
@@ -362,6 +382,8 @@ export default function App() {
             onUpdateCultures={updateCultures}
             onUpdateTagRegistry={updateTagRegistry}
             tagUsage={tagUsage}
+            schemaUsage={schemaUsage}
+            namingData={namingData}
           />
         );
 
@@ -374,6 +396,7 @@ export default function App() {
             onAddTag={addTag}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
+            generators={currentProject?.generators || []}
           />
         );
 
@@ -393,6 +416,7 @@ export default function App() {
             onAddTag={addTag}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
+            schemaUsage={schemaUsage}
           />
         );
 
@@ -412,6 +436,7 @@ export default function App() {
             onSystemsChange={updateSystems}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
+            namingData={namingData}
           />
         );
 
@@ -433,6 +458,10 @@ export default function App() {
             activeSection={activeSection}
             onSectionChange={setActiveSection}
             onViewInArchivist={handleViewInArchivist}
+            simulationResults={simulationResults}
+            onSimulationResultsChange={setSimulationResults}
+            simulationState={simulationState}
+            onSimulationStateChange={setSimulationState}
           />
         );
 

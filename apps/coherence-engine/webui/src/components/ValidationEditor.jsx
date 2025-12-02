@@ -13,6 +13,7 @@
 
 import React, { useMemo, useState } from 'react';
 import DependencyViewer from './DependencyViewer';
+import NamingProfileMappingViewer from './NamingProfileMappingViewer';
 
 // Arctic Blue base theme with amber accent
 const ACCENT_COLOR = '#f59e0b';
@@ -250,7 +251,131 @@ const styles = {
     paddingLeft: '12px',
     borderLeft: '2px solid rgba(59, 130, 246, 0.3)',
   },
+  exportRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  exportButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: 500,
+    fontFamily: 'inherit',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    color: '#60a5fa',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  exportButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
 };
+
+// ============================================================================
+// EXPORT FUNCTIONS
+// ============================================================================
+
+function formatValidationForExport(validationResults) {
+  const items = [];
+
+  // Process errors
+  for (const error of validationResults.errors) {
+    for (const item of error.affectedItems) {
+      items.push({
+        severity: 'ERROR',
+        category: error.id,
+        title: error.title,
+        message: error.message,
+        itemId: item.id,
+        itemLabel: item.label,
+        detail: item.detail || '',
+      });
+    }
+  }
+
+  // Process warnings
+  for (const warning of validationResults.warnings) {
+    for (const item of warning.affectedItems) {
+      items.push({
+        severity: 'WARNING',
+        category: warning.id,
+        title: warning.title,
+        message: warning.message,
+        itemId: item.id,
+        itemLabel: item.label,
+        detail: item.detail || '',
+      });
+    }
+  }
+
+  return items;
+}
+
+function exportAsJson(validationResults) {
+  const items = formatValidationForExport(validationResults);
+  const json = JSON.stringify({
+    exportedAt: new Date().toISOString(),
+    summary: {
+      errorCount: validationResults.errors.length,
+      warningCount: validationResults.warnings.length,
+      totalItems: items.length,
+    },
+    issues: items,
+  }, null, 2);
+
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `validation-report-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportAsCsv(validationResults) {
+  const items = formatValidationForExport(validationResults);
+
+  // CSV header
+  const headers = ['Severity', 'Category', 'Title', 'Message', 'Item ID', 'Item Label', 'Detail'];
+
+  // Escape CSV field
+  const escapeField = (field) => {
+    const str = String(field || '');
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // Build CSV rows
+  const rows = [
+    headers.join(','),
+    ...items.map(item => [
+      item.severity,
+      item.category,
+      escapeField(item.title),
+      escapeField(item.message),
+      escapeField(item.itemId),
+      escapeField(item.itemLabel),
+      escapeField(item.detail),
+    ].join(',')),
+  ];
+
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `validation-report-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // ============================================================================
 // VALIDATION RULES
@@ -1209,6 +1334,7 @@ export default function ValidationEditor({
   generators = [],
   systems = [],
   usageMap = null,
+  namingData = {},
   onNavigateToGenerator,
 }) {
   const validationResults = useMemo(() =>
@@ -1249,17 +1375,39 @@ export default function ValidationEditor({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>
-          Validation
-          <span style={statusBadgeStyle}>
-            {overallStatus === 'clean' ? 'All Clear' :
-             `${totalIssues} ${totalIssues === 1 ? 'Issue' : 'Issues'}`}
-          </span>
-        </h1>
-        <p style={styles.subtitle}>
-          Pre-run validation checks for your world configuration.
-          Fix issues here before running the simulation.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={styles.title}>
+              Validation
+              <span style={statusBadgeStyle}>
+                {overallStatus === 'clean' ? 'All Clear' :
+                 `${totalIssues} ${totalIssues === 1 ? 'Issue' : 'Issues'}`}
+              </span>
+            </h1>
+            <p style={styles.subtitle}>
+              Pre-run validation checks for your world configuration.
+              Fix issues here before running the simulation.
+            </p>
+          </div>
+          {totalIssues > 0 && (
+            <div style={styles.exportRow}>
+              <button
+                style={styles.exportButton}
+                onClick={() => exportAsJson(validationResults)}
+                title="Export validation report as JSON"
+              >
+                Export JSON
+              </button>
+              <button
+                style={styles.exportButton}
+                onClick={() => exportAsCsv(validationResults)}
+                title="Export validation report as CSV"
+              >
+                Export CSV
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -1353,6 +1501,17 @@ export default function ValidationEditor({
       {usageMap && (
         <div style={{ marginBottom: '24px' }}>
           <DependencyViewer usageMap={usageMap} />
+        </div>
+      )}
+
+      {/* Naming Profile Mappings */}
+      {Object.keys(namingData).length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <NamingProfileMappingViewer
+            generators={generators}
+            schema={schema}
+            namingData={namingData}
+          />
         </div>
       )}
 

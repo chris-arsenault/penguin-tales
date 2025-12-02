@@ -176,6 +176,7 @@ export default function NameForgeRemote({
   onAddTag,
   activeSection,
   onSectionChange,
+  generators = [],
 }) {
   // Use passed-in section or default to 'workshop'
   const activeTab = activeSection || 'workshop';
@@ -360,6 +361,7 @@ export default function NameForgeRemote({
               onCultureChange={handleCultureChange}
               onAddTag={onAddTag}
               apiKey={apiKey}
+              generators={generators}
             />
           </div>
         )}

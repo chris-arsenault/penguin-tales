@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { colors, typography, spacing, radius, components } from '../../theme';
+import UsageBadges, { getRelationshipKindUsageSummary } from '../UsageBadges';
 
 const styles = {
   container: {
@@ -215,6 +216,7 @@ export default function RelationshipKindEditor({
   relationshipKinds,
   entityKinds,
   onChange,
+  schemaUsage = {},
 }) {
   const [expandedRels, setExpandedRels] = useState({});
 
@@ -334,24 +336,27 @@ export default function RelationshipKindEditor({
                       </span>
                     )}
                   </div>
-                  <div style={styles.relSummary}>
-                    {srcNames.map((name, i) => (
-                      <span key={i} style={styles.summaryKind}>
-                        {name}
-                      </span>
-                    ))}
-                    {rel.srcKinds?.length > 2 && (
-                      <span>+{rel.srcKinds.length - 2}</span>
-                    )}
-                    <span style={{ color: colors.textMuted }}>→</span>
-                    {dstNames.map((name, i) => (
-                      <span key={i} style={styles.summaryKind}>
-                        {name}
-                      </span>
-                    ))}
-                    {rel.dstKinds?.length > 2 && (
-                      <span>+{rel.dstKinds.length - 2}</span>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                    <UsageBadges usage={getRelationshipKindUsageSummary(schemaUsage, rel.kind)} compact />
+                    <div style={styles.relSummary}>
+                      {srcNames.map((name, i) => (
+                        <span key={i} style={styles.summaryKind}>
+                          {name}
+                        </span>
+                      ))}
+                      {rel.srcKinds?.length > 2 && (
+                        <span>+{rel.srcKinds.length - 2}</span>
+                      )}
+                      <span style={{ color: colors.textMuted }}>→</span>
+                      {dstNames.map((name, i) => (
+                        <span key={i} style={styles.summaryKind}>
+                          {name}
+                        </span>
+                      ))}
+                      {rel.dstKinds?.length > 2 && (
+                        <span>+{rel.dstKinds.length - 2}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

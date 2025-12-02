@@ -173,6 +173,7 @@ export default function CoherenceEngineRemote({
   onSystemsChange,
   activeSection,
   onSectionChange,
+  namingData = {},
 }) {
   // Use passed-in section or default to 'validation'
   const activeTab = activeSection || 'validation';
@@ -209,6 +210,7 @@ export default function CoherenceEngineRemote({
             generators={generators}
             systems={systems}
             usageMap={usageMap}
+            namingData={namingData}
             onNavigateToGenerator={handleNavigateToGenerator}
           />
         );
@@ -240,6 +242,7 @@ export default function CoherenceEngineRemote({
             pressures={pressures}
             eras={eras}
             usageMap={usageMap}
+            namingData={namingData}
           />
         );
       case 'actions':

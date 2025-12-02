@@ -80,6 +80,8 @@ export default function SchemaEditor({
   onUpdateCultures,
   onUpdateTagRegistry,
   tagUsage = {},
+  schemaUsage = {},
+  namingData = {},
 }) {
   // Use passed-in activeSection, fallback to entityKinds
   const currentSection = activeSection || 'entityKinds';
@@ -98,6 +100,8 @@ export default function SchemaEditor({
           <EntityKindEditor
             entityKinds={project.entityKinds}
             onChange={onUpdateEntityKinds}
+            schemaUsage={schemaUsage}
+            namingData={namingData}
           />
         );
 
@@ -107,6 +111,7 @@ export default function SchemaEditor({
             relationshipKinds={project.relationshipKinds}
             entityKinds={project.entityKinds}
             onChange={onUpdateRelationshipKinds}
+            schemaUsage={schemaUsage}
           />
         );
 

@@ -51,6 +51,10 @@ export default function LoreWeaveHost({
   activeSection,
   onSectionChange,
   onViewInArchivist,
+  simulationResults,
+  onSimulationResultsChange,
+  simulationState,
+  onSimulationStateChange,
 }) {
   return (
     <div style={styles.container}>
@@ -71,6 +75,10 @@ export default function LoreWeaveHost({
           activeSection={activeSection}
           onSectionChange={onSectionChange}
           onViewInArchivist={onViewInArchivist}
+          simulationResults={simulationResults}
+          onSimulationResultsChange={onSimulationResultsChange}
+          simulationState={simulationState}
+          onSimulationStateChange={onSimulationStateChange}
         />
       </Suspense>
     </div>

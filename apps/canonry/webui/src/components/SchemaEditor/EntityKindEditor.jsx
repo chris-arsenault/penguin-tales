@@ -5,8 +5,57 @@
  * Semantic planes are edited in Cosmographer.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { colors, typography, spacing, radius, components } from '../../theme';
+import UsageBadges, { getEntityKindUsageSummary } from '../UsageBadges';
+
+/**
+ * Compute naming profile usage for each entity kind
+ * Returns { [entityKind]: { profiles: [{ cultureId, profileId, groupName }] } }
+ */
+function computeNamingProfileUsage(namingData) {
+  const usage = {};
+
+  Object.entries(namingData || {}).forEach(([cultureId, cultureConfig]) => {
+    const profiles = cultureConfig?.profiles || [];
+
+    profiles.forEach((profile) => {
+      const groups = profile.strategyGroups || [];
+
+      groups.forEach((group) => {
+        const cond = group.conditions || {};
+        const entityKinds = cond.entityKinds || [];
+
+        // If no entityKinds specified, this group matches all entity kinds
+        if (entityKinds.length === 0) {
+          // Mark as "all" - we'll handle display separately
+          if (!usage['*']) {
+            usage['*'] = { profiles: [] };
+          }
+          usage['*'].profiles.push({
+            cultureId,
+            profileId: profile.id,
+            groupName: group.name || 'Default',
+          });
+        } else {
+          // Specific entity kinds
+          entityKinds.forEach((kind) => {
+            if (!usage[kind]) {
+              usage[kind] = { profiles: [] };
+            }
+            usage[kind].profiles.push({
+              cultureId,
+              profileId: profile.id,
+              groupName: group.name,
+            });
+          });
+        }
+      });
+    });
+  });
+
+  return usage;
+}
 
 const styles = {
   container: {
@@ -195,10 +244,23 @@ function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
-export default function EntityKindEditor({ entityKinds, onChange }) {
+export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = {}, namingData = {} }) {
   const [expandedKinds, setExpandedKinds] = useState({});
   const [newSubtype, setNewSubtype] = useState({});
   const [newStatus, setNewStatus] = useState({});
+
+  // Compute naming profile usage for each entity kind
+  const namingProfileUsage = useMemo(
+    () => computeNamingProfileUsage(namingData),
+    [namingData]
+  );
+
+  // Get naming profile count for an entity kind
+  const getNamingProfileCount = (kind) => {
+    const specific = namingProfileUsage[kind]?.profiles?.length || 0;
+    const wildcard = namingProfileUsage['*']?.profiles?.length || 0;
+    return specific + wildcard;
+  };
 
   // Use stable key for expand/collapse tracking (falls back to kind for existing kinds)
   const getStableKey = (ek) => ek._key || ek.kind;
@@ -328,8 +390,34 @@ export default function EntityKindEditor({ entityKinds, onChange }) {
                     <span style={styles.kindName}>{ek.description}</span>
                     <span style={styles.kindId}>({ek.kind})</span>
                   </div>
-                  <div style={styles.kindSummary}>
-                    {ek.subtypes.length} subtypes, {ek.statuses.length} statuses
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                    <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, ek.kind)} compact />
+                    {/* Naming profile usage badge */}
+                    {(() => {
+                      const profileCount = getNamingProfileCount(ek.kind);
+                      return profileCount > 0 ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            padding: `2px ${spacing.sm}`,
+                            borderRadius: radius.sm,
+                            fontSize: typography.sizeXs,
+                            backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                            border: '1px solid rgba(251, 191, 36, 0.4)',
+                            color: colors.accentNameForge,
+                          }}
+                          title={`Used in ${profileCount} naming profile group${profileCount !== 1 ? 's' : ''}`}
+                        >
+                          <span style={{ fontSize: '10px' }}>✎</span>
+                          <span>{profileCount}</span>
+                        </span>
+                      ) : null;
+                    })()}
+                    <span style={styles.kindSummary}>
+                      {ek.subtypes.length} subtypes, {ek.statuses.length} statuses
+                    </span>
                   </div>
                 </div>
 

@@ -50,6 +50,7 @@ export default function CosmographerHost({
   onAddTag,
   activeSection,
   onSectionChange,
+  schemaUsage,
 }) {
   return (
     <div style={styles.container}>
@@ -68,6 +69,7 @@ export default function CosmographerHost({
           onAddTag={onAddTag}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
+          schemaUsage={schemaUsage}
         />
       </Suspense>
     </div>

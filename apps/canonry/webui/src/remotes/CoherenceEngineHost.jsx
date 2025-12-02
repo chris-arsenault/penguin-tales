@@ -49,6 +49,7 @@ export default function CoherenceEngineHost({
   onSystemsChange,
   activeSection,
   onSectionChange,
+  namingData,
 }) {
   return (
     <div style={styles.container}>
@@ -67,6 +68,7 @@ export default function CoherenceEngineHost({
           onSystemsChange={onSystemsChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
+          namingData={namingData}
         />
       </Suspense>
     </div>

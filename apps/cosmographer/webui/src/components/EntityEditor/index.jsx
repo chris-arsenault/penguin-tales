@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { generateEntityName } from '../../lib/name-generator.js';
-import { TagSelector } from '@lore-weave/shared-components';
+import { TagSelector, UsageBadges, getEntityKindUsageSummary } from '@lore-weave/shared-components';
 
 // Arctic Blue base theme with frost blue accent (Cosmographer)
 const ACCENT_COLOR = '#60a5fa';
@@ -239,7 +239,7 @@ const styles = {
   }
 };
 
-export default function EntityEditor({ project, onSave, onAddTag }) {
+export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = {} }) {
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [filterKind, setFilterKind] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -421,8 +421,11 @@ export default function EntityEditor({ project, onSave, onAddTag }) {
                 <div style={{ ...styles.entityColor, backgroundColor: getCultureColor(entity.culture) }} />
                 <div style={styles.entityInfo}>
                   <div style={styles.entityName}>{entity.name}</div>
-                  <div style={styles.entityMeta}>
-                    {entity.kind} / {entity.subtype || 'no subtype'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={styles.entityMeta}>
+                      {entity.kind} / {entity.subtype || 'no subtype'}
+                    </span>
+                    <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, entity.kind)} compact />
                   </div>
                 </div>
               </div>
