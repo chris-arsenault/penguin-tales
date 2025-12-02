@@ -99,8 +99,8 @@ export interface Region {
   /** Narrative description (optional) */
   description?: string;
 
-  /** Tags to auto-apply to entities in this region */
-  autoTags?: string[];
+  /** Tags to apply to entities placed in this region */
+  tags?: string[];
 
   /** Parent region (for nested regions like city within planet) */
   parentRegion?: string;
@@ -315,11 +315,11 @@ export interface SemanticAxis {
   /** Axis identifier (e.g., 'source', 'scope', 'alignment') */
   name: string;
 
-  /** Label at position 0 (e.g., 'Ancient', 'Weak', 'Surface') */
-  lowLabel: string;
+  /** Tag at position 0 - applied to entities at low axis values */
+  lowTag: string;
 
-  /** Label at position 100 (e.g., 'Modern', 'Strong', 'Deep') */
-  highLabel: string;
+  /** Tag at position 100 - applied to entities at high axis values */
+  highTag: string;
 }
 
 /**

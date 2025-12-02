@@ -910,23 +910,23 @@ export class TemplateGraphView {
 
     // Interpret x-axis
     const xValue = coords.x;
-    const xConcept = xValue < 33 ? axes.x.lowLabel
-                   : xValue > 66 ? axes.x.highLabel
+    const xConcept = xValue < 33 ? axes.x.lowTag
+                   : xValue > 66 ? axes.x.highTag
                    : 'neutral';
     result[axes.x.name] = { value: xValue, concept: xConcept };
 
     // Interpret y-axis
     const yValue = coords.y;
-    const yConcept = yValue < 33 ? axes.y.lowLabel
-                   : yValue > 66 ? axes.y.highLabel
+    const yConcept = yValue < 33 ? axes.y.lowTag
+                   : yValue > 66 ? axes.y.highTag
                    : 'neutral';
     result[axes.y.name] = { value: yValue, concept: yConcept };
 
     // Interpret z-axis (optional in semantic plane)
     if (axes.z) {
       const zValue = coords.z ?? 50;
-      const zConcept = zValue < 33 ? axes.z.lowLabel
-                     : zValue > 66 ? axes.z.highLabel
+      const zConcept = zValue < 33 ? axes.z.lowTag
+                     : zValue > 66 ? axes.z.highTag
                      : 'neutral';
       result[axes.z.name] = { value: zValue, concept: zConcept };
     }
@@ -1026,8 +1026,8 @@ export class TemplateGraphView {
     for (const region of regions) {
       if (this.pointInRegion(point, region)) {
         tags.region = region.id;
-        if (region.autoTags) {
-          for (const tag of region.autoTags) {
+        if (region.tags) {
+          for (const tag of region.tags) {
             tags[tag] = true;
           }
         }

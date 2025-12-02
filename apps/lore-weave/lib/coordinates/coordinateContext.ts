@@ -60,8 +60,16 @@ export interface PlacementResult {
   /** All region IDs containing the point */
   allRegionIds?: string[];
 
-  /** Tags derived from region + culture */
+  /** Tags derived from region + axis position (as Record for backward compatibility) */
   derivedTags?: Record<string, string | boolean>;
+
+  /**
+   * Tags derived from placement as an array (easier to merge into entity.tags).
+   * Includes tags from:
+   * - Region tags (from regions containing the placed point)
+   * - Axis tags (based on coordinate position relative to axis thresholds)
+   */
+  placementTags?: string[];
 
   /** Culture ID used for placement */
   cultureId?: string;
@@ -85,9 +93,9 @@ export interface PlacementResult {
  */
 export interface SemanticPlane {
   axes: {
-    x: { name: string; lowLabel: string; highLabel: string };
-    y: { name: string; lowLabel: string; highLabel: string };
-    z?: { name: string; lowLabel: string; highLabel: string };
+    x: { name: string; lowTag: string; highTag: string };
+    y: { name: string; lowTag: string; highTag: string };
+    z?: { name: string; lowTag: string; highTag: string };
   };
   regions: import('./types').Region[];
 }
@@ -510,6 +518,67 @@ export class CoordinateContext {
   }
 
   /**
+   * Derive tags from entity placement based on:
+   * 1. Region tags - tags associated with the region the entity is placed in
+   * 2. Axis tags - tags derived from position on semantic axes (low/high thresholds)
+   *
+   * @param entityKind - Entity kind to get semantic plane from
+   * @param point - Coordinates of the placed entity
+   * @param containingRegions - Regions containing the point
+   * @returns Array of derived tag strings
+   */
+  deriveTagsFromPlacement(
+    entityKind: string,
+    point: Point,
+    containingRegions: import('./types').Region[]
+  ): string[] {
+    const tags: string[] = [];
+    const seenTags = new Set<string>();
+
+    const addTag = (tag: string) => {
+      if (tag && !seenTags.has(tag)) {
+        seenTags.add(tag);
+        tags.push(tag);
+      }
+    };
+
+    // 1. Add tags from containing regions
+    for (const region of containingRegions) {
+      if (region.tags) {
+        for (const tag of region.tags) {
+          addTag(tag);
+        }
+      }
+    }
+
+    // 2. Derive tags from axis positions
+    const semanticPlane = this.getSemanticPlane(entityKind);
+    if (semanticPlane?.axes) {
+      const { axes } = semanticPlane;
+
+      // X axis: low tag if < 33, high tag if > 66
+      if (axes.x) {
+        if (point.x < 33) addTag(axes.x.lowTag);
+        else if (point.x > 66) addTag(axes.x.highTag);
+      }
+
+      // Y axis: low tag if < 33, high tag if > 66
+      if (axes.y) {
+        if (point.y < 33) addTag(axes.y.lowTag);
+        else if (point.y > 66) addTag(axes.y.highTag);
+      }
+
+      // Z axis: low tag if < 33, high tag if > 66
+      if (axes.z && point.z !== undefined) {
+        if (point.z < 33) addTag(axes.z.lowTag);
+        else if (point.z > 66) addTag(axes.z.highTag);
+      }
+    }
+
+    return tags;
+  }
+
+  /**
    * Place an entity with culture context.
    */
   placeWithCulture(
@@ -528,16 +597,31 @@ export class CoordinateContext {
       };
     }
 
-    // Find which region contains this point
+    // Find which regions contain this point
     const regions = this.getRegions(entityKind);
-    const containingRegion = regions.find(r => this.pointInRegion(point, r));
+    const containingRegions = regions.filter(r => this.pointInRegion(point, r));
+    const containingRegion = containingRegions[0];
+
+    // Derive tags from placement (region tags + axis-based tags)
+    const derivedTagList = this.deriveTagsFromPlacement(entityKind, point, containingRegions);
+
+    // Build derivedTags object (for backward compatibility, includes culture as a special key)
+    const derivedTags: Record<string, string | boolean> = {};
+    if (context.cultureId) {
+      derivedTags.culture = context.cultureId;
+    }
+    // Add derived tags as boolean flags
+    for (const tag of derivedTagList) {
+      derivedTags[tag] = true;
+    }
 
     return {
       success: true,
       coordinates: point,
       regionId: containingRegion?.id ?? null,
-      allRegionIds: regions.filter(r => this.pointInRegion(point, r)).map(r => r.id),
-      derivedTags: context.cultureId ? { culture: context.cultureId } : {},
+      allRegionIds: containingRegions.map(r => r.id),
+      derivedTags,
+      placementTags: derivedTagList,
       cultureId: context.cultureId
     };
   }

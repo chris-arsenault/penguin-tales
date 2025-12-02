@@ -8,6 +8,7 @@
  * - Warns about invalid tags not in registry
  * - Good keyboard navigation
  * - Option to add new tags to registry
+ * - Single-select mode for choosing exactly one tag
  */
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -39,6 +40,7 @@ export default function TagSelector({
   matchAllEnabled = false,
   matchAll = false,
   onMatchAllChange,
+  singleSelect = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,8 +166,15 @@ export default function TagSelector({
   };
 
   const handleSelectTag = (tag) => {
-    if (!value.includes(tag)) {
-      onChange([...value, tag]);
+    if (singleSelect) {
+      // In single-select mode, replace current selection
+      onChange([tag]);
+      setIsOpen(false);
+    } else {
+      // In multi-select mode, add to selection
+      if (!value.includes(tag)) {
+        onChange([...value, tag]);
+      }
     }
     setSearchQuery('');
     inputRef.current?.focus();
@@ -185,8 +194,11 @@ export default function TagSelector({
         description: '',
       });
     }
-    // Also select it
-    if (!value.includes(tag)) {
+    // Select it (replace in single-select mode, add in multi-select)
+    if (singleSelect) {
+      onChange([tag]);
+      setIsOpen(false);
+    } else if (!value.includes(tag)) {
       onChange([...value, tag]);
     }
     setSearchQuery('');

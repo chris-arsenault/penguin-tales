@@ -537,6 +537,83 @@ function collectRelKindRefsFromFactors(factors, source, sourceId, sourceType, re
 }
 
 /**
+ * Helper to collect tag references from generators, systems, and pressures
+ */
+function collectTagRefs(generators, systems, pressures) {
+  const refs = [];
+
+  // From generators - creation tags
+  for (const gen of generators) {
+    if (gen.enabled === false) continue;
+    if (gen.creation) {
+      for (const c of gen.creation) {
+        if (c.tags && typeof c.tags === 'object') {
+          for (const tag of Object.keys(c.tags)) {
+            refs.push({ tag, source: `generator "${gen.id}" creation`, sourceId: gen.id, sourceType: 'generator' });
+          }
+        }
+      }
+    }
+  }
+
+  // From systems - thresholdTrigger conditions/actions, tagDiffusion convergence/divergence
+  for (const sys of systems) {
+    const cfg = sys.config;
+    if (!cfg) continue;
+    const sysId = cfg.id || sys.id;
+
+    // thresholdTrigger
+    if (sys.systemType === 'thresholdTrigger') {
+      for (const cond of (cfg.conditions || [])) {
+        if (cond.tag) {
+          refs.push({ tag: cond.tag, source: `system "${sysId}" condition`, sourceId: sysId, sourceType: 'system' });
+        }
+        if (cond.type === 'has_any_tag' && Array.isArray(cond.tags)) {
+          for (const tag of cond.tags) {
+            refs.push({ tag, source: `system "${sysId}" has_any_tag`, sourceId: sysId, sourceType: 'system' });
+          }
+        }
+      }
+      for (const action of (cfg.actions || [])) {
+        if (action.tag) {
+          refs.push({ tag: action.tag, source: `system "${sysId}" action`, sourceId: sysId, sourceType: 'system' });
+        }
+      }
+    }
+
+    // tagDiffusion
+    if (sys.systemType === 'tagDiffusion') {
+      for (const tag of (cfg.convergence?.tags || [])) {
+        refs.push({ tag, source: `system "${sysId}" convergence`, sourceId: sysId, sourceType: 'system' });
+      }
+      for (const tag of (cfg.divergence?.tags || [])) {
+        refs.push({ tag, source: `system "${sysId}" divergence`, sourceId: sysId, sourceType: 'system' });
+      }
+    }
+  }
+
+  // From pressures - tag_count factors
+  for (const p of pressures) {
+    const checkFactors = (factors, source) => {
+      for (const f of (factors || [])) {
+        if (f.tag) {
+          refs.push({ tag: f.tag, source, sourceId: p.id, sourceType: 'pressure' });
+        }
+        if (f.tags && Array.isArray(f.tags)) {
+          for (const tag of f.tags) {
+            refs.push({ tag, source, sourceId: p.id, sourceType: 'pressure' });
+          }
+        }
+      }
+    };
+    checkFactors(p.growth?.positiveFeedback, `pressure "${p.id}" positiveFeedback`);
+    checkFactors(p.growth?.negativeFeedback, `pressure "${p.id}" negativeFeedback`);
+  }
+
+  return refs;
+}
+
+/**
  * Helper to collect pressure ID references
  */
 function collectPressureIdRefs(generators, systems) {
@@ -1037,6 +1114,19 @@ const validationRules = {
       if (gen.creation) {
         for (const c of gen.creation) {
           if (c.kind && c.subtype && subtypesByKind[c.kind]) {
+            // Skip DSL-based subtypes (objects like {inherit: ...} or {random: [...]})
+            if (typeof c.subtype === 'object') {
+              // For random subtypes, validate the array values
+              if (c.subtype.random && Array.isArray(c.subtype.random)) {
+                for (const st of c.subtype.random) {
+                  if (!subtypesByKind[c.kind].has(st)) {
+                    invalid.push({ kind: c.kind, subtype: st, source: `generator "${gen.id}"` });
+                  }
+                }
+              }
+              // For inherit subtypes, skip validation (runtime-resolved)
+              continue;
+            }
             if (!subtypesByKind[c.kind].has(c.subtype)) {
               invalid.push({ kind: c.kind, subtype: c.subtype, source: `generator "${gen.id}"` });
             }
@@ -1072,11 +1162,14 @@ const validationRules = {
       title: 'Invalid subtype references',
       message: 'These configurations reference subtypes that do not exist for the specified entity kind.',
       severity: 'warning',
-      affectedItems: invalid.map(i => ({
-        id: `${i.kind}:${i.subtype}`,
-        label: `${i.kind}:${i.subtype}`,
-        detail: `In ${i.source}`,
-      })),
+      affectedItems: invalid.map((i, idx) => {
+        const subtypeStr = typeof i.subtype === 'object' ? JSON.stringify(i.subtype) : i.subtype;
+        return {
+          id: `${i.kind}:${subtypeStr}:${i.source}:${idx}`,
+          label: `${i.kind}:${subtypeStr}`,
+          detail: `In ${i.source}`,
+        };
+      }),
     };
   },
 
@@ -1112,8 +1205,8 @@ const validationRules = {
       title: 'Invalid status references',
       message: 'These generators set entity statuses that are not valid for the entity kind.',
       severity: 'warning',
-      affectedItems: invalid.map(i => ({
-        id: `${i.kind}:${i.status}`,
+      affectedItems: invalid.map((i, idx) => ({
+        id: `${i.kind}:${i.status}:${i.source}:${idx}`,
         label: `${i.kind} status "${i.status}"`,
         detail: `In ${i.source}`,
       })),
@@ -1154,7 +1247,95 @@ const validationRules = {
   },
 
   /**
-   * 15. Numeric Range Validation (WARNING)
+   * 15. Undefined Tag References (WARNING)
+   */
+  undefinedTagRefs: (schema, generators, systems, pressures) => {
+    const definedTags = new Set((schema.tagRegistry || []).map(t => t.tag));
+    const refs = collectTagRefs(generators, systems, pressures);
+
+    // Find tags that are referenced but not in registry
+    const undefinedRefs = refs.filter(r => !definedTags.has(r.tag));
+
+    if (undefinedRefs.length === 0) return null;
+
+    // Group by tag for cleaner display
+    const byTag = {};
+    for (const r of undefinedRefs) {
+      if (!byTag[r.tag]) byTag[r.tag] = [];
+      byTag[r.tag].push(r);
+    }
+
+    return {
+      id: 'undefined-tag-refs',
+      title: 'Tags used but not in registry',
+      message: 'These tags are referenced in generators, systems, or pressures but are not defined in the tag registry. They will still work at runtime but lack metadata like conflictingTags.',
+      severity: 'warning',
+      affectedItems: Object.entries(byTag).map(([tag, sources]) => ({
+        id: tag,
+        label: tag,
+        detail: `Used by: ${sources.map(s => s.source).join(', ')}`,
+      })),
+    };
+  },
+
+  /**
+   * 16. Conflicting Tags (WARNING) - Tags assigned together that are marked as conflicting
+   */
+  conflictingTagsInUse: (schema, generators) => {
+    const tagRegistry = schema.tagRegistry || [];
+    const conflictMap = {};
+    for (const t of tagRegistry) {
+      if (t.conflictingTags && t.conflictingTags.length > 0) {
+        conflictMap[t.tag] = new Set(t.conflictingTags);
+      }
+    }
+
+    const issues = [];
+
+    // Check generators that assign multiple tags
+    for (const gen of generators) {
+      if (gen.enabled === false) continue;
+      if (gen.creation) {
+        for (const c of gen.creation) {
+          if (c.tags && typeof c.tags === 'object') {
+            const assignedTags = Object.keys(c.tags).filter(t => c.tags[t] === true);
+            // Check for conflicts among assigned tags
+            for (let i = 0; i < assignedTags.length; i++) {
+              for (let j = i + 1; j < assignedTags.length; j++) {
+                const tagA = assignedTags[i];
+                const tagB = assignedTags[j];
+                if (conflictMap[tagA]?.has(tagB) || conflictMap[tagB]?.has(tagA)) {
+                  issues.push({
+                    generator: gen.id,
+                    tagA,
+                    tagB,
+                    entityKind: c.kind,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (issues.length === 0) return null;
+
+    return {
+      id: 'conflicting-tags-in-use',
+      title: 'Conflicting tags assigned together',
+      message: 'These generators assign tags that are marked as conflicting in the tag registry. This may produce semantically inconsistent entities.',
+      severity: 'warning',
+      affectedItems: issues.map((i, idx) => ({
+        id: `${i.generator}:${i.tagA}:${i.tagB}:${idx}`,
+        label: `${i.tagA} + ${i.tagB}`,
+        detail: `In generator "${i.generator}" creating ${i.entityKind}`,
+      })),
+    };
+  },
+
+  /**
+   * 17. Numeric Range Validation (WARNING)
    */
   numericRangeIssues: (pressures, eras) => {
     const issues = [];
@@ -1230,6 +1411,8 @@ function runValidations(schema, eras, pressures, generators, systems) {
     () => validationRules.invalidSubtypeRef(schema, generators, pressures),
     () => validationRules.invalidStatusRef(schema, generators),
     () => validationRules.invalidCultureRef(schema),
+    () => validationRules.undefinedTagRefs(schema, generators, systems, pressures),
+    () => validationRules.conflictingTagsInUse(schema, generators),
     () => validationRules.numericRangeIssues(pressures, eras),
   ];
 

@@ -119,8 +119,8 @@ function buildInternalProject(
     ...ek,
     semanticPlane: semanticData?.[ek.kind] || ek.semanticPlane || {
       axes: {
-        x: { name: 'X Axis', lowLabel: 'Low', highLabel: 'High' },
-        y: { name: 'Y Axis', lowLabel: 'Low', highLabel: 'High' },
+        x: { name: 'X Axis', lowTag: 'low', highTag: 'high' },
+        y: { name: 'Y Axis', lowTag: 'low', highTag: 'high' },
       },
       regions: [],
     },

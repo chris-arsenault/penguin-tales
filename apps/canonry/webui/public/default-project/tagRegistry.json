@@ -1,171 +1,317 @@
 [
   {
-    "tag": "active",
-    "category": "status",
-    "rarity": "common",
-    "description": "Entity is currently active in the world",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": [],
-    "minUsage": 1,
-    "maxUsage": 100,
-    "relatedTags": [],
-    "conflictingTags": ["historical", "deceased"]
+    "tag": "mystical",
+    "category": "theme",
+    "rarity": "uncommon",
+    "description": "Associated with magic, anomalies, or the supernatural",
+    "entityKinds": ["npc", "location", "faction", "abilities"],
+    "conflictingTags": ["mundane"],
+    "relatedTags": ["anomaly", "cult"]
   },
   {
-    "tag": "historical",
-    "category": "status",
+    "tag": "mundane",
+    "category": "theme",
     "rarity": "common",
-    "description": "Entity existed in the past but is no longer active",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": [],
-    "minUsage": 1,
-    "maxUsage": 100,
-    "relatedTags": ["legendary", "ancient"],
-    "conflictingTags": ["active"]
+    "description": "Practical, non-magical, everyday nature",
+    "entityKinds": ["npc", "location", "faction", "abilities"],
+    "conflictingTags": ["mystical"],
+    "relatedTags": ["technology"]
+  },
+  {
+    "tag": "hostile",
+    "category": "behavior",
+    "rarity": "uncommon",
+    "description": "Aggressive, threatening, or antagonistic disposition",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": ["friendly"],
+    "relatedTags": ["external", "raider"]
+  },
+  {
+    "tag": "friendly",
+    "category": "behavior",
+    "rarity": "common",
+    "description": "Cooperative, peaceful, or allied disposition",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": ["hostile"],
+    "relatedTags": ["trade", "diplomatic"]
   },
   {
     "tag": "leader",
     "category": "trait",
     "rarity": "uncommon",
-    "description": "Entity holds a leadership position",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "faction"],
-    "minUsage": 3,
-    "maxUsage": 20,
-    "relatedTags": ["influential", "powerful"],
-    "conflictingTags": ["subordinate"]
+    "description": "Holds authority or leads others",
+    "entityKinds": ["npc"],
+    "conflictingTags": ["follower"],
+    "relatedTags": ["influential", "political"]
   },
   {
-    "tag": "influential",
+    "tag": "follower",
     "category": "trait",
-    "rarity": "uncommon",
-    "description": "Entity has significant influence over others",
-    "usageCount": 0,
-    "templates": [],
+    "rarity": "common",
+    "description": "Follows or supports others rather than leading",
+    "entityKinds": ["npc"],
+    "conflictingTags": ["leader"],
+    "relatedTags": []
+  },
+  {
+    "tag": "external",
+    "category": "affiliation",
+    "rarity": "rare",
+    "description": "Comes from outside the penguin colonies - outsider or invader",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["hostile", "raider", "orca"]
+  },
+  {
+    "tag": "orca",
+    "category": "affiliation",
+    "rarity": "rare",
+    "description": "Associated with Orca Raiders - fearsome predators",
+    "entityKinds": ["npc", "faction", "abilities"],
+    "conflictingTags": [],
+    "relatedTags": ["external", "hostile", "raider"]
+  },
+  {
+    "tag": "raider",
+    "category": "behavior",
+    "rarity": "rare",
+    "description": "Engages in raiding, plundering, or predatory activities",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": ["trade"],
+    "relatedTags": ["hostile", "external", "orca"]
+  },
+  {
+    "tag": "trade",
+    "category": "behavior",
+    "rarity": "common",
+    "description": "Engages in commerce, trade routes, or economic activity",
     "entityKinds": ["npc", "faction", "location"],
-    "minUsage": 5,
-    "maxUsage": 30,
-    "relatedTags": ["leader", "powerful"],
-    "conflictingTags": []
+    "conflictingTags": ["raider"],
+    "relatedTags": ["friendly", "guild"]
   },
   {
-    "tag": "mystical",
-    "category": "theme",
-    "rarity": "rare",
-    "description": "Entity is associated with magic or the supernatural",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "location", "faction"],
-    "minUsage": 2,
-    "maxUsage": 15,
-    "relatedTags": ["ancient", "powerful"],
-    "conflictingTags": ["mundane"]
+    "tag": "guild",
+    "category": "affiliation",
+    "rarity": "uncommon",
+    "description": "Part of an organized trade or craft guild",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["trade", "organized"]
   },
   {
-    "tag": "ancient",
-    "category": "theme",
-    "rarity": "rare",
-    "description": "Entity has existed for a very long time",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "location", "faction"],
-    "minUsage": 2,
-    "maxUsage": 20,
-    "relatedTags": ["mystical", "historical", "legendary"],
-    "conflictingTags": ["young", "new"]
+    "tag": "cult",
+    "category": "affiliation",
+    "rarity": "uncommon",
+    "description": "Part of a mystical or secretive religious group",
+    "entityKinds": ["npc", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["mystical", "secretive"]
+  },
+  {
+    "tag": "political",
+    "category": "affiliation",
+    "rarity": "common",
+    "description": "Involved in governance, succession, or political maneuvering",
+    "entityKinds": ["npc", "faction", "rules"],
+    "conflictingTags": [],
+    "relatedTags": ["leader", "influential"]
+  },
+  {
+    "tag": "emergent",
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Recently risen, discovered, or newly prominent",
+    "entityKinds": ["npc", "location", "faction", "abilities"],
+    "conflictingTags": ["legendary"],
+    "relatedTags": ["discovered"]
   },
   {
     "tag": "legendary",
+    "category": "status",
+    "rarity": "rare",
+    "description": "Subject of legends, myths, or historical significance",
+    "entityKinds": ["npc", "location", "faction", "abilities", "occurrence"],
+    "conflictingTags": ["emergent"],
+    "relatedTags": ["influential", "cultural"]
+  },
+  {
+    "tag": "discovered",
+    "category": "status",
+    "rarity": "common",
+    "description": "Recently found, explored, or uncovered",
+    "entityKinds": ["location", "abilities"],
+    "conflictingTags": [],
+    "relatedTags": ["emergent", "resource"]
+  },
+  {
+    "tag": "anomaly",
     "category": "theme",
-    "rarity": "legendary",
-    "description": "Entity is the subject of legends and myths",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "location", "faction"],
-    "minUsage": 1,
-    "maxUsage": 5,
-    "relatedTags": ["ancient", "historical", "powerful"],
-    "conflictingTags": []
+    "rarity": "rare",
+    "description": "Strange, supernatural, or reality-bending phenomenon",
+    "entityKinds": ["location", "abilities", "occurrence"],
+    "conflictingTags": ["mundane"],
+    "relatedTags": ["mystical"]
   },
   {
-    "tag": "criminal",
-    "category": "affiliation",
-    "rarity": "uncommon",
-    "description": "Entity is involved in criminal activities",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "faction"],
-    "minUsage": 3,
-    "maxUsage": 25,
-    "relatedTags": ["outlaw", "underground"],
-    "conflictingTags": ["lawful", "noble"]
-  },
-  {
-    "tag": "noble",
-    "category": "affiliation",
-    "rarity": "uncommon",
-    "description": "Entity belongs to the aristocracy or ruling class",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "faction", "location"],
-    "minUsage": 2,
-    "maxUsage": 20,
-    "relatedTags": ["wealthy", "influential"],
-    "conflictingTags": ["criminal", "outlaw"]
-  },
-  {
-    "tag": "remote",
+    "tag": "resource",
     "category": "location",
     "rarity": "common",
-    "description": "Location is far from civilization",
-    "usageCount": 0,
-    "templates": [],
+    "description": "Source of valuable materials, food, or strategic value",
     "entityKinds": ["location"],
-    "minUsage": 3,
-    "maxUsage": 30,
-    "relatedTags": ["isolated", "frontier"],
-    "conflictingTags": ["central", "urban"]
+    "conflictingTags": [],
+    "relatedTags": ["discovered", "trade"]
+  },
+  {
+    "tag": "technology",
+    "category": "theme",
+    "rarity": "common",
+    "description": "Involves practical innovation, tools, or engineering",
+    "entityKinds": ["abilities", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["mundane", "innovation"]
+  },
+  {
+    "tag": "innovation",
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Breakthrough or novel discovery",
+    "entityKinds": ["abilities", "rules"],
+    "conflictingTags": [],
+    "relatedTags": ["technology", "emergent"]
+  },
+  {
+    "tag": "cultural",
+    "category": "theme",
+    "rarity": "common",
+    "description": "Related to traditions, festivals, or social customs",
+    "entityKinds": ["rules", "occurrence", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["legendary", "political"]
+  },
+  {
+    "tag": "conflict",
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Involved in or caused by warfare, strife, or crisis",
+    "entityKinds": ["npc", "faction", "occurrence", "rules"],
+    "conflictingTags": ["peaceful"],
+    "relatedTags": ["hostile", "crisis"]
+  },
+  {
+    "tag": "crisis",
+    "category": "status",
+    "rarity": "rare",
+    "description": "Emergency situation requiring urgent response",
+    "entityKinds": ["occurrence", "rules", "faction"],
+    "conflictingTags": [],
+    "relatedTags": ["conflict", "power_vacuum"]
+  },
+  {
+    "tag": "secretive",
+    "category": "behavior",
+    "rarity": "uncommon",
+    "description": "Operates in shadows, hidden, or clandestine",
+    "entityKinds": ["npc", "faction", "location"],
+    "conflictingTags": ["central"],
+    "relatedTags": ["cult", "mystical", "hidden"]
+  },
+  {
+    "tag": "organized",
+    "category": "trait",
+    "rarity": "common",
+    "description": "Well-structured, disciplined, or hierarchical",
+    "entityKinds": ["faction", "npc"],
+    "conflictingTags": ["chaotic"],
+    "relatedTags": ["guild", "political"]
+  },
+  {
+    "tag": "chaotic",
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Disorganized, unpredictable, or anarchic",
+    "entityKinds": ["faction", "npc"],
+    "conflictingTags": ["organized"],
+    "relatedTags": ["criminal"]
   },
   {
     "tag": "central",
     "category": "location",
     "rarity": "common",
-    "description": "Location is at the heart of civilization or activity",
-    "usageCount": 0,
-    "templates": [],
+    "description": "At the heart of civilization, well-connected, accessible",
     "entityKinds": ["location"],
-    "minUsage": 2,
-    "maxUsage": 15,
-    "relatedTags": ["urban", "influential"],
-    "conflictingTags": ["remote", "isolated"]
+    "conflictingTags": ["hidden"],
+    "relatedTags": ["trade", "safe"]
   },
   {
-    "tag": "aggressive",
-    "category": "behavior",
+    "tag": "hidden",
+    "category": "location",
     "rarity": "uncommon",
-    "description": "Entity tends toward hostile or confrontational behavior",
-    "usageCount": 0,
-    "templates": [],
-    "entityKinds": ["npc", "faction"],
-    "minUsage": 3,
-    "maxUsage": 25,
-    "relatedTags": ["militant", "hostile"],
-    "conflictingTags": ["peaceful", "diplomatic"]
+    "description": "Remote, hard to find, or off the beaten path",
+    "entityKinds": ["location"],
+    "conflictingTags": ["central"],
+    "relatedTags": ["secretive", "anomaly"]
   },
   {
-    "tag": "diplomatic",
-    "category": "behavior",
+    "tag": "safe",
+    "category": "location",
+    "rarity": "common",
+    "description": "Protected, secure, low danger",
+    "entityKinds": ["location"],
+    "conflictingTags": ["dangerous"],
+    "relatedTags": ["central", "trade"]
+  },
+  {
+    "tag": "dangerous",
+    "category": "location",
     "rarity": "uncommon",
-    "description": "Entity prefers negotiation and peaceful solutions",
-    "usageCount": 0,
-    "templates": [],
+    "description": "Hazardous, risky, or threatening environment",
+    "entityKinds": ["location"],
+    "conflictingTags": ["safe"],
+    "relatedTags": ["anomaly", "external"]
+  },
+  {
+    "tag": "influential",
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Has significant power or sway over others",
     "entityKinds": ["npc", "faction"],
-    "minUsage": 3,
-    "maxUsage": 25,
-    "relatedTags": ["peaceful", "influential"],
-    "conflictingTags": ["aggressive", "militant"]
+    "conflictingTags": [],
+    "relatedTags": ["leader", "political", "legendary"]
+  },
+  {
+    "tag": "splinter",
+    "category": "status",
+    "rarity": "rare",
+    "description": "Split off from a parent organization",
+    "entityKinds": ["faction"],
+    "conflictingTags": [],
+    "relatedTags": ["conflict", "political"]
+  },
+  {
+    "tag": "power_vacuum",
+    "category": "status",
+    "rarity": "rare",
+    "description": "Leadership void creating instability",
+    "entityKinds": ["faction", "location"],
+    "conflictingTags": [],
+    "relatedTags": ["crisis", "political"]
+  },
+  {
+    "tag": "stressed",
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Under environmental, economic, or social pressure",
+    "entityKinds": ["location", "faction"],
+    "conflictingTags": ["thriving"],
+    "relatedTags": ["crisis", "resource"]
+  },
+  {
+    "tag": "thriving",
+    "category": "status",
+    "rarity": "common",
+    "description": "Prosperous, growing, or flourishing",
+    "entityKinds": ["location", "faction"],
+    "conflictingTags": ["stressed"],
+    "relatedTags": ["trade", "safe"]
   }
 ]

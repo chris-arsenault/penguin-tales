@@ -23,14 +23,14 @@ describe('KindRegionService', () => {
       label: 'Highlands',
       description: 'Northern mountain region',
       bounds: { shape: 'circle', center: { x: 30, y: 70 }, radius: 15 },
-      autoTags: ['cold', 'mountainous']
+      tags: ['cold', 'mountainous']
     },
     {
       id: 'coastal',
       label: 'Coastal',
       description: 'Eastern coastal region',
       bounds: { shape: 'circle', center: { x: 70, y: 50 }, radius: 12 },
-      autoTags: ['temperate', 'maritime']
+      tags: ['temperate', 'maritime']
     }
   ];
 
@@ -41,14 +41,14 @@ describe('KindRegionService', () => {
       label: 'Combat Zone',
       description: 'Combat-oriented abilities',
       bounds: { shape: 'rect', x1: 0, y1: 0, x2: 50, y2: 50 },
-      autoTags: ['combat']
+      tags: ['combat']
     },
     {
       id: 'utility_zone',
       label: 'Utility Zone',
       description: 'Utility abilities',
       bounds: { shape: 'rect', x1: 50, y1: 50, x2: 100, y2: 100 },
-      autoTags: ['utility']
+      tags: ['utility']
     }
   ];
 

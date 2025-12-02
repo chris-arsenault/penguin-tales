@@ -236,9 +236,9 @@ export default function PlaneCanvas({
     // X axis labels
     if (axes.x) {
       ctx.textAlign = 'left';
-      ctx.fillText(axes.x.lowLabel || '0', topLeft.x, bottomRight.y + 16);
+      ctx.fillText(axes.x.lowTag || '0', topLeft.x, bottomRight.y + 16);
       ctx.textAlign = 'right';
-      ctx.fillText(axes.x.highLabel || '100', bottomRight.x, bottomRight.y + 16);
+      ctx.fillText(axes.x.highTag || '100', bottomRight.x, bottomRight.y + 16);
       ctx.textAlign = 'center';
       ctx.fillText(axes.x.name || 'X Axis', (topLeft.x + bottomRight.x) / 2, bottomRight.y + 28);
     }
@@ -246,8 +246,8 @@ export default function PlaneCanvas({
     // Y axis labels
     if (axes.y) {
       ctx.textAlign = 'right';
-      ctx.fillText(axes.y.lowLabel || '0', topLeft.x - 6, bottomRight.y);
-      ctx.fillText(axes.y.highLabel || '100', topLeft.x - 6, topLeft.y + 4);
+      ctx.fillText(axes.y.lowTag || '0', topLeft.x - 6, bottomRight.y);
+      ctx.fillText(axes.y.highTag || '100', topLeft.x - 6, topLeft.y + 4);
 
       // Rotated Y axis name
       ctx.save();

@@ -149,10 +149,10 @@ export class RegionMapper {
         tags.regions = regionIds.join(',');
       }
 
-      // Merge autoTags from all regions (more specific regions override)
+      // Merge tags from all regions (more specific regions override)
       for (const region of result.all) {
-        if (region.autoTags) {
-          tags = mergeTags(tags, arrayToTags(region.autoTags));
+        if (region.tags) {
+          tags = mergeTags(tags, arrayToTags(region.tags));
         }
       }
     }
@@ -292,7 +292,7 @@ export class RegionMapper {
         radius: eConfig.defaultRadius
       },
       zRange: eConfig.defaultZRange,
-      autoTags: [`emergent`, `created:tick-${tick}`],
+      tags: [`emergent`, `created:tick-${tick}`],
       emergent: true,
       createdAt: tick,
       createdBy

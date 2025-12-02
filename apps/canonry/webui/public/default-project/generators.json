@@ -68,7 +68,6 @@
           }
         },
         "tags": {
-          "brave": true,
           "emergent": true
         },
         "placement": {
@@ -76,12 +75,22 @@
           "entity": "$target"
         },
         "lineage": {
-          "relationshipKind": "inspired_by",
+          "relationshipKind": "derived_from",
           "ancestorFilter": [
-            { "kind": "npc", "subtype": "hero", "status": "alive" },
-            { "kind": "npc", "status": "alive" }
+            {
+              "kind": "npc",
+              "subtype": "hero",
+              "status": "alive"
+            },
+            {
+              "kind": "npc",
+              "status": "alive"
+            }
           ],
-          "distanceRange": { "min": 40, "max": 70 }
+          "distanceRange": {
+            "min": 40,
+            "max": 70
+          }
         }
       }
     ],
@@ -217,11 +226,19 @@
           }
         },
         "tags": {
-          "successor": true
+          "political": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$colony"
+        },
+        "lineage": {
+          "relationshipKind": "believer_of",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
@@ -411,13 +428,25 @@
         "tags": {
           "orca": true,
           "raider": true,
-          "external-threat": true,
-          "predator": true,
-          "underwater": true
+          "external": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "npc",
+              "subtype": "orca",
+              "status": "alive"
+            }
+          ],
+          "distanceRange": {
+            "min": 20,
+            "max": 50
+          }
         }
       }
     ],
@@ -453,7 +482,7 @@
         }
       },
       {
-        "kind": "inspired_by",
+        "kind": "derived_from",
         "src": "$orca1",
         "dst": "$existingOrca",
         "strength": 0.7,
@@ -632,15 +661,26 @@
         "placement": {
           "type": "at_location",
           "location": "$location"
+        },
+        "lineage": {
+          "relationshipKind": "splinter_of",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 15,
+            "max": 40
+          }
         }
       }
     ],
     "relationships": [
       {
-        "kind": "split_from",
+        "kind": "splinter_of",
         "src": "$splinter",
         "dst": "$target",
-        "distance": { "min": 15, "max": 80 }
+        "distance": {
+          "min": 15,
+          "max": 80
+        }
       },
       {
         "kind": "at_war_with",
@@ -795,7 +835,7 @@
         ],
         "relationships": [
           {
-            "kind": "split_from",
+            "kind": "splinter_of",
             "category": "immutable_fact",
             "probability": 1,
             "comment": "Splinter lineage with ideological distance"
@@ -1214,6 +1254,14 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "originated_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
@@ -1440,6 +1488,14 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "originated_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 20,
+            "max": 50
+          }
         }
       },
       {
@@ -1458,12 +1514,29 @@
           }
         },
         "tags": {
-          "prophet": true,
           "mystical": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "npc",
+              "subtype": "hero",
+              "status": "alive"
+            },
+            {
+              "kind": "abilities",
+              "subtype": "magic"
+            }
+          ],
+          "distanceRange": {
+            "min": 30,
+            "max": 60
+          }
         }
       }
     ],
@@ -1507,7 +1580,7 @@
         }
       },
       {
-        "kind": "seeks",
+        "kind": "related_to",
         "src": "$cult",
         "dst": "$magic",
         "strength": 0.8,
@@ -1618,7 +1691,7 @@
             "comment": "Cultist joins"
           },
           {
-            "kind": "seeks",
+            "kind": "related_to",
             "category": "cultural",
             "probability": 0.8,
             "comment": "Cult seeks magic if exists"
@@ -1695,13 +1768,21 @@
           }
         },
         "tags": {
-          "new": true,
-          "colony": true
+          "emergent": true,
+          "central": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target",
           "minDistance": 20
+        },
+        "lineage": {
+          "relationshipKind": "contained_by",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 15,
+            "max": 35
+          }
         }
       }
     ],
@@ -1824,11 +1905,19 @@
         "tags": {
           "anomaly": true,
           "mystical": true,
-          "caverns": true
+          "hidden": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "adjacent_to",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 25,
+            "max": 55
+          }
         }
       }
     ],
@@ -1998,6 +2087,14 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "discovered_by",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 20,
+            "max": 45
+          }
         }
       }
     ],
@@ -2154,6 +2251,14 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "discovered_by",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 20,
+            "max": 45
+          }
         }
       }
     ],
@@ -2301,12 +2406,19 @@
           "replacements": {}
         },
         "tags": {
-          "explored": true,
-          "geographic": true
+          "discovered": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "discovered_by",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 25,
+            "max": 50
+          }
         }
       }
     ],
@@ -2461,13 +2573,19 @@
         },
         "description": "Massive bioluminescent krill swarms dance in these waters, drawing merchants and hunters from across the berg.",
         "tags": {
-          "krill": true,
-          "bloom": true,
           "resource": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "adjacent_to",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 15,
+            "max": 40
+          }
         }
       },
       {
@@ -2481,13 +2599,27 @@
         },
         "description": "An enterprising merchant who discovered the krill blooms and now leads expeditions to harvest them.",
         "tags": {
-          "explorer": true,
-          "merchant": true,
-          "krill": true
+          "emergent": true,
+          "trade": true,
+          "resource": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "npc",
+              "subtype": "merchant",
+              "status": "alive"
+            }
+          ],
+          "distanceRange": {
+            "min": 25,
+            "max": 55
+          }
         }
       }
     ],
@@ -2531,7 +2663,7 @@
         "strength": 0.85
       },
       {
-        "kind": "discoverer_of",
+        "kind": "discovered_by",
         "src": "$merchant",
         "dst": "$technology",
         "strength": 0.6,
@@ -2646,7 +2778,7 @@
             "comment": "Merchant explores bloom"
           },
           {
-            "kind": "discoverer_of",
+            "kind": "discovered_by",
             "category": "cultural",
             "probability": 0.1,
             "comment": "Rare tech discovery"
@@ -2719,13 +2851,19 @@
           }
         },
         "tags": {
-          "conflict": true,
-          "military": true,
-          "devastating": true
+          "conflict": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "participant_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 35
+          }
         }
       }
     ],
@@ -2850,12 +2988,19 @@
         },
         "tags": {
           "political": true,
-          "internal_strife": true,
-          "leadership": true
+          "conflict": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "participant_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
@@ -2867,7 +3012,7 @@
         "strength": 1
       },
       {
-        "kind": "affects",
+        "kind": "participant_in",
         "src": "$crisis",
         "dst": "$target",
         "strength": 0.9
@@ -2976,13 +3121,19 @@
           }
         },
         "tags": {
-          "memorial": true,
-          "tradition": true,
           "cultural": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$location"
+        },
+        "lineage": {
+          "relationshipKind": "commemorates",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 15,
+            "max": 40
+          }
         }
       }
     ],
@@ -3113,24 +3264,31 @@
           }
         },
         "tags": {
-          "crisis": true,
-          "emergency": true
+          "crisis": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "originated_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
     "relationships": [
       {
-        "kind": "applies_in",
+        "kind": "originated_in",
         "src": "$rule",
         "dst": "$target",
         "strength": 0.8
       },
       {
-        "kind": "supersedes",
+        "kind": "derived_from",
         "src": "$rule",
         "dst": "$existingRule",
         "strength": 0.7,
@@ -3170,7 +3328,7 @@
         "select": {
           "from": {
             "relatedTo": "$target",
-            "relationship": "applies_in",
+            "relationship": "originated_in",
             "direction": "dst"
           },
           "filters": [
@@ -3203,13 +3361,13 @@
         ],
         "relationships": [
           {
-            "kind": "applies_in",
+            "kind": "originated_in",
             "category": "immutable_fact",
             "probability": 1,
             "comment": "Law applies in colony"
           },
           {
-            "kind": "supersedes",
+            "kind": "derived_from",
             "category": "immutable_fact",
             "probability": 0.4,
             "comment": "Supersedes existing law"
@@ -3275,12 +3433,19 @@
           }
         },
         "tags": {
-          "festival": true,
           "cultural": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "originated_in",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
@@ -3548,6 +3713,19 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "abilities",
+              "subtype": "technology"
+            }
+          ],
+          "distanceRange": {
+            "min": 20,
+            "max": 50
+          }
         }
       }
     ],
@@ -3742,11 +3920,19 @@
         },
         "tags": {
           "anomaly": true,
-          "magical": true
+          "mystical": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$practitioner"
+        },
+        "lineage": {
+          "relationshipKind": "discovered_by",
+          "ancestorRef": "$practitioner",
+          "distanceRange": {
+            "min": 25,
+            "max": 55
+          }
         }
       }
     ],
@@ -3887,14 +4073,27 @@
           }
         },
         "tags": {
-          "combat": true,
+          "conflict": true,
           "orca": true,
-          "offensive": true,
+          "hostile": true,
           "external": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "abilities",
+              "subtype": "combat"
+            }
+          ],
+          "distanceRange": {
+            "min": 30,
+            "max": 60
+          }
         }
       }
     ],
@@ -4039,7 +4238,7 @@
             "count": 3,
             "path": [
               {
-                "via": "wields",
+                "via": "practitioner_of",
                 "direction": "out",
                 "targetKind": "abilities"
               }
@@ -4076,16 +4275,26 @@
         "lineage": {
           "relationshipKind": "derived_from",
           "ancestorFilter": [
-            { "kind": "abilities", "subtype": "technology", "status": "discovered" },
-            { "kind": "abilities", "status": "discovered" }
+            {
+              "kind": "abilities",
+              "subtype": "technology",
+              "status": "discovered"
+            },
+            {
+              "kind": "abilities",
+              "status": "discovered"
+            }
           ],
-          "distanceRange": { "min": 10, "max": 30 }
+          "distanceRange": {
+            "min": 10,
+            "max": 30
+          }
         }
       }
     ],
     "relationships": [
       {
-        "kind": "wields",
+        "kind": "practitioner_of",
         "src": "$target",
         "dst": "$technology",
         "strength": 0.8
@@ -4191,7 +4400,7 @@
         ],
         "relationships": [
           {
-            "kind": "wields",
+            "kind": "practitioner_of",
             "category": "cultural",
             "probability": 1,
             "comment": "Faction wields technology"
@@ -4268,7 +4477,7 @@
             "count": 1,
             "path": [
               {
-                "via": "discoverer_of",
+                "via": "discovered_by",
                 "direction": "out",
                 "targetKind": "abilities"
               }
@@ -4295,7 +4504,6 @@
           }
         },
         "tags": {
-          "magic": true,
           "mystical": true
         },
         "placement": {
@@ -4305,16 +4513,26 @@
         "lineage": {
           "relationshipKind": "derived_from",
           "ancestorFilter": [
-            { "kind": "abilities", "subtype": "magic", "status": "discovered" },
-            { "kind": "abilities", "status": "discovered" }
+            {
+              "kind": "abilities",
+              "subtype": "magic",
+              "status": "discovered"
+            },
+            {
+              "kind": "abilities",
+              "status": "discovered"
+            }
           ],
-          "distanceRange": { "min": 20, "max": 50 }
+          "distanceRange": {
+            "min": 20,
+            "max": 50
+          }
         }
       }
     ],
     "relationships": [
       {
-        "kind": "discoverer_of",
+        "kind": "discovered_by",
         "src": "$target",
         "dst": "$magic",
         "strength": 1
@@ -4395,7 +4613,7 @@
         ],
         "relationships": [
           {
-            "kind": "discoverer_of",
+            "kind": "discovered_by",
             "category": "immutable_fact",
             "probability": 1,
             "comment": "Hero discovers magic"
@@ -4495,18 +4713,30 @@
           }
         },
         "tags": {
-          "ideology": true,
+          "political": true,
           "cultural": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "derived_from",
+          "ancestorFilter": [
+            {
+              "kind": "rules"
+            }
+          ],
+          "distanceRange": {
+            "min": 25,
+            "max": 55
+          }
         }
       }
     ],
     "relationships": [
       {
-        "kind": "champion_of",
+        "kind": "believer_of",
         "src": "$target",
         "dst": "$ideology",
         "strength": 1
@@ -4699,7 +4929,7 @@
         ],
         "relationships": [
           {
-            "kind": "champion_of",
+            "kind": "believer_of",
             "category": "social",
             "probability": 1,
             "comment": "Champion promotes ideology"
@@ -4785,13 +5015,21 @@
           }
         },
         "tags": {
-          "strategic": true,
-          "tactical": true,
+          "political": true,
+          "conflict": true,
           "discovered": true
         },
         "placement": {
           "type": "near_entity",
           "entity": "$target"
+        },
+        "lineage": {
+          "relationshipKind": "discovered_by",
+          "ancestorRef": "$target",
+          "distanceRange": {
+            "min": 20,
+            "max": 50
+          }
         }
       }
     ],

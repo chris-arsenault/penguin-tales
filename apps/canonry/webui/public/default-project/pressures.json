@@ -40,8 +40,8 @@
       "positiveFeedback": [
         {
           "type": "ratio",
-          "numerator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "rival_of", "at_war_with"] },
-          "denominator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "rival_of", "at_war_with", "allied_with", "trades_with", "member_of"] },
+          "numerator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "enemy_of", "at_war_with"] },
+          "denominator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "enemy_of", "at_war_with", "allied_with", "trades_with", "member_of"] },
           "fallbackValue": 0,
           "coefficient": 10
         },
@@ -119,7 +119,7 @@
         {
           "type": "ratio",
           "numerator": { "type": "relationship_count", "relationshipKinds": ["allied_with"] },
-          "denominator": { "type": "relationship_count", "relationshipKinds": ["allied_with", "enemy_of", "rival_of", "at_war_with"] },
+          "denominator": { "type": "relationship_count", "relationshipKinds": ["allied_with", "enemy_of", "enemy_of", "at_war_with"] },
           "fallbackValue": 0.5,
           "coefficient": 7
         },
@@ -148,7 +148,7 @@
       "positiveFeedback": [
         {
           "type": "tag_count",
-          "tags": ["external", "invader"],
+          "tags": ["external", "hostile", "raider"],
           "coefficient": 10
         },
         {
@@ -170,7 +170,7 @@
       "positiveFeedback": [
         {
           "type": "cross_culture_ratio",
-          "relationshipKinds": ["follower_of", "rival_of", "lover_of", "enemy_of", "allied_with"],
+          "relationshipKinds": ["believer_of", "enemy_of", "allied_with", "enemy_of", "allied_with"],
           "coefficient": 10
         },
         {
@@ -183,6 +183,34 @@
       ],
       "negativeFeedback": [],
       "maxGrowth": 10
+    }
+  },
+  {
+    "id": "diplomacy",
+    "name": "Diplomatic Relations",
+    "initialValue": 30,
+    "decay": 5,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "relationship_count",
+          "relationshipKinds": ["allied_with", "trades_with"],
+          "coefficient": 0.5
+        },
+        {
+          "type": "entity_count",
+          "kind": "npc",
+          "subtype": "merchant",
+          "coefficient": 0.3
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "relationship_count",
+          "relationshipKinds": ["at_war_with", "enemy_of"],
+          "coefficient": 0.4
+        }
+      ]
     }
   }
 ]

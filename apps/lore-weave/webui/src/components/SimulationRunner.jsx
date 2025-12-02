@@ -241,8 +241,8 @@ function buildCoordinateContextConfig(semanticData, cultureVisuals) {
     id: kindId,
     semanticPlane: data ? {
       axes: data.axes || {
-        x: { name: 'X', lowLabel: 'Low', highLabel: 'High' },
-        y: { name: 'Y', lowLabel: 'Low', highLabel: 'High' },
+        x: { name: 'X', lowTag: 'low', highTag: 'high' },
+        y: { name: 'Y', lowTag: 'low', highTag: 'high' },
       },
       regions: data.regions || [],
     } : undefined,

@@ -5,17 +5,13 @@
     "description": "A period of exploration and colony founding as the ice recedes",
     "templateWeights": {
       "colony_founding": 2.0,
-      "geographic_discovery": 1.5,
-      "structure_building": 1.2,
       "resource_location_discovery": 2.5,
       "geographic_exploration": 2.5,
       "krill_bloom_migration": 2.0,
       "hero_emergence": 1.0,
-      "merchant_arrival": 0.5,
       "orca_raider_arrival": 0,
       "guild_establishment": 1.0,
       "faction_splinter": 0.2,
-      "cultural_tradition": 2.0,
       "crisis_legislation": 1.0,
       "great_festival": 0.5,
       "ideology_emergence": 0.5,
@@ -25,17 +21,16 @@
       "territorial_expansion": 2.5,
       "trade_route_establishment": 1.5,
       "magical_site_discovery": 1.0,
-      "tech_breakthrough": 1.2
+      "tech_breakthrough": 1.2,
+      "strategic_location_discovery": 1.0,
+      "anomaly_manifestation": 0.5
     },
     "systemModifiers": {
-      "resource_flow": 1.5,
       "conflict_contagion": 0.3,
       "cultural_drift": 0.5,
-      "relationship_formation": 1.5,
-      "thermal_cascade": 1.0,
       "belief_contagion": 0.8,
-      "legend_crystallization": 0.5,
-      "succession_vacuum": 0.5
+      "thermal_diffusion": 1.0,
+      "resource_diffusion": 1.5
     }
   },
   {
@@ -44,33 +39,30 @@
     "description": "Resource scarcity leads to inter-colony conflicts",
     "templateWeights": {
       "colony_founding": 0,
-      "fortification_building": 2.0,
       "strategic_location_discovery": 1.5,
       "krill_bloom_migration": 0.3,
       "hero_emergence": 1.5,
       "orca_raider_arrival": 0,
       "faction_splinter": 2.0,
-      "underground_formation": 1.5,
       "crisis_legislation": 2.0,
-      "martial_law": 1.5,
       "great_festival": 2.0,
       "ideology_emergence": 2.5,
-      "combat_technique": 1.5,
       "orca_combat_technique": 0,
       "territorial_expansion": 3.0,
       "trade_route_establishment": 0.3,
       "magical_site_discovery": 0.5,
-      "tech_breakthrough": 0.8
+      "tech_breakthrough": 0.8,
+      "war_outbreak": 1.5,
+      "succession_crisis": 1.0,
+      "legend_crystallization": 1.5
     },
     "systemModifiers": {
       "conflict_contagion": 2.0,
       "alliance_formation": 2.0,
-      "resource_flow": 0.5,
-      "status_volatility": 2.0,
-      "thermal_cascade": 1.2,
       "belief_contagion": 2.0,
-      "legend_crystallization": 2.0,
-      "succession_vacuum": 2.5
+      "cultural_drift": 1.5,
+      "thermal_diffusion": 1.2,
+      "resource_diffusion": 0.5
     }
   },
   {
@@ -79,37 +71,31 @@
     "description": "Technology and magic flourish as penguins seek solutions",
     "templateWeights": {
       "anomaly_manifestation": 1.5,
-      "research_site": 2.0,
-      "mystical_location_discovery": 1.3,
       "resource_location_discovery": 0.8,
       "krill_bloom_migration": 1.0,
-      "scholar_emergence": 0.5,
-      "merchant_arrival": 0.5,
       "orca_raider_arrival": 0,
       "guild_establishment": 2.0,
       "cult_formation": 0.1,
-      "natural_law_discovery": 2.5,
-      "regulation_creation": 2.0,
       "great_festival": 1.0,
       "ideology_emergence": 3.0,
       "tech_innovation": 3.0,
       "magic_discovery": 0.6,
-      "technique_evolution": 2.0,
       "orca_combat_technique": 0,
       "territorial_expansion": 0.8,
       "trade_route_establishment": 2.5,
       "magical_site_discovery": 3.0,
-      "tech_breakthrough": 3.5
+      "tech_breakthrough": 3.5,
+      "strategic_location_discovery": 1.0,
+      "legend_crystallization": 1.0
     },
     "systemModifiers": {
-      "knowledge_spread": 2.0,
-      "resource_flow": 1.2,
-      "cultural_exchange": 1.5,
-      "ability_mutation": 2.0,
-      "thermal_cascade": 1.5,
       "belief_contagion": 1.5,
-      "legend_crystallization": 1.0,
-      "succession_vacuum": 0.8
+      "cultural_drift": 1.5,
+      "thermal_diffusion": 1.5,
+      "resource_diffusion": 1.2,
+      "magic_school_formation": 2.0,
+      "combat_technique_formation": 1.5,
+      "legal_code_formation": 2.0
     }
   },
   {
@@ -117,36 +103,28 @@
     "name": "The Orca Incursion",
     "description": "External threats unite the colonies against common enemies",
     "templateWeights": {
-      "defensive_structure": 3.0,
-      "refugee_camp": 2.0,
       "strategic_location_discovery": 1.0,
       "krill_bloom_migration": 0.2,
       "hero_emergence": 2.0,
-      "war_leader": 0.5,
       "orca_raider_arrival": 2.0,
-      "military_order": 2.0,
-      "resistance_cell": 1.5,
-      "emergency_decree": 2.0,
-      "alliance_pact": 3.0,
       "great_festival": 0.5,
       "ideology_emergence": 1.0,
-      "combat_technique": 2.0,
-      "defensive_magic": 2.5,
       "orca_combat_technique": 3.0,
       "territorial_expansion": 1.5,
       "trade_route_establishment": 0.2,
       "magical_site_discovery": 1.0,
-      "tech_breakthrough": 1.5
+      "tech_breakthrough": 1.5,
+      "war_outbreak": 2.0,
+      "legend_crystallization": 2.0,
+      "crisis_legislation": 2.5
     },
     "systemModifiers": {
-      "external_pressure": 3.0,
-      "internal_solidarity": 2.0,
       "conflict_contagion": 0.3,
-      "hero_emergence": 2.0,
-      "thermal_cascade": 1.8,
+      "alliance_formation": 2.5,
+      "thermal_diffusion": 1.8,
       "belief_contagion": 1.2,
-      "legend_crystallization": 3.0,
-      "succession_vacuum": 2.0
+      "resource_diffusion": 0.8,
+      "combat_technique_formation": 2.5
     }
   },
   {
@@ -154,37 +132,28 @@
     "name": "The Frozen Peace",
     "description": "Rebuilding and consolidation after the wars",
     "templateWeights": {
-      "memorial_sites": 1.5,
-      "trade_posts": 2.0,
       "geographic_exploration": 1.3,
       "krill_bloom_migration": 1.5,
       "succession": 1.0,
-      "diplomat_emergence": 0.4,
       "orca_raider_arrival": 0,
-      "merchant_consortium": 1.5,
-      "veteran_society": 1.0,
-      "peace_treaty": 2.0,
-      "cultural_codification": 3.0,
-      "trade_agreement": 2.5,
       "great_festival": 3.0,
       "ideology_emergence": 2.0,
-      "tradition_preservation": 2.0,
-      "hybrid_technique": 1.5,
       "orca_combat_technique": 0,
       "territorial_expansion": 1.0,
       "trade_route_establishment": 3.0,
       "magical_site_discovery": 1.2,
-      "tech_breakthrough": 1.8
+      "tech_breakthrough": 1.8,
+      "legend_crystallization": 2.5,
+      "guild_establishment": 2.0,
+      "tech_innovation": 1.5
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
-      "trade_flow": 2.0,
-      "conflict_decay": 2.0,
-      "prominence_stabilization": 1.5,
-      "thermal_cascade": 0.8,
       "belief_contagion": 1.0,
-      "legend_crystallization": 2.5,
-      "succession_vacuum": 1.5
+      "thermal_diffusion": 0.8,
+      "resource_diffusion": 2.0,
+      "alliance_formation": 1.5,
+      "legal_code_formation": 2.0
     }
   }
 ]

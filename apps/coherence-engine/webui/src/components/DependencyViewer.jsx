@@ -305,6 +305,19 @@ export default function DependencyViewer({ usageMap }) {
       .sort((a, b) => b.eraCount - a.eraCount);
   }, [usageMap]);
 
+  // Prepare tags data
+  const tagsData = useMemo(() => {
+    if (!usageMap?.tags) return [];
+    return Object.entries(usageMap.tags)
+      .map(([tag, usage]) => ({
+        id: tag,
+        usage,
+        totalUsage: (usage.generators?.length || 0) + (usage.systems?.length || 0) +
+                    (usage.actions?.length || 0) + (usage.pressures?.length || 0),
+      }))
+      .sort((a, b) => b.totalUsage - a.totalUsage);
+  }, [usageMap]);
+
   if (!usageMap) {
     return (
       <div style={styles.container}>
@@ -374,6 +387,13 @@ export default function DependencyViewer({ usageMap }) {
         title="Relationship Kinds"
         icon="🔗"
         items={relationshipKindsData}
+        renderItem={renderSchemaItem}
+      />
+
+      <DependencySection
+        title="Tags"
+        icon="🏷️"
+        items={tagsData}
         renderItem={renderSchemaItem}
       />
 

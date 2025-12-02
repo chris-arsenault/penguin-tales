@@ -111,7 +111,7 @@
       },
       "relationshipDistribution": {
         "preferredTypes": [
-          "rival_of",
+          "enemy_of",
           "enemy_of",
           "ally_of",
           "fought_against"
@@ -282,7 +282,7 @@
     "comment": "Categorization for diversity metrics",
     "social": [
       "friend_of",
-      "rival_of",
+      "enemy_of",
       "family_of",
       "mentor_of",
       "student_of"
@@ -292,7 +292,7 @@
       "enemy_of",
       "member_of",
       "leader_of",
-      "follower_of"
+      "believer_of"
     ],
     "economic": [
       "trades_with",

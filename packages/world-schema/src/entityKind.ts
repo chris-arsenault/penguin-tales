@@ -28,10 +28,10 @@ export interface Status {
 export interface SemanticAxis {
   /** Display name for the axis */
   name: string;
-  /** Label for the low end (0) of the axis */
-  lowLabel: string;
-  /** Label for the high end (100) of the axis */
-  highLabel: string;
+  /** Tag for the low end (0) of the axis - applied to entities placed at low values */
+  lowTag: string;
+  /** Tag for the high end (100) of the axis - applied to entities placed at high values */
+  highTag: string;
 }
 
 /**
@@ -76,6 +76,8 @@ export interface SemanticRegion {
   color: string;
   /** Culture that "owns" this region (optional) */
   culture?: string;
+  /** Tags to apply to entities placed in this region */
+  tags?: string[];
   bounds: RegionBounds;
 }
 

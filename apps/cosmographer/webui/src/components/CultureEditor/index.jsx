@@ -373,14 +373,14 @@ export default function CultureEditor({ project, onSave }) {
                             {kindExpanded && (
                               <div style={styles.accordionBody}>
                                 {['x', 'y', 'z'].map((axis) => {
-                                  const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowLabel: 'Low', highLabel: 'High' };
+                                  const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowTag: 'low', highTag: 'high' };
                                   return (
                                     <div key={axis} style={styles.axisRow}>
                                       <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
                                       <span style={styles.axisName} title={axisConfig.name}>
                                         {axisConfig.name}
                                       </span>
-                                      <span style={styles.lowLabel}>{axisConfig.lowLabel}</span>
+                                      <span style={styles.lowLabel}>{axisConfig.lowTag}</span>
                                       <input
                                         type="range"
                                         min="0"
@@ -389,7 +389,7 @@ export default function CultureEditor({ project, onSave }) {
                                         onChange={(e) => setAxisBias(culture.id, kind.kind, axis, e.target.value)}
                                         style={styles.slider}
                                       />
-                                      <span style={styles.highLabel}>{axisConfig.highLabel}</span>
+                                      <span style={styles.highLabel}>{axisConfig.highTag}</span>
                                       <div style={styles.axisValue}>{biases[axis] ?? 50}</div>
                                     </div>
                                   );

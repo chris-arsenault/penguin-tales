@@ -137,12 +137,12 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "war_brewing_detector",
-      "name": "War Brewing Detector",
-      "description": "Detects factions engaged in conflict and marks them as war_brewing",
+      "name": "Conflict Escalation",
+      "description": "Detects factions engaged in warfare and marks them as hostile and in conflict",
       "entityFilter": {
         "kind": "faction",
         "status": "active",
-        "notHasTag": "at_war"
+        "notHasTag": "conflict"
       },
       "conditions": [
         {
@@ -155,14 +155,18 @@
       "actions": [
         {
           "type": "set_cluster_tag",
-          "tag": "war_brewing"
+          "tag": "conflict"
+        },
+        {
+          "type": "set_cluster_tag",
+          "tag": "hostile"
         }
       ],
       "clusterMode": "by_relationship",
       "clusterRelationshipKind": "at_war_with",
       "minClusterSize": 2,
       "throttleChance": 0.3,
-      "cooldownTag": "war_brewing_cooldown",
+      "cooldownTag": "conflict_cooldown",
       "pressureChanges": { "conflict": 5 }
     }
   },
@@ -170,8 +174,8 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "power_vacuum_detector",
-      "name": "Power Vacuum Detector",
-      "description": "Detects factions with dead leaders and marks them as power_vacuum",
+      "name": "Leadership Crisis",
+      "description": "Detects factions with dead leaders and marks them in crisis",
       "entityFilter": {
         "kind": "faction",
         "status": "active",
@@ -191,6 +195,16 @@
           "type": "set_tag",
           "tag": "power_vacuum",
           "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "crisis",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "political",
+          "tagValue": true
         }
       ],
       "clusterMode": "individual",
@@ -202,12 +216,12 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "legend_ripe_detector",
-      "name": "Legend Ripe Detector",
-      "description": "Detects dead heroes ready to become legends",
+      "name": "Legend Formation",
+      "description": "Detects dead heroes and influential NPCs ready to become legends",
       "entityFilter": {
         "kind": "npc",
         "status": "dead",
-        "notHasTag": "legend_ripe"
+        "notHasTag": "legendary"
       },
       "conditions": [
         {
@@ -218,7 +232,12 @@
       "actions": [
         {
           "type": "set_tag",
-          "tag": "legend_ripe",
+          "tag": "legendary",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "cultural",
           "tagValue": true
         }
       ],
@@ -343,7 +362,7 @@
         "relationshipKind": "believer_of"
       },
       "vectors": [
-        { "relationshipKind": "follower_of", "direction": "both", "minStrength": 0.3 },
+        { "relationshipKind": "believer_of", "direction": "both", "minStrength": 0.3 },
         { "relationshipKind": "member_of", "direction": "src", "minStrength": 0.3 }
       ],
       "transmission": {
@@ -393,19 +412,19 @@
     "config": {
       "id": "cultural_drift",
       "name": "Cultural Evolution",
-      "description": "Connected colonies become more similar, isolated colonies diverge",
+      "description": "Connected colonies become more similar (trade, friendly), isolated colonies diverge (secretive, hidden)",
       "entityKind": "location",
       "entitySubtype": "colony",
       "connectionKind": "adjacent_to",
       "connectionDirection": "both",
       "convergence": {
-        "tags": ["unified", "trading", "peaceful"],
+        "tags": ["trade", "friendly", "central", "thriving"],
         "minConnections": 1,
         "probability": 0.3,
         "maxSharedTags": 2
       },
       "divergence": {
-        "tags": ["isolated", "unique", "divergent"],
+        "tags": ["hidden", "secretive", "mystical"],
         "maxConnections": 0,
         "probability": 0.3
       },
@@ -422,14 +441,14 @@
     "config": {
       "id": "thermal_diffusion",
       "name": "Thermal Diffusion",
-      "description": "Heat spreads from volcanic sources, absorbed by deep ice sinks",
+      "description": "Heat spreads from anomaly sources, making locations dangerous or safe",
       "entityKind": "location",
       "sources": {
-        "tagFilter": "volcanic",
+        "tagFilter": "anomaly",
         "defaultStrength": 1.0
       },
       "sinks": {
-        "tagFilter": "deep_ice",
+        "tagFilter": "central",
         "defaultStrength": 0.5
       },
       "diffusion": {
@@ -438,11 +457,8 @@
         "maxRadius": 50
       },
       "outputTags": [
-        { "tag": "extreme_hot", "minValue": 0.85 },
-        { "tag": "hot_zone", "minValue": 0.6, "maxValue": 0.85 },
-        { "tag": "temperate", "minValue": 0.3, "maxValue": 0.6 },
-        { "tag": "cold_zone", "minValue": 0.15, "maxValue": 0.3 },
-        { "tag": "extreme_cold", "maxValue": 0.15 }
+        { "tag": "dangerous", "minValue": 0.7 },
+        { "tag": "safe", "maxValue": 0.3 }
       ],
       "valueTag": "temperature"
     }
@@ -451,8 +467,8 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "thermal_stress_detector",
-      "name": "Thermal Stress Detector",
-      "description": "Detects colonies in extreme temperature zones and marks them as stressed",
+      "name": "Environmental Stress",
+      "description": "Detects colonies in dangerous zones and marks them as stressed",
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
@@ -461,13 +477,18 @@
       "conditions": [
         {
           "type": "has_any_tag",
-          "tags": ["extreme_hot", "extreme_cold"]
+          "tags": ["dangerous", "anomaly"]
         }
       ],
       "actions": [
         {
           "type": "set_tag",
-          "tag": "thermal_stress",
+          "tag": "stressed",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "crisis",
           "tagValue": true
         }
       ],
@@ -479,24 +500,29 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "thermal_recovery_detector",
-      "name": "Thermal Recovery Detector",
-      "description": "Detects waning colonies in temperate zones ready to recover",
+      "name": "Recovery Opportunity",
+      "description": "Detects waning colonies in safe zones ready to recover",
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
         "status": "waning",
-        "hasTag": "temperate"
+        "hasTag": "safe"
       },
       "conditions": [
         {
           "type": "tag_absent",
-          "tag": "thermal_stress"
+          "tag": "stressed"
         }
       ],
       "actions": [
         {
           "type": "set_tag",
-          "tag": "recovery_ready",
+          "tag": "thriving",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "emergent",
           "tagValue": true
         }
       ],
@@ -507,13 +533,13 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
-      "id": "thermal_discovery_detector",
-      "name": "Thermal Discovery Detector",
-      "description": "Detects warming locations where ice memory may thaw",
+      "id": "discovery_candidate_detector",
+      "name": "Discovery Opportunity",
+      "description": "Detects hidden or dangerous locations with potential for discovery",
       "entityFilter": {
         "kind": "location",
-        "hasTag": "hot_zone",
-        "notHasTag": "recently_thawed"
+        "hasTag": "hidden",
+        "notHasTag": "discovered"
       },
       "conditions": [
         {
@@ -526,7 +552,12 @@
       "actions": [
         {
           "type": "set_tag",
-          "tag": "thaw_candidate",
+          "tag": "discovered",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "emergent",
           "tagValue": true
         }
       ],
@@ -538,8 +569,8 @@
     "systemType": "planeDiffusion",
     "config": {
       "id": "resource_diffusion",
-      "name": "Resource Diffusion",
-      "description": "Resource availability spreads from resource-rich locations",
+      "name": "Resource & Trade Flow",
+      "description": "Prosperity spreads from resource-rich and trade locations",
       "entityKind": "location",
       "sources": {
         "tagFilter": "resource",
@@ -551,9 +582,8 @@
         "maxRadius": 40
       },
       "outputTags": [
-        { "tag": "resource_abundant", "minValue": 0.6 },
-        { "tag": "resource_moderate", "minValue": 0.3, "maxValue": 0.6 },
-        { "tag": "resource_scarce", "maxValue": 0.3 }
+        { "tag": "thriving", "minValue": 0.6 },
+        { "tag": "stressed", "maxValue": 0.2 }
       ],
       "valueTag": "resource_level"
     }
@@ -562,13 +592,13 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "economic_stress_detector",
-      "name": "Economic Stress Detector",
-      "description": "Detects colonies with resource scarcity and high population",
+      "name": "Resource Scarcity Crisis",
+      "description": "Detects crowded colonies with resource stress",
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
         "status": "thriving",
-        "hasTag": "resource_scarce"
+        "hasTag": "stressed"
       },
       "conditions": [
         {
@@ -581,58 +611,71 @@
       "actions": [
         {
           "type": "set_tag",
-          "tag": "economic_stress",
+          "tag": "crisis",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "conflict",
           "tagValue": true
         }
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3,
-      "pressureChanges": { "resource_scarcity": 15 }
+      "pressureChanges": { "resource_scarcity": 15, "conflict": 5 }
     }
   },
   {
     "systemType": "thresholdTrigger",
     "config": {
       "id": "economic_prosperity_detector",
-      "name": "Economic Prosperity Detector",
-      "description": "Detects waning colonies with abundant resources ready to recover",
+      "name": "Economic Recovery",
+      "description": "Detects thriving trade locations becoming prosperous",
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
-        "status": "waning",
-        "hasTag": "resource_abundant"
+        "hasTag": "thriving"
       },
       "conditions": [
         {
           "type": "tag_absent",
-          "tag": "economic_stress"
+          "tag": "stressed"
+        },
+        {
+          "type": "has_any_tag",
+          "tags": ["trade", "resource"]
         }
       ],
       "actions": [
         {
           "type": "set_tag",
-          "tag": "prosperity_ready",
+          "tag": "influential",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "central",
           "tagValue": true
         }
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3,
-      "pressureChanges": { "resource_scarcity": -5 }
+      "pressureChanges": { "resource_scarcity": -5, "stability": 5 }
     }
   },
   {
     "systemType": "connectionEvolution",
     "config": {
       "id": "merchant_prosperity",
-      "name": "Merchant Prosperity",
-      "description": "Merchant factions controlling abundant colonies gain prominence",
+      "name": "Trade Network Growth",
+      "description": "Trade-connected factions controlling thriving colonies gain influence",
       "entityKind": "faction",
       "entitySubtype": "company",
       "metric": {
         "type": "tagged_connection_count",
         "relationshipKind": "controls",
         "direction": "src",
-        "targetTag": "resource_abundant"
+        "targetTag": "thriving"
       },
       "rules": [
         {
@@ -648,6 +691,110 @@
         }
       ],
       "throttleChance": 0.3
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "guild_trade_expansion",
+      "name": "Guild Trade Expansion",
+      "description": "Guild factions gain trade tag when controlling trade locations",
+      "entityFilter": {
+        "kind": "faction",
+        "hasTag": "guild",
+        "notHasTag": "trade"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "controls",
+          "relationshipDirection": "src",
+          "minCount": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "trade",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "influential",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "cult_mystical_influence",
+      "name": "Cult Mystical Influence",
+      "description": "Cult factions near anomalies gain mystical influence",
+      "entityFilter": {
+        "kind": "faction",
+        "hasTag": "cult",
+        "notHasTag": "influential"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "controls",
+          "relationshipDirection": "src",
+          "minCount": 1
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "mystical",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "influential",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3
+    }
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "orca_raider_hostility",
+      "name": "Orca Raider Aggression",
+      "description": "Orca-tagged entities become hostile and raiders",
+      "entityFilter": {
+        "kind": "npc",
+        "hasTag": "orca",
+        "notHasTag": "hostile"
+      },
+      "conditions": [],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "hostile",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "raider",
+          "tagValue": true
+        },
+        {
+          "type": "set_tag",
+          "tag": "external",
+          "tagValue": true
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.1,
+      "pressureChanges": { "external_threat": 10 }
     }
   }
 ]

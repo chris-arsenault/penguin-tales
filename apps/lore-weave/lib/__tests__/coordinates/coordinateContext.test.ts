@@ -26,14 +26,14 @@ describe('CoordinateContext', () => {
       label: 'Highlands',
       culture: 'highland',  // Culture association via region.culture
       bounds: { shape: 'circle', center: { x: 30, y: 70 }, radius: 15 },
-      autoTags: ['cold', 'mountainous']
+      tags: ['cold', 'mountainous']
     },
     {
       id: 'coastal',
       label: 'Coastal',
       culture: 'coastal',
       bounds: { shape: 'circle', center: { x: 70, y: 50 }, radius: 12 },
-      autoTags: ['temperate', 'maritime']
+      tags: ['temperate', 'maritime']
     }
   ];
 
@@ -54,9 +54,9 @@ describe('CoordinateContext', () => {
       name: 'Locations',
       semanticPlane: {
         axes: {
-          x: { name: 'temperature', lowLabel: 'Cold', highLabel: 'Warm' },
-          y: { name: 'population', lowLabel: 'Sparse', highLabel: 'Dense' },
-          z: { name: 'depth', lowLabel: 'Surface', highLabel: 'Deep' }
+          x: { name: 'temperature', lowTag: 'cold', highTag: 'warm' },
+          y: { name: 'population', lowTag: 'sparse', highTag: 'dense' },
+          z: { name: 'depth', lowTag: 'surface', highTag: 'deep' }
         },
         regions: locationRegions
       }
@@ -66,9 +66,9 @@ describe('CoordinateContext', () => {
       name: 'NPCs',
       semanticPlane: {
         axes: {
-          x: { name: 'alignment', lowLabel: 'Lawful', highLabel: 'Chaotic' },
-          y: { name: 'disposition', lowLabel: 'Hostile', highLabel: 'Friendly' },
-          z: { name: 'power', lowLabel: 'Weak', highLabel: 'Strong' }
+          x: { name: 'alignment', lowTag: 'lawful', highTag: 'chaotic' },
+          y: { name: 'disposition', lowTag: 'hostile', highTag: 'friendly' },
+          z: { name: 'power', lowTag: 'weak', highTag: 'strong' }
         },
         regions: npcRegions
       }
@@ -127,8 +127,8 @@ describe('CoordinateContext', () => {
       const plane = context.getSemanticPlane('location');
       expect(plane).toBeDefined();
       expect(plane!.axes.x.name).toBe('temperature');
-      expect(plane!.axes.x.lowLabel).toBe('Cold');
-      expect(plane!.axes.x.highLabel).toBe('Warm');
+      expect(plane!.axes.x.lowTag).toBe('cold');
+      expect(plane!.axes.x.highTag).toBe('warm');
     });
 
     it('should return undefined for unconfigured kind', () => {

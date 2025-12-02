@@ -19,7 +19,7 @@ describe('RegionMapper', () => {
         center: { x: 30, y: 80 },
         radius: 15
       },
-      autoTags: ['cold', 'ice']
+      tags: ['cold', 'ice']
     },
     {
       id: 'southern_coast',
@@ -32,7 +32,7 @@ describe('RegionMapper', () => {
         x2: 50,
         y2: 30
       },
-      autoTags: ['coastal', 'fishing']
+      tags: ['coastal', 'fishing']
     },
     {
       id: 'sacred_cave',
@@ -44,7 +44,7 @@ describe('RegionMapper', () => {
         radius: 5
       },
       zRange: { min: 0, max: 30 },
-      autoTags: ['sacred', 'underground']
+      tags: ['sacred', 'underground']
     }
   ];
 
@@ -165,7 +165,7 @@ describe('RegionMapper', () => {
       expect(result.region).toBeDefined();
       expect(result.region!.emergent).toBe(true);
       expect(result.region!.createdAt).toBe(100);
-      expect(result.region!.autoTags).toContain('emergent');
+      expect(result.region!.tags).toContain('emergent');
     });
 
     it('fails when emergent not allowed', () => {
