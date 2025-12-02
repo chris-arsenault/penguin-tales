@@ -1,13 +1,20 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { eraSpawner } from '../../systems/eraSpawner';
-import { Graph } from '../../engine/types';
+import { createEraSpawnerSystem } from '../../systems/eraSpawner';
+import { Graph, SimulationSystem } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 
 describe('eraSpawner', () => {
   let graph: Graph;
+  let eraSpawner: SimulationSystem;
 
   beforeEach(() => {
+    // Create the era spawner system with default config
+    eraSpawner = createEraSpawnerSystem({
+      id: 'era_spawner',
+      name: 'Era Initialization',
+      ticksPerEra: 30
+    });
     const _entities = new Map();
     let _relationships: Relationship[] = [];
 

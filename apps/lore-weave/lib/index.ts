@@ -196,11 +196,8 @@ export {
 // Framework systems are exposed via thin declarative shells (systemType: 'eraSpawner', etc.)
 // This makes them visible in the Canonry UI and allows enable/disable toggling.
 // The actual implementations are imperative TypeScript that access engine internals.
-
-export { relationshipMaintenance } from './systems/relationshipMaintenance';
-export { eraSpawner } from './systems/eraSpawner';
-export { eraTransition } from './systems/eraTransition';
-export { universalCatalyst } from './systems/universalCatalyst';
+// Note: Use the factory functions (createEraSpawnerSystem, createEraTransitionSystem, etc.)
+// accessed via the systemInterpreter, not deprecated singleton exports.
 export { createConnectionEvolutionSystem } from './systems/connectionEvolution';
 export type {
   ConnectionEvolutionConfig,
@@ -471,8 +468,20 @@ export type {
   FrameworkSystemConfig,
   DeclarativeEraSpawnerSystem,
   DeclarativeEraTransitionSystem,
-  DeclarativeUniversalCatalystSystem
+  DeclarativeUniversalCatalystSystem,
+  // Era system config types
+  EraTransitionConfig,
+  EraSpawnerConfig
 } from './engine/systemInterpreter';
+
+// Era transition condition types (defined per-era in eras.json)
+export type {
+  TransitionCondition,
+  PressureTransitionCondition,
+  EntityCountTransitionCondition,
+  TimeTransitionCondition,
+  EraTransitionEffects
+} from './engine/types';
 
 // =============================================================================
 // DECLARATIVE DOMAIN SCHEMA SYSTEM

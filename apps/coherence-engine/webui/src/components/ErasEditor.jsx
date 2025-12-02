@@ -662,13 +662,232 @@ function WeightItem({ id, name, value, onChange, onRemove }) {
 }
 
 // ============================================================================
+// TRANSITION CONDITION TYPE LABELS
+// ============================================================================
+
+const CONDITION_TYPES = [
+  { value: 'time', label: 'Time', description: 'Transition after minimum ticks' },
+  { value: 'pressure', label: 'Pressure', description: 'Based on pressure level' },
+  { value: 'entity_count', label: 'Entity Count', description: 'Based on entity population' },
+];
+
+const OPERATORS = [
+  { value: 'above', label: 'Above' },
+  { value: 'below', label: 'Below' },
+];
+
+// ============================================================================
+// TRANSITION CONDITION EDITOR COMPONENT
+// ============================================================================
+
+function TransitionConditionEditor({ condition, index, onChange, onRemove, pressures, schema }) {
+  const [removeHover, setRemoveHover] = useState(false);
+
+  const handleFieldChange = (field, value) => {
+    onChange({ ...condition, [field]: value });
+  };
+
+  // Get entity kinds from schema
+  const entityKinds = useMemo(() => {
+    return schema?.entityKinds?.map(ek => ({ id: ek.id, name: ek.name || ek.id })) || [];
+  }, [schema]);
+
+  // Get subtypes for selected entity kind
+  const subtypes = useMemo(() => {
+    if (!condition.entityKind || !schema?.entityKinds) return [];
+    const kind = schema.entityKinds.find(ek => ek.id === condition.entityKind);
+    return kind?.subtypes?.map(st => ({ id: st.id, name: st.name || st.id })) || [];
+  }, [condition.entityKind, schema]);
+
+  return (
+    <div style={{
+      ...styles.itemRow,
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <select
+          value={condition.type}
+          onChange={(e) => handleFieldChange('type', e.target.value)}
+          style={{
+            ...styles.input,
+            width: '140px',
+            padding: '8px 10px',
+          }}
+        >
+          {CONDITION_TYPES.map(ct => (
+            <option key={ct.value} value={ct.value}>{ct.label}</option>
+          ))}
+        </select>
+
+        <span style={{ color: '#60a5fa', fontSize: '12px', flex: 1 }}>
+          {CONDITION_TYPES.find(ct => ct.value === condition.type)?.description}
+        </span>
+
+        <button
+          style={{
+            ...styles.removeButton,
+            ...(removeHover ? styles.removeButtonHover : {}),
+          }}
+          onClick={onRemove}
+          onMouseEnter={() => setRemoveHover(true)}
+          onMouseLeave={() => setRemoveHover(false)}
+          title="Remove condition"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Time-based condition */}
+      {condition.type === 'time' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <label style={{ ...styles.label, marginBottom: 0, minWidth: '80px' }}>Min Ticks</label>
+          <input
+            type="number"
+            value={condition.minTicks ?? 50}
+            onChange={(e) => handleFieldChange('minTicks', parseInt(e.target.value) || 0)}
+            style={{ ...styles.input, width: '100px' }}
+            min="0"
+          />
+          <span style={{ color: '#93c5fd', fontSize: '12px' }}>
+            Era must run at least this many ticks before transition
+          </span>
+        </div>
+      )}
+
+      {/* Pressure-based condition */}
+      {condition.type === 'pressure' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <select
+            value={condition.pressureId || ''}
+            onChange={(e) => handleFieldChange('pressureId', e.target.value)}
+            style={{ ...styles.input, width: '160px', padding: '8px 10px' }}
+          >
+            <option value="">Select pressure...</option>
+            {pressures.map(p => (
+              <option key={p.id} value={p.id}>{p.name || p.id}</option>
+            ))}
+          </select>
+          <select
+            value={condition.operator || 'above'}
+            onChange={(e) => handleFieldChange('operator', e.target.value)}
+            style={{ ...styles.input, width: '100px', padding: '8px 10px' }}
+          >
+            {OPERATORS.map(op => (
+              <option key={op.value} value={op.value}>{op.label}</option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={condition.threshold ?? 50}
+            onChange={(e) => handleFieldChange('threshold', parseInt(e.target.value) || 0)}
+            style={{ ...styles.input, width: '80px' }}
+            min="0"
+            max="100"
+          />
+        </div>
+      )}
+
+      {/* Entity count condition */}
+      {condition.type === 'entity_count' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <select
+            value={condition.entityKind || ''}
+            onChange={(e) => handleFieldChange('entityKind', e.target.value)}
+            style={{ ...styles.input, width: '140px', padding: '8px 10px' }}
+          >
+            <option value="">Entity kind...</option>
+            {entityKinds.map(ek => (
+              <option key={ek.id} value={ek.id}>{ek.name}</option>
+            ))}
+          </select>
+          {subtypes.length > 0 && (
+            <select
+              value={condition.subtype || ''}
+              onChange={(e) => handleFieldChange('subtype', e.target.value || undefined)}
+              style={{ ...styles.input, width: '140px', padding: '8px 10px' }}
+            >
+              <option value="">Any subtype</option>
+              {subtypes.map(st => (
+                <option key={st.id} value={st.id}>{st.name}</option>
+              ))}
+            </select>
+          )}
+          <select
+            value={condition.operator || 'above'}
+            onChange={(e) => handleFieldChange('operator', e.target.value)}
+            style={{ ...styles.input, width: '100px', padding: '8px 10px' }}
+          >
+            {OPERATORS.map(op => (
+              <option key={op.value} value={op.value}>{op.label}</option>
+            ))}
+          </select>
+          <input
+            type="number"
+            value={condition.threshold ?? 10}
+            onChange={(e) => handleFieldChange('threshold', parseInt(e.target.value) || 0)}
+            style={{ ...styles.input, width: '80px' }}
+            min="0"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// TRANSITION EFFECTS EDITOR COMPONENT
+// ============================================================================
+
+function TransitionEffectItem({ pressureId, value, onChange, onRemove, pressures }) {
+  const [removeHover, setRemoveHover] = useState(false);
+  const pressure = pressures.find(p => p.id === pressureId);
+
+  return (
+    <div style={styles.itemRow}>
+      <span style={styles.itemName}>
+        {pressure?.name || pressureId}
+      </span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        style={{
+          ...styles.strengthInput,
+          width: '80px',
+          color: value >= 0 ? '#22c55e' : '#ef4444',
+        }}
+      />
+      <span style={{ color: '#60a5fa', fontSize: '12px', minWidth: '80px' }}>
+        {value >= 0 ? '+' : ''}{value} pressure
+      </span>
+      <button
+        style={{
+          ...styles.removeButton,
+          ...(removeHover ? styles.removeButtonHover : {}),
+        }}
+        onClick={onRemove}
+        onMouseEnter={() => setRemoveHover(true)}
+        onMouseLeave={() => setRemoveHover(false)}
+        title="Remove effect"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
 // ERA CARD COMPONENT
 // ============================================================================
 
-function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems, usageMap }) {
+function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems, pressures, schema, usageMap }) {
   const [hovering, setHovering] = useState(false);
   const [addGenHover, setAddGenHover] = useState(false);
   const [addSysHover, setAddSysHover] = useState(false);
+  const [addCondHover, setAddCondHover] = useState(false);
+  const [addEffectHover, setAddEffectHover] = useState(false);
 
   // Compute validation status for this era
   const validation = useMemo(() => {
@@ -750,6 +969,71 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
     });
   }, [era, onChange]);
 
+  // Transition condition handlers
+  const handleAddCondition = useCallback(() => {
+    const newCondition = { type: 'time', minTicks: 50 };
+    onChange({
+      ...era,
+      transitionConditions: [...(era.transitionConditions || []), newCondition],
+    });
+  }, [era, onChange]);
+
+  const handleUpdateCondition = useCallback((index, updatedCondition) => {
+    const newConditions = [...(era.transitionConditions || [])];
+    newConditions[index] = updatedCondition;
+    onChange({
+      ...era,
+      transitionConditions: newConditions,
+    });
+  }, [era, onChange]);
+
+  const handleRemoveCondition = useCallback((index) => {
+    const newConditions = (era.transitionConditions || []).filter((_, i) => i !== index);
+    onChange({
+      ...era,
+      transitionConditions: newConditions,
+    });
+  }, [era, onChange]);
+
+  // Transition effect handlers
+  const handleAddEffect = useCallback((pressureId) => {
+    onChange({
+      ...era,
+      transitionEffects: {
+        ...era.transitionEffects,
+        pressureChanges: {
+          ...(era.transitionEffects?.pressureChanges || {}),
+          [pressureId]: 10,
+        },
+      },
+    });
+  }, [era, onChange]);
+
+  const handleUpdateEffect = useCallback((pressureId, value) => {
+    onChange({
+      ...era,
+      transitionEffects: {
+        ...era.transitionEffects,
+        pressureChanges: {
+          ...(era.transitionEffects?.pressureChanges || {}),
+          [pressureId]: value,
+        },
+      },
+    });
+  }, [era, onChange]);
+
+  const handleRemoveEffect = useCallback((pressureId) => {
+    const newChanges = { ...(era.transitionEffects?.pressureChanges || {}) };
+    delete newChanges[pressureId];
+    onChange({
+      ...era,
+      transitionEffects: {
+        ...era.transitionEffects,
+        pressureChanges: newChanges,
+      },
+    });
+  }, [era, onChange]);
+
   // Get generator/system names for display
   const getGeneratorName = (id) => {
     const gen = generators.find(g => g.id === id);
@@ -781,6 +1065,18 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
       .filter(s => s.config?.id && !currentIds.has(s.config.id))
       .map(s => ({ id: s.config.id, name: s.config.name || s.config.id }));
   }, [systems, era.systemModifiers]);
+
+  // Available pressures for effects (not already added)
+  const availablePressuresForEffects = useMemo(() => {
+    const currentIds = new Set(Object.keys(era.transitionEffects?.pressureChanges || {}));
+    return (pressures || [])
+      .filter(p => !currentIds.has(p.id))
+      .map(p => ({ id: p.id, name: p.name || p.id }));
+  }, [pressures, era.transitionEffects]);
+
+  // Transition data
+  const transitionConditions = era.transitionConditions || [];
+  const pressureChanges = Object.entries(era.transitionEffects?.pressureChanges || {});
 
   // Count active items (strength > 0)
   const activeGenerators = templateWeights.filter(([, v]) => v > 0).length;
@@ -945,6 +1241,92 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
             </div>
           </div>
 
+          {/* Transition Conditions */}
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.sectionTitle}>
+                <span style={styles.sectionIcon}>🔄</span>
+                Transition Conditions
+                <span style={styles.sectionCount}>{transitionConditions.length} condition{transitionConditions.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
+              All conditions must be met for this era to end and transition to the next era.
+            </div>
+            <div style={styles.itemsGrid}>
+              {transitionConditions.length === 0 ? (
+                <div style={styles.emptyItems}>
+                  No transition conditions defined. The era will use default timing (2x minimum era length).
+                </div>
+              ) : (
+                transitionConditions.map((condition, index) => (
+                  <TransitionConditionEditor
+                    key={index}
+                    condition={condition}
+                    index={index}
+                    onChange={(updated) => handleUpdateCondition(index, updated)}
+                    onRemove={() => handleRemoveCondition(index)}
+                    pressures={pressures || []}
+                    schema={schema}
+                  />
+                ))
+              )}
+            </div>
+            <button
+              style={{
+                ...styles.addItemButton,
+                marginTop: '10px',
+                padding: '10px 16px',
+                ...(addCondHover ? styles.addItemButtonHover : {}),
+              }}
+              onClick={handleAddCondition}
+              onMouseEnter={() => setAddCondHover(true)}
+              onMouseLeave={() => setAddCondHover(false)}
+            >
+              + Add Condition
+            </button>
+          </div>
+
+          {/* Transition Effects */}
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.sectionTitle}>
+                <span style={styles.sectionIcon}>✨</span>
+                Transition Effects
+                <span style={styles.sectionCount}>{pressureChanges.length} effect{pressureChanges.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
+              Pressure changes applied when this era ends and transitions to the next era.
+            </div>
+            <div style={styles.itemsGrid}>
+              {pressureChanges.length === 0 ? (
+                <div style={styles.emptyItems}>
+                  No transition effects defined. Add pressure changes to influence the next era.
+                </div>
+              ) : (
+                pressureChanges.map(([pressureId, value]) => (
+                  <TransitionEffectItem
+                    key={pressureId}
+                    pressureId={pressureId}
+                    value={value}
+                    onChange={(newValue) => handleUpdateEffect(pressureId, newValue)}
+                    onRemove={() => handleRemoveEffect(pressureId)}
+                    pressures={pressures || []}
+                  />
+                ))
+              )}
+            </div>
+            <div style={styles.addItemContainer}>
+              <AddItemDropdown
+                availableItems={availablePressuresForEffects}
+                onAdd={handleAddEffect}
+                placeholder="Add pressure effect..."
+                emptyMessage="All pressures added"
+              />
+            </div>
+          </div>
+
           {/* Delete era button */}
           <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(59, 130, 246, 0.2)' }}>
             <button
@@ -964,7 +1346,7 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
 // MAIN COMPONENT
 // ============================================================================
 
-export default function ErasEditor({ eras = [], onChange, generators = [], systems = [], usageMap }) {
+export default function ErasEditor({ eras = [], onChange, generators = [], systems = [], pressures = [], schema, usageMap }) {
   const [expandedEra, setExpandedEra] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
 
@@ -1053,6 +1435,8 @@ export default function ErasEditor({ eras = [], onChange, generators = [], syste
             onDelete={() => handleDeleteEra(index)}
             generators={generators}
             systems={systems}
+            pressures={pressures}
+            schema={schema}
             usageMap={usageMap}
           />
         ))}

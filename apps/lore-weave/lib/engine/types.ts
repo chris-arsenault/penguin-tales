@@ -27,6 +27,38 @@ export interface NameGenerationService {
   printStats(): void;
 }
 
+// Transition condition types - when should this era end?
+export type TransitionCondition =
+  | PressureTransitionCondition
+  | EntityCountTransitionCondition
+  | TimeTransitionCondition;
+
+export interface PressureTransitionCondition {
+  type: 'pressure';
+  pressureId: string;
+  operator: 'above' | 'below';
+  threshold: number;
+}
+
+export interface EntityCountTransitionCondition {
+  type: 'entity_count';
+  entityKind: string;
+  subtype?: string;
+  status?: string;
+  operator: 'above' | 'below';
+  threshold: number;
+}
+
+export interface TimeTransitionCondition {
+  type: 'time';
+  minTicks: number;
+}
+
+// Effects applied when transitioning OUT of this era
+export interface EraTransitionEffects {
+  pressureChanges?: Record<string, number>;
+}
+
 // Era definition
 export interface Era {
   id: string;
@@ -36,6 +68,9 @@ export interface Era {
   systemModifiers: Record<string, number>;  // multipliers for system effects
   pressureModifiers?: Record<string, number>;
   specialRules?: (graph: Graph) => void;
+  // Transition configuration - when should this era end?
+  transitionConditions?: TransitionCondition[];  // ALL must be met to transition
+  transitionEffects?: EraTransitionEffects;      // Applied when transitioning out
 }
 
 /**

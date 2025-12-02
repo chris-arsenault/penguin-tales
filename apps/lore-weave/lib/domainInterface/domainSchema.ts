@@ -248,19 +248,6 @@ export interface DomainSchema {
   validateEntityStructure?(entity: HardState): { valid: boolean; missing: string[] };
 
   // ===========================
-  // CATALYST SYSTEM EXTENSIONS (LEGACY - use actions.json instead)
-  // ===========================
-
-  /** @deprecated Use getOccurrenceTriggers via declarative systems */
-  getOccurrenceTriggers?(): Record<string, any>;
-
-  /** @deprecated Use era transition conditions via declarative systems */
-  getEraTransitionConditions?(eraSubtype: string): any[];
-
-  /** @deprecated Use era transition effects via declarative systems */
-  getEraTransitionEffects?(fromEra: HardState, toEra: HardState, graph: any): any;
-
-  // ===========================
   // SEMANTIC AXIS CONFIG
   // ===========================
 

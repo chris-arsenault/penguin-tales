@@ -230,6 +230,8 @@ export default function CoherenceEngineRemote({
             onChange={onErasChange || (() => {})}
             generators={generators}
             systems={systems}
+            pressures={pressures}
+            schema={schema}
             usageMap={usageMap}
           />
         );

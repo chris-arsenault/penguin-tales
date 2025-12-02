@@ -104,6 +104,10 @@ export interface EraSpawnerConfig extends FrameworkSystemConfig {
 /**
  * Era Transition system config.
  * Handles transitions between eras based on world state.
+ *
+ * NOTE: Transition conditions and effects are now defined PER-ERA in eras.json,
+ * not at the system level. Each era has its own transitionConditions and
+ * transitionEffects fields. See Era type in engine/types.ts.
  */
 export interface EraTransitionConfig extends FrameworkSystemConfig {
   /** Minimum ticks before era can transition. Default: 50 */

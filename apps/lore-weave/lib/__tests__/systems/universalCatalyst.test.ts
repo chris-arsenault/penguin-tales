@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { universalCatalyst } from '../../systems/universalCatalyst';
-import { Graph, ComponentPurpose } from '../../engine/types';
+import { createUniversalCatalystSystem } from '../../systems/universalCatalyst';
+import { Graph, ComponentPurpose, SimulationSystem } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { TemplateGraphView } from '../../graph/templateGraphView';
 import { TargetSelector } from '../../selection/targetSelector';
@@ -11,8 +11,18 @@ describe('universalCatalyst', () => {
   let mockGraph: Graph;
   let graphView: TemplateGraphView;
   let mockModifier: any;
+  let universalCatalyst: SimulationSystem;
 
   beforeEach(() => {
+    // Create the universal catalyst system with default config
+    universalCatalyst = createUniversalCatalystSystem({
+      id: 'universal_catalyst',
+      name: 'Agent Actions',
+      actionAttemptRate: 0.3,
+      influenceGain: 0.1,
+      influenceLoss: 0.05,
+      pressureMultiplier: 1.5
+    });
     const _entities = new Map<string, HardState>();
     let _relationships: Relationship[] = [];
 

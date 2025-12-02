@@ -315,11 +315,3 @@ interface ActionOutcome {
   entitiesModified?: string[];
 }
 
-/**
- * Default Universal Catalyst instance (for backwards compatibility).
- * @deprecated Use createUniversalCatalystSystem() instead.
- */
-export const universalCatalyst = createUniversalCatalystSystem({
-  id: 'universal_catalyst',
-  name: 'Agent Actions'
-});

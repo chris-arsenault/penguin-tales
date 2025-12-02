@@ -142,11 +142,3 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
   };
 }
 
-/**
- * Default Era Spawner instance (for backwards compatibility).
- * @deprecated Use createEraSpawnerSystem() instead.
- */
-export const eraSpawner = createEraSpawnerSystem({
-  id: 'era_spawner',
-  name: 'Era Initialization'
-});

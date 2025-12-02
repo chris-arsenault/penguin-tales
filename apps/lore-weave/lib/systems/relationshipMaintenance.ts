@@ -225,11 +225,3 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
   };
 }
 
-/**
- * Default Relationship Maintenance instance (for backwards compatibility).
- * @deprecated Use createRelationshipMaintenanceSystem() instead.
- */
-export const relationshipMaintenance = createRelationshipMaintenanceSystem({
-  id: 'relationship_maintenance',
-  name: 'Relationship Maintenance'
-});

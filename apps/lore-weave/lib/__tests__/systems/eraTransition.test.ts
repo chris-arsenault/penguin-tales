@@ -1,17 +1,38 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
-import { eraTransition } from '../../systems/eraTransition';
-import { Graph } from '../../engine/types';
+import { createEraTransitionSystem } from '../../systems/eraTransition';
+import { Graph, SimulationSystem } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { FRAMEWORK_STATUS } from '../../core/frameworkPrimitives';
 
 describe('eraTransition', () => {
   let graph: Graph;
+  let eraTransition: SimulationSystem;
+
+  // Helper to create era transition system
+  const createSystem = () => {
+    return createEraTransitionSystem({
+      id: 'era_transition',
+      name: 'Era Progression',
+      minEraLength: 50,
+      transitionCooldown: 10
+    });
+  };
+
+  // Helper to set conditions on the current era in the config
+  // (conditions are now per-era, not per-system)
+  const setEraConditions = (eraId: string, conditions?: any[], effects?: any) => {
+    const eraConfig = graph.config.eras.find(e => e.id === eraId);
+    if (eraConfig) {
+      eraConfig.transitionConditions = conditions;
+      eraConfig.transitionEffects = effects;
+    }
+  };
 
   const createEraEntity = (id: string, name: string, status: string, createdAt: number): HardState => ({
     id,
     kind: 'era',
-    subtype: 'era',
+    subtype: id, // subtype must match config era id for condition lookup
     name,
     description: `Era ${name}`,
     status,
@@ -23,6 +44,9 @@ describe('eraTransition', () => {
   });
 
   beforeEach(() => {
+    // Create the era transition system
+    eraTransition = createSystem();
+
     const _entities = new Map<string, HardState>();
     _entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
     _entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
@@ -243,8 +267,8 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120; // Greater than minEraLength (50)
 
-      // Configure transition conditions to allow immediate transition
-      graph.config.domain.getEraTransitionConditions = () => [];
+      // Create system with empty conditions (allows immediate transition after min length)
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -269,7 +293,7 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: graph.tick - 60, endTick: null };
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -352,7 +376,7 @@ describe('eraTransition', () => {
       });
 
       graph.tick = 120;
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -384,7 +408,7 @@ describe('eraTransition', () => {
       }
 
       graph.tick = 120;
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -427,7 +451,7 @@ describe('eraTransition', () => {
       });
 
       graph.tick = 120;
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -446,12 +470,12 @@ describe('eraTransition', () => {
 
       graph.pressures.set('conflict', 75);
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'pressure',
         pressureId: 'conflict',
         operator: 'above',
         threshold: 60
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -466,12 +490,12 @@ describe('eraTransition', () => {
 
       graph.pressures.set('stability', 25);
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'pressure',
         pressureId: 'stability',
         operator: 'below',
         threshold: 40
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -485,12 +509,12 @@ describe('eraTransition', () => {
 
       graph.pressures.set('conflict', 30);
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'pressure',
         pressureId: 'conflict',
         operator: 'above',
         threshold: 60
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -520,12 +544,12 @@ describe('eraTransition', () => {
         });
       }
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'entity_count',
         entityKind: 'npc',
         operator: 'above',
         threshold: 5
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -565,73 +589,13 @@ describe('eraTransition', () => {
         updatedAt: 50
       });
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'entity_count',
         entityKind: 'npc',
         subtype: 'hero',
         operator: 'above',
         threshold: 0
-      }];
-
-      const result = eraTransition.apply(graph);
-
-      expect(result.description).toContain('→');
-    });
-
-    it('should handle occurrence conditions (exists)', () => {
-      const currentEra = graph.entities.get('era1')!;
-      currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 120;
-
-      graph.entities.set('occ-1', {
-        id: 'occ-1',
-        kind: 'occurrence',
-        subtype: 'war',
-        name: 'Great War',
-        description: '',
-        status: 'active',
-        prominence: 'recognized',
-        tags: [],
-        links: [],
-        createdAt: 50,
-        updatedAt: 50
-      });
-
-      graph.config.domain.getEraTransitionConditions = () => [{
-        type: 'occurrence',
-        subtype: 'war',
-        operator: 'exists'
-      }];
-
-      const result = eraTransition.apply(graph);
-
-      expect(result.description).toContain('→');
-    });
-
-    it('should handle occurrence conditions (ended)', () => {
-      const currentEra = graph.entities.get('era1')!;
-      currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 120;
-
-      graph.entities.set('occ-1', {
-        id: 'occ-1',
-        kind: 'occurrence',
-        subtype: 'war',
-        name: 'Great War',
-        description: '',
-        status: FRAMEWORK_STATUS.HISTORICAL,
-        prominence: 'recognized',
-        tags: [],
-        links: [],
-        createdAt: 50,
-        updatedAt: 100
-      });
-
-      graph.config.domain.getEraTransitionConditions = () => [{
-        type: 'occurrence',
-        subtype: 'war',
-        operator: 'ended'
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -643,10 +607,10 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 150;
 
-      graph.config.domain.getEraTransitionConditions = () => [{
+      setEraConditions('era1', [{
         type: 'time',
         minTicks: 100
-      }];
+      }]);
 
       const result = eraTransition.apply(graph);
 
@@ -660,7 +624,7 @@ describe('eraTransition', () => {
 
       graph.pressures.set('conflict', 75);
 
-      graph.config.domain.getEraTransitionConditions = () => [
+      setEraConditions('era1', [
         {
           type: 'pressure',
           pressureId: 'conflict',
@@ -671,7 +635,7 @@ describe('eraTransition', () => {
           type: 'time',
           minTicks: 200 // Not met
         }
-      ];
+      ]);
 
       const result = eraTransition.apply(graph);
 
@@ -687,7 +651,8 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 150; // 2x minEraLength (50)
 
-      graph.config.domain.getEraTransitionConditions = () => null;
+      // Default - no conditions specified (uses 2x minEraLength heuristic)
+      // Don't set any conditions on era1
 
       const result = eraTransition.apply(graph);
 
@@ -702,7 +667,7 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const historyLengthBefore = graph.history.length;
 
@@ -721,7 +686,7 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       eraTransition.apply(graph);
 
@@ -731,13 +696,13 @@ describe('eraTransition', () => {
   });
 
   describe('era transition effects', () => {
-    it('should apply domain-specific transition effects', () => {
+    it('should apply config-defined transition effects', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
-      graph.config.domain.getEraTransitionEffects = () => ({
+      // Set effects on era1 config (conditions are per-era now)
+      setEraConditions('era1', [], {
         pressureChanges: {
           conflict: 20,
           stability: -10
@@ -751,13 +716,13 @@ describe('eraTransition', () => {
       expect(result.pressureChanges['stability']).toBe(-10);
     });
 
-    it('should handle missing transition effects function', () => {
+    it('should handle missing transition effects config', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
-      delete graph.config.domain.getEraTransitionEffects;
+      // No effects configured
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -773,7 +738,7 @@ describe('eraTransition', () => {
       graph.entities.get('era3')!.status = FRAMEWORK_STATUS.HISTORICAL;
       graph.tick = 120;
 
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
@@ -788,10 +753,9 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      const era2 = graph.entities.get('era2')!;
-      era2.subtype = 'era2'; // Match config era id
+      // subtype already matches config era id via createEraEntity
 
-      graph.config.domain.getEraTransitionConditions = () => [];
+      setEraConditions('era1', []);
 
       eraTransition.apply(graph);
 

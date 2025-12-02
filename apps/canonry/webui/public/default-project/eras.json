@@ -31,6 +31,13 @@
       "belief_contagion": 0.8,
       "thermal_diffusion": 1.0,
       "resource_diffusion": 1.5
+    },
+    "transitionConditions": [
+      { "type": "time", "minTicks": 80 },
+      { "type": "entity_count", "entityKind": "location", "operator": "above", "threshold": 8 }
+    ],
+    "transitionEffects": {
+      "pressureChanges": { "conflict": 15, "expansion": -10 }
     }
   },
   {
@@ -63,6 +70,13 @@
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.2,
       "resource_diffusion": 0.5
+    },
+    "transitionConditions": [
+      { "type": "time", "minTicks": 100 },
+      { "type": "pressure", "pressureId": "conflict", "operator": "below", "threshold": 30 }
+    ],
+    "transitionEffects": {
+      "pressureChanges": { "innovation": 20, "conflict": -15 }
     }
   },
   {
@@ -96,6 +110,13 @@
       "magic_school_formation": 2.0,
       "combat_technique_formation": 1.5,
       "legal_code_formation": 2.0
+    },
+    "transitionConditions": [
+      { "type": "time", "minTicks": 90 },
+      { "type": "entity_count", "entityKind": "abilities", "operator": "above", "threshold": 5 }
+    ],
+    "transitionEffects": {
+      "pressureChanges": { "threat": 25, "innovation": -10 }
     }
   },
   {
@@ -125,6 +146,13 @@
       "belief_contagion": 1.2,
       "resource_diffusion": 0.8,
       "combat_technique_formation": 2.5
+    },
+    "transitionConditions": [
+      { "type": "time", "minTicks": 120 },
+      { "type": "pressure", "pressureId": "threat", "operator": "below", "threshold": 20 }
+    ],
+    "transitionEffects": {
+      "pressureChanges": { "stability": 30, "threat": -20 }
     }
   },
   {
