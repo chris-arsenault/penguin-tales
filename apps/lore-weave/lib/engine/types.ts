@@ -5,6 +5,60 @@ import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 import type { ISimulationEmitter } from '../observer/types';
 import type { Culture } from '../naming/nameForgeService';
 
+// =============================================================================
+// DEBUG CONFIGURATION
+// =============================================================================
+
+/**
+ * Debug categories for filtering debug output.
+ * Each category can be toggled independently in the UI.
+ */
+export type DebugCategory =
+  | 'placement'      // Entity placement and coordinate resolution
+  | 'coordinates'    // Coordinate context, regions, culture mapping
+  | 'templates'      // Template expansion and variable resolution
+  | 'systems'        // System execution and effects
+  | 'relationships'  // Relationship creation and mutations
+  | 'selection'      // Target and template selection
+  | 'eras'           // Era transitions and epoch events
+  | 'entities'       // Entity creation and state changes
+  | 'pressures'      // Pressure changes and thresholds
+  | 'naming';        // Name generation
+
+/**
+ * Debug configuration for controlling debug output.
+ */
+export interface DebugConfig {
+  /** Master switch - if false, no debug output regardless of categories */
+  enabled: boolean;
+  /** Which categories are enabled (if empty and enabled=true, all are shown) */
+  enabledCategories: DebugCategory[];
+}
+
+/**
+ * Default debug config - all categories disabled.
+ */
+export const DEFAULT_DEBUG_CONFIG: DebugConfig = {
+  enabled: false,
+  enabledCategories: []
+};
+
+/**
+ * All available debug categories with descriptions for UI.
+ */
+export const DEBUG_CATEGORY_INFO: Record<DebugCategory, { label: string; description: string }> = {
+  placement: { label: 'Placement', description: 'Entity placement and coordinate resolution' },
+  coordinates: { label: 'Coordinates', description: 'Coordinate context, regions, culture mapping' },
+  templates: { label: 'Templates', description: 'Template expansion and variable resolution' },
+  systems: { label: 'Systems', description: 'System execution and effects' },
+  relationships: { label: 'Relationships', description: 'Relationship creation and mutations' },
+  selection: { label: 'Selection', description: 'Target and template selection' },
+  eras: { label: 'Eras', description: 'Era transitions and epoch events' },
+  entities: { label: 'Entities', description: 'Entity creation and state changes' },
+  pressures: { label: 'Pressures', description: 'Pressure changes and thresholds' },
+  naming: { label: 'Naming', description: 'Name generation' }
+};
+
 // LLM types moved to @illuminator
 // import { LoreIndex, LoreRecord } from '../llm/types';
 // export interface LLMConfig { ... }
@@ -499,6 +553,9 @@ export interface EngineConfig {
   // Simulation event emitter (REQUIRED - no fallback)
   // Used to emit progress, logs, stats, and completion events
   emitter: ISimulationEmitter;
+
+  // Debug configuration (optional - defaults to all debug disabled)
+  debugConfig?: DebugConfig;
 }
 
 // Meta-entity formation config (legacy - used by validationOrchestrator)
@@ -628,6 +685,29 @@ export class GraphStore implements Graph {
     tick: number;
     violations: Array<{ kind: string; strength: number }>;
   }>;
+
+  // ===========================================================================
+  // DEBUG HELPERS
+  // ===========================================================================
+
+  /**
+   * Emit a categorized debug message.
+   * Only emits if debug is enabled and the category is in the enabled list.
+   */
+  private debug(category: DebugCategory, message: string, context?: Record<string, unknown>): void {
+    const debugConfig = this.config?.debugConfig ?? DEFAULT_DEBUG_CONFIG;
+
+    // If debug is disabled globally, skip
+    if (!debugConfig.enabled) return;
+
+    // If no categories specified, emit all; otherwise check if category is enabled
+    if (debugConfig.enabledCategories.length > 0 && !debugConfig.enabledCategories.includes(category)) {
+      return;
+    }
+
+    // Emit with category prefix
+    this.config?.emitter?.log('debug', `[${category.toUpperCase()}] ${message}`, context);
+  }
 
   // ===========================================================================
   // ENTITY READ METHODS
@@ -793,8 +873,8 @@ export class GraphStore implements Graph {
     // Debug log entity creation with full details
     const tagList = Object.keys(tags).filter(t => t !== 'name');
     const coords = settings.coordinates;
-    this.config.emitter?.log('debug',
-      `[EntityCreate] ${settings.kind}:${settings.subtype} "${name}" ` +
+    this.debug('entities',
+      `[Create] ${settings.kind}:${settings.subtype} "${name}" ` +
       `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)}) ` +
       `[${settings.culture || 'world'}] ` +
       `tags:[${tagList.join(',')}]`,
@@ -844,8 +924,8 @@ export class GraphStore implements Graph {
       ? `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)})`
       : '@ (no coords)';
 
-    this.config.emitter?.log('debug',
-      `[EntityLoad] ${entity.kind}:${entity.subtype} "${entity.name}" ` +
+    this.debug('entities',
+      `[Load] ${entity.kind}:${entity.subtype} "${entity.name}" ` +
       `${coordStr} ` +
       `[${entity.culture || 'world'}] ` +
       `tags:[${tagList.join(',')}]`,

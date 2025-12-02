@@ -10,6 +10,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { createDomainSchemaFromJSON } from '@lib';
 import SimulationDashboard from './SimulationDashboard';
+import DebugSettingsModal from './DebugSettingsModal';
 
 // Arctic Blue base theme with purple accent
 const ACCENT_COLOR = '#6d28d9';
@@ -244,6 +245,25 @@ const styles = {
     fontSize: '13px',
     color: '#93c5fd',
   },
+  debugButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
+    fontSize: '13px',
+    fontWeight: 500,
+    backgroundColor: 'transparent',
+    color: '#93c5fd',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  debugButtonActive: {
+    backgroundColor: 'rgba(109, 40, 217, 0.2)',
+    borderColor: '#6d28d9',
+    color: '#c4b5fd',
+  },
 };
 
 /**
@@ -301,6 +321,13 @@ export default function SimulationRunner({
   });
 
   const [showConfig, setShowConfig] = useState(false);
+
+  // Debug configuration
+  const [debugConfig, setDebugConfig] = useState({
+    enabled: false,
+    enabledCategories: [],
+  });
+  const [showDebugModal, setShowDebugModal] = useState(false);
 
   // Use simulation worker passed from parent (persists across tab navigation)
   const {
@@ -418,8 +445,9 @@ export default function SimulationRunner({
       scaleFactor: params.scaleFactor,
       coordinateContextConfig,
       seedRelationships: seedRelationships || [],
+      debugConfig,
     };
-  }, [schema, eras, pressures, generators, systems, params, coordinateContextConfig, seedRelationships, namingData]);
+  }, [schema, eras, pressures, generators, systems, params, coordinateContextConfig, seedRelationships, namingData, debugConfig]);
 
   // Run simulation using web worker
   const runSimulation = useCallback(() => {
@@ -689,17 +717,28 @@ export default function SimulationRunner({
         {/* Collapsible config output */}
         {!workerIsRunning && (
           <>
-            <div
-              style={styles.configToggle}
-              onClick={() => setShowConfig(!showConfig)}
-            >
-              <span>{showConfig ? '▼' : '▶'}</span>
-              <span>View Engine Configuration</span>
-              <button
-                style={styles.copyButton}
-                onClick={(e) => { e.stopPropagation(); copyConfig(); }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div
+                style={{ ...styles.configToggle, flex: 1, marginTop: 0 }}
+                onClick={() => setShowConfig(!showConfig)}
               >
-                Copy
+                <span>{showConfig ? '▼' : '▶'}</span>
+                <span>View Engine Configuration</span>
+                <button
+                  style={styles.copyButton}
+                  onClick={(e) => { e.stopPropagation(); copyConfig(); }}
+                >
+                  Copy
+                </button>
+              </div>
+              <button
+                style={{
+                  ...styles.debugButton,
+                  ...(debugConfig.enabled ? styles.debugButtonActive : {}),
+                }}
+                onClick={() => setShowDebugModal(true)}
+              >
+                🔧 Debug {debugConfig.enabled ? `(${debugConfig.enabledCategories.length || 'All'})` : ''}
               </button>
             </div>
             {showConfig && (
@@ -718,6 +757,14 @@ export default function SimulationRunner({
           onClearLogs={clearLogs}
         />
       )}
+
+      {/* Debug Settings Modal */}
+      <DebugSettingsModal
+        isOpen={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+        debugConfig={debugConfig}
+        onDebugConfigChange={setDebugConfig}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Graph } from '../engine/types';
+import { Graph, DebugCategory, DebugConfig, DEFAULT_DEBUG_CONFIG } from '../engine/types';
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
 import { CoordinateContext, PlacementContext } from '../coordinates/coordinateContext';
@@ -49,8 +49,15 @@ export class TemplateGraphView {
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
 
-    // Wire up debug logging from coordinate context to graph view
-    this.coordinateContext.debugLog = (level, msg) => this.log(level as 'debug' | 'info' | 'warn' | 'error', msg);
+    // Wire up debug logging from coordinate context to graph view with category support
+    this.coordinateContext.debugLog = (level, msg) => {
+      // Coordinate context messages go to 'coordinates' category
+      if (level === 'debug') {
+        this.debug('coordinates', msg.replace(/^\[CoordContext\]\s*/, ''));
+      } else {
+        this.log(level as 'debug' | 'info' | 'warn' | 'error', msg);
+      }
+    };
   }
 
   // ============================================================================
@@ -107,6 +114,40 @@ export class TemplateGraphView {
    */
   log(level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>): void {
     this.config?.emitter?.log(level, message, context);
+  }
+
+  /**
+   * Emit a categorized debug message.
+   * Only emits if debug is enabled and the category is in the enabled list.
+   *
+   * @param category - Debug category (e.g., 'placement', 'coordinates', 'templates')
+   * @param message - Debug message to emit
+   * @param context - Optional additional context
+   */
+  debug(category: DebugCategory, message: string, context?: Record<string, unknown>): void {
+    const debugConfig = this.config?.debugConfig ?? DEFAULT_DEBUG_CONFIG;
+
+    // If debug is disabled globally, skip
+    if (!debugConfig.enabled) return;
+
+    // If no categories specified, emit all; otherwise check if category is enabled
+    if (debugConfig.enabledCategories.length > 0 && !debugConfig.enabledCategories.includes(category)) {
+      return;
+    }
+
+    // Emit with category prefix
+    this.config?.emitter?.log('debug', `[${category.toUpperCase()}] ${message}`, context);
+  }
+
+  /**
+   * Check if a debug category is enabled.
+   * Useful for avoiding expensive string formatting when debug is disabled.
+   */
+  isDebugEnabled(category: DebugCategory): boolean {
+    const debugConfig = this.config?.debugConfig ?? DEFAULT_DEBUG_CONFIG;
+    if (!debugConfig.enabled) return false;
+    if (debugConfig.enabledCategories.length === 0) return true;
+    return debugConfig.enabledCategories.includes(category);
   }
 
   /** Get rate limit state (for templates with creation rate limiting) */

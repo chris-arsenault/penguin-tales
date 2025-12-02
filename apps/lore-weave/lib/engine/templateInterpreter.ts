@@ -878,7 +878,7 @@ export class TemplateInterpreter {
     const { graphView } = context;
 
     const debug = (strategy: string, coords: Point, details?: string) => {
-      graphView.log('debug', `[Placement] ${entityKind} -> ${strategy} @ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})${details ? ` | ${details}` : ''}`);
+      graphView.debug('placement', `${entityKind} -> ${strategy} @ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})${details ? ` | ${details}` : ''}`);
     };
 
     switch (spec.type) {
@@ -909,7 +909,7 @@ export class TemplateInterpreter {
           debug(strategy, coordinates, `ref=${refEntity.name} @ (${refEntity.coordinates.x.toFixed(1)}, ${refEntity.coordinates.y.toFixed(1)}), offset=${offset}`);
           return { coordinates, strategy };
         }
-        graphView.log('debug', `[Placement] ${entityKind} -> near_entity:${spec.entity} FAILED (no ref coords), falling back`);
+        graphView.debug('placement', `${entityKind} -> near_entity:${spec.entity} FAILED (no ref coords), falling back`);
         break;
       }
 
@@ -928,7 +928,7 @@ export class TemplateInterpreter {
           debug(strategy, result.coordinates, `culture=${cultureId} (from ${spec.culture})`);
           return { coordinates: result.coordinates, strategy };
         }
-        graphView.log('debug', `[Placement] ${entityKind} -> in_culture_region:${cultureId} FAILED, falling back`);
+        graphView.debug('placement', `${entityKind} -> in_culture_region:${cultureId} FAILED, falling back`);
         break;
       }
 
@@ -965,7 +965,7 @@ export class TemplateInterpreter {
           debug(strategy, result.coordinates, `refs=[${sameKindRefs.map(r => r.name).join(', ')}], culture=${cultureId}`);
           return { coordinates: result.coordinates, strategy };
         }
-        graphView.log('debug', `[Placement] ${entityKind} -> derived_from_refs FAILED, falling back`);
+        graphView.debug('placement', `${entityKind} -> derived_from_refs FAILED, falling back`);
         break;
       }
 
@@ -989,7 +989,7 @@ export class TemplateInterpreter {
 
         if (!sparseResult.success || !sparseResult.coordinates) {
           // Fall back to random placement if no sparse area found
-          graphView.log('debug', `[Placement] ${entityKind} -> in_sparse_area FAILED: ${sparseResult.failureReason}, falling back`);
+          graphView.debug('placement', `${entityKind} -> in_sparse_area FAILED: ${sparseResult.failureReason}, falling back`);
           break; // Fall through to default random placement
         }
 
