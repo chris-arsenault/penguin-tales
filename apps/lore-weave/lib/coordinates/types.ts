@@ -179,6 +179,31 @@ export interface EmergentRegionResult {
 }
 
 /**
+ * Result of finding a sparse area on a semantic plane.
+ */
+export interface SparseAreaResult {
+  success: boolean;
+  coordinates?: Point;
+  /** Minimum distance to nearest entity (score of how "sparse" the area is) */
+  minDistanceToEntity?: number;
+  failureReason?: string;
+}
+
+/**
+ * Options for finding a sparse area.
+ */
+export interface SparseAreaOptions {
+  /** Minimum required distance from any existing entity (default: 15) */
+  minDistanceFromEntities: number;
+  /** Bias toward plane edges/periphery (default: false) */
+  preferPeriphery: boolean;
+  /** Maximum sampling attempts (default: 50) */
+  maxAttempts?: number;
+  /** Existing entity positions to avoid */
+  existingPositions: Point[];
+}
+
+/**
  * Options for finding a point within a region.
  */
 export interface SampleRegionOptions {

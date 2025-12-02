@@ -1782,9 +1782,13 @@
           "central": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target",
-          "minDistance": 20
+          "type": "in_sparse_area",
+          "minDistanceFromEntities": 20,
+          "preferPeriphery": false,
+          "createRegion": {
+            "label": "Colony Territory",
+            "description": "A settled region around the new colony"
+          }
         },
         "lineage": {
           "relationshipKind": "contained_by",

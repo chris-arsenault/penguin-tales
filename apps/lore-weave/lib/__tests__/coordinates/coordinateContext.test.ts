@@ -424,4 +424,150 @@ describe('CoordinateContext', () => {
       expect(distance).toBeLessThanOrEqual(20);
     });
   });
+
+  describe('Sparse Area Placement', () => {
+    let context: CoordinateContext;
+
+    beforeEach(() => {
+      context = createCoordinateContext(validConfig);
+    });
+
+    it('should find any point when no existing positions', () => {
+      const result = context.findSparseArea({
+        existingPositions: [],
+        minDistanceFromEntities: 15,
+        preferPeriphery: false
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.coordinates).toBeDefined();
+      expect(result.coordinates!.x).toBeGreaterThanOrEqual(0);
+      expect(result.coordinates!.x).toBeLessThanOrEqual(100);
+      expect(result.coordinates!.y).toBeGreaterThanOrEqual(0);
+      expect(result.coordinates!.y).toBeLessThanOrEqual(100);
+      expect(result.minDistanceToEntity).toBe(100); // Maximum distance when empty
+    });
+
+    it('should find point far from existing entities', () => {
+      const existingPositions = [
+        { x: 50, y: 50, z: 50 }  // Single entity in center
+      ];
+
+      const result = context.findSparseArea({
+        existingPositions,
+        minDistanceFromEntities: 15,
+        preferPeriphery: false
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.coordinates).toBeDefined();
+
+      // Verify minimum distance is respected
+      const dx = result.coordinates!.x - 50;
+      const dy = result.coordinates!.y - 50;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      expect(distance).toBeGreaterThanOrEqual(15);
+      expect(result.minDistanceToEntity).toBeGreaterThanOrEqual(15);
+    });
+
+    it('should find point far from multiple existing entities', () => {
+      const existingPositions = [
+        { x: 25, y: 25, z: 50 },
+        { x: 25, y: 75, z: 50 },
+        { x: 75, y: 25, z: 50 },
+        { x: 75, y: 75, z: 50 }
+      ];
+
+      const result = context.findSparseArea({
+        existingPositions,
+        minDistanceFromEntities: 10,
+        preferPeriphery: false
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.coordinates).toBeDefined();
+
+      // Verify minimum distance from all existing entities
+      for (const pos of existingPositions) {
+        const dx = result.coordinates!.x - pos.x;
+        const dy = result.coordinates!.y - pos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        expect(distance).toBeGreaterThanOrEqual(10);
+      }
+    });
+
+    it('should fail when plane is too crowded', () => {
+      // Create a dense grid of positions that covers most of the plane
+      const existingPositions: Array<{ x: number; y: number; z: number }> = [];
+      for (let x = 10; x <= 90; x += 15) {
+        for (let y = 10; y <= 90; y += 15) {
+          existingPositions.push({ x, y, z: 50 });
+        }
+      }
+
+      const result = context.findSparseArea({
+        existingPositions,
+        minDistanceFromEntities: 30,  // Very large min distance
+        preferPeriphery: false,
+        maxAttempts: 20
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.failureReason).toContain('No sparse area found');
+    });
+
+    it('should bias toward periphery when preferPeriphery is true', () => {
+      const existingPositions = [
+        { x: 50, y: 50, z: 50 }  // Single entity in center
+      ];
+
+      // Run multiple times to check statistical bias
+      const peripheryDistances: number[] = [];
+      for (let i = 0; i < 20; i++) {
+        const result = context.findSparseArea({
+          existingPositions,
+          minDistanceFromEntities: 5,
+          preferPeriphery: true
+        });
+
+        if (result.success && result.coordinates) {
+          // Distance from center (50, 50)
+          const dx = result.coordinates.x - 50;
+          const dy = result.coordinates.y - 50;
+          const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+          peripheryDistances.push(distFromCenter);
+        }
+      }
+
+      // Average distance from center should be higher with periphery bias
+      const avgDistance = peripheryDistances.reduce((a, b) => a + b, 0) / peripheryDistances.length;
+      expect(avgDistance).toBeGreaterThan(15); // Should be biased toward edges
+    });
+
+    it('should return the sparsest point (highest minDistanceToEntity)', () => {
+      const existingPositions = [
+        { x: 10, y: 10, z: 50 }  // Single entity in corner
+      ];
+
+      const result = context.findSparseArea({
+        existingPositions,
+        minDistanceFromEntities: 5,
+        preferPeriphery: false,
+        maxAttempts: 100
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.coordinates).toBeDefined();
+
+      // The sparsest area should be toward the opposite corner
+      // or at least far from (10, 10)
+      const dx = result.coordinates!.x - 10;
+      const dy = result.coordinates!.y - 10;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Should find a point reasonably far from the corner
+      expect(distance).toBeGreaterThan(30);
+      expect(result.minDistanceToEntity).toBeGreaterThan(30);
+    });
+  });
 });

@@ -18,7 +18,7 @@
  * and simulation systems in alternating phases across multiple eras.
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ConfigurationSummary from './components/ConfigurationSummary';
 import DistributionTargetsEditor from './components/DistributionTargetsEditor';
 import SimulationRunner from './components/SimulationRunner';
@@ -124,9 +124,13 @@ export default function LoreWeaveRemote({
   // This allows stepping through epochs, exporting to Archivist, and returning to continue
   const simulationWorker = useSimulationWorker();
 
-  // Sync worker running state
+  // Sync worker running state (only update if value actually changed)
+  const prevIsRunningRef = useRef(simulationWorker.isRunning);
   useEffect(() => {
-    setIsRunning(simulationWorker.isRunning);
+    if (prevIsRunningRef.current !== simulationWorker.isRunning) {
+      prevIsRunningRef.current = simulationWorker.isRunning;
+      setIsRunning(simulationWorker.isRunning);
+    }
   }, [simulationWorker.isRunning]);
 
   // Validate configuration completeness

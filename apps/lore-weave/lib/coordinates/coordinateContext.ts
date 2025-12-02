@@ -434,6 +434,115 @@ export class CoordinateContext {
   }
 
   // ===========================================================================
+  // SPARSE AREA PLACEMENT
+  // ===========================================================================
+
+  /**
+   * Find a sparse (unoccupied) area on the semantic plane.
+   *
+   * This is used for templates that need to place entities far from existing
+   * same-kind entities, like colony founding where new colonies should spread
+   * across the plane rather than cluster.
+   *
+   * @param options - Configuration for sparse area search
+   * @returns Result with coordinates of the sparsest valid area found
+   */
+  findSparseArea(
+    options: import('./types').SparseAreaOptions
+  ): import('./types').SparseAreaResult {
+    const { existingPositions, minDistanceFromEntities, preferPeriphery, maxAttempts = 50 } = options;
+
+    // If no existing positions, any point is valid
+    if (existingPositions.length === 0) {
+      const point = preferPeriphery
+        ? this.generatePeripheryBiasedPoint()
+        : { x: Math.random() * 100, y: Math.random() * 100, z: 50 };
+      return {
+        success: true,
+        coordinates: point,
+        minDistanceToEntity: 100 // Maximum possible distance
+      };
+    }
+
+    // Sample candidate points and score them by distance from existing entities
+    const candidates: Array<{ point: Point; score: number }> = [];
+
+    for (let i = 0; i < maxAttempts; i++) {
+      // Generate candidate point
+      const point = preferPeriphery
+        ? this.generatePeripheryBiasedPoint()
+        : { x: Math.random() * 100, y: Math.random() * 100, z: 50 };
+
+      // Calculate minimum distance to any existing entity
+      const minDist = this.calculateMinDistanceToPoints(point, existingPositions);
+
+      // Only consider points that meet minimum distance requirement
+      if (minDist >= minDistanceFromEntities) {
+        candidates.push({ point, score: minDist });
+      }
+    }
+
+    if (candidates.length === 0) {
+      return {
+        success: false,
+        failureReason: `No sparse area found after ${maxAttempts} attempts. ` +
+          `All sampled points were within ${minDistanceFromEntities} units of existing entities.`
+      };
+    }
+
+    // Return the point with highest score (furthest from existing entities)
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+
+    return {
+      success: true,
+      coordinates: best.point,
+      minDistanceToEntity: best.score
+    };
+  }
+
+  /**
+   * Generate a point biased toward the periphery of the coordinate space.
+   * Uses a ring sampling strategy that favors edges over center.
+   */
+  private generatePeripheryBiasedPoint(): Point {
+    // Sample angle uniformly
+    const theta = Math.random() * 2 * Math.PI;
+
+    // Bias radius toward edges (inverse of center-biased sqrt distribution)
+    // This makes ~70% of points fall in the outer half of the space
+    const r = 50 * (1 - Math.sqrt(1 - Math.random()));
+
+    // Convert polar to cartesian, centered at (50, 50)
+    const x = 50 + r * Math.cos(theta);
+    const y = 50 + r * Math.sin(theta);
+
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+      z: 50
+    };
+  }
+
+  /**
+   * Calculate minimum Euclidean distance from a point to a set of existing points.
+   */
+  private calculateMinDistanceToPoints(point: Point, existingPoints: Point[]): number {
+    if (existingPoints.length === 0) return Infinity;
+
+    let minDist = Infinity;
+    for (const existing of existingPoints) {
+      const dx = point.x - existing.x;
+      const dy = point.y - existing.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDist) {
+        minDist = dist;
+      }
+    }
+    return minDist;
+  }
+
+  // ===========================================================================
   // CULTURE-AWARE PLACEMENT
   // ===========================================================================
 

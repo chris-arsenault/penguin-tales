@@ -1100,6 +1100,53 @@ export class TemplateGraphView {
   }
 
   /**
+   * Find a sparse (unoccupied) area on the semantic plane for an entity kind.
+   *
+   * This is used for templates that need to place entities far from existing
+   * same-kind entities, like colony founding where new colonies should spread
+   * across the plane rather than cluster.
+   *
+   * @param entityKind - Entity kind to find sparse area for
+   * @param options - Configuration for sparse area search
+   * @returns Result with coordinates of the sparsest valid area found
+   *
+   * @example
+   * ```typescript
+   * const result = view.findSparseArea('location', {
+   *   minDistanceFromEntities: 20,
+   *   preferPeriphery: false
+   * });
+   *
+   * if (result.success) {
+   *   console.log(`Found sparse area at (${result.coordinates.x}, ${result.coordinates.y})`);
+   * }
+   * ```
+   */
+  findSparseArea(
+    entityKind: string,
+    options: {
+      minDistanceFromEntities?: number;
+      preferPeriphery?: boolean;
+      maxAttempts?: number;
+    }
+  ): import('../coordinates/types').SparseAreaResult {
+    // Gather existing entity positions for this kind
+    const existingPositions: Point[] = [];
+    for (const entity of this.graph.getEntities()) {
+      if (entity.kind === entityKind && entity.coordinates) {
+        existingPositions.push(entity.coordinates);
+      }
+    }
+
+    return this.coordinateContext.findSparseArea({
+      existingPositions,
+      minDistanceFromEntities: options.minDistanceFromEntities ?? 15,
+      preferPeriphery: options.preferPeriphery ?? false,
+      maxAttempts: options.maxAttempts ?? 50
+    });
+  }
+
+  /**
    * Get region statistics for diagnostics.
    */
   getRegionStats(): {

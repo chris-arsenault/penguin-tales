@@ -1014,6 +1014,47 @@ export class TemplateInterpreter {
         };
       }
 
+      case 'in_sparse_area': {
+        // Find a sparse (unoccupied) area on the semantic plane
+        const sparseResult = graphView.findSparseArea(entityKind, {
+          minDistanceFromEntities: spec.minDistanceFromEntities ?? 15,
+          preferPeriphery: spec.preferPeriphery ?? false
+        });
+
+        if (!sparseResult.success || !sparseResult.coordinates) {
+          // Fall back to random placement if no sparse area found
+          console.warn(
+            `[WARN] in_sparse_area placement failed for ${entityKind}: ${sparseResult.failureReason}. ` +
+            `Falling back to random placement.`
+          );
+          break; // Fall through to default random placement
+        }
+
+        // Optionally create an emergent region at the placement location
+        if (spec.createRegion) {
+          const regionLabel = context.resolveString(spec.createRegion.label);
+          const regionDescription = spec.createRegion.description
+            ? context.resolveString(spec.createRegion.description)
+            : `Emergent region created at tick ${graphView.tick}`;
+
+          const regionResult = graphView.createEmergentRegion(
+            entityKind,
+            sparseResult.coordinates,
+            regionLabel,
+            regionDescription
+          );
+
+          if (regionResult.success && regionResult.region) {
+            graphView.log('info', `Created emergent region "${regionResult.region.label}" at (${sparseResult.coordinates.x.toFixed(1)}, ${sparseResult.coordinates.y.toFixed(1)})`);
+          }
+        }
+
+        return {
+          coordinates: sparseResult.coordinates,
+          strategy: `in_sparse_area:dist=${sparseResult.minDistanceToEntity?.toFixed(1)}`
+        };
+      }
+
     }
 
     // Fallback

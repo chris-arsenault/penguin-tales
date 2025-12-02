@@ -111,6 +111,15 @@ export interface PostProcessConfig {
   governanceRelationship?: string;
   /** Pressure changes after formation */
   pressureChanges?: Record<string, number>;
+  /**
+   * Whether to create an emergent region at the meta-entity's location.
+   * This marks the semantic area where similar entities clustered.
+   */
+  createEmergentRegion?: boolean;
+  /** Label template for the emergent region (use {name} for meta-entity name) */
+  emergentRegionLabel?: string;
+  /** Description template for the emergent region */
+  emergentRegionDescription?: string;
 }
 
 /**
@@ -499,6 +508,25 @@ export function createClusterFormationSystem(
             dst: metaEntityId
           });
         });
+
+        // Post-process: create emergent region if configured
+        if (config.postProcess?.createEmergentRegion && metaEntityPartial.coordinates) {
+          const regionLabel = (config.postProcess.emergentRegionLabel || '{name} Region')
+            .replace('{name}', metaEntity.name);
+          const regionDescription = (config.postProcess.emergentRegionDescription || 'A semantic cluster formed around {name}')
+            .replace('{name}', metaEntity.name);
+
+          const regionResult = graphView.createEmergentRegion(
+            config.metaEntity.kind,
+            metaEntityPartial.coordinates,
+            regionLabel,
+            regionDescription
+          );
+
+          if (regionResult.success && regionResult.region) {
+            graphView.log('info', `Created emergent region "${regionResult.region.label}" for meta-entity "${metaEntity.name}"`);
+          }
+        }
 
         // Post-process: create governance faction if configured
         if (config.postProcess?.createGovernanceFaction) {

@@ -407,7 +407,16 @@ export type PlacementSpec =
   | { type: 'in_culture_region'; culture: string }
   | { type: 'at_location'; location: string }  // DEPRECATED: cross-kind reference
   | { type: 'derived_from_references'; references: string[]; culture?: string }  // references MUST be same kind!
-  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } };
+  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } }
+  | {
+      type: 'in_sparse_area';
+      minDistanceFromEntities?: number;  // Min distance from existing same-kind entities (default: 15)
+      preferPeriphery?: boolean;         // Bias toward plane edges (default: false)
+      createRegion?: {                   // Optionally create an emergent region at the placement
+        label: string;                   // Region label (can use template vars)
+        description?: string;            // Region description
+      };
+    };
 
 export interface CountRange {
   min: number;
