@@ -13,6 +13,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { getElementValidation, getUsageSummary } from '../utils/schemaUsageMap';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 // ============================================================================
 // CSS HOVER STYLES (injected once)
@@ -1577,9 +1578,40 @@ function VariablesTab({ generator, onChange, schema }) {
 // CREATION TAB
 // ============================================================================
 
-function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, namingData = {}, cultureIds = [] }) {
+function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, namingData = {}, cultureIds = [], generator, tagRegistry = [], onAddToRegistry }) {
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
+
+  /**
+   * Get the entity kind that a variable reference selects.
+   * CRITICAL: Semantic planes are per-entity-kind. near_entity placement
+   * MUST reference an entity of the SAME KIND as the entity being created.
+   */
+  const getRefKind = useCallback((ref) => {
+    if (!ref) return null;
+    if (ref === '$target') {
+      return generator?.selection?.kind || null;
+    }
+    const varConfig = generator?.variables?.[ref];
+    if (varConfig?.select?.kind) {
+      return varConfig.select.kind;
+    }
+    // Check if it's a creation ref from earlier in the list
+    const creationItem = generator?.creation?.find(c => c.entityRef === ref);
+    if (creationItem?.kind) {
+      return creationItem.kind;
+    }
+    return null;
+  }, [generator]);
+
+  // Get refs that are the SAME KIND as this entity (for near_entity placement)
+  const sameKindRefs = useMemo(() => {
+    if (!item.kind) return [];
+    return availableRefs.filter(ref => {
+      const refKind = getRefKind(ref);
+      return refKind === item.kind;
+    });
+  }, [availableRefs, item.kind, getRefKind]);
 
   // Determine which culture this creation would use
   const getCultureId = () => {
@@ -1784,13 +1816,189 @@ function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, 
               )}
             </div>
           </div>
+
+          {/* PLACEMENT EDITOR */}
+          <div style={{ marginTop: '16px' }}>
+            <label style={styles.label}>Placement</label>
+            <div style={{
+              fontSize: '11px',
+              color: COLORS.textMuted,
+              marginBottom: '8px',
+              padding: '6px 8px',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '4px',
+              borderLeft: `3px solid ${COLORS.textDim}`,
+            }}>
+              <strong>Semantic Planes:</strong> Each entity kind has its own coordinate space.
+              "Near entity" placement requires a reference of the <em>same kind</em> ({item.kind || 'select kind first'}).
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <ReferenceDropdown
+                value={item.placement?.type || 'none'}
+                onChange={(v) => {
+                  if (v === 'none') updateField('placement', undefined);
+                  else if (v === 'near_entity') updateField('placement', { type: 'near_entity', entity: '' });
+                  else if (v === 'in_culture_region') updateField('placement', { type: 'in_culture_region', culture: '$target' });
+                  else if (v === 'random_in_bounds') updateField('placement', { type: 'random_in_bounds' });
+                }}
+                options={[
+                  { value: 'none', label: 'Default (random)' },
+                  { value: 'near_entity', label: 'Near same-kind entity' },
+                  { value: 'in_culture_region', label: 'In culture region' },
+                  { value: 'random_in_bounds', label: 'Random in bounds' },
+                ]}
+                style={{ flex: 1 }}
+              />
+              {item.placement?.type === 'near_entity' && (
+                <ReferenceDropdown
+                  value={item.placement.entity}
+                  onChange={(v) => updateField('placement', { ...item.placement, entity: v })}
+                  options={sameKindRefs.length > 0
+                    ? sameKindRefs.map((r) => ({ value: r, label: `${r} (${item.kind})` }))
+                    : [{ value: '', label: `No ${item.kind} refs available` }]
+                  }
+                  placeholder={sameKindRefs.length > 0 ? 'Select same-kind entity...' : `Define a ${item.kind} variable first`}
+                  style={{ flex: 1 }}
+                />
+              )}
+              {item.placement?.type === 'in_culture_region' && (
+                <ReferenceDropdown
+                  value={item.placement.culture}
+                  onChange={(v) => updateField('placement', { ...item.placement, culture: v })}
+                  options={availableRefs.map((r) => ({ value: r, label: r }))}
+                  placeholder="Select culture source..."
+                  style={{ flex: 1 }}
+                />
+              )}
+            </div>
+            {item.placement?.type === 'near_entity' && sameKindRefs.length === 0 && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px',
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '4px',
+                fontSize: '11px',
+                color: '#ef4444',
+              }}>
+                ⚠️ No same-kind ({item.kind}) variables or targets available. Define a variable that selects {item.kind} entities,
+                or use "In culture region" placement instead.
+              </div>
+            )}
+          </div>
+
+          {/* LINEAGE EDITOR */}
+          <div style={{ marginTop: '16px' }}>
+            <label style={styles.label}>Lineage</label>
+            <div style={{
+              fontSize: '11px',
+              color: COLORS.textMuted,
+              marginBottom: '8px',
+            }}>
+              Optional: Create a lineage relationship to an ancestor entity (e.g., derived_from, inspired_by).
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: COLORS.text }}>
+                <input
+                  type="checkbox"
+                  checked={!!item.lineage}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      updateField('lineage', {
+                        relationshipKind: 'derived_from',
+                        ancestorRef: '$target',
+                        distanceRange: { min: 20, max: 50 },
+                      });
+                    } else {
+                      updateField('lineage', undefined);
+                    }
+                  }}
+                />
+                Enable lineage
+              </label>
+            </div>
+            {item.lineage && (
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
+                <div style={styles.formGroup}>
+                  <label style={{ ...styles.label, fontSize: '10px' }}>Relationship Kind</label>
+                  <input
+                    type="text"
+                    value={item.lineage.relationshipKind || ''}
+                    onChange={(e) => updateField('lineage', { ...item.lineage, relationshipKind: e.target.value })}
+                    style={{ ...styles.input, width: '120px' }}
+                    placeholder="derived_from"
+                  />
+                </div>
+                <ReferenceDropdown
+                  label="Ancestor"
+                  value={item.lineage.ancestorRef}
+                  onChange={(v) => updateField('lineage', { ...item.lineage, ancestorRef: v })}
+                  options={availableRefs.map((r) => ({ value: r, label: r }))}
+                  placeholder="Select ancestor..."
+                  style={{ minWidth: '120px' }}
+                />
+                <div style={styles.formGroup}>
+                  <label style={{ ...styles.label, fontSize: '10px' }}>Distance Range</label>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      value={item.lineage.distanceRange?.min ?? 20}
+                      onChange={(e) => updateField('lineage', {
+                        ...item.lineage,
+                        distanceRange: { ...item.lineage.distanceRange, min: parseInt(e.target.value) || 0 },
+                      })}
+                      style={{ ...styles.input, width: '50px' }}
+                      min={0}
+                      max={100}
+                    />
+                    <span style={{ color: COLORS.textMuted }}>-</span>
+                    <input
+                      type="number"
+                      value={item.lineage.distanceRange?.max ?? 50}
+                      onChange={(e) => updateField('lineage', {
+                        ...item.lineage,
+                        distanceRange: { ...item.lineage.distanceRange, max: parseInt(e.target.value) || 100 },
+                      })}
+                      style={{ ...styles.input, width: '50px' }}
+                      min={0}
+                      max={100}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* TAGS EDITOR */}
+          <div style={{ marginTop: '16px' }}>
+            <label style={styles.label}>Tags</label>
+            <div style={{
+              fontSize: '11px',
+              color: COLORS.textMuted,
+              marginBottom: '8px',
+            }}>
+              Assign tags to this entity for filtering, naming profiles, and system targeting.
+            </div>
+            <TagSelector
+              value={Object.keys(item.tags || {}).filter(k => item.tags[k])}
+              onChange={(tagArray) => {
+                // Convert array of tags to Record<string, boolean>
+                const tagsObj = {};
+                tagArray.forEach(t => { tagsObj[t] = true; });
+                updateField('tags', tagsObj);
+              }}
+              tagRegistry={tagRegistry}
+              onAddToRegistry={onAddToRegistry}
+              placeholder="Select tags..."
+            />
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function CreationTab({ generator, onChange, schema, namingData = {} }) {
+function CreationTab({ generator, onChange, schema, namingData = {}, tagRegistry = [], onAddToRegistry }) {
   const creation = generator.creation || [];
 
   const availableRefs = useMemo(() => {
@@ -1844,6 +2052,9 @@ function CreationTab({ generator, onChange, schema, namingData = {} }) {
               availableRefs={availableRefs}
               namingData={namingData}
               cultureIds={cultureIds}
+              generator={generator}
+              tagRegistry={tagRegistry}
+              onAddToRegistry={onAddToRegistry}
             />
           ))
         )}
@@ -2216,7 +2427,7 @@ function TabValidationBadge({ count }) {
   );
 }
 
-function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap, namingData }) {
+function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap, namingData, tagRegistry = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Compute validation for this generator
@@ -2236,7 +2447,7 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
       case 'variables':
         return <VariablesTab generator={generator} onChange={onChange} schema={schema} />;
       case 'creation':
-        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} />;
+        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} tagRegistry={tagRegistry} />;
       case 'relationships':
         return <RelationshipsTab generator={generator} onChange={onChange} schema={schema} />;
       case 'effects':
@@ -2542,6 +2753,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
           eras={eras}
           usageMap={usageMap}
           namingData={namingData}
+          tagRegistry={schema.tagRegistry || []}
         />
       )}
     </div>

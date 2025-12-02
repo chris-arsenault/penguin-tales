@@ -37,10 +37,6 @@ import type { EraTransitionConfig } from '../engine/systemInterpreter';
  * Create an Era Transition system with the given configuration.
  */
 export function createEraTransitionSystem(config: EraTransitionConfig): SimulationSystem {
-  // Extract config with defaults
-  const minEraLength = config.minEraLength ?? 50;
-  const transitionCooldown = config.transitionCooldown ?? 10;
-
   return {
     id: config.id || 'era_transition',
     name: config.name || 'Era Progression',
@@ -57,20 +53,11 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         return activateFirstEra(graphView);
       }
 
-      // Check minimum era length
+      // Calculate era age for condition checking
       const eraAge = graphView.tick - currentEra.createdAt;
-      if (eraAge < minEraLength) {
-        return {
-          relationshipsAdded: [],
-          entitiesModified: [],
-          pressureChanges: {},
-          description: `${currentEra.name} continues (${eraAge}/${minEraLength} ticks)`
-        };
-      }
 
-      // Check transition cooldown (prevent rapid cycling)
+      // Initialize temporal tracking if missing
       if (!currentEra.temporal?.startTick) {
-        // Initialize temporal tracking if missing
         currentEra.temporal = {
           startTick: graphView.tick - eraAge,
           endTick: null
@@ -78,24 +65,44 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       }
 
       const timeSinceStart = graphView.tick - currentEra.temporal.startTick;
-      if (timeSinceStart < transitionCooldown) {
-        return {
-          relationshipsAdded: [],
-          entitiesModified: [],
-          pressureChanges: {},
-          description: `${currentEra.name} stabilizing`
-        };
-      }
 
       // Get era config to check transition conditions for THIS era
       const eraConfig = graphView.config.eras.find(e => e.id === currentEra.subtype) as Era | undefined;
-      const eraConditions = eraConfig?.transitionConditions;
-      const eraEffects = eraConfig?.transitionEffects;
+
+      if (!eraConfig) {
+        throw new Error(
+          `[EraTransition] No era config found for "${currentEra.name}" (subtype="${currentEra.subtype}", id="${currentEra.id}"). ` +
+          `Era entity subtype must match an era config id. ` +
+          `Available era configs: [${graphView.config.eras.map(e => e.id).join(', ')}].`
+        );
+      }
+
+      const eraConditions = eraConfig.transitionConditions;
+      if (!eraConditions) {
+        throw new Error(
+          `[EraTransition] Era config "${eraConfig.id}" has no transitionConditions defined. ` +
+          `Every era must define transitionConditions (use [] for immediate transition).`
+        );
+      }
+      const eraEffects = eraConfig.transitionEffects;
 
       // Check per-era transition conditions
-      const shouldTransition = checkTransitionConditions(currentEra, graphView, minEraLength, eraConditions);
+      const { shouldTransition, conditionResults } = checkTransitionConditions(currentEra, graphView, eraConditions);
 
       if (!shouldTransition) {
+        // Build detailed condition status string
+        const conditionSummary = conditionResults.map(r => {
+          const status = r.passed ? '✓' : '✗';
+          const details = Object.entries(r.details)
+            .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+            .join(', ');
+          return `${status} ${r.type}: ${details}`;
+        }).join(' | ');
+
+        graphView.log('debug',
+          `[EraTransition] ${currentEra.name}: conditions not met (age=${timeSinceStart}) [${conditionSummary}]`,
+          { eraAge: timeSinceStart, conditionResults }
+        );
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -103,6 +110,20 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
           description: `${currentEra.name} persists`
         };
       }
+
+      // Build detailed condition status string for success case too
+      const conditionSummary = conditionResults.map(r => {
+        const status = r.passed ? '✓' : '✗';
+        const details = Object.entries(r.details)
+          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+          .join(', ');
+        return `${status} ${r.type}: ${details}`;
+      }).join(' | ');
+
+      graphView.log('debug',
+        `[EraTransition] ${currentEra.name}: transition conditions MET (age=${timeSinceStart}) [${conditionSummary}]`,
+        { eraAge: timeSinceStart, conditionResults }
+      );
 
       // Find next era (first entity with status: 'future')
       const nextEra = graphView.findEntities({
@@ -112,6 +133,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
 
       if (!nextEra) {
         // No more eras - current era continues indefinitely
+        graphView.log('debug', `[EraTransition] ${currentEra.name}: final era, no transition possible`);
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -121,6 +143,11 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       }
 
       // Perform transition
+      graphView.log('info', `[EraTransition] TRANSITIONING: ${currentEra.name} → ${nextEra.name}`, {
+        tick: graphView.tick,
+        fromEra: currentEra.subtype,
+        toEra: nextEra.subtype
+      });
       currentEra.status = FRAMEWORK_STATUS.HISTORICAL;
       currentEra.temporal!.endTick = graphView.tick;
       currentEra.updatedAt = graphView.tick;
@@ -222,51 +249,96 @@ function activateFirstEra(graphView: TemplateGraphView): SystemResult {
   };
 }
 
+interface ConditionResult {
+  type: string;
+  passed: boolean;
+  details: Record<string, unknown>;
+}
+
+interface TransitionCheckResult {
+  shouldTransition: boolean;
+  conditionResults: ConditionResult[];
+}
+
 /**
  * Check if conditions are met for era transition
- * Uses config-defined transition conditions
+ * Uses config-defined transition conditions from per-era config
  */
 function checkTransitionConditions(
   currentEra: HardState,
   graphView: TemplateGraphView,
-  minEraLength: number,
-  conditions?: TransitionCondition[]
-): boolean {
-  // No conditions array = use default heuristics
-  if (conditions === undefined) {
-    return checkDefaultTransitionConditions(currentEra, graphView, minEraLength);
-  }
-
-  // Empty conditions array = allow transition (no conditions to check)
+  conditions: TransitionCondition[]
+): TransitionCheckResult {
+  // Empty conditions array = allow immediate transition
   if (conditions.length === 0) {
-    return true;
+    return {
+      shouldTransition: true,
+      conditionResults: [{ type: 'none', passed: true, details: { reason: 'empty conditions array - immediate transition' } }]
+    };
   }
 
   // Check each condition - ALL must be met
-  return conditions.every((condition) => {
+  const conditionResults: ConditionResult[] = [];
+
+  for (const condition of conditions) {
+    let passed = false;
+    let details: Record<string, unknown> = {};
+
     switch (condition.type) {
-      case 'pressure':
-        return checkPressureCondition(condition as PressureTransitionCondition, graphView);
-      case 'entity_count':
-        return checkEntityCountCondition(condition as EntityCountTransitionCondition, graphView);
-      case 'time':
-        return checkTimeCondition(condition as TimeTransitionCondition, currentEra, graphView);
+      case 'pressure': {
+        const pressureCondition = condition as PressureTransitionCondition;
+        const currentValue = graphView.getPressure(pressureCondition.pressureId);
+        passed = checkPressureCondition(pressureCondition, graphView);
+        details = {
+          pressureId: pressureCondition.pressureId,
+          operator: pressureCondition.operator,
+          threshold: pressureCondition.threshold,
+          currentValue
+        };
+        break;
+      }
+      case 'entity_count': {
+        const entityCondition = condition as EntityCountTransitionCondition;
+        const entities = graphView.findEntities({
+          kind: entityCondition.entityKind,
+          subtype: entityCondition.subtype,
+          status: entityCondition.status
+        });
+        passed = checkEntityCountCondition(entityCondition, graphView);
+        details = {
+          entityKind: entityCondition.entityKind,
+          subtype: entityCondition.subtype,
+          status: entityCondition.status,
+          operator: entityCondition.operator,
+          threshold: entityCondition.threshold,
+          currentCount: entities.length
+        };
+        break;
+      }
+      case 'time': {
+        const timeCondition = condition as TimeTransitionCondition;
+        const eraAge = currentEra.temporal
+          ? graphView.tick - currentEra.temporal.startTick
+          : graphView.tick - currentEra.createdAt;
+        passed = checkTimeCondition(timeCondition, currentEra, graphView);
+        details = {
+          minTicks: timeCondition.minTicks,
+          currentAge: eraAge
+        };
+        break;
+      }
       default:
-        return true;
+        passed = true;
+        details = { reason: 'unknown condition type' };
     }
-  });
-}
 
-/**
- * Default transition conditions (if domain doesn't define custom logic)
- */
-function checkDefaultTransitionConditions(currentEra: HardState, graphView: TemplateGraphView, minEraLength: number): boolean {
-  const eraAge = currentEra.temporal
-    ? graphView.tick - currentEra.temporal.startTick
-    : graphView.tick - currentEra.createdAt;
+    conditionResults.push({ type: condition.type, passed, details });
+  }
 
-  // Simple heuristic: transition after era has lasted 2x minimum length
-  return eraAge > minEraLength * 2;
+  return {
+    shouldTransition: conditionResults.every(r => r.passed),
+    conditionResults
+  };
 }
 
 /**

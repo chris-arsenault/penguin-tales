@@ -1373,6 +1373,8 @@ export default function ErasEditor({ eras = [], onChange, generators = [], syste
       description: 'A new period in world history',
       templateWeights: {},
       systemModifiers: {},
+      transitionConditions: [{ type: 'time', minTicks: 50 }],  // Default: transition after 50 ticks
+      transitionEffects: {},
     };
     onChange([...eras, newEra]);
     setExpandedEra(eras.length);

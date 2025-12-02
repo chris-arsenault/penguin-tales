@@ -24,8 +24,6 @@ import type {
   CultureSpec,
   DescriptionSpec,
   PlacementSpec,
-  NearAncestorPlacement,
-  AncestorFilterSpec,
   LineageSpec,
   CountRange,
   RelationshipCondition,
@@ -187,12 +185,14 @@ export class TemplateInterpreter {
     const entities: Partial<HardState>[] = [];
     const entityRefs: Map<string, string[]> = new Map();  // Track created entity placeholders
     const lineageRelationships: Relationship[] = [];  // Relationships from near_ancestor placement
+    const placementStrategies: string[] = [];  // For debugging
 
     for (const rule of template.creation) {
       const created = await this.executeCreation(rule, context, entities.length);
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
       lineageRelationships.push(...created.lineageRelationships);
+      placementStrategies.push(...created.placementStrategies);
     }
 
     // Execute relationship rules
@@ -210,7 +210,8 @@ export class TemplateInterpreter {
     return {
       entities,
       relationships,
-      description: `${template.name} executed`
+      description: `${template.name} executed`,
+      placementStrategies
     };
   }
 
@@ -745,10 +746,11 @@ export class TemplateInterpreter {
     rule: CreationRule,
     context: ExecutionContext,
     startIndex: number
-  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; lineageRelationships: Relationship[] }> {
+  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; lineageRelationships: Relationship[]; placementStrategies: string[] }> {
     const entities: Partial<HardState>[] = [];
     const placeholders: string[] = [];
     const lineageRelationships: Relationship[] = [];
+    const placementStrategies: string[] = [];
 
     // Determine count
     const count = this.resolveCount(rule.count);
@@ -767,7 +769,7 @@ export class TemplateInterpreter {
       const description = this.resolveDescription(rule.description, context);
 
       // Resolve placement (may also create lineage relationship for near_ancestor)
-      const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder);
+      const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
 
       const entity: Partial<HardState> = {
         kind: rule.kind,
@@ -782,6 +784,7 @@ export class TemplateInterpreter {
       };
 
       entities.push(entity);
+      placementStrategies.push(placementResult.strategy);
 
       // Collect lineage relationship from near_ancestor placement
       if (placementResult.lineageRelationship) {
@@ -797,7 +800,7 @@ export class TemplateInterpreter {
       }
     }
 
-    return { entities, placeholders, lineageRelationships };
+    return { entities, placeholders, lineageRelationships, placementStrategies };
   }
 
   /**
@@ -806,20 +809,11 @@ export class TemplateInterpreter {
   private resolveLineage(
     spec: LineageSpec,
     context: ExecutionContext,
-    newEntity: Partial<HardState>,
+    _newEntity: Partial<HardState>,
     placeholder: string
   ): Relationship | undefined {
-    const { graphView } = context;
-
-    // Find ancestor using filters (try each in order)
-    let ancestor: HardState | undefined;
-    for (const filter of spec.ancestorFilter) {
-      const candidates = this.findAncestorCandidates(graphView, filter, newEntity.culture || '');
-      if (candidates.length > 0) {
-        ancestor = pickRandom(candidates);
-        break;
-      }
-    }
+    // Resolve ancestor from entity reference
+    const ancestor = context.resolveEntity(spec.ancestorRef);
 
     // No ancestor found - skip lineage
     if (!ancestor) {
@@ -916,18 +910,38 @@ export class TemplateInterpreter {
   /**
    * Result of placement resolution.
    * Includes coordinates and optionally a lineage relationship (for near_ancestor).
+   *
+   * CRITICAL: Semantic planes are PER-ENTITY-KIND.
+   * The 'near_entity' placement type REQUIRES the reference entity to be the SAME KIND
+   * as the entity being created. Cross-kind near_entity placements are meaningless
+   * because coordinates represent semantic similarity within a kind, not spatial location.
    */
   private resolvePlacement(
     spec: PlacementSpec,
     context: ExecutionContext,
     culture: string,
-    placeholder: string
-  ): { coordinates: Point; lineageRelationship?: Relationship } {
+    placeholder: string,
+    entityKind: string
+  ): { coordinates: Point; lineageRelationship?: Relationship; strategy: string } {
     const { graphView } = context;
 
     switch (spec.type) {
       case 'near_entity': {
         const refEntity = context.resolveEntity(spec.entity);
+
+        // CRITICAL VALIDATION: Prevent cross-kind near_entity placements.
+        // Each entity kind has its own independent semantic plane.
+        // Placing an NPC "near" a location is MEANINGLESS - they exist on different planes.
+        if (refEntity && refEntity.kind !== entityKind) {
+          console.warn(
+            `[WARN] Cross-kind near_entity placement detected: ` +
+            `Creating ${entityKind} near ${spec.entity} (${refEntity.kind}). ` +
+            `Semantic planes are per-entity-kind - this placement is meaningless. ` +
+            `Use 'in_culture_region' instead. Falling back to random placement.`
+          );
+          break; // Fall through to default random placement
+        }
+
         if (refEntity?.coordinates) {
           const offset = spec.maxDistance || 10;
           return {
@@ -935,7 +949,8 @@ export class TemplateInterpreter {
               x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
               y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
               z: refEntity.coordinates.z
-            }
+            },
+            strategy: `near_entity:${spec.entity}`
           };
         }
         break;
@@ -945,27 +960,44 @@ export class TemplateInterpreter {
         const cultureId = context.resolveString(spec.culture);
         const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', []);
         if (result) {
-          return { coordinates: result.coordinates };
+          return { coordinates: result.coordinates, strategy: `in_culture_region:${cultureId}` };
         }
         break;
       }
 
       case 'at_location': {
-        const location = context.resolveEntity(spec.location);
-        if (location?.coordinates) {
-          return { coordinates: { ...location.coordinates } };
-        }
-        break;
+        // DEPRECATED: at_location is a cross-kind reference pattern.
+        // Placing a non-location entity "at" a location is semantically incorrect.
+        // Use 'in_culture_region' instead to place within a culture's semantic region.
+        console.warn(
+          `[WARN] Deprecated 'at_location' placement used for ${entityKind}. ` +
+          `This is a cross-kind placement pattern. Use 'in_culture_region' instead. ` +
+          `Falling back to random placement.`
+        );
+        break; // Fall through to default random placement
       }
 
       case 'derived_from_references': {
         const refs = spec.references
           .map(ref => context.resolveEntity(ref))
           .filter((e): e is HardState => !!e);
+
+        // CRITICAL VALIDATION: References must be same kind as entity being created.
+        // Semantic planes are per-entity-kind - cross-kind references are meaningless.
+        const crossKindRefs = refs.filter(e => e.kind !== entityKind);
+        if (crossKindRefs.length > 0) {
+          console.warn(
+            `[WARN] Cross-kind derived_from_references detected for ${entityKind}. ` +
+            `References include: ${crossKindRefs.map(e => `${e.kind}`).join(', ')}. ` +
+            `Semantic planes are per-entity-kind. Filtering to same-kind only.`
+          );
+        }
+        const sameKindRefs = refs.filter(e => e.kind === entityKind);
+
         const cultureId = spec.culture ? context.resolveString(spec.culture) : culture;
-        const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', refs);
+        const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', sameKindRefs);
         if (result) {
-          return { coordinates: result.coordinates };
+          return { coordinates: result.coordinates, strategy: `derived_from_refs:${sameKindRefs.length}` };
         }
         break;
       }
@@ -977,13 +1009,11 @@ export class TemplateInterpreter {
             x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
             y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
             z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
-          }
+          },
+          strategy: 'random_in_bounds'
         };
       }
 
-      case 'near_ancestor': {
-        return this.resolveNearAncestorPlacement(spec, context, culture, placeholder);
-      }
     }
 
     // Fallback
@@ -992,99 +1022,9 @@ export class TemplateInterpreter {
         x: 50 + (Math.random() - 0.5) * 20,
         y: 50 + (Math.random() - 0.5) * 20,
         z: 50
-      }
+      },
+      strategy: 'fallback_random'
     };
-  }
-
-  /**
-   * Handle near_ancestor placement: find ancestor, place nearby, create lineage relationship.
-   */
-  private resolveNearAncestorPlacement(
-    spec: NearAncestorPlacement,
-    context: ExecutionContext,
-    culture: string,
-    placeholder: string
-  ): { coordinates: Point; lineageRelationship?: Relationship } {
-    const { graphView } = context;
-
-    // Find ancestor using filters (try each in order)
-    let ancestor: HardState | undefined;
-    for (const filter of spec.ancestorFilter) {
-      const candidates = this.findAncestorCandidates(graphView, filter, culture);
-      if (candidates.length > 0) {
-        ancestor = pickRandom(candidates);
-        break;
-      }
-    }
-
-    // If no ancestor found, fall back to random placement
-    if (!ancestor || !ancestor.coordinates) {
-      return {
-        coordinates: {
-          x: 50 + (Math.random() - 0.5) * 20,
-          y: 50 + (Math.random() - 0.5) * 20,
-          z: 50
-        }
-      };
-    }
-
-    // Calculate distance within specified range (0-100 scale)
-    const { min, max } = spec.distanceRange;
-    const targetDistance = min + Math.random() * (max - min);
-
-    // Place at target distance from ancestor (random direction)
-    const angle = Math.random() * 2 * Math.PI;
-    const phi = Math.random() * Math.PI;  // For 3D placement
-
-    const coordinates: Point = {
-      x: Math.max(0, Math.min(100, ancestor.coordinates.x + targetDistance * Math.cos(angle) * Math.sin(phi))),
-      y: Math.max(0, Math.min(100, ancestor.coordinates.y + targetDistance * Math.sin(angle) * Math.sin(phi))),
-      z: Math.max(0, Math.min(100, ancestor.coordinates.z + targetDistance * Math.cos(phi)))
-    };
-
-    // Calculate actual Euclidean distance (may differ from target due to clamping)
-    const dx = coordinates.x - ancestor.coordinates.x;
-    const dy = coordinates.y - ancestor.coordinates.y;
-    const dz = coordinates.z - ancestor.coordinates.z;
-    const actualDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-    // Create lineage relationship with actual distance
-    const lineageRelationship: Relationship = {
-      kind: spec.relationshipKind,
-      src: placeholder,  // Will be resolved to real ID by worldEngine
-      dst: ancestor.id,
-      distance: actualDistance
-    };
-
-    return { coordinates, lineageRelationship };
-  }
-
-  /**
-   * Find candidate ancestors matching a filter.
-   */
-  private findAncestorCandidates(
-    graphView: TemplateGraphView,
-    filter: AncestorFilterSpec,
-    newEntityCulture: string
-  ): HardState[] {
-    // Build criteria
-    const criteria: { kind: string; subtype?: string; status?: string } = {
-      kind: filter.kind
-    };
-    if (filter.subtype) criteria.subtype = filter.subtype;
-    if (filter.status) criteria.status = filter.status;
-
-    let candidates = graphView.findEntities(criteria);
-
-    // Filter by same culture if specified
-    if (filter.sameCulture && newEntityCulture) {
-      const sameCultureCandidates = candidates.filter(c => c.culture === newEntityCulture);
-      if (sameCultureCandidates.length > 0) {
-        candidates = sameCultureCandidates;
-      }
-    }
-
-    return candidates;
   }
 
   // ===========================================================================

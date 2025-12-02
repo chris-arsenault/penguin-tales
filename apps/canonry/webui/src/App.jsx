@@ -133,25 +133,6 @@ export default function App() {
     setShowHome(false);
   }, []);
 
-  // Handle viewing simulation results in Archivist
-  const handleViewInArchivist = useCallback((simulationResults) => {
-    // Transform simulation results to archivist WorldState format
-    const worldData = {
-      metadata: {
-        ...simulationResults.metadata,
-        enrichmentTriggers: {},
-      },
-      hardState: simulationResults.hardState || [],
-      relationships: simulationResults.relationships || [],
-      pressures: simulationResults.pressures || {},
-      history: simulationResults.history || [],
-    };
-    setArchivistData({ worldData, loreData: null, imageData: null });
-    setActiveTab('archivist');
-    setActiveSection('explorer');
-    setShowHome(false);
-  }, []);
-
   // Sync state changes to URL
   useEffect(() => {
     updateUrl(activeTab, activeSection, showHome);
@@ -170,6 +151,80 @@ export default function App() {
     exportProject,
     importProject,
   } = useProjectStorage();
+
+  // Handle viewing simulation results in Archivist
+  const handleViewInArchivist = useCallback((simulationResults) => {
+    // Build per-kind map configs and regions from semantic plane data
+    const perKindMaps = {};
+    const perKindRegions = {};
+
+    currentProject?.entityKinds?.forEach(ek => {
+      if (ek.semanticPlane) {
+        const sp = ek.semanticPlane;
+        // Build map config with axis labels
+        perKindMaps[ek.kind] = {
+          entityKind: ek.kind,
+          name: `${ek.description || ek.kind} Semantic Map`,
+          description: `Coordinate space for ${ek.description || ek.kind}`,
+          bounds: { min: 0, max: 100 },
+          hasZAxis: !!sp.axes?.z,
+          zAxisLabel: sp.axes?.z?.name,
+          xAxis: sp.axes?.x,
+          yAxis: sp.axes?.y,
+          zAxis: sp.axes?.z,
+        };
+        // Convert semantic plane regions to archivist format
+        if (sp.regions && sp.regions.length > 0) {
+          perKindRegions[ek.kind] = sp.regions.map(r => ({
+            id: r.id,
+            label: r.label,
+            description: r.description || '',
+            bounds: r.bounds,
+            metadata: {
+              color: r.color,
+              culture: r.culture,
+              tags: r.tags,
+              subtype: r.culture ? 'colony' : 'default',
+            },
+          }));
+        }
+      }
+    });
+
+    // Build uiSchema for Archivist
+    const uiSchema = {
+      worldName: currentProject?.name || 'Simulation Results',
+      worldIcon: '🌍',
+      entityKinds: currentProject?.entityKinds || [],
+      relationshipKinds: currentProject?.relationshipKinds || [],
+      prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
+      cultures: currentProject?.cultures?.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        color: c.color,
+      })) || [],
+      perKindMaps,
+      perKindRegions,
+    };
+
+    // Transform simulation results to archivist WorldState format
+    const worldData = {
+      metadata: {
+        ...simulationResults.metadata,
+        enrichmentTriggers: {},
+      },
+      hardState: simulationResults.hardState || [],
+      relationships: simulationResults.relationships || [],
+      pressures: simulationResults.pressures || {},
+      history: simulationResults.history || [],
+      uiSchema,
+    };
+    setArchivistData({ worldData, loreData: null, imageData: null });
+    setActiveTab('archivist');
+    setActiveSection('explorer');
+    setShowHome(false);
+  }, [currentProject]);
 
   // Update functions that auto-save
   const updateEntityKinds = useCallback(
@@ -441,37 +496,42 @@ export default function App() {
         );
 
       case 'simulation':
-        return (
-          <LoreWeaveHost
-            schema={schema}
-            eras={currentProject?.eras || []}
-            pressures={currentProject?.pressures || []}
-            generators={currentProject?.generators || []}
-            systems={currentProject?.systems || []}
-            seedEntities={currentProject?.seedEntities || []}
-            seedRelationships={currentProject?.seedRelationships || []}
-            namingData={namingData}
-            semanticData={semanticData}
-            cultureVisuals={cultureVisuals}
-            distributionTargets={currentProject?.distributionTargets || null}
-            onDistributionTargetsChange={updateDistributionTargets}
-            activeSection={activeSection}
-            onSectionChange={setActiveSection}
-            onViewInArchivist={handleViewInArchivist}
-            simulationResults={simulationResults}
-            onSimulationResultsChange={setSimulationResults}
-            simulationState={simulationState}
-            onSimulationStateChange={setSimulationState}
-          />
-        );
-
       case 'archivist':
+        // Keep both LoreWeaveHost and ArchivistHost mounted so simulation state persists
+        // when exporting to Archivist and navigating back
         return (
-          <ArchivistHost
-            worldData={archivistData?.worldData}
-            loreData={archivistData?.loreData}
-            imageData={archivistData?.imageData}
-          />
+          <>
+            <div style={{ display: activeTab === 'simulation' ? 'contents' : 'none' }}>
+              <LoreWeaveHost
+                schema={schema}
+                eras={currentProject?.eras || []}
+                pressures={currentProject?.pressures || []}
+                generators={currentProject?.generators || []}
+                systems={currentProject?.systems || []}
+                seedEntities={currentProject?.seedEntities || []}
+                seedRelationships={currentProject?.seedRelationships || []}
+                namingData={namingData}
+                semanticData={semanticData}
+                cultureVisuals={cultureVisuals}
+                distributionTargets={currentProject?.distributionTargets || null}
+                onDistributionTargetsChange={updateDistributionTargets}
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
+                onViewInArchivist={handleViewInArchivist}
+                simulationResults={simulationResults}
+                onSimulationResultsChange={setSimulationResults}
+                simulationState={simulationState}
+                onSimulationStateChange={setSimulationState}
+              />
+            </div>
+            <div style={{ display: activeTab === 'archivist' ? 'contents' : 'none' }}>
+              <ArchivistHost
+                worldData={archivistData?.worldData}
+                loreData={archivistData?.loreData}
+                imageData={archivistData?.imageData}
+              />
+            </div>
+          </>
         );
 
       default:

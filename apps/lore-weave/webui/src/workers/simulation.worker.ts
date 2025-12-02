@@ -67,6 +67,10 @@ ctx.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
       engine = null;
       emitter = null;
       break;
+
+    case 'exportState':
+      exportCurrentState();
+      break;
   }
 };
 
@@ -229,6 +233,48 @@ function resetSimulation(): void {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       phase: 'reset',
+      context: {}
+    });
+  }
+}
+
+/**
+ * Export current state for Archivist (without finalizing simulation)
+ */
+function exportCurrentState(): void {
+  if (!engine || !emitter) {
+    emitter?.error({
+      message: 'No simulation initialized. Call start first.',
+      phase: 'exportState',
+      context: {}
+    });
+    return;
+  }
+
+  try {
+    const graph = engine.getGraph();
+    const isComplete = engine.isComplete();
+
+    emitter.stateExport({
+      metadata: {
+        tick: graph.tick,
+        epoch: engine.getCurrentEpoch(),
+        era: graph.currentEra.name,
+        entityCount: graph.getEntityCount(),
+        relationshipCount: graph.getRelationshipCount(),
+        historyEventCount: graph.history.length,
+        isComplete
+      },
+      hardState: graph.getEntities(),
+      relationships: graph.getRelationships(),
+      history: graph.history,
+      pressures: Object.fromEntries(graph.pressures)
+    });
+  } catch (error) {
+    emitter?.error({
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      phase: 'exportState',
       context: {}
     });
   }

@@ -72,25 +72,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$mentor"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "npc",
-              "subtype": "hero",
-              "status": "alive"
-            },
-            {
-              "kind": "npc",
-              "status": "alive"
-            }
-          ],
           "distanceRange": {
             "min": 40,
             "max": 70
-          }
+          },
+          "ancestorRef": "$mentor"
         }
       }
     ],
@@ -126,6 +116,18 @@
           "strategy": "by_kind",
           "kind": "abilities",
           "pickStrategy": "random"
+        }
+      },
+      "$mentor": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "hero"
+          ],
+          "statusFilter": "alive"
         }
       }
     },
@@ -229,8 +231,8 @@
           "political": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$colony"
+          "type": "in_culture_region",
+          "culture": "$colony"
         },
         "lineage": {
           "relationshipKind": "believer_of",
@@ -432,21 +434,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentOrca"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "npc",
-              "subtype": "orca",
-              "status": "alive"
-            }
-          ],
           "distanceRange": {
             "min": 20,
             "max": 50
-          }
+          },
+          "ancestorRef": "$parentOrca"
         }
       }
     ],
@@ -547,6 +543,18 @@
             "orca"
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$parentOrca": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "orca"
+          ],
+          "statusFilter": "alive"
         }
       }
     },
@@ -659,8 +667,8 @@
           "splinter": true
         },
         "placement": {
-          "type": "at_location",
-          "location": "$location"
+          "type": "in_culture_region",
+          "culture": "$location"
         },
         "lineage": {
           "relationshipKind": "splinter_of",
@@ -1252,8 +1260,8 @@
           "organized": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "originated_in",
@@ -1486,8 +1494,8 @@
           "cult": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "originated_in",
@@ -1518,25 +1526,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$mentor"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "npc",
-              "subtype": "hero",
-              "status": "alive"
-            },
-            {
-              "kind": "abilities",
-              "subtype": "magic"
-            }
-          ],
           "distanceRange": {
             "min": 30,
             "max": 60
-          }
+          },
+          "ancestorRef": "$mentor"
         }
       }
     ],
@@ -1630,6 +1628,18 @@
             }
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$mentor": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "hero"
+          ],
+          "statusFilter": "alive"
         }
       }
     },
@@ -2085,8 +2095,8 @@
           "discovered": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "discovered_by",
@@ -2249,8 +2259,8 @@
           "emergent": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "discovered_by",
@@ -2409,8 +2419,8 @@
           "discovered": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "discovered_by",
@@ -2605,21 +2615,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentMerchant"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "npc",
-              "subtype": "merchant",
-              "status": "alive"
-            }
-          ],
           "distanceRange": {
             "min": 25,
             "max": 55
-          }
+          },
+          "ancestorRef": "$parentMerchant"
         }
       }
     ],
@@ -2717,6 +2721,18 @@
             "technology"
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$parentMerchant": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "merchant"
+          ],
+          "statusFilter": "alive"
         }
       }
     },
@@ -2854,8 +2870,8 @@
           "conflict": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "participant_in",
@@ -2991,8 +3007,8 @@
           "conflict": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "participant_in",
@@ -3124,8 +3140,8 @@
           "cultural": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$location"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "commemorates",
@@ -3267,8 +3283,8 @@
           "crisis": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "originated_in",
@@ -3436,8 +3452,8 @@
           "cultural": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "originated_in",
@@ -3712,20 +3728,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentTech"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "abilities",
-              "subtype": "technology"
-            }
-          ],
           "distanceRange": {
             "min": 20,
             "max": 50
-          }
+          },
+          "ancestorRef": "$parentTech"
         }
       }
     ],
@@ -3817,6 +3828,17 @@
             }
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$parentTech": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "pickStrategy": "random",
+          "subtypes": [
+            "technology"
+          ]
         }
       }
     },
@@ -3923,8 +3945,8 @@
           "mystical": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$practitioner"
+          "type": "in_culture_region",
+          "culture": "$practitioner"
         },
         "lineage": {
           "relationshipKind": "discovered_by",
@@ -4080,20 +4102,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentTechnique"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "abilities",
-              "subtype": "combat"
-            }
-          ],
           "distanceRange": {
             "min": 30,
             "max": 60
-          }
+          },
+          "ancestorRef": "$parentTechnique"
         }
       }
     ],
@@ -4160,6 +4177,17 @@
           ],
           "statusFilter": "active",
           "pickStrategy": "random"
+        }
+      },
+      "$parentTechnique": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "pickStrategy": "random",
+          "subtypes": [
+            "combat"
+          ]
         }
       }
     },
@@ -4270,25 +4298,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentTech"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "abilities",
-              "subtype": "technology",
-              "status": "discovered"
-            },
-            {
-              "kind": "abilities",
-              "status": "discovered"
-            }
-          ],
           "distanceRange": {
             "min": 10,
             "max": 30
-          }
+          },
+          "ancestorRef": "$parentTech"
         }
       }
     ],
@@ -4377,6 +4395,18 @@
             }
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$parentTech": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "pickStrategy": "random",
+          "subtypes": [
+            "technology"
+          ],
+          "statusFilter": "discovered"
         }
       }
     },
@@ -4508,25 +4538,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentMagic"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "abilities",
-              "subtype": "magic",
-              "status": "discovered"
-            },
-            {
-              "kind": "abilities",
-              "status": "discovered"
-            }
-          ],
           "distanceRange": {
             "min": 20,
             "max": 50
-          }
+          },
+          "ancestorRef": "$parentMagic"
         }
       }
     ],
@@ -4590,6 +4610,18 @@
             }
           ],
           "pickStrategy": "random"
+        }
+      },
+      "$parentMagic": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "abilities",
+          "pickStrategy": "random",
+          "subtypes": [
+            "magic"
+          ],
+          "statusFilter": "discovered"
         }
       }
     },
@@ -4718,19 +4750,15 @@
         },
         "placement": {
           "type": "near_entity",
-          "entity": "$target"
+          "entity": "$parentRule"
         },
         "lineage": {
           "relationshipKind": "derived_from",
-          "ancestorFilter": [
-            {
-              "kind": "rules"
-            }
-          ],
           "distanceRange": {
             "min": 25,
             "max": 55
-          }
+          },
+          "ancestorRef": "$parentRule"
         }
       }
     ],
@@ -4907,6 +4935,14 @@
           ],
           "pickStrategy": "random"
         }
+      },
+      "$parentRule": {
+        "select": {
+          "from": "graph",
+          "strategy": "by_kind",
+          "kind": "rules",
+          "pickStrategy": "random"
+        }
       }
     },
     "metadata": {
@@ -5020,8 +5056,8 @@
           "discovered": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "type": "in_culture_region",
+          "culture": "$target"
         },
         "lineage": {
           "relationshipKind": "discovered_by",

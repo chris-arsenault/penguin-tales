@@ -417,8 +417,6 @@ export type {
   SubtypeSpec,
   CultureSpec,
   PlacementSpec,
-  NearAncestorPlacement,
-  AncestorFilterSpec,
   LineageSpec,
   RelationshipCondition
 } from './engine/declarativeTypes';

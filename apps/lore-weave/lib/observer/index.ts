@@ -19,6 +19,7 @@ export type {
   TagHealthPayload,
   SystemHealthPayload,
   SimulationResultPayload,
+  StateExportPayload,
   ErrorPayload,
   WorkerInboundMessage,
   WorkerOutboundMessage,

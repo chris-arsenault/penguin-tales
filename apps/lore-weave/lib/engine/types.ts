@@ -88,6 +88,8 @@ export interface CreateEntitySettings {
   prominence?: import('../core/worldTypes').Prominence;
   culture?: string;
   temporal?: { startTick: number; endTick: number | null };
+  source?: string;  // Optional - for debugging (e.g., template ID, system ID)
+  placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
 }
 
 // Graph representation with controlled access
@@ -244,6 +246,7 @@ export interface TemplateResult {
   entities: Partial<HardState>[];
   relationships: Relationship[];  // Can use placeholder IDs like 'will-be-assigned-0'
   description: string;
+  placementStrategies?: string[];  // Optional - for debugging, parallel to entities array
 }
 
 // Simulation system interface
@@ -682,8 +685,8 @@ export class GraphStore implements Graph {
       );
     }
 
-    // Tags default to empty object
-    const tags: EntityTags = settings.tags || {};
+    // Tags default to empty object - IMPORTANT: clone to avoid mutating source
+    const tags: EntityTags = { ...(settings.tags || {}) };
 
     // Auto-generate name if not provided (uses tags, so tags must be set first)
     let name = settings.name;
@@ -754,6 +757,33 @@ export class GraphStore implements Graph {
     }
 
     this.#entities.set(id, entity);
+
+    // Debug log entity creation with full details
+    const tagList = Object.keys(tags).filter(t => t !== 'name');
+    const coords = settings.coordinates;
+    this.config.emitter?.log('debug',
+      `[EntityCreate] ${settings.kind}:${settings.subtype} "${name}" ` +
+      `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)}) ` +
+      `[${settings.culture || 'world'}] ` +
+      `tags:[${tagList.join(',')}]`,
+      {
+        id,
+        kind: settings.kind,
+        subtype: settings.subtype,
+        name,
+        culture: settings.culture || 'world',
+        prominence: settings.prominence || 'marginal',
+        status: settings.status || 'active',
+        plane: `${settings.kind}-plane`,
+        x: parseFloat(coords.x.toFixed(2)),
+        y: parseFloat(coords.y.toFixed(2)),
+        z: parseFloat((coords.z ?? 50).toFixed(2)),
+        tags: tagList,
+        placement: settings.placementStrategy || 'default',
+        source: settings.source || 'unknown'
+      }
+    );
+
     return id;
   }
 
@@ -774,6 +804,36 @@ export class GraphStore implements Graph {
    */
   _loadEntity(id: string, entity: HardState): void {
     this.#entities.set(id, entity);
+
+    // Debug log initial state entity loading with full details
+    const tagList = Object.keys(entity.tags || {}).filter(t => t !== 'name');
+    const coords = entity.coordinates;
+    const coordStr = coords
+      ? `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)})`
+      : '@ (no coords)';
+
+    this.config.emitter?.log('debug',
+      `[EntityLoad] ${entity.kind}:${entity.subtype} "${entity.name}" ` +
+      `${coordStr} ` +
+      `[${entity.culture || 'world'}] ` +
+      `tags:[${tagList.join(',')}]`,
+      {
+        id,
+        kind: entity.kind,
+        subtype: entity.subtype,
+        name: entity.name,
+        culture: entity.culture || 'world',
+        prominence: entity.prominence || 'marginal',
+        status: entity.status || 'active',
+        plane: `${entity.kind}-plane`,
+        x: coords ? parseFloat(coords.x.toFixed(2)) : null,
+        y: coords ? parseFloat(coords.y.toFixed(2)) : null,
+        z: coords ? parseFloat((coords.z ?? 50).toFixed(2)) : null,
+        tags: tagList,
+        placement: 'initial_state',
+        source: 'initial_state'
+      }
+    );
   }
 
   // ===========================================================================

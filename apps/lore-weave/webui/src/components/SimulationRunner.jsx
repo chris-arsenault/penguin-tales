@@ -9,7 +9,6 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { createDomainSchemaFromJSON } from '@lib';
-import { useSimulationWorker } from '../hooks/useSimulationWorker';
 import SimulationDashboard from './SimulationDashboard';
 
 // Arctic Blue base theme with purple accent
@@ -221,6 +220,20 @@ const styles = {
     display: 'flex',
     gap: '8px',
   },
+  archivistButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: 500,
+    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
   stepIndicator: {
     display: 'flex',
     alignItems: 'center',
@@ -273,8 +286,10 @@ export default function SimulationRunner({
   setIsRunning,
   onComplete,
   onViewResults,
+  onViewInArchivist,
   externalSimulationState,
   onSimulationStateChange,
+  simulationWorker,
 }) {
   // Simulation parameters
   const [params, setParams] = useState({
@@ -287,7 +302,7 @@ export default function SimulationRunner({
 
   const [showConfig, setShowConfig] = useState(false);
 
-  // Use the simulation worker hook
+  // Use simulation worker passed from parent (persists across tab navigation)
   const {
     state: workerSimState,
     start: startWorker,
@@ -297,9 +312,10 @@ export default function SimulationRunner({
     reset: resetWorker,
     abort: abortWorker,
     clearLogs: workerClearLogs,
+    requestExport: workerRequestExport,
     isRunning: workerIsRunning,
     isPaused: workerIsPaused
-  } = useSimulationWorker();
+  } = simulationWorker;
 
   // Use external state if provided and worker is idle, otherwise use worker state
   // This preserves dashboard data when navigating away and back
@@ -307,12 +323,17 @@ export default function SimulationRunner({
     ? externalSimulationState
     : workerSimState;
 
-  // Sync worker state changes to external state
+  // Sync worker state changes to external state (only when status changes to preserve state across navigation)
+  const prevStatusRef = React.useRef(workerSimState.status);
   useEffect(() => {
+    // Only sync when status actually changes, not on every state update
     if (onSimulationStateChange && workerSimState.status !== 'idle') {
-      onSimulationStateChange(workerSimState);
+      if (prevStatusRef.current !== workerSimState.status) {
+        prevStatusRef.current = workerSimState.status;
+        onSimulationStateChange(workerSimState);
+      }
     }
-  }, [workerSimState, onSimulationStateChange]);
+  }, [workerSimState.status, onSimulationStateChange]);
 
   // Wrap clearLogs to also clear external state
   const clearLogs = useCallback(() => {
@@ -322,10 +343,7 @@ export default function SimulationRunner({
     }
   }, [workerClearLogs, onSimulationStateChange, externalSimulationState]);
 
-  // Sync running state with parent
-  useEffect(() => {
-    setIsRunning(workerIsRunning);
-  }, [workerIsRunning, setIsRunning]);
+  // Note: isRunning is synced via simulationWorker.isRunning in LoreWeaveRemote
 
   // Handle completion
   useEffect(() => {
@@ -349,43 +367,35 @@ export default function SimulationRunner({
 
   // Generate the EngineConfig that would be passed to WorldEngine
   const engineConfig = useMemo(() => {
+    // Build DomainSchema - use spread to preserve all fields, add computed aliases
     const domainSchemaJSON = {
       id: schema.id || 'canonry-domain',
       name: schema.name || 'Generated World',
       version: schema.version || '1.0.0',
       entityKinds: schema.entityKinds.map(ek => ({
-        id: ek.id,
+        ...ek,
+        // Computed aliases for backwards compatibility
         kind: ek.kind || ek.id,
         name: ek.name || ek.description,
         description: ek.description || ek.name,
-        subtypes: ek.subtypes || [],
-        statuses: ek.statuses || [],
-        color: ek.color,
-        shape: ek.shape,
       })),
       relationshipKinds: schema.relationshipKinds.map(rk => ({
-        id: rk.id,
+        ...rk,
+        // Computed aliases for backwards compatibility
         kind: rk.kind || rk.id,
         name: rk.name || rk.description,
-        description: rk.description,
         srcKinds: rk.srcKinds || rk.sourceKinds || [],
         dstKinds: rk.dstKinds || rk.targetKinds || [],
       })),
-      // Domain cultures (for DomainSchema)
-      cultures: (schema.cultures || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-      })),
+      // Domain cultures (for DomainSchema) - spread preserves all fields
+      cultures: schema.cultures || [],
     };
 
     // Build cultures array with naming config for EngineConfig.cultures
     // WorldEngine uses this to create NameForgeService
+    // Use spread to preserve all fields, only override naming if external data exists
     const culturesWithNaming = (schema.cultures || []).map(c => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      // Include naming config for NameForgeService
+      ...c,
       naming: namingData[c.id] || c.naming,
     }));
 
@@ -393,18 +403,13 @@ export default function SimulationRunner({
       domain: domainSchemaJSON,
       // Cultures with naming config - required by WorldEngine for NameForgeService
       cultures: culturesWithNaming,
-      eras: eras.map(era => ({
-        id: era.id,
-        name: era.name,
-        description: era.description,
-        templateWeights: era.templateWeights || {},
-        systemModifiers: era.systemModifiers || {},
-        pressureModifiers: era.pressureModifiers || {},
-      })),
+      eras,  // Pass through directly - no mapping to lose fields
       pressures: pressures,
       // Filter out disabled generators and systems
       templates: (generators || []).filter(g => g.enabled !== false),
       systems: (systems || []).filter(s => s.enabled !== false),
+      // Tag registry for tag validation and orphan checking
+      tagRegistry: schema.tagRegistry || [],
       epochLength: params.epochLength,
       simulationTicksPerGrowth: params.simulationTicksPerGrowth,
       targetEntitiesPerKind: params.targetEntitiesPerKind,
@@ -450,6 +455,42 @@ export default function SimulationRunner({
   const handleParamChange = (field, value) => {
     setParams(prev => ({ ...prev, [field]: value }));
   };
+
+  // Track if we're waiting for an export (to avoid re-triggering on navigation back)
+  const [pendingExport, setPendingExport] = useState(false);
+
+  // Handle export to Archivist (for intermediate state during stepping)
+  const handleExportToArchivist = useCallback(() => {
+    if (!onViewInArchivist) return;
+
+    // Mark that we're expecting an export
+    setPendingExport(true);
+    // Request export from worker
+    workerRequestExport();
+  }, [onViewInArchivist, workerRequestExport]);
+
+  // Watch for stateExport to be populated and call onViewInArchivist
+  // Only trigger if we're actively waiting for an export (pendingExport is true)
+  useEffect(() => {
+    if (pendingExport && simState.stateExport && onViewInArchivist) {
+      // Clear pending flag immediately to prevent re-triggering
+      setPendingExport(false);
+
+      // Convert stateExport to the format expected by Archivist
+      const results = {
+        metadata: {
+          ...simState.stateExport.metadata,
+          // Add fields expected by Archivist
+          durationMs: 0, // Not tracked for intermediate exports
+        },
+        hardState: simState.stateExport.hardState,
+        relationships: simState.stateExport.relationships,
+        history: simState.stateExport.history,
+        pressures: simState.stateExport.pressures,
+      };
+      onViewInArchivist(results);
+    }
+  }, [pendingExport, simState.stateExport, onViewInArchivist]);
 
   const copyConfig = useCallback(() => {
     navigator.clipboard.writeText(JSON.stringify(engineConfig, null, 2));
@@ -520,6 +561,15 @@ export default function SimulationRunner({
                   >
                     ▶ Continue
                   </button>
+                  {onViewInArchivist && (
+                    <button
+                      style={styles.archivistButton}
+                      onClick={handleExportToArchivist}
+                      title="Export current state to Archivist"
+                    >
+                      📖 Export to Archivist
+                    </button>
+                  )}
                   <button
                     style={styles.resetButton}
                     onClick={resetWorker}

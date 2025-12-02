@@ -13,9 +13,7 @@
     "config": {
       "id": "era_transition",
       "name": "Era Progression",
-      "description": "Handles transitions between eras based on world state and domain-defined conditions. Updates era status from future → current → historical.",
-      "minEraLength": 50,
-      "transitionCooldown": 10
+      "description": "Handles transitions between eras based on world state and per-era transitionConditions. Updates era status from future → current → historical."
     }
   },
   {

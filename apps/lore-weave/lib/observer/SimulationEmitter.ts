@@ -26,6 +26,7 @@ import {
   NotableEntitiesPayload,
   SampleHistoryPayload,
   SimulationResultPayload,
+  StateExportPayload,
   ErrorPayload,
 } from './types';
 
@@ -124,6 +125,10 @@ export class SimulationEmitter implements ISimulationEmitter {
 
   complete(payload: SimulationResultPayload): void {
     this.emit({ type: 'complete', payload });
+  }
+
+  stateExport(payload: StateExportPayload): void {
+    this.emit({ type: 'state_export', payload });
   }
 
   error(payload: ErrorPayload): void {

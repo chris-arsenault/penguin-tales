@@ -269,7 +269,7 @@ export class WorldEngine {
     }
     const culturesWithNaming = config.cultures.filter(c => c.naming);
     if (culturesWithNaming.length > 0) {
-      this.nameForgeService = new NameForgeService(culturesWithNaming);
+      this.nameForgeService = new NameForgeService(culturesWithNaming, this.emitter);
       // Set on config so Graph can access it for entity name generation
       this.config.nameForgeService = this.nameForgeService;
       this.emitter.log('info', 'NameForgeService initialized', {
@@ -809,6 +809,10 @@ export class WorldEngine {
     // Emit diagnostics (updated each epoch for visibility during stepping)
     this.emitDiagnostics();
 
+    // Emit feedback reports (population, template usage, system health)
+    // so dashboards update during stepping, not just at finalize
+    this.emitEpochFeedback();
+
     this.queueEraNarrative(previousEra, era);
 
     // Check for significant entity changes and enrich them
@@ -1051,6 +1055,103 @@ export class WorldEngine {
   }
 
   /**
+   * Emit epoch feedback reports (population, template usage, system health).
+   * Called after each epoch so dashboards update during stepping.
+   */
+  private emitEpochFeedback(): void {
+    // Update population metrics
+    this.populationTracker.update(this.graph);
+    const metrics = this.populationTracker.getMetrics();
+    const summary = this.populationTracker.getSummary();
+    const outliers = this.populationTracker.getOutliers(0.3);
+
+    // Build entity metrics array
+    const entityMetrics = Array.from(metrics.entities.values())
+      .filter(m => m.target > 0)
+      .map(m => ({
+        kind: m.kind,
+        subtype: m.subtype,
+        count: m.count,
+        target: m.target,
+        deviation: m.deviation
+      }));
+
+    // Build pressure metrics array
+    const pressureMetrics: Array<{ id: string; value: number; target: number; deviation: number }> = [];
+    summary.pressureDeviations.forEach((deviation, pressureId) => {
+      const metric = metrics.pressures.get(pressureId);
+      if (metric) {
+        pressureMetrics.push({
+          id: pressureId,
+          value: metric.value,
+          target: metric.target,
+          deviation
+        });
+      }
+    });
+
+    // Emit population report
+    this.emitter.populationReport({
+      totalEntities: summary.totalEntities,
+      totalRelationships: summary.totalRelationships,
+      avgDeviation: summary.avgEntityDeviation,
+      maxDeviation: summary.maxEntityDeviation,
+      entityMetrics,
+      pressureMetrics,
+      outliers: {
+        overpopulated: outliers.overpopulated.map(m => ({
+          kind: m.kind,
+          subtype: m.subtype,
+          count: m.count,
+          target: m.target,
+          deviation: m.deviation
+        })),
+        underpopulated: outliers.underpopulated.map(m => ({
+          kind: m.kind,
+          subtype: m.subtype,
+          count: m.count,
+          target: m.target,
+          deviation: m.deviation
+        }))
+      }
+    });
+
+    // Emit template usage report
+    const sortedTemplates = Array.from(this.templateRunCounts.entries())
+      .sort((a, b) => b[1] - a[1]);
+    const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
+
+    const unusedTemplates = this.runtimeTemplates.filter(t => !this.templateRunCounts.has(t.id));
+    const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+
+    this.emitter.templateUsage({
+      totalApplications: totalRuns,
+      uniqueTemplatesUsed: sortedTemplates.length,
+      totalTemplates: this.runtimeTemplates.length,
+      maxRunsPerTemplate: this.maxRunsPerTemplate,
+      usage: sortedTemplates.slice(0, 20).map(([templateId, count]) => ({
+        templateId,
+        count,
+        percentage: totalRuns > 0 ? (count / totalRuns) * 100 : 0,
+        status: count >= this.maxRunsPerTemplate ? 'saturated' as const :
+                count >= this.maxRunsPerTemplate * 0.7 ? 'warning' as const : 'healthy' as const
+      })),
+      unusedTemplates: unusedTemplates.map(t => ({
+        templateId: t.id,
+        diagnostic: this.contractEnforcer.getDiagnostic(t, diagnosticView)
+      }))
+    });
+
+    // Emit system health
+    const populationHealth = 1 - summary.avgEntityDeviation;
+    this.emitter.systemHealth({
+      populationHealth,
+      status: populationHealth > 0.8 ? 'stable' :
+              populationHealth > 0.6 ? 'functional' : 'needs_attention'
+    });
+  }
+
+  /**
    * Emit coordinate statistics via emitter
    */
   private emitCoordinateStats(): void {
@@ -1176,8 +1277,14 @@ export class WorldEngine {
         const result = await template.expand(graphView, target);
 
         // ENFORCEMENT: Check tag saturation before creating entities
-        // Collect all tags that would be added (convert EntityTags to array of keys)
-        const allTagsToAdd = result.entities.flatMap(e => Object.keys(e.tags || {}));
+        // Collect unique tags that would be added (convert EntityTags to deduplicated array)
+        const allTagsSet = new Set<string>();
+        for (const entity of result.entities) {
+          for (const tag of Object.keys(entity.tags || {})) {
+            allTagsSet.add(tag);
+          }
+        }
+        const allTagsToAdd = Array.from(allTagsSet);
         const tagSaturationCheck = this.contractEnforcer.checkTagSaturation(this.graph, allTagsToAdd);
 
         if (tagSaturationCheck.saturated) {
@@ -1200,8 +1307,10 @@ export class WorldEngine {
         // Add entities to graph
         const newIds: string[] = [];
         const clusterEntities: HardState[] = [];
-        for (const entity of result.entities) {
-          const id = await addEntity(this.graph, entity);
+        for (let i = 0; i < result.entities.length; i++) {
+          const entity = result.entities[i];
+          const placementStrategy = result.placementStrategies?.[i] || 'unknown';
+          const id = await addEntity(this.graph, entity, `template:${template.id}`, placementStrategy);
           newIds.push(id);
           const ref = this.graph.getEntity(id);
           if (ref) {

@@ -75,8 +75,10 @@ export function normalizeInitialState(entities: any[]): HardState[] {
 
 /**
  * Add entity to graph (coordinates required)
+ * @param source - Optional source identifier for debugging (e.g., template ID)
+ * @param placementStrategy - Optional placement strategy for debugging
  */
-export async function addEntity(graph: Graph, entity: Partial<HardState>): Promise<string> {
+export async function addEntity(graph: Graph, entity: Partial<HardState>, source?: string, placementStrategy?: string): Promise<string> {
   // Coordinates are required - fail loudly
   // Check for valid numeric values, not just object existence
   const coords = entity.coordinates;
@@ -90,11 +92,12 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>): Promi
   }
 
   // Normalize tags: handle both old array format and new KVP format
+  // Clone to avoid mutating source object
   let tags: EntityTags;
   if (Array.isArray(entity.tags)) {
     tags = arrayToTags(entity.tags);
   } else {
-    tags = entity.tags || {};
+    tags = { ...(entity.tags || {}) };
   }
 
   // Delegate to Graph.createEntity() which enforces the contract:
@@ -112,7 +115,9 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>): Promi
     status: entity.status,
     prominence: entity.prominence,
     culture: entity.culture,
-    temporal: entity.temporal
+    temporal: entity.temporal,
+    source,
+    placementStrategy
   });
 }
 

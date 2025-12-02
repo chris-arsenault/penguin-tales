@@ -3,6 +3,30 @@
  *
  * Types for the region-based coordinate system and semantic axis encoding.
  *
+ * =============================================================================
+ * CRITICAL CONCEPT: SEMANTIC PLANES ARE PER-ENTITY-KIND
+ * =============================================================================
+ *
+ * Each entity kind (npc, location, faction, abilities, rules, etc.) has its own
+ * INDEPENDENT semantic plane. Coordinates represent SEMANTIC SIMILARITY within
+ * that kind, NOT physical/spatial location.
+ *
+ * For example:
+ * - Two NPCs close together on the NPC plane are semantically similar
+ *   (similar roles, traits, cultural background)
+ * - Two locations close together on the location plane are semantically similar
+ *   (similar terrain types, strategic importance, resources)
+ *
+ * CROSS-KIND COORDINATES ARE MEANINGLESS:
+ * - An NPC's coordinates have NO relationship to a location's coordinates
+ * - Placing an NPC "near" a location is NONSENSICAL - they exist on different planes
+ * - The x,y values between different entity kinds cannot be compared
+ *
+ * CORRECT USAGE:
+ * - near_entity placement: Reference entity MUST be the same kind as the new entity
+ * - Lineage relationships can cross kinds (an ability can be derived_from a location)
+ *   but the placement must use a same-kind reference or random/culture placement
+ *
  * Key concepts:
  * - EntityKindMap: A 2D coordinate space for a single entity kind
  * - Region: A named area within a kind's map with narrative meaning

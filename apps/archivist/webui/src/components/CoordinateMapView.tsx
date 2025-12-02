@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig } from '../types/world.ts';
+import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig, AxisConfig } from '../types/world.ts';
 import type { EntityKindDefinition } from '@canonry/world-schema';
 import './CoordinateMapView.css';
 
@@ -30,7 +30,7 @@ function getDefaultMapConfig(kind: string): EntityKindMapConfig {
   };
 }
 
-// Region colors by type
+// Default region colors by type (fallback if no color in metadata)
 const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
   colony: { fill: 'rgba(111, 177, 252, 0.15)', stroke: 'rgba(111, 177, 252, 0.6)' },
   geographic_feature: { fill: 'rgba(107, 252, 156, 0.15)', stroke: 'rgba(107, 252, 156, 0.6)' },
@@ -39,8 +39,26 @@ const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
   default: { fill: 'rgba(150, 150, 150, 0.1)', stroke: 'rgba(150, 150, 150, 0.4)' }
 };
 
-// Get region color by subtype from metadata
+// Convert hex color to rgba with alpha
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (result) {
+    return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
+  }
+  return `rgba(150, 150, 150, ${alpha})`;
+}
+
+// Get region color - prefer color from metadata, fallback to subtype colors
 function getRegionColor(region: RegionSchema): { fill: string; stroke: string } {
+  // Use color from metadata if available
+  const metadataColor = region.metadata?.color as string;
+  if (metadataColor) {
+    return {
+      fill: hexToRgba(metadataColor, 0.15),
+      stroke: hexToRgba(metadataColor, 0.7)
+    };
+  }
+  // Fallback to subtype-based colors
   const subtype = (region.metadata?.subtype as string) || 'default';
   return REGION_COLORS[subtype] || REGION_COLORS.default;
 }
@@ -299,15 +317,74 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       ctx.stroke();
     }
 
-    // Draw axis labels
-    ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
-    ctx.font = '10px monospace';
-    for (let i = bounds.min; i <= bounds.max; i += 20) {
-      const pos = worldToCanvas(i, bounds.min);
-      ctx.fillText(i.toString(), pos.x - 5, pos.y + 15);
+    // Draw axis labels - semantic tags at ends, numeric in middle
+    const padding = 40;
 
+    // Draw semantic axis labels at ends
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+
+    // X-axis labels (low on left, high on right)
+    if (mapConfig.xAxis) {
+      // Low tag (left side)
+      ctx.fillStyle = 'rgba(252, 107, 107, 0.8)';  // Reddish for low
+      const xLowPos = worldToCanvas(bounds.min + 5, bounds.min);
+      ctx.fillText(`← ${mapConfig.xAxis.lowTag}`, xLowPos.x + 30, xLowPos.y + 25);
+
+      // Axis name (center bottom)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      const xCenterPos = worldToCanvas((bounds.min + bounds.max) / 2, bounds.min);
+      ctx.fillText(mapConfig.xAxis.name, xCenterPos.x, xCenterPos.y + 25);
+
+      // High tag (right side)
+      ctx.fillStyle = 'rgba(107, 252, 156, 0.8)';  // Greenish for high
+      const xHighPos = worldToCanvas(bounds.max - 5, bounds.min);
+      ctx.fillText(`${mapConfig.xAxis.highTag} →`, xHighPos.x - 30, xHighPos.y + 25);
+    }
+
+    // Y-axis labels (low on bottom, high on top)
+    if (mapConfig.yAxis) {
+      ctx.save();
+
+      // Low tag (bottom)
+      ctx.fillStyle = 'rgba(252, 107, 107, 0.8)';
+      const yLowPos = worldToCanvas(bounds.min, bounds.min + 5);
+      ctx.translate(yLowPos.x - 25, yLowPos.y - 20);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(`← ${mapConfig.yAxis.lowTag}`, 0, 0);
+      ctx.restore();
+
+      // Axis name (center left)
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      const yCenterPos = worldToCanvas(bounds.min, (bounds.min + bounds.max) / 2);
+      ctx.translate(yCenterPos.x - 25, yCenterPos.y);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(mapConfig.yAxis.name, 0, 0);
+      ctx.restore();
+
+      // High tag (top)
+      ctx.save();
+      ctx.fillStyle = 'rgba(107, 252, 156, 0.8)';
+      const yHighPos = worldToCanvas(bounds.min, bounds.max - 5);
+      ctx.translate(yHighPos.x - 25, yHighPos.y + 20);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(`${mapConfig.yAxis.highTag} →`, 0, 0);
+      ctx.restore();
+    }
+
+    // Draw small numeric labels for reference
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    for (let i = bounds.min + 20; i < bounds.max; i += 20) {
+      const pos = worldToCanvas(i, bounds.min);
+      ctx.fillText(i.toString(), pos.x, pos.y + 12);
+
+      ctx.textAlign = 'right';
       const posY = worldToCanvas(bounds.min, i);
-      ctx.fillText(i.toString(), posY.x - 25, posY.y + 3);
+      ctx.fillText(i.toString(), posY.x - 5, posY.y + 3);
+      ctx.textAlign = 'center';
     }
 
     // Draw regions if layer is visible

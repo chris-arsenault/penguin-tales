@@ -18,11 +18,12 @@
  * and simulation systems in alternating phases across multiple eras.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import ConfigurationSummary from './components/ConfigurationSummary';
 import DistributionTargetsEditor from './components/DistributionTargetsEditor';
 import SimulationRunner from './components/SimulationRunner';
 import ResultsViewer from './components/ResultsViewer';
+import { useSimulationWorker } from './hooks/useSimulationWorker';
 
 const TABS = [
   { id: 'configure', label: 'Configure' },
@@ -118,6 +119,15 @@ export default function LoreWeaveRemote({
   const simulationResults = externalSimulationResults !== undefined ? externalSimulationResults : localSimulationResults;
   const setSimulationResults = onSimulationResultsChange || setLocalSimulationResults;
   const [isRunning, setIsRunning] = useState(false);
+
+  // Lift worker management to this level so it persists across tab navigation
+  // This allows stepping through epochs, exporting to Archivist, and returning to continue
+  const simulationWorker = useSimulationWorker();
+
+  // Sync worker running state
+  useEffect(() => {
+    setIsRunning(simulationWorker.isRunning);
+  }, [simulationWorker.isRunning]);
 
   // Validate configuration completeness
   const configValidation = useMemo(() => {
@@ -220,8 +230,10 @@ export default function LoreWeaveRemote({
             setIsRunning={setIsRunning}
             onComplete={handleSimulationComplete}
             onViewResults={() => setActiveTab('results')}
+            onViewInArchivist={onViewInArchivist}
             externalSimulationState={externalSimulationState}
             onSimulationStateChange={onSimulationStateChange}
+            simulationWorker={simulationWorker}
           />
         );
       case 'results':

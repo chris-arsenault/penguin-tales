@@ -230,6 +230,26 @@ export interface SystemHealthPayload {
   status: 'stable' | 'functional' | 'needs_attention';
 }
 
+/**
+ * State export payload - emitted on request for intermediate state export
+ * Contains the same structure as SimulationResultPayload but for in-progress simulation
+ */
+export interface StateExportPayload {
+  metadata: {
+    tick: number;
+    epoch: number;
+    era: string;
+    entityCount: number;
+    relationshipCount: number;
+    historyEventCount: number;
+    isComplete: boolean;
+  };
+  hardState: HardState[];
+  relationships: Relationship[];
+  history: HistoryEvent[];
+  pressures: Record<string, number>;
+}
+
 // =============================================================================
 // Event Union Type
 // =============================================================================
@@ -252,6 +272,7 @@ export type SimulationEvent =
   | { type: 'notable_entities'; payload: NotableEntitiesPayload }
   | { type: 'sample_history'; payload: SampleHistoryPayload }
   | { type: 'complete'; payload: SimulationResultPayload }
+  | { type: 'state_export'; payload: StateExportPayload }
   | { type: 'error'; payload: ErrorPayload };
 
 // =============================================================================
@@ -287,6 +308,7 @@ export interface ISimulationEmitter {
   notableEntities(payload: NotableEntitiesPayload): void;
   sampleHistory(payload: SampleHistoryPayload): void;
   complete(payload: SimulationResultPayload): void;
+  stateExport(payload: StateExportPayload): void;
   error(payload: ErrorPayload): void;
 }
 
@@ -303,7 +325,8 @@ export type WorkerInboundMessage =
   | { type: 'step' }
   | { type: 'runToCompletion' }
   | { type: 'reset' }
-  | { type: 'abort' };
+  | { type: 'abort' }
+  | { type: 'exportState' };
 
 /**
  * Messages sent from worker to main thread

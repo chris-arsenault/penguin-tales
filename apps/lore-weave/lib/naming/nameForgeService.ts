@@ -85,13 +85,27 @@ export interface NameForgeStats {
 export class NameForgeService {
   private cultures: Record<string, NameForgeCulture>;
   private stats: NameForgeStats;
+  private log: (level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>) => void;
 
   /**
    * Create a NameForgeService from canonry's cultures array.
    *
    * @param cultures - Array of cultures from canonry (cultures.json)
+   * @param emitter - Optional emitter for logging (uses console if not provided)
    */
-  constructor(cultures: Culture[]) {
+  constructor(
+    cultures: Culture[],
+    emitter?: { log: (level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>) => void }
+  ) {
+    // Set up logging - use emitter if provided, otherwise console
+    this.log = emitter
+      ? (level, message, context) => emitter.log(level, message, context)
+      : (level, message) => {
+          if (level === 'error') console.error(message);
+          else if (level === 'warn') console.warn(message);
+          else console.log(message);
+        };
+
     if (!cultures || cultures.length === 0) {
       throw new Error('NameForgeService: cultures array is empty');
     }
@@ -101,8 +115,9 @@ export class NameForgeService {
 
     for (const culture of cultures) {
       if (!culture.naming) {
-        console.warn(
-          `[NameForge] Culture '${culture.id}' has no naming configuration, skipping`
+        this.log('warn',
+          `[NameForge] Culture '${culture.id}' has no naming configuration, skipping`,
+          { cultureId: culture.id }
         );
         continue;
       }
@@ -180,17 +195,18 @@ export class NameForgeService {
     const culture = this.cultures[cultureId];
 
     if (!culture) {
-      console.error(
-        `[NameForge] Culture '${cultureId}' not found. ` +
-        `Available: ${Object.keys(this.cultures).join(', ')}`
+      this.log('warn',
+        `[NameForge] Culture '${cultureId}' not found. Available: ${Object.keys(this.cultures).join(', ')}`,
+        { cultureId, available: Object.keys(this.cultures), kind, subtype }
       );
       this.trackCall(cultureId, kind, false);
       return 'unnamed';
     }
 
     if (!culture.profiles || culture.profiles.length === 0) {
-      console.error(
-        `[NameForge] Culture '${cultureId}' has no profiles`
+      this.log('error',
+        `[NameForge] Culture '${cultureId}' has no profiles`,
+        { cultureId }
       );
       this.trackCall(cultureId, kind, false);
       return 'unnamed';
@@ -208,9 +224,9 @@ export class NameForgeService {
       });
 
       if (!name) {
-        console.warn(
-          `[NameForge] Empty name returned for ${kind}:${subtype} ` +
-          `(culture: ${cultureId}, tags: [${tags.join(', ')}])`
+        this.log('warn',
+          `[NameForge] Empty name returned for ${kind}:${subtype} (culture: ${cultureId}, tags: [${tags.join(', ')}])`,
+          { kind, subtype, cultureId, tags }
         );
         this.trackCall(cultureId, kind, false);
         return 'unnamed';
@@ -219,9 +235,9 @@ export class NameForgeService {
       this.trackCall(cultureId, kind, true);
       return name;
     } catch (error) {
-      console.error(
-        `[NameForge] Generation failed for ${kind}:${subtype}:`,
-        error instanceof Error ? error.message : error
+      this.log('error',
+        `[NameForge] Generation failed for ${kind}:${subtype}: ${error instanceof Error ? error.message : error}`,
+        { kind, subtype, cultureId, error: error instanceof Error ? error.message : String(error) }
       );
       this.trackCall(cultureId, kind, false);
       return 'unnamed';
@@ -243,38 +259,28 @@ export class NameForgeService {
   }
 
   /**
-   * Print name generation statistics to console
+   * Log name generation statistics summary
    */
   printStats(): void {
     const { total, successes, failures, byCultureAndKind } = this.stats;
 
     if (total === 0) {
-      console.log('\n📛 Name Generation: No calls made');
+      this.log('info', '[NameForge] No calls made');
       return;
     }
 
     const successRate = ((successes / total) * 100).toFixed(1);
 
-    console.log('\n📛 Name Generation Statistics:');
-    console.log(`   Total: ${total} calls (${successes} success, ${failures} failed)`);
-    console.log(`   Success rate: ${successRate}%`);
-
-    // Print per culture/kind breakdown
-    const cultures = Object.keys(byCultureAndKind).sort();
-    for (const culture of cultures) {
-      const kinds = byCultureAndKind[culture];
-      const kindNames = Object.keys(kinds).sort();
-
-      console.log(`   ${culture}:`);
-      for (const kind of kindNames) {
-        const { calls, failures: kindFailures } = kinds[kind];
-        const failStr = kindFailures > 0 ? ` (${kindFailures} failed)` : '';
-        console.log(`      ${kind}: ${calls}${failStr}`);
-      }
-    }
+    this.log('info',
+      `[NameForge] Stats: ${total} calls (${successes} success, ${failures} failed, ${successRate}% success rate)`,
+      { total, successes, failures, successRate, byCultureAndKind }
+    );
 
     if (failures > 0) {
-      console.warn(`   ⚠️  ${failures} name generation failures`);
+      this.log('warn',
+        `[NameForge] ${failures} name generation failures`,
+        { failures, byCultureAndKind }
+      );
     }
   }
 }

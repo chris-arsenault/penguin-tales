@@ -37,10 +37,13 @@ Location: `src/systems/occurrenceCreation.ts`
 #### era_transition
 Location: `src/systems/eraTransition.ts`
 
-- **minEraLength**: Minimum ticks before era can transition
-  - Default: 50, Range: [20, 200]
-- **transitionCooldown**: Ticks between transitions to prevent rapid cycling
-  - Default: 10, Range: [5, 50]
+Era transition timing is controlled per-era via `transitionConditions` in eras.json.
+Use a `time` condition to control minimum era length:
+```json
+{ "type": "time", "minTicks": 25 }
+```
+
+No system-level parameters - all transition logic is per-era.
 
 ### Domain Systems
 

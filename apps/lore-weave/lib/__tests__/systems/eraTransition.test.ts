@@ -13,9 +13,7 @@ describe('eraTransition', () => {
   const createSystem = () => {
     return createEraTransitionSystem({
       id: 'era_transition',
-      name: 'Era Progression',
-      minEraLength: 50,
-      transitionCooldown: 10
+      name: 'Era Progression'
     });
   };
 
@@ -64,9 +62,9 @@ describe('eraTransition', () => {
       relationshipCooldowns: new Map(),
       config: {
         eras: [
-          { id: 'era1', name: 'Early Age', description: 'First', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
-          { id: 'era2', name: 'Middle Age', description: 'Second', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
-          { id: 'era3', name: 'Late Age', description: 'Third', templateWeights: {}, systemModifiers: {}, pressureModifiers: {} },
+          { id: 'era1', name: 'Early Age', description: 'First', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
+          { id: 'era2', name: 'Middle Age', description: 'Second', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
+          { id: 'era3', name: 'Late Age', description: 'Third', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
         ],
         maxTicks: 500,
         domain: {
@@ -143,7 +141,9 @@ describe('eraTransition', () => {
       // Era management
       setCurrentEra(era: any) { graph.currentEra = era; },
       // Pressure methods (for TemplateGraphView compatibility)
-      getPressure(id: string) { return graph.pressures.get(id) ?? 0; }
+      getPressure(id: string) { return graph.pressures.get(id) ?? 0; },
+      // Logging (for TemplateGraphView compatibility)
+      log(_level: string, _message: string, _context?: any) { /* no-op for tests */ }
     } as any;
   });
 
@@ -250,54 +250,51 @@ describe('eraTransition', () => {
     });
   });
 
-  describe('minimum era length enforcement', () => {
-    it('should not transition before minimum length', () => {
+  describe('per-era time conditions', () => {
+    it('should not transition before time condition is met', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 25; // Less than minEraLength (50)
+      graph.tick = 25;
+
+      // Set explicit time condition
+      setEraConditions('era1', [{
+        type: 'time',
+        minTicks: 50
+      }]);
 
       const result = eraTransition.apply(graph);
 
-      expect(result.description).toContain('continues');
+      expect(result.description).toContain('persists');
       expect(currentEra.status).toBe('current');
     });
 
-    it('should allow transition after minimum length', () => {
+    it('should allow transition after time condition is met', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 120; // Greater than minEraLength (50)
-
-      // Create system with empty conditions (allows immediate transition after min length)
-      setEraConditions('era1', []);
-
-      const result = eraTransition.apply(graph);
-
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('transition cooldown', () => {
-    it('should respect transition cooldown period', () => {
-      const currentEra = graph.entities.get('era1')!;
-      currentEra.temporal = { startTick: graph.tick - 5, endTick: null }; // Just started
-      graph.tick = 55; // Within cooldown
-
-      const result = eraTransition.apply(graph);
-
-      expect(result.description).toContain('stabilizing');
-      expect(currentEra.status).toBe('current');
-    });
-
-    it('should allow transition after cooldown', () => {
-      const currentEra = graph.entities.get('era1')!;
-      currentEra.temporal = { startTick: graph.tick - 60, endTick: null };
       graph.tick = 120;
 
+      // Set explicit time condition that is met
+      setEraConditions('era1', [{
+        type: 'time',
+        minTicks: 50
+      }]);
+
+      const result = eraTransition.apply(graph);
+
+      expect(result.description).toContain('→');
+    });
+
+    it('should allow immediate transition with empty conditions', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 10;
+
+      // Empty conditions = transition allowed
       setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
-      expect(result).toBeDefined();
+      expect(result.description).toContain('→');
     });
   });
 
@@ -645,19 +642,39 @@ describe('eraTransition', () => {
     });
   });
 
-  describe('default transition conditions', () => {
-    it('should use default heuristic when no custom conditions defined', () => {
+  describe('missing config errors', () => {
+    it('should throw if era config not found', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.subtype = 'nonexistent_era'; // subtype doesn't match any config
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 150;
+
+      expect(() => eraTransition.apply(graph)).toThrow(/No era config found/);
+    });
+
+    it('should throw if transitionConditions is undefined', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 150; // 2x minEraLength (50)
+      graph.tick = 150;
 
-      // Default - no conditions specified (uses 2x minEraLength heuristic)
-      // Don't set any conditions on era1
+      // Remove transitionConditions from era1 config
+      const eraConfig = graph.config.eras.find((e: any) => e.id === 'era1');
+      delete eraConfig.transitionConditions;
+
+      expect(() => eraTransition.apply(graph)).toThrow(/no transitionConditions defined/);
+    });
+
+    it('should allow immediate transition with empty conditions array', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 1; // Very early
+
+      // Empty array = immediate transition
+      setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
 
-      // Should transition using default heuristic (2x min length)
-      expect(result).toBeDefined();
+      expect(result.description).toContain('→');
     });
   });
 

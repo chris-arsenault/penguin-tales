@@ -30,6 +30,13 @@ export interface Point {
   z: number;
 }
 
+// Axis configuration with semantic tags
+export interface AxisConfig {
+  name: string;
+  lowTag: string;
+  highTag: string;
+}
+
 // Each entity kind has its own coordinate space with its own regions
 export interface EntityKindMapConfig {
   entityKind: string;
@@ -38,6 +45,10 @@ export interface EntityKindMapConfig {
   bounds: { min: number; max: number };
   hasZAxis: boolean;
   zAxisLabel?: string;
+  // Semantic axis labels (low/high tags at each end)
+  xAxis?: AxisConfig;
+  yAxis?: AxisConfig;
+  zAxis?: AxisConfig;
 }
 
 export interface UISchema {

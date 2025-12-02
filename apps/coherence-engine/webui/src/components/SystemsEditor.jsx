@@ -2464,26 +2464,10 @@ function FrameworkSystemTab({ system, onChange }) {
 
         {system.systemType === 'eraTransition' && (
           <div style={styles.formGrid}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Min Era Length</label>
-              <input
-                type="number"
-                value={config.minEraLength ?? ''}
-                onChange={(e) => updateConfig('minEraLength', parseInt(e.target.value) || undefined)}
-                style={styles.input}
-                min="1"
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Transition Cooldown</label>
-              <input
-                type="number"
-                value={config.transitionCooldown ?? ''}
-                onChange={(e) => updateConfig('transitionCooldown', parseInt(e.target.value) || undefined)}
-                style={styles.input}
-                min="0"
-              />
-            </div>
+            <p style={{ ...styles.label, gridColumn: '1 / -1', color: '#666' }}>
+              Era transition timing is controlled by per-era transitionConditions in eras.json.
+              Add a time condition (e.g., {`{ type: 'time', minTicks: 25 }`}) to control minimum era length.
+            </p>
           </div>
         )}
 

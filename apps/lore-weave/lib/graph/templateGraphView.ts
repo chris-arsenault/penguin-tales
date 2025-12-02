@@ -98,6 +98,14 @@ export class TemplateGraphView {
     return this.graph.config;
   }
 
+  /**
+   * Log a message via the emitter (if available).
+   * Convenience method for systems to emit debug/info/warn messages.
+   */
+  log(level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>): void {
+    this.config?.emitter?.log(level, message, context);
+  }
+
   /** Get rate limit state (for templates with creation rate limiting) */
   get rateLimitState() {
     return this.graph.rateLimitState;

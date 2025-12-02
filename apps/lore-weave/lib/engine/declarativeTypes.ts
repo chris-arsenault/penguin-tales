@@ -381,56 +381,33 @@ export type DescriptionSpec =
   | { template: string; replacements: Record<string, string> };  // Template with variable references
 
 /**
- * How to place the new entity.
+ * How to place the new entity on its semantic plane.
+ *
+ * =============================================================================
+ * CRITICAL: SEMANTIC PLANES ARE PER-ENTITY-KIND
+ * =============================================================================
+ *
+ * Coordinates represent semantic similarity within a kind, NOT physical location.
+ * Each entity kind has its own independent coordinate space.
+ *
+ * RULES FOR near_entity PLACEMENT:
+ * - The referenced entity MUST be the SAME KIND as the entity being created
+ * - Placing an NPC near a location is MEANINGLESS (different planes)
+ * - Placing an ability near an NPC is MEANINGLESS (different planes)
+ *
+ * If you need to associate entities across kinds, use:
+ * - Relationships (e.g., npc "resident_of" location)
+ * - Lineage (which only affects relationship distance, not coordinates)
+ * - in_culture_region placement (places within culture's semantic region)
  *
  * Distance values are on 0-100 scale (Euclidean distance on semantic plane).
  */
 export type PlacementSpec =
-  | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }
+  | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }  // entity MUST be same kind!
   | { type: 'in_culture_region'; culture: string }
-  | { type: 'at_location'; location: string }
-  | { type: 'derived_from_references'; references: string[]; culture?: string }
-  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } }
-  | NearAncestorPlacement;
-
-/**
- * Place entity near an ancestor and create a lineage relationship.
- *
- * This placement type unifies coordinate placement with lineage relationship creation:
- * 1. Finds an ancestor using ancestorFilter (tries each filter in order)
- * 2. Places the new entity at the specified distance from the ancestor
- * 3. Creates a relationship of relationshipKind from new entity to ancestor
- * 4. Sets relationship.distance to the actual Euclidean distance
- *
- * Distance values are on 0-100 scale (same as coordinates).
- */
-export interface NearAncestorPlacement {
-  type: 'near_ancestor';
-
-  /** Relationship kind for the lineage link (e.g., 'inspired_by', 'derived_from') */
-  relationshipKind: string;
-
-  /** Distance range from ancestor on the semantic plane (0-100 scale) */
-  distanceRange: { min: number; max: number };
-
-  /**
-   * Filters to find an ancestor, tried in order.
-   * First filter that returns results is used, then one entity is picked randomly.
-   */
-  ancestorFilter: AncestorFilterSpec[];
-}
-
-/**
- * Filter criteria for finding ancestor entities.
- * All specified fields must match (AND logic).
- */
-export interface AncestorFilterSpec {
-  kind: string;
-  subtype?: string;
-  status?: string;
-  /** If true, prefer ancestors with same culture as the new entity */
-  sameCulture?: boolean;
-}
+  | { type: 'at_location'; location: string }  // DEPRECATED: cross-kind reference
+  | { type: 'derived_from_references'; references: string[]; culture?: string }  // references MUST be same kind!
+  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } };
 
 export interface CountRange {
   min: number;
@@ -441,23 +418,22 @@ export interface CountRange {
  * Lineage specification for automatic ancestor linking.
  *
  * When specified on a CreationRule, the framework will:
- * 1. Search for an ancestor using ancestorFilter (tries each filter in order)
+ * 1. Resolve ancestorRef to find the ancestor entity
  * 2. Create a relationship of relationshipKind from new entity to ancestor
  * 3. Set relationship.distance randomly within distanceRange (0-100 scale)
  *
- * This is separate from placement - the entity is placed according to its
- * placement spec, and the lineage relationship is created afterward.
+ * To search for an ancestor by kind/subtype, define a variable in the template's
+ * variables section and reference it here.
  */
 export interface LineageSpec {
   /** Relationship kind for the lineage link (e.g., 'inspired_by', 'derived_from') */
   relationshipKind: string;
 
   /**
-   * Filters to find an ancestor, tried in order.
-   * First filter that returns results is used, then one entity is picked randomly.
-   * If no filter returns results, no lineage relationship is created.
+   * Reference to the ancestor entity (e.g., "$target", "$mentor", "$faction").
+   * Use template variables to search for ancestors by kind/subtype.
    */
-  ancestorFilter: AncestorFilterSpec[];
+  ancestorRef: string;
 
   /** Distance range for the lineage relationship (0-100 scale, Euclidean distance) */
   distanceRange: { min: number; max: number };

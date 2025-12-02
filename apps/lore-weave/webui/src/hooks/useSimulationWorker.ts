@@ -29,6 +29,7 @@ import type {
   NotableEntitiesPayload,
   SampleHistoryPayload,
   SimulationResultPayload,
+  StateExportPayload,
   ErrorPayload
 } from '../../../lib/observer/types';
 import type { EngineConfig } from '../../../lib/engine/types';
@@ -56,6 +57,8 @@ export interface SimulationState {
   notableEntities: NotableEntitiesPayload | null;
   sampleHistory: SampleHistoryPayload | null;
   result: SimulationResultPayload | null;
+  // State export (for intermediate Archivist export)
+  stateExport: StateExportPayload | null;
   error: ErrorPayload | null;
   logs: LogPayload[];
 }
@@ -69,6 +72,7 @@ export interface UseSimulationWorkerReturn {
   reset: () => void;
   abort: () => void;
   clearLogs: () => void;
+  requestExport: () => void;
   isRunning: boolean;
   isPaused: boolean;
 }
@@ -91,6 +95,7 @@ const initialState: SimulationState = {
   notableEntities: null,
   sampleHistory: null,
   result: null,
+  stateExport: null,
   error: null,
   logs: []
 };
@@ -223,6 +228,12 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
             ...prev,
             status: 'complete',
             result: message.payload
+          };
+
+        case 'state_export':
+          return {
+            ...prev,
+            stateExport: message.payload
           };
 
         case 'error':
@@ -373,6 +384,14 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     }
   }, []);
 
+  const requestExport = useCallback(() => {
+    if (workerRef.current) {
+      // Clear previous export before requesting new one
+      setState(prev => ({ ...prev, stateExport: null }));
+      workerRef.current.postMessage({ type: 'exportState' });
+    }
+  }, []);
+
   const clearLogs = useCallback(() => {
     setState(prev => ({
       ...prev,
@@ -396,6 +415,7 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     reset,
     abort,
     clearLogs,
+    requestExport,
     isRunning,
     isPaused
   };
