@@ -24,7 +24,7 @@ export function prominenceToNumber(prominence: Prominence, uiSchema?: UISchema):
 
 export function getKindColor(kind: string, uiSchema?: UISchema): string {
   if (uiSchema?.entityKinds) {
-    const entityKind = uiSchema.entityKinds.find(ek => ek.id === kind);
+    const entityKind = uiSchema.entityKinds.find(ek => ek.kind === kind);
     if (entityKind?.style?.color) return entityKind.style.color;
   }
   // Fallback defaults

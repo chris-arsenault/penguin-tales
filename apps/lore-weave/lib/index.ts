@@ -39,7 +39,6 @@ export type {
   EntityOperatorRegistry,
   NameGenerationService,
   TagMetadata,
-  ComponentContract,
   AncestorFilter
 } from './engine/types';
 
@@ -114,7 +113,6 @@ export {
   getTagValue,
   getTrueTagKeys,
   getStringTags,
-  tagsToArray,
   arrayToTags,
   // Additional entity/relationship utilities
   rollProbability,
@@ -417,7 +415,6 @@ export type {
   SubtypeSpec,
   CultureSpec,
   PlacementSpec,
-  LineageSpec,
   RelationshipCondition
 } from './engine/declarativeTypes';
 

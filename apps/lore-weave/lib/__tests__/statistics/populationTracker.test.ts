@@ -196,7 +196,6 @@ describe('PopulationTracker', () => {
         return false;
       },
 
-      // Keep backward compatibility for tests
       get entities() { return _entities; },
       get relationships() { return _relationships; },
       set relationships(rels: Relationship[]) { _relationships = rels; }

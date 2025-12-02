@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ContractEnforcer } from '../../engine/contractEnforcer';
-import { Graph, GrowthTemplate, EngineConfig, ComponentContract, EntityRegistry, ComponentPurpose } from '../../engine/types';
+import { Graph, GrowthTemplate, EngineConfig, EntityRegistry, ComponentPurpose } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
 import { TemplateGraphView } from '../../graph/templateGraphView';
 
@@ -179,7 +179,6 @@ describe('ContractEnforcer', () => {
         return false;
       },
 
-      // Keep backward compatibility for tests
       get entities() { return _entities; },
       get relationships() { return _relationships; },
       set relationships(rels: Relationship[]) { _relationships = rels; }

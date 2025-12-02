@@ -168,7 +168,6 @@ describe('StatisticsCollector', () => {
         return false;
       },
 
-      // Keep backward compatibility for tests
       get entities() { return _entities; },
       get relationships() { return _relationships; }
     } as Graph;

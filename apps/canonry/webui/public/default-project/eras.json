@@ -32,12 +32,15 @@
       "thermal_diffusion": 1.0,
       "resource_diffusion": 1.5
     },
-    "transitionConditions": [
+    "entryEffects": {
+      "pressureChanges": { "exploration": 10, "stability": 5 }
+    },
+    "exitConditions": [
       { "type": "time", "minTicks": 80 },
       { "type": "entity_count", "entityKind": "location", "operator": "above", "threshold": 8 },
       { "type": "pressure", "pressureId": "resource_scarcity", "operator": "above", "threshold": 40 }
     ],
-    "transitionEffects": {
+    "exitEffects": {
       "pressureChanges": { "conflict": 20, "resource_scarcity": 15 }
     }
   },
@@ -72,12 +75,18 @@
       "thermal_diffusion": 1.2,
       "resource_diffusion": 0.5
     },
-    "transitionConditions": [
+    "entryConditions": [
+      { "type": "pressure", "pressureId": "resource_scarcity", "operator": "above", "threshold": 30 }
+    ],
+    "entryEffects": {
+      "pressureChanges": { "conflict": 15 }
+    },
+    "exitConditions": [
       { "type": "time", "minTicks": 100 },
       { "type": "pressure", "pressureId": "conflict", "operator": "below", "threshold": 30 },
       { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 35 }
     ],
-    "transitionEffects": {
+    "exitEffects": {
       "pressureChanges": { "stability": 15, "conflict": -10, "magical_instability": 10 }
     }
   },
@@ -113,12 +122,18 @@
       "combat_technique_formation": 1.5,
       "legal_code_formation": 2.0
     },
-    "transitionConditions": [
+    "entryConditions": [
+      { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 25 }
+    ],
+    "entryEffects": {
+      "pressureChanges": { "innovation": 20 }
+    },
+    "exitConditions": [
       { "type": "time", "minTicks": 90 },
       { "type": "entity_count", "entityKind": "abilities", "operator": "above", "threshold": 5 },
       { "type": "pressure", "pressureId": "magical_instability", "operator": "above", "threshold": 50 }
     ],
-    "transitionEffects": {
+    "exitEffects": {
       "pressureChanges": { "external_threat": 30, "magical_instability": -15 }
     }
   },
@@ -150,12 +165,18 @@
       "resource_diffusion": 0.8,
       "combat_technique_formation": 2.5
     },
-    "transitionConditions": [
+    "entryConditions": [
+      { "type": "pressure", "pressureId": "external_threat", "operator": "above", "threshold": 25 }
+    ],
+    "entryEffects": {
+      "pressureChanges": { "unity": 20, "conflict": -10 }
+    },
+    "exitConditions": [
       { "type": "time", "minTicks": 120 },
       { "type": "pressure", "pressureId": "external_threat", "operator": "below", "threshold": 20 },
       { "type": "entity_count", "entityKind": "npc", "subtype": "hero", "operator": "above", "threshold": 3 }
     ],
-    "transitionEffects": {
+    "exitEffects": {
       "pressureChanges": { "stability": 25, "external_threat": -20, "diplomacy": 20 }
     }
   },
@@ -186,6 +207,13 @@
       "resource_diffusion": 2.0,
       "alliance_formation": 1.5,
       "legal_code_formation": 2.0
+    },
+    "entryConditions": [
+      { "type": "pressure", "pressureId": "external_threat", "operator": "below", "threshold": 25 },
+      { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 20 }
+    ],
+    "entryEffects": {
+      "pressureChanges": { "prosperity": 15, "stability": 10 }
     }
   }
 ]

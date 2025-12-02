@@ -2,6 +2,11 @@
  * Coordinate System Types
  *
  * Types for the region-based coordinate system and semantic axis encoding.
+ */
+
+import { EntityTags } from '../core/worldTypes';
+
+/**
  *
  * =============================================================================
  * CRITICAL CONCEPT: SEMANTIC PLANES ARE PER-ENTITY-KIND
@@ -24,8 +29,8 @@
  *
  * CORRECT USAGE:
  * - near_entity placement: Reference entity MUST be the same kind as the new entity
- * - Lineage relationships can cross kinds (an ability can be derived_from a location)
- *   but the placement must use a same-kind reference or random/culture placement
+ * - Relationships with semantic distance (derived_from, splinter_of, etc.) should be
+ *   same-kind since distance is computed from coordinates on the semantic plane
  *
  * Key concepts:
  * - EntityKindMap: A 2D coordinate space for a single entity kind
@@ -278,7 +283,7 @@ export interface EntityPlacedInRegionEvent {
   entityId: string;
   point: Point;
   region: Region | null;
-  appliedTags: string[];
+  appliedTags: EntityTags;
 }
 
 // ============================================================================

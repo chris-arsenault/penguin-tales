@@ -73,7 +73,7 @@ export interface Relationship {
     kind: string;   // must be allowed by the (src.kind, dst.kind) matrix
     src: string;    // HardState.id
     dst: string;    // HardState.id
-    strength?: number;  // 0.0 (weak/spatial) to 1.0 (strong/narrative) - optional for backward compat
+    strength: number;   // 0.0 (weak/spatial) to 1.0 (strong/narrative)
     distance?: number;  // Euclidean distance on the semantic plane (0-100 scale, same as coordinates)
     catalyzedBy?: string;  // ID of agent that caused this relationship
     category?: string;     // Domain-defined relationship category (e.g., 'political', 'immutable_fact')

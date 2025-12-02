@@ -44,14 +44,14 @@ export default function FilterPanel({
   // Get entity kinds and prominence levels from uiSchema (with fallbacks for older data)
   const entityKindSchemas = worldData.uiSchema?.entityKinds ?? [];
   const entityKinds: EntityKind[] = entityKindSchemas.length > 0
-    ? entityKindSchemas.map(ek => ek.id)
+    ? entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind)
     : ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
   const prominenceLevels: Prominence[] = worldData.uiSchema?.prominenceLevels
     ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
   // Build a map from kind to display name
   const kindDisplayNames = Object.fromEntries(
-    entityKindSchemas.map(ek => [ek.id, ek.displayName || ek.name])
+    entityKindSchemas.map(ek => [ek.kind, ek.description || ek.kind])
   );
 
   const toggleKind = (kind: EntityKind) => {

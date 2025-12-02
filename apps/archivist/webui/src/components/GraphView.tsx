@@ -11,19 +11,19 @@ cytoscape.use(coseBilkent);
 
 // Default entity kind styles (fallback when uiSchema not present)
 const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
-  { id: 'npc', name: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
-  { id: 'faction', name: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
-  { id: 'location', name: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
-  { id: 'rules', name: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
-  { id: 'abilities', name: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
-  { id: 'era', name: 'Eras', subtypes: [], statuses: [], style: { color: '#FFD700', shape: 'octagon' } },
-  { id: 'occurrence', name: 'Occurrences', subtypes: [], statuses: [], style: { color: '#FF69B4', shape: 'triangle' } }
+  { kind: 'npc', description: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
+  { kind: 'faction', description: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
+  { kind: 'location', description: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
+  { kind: 'rules', description: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
+  { kind: 'abilities', description: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
+  { kind: 'era', description: 'Eras', subtypes: [], statuses: [], style: { color: '#FFD700', shape: 'octagon' } },
+  { kind: 'occurrence', description: 'Occurrences', subtypes: [], statuses: [], style: { color: '#FF69B4', shape: 'triangle' } }
 ];
 
 // Generate Cytoscape style array from entity kind definitions
 function generateEntityKindStyles(entityKinds: EntityKindDefinition[]) {
   return entityKinds.map(ek => ({
-    selector: `node[kind="${ek.id}"]`,
+    selector: `node[kind="${ek.kind}"]`,
     style: {
       'background-color': ek.style?.color || '#999',
       'shape': (ek.style?.shape || 'ellipse') as any
@@ -424,7 +424,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
         </div>
         <div className="px-5 py-4 space-y-3">
           {entityKindSchemas.map(ek => (
-            <div key={ek.id} className="flex items-center gap-3">
+            <div key={ek.kind} className="flex items-center gap-3">
               <div
                 className="w-5 h-5 shadow-lg flex-shrink-0"
                 style={{
@@ -432,7 +432,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
                   ...shapeToLegendStyle(ek.style?.shape || 'ellipse')
                 }}
               ></div>
-              <span className="font-medium">{ek.displayName || ek.name}</span>
+              <span className="font-medium">{ek.description || ek.kind}</span>
             </div>
           ))}
         </div>

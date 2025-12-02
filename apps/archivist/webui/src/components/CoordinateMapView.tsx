@@ -11,11 +11,11 @@ interface CoordinateMapViewProps {
 
 // Default entity styles for when uiSchema is not present
 const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
-  { id: 'npc', name: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
-  { id: 'faction', name: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
-  { id: 'location', name: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
-  { id: 'rules', name: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
-  { id: 'abilities', name: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
+  { kind: 'npc', description: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
+  { kind: 'faction', description: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
+  { kind: 'location', description: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
+  { kind: 'rules', description: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
+  { kind: 'abilities', description: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
 ];
 
 // Generate a default map config for any entity kind
@@ -173,7 +173,14 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
   // Get entity kind schemas
   const entityKindSchemas = data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
-  const entityKinds = entityKindSchemas.map(ek => ek.id);
+  const entityKinds = entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind);
+
+  // Ensure mapKind is valid - default to first available kind if current selection is invalid
+  useEffect(() => {
+    if (entityKinds.length > 0 && !entityKinds.includes(mapKind)) {
+      setMapKind(entityKinds[0]);
+    }
+  }, [entityKinds, mapKind]);
 
   // Get per-kind map config and regions
   const mapConfig = data.uiSchema?.perKindMaps?.[mapKind] ?? getDefaultMapConfig(mapKind);
@@ -207,7 +214,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   // Build entity color map
   const entityColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    entityKindSchemas.forEach(ek => map.set(ek.id, ek.style?.color || '#999'));
+    entityKindSchemas.forEach(ek => map.set(ek.kind, ek.style?.color || '#999'));
     return map;
   }, [entityKindSchemas]);
 
@@ -598,7 +605,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
           >
             {entityKinds.map(kind => (
               <option key={kind} value={kind}>
-                {entityKindSchemas.find(ek => ek.id === kind)?.displayName ?? entityKindSchemas.find(ek => ek.id === kind)?.name ?? kind}
+                {entityKindSchemas.find(ek => ek.kind === kind)?.description ?? kind}
               </option>
             ))}
           </select>
@@ -637,16 +644,16 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       <div className="coordinate-map-legend">
         <div className="legend-title">Entity Types</div>
         {entityKindSchemas.map(ek => (
-          <div key={ek.id} className="legend-item">
+          <div key={ek.kind} className="legend-item">
             <div
               className="legend-dot"
               style={{
                 backgroundColor: ek.style?.color || '#999',
-                border: ek.id === mapKind ? '2px solid white' : 'none'
+                border: ek.kind === mapKind ? '2px solid white' : 'none'
               }}
             />
-            <span>{ek.displayName || ek.name}</span>
-            {ek.id === mapKind && <span className="anchor-badge">primary</span>}
+            <span>{ek.description || ek.kind}</span>
+            {ek.kind === mapKind && <span className="anchor-badge">primary</span>}
           </div>
         ))}
         {regions.length > 0 && (

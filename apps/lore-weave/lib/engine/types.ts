@@ -27,7 +27,14 @@ export interface NameGenerationService {
   printStats(): void;
 }
 
-// Transition condition types - when should this era end?
+// =============================================================================
+// ERA TRANSITION CONDITIONS
+// =============================================================================
+
+/**
+ * Transition conditions define when an era can start or end.
+ * Multiple conditions are combined with AND logic (all must be met).
+ */
 export type TransitionCondition =
   | PressureTransitionCondition
   | EntityCountTransitionCondition
@@ -54,12 +61,36 @@ export interface TimeTransitionCondition {
   minTicks: number;
 }
 
-// Effects applied when transitioning OUT of this era
+// =============================================================================
+// ERA TRANSITION EFFECTS
+// =============================================================================
+
+/**
+ * Effects applied during era transitions.
+ * These can trigger pressure changes or other state modifications.
+ */
 export interface EraTransitionEffects {
   pressureChanges?: Record<string, number>;
 }
 
-// Era definition
+// =============================================================================
+// ERA DEFINITION
+// =============================================================================
+
+/**
+ * Era configuration defines a historical period in world generation.
+ *
+ * TRANSITION MODEL:
+ * - `exitConditions`: Criteria that must ALL be met for this era to end
+ * - `entryConditions`: Criteria that must ALL be met for this era to START
+ * - `nextEra`: Optional explicit next era ID (supports divergent era paths)
+ * - `exitEffects`: Effects applied when transitioning OUT of this era
+ * - `entryEffects`: Effects applied when transitioning INTO this era
+ *
+ * Era entities are created lazily when transitioned into (not spawned at init).
+ * If no nextEra is specified, the system finds the first candidate era
+ * whose entryConditions are met.
+ */
 export interface Era {
   id: string;
   name: string;
@@ -68,9 +99,21 @@ export interface Era {
   systemModifiers: Record<string, number>;  // multipliers for system effects
   pressureModifiers?: Record<string, number>;
   specialRules?: (graph: Graph) => void;
-  // Transition configuration - when should this era end?
-  transitionConditions?: TransitionCondition[];  // ALL must be met to transition
-  transitionEffects?: EraTransitionEffects;      // Applied when transitioning out
+
+  // Criteria for this era to END (all must be met)
+  exitConditions?: TransitionCondition[];
+
+  // Criteria for this era to START (all must be met, checked when seeking next era)
+  entryConditions?: TransitionCondition[];
+
+  // Optional explicit next era ID (if not set, searches for first candidate)
+  nextEra?: string;
+
+  // Effects applied when transitioning OUT of this era
+  exitEffects?: EraTransitionEffects;
+
+  // Effects applied when transitioning INTO this era
+  entryEffects?: EraTransitionEffects;
 }
 
 /**
@@ -149,10 +192,11 @@ export interface Graph {
   // RELATIONSHIP MUTATION METHODS (framework-aware)
   // =============================================================================
   /**
-   * Add a relationship between two entities with validation
+   * Add a relationship between two entities with validation.
+   * Distance is ALWAYS computed from Euclidean distance between coordinates.
    * @returns true if relationship was added, false if duplicate or invalid
    */
-  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean;
+  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distanceIgnored?: number, category?: string): boolean;
 
   /**
    * Remove a specific relationship
@@ -226,7 +270,6 @@ export interface GrowthTemplate {
   name: string;
   requiredEra?: string[];  // optional era restrictions
   metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
-  contract?: ComponentContract;
 
   // Check if template can be applied
   // Uses TemplateGraphView for safe, restricted graph access
@@ -254,7 +297,6 @@ export interface SimulationSystem {
   id: string;
   name: string;
   metadata?: SystemMetadata;  // Statistical metadata for distribution tuning
-  contract?: ComponentContract;
 
   // Run one tick of this system
   // graphView provides access to graph queries AND coordinate context
@@ -293,16 +335,6 @@ export enum ComponentPurpose {
   BEHAVIORAL_MODIFIER = 'Modifies template weights or system frequencies'
 }
 
-// Component Contract - DEPRECATED
-// All contract functionality has been removed:
-// - Input conditions: Handled via applicability rules in templateInterpreter.ts
-// - Output validation: Declarative templates already define what they create
-// - Lineage: Merged into placement system (use 'near_ancestor' placement type)
-// This interface is kept empty for backward compatibility during migration.
-export interface ComponentContract {
-  // Empty - all fields removed
-}
-
 /**
  * Filter criteria for finding ancestor entities.
  * Used by 'near_ancestor' placement type.
@@ -319,8 +351,8 @@ export interface AncestorFilter {
 }
 
 // Pressure Contract
-// Extended contract for pressures including sources, sinks, and equilibrium model
-export interface PressureContract extends Omit<ComponentContract, 'affects'> {
+// Contract for pressures including sources, sinks, and equilibrium model
+export interface PressureContract {
   purpose: ComponentPurpose.PRESSURE_ACCUMULATION;
 
   // What creates this pressure
@@ -880,15 +912,19 @@ export class GraphStore implements Graph {
   /**
    * Add a relationship with validation.
    * Checks for duplicates and validates that both entities exist.
+   * Distance is ALWAYS computed from Euclidean distance between entity coordinates.
    * @returns true if relationship was added, false if duplicate or invalid
    */
-  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
+  addRelationship(kind: string, srcId: string, dstId: string, strength?: number, _distanceIgnored?: number, category?: string): boolean {
     // Validate entities exist
-    if (!this.#entities.has(srcId)) {
+    const srcEntity = this.#entities.get(srcId);
+    const dstEntity = this.#entities.get(dstId);
+
+    if (!srcEntity) {
       this.config.emitter?.log('warn', `addRelationship: source entity ${srcId} does not exist`);
       return false;
     }
-    if (!this.#entities.has(dstId)) {
+    if (!dstEntity) {
       this.config.emitter?.log('warn', `addRelationship: destination entity ${dstId} does not exist`);
       return false;
     }
@@ -899,6 +935,15 @@ export class GraphStore implements Graph {
     );
     if (exists) {
       return false;  // Duplicate - silently skip
+    }
+
+    // Compute distance from coordinates (relationship.distance === Euclidean distance)
+    let distance: number | undefined;
+    if (srcEntity.coordinates && dstEntity.coordinates) {
+      const dx = srcEntity.coordinates.x - dstEntity.coordinates.x;
+      const dy = srcEntity.coordinates.y - dstEntity.coordinates.y;
+      const dz = (srcEntity.coordinates.z ?? 0) - (dstEntity.coordinates.z ?? 0);
+      distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     // Build relationship
@@ -915,15 +960,9 @@ export class GraphStore implements Graph {
     this.#relationships.push(relationship);
 
     // Update entity links (denormalized cache)
-    const srcEntity = this.#entities.get(srcId);
-    if (srcEntity) {
-      srcEntity.links.push({ ...relationship });
-      srcEntity.updatedAt = this.tick;
-    }
-    const dstEntity = this.#entities.get(dstId);
-    if (dstEntity) {
-      dstEntity.updatedAt = this.tick;
-    }
+    srcEntity.links.push({ ...relationship });
+    srcEntity.updatedAt = this.tick;
+    dstEntity.updatedAt = this.tick;
 
     return true;
   }

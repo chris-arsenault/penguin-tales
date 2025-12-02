@@ -99,6 +99,7 @@ describe('EntityClusterBuilder', () => {
         kind: 'member_of',
         src: 'will-be-assigned-1',
         dst: 'will-be-assigned-0',
+        strength: 0.5,
       });
     });
 
@@ -125,11 +126,11 @@ describe('EntityClusterBuilder', () => {
       expect(result.relationships[0].dst).toBe('existing-entity-id');
     });
 
-    it('should not add strength property when undefined', () => {
+    it('should default strength to 0.5 when not specified', () => {
       builder.relate(0, 1, 'trades_with');
       const result = builder.build();
 
-      expect(result.relationships[0]).not.toHaveProperty('strength');
+      expect(result.relationships[0].strength).toBe(0.5);
     });
   });
 
@@ -147,6 +148,7 @@ describe('EntityClusterBuilder', () => {
         kind: 'located_in',
         src: 'will-be-assigned-0',
         dst: 'existing-colony-id',
+        strength: 0.5,
       });
     });
 
@@ -181,6 +183,7 @@ describe('EntityClusterBuilder', () => {
         kind: 'located_in',
         src: 'npc-id',
         dst: 'will-be-assigned-0',
+        strength: 0.5,
       });
     });
 
@@ -323,11 +326,13 @@ describe('EntityClusterBuilder', () => {
         kind: 'allied_with',
         src: 'will-be-assigned-0',
         dst: 'will-be-assigned-1',
+        strength: 0.5,
       });
       expect(result.relationships[1]).toEqual({
         kind: 'allied_with',
         src: 'will-be-assigned-1',
         dst: 'will-be-assigned-0',
+        strength: 0.5,
       });
     });
 

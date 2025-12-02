@@ -103,17 +103,17 @@ export interface EraSpawnerConfig extends FrameworkSystemConfig {
 
 /**
  * Era Transition system config.
- * Handles transitions between eras based on world state.
+ * Handles transitions between eras based on exit/entry conditions.
  *
- * NOTE: Transition conditions and effects are defined PER-ERA in eras.json,
- * not at the system level. Each era has its own transitionConditions and
- * transitionEffects fields. See Era type in engine/types.ts.
+ * Transition conditions and effects are defined PER-ERA in eras.json:
+ * - exitConditions: Criteria for an era to END (all must be met)
+ * - entryConditions: Criteria for an era to START (all must be met)
+ * - exitEffects: Pressure changes when leaving an era
+ * - entryEffects: Pressure changes when entering an era
  *
- * To control when an era transitions, add a 'time' condition to the era's
- * transitionConditions array: { type: 'time', minTicks: 25 }
+ * See Era type in engine/types.ts for details.
  */
 export interface EraTransitionConfig extends FrameworkSystemConfig {
-  // All transition logic is now per-era via transitionConditions in eras.json
 }
 
 /**

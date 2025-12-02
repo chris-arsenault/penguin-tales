@@ -60,7 +60,6 @@ describe('distributionCalculations', () => {
       _loadEntity(id: string, entity: HardState) { entities.set(id, entity); },
       _loadRelationship(rel: Relationship) { relationships.push(rel); },
       _setRelationships(rels: Relationship[]) { relationships.length = 0; relationships.push(...rels); },
-      // Keep backward compatibility
       get entities() { return entities; },
       get relationships() { return relationships; }
     } as Graph;

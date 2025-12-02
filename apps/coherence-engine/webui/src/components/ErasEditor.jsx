@@ -689,13 +689,13 @@ function TransitionConditionEditor({ condition, index, onChange, onRemove, press
 
   // Get entity kinds from schema
   const entityKinds = useMemo(() => {
-    return schema?.entityKinds?.map(ek => ({ id: ek.id, name: ek.name || ek.id })) || [];
+    return schema?.entityKinds?.map(ek => ({ id: ek.kind, name: ek.description || ek.kind })) || [];
   }, [schema]);
 
   // Get subtypes for selected entity kind
   const subtypes = useMemo(() => {
     if (!condition.entityKind || !schema?.entityKinds) return [];
-    const kind = schema.entityKinds.find(ek => ek.id === condition.entityKind);
+    const kind = schema.entityKinds.find(ek => ek.kind === condition.entityKind);
     return kind?.subtypes?.map(st => ({ id: st.id, name: st.name || st.id })) || [];
   }, [condition.entityKind, schema]);
 
@@ -882,12 +882,14 @@ function TransitionEffectItem({ pressureId, value, onChange, onRemove, pressures
 // ERA CARD COMPONENT
 // ============================================================================
 
-function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems, pressures, schema, usageMap }) {
+function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, systems, pressures, schema, usageMap, allEras }) {
   const [hovering, setHovering] = useState(false);
   const [addGenHover, setAddGenHover] = useState(false);
   const [addSysHover, setAddSysHover] = useState(false);
   const [addCondHover, setAddCondHover] = useState(false);
   const [addEffectHover, setAddEffectHover] = useState(false);
+  const [addEntryCondHover, setAddEntryCondHover] = useState(false);
+  const [addEntryEffectHover, setAddEntryEffectHover] = useState(false);
 
   // Compute validation status for this era
   const validation = useMemo(() => {
@@ -969,68 +971,141 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
     });
   }, [era, onChange]);
 
-  // Transition condition handlers
-  const handleAddCondition = useCallback(() => {
+  // Exit condition handlers (when this era ENDS)
+  const handleAddExitCondition = useCallback(() => {
     const newCondition = { type: 'time', minTicks: 50 };
     onChange({
       ...era,
-      transitionConditions: [...(era.transitionConditions || []), newCondition],
+      exitConditions: [...(era.exitConditions || []), newCondition],
     });
   }, [era, onChange]);
 
-  const handleUpdateCondition = useCallback((index, updatedCondition) => {
-    const newConditions = [...(era.transitionConditions || [])];
+  const handleUpdateExitCondition = useCallback((index, updatedCondition) => {
+    const newConditions = [...(era.exitConditions || [])];
     newConditions[index] = updatedCondition;
     onChange({
       ...era,
-      transitionConditions: newConditions,
+      exitConditions: newConditions,
     });
   }, [era, onChange]);
 
-  const handleRemoveCondition = useCallback((index) => {
-    const newConditions = (era.transitionConditions || []).filter((_, i) => i !== index);
+  const handleRemoveExitCondition = useCallback((index) => {
+    const newConditions = (era.exitConditions || []).filter((_, i) => i !== index);
     onChange({
       ...era,
-      transitionConditions: newConditions,
+      exitConditions: newConditions,
     });
   }, [era, onChange]);
 
-  // Transition effect handlers
-  const handleAddEffect = useCallback((pressureId) => {
+  // Entry condition handlers (when this era STARTS)
+  const handleAddEntryCondition = useCallback(() => {
+    const newCondition = { type: 'pressure', pressureId: '', operator: 'above', threshold: 50 };
     onChange({
       ...era,
-      transitionEffects: {
-        ...era.transitionEffects,
+      entryConditions: [...(era.entryConditions || []), newCondition],
+    });
+  }, [era, onChange]);
+
+  const handleUpdateEntryCondition = useCallback((index, updatedCondition) => {
+    const newConditions = [...(era.entryConditions || [])];
+    newConditions[index] = updatedCondition;
+    onChange({
+      ...era,
+      entryConditions: newConditions,
+    });
+  }, [era, onChange]);
+
+  const handleRemoveEntryCondition = useCallback((index) => {
+    const newConditions = (era.entryConditions || []).filter((_, i) => i !== index);
+    onChange({
+      ...era,
+      entryConditions: newConditions,
+    });
+  }, [era, onChange]);
+
+  // Exit effect handlers (applied when this era ENDS)
+  const handleAddExitEffect = useCallback((pressureId) => {
+    onChange({
+      ...era,
+      exitEffects: {
+        ...(era.exitEffects || {}),
         pressureChanges: {
-          ...(era.transitionEffects?.pressureChanges || {}),
+          ...(era.exitEffects?.pressureChanges || {}),
           [pressureId]: 10,
         },
       },
     });
   }, [era, onChange]);
 
-  const handleUpdateEffect = useCallback((pressureId, value) => {
+  const handleUpdateExitEffect = useCallback((pressureId, value) => {
     onChange({
       ...era,
-      transitionEffects: {
-        ...era.transitionEffects,
+      exitEffects: {
+        ...(era.exitEffects || {}),
         pressureChanges: {
-          ...(era.transitionEffects?.pressureChanges || {}),
+          ...(era.exitEffects?.pressureChanges || {}),
           [pressureId]: value,
         },
       },
     });
   }, [era, onChange]);
 
-  const handleRemoveEffect = useCallback((pressureId) => {
-    const newChanges = { ...(era.transitionEffects?.pressureChanges || {}) };
+  const handleRemoveExitEffect = useCallback((pressureId) => {
+    const newChanges = { ...(era.exitEffects?.pressureChanges || {}) };
     delete newChanges[pressureId];
     onChange({
       ...era,
-      transitionEffects: {
-        ...era.transitionEffects,
+      exitEffects: {
+        ...(era.exitEffects || {}),
         pressureChanges: newChanges,
       },
+    });
+  }, [era, onChange]);
+
+  // Entry effect handlers (applied when this era STARTS)
+  const handleAddEntryEffect = useCallback((pressureId) => {
+    onChange({
+      ...era,
+      entryEffects: {
+        ...(era.entryEffects || {}),
+        pressureChanges: {
+          ...(era.entryEffects?.pressureChanges || {}),
+          [pressureId]: 10,
+        },
+      },
+    });
+  }, [era, onChange]);
+
+  const handleUpdateEntryEffect = useCallback((pressureId, value) => {
+    onChange({
+      ...era,
+      entryEffects: {
+        ...(era.entryEffects || {}),
+        pressureChanges: {
+          ...(era.entryEffects?.pressureChanges || {}),
+          [pressureId]: value,
+        },
+      },
+    });
+  }, [era, onChange]);
+
+  const handleRemoveEntryEffect = useCallback((pressureId) => {
+    const newChanges = { ...(era.entryEffects?.pressureChanges || {}) };
+    delete newChanges[pressureId];
+    onChange({
+      ...era,
+      entryEffects: {
+        ...(era.entryEffects || {}),
+        pressureChanges: newChanges,
+      },
+    });
+  }, [era, onChange]);
+
+  // Next era handler
+  const handleNextEraChange = useCallback((nextEraId) => {
+    onChange({
+      ...era,
+      nextEra: nextEraId || undefined,  // Clear if empty string
     });
   }, [era, onChange]);
 
@@ -1066,17 +1141,26 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
       .map(s => ({ id: s.config.id, name: s.config.name || s.config.id }));
   }, [systems, era.systemModifiers]);
 
-  // Available pressures for effects (not already added)
-  const availablePressuresForEffects = useMemo(() => {
-    const currentIds = new Set(Object.keys(era.transitionEffects?.pressureChanges || {}));
+  // Available pressures for exit effects (not already added)
+  const availablePressuresForExitEffects = useMemo(() => {
+    const currentIds = new Set(Object.keys(era.exitEffects?.pressureChanges || {}));
     return (pressures || [])
       .filter(p => !currentIds.has(p.id))
       .map(p => ({ id: p.id, name: p.name || p.id }));
-  }, [pressures, era.transitionEffects]);
+  }, [pressures, era.exitEffects]);
 
-  // Transition data
-  const transitionConditions = era.transitionConditions || [];
-  const pressureChanges = Object.entries(era.transitionEffects?.pressureChanges || {});
+  // Available pressures for entry effects (not already added)
+  const availablePressuresForEntryEffects = useMemo(() => {
+    const currentIds = new Set(Object.keys(era.entryEffects?.pressureChanges || {}));
+    return (pressures || [])
+      .filter(p => !currentIds.has(p.id))
+      .map(p => ({ id: p.id, name: p.name || p.id }));
+  }, [pressures, era.entryEffects]);
+
+  const exitConditions = era.exitConditions || [];
+  const entryConditions = era.entryConditions || [];
+  const exitPressureChanges = Object.entries(era.exitEffects?.pressureChanges || {});
+  const entryPressureChanges = Object.entries(era.entryEffects?.pressureChanges || {});
 
   // Count active items (strength > 0)
   const activeGenerators = templateWeights.filter(([, v]) => v > 0).length;
@@ -1241,31 +1325,31 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
             </div>
           </div>
 
-          {/* Transition Conditions */}
+          {/* Entry Conditions - when this era CAN START */}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitle}>
-                <span style={styles.sectionIcon}>🔄</span>
-                Transition Conditions
-                <span style={styles.sectionCount}>{transitionConditions.length} condition{transitionConditions.length !== 1 ? 's' : ''}</span>
+                <span style={styles.sectionIcon}>🚪</span>
+                Entry Conditions
+                <span style={styles.sectionCount}>{entryConditions.length} condition{entryConditions.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
             <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
-              All conditions must be met for this era to end and transition to the next era.
+              All conditions must be met for this era to START. Empty = can always start when the previous era exits.
             </div>
             <div style={styles.itemsGrid}>
-              {transitionConditions.length === 0 ? (
+              {entryConditions.length === 0 ? (
                 <div style={styles.emptyItems}>
-                  No transition conditions defined. The era will use default timing (2x minimum era length).
+                  No entry conditions. This era can start immediately when the previous era exits.
                 </div>
               ) : (
-                transitionConditions.map((condition, index) => (
+                entryConditions.map((condition, index) => (
                   <TransitionConditionEditor
                     key={index}
                     condition={condition}
                     index={index}
-                    onChange={(updated) => handleUpdateCondition(index, updated)}
-                    onRemove={() => handleRemoveCondition(index)}
+                    onChange={(updated) => handleUpdateEntryCondition(index, updated)}
+                    onRemove={() => handleRemoveEntryCondition(index)}
                     pressures={pressures || []}
                     schema={schema}
                   />
@@ -1279,39 +1363,39 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
                 padding: '10px 16px',
                 ...(addCondHover ? styles.addItemButtonHover : {}),
               }}
-              onClick={handleAddCondition}
+              onClick={handleAddEntryCondition}
               onMouseEnter={() => setAddCondHover(true)}
               onMouseLeave={() => setAddCondHover(false)}
             >
-              + Add Condition
+              + Add Entry Condition
             </button>
           </div>
 
-          {/* Transition Effects */}
+          {/* Entry Effects - applied when this era STARTS */}
           <div style={styles.section}>
             <div style={styles.sectionHeader}>
               <div style={styles.sectionTitle}>
                 <span style={styles.sectionIcon}>✨</span>
-                Transition Effects
-                <span style={styles.sectionCount}>{pressureChanges.length} effect{pressureChanges.length !== 1 ? 's' : ''}</span>
+                Entry Effects
+                <span style={styles.sectionCount}>{entryPressureChanges.length} effect{entryPressureChanges.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
             <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
-              Pressure changes applied when this era ends and transitions to the next era.
+              Pressure changes applied when this era STARTS.
             </div>
             <div style={styles.itemsGrid}>
-              {pressureChanges.length === 0 ? (
+              {entryPressureChanges.length === 0 ? (
                 <div style={styles.emptyItems}>
-                  No transition effects defined. Add pressure changes to influence the next era.
+                  No entry effects defined.
                 </div>
               ) : (
-                pressureChanges.map(([pressureId, value]) => (
+                entryPressureChanges.map(([pressureId, value]) => (
                   <TransitionEffectItem
                     key={pressureId}
                     pressureId={pressureId}
                     value={value}
-                    onChange={(newValue) => handleUpdateEffect(pressureId, newValue)}
-                    onRemove={() => handleRemoveEffect(pressureId)}
+                    onChange={(newValue) => handleUpdateEntryEffect(pressureId, newValue)}
+                    onRemove={() => handleRemoveEntryEffect(pressureId)}
                     pressures={pressures || []}
                   />
                 ))
@@ -1319,9 +1403,95 @@ function EraCard({ era, expanded, onToggle, onChange, onDelete, generators, syst
             </div>
             <div style={styles.addItemContainer}>
               <AddItemDropdown
-                availableItems={availablePressuresForEffects}
-                onAdd={handleAddEffect}
-                placeholder="Add pressure effect..."
+                availableItems={availablePressuresForEntryEffects}
+                onAdd={handleAddEntryEffect}
+                placeholder="Add entry effect..."
+                emptyMessage="All pressures added"
+              />
+            </div>
+          </div>
+
+          {/* Exit Conditions - when this era CAN END */}
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.sectionTitle}>
+                <span style={styles.sectionIcon}>🔄</span>
+                Exit Conditions
+                <span style={styles.sectionCount}>{exitConditions.length} condition{exitConditions.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
+              All conditions must be met for this era to END and transition to the next era.
+            </div>
+            <div style={styles.itemsGrid}>
+              {exitConditions.length === 0 ? (
+                <div style={styles.emptyItems}>
+                  No exit conditions. The era will transition immediately when a valid next era is found.
+                </div>
+              ) : (
+                exitConditions.map((condition, index) => (
+                  <TransitionConditionEditor
+                    key={index}
+                    condition={condition}
+                    index={index}
+                    onChange={(updated) => handleUpdateExitCondition(index, updated)}
+                    onRemove={() => handleRemoveExitCondition(index)}
+                    pressures={pressures || []}
+                    schema={schema}
+                  />
+                ))
+              )}
+            </div>
+            <button
+              style={{
+                ...styles.addItemButton,
+                marginTop: '10px',
+                padding: '10px 16px',
+                ...(addCondHover ? styles.addItemButtonHover : {}),
+              }}
+              onClick={handleAddExitCondition}
+              onMouseEnter={() => setAddCondHover(true)}
+              onMouseLeave={() => setAddCondHover(false)}
+            >
+              + Add Exit Condition
+            </button>
+          </div>
+
+          {/* Exit Effects - applied when this era ENDS */}
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <div style={styles.sectionTitle}>
+                <span style={styles.sectionIcon}>💫</span>
+                Exit Effects
+                <span style={styles.sectionCount}>{exitPressureChanges.length} effect{exitPressureChanges.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#93c5fd', marginBottom: '12px' }}>
+              Pressure changes applied when this era ENDS.
+            </div>
+            <div style={styles.itemsGrid}>
+              {exitPressureChanges.length === 0 ? (
+                <div style={styles.emptyItems}>
+                  No exit effects defined.
+                </div>
+              ) : (
+                exitPressureChanges.map(([pressureId, value]) => (
+                  <TransitionEffectItem
+                    key={pressureId}
+                    pressureId={pressureId}
+                    value={value}
+                    onChange={(newValue) => handleUpdateExitEffect(pressureId, newValue)}
+                    onRemove={() => handleRemoveExitEffect(pressureId)}
+                    pressures={pressures || []}
+                  />
+                ))
+              )}
+            </div>
+            <div style={styles.addItemContainer}>
+              <AddItemDropdown
+                availableItems={availablePressuresForExitEffects}
+                onAdd={handleAddExitEffect}
+                placeholder="Add exit effect..."
                 emptyMessage="All pressures added"
               />
             </div>
@@ -1373,8 +1543,11 @@ export default function ErasEditor({ eras = [], onChange, generators = [], syste
       description: 'A new period in world history',
       templateWeights: {},
       systemModifiers: {},
-      transitionConditions: [{ type: 'time', minTicks: 50 }],  // Default: transition after 50 ticks
-      transitionEffects: {},
+      // New era model: use exitConditions/entryConditions
+      entryConditions: [],  // Can start anytime (no requirements)
+      entryEffects: {},
+      exitConditions: [{ type: 'time', minTicks: 50 }],  // Default: can exit after 50 ticks
+      exitEffects: {},
     };
     onChange([...eras, newEra]);
     setExpandedEra(eras.length);
@@ -1440,6 +1613,7 @@ export default function ErasEditor({ eras = [], onChange, generators = [], syste
             pressures={pressures}
             schema={schema}
             usageMap={usageMap}
+            allEras={eras}
           />
         ))}
 

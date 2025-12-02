@@ -334,11 +334,7 @@ export class WorldEngine {
       this.graph._loadEntity(id, loadedEntity);
     });
 
-    // Load relationships from two sources:
-    // 1. config.seedRelationships (canonry format - preferred)
-    // 2. entity.links (legacy format - for backwards compatibility)
-
-    // First, load from seedRelationships array (canonry format)
+    // Load relationships from seedRelationships array
     if (config.seedRelationships) {
       config.seedRelationships.forEach(rel => {
         const srcEntity = this.graph.getEntity(rel.src) || this.findEntityByName(rel.src);
@@ -355,25 +351,6 @@ export class WorldEngine {
         }
       });
     }
-
-    // Also load from entity.links (legacy format)
-    initialState.forEach(entity => {
-      entity.links?.forEach(link => {
-        // Find actual IDs from names
-        const srcEntity = this.findEntityByName(link.src) || entity;
-        const dstEntity = this.findEntityByName(link.dst);
-
-        if (srcEntity && dstEntity) {
-          this.graph.addRelationship(
-            link.kind,
-            srcEntity.id,
-            dstEntity.id,
-            link.strength,
-            link.distance  // Preserve lineage distance from seed data
-          );
-        }
-      });
-    });
 
     // Record initial state as first history event
     const initialEntityIds = this.graph.getEntityIds();
@@ -1336,8 +1313,8 @@ export class WorldEngine {
             : rel.dst;
 
           if (srcId && dstId) {
-            // Pass through strength and distance from template relationships
-            addRelationship(this.graph, rel.kind, srcId, dstId, rel.strength, rel.distance);
+            // Distance is computed from coordinates
+            addRelationship(this.graph, rel.kind, srcId, dstId, rel.strength);
           }
         });
 

@@ -6,6 +6,7 @@
  */
 
 import type { Point } from './types';
+import type { EntityTags } from '../core/worldTypes';
 
 // =============================================================================
 // CULTURE CONFIGURATION TYPES
@@ -60,16 +61,8 @@ export interface PlacementResult {
   /** All region IDs containing the point */
   allRegionIds?: string[];
 
-  /** Tags derived from region + axis position (as Record for backward compatibility) */
-  derivedTags?: Record<string, string | boolean>;
-
-  /**
-   * Tags derived from placement as an array (easier to merge into entity.tags).
-   * Includes tags from:
-   * - Region tags (from regions containing the placed point)
-   * - Axis tags (based on coordinate position relative to axis thresholds)
-   */
-  placementTags?: string[];
+  /** Tags derived from region + axis position */
+  derivedTags?: EntityTags;
 
   /** Culture ID used for placement */
   cultureId?: string;
@@ -175,6 +168,9 @@ export class CoordinateContext {
   /** Counter for generating unique emergent region IDs */
   private emergentRegionCounter = 0;
 
+  /** Optional debug logger */
+  debugLog?: (level: string, message: string) => void;
+
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];
     this.cultures = config.cultures || [];
@@ -264,9 +260,15 @@ export class CoordinateContext {
    */
   getSeedRegionIds(cultureId: string, entityKind: string): string[] {
     const regions = this.getRegions(entityKind);
-    return regions
-      .filter(r => r.culture === cultureId)
-      .map(r => r.id);
+    const matching = regions.filter(r => r.culture === cultureId);
+
+    // Debug: log what we're finding
+    if (this.debugLog && matching.length === 0 && regions.length > 0) {
+      const cultures = [...new Set(regions.map(r => r.culture).filter(Boolean))];
+      this.debugLog('debug', `[CoordContext] getSeedRegionIds(${cultureId}, ${entityKind}): no match. Available cultures: [${cultures.join(', ')}]`);
+    }
+
+    return matching.map(r => r.id);
   }
 
   /**
@@ -585,6 +587,12 @@ export class CoordinateContext {
     existingPoints: Point[] = [],
     minDistance: number = 5
   ): Point | null {
+    const debug = (msg: string) => {
+      if (this.debugLog) {
+        this.debugLog('debug', `[CoordContext] ${msg}`);
+      }
+    };
+
     // If reference entity provided, sample near it
     if (context.referenceEntity?.coordinates) {
       const point = this.sampleNearPoint(
@@ -593,10 +601,14 @@ export class CoordinateContext {
         minDistance,
         minDistance * 4  // maxSearchRadius
       );
-      if (point) return point;
+      if (point) {
+        debug(`${entityKind} placed near ref @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+        return point;
+      }
     }
 
     const regions = this.getRegions(entityKind);
+    debug(`${entityKind} culture=${context.cultureId}: ${regions.length} total regions, seedRegionIds=[${context.seedRegionIds?.join(', ') || 'none'}]`);
 
     // Try seed regions first (regions belonging to this culture)
     if (context.seedRegionIds && context.seedRegionIds.length > 0) {
@@ -604,26 +616,43 @@ export class CoordinateContext {
 
       for (const regionId of shuffledSeeds) {
         const region = regions.find(r => r.id === regionId);
-        if (!region) continue;
+        if (!region) {
+          debug(`  seed region ${regionId} not found in regions list`);
+          continue;
+        }
 
         const point = this.sampleCircleRegion(region, existingPoints, minDistance);
-        if (point) return point;
+        if (point) {
+          debug(`  -> sampled in seed region "${region.label}" @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+          return point;
+        }
+        debug(`  seed region "${region.label}" failed (crowded?)`);
       }
+      debug(`  all seed regions exhausted`);
+    } else {
+      debug(`  NO seed regions for culture=${context.cultureId}`);
     }
 
-    // Try any region
+    // BUG WARNING: This falls through to ANY region, ignoring culture!
+    // TODO: Should this only try regions matching culture, or is this intentional?
+    debug(`  falling through to any-region (ignoring culture!)`);
     for (const region of regions.sort(() => Math.random() - 0.5)) {
       const point = this.sampleCircleRegion(region, existingPoints, minDistance);
-      if (point) return point;
+      if (point) {
+        debug(`  -> sampled in non-culture region "${region.label}" (culture=${region.culture}) @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+        return point;
+      }
     }
 
     // Fallback: random point with culture bias applied
     const biases = context.axisBiases || { x: 50, y: 50, z: 50 };
-    return {
+    const fallbackPoint = {
       x: biases.x + (Math.random() - 0.5) * 30,
       y: biases.y + (Math.random() - 0.5) * 30,
       z: biases.z
     };
+    debug(`  -> FALLBACK random with biases @ (${fallbackPoint.x.toFixed(1)}, ${fallbackPoint.y.toFixed(1)})`);
+    return fallbackPoint;
   }
 
   /**
@@ -714,8 +743,8 @@ export class CoordinateContext {
     // Derive tags from placement (region tags + axis-based tags)
     const derivedTagList = this.deriveTagsFromPlacement(entityKind, point, containingRegions);
 
-    // Build derivedTags object (for backward compatibility, includes culture as a special key)
-    const derivedTags: Record<string, string | boolean> = {};
+    // Build derivedTags object
+    const derivedTags: EntityTags = {};
     if (context.cultureId) {
       derivedTags.culture = context.cultureId;
     }
@@ -730,7 +759,6 @@ export class CoordinateContext {
       regionId: containingRegion?.id ?? null,
       allRegionIds: containingRegions.map(r => r.id),
       derivedTags,
-      placementTags: derivedTagList,
       cultureId: context.cultureId
     };
   }

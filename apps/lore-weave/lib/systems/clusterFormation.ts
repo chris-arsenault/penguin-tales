@@ -318,7 +318,8 @@ async function createGovernanceFaction(
     relationships.push({
       kind: relKind,
       src: existingGoverningFaction.id,
-      dst: metaEntityId
+      dst: metaEntityId,
+      strength: 0.8
     });
     return { factionId: null, relationships };
   }
@@ -353,7 +354,8 @@ async function createGovernanceFaction(
   relationships.push({
     kind: relKind,
     src: factionId,
-    dst: metaEntityId
+    dst: metaEntityId,
+    strength: 0.8
   });
 
   // Link faction to location
@@ -361,7 +363,8 @@ async function createGovernanceFaction(
   relationships.push({
     kind: 'controls',
     src: factionId,
-    dst: primaryLocation.id
+    dst: primaryLocation.id,
+    strength: 0.8
   });
 
   return { factionId, relationships };
@@ -505,7 +508,8 @@ export function createClusterFormationSystem(
           relationshipsAdded.push({
             kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
             src: id,
-            dst: metaEntityId
+            dst: metaEntityId,
+            strength: 1.0  // Part-of relationships are strong
           });
         });
 

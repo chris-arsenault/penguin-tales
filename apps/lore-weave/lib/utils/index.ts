@@ -1,8 +1,7 @@
 /**
  * Utils Index
  *
- * Re-exports all utility functions for backward compatibility.
- * Individual utilities have been split into concern-specific files.
+ * Re-exports utility functions.
  */
 
 // Tag utilities
@@ -12,7 +11,6 @@ export {
   getTagValue,
   getTrueTagKeys,
   getStringTags,
-  tagsToArray,
   arrayToTags
 } from './tagUtils';
 

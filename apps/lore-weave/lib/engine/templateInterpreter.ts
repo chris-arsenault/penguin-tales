@@ -24,7 +24,6 @@ import type {
   CultureSpec,
   DescriptionSpec,
   PlacementSpec,
-  LineageSpec,
   CountRange,
   RelationshipCondition,
   GraphPathAssertion,
@@ -184,19 +183,17 @@ export class TemplateInterpreter {
     // Execute creation rules
     const entities: Partial<HardState>[] = [];
     const entityRefs: Map<string, string[]> = new Map();  // Track created entity placeholders
-    const lineageRelationships: Relationship[] = [];  // Relationships from near_ancestor placement
     const placementStrategies: string[] = [];  // For debugging
 
     for (const rule of template.creation) {
       const created = await this.executeCreation(rule, context, entities.length);
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
-      lineageRelationships.push(...created.lineageRelationships);
       placementStrategies.push(...created.placementStrategies);
     }
 
     // Execute relationship rules
-    const relationships: Relationship[] = [...lineageRelationships];
+    const relationships: Relationship[] = [];
     for (const rule of template.relationships) {
       const rels = this.executeRelationship(rule, context, entityRefs);
       relationships.push(...rels);
@@ -746,10 +743,9 @@ export class TemplateInterpreter {
     rule: CreationRule,
     context: ExecutionContext,
     startIndex: number
-  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; lineageRelationships: Relationship[]; placementStrategies: string[] }> {
+  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; placementStrategies: string[] }> {
     const entities: Partial<HardState>[] = [];
     const placeholders: string[] = [];
-    const lineageRelationships: Relationship[] = [];
     const placementStrategies: string[] = [];
 
     // Determine count
@@ -768,7 +764,7 @@ export class TemplateInterpreter {
       // Resolve description
       const description = this.resolveDescription(rule.description, context);
 
-      // Resolve placement (may also create lineage relationship for near_ancestor)
+      // Resolve placement
       const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
 
       const entity: Partial<HardState> = {
@@ -785,52 +781,9 @@ export class TemplateInterpreter {
 
       entities.push(entity);
       placementStrategies.push(placementResult.strategy);
-
-      // Collect lineage relationship from near_ancestor placement
-      if (placementResult.lineageRelationship) {
-        lineageRelationships.push(placementResult.lineageRelationship);
-      }
-
-      // Process inline lineage spec (separate from placement)
-      if (rule.lineage) {
-        const lineageRel = this.resolveLineage(rule.lineage, context, entity, placeholder);
-        if (lineageRel) {
-          lineageRelationships.push(lineageRel);
-        }
-      }
     }
 
-    return { entities, placeholders, lineageRelationships, placementStrategies };
-  }
-
-  /**
-   * Resolve lineage spec: find ancestor and create lineage relationship.
-   */
-  private resolveLineage(
-    spec: LineageSpec,
-    context: ExecutionContext,
-    _newEntity: Partial<HardState>,
-    placeholder: string
-  ): Relationship | undefined {
-    // Resolve ancestor from entity reference
-    const ancestor = context.resolveEntity(spec.ancestorRef);
-
-    // No ancestor found - skip lineage
-    if (!ancestor) {
-      return undefined;
-    }
-
-    // Calculate distance within specified range (0-100 scale)
-    const { min, max } = spec.distanceRange;
-    const distance = min + Math.random() * (max - min);
-
-    // Create lineage relationship
-    return {
-      kind: spec.relationshipKind,
-      src: placeholder,  // Will be resolved to real ID by worldEngine
-      dst: ancestor.id,
-      distance
-    };
+    return { entities, placeholders, placementStrategies };
   }
 
   private resolveCount(count: number | CountRange | undefined): number {
@@ -908,8 +861,7 @@ export class TemplateInterpreter {
   }
 
   /**
-   * Result of placement resolution.
-   * Includes coordinates and optionally a lineage relationship (for near_ancestor).
+   * Resolve placement to coordinates.
    *
    * CRITICAL: Semantic planes are PER-ENTITY-KIND.
    * The 'near_entity' placement type REQUIRES the reference entity to be the SAME KIND
@@ -920,10 +872,14 @@ export class TemplateInterpreter {
     spec: PlacementSpec,
     context: ExecutionContext,
     culture: string,
-    placeholder: string,
+    _placeholder: string,
     entityKind: string
-  ): { coordinates: Point; lineageRelationship?: Relationship; strategy: string } {
+  ): { coordinates: Point; strategy: string } {
     const { graphView } = context;
+
+    const debug = (strategy: string, coords: Point, details?: string) => {
+      graphView.log('debug', `[Placement] ${entityKind} -> ${strategy} @ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})${details ? ` | ${details}` : ''}`);
+    };
 
     switch (spec.type) {
       case 'near_entity': {
@@ -944,37 +900,36 @@ export class TemplateInterpreter {
 
         if (refEntity?.coordinates) {
           const offset = spec.maxDistance || 10;
-          return {
-            coordinates: {
-              x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
-              y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
-              z: refEntity.coordinates.z
-            },
-            strategy: `near_entity:${spec.entity}`
+          const coordinates = {
+            x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
+            y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
+            z: refEntity.coordinates.z
           };
+          const strategy = `near_entity:${spec.entity}`;
+          debug(strategy, coordinates, `ref=${refEntity.name} @ (${refEntity.coordinates.x.toFixed(1)}, ${refEntity.coordinates.y.toFixed(1)}), offset=${offset}`);
+          return { coordinates, strategy };
         }
+        graphView.log('debug', `[Placement] ${entityKind} -> near_entity:${spec.entity} FAILED (no ref coords), falling back`);
         break;
       }
 
       case 'in_culture_region': {
-        const cultureId = context.resolveString(spec.culture);
-        const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', []);
-        if (result) {
-          return { coordinates: result.coordinates, strategy: `in_culture_region:${cultureId}` };
+        // Resolve culture - if it's an entity reference like "$target", get its culture property
+        let cultureId = spec.culture;
+        if (spec.culture.startsWith('$') && !spec.culture.includes('.')) {
+          const refEntity = context.resolveEntity(spec.culture);
+          cultureId = refEntity?.culture || context.resolveString(spec.culture);
+        } else {
+          cultureId = context.resolveString(spec.culture);
         }
+        const result = graphView.deriveCoordinatesWithCulture(cultureId, entityKind, []);
+        if (result) {
+          const strategy = `in_culture_region:${cultureId}`;
+          debug(strategy, result.coordinates, `culture=${cultureId} (from ${spec.culture})`);
+          return { coordinates: result.coordinates, strategy };
+        }
+        graphView.log('debug', `[Placement] ${entityKind} -> in_culture_region:${cultureId} FAILED, falling back`);
         break;
-      }
-
-      case 'at_location': {
-        // DEPRECATED: at_location is a cross-kind reference pattern.
-        // Placing a non-location entity "at" a location is semantically incorrect.
-        // Use 'in_culture_region' instead to place within a culture's semantic region.
-        console.warn(
-          `[WARN] Deprecated 'at_location' placement used for ${entityKind}. ` +
-          `This is a cross-kind placement pattern. Use 'in_culture_region' instead. ` +
-          `Falling back to random placement.`
-        );
-        break; // Fall through to default random placement
       }
 
       case 'derived_from_references': {
@@ -994,24 +949,35 @@ export class TemplateInterpreter {
         }
         const sameKindRefs = refs.filter(e => e.kind === entityKind);
 
-        const cultureId = spec.culture ? context.resolveString(spec.culture) : culture;
-        const result = graphView.deriveCoordinatesWithCulture(cultureId, 'entity', sameKindRefs);
-        if (result) {
-          return { coordinates: result.coordinates, strategy: `derived_from_refs:${sameKindRefs.length}` };
+        // Resolve culture - if it's an entity reference like "$target", get its culture property
+        let cultureId = culture;
+        if (spec.culture) {
+          if (spec.culture.startsWith('$') && !spec.culture.includes('.')) {
+            const refEntity = context.resolveEntity(spec.culture);
+            cultureId = refEntity?.culture || context.resolveString(spec.culture);
+          } else {
+            cultureId = context.resolveString(spec.culture);
+          }
         }
+        const result = graphView.deriveCoordinatesWithCulture(cultureId, entityKind, sameKindRefs);
+        if (result) {
+          const strategy = `derived_from_refs:${sameKindRefs.length}`;
+          debug(strategy, result.coordinates, `refs=[${sameKindRefs.map(r => r.name).join(', ')}], culture=${cultureId}`);
+          return { coordinates: result.coordinates, strategy };
+        }
+        graphView.log('debug', `[Placement] ${entityKind} -> derived_from_refs FAILED, falling back`);
         break;
       }
 
       case 'random_in_bounds': {
         const bounds = spec.bounds || { x: [0, 100], y: [0, 100] };
-        return {
-          coordinates: {
-            x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
-            y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
-            z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
-          },
-          strategy: 'random_in_bounds'
+        const coordinates = {
+          x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
+          y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
+          z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
         };
+        debug('random_in_bounds', coordinates, `bounds=x[${bounds.x[0]},${bounds.x[1]}] y[${bounds.y[0]},${bounds.y[1]}]`);
+        return { coordinates, strategy: 'random_in_bounds' };
       }
 
       case 'in_sparse_area': {
@@ -1023,10 +989,7 @@ export class TemplateInterpreter {
 
         if (!sparseResult.success || !sparseResult.coordinates) {
           // Fall back to random placement if no sparse area found
-          console.warn(
-            `[WARN] in_sparse_area placement failed for ${entityKind}: ${sparseResult.failureReason}. ` +
-            `Falling back to random placement.`
-          );
+          graphView.log('debug', `[Placement] ${entityKind} -> in_sparse_area FAILED: ${sparseResult.failureReason}, falling back`);
           break; // Fall through to default random placement
         }
 
@@ -1049,23 +1012,21 @@ export class TemplateInterpreter {
           }
         }
 
-        return {
-          coordinates: sparseResult.coordinates,
-          strategy: `in_sparse_area:dist=${sparseResult.minDistanceToEntity?.toFixed(1)}`
-        };
+        const strategy = `in_sparse_area:dist=${sparseResult.minDistanceToEntity?.toFixed(1)}`;
+        debug(strategy, sparseResult.coordinates, `minDist=${spec.minDistanceFromEntities ?? 15}, periphery=${spec.preferPeriphery ?? false}`);
+        return { coordinates: sparseResult.coordinates, strategy };
       }
 
     }
 
     // Fallback
-    return {
-      coordinates: {
-        x: 50 + (Math.random() - 0.5) * 20,
-        y: 50 + (Math.random() - 0.5) * 20,
-        z: 50
-      },
-      strategy: 'fallback_random'
+    const fallbackCoords = {
+      x: 50 + (Math.random() - 0.5) * 20,
+      y: 50 + (Math.random() - 0.5) * 20,
+      z: 50
     };
+    debug('fallback_random', fallbackCoords, `spec.type=${spec.type} did not resolve`);
+    return { coordinates: fallbackCoords, strategy: 'fallback_random' };
   }
 
   // ===========================================================================
@@ -1092,18 +1053,13 @@ export class TemplateInterpreter {
       for (const dstId of dstIds) {
         if (srcId === dstId) continue;
 
-        const distance = typeof rule.distance === 'number'
-          ? rule.distance
-          : rule.distance
-            ? rule.distance.min + Math.random() * (rule.distance.max - rule.distance.min)
-            : undefined;
-
+        // Note: distance is computed from coordinates when relationship is added to graph
         const rel: Relationship = {
           kind: rule.kind,
           src: srcId,
           dst: dstId,
-          strength: rule.strength,
-          distance
+          strength: rule.strength
+          // distance computed from coordinates, not set here
         };
 
         if (rule.catalyzedBy) {
@@ -1121,7 +1077,6 @@ export class TemplateInterpreter {
             src: dstId,
             dst: srcId,
             strength: rule.strength,
-            distance,
             catalyzedBy: rel.catalyzedBy
           });
         }
@@ -1322,7 +1277,6 @@ export function createTemplateFromDeclarative(
     id: template.id,
     name: template.name,
     metadata: template.metadata,
-    contract: template.contract,
 
     canApply: (graphView: TemplateGraphView) => {
       return interpreter.canApply(template, graphView);

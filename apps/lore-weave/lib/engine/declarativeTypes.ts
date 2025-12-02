@@ -8,7 +8,6 @@
 
 import type { Prominence } from '../core/worldTypes';
 import type { TemplateMetadata } from '../statistics/types';
-import type { ComponentContract } from './types';
 
 // =============================================================================
 // MAIN TEMPLATE STRUCTURE
@@ -50,7 +49,6 @@ export interface DeclarativeTemplate {
   variables?: Record<string, VariableDefinition>;
 
   // Metadata for UI/introspection
-  contract?: ComponentContract;
   metadata?: TemplateMetadata;
 }
 
@@ -352,9 +350,6 @@ export interface CreationRule {
 
   // Count (for batch creation)
   count?: number | CountRange;
-
-  // Lineage (optional connection to existing similar entity)
-  lineage?: LineageSpec;
 }
 
 /**
@@ -397,7 +392,6 @@ export type DescriptionSpec =
  *
  * If you need to associate entities across kinds, use:
  * - Relationships (e.g., npc "resident_of" location)
- * - Lineage (which only affects relationship distance, not coordinates)
  * - in_culture_region placement (places within culture's semantic region)
  *
  * Distance values are on 0-100 scale (Euclidean distance on semantic plane).
@@ -405,7 +399,6 @@ export type DescriptionSpec =
 export type PlacementSpec =
   | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }  // entity MUST be same kind!
   | { type: 'in_culture_region'; culture: string }
-  | { type: 'at_location'; location: string }  // DEPRECATED: cross-kind reference
   | { type: 'derived_from_references'; references: string[]; culture?: string }  // references MUST be same kind!
   | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } }
   | {
@@ -423,37 +416,15 @@ export interface CountRange {
   max: number;
 }
 
-/**
- * Lineage specification for automatic ancestor linking.
- *
- * When specified on a CreationRule, the framework will:
- * 1. Resolve ancestorRef to find the ancestor entity
- * 2. Create a relationship of relationshipKind from new entity to ancestor
- * 3. Set relationship.distance randomly within distanceRange (0-100 scale)
- *
- * To search for an ancestor by kind/subtype, define a variable in the template's
- * variables section and reference it here.
- */
-export interface LineageSpec {
-  /** Relationship kind for the lineage link (e.g., 'inspired_by', 'derived_from') */
-  relationshipKind: string;
-
-  /**
-   * Reference to the ancestor entity (e.g., "$target", "$mentor", "$faction").
-   * Use template variables to search for ancestors by kind/subtype.
-   */
-  ancestorRef: string;
-
-  /** Distance range for the lineage relationship (0-100 scale, Euclidean distance) */
-  distanceRange: { min: number; max: number };
-}
-
 // =============================================================================
 // STEP 4: RELATIONSHIP RULES
 // =============================================================================
 
 /**
  * Rules that define relationships to create.
+ *
+ * IMPORTANT: relationship.distance is ALWAYS computed from Euclidean distance
+ * between src and dst coordinates. It cannot be set directly.
  */
 export interface RelationshipRule {
   kind: string;
@@ -461,8 +432,8 @@ export interface RelationshipRule {
   dst: string;  // Entity reference
 
   // Relationship attributes
-  strength?: number;
-  distance?: number | { min: number; max: number };
+  strength: number;  // 0.0 (weak/spatial) to 1.0 (strong/narrative)
+  // Note: distance is computed from coordinates, not specified here
 
   // Special behaviors
   bidirectional?: boolean;

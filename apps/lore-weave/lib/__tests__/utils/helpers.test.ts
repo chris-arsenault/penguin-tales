@@ -232,12 +232,23 @@ function createMockGraph(): Graph {
     },
 
     // Relationship mutation methods
-    addRelationship(kind: string, srcId: string, dstId: string, strength?: number, distance?: number, category?: string): boolean {
+    addRelationship(kind: string, srcId: string, dstId: string, strength?: number, _distanceIgnored?: number, category?: string): boolean {
       const exists = _relationships.some(r => r.src === srcId && r.dst === dstId && r.kind === kind);
       if (exists) return false;
+
+      // Compute distance from coordinates (relationship.distance === Euclidean distance)
+      const srcEntity = _entities.get(srcId);
+      const dstEntity = _entities.get(dstId);
+      let distance: number | undefined;
+      if (srcEntity?.coordinates && dstEntity?.coordinates) {
+        const dx = srcEntity.coordinates.x - dstEntity.coordinates.x;
+        const dy = srcEntity.coordinates.y - dstEntity.coordinates.y;
+        const dz = (srcEntity.coordinates.z ?? 0) - (dstEntity.coordinates.z ?? 0);
+        distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      }
+
       const relationship: Relationship = { kind, src: srcId, dst: dstId, strength: strength ?? 0.5, distance, category, status: 'active' };
       _relationships.push(relationship);
-      const srcEntity = _entities.get(srcId);
       if (srcEntity) {
         srcEntity.links.push({ ...relationship });
         srcEntity.updatedAt = 10;
@@ -989,35 +1000,37 @@ describe('Graph Modification', () => {
   });
 
   describe('addRelationshipWithDistance', () => {
-    it('should add relationship with random distance in range', () => {
+    it('should add relationship - distance is computed from coordinates', () => {
       const graph = createMockGraph();
-      const e1 = createMockEntity({ id: 'e1', links: [] });
-      const e2 = createMockEntity({ id: 'e2', links: [] });
+      // Create entities with coordinates so distance can be computed
+      const e1 = createMockEntity({ id: 'e1', links: [], coordinates: { x: 0, y: 0, z: 0 } });
+      const e2 = createMockEntity({ id: 'e2', links: [], coordinates: { x: 30, y: 40, z: 0 } });
 
       graph._loadEntity(e1.id, e1);
       graph._loadEntity(e2.id, e2);
 
-      // Distance is now on 0-100 scale (Euclidean distance on semantic plane)
+      // distanceRange is now ignored - distance computed from coordinates
       addRelationshipWithDistance(graph, 'derived_from', 'e1', 'e2', { min: 30, max: 50 });
 
       const rel = graph.getRelationships()[0];
-      expect(rel.distance).toBeGreaterThanOrEqual(30);
-      expect(rel.distance).toBeLessThanOrEqual(50);
+      // Distance should be Euclidean: sqrt(30^2 + 40^2) = 50
+      expect(rel.distance).toBeCloseTo(50, 1);
     });
 
-    it('should handle invalid range', () => {
+    it('should compute distance from coordinates ignoring invalid range', () => {
       const graph = createMockGraph();
-      const e1 = createMockEntity({ id: 'e1', links: [] });
-      const e2 = createMockEntity({ id: 'e2', links: [] });
+      // Create entities with coordinates
+      const e1 = createMockEntity({ id: 'e1', links: [], coordinates: { x: 10, y: 10, z: 0 } });
+      const e2 = createMockEntity({ id: 'e2', links: [], coordinates: { x: 20, y: 20, z: 0 } });
 
       graph._loadEntity(e1.id, e1);
       graph._loadEntity(e2.id, e2);
 
-      // Should clamp to [0, 100] (now uses 0-100 scale)
+      // distanceRange is ignored - distance computed from coordinates
       addRelationshipWithDistance(graph, 'test', 'e1', 'e2', { min: -1, max: 200 });
 
-      expect(graph.getRelationships()[0].distance).toBeGreaterThanOrEqual(0);
-      expect(graph.getRelationships()[0].distance).toBeLessThanOrEqual(100);
+      // Distance should be Euclidean: sqrt(10^2 + 10^2) ≈ 14.14
+      expect(graph.getRelationships()[0].distance).toBeCloseTo(14.14, 1);
     });
   });
 

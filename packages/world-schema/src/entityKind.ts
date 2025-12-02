@@ -108,12 +108,8 @@ export interface EntityKindStyle {
  */
 export interface EntityKindDefinition {
   /** Unique identifier (e.g., "npc", "location", "faction") */
-  id: string;
-  /** Display name (e.g., "NPCs", "Locations") */
-  name: string;
-  /** Alternative display name (optional alias for UI) */
-  displayName?: string;
-  /** Human-readable description */
+  kind: string;
+  /** Human-readable description (used as display name) */
   description?: string;
   /** Valid subtypes for this entity kind */
   subtypes: Subtype[];

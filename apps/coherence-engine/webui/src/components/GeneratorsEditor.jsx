@@ -1605,13 +1605,16 @@ function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, 
   }, [generator]);
 
   // Get refs that are the SAME KIND as this entity (for near_entity placement)
+  // Excludes self-reference since an entity can't be placed near itself
   const sameKindRefs = useMemo(() => {
     if (!item.kind) return [];
     return availableRefs.filter(ref => {
+      // Exclude self-reference
+      if (ref === item.entityRef) return false;
       const refKind = getRefKind(ref);
       return refKind === item.kind;
     });
-  }, [availableRefs, item.kind, getRefKind]);
+  }, [availableRefs, item.kind, item.entityRef, getRefKind]);
 
   // Determine which culture this creation would use
   const getCultureId = () => {
@@ -1883,88 +1886,6 @@ function CreationCard({ item, index, onChange, onRemove, schema, availableRefs, 
               }}>
                 ⚠️ No same-kind ({item.kind}) variables or targets available. Define a variable that selects {item.kind} entities,
                 or use "In culture region" placement instead.
-              </div>
-            )}
-          </div>
-
-          {/* LINEAGE EDITOR */}
-          <div style={{ marginTop: '16px' }}>
-            <label style={styles.label}>Lineage</label>
-            <div style={{
-              fontSize: '11px',
-              color: COLORS.textMuted,
-              marginBottom: '8px',
-            }}>
-              Optional: Create a lineage relationship to an ancestor entity (e.g., derived_from, inspired_by).
-            </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: COLORS.text }}>
-                <input
-                  type="checkbox"
-                  checked={!!item.lineage}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      updateField('lineage', {
-                        relationshipKind: 'derived_from',
-                        ancestorRef: '$target',
-                        distanceRange: { min: 20, max: 50 },
-                      });
-                    } else {
-                      updateField('lineage', undefined);
-                    }
-                  }}
-                />
-                Enable lineage
-              </label>
-            </div>
-            {item.lineage && (
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
-                <div style={styles.formGroup}>
-                  <label style={{ ...styles.label, fontSize: '10px' }}>Relationship Kind</label>
-                  <input
-                    type="text"
-                    value={item.lineage.relationshipKind || ''}
-                    onChange={(e) => updateField('lineage', { ...item.lineage, relationshipKind: e.target.value })}
-                    style={{ ...styles.input, width: '120px' }}
-                    placeholder="derived_from"
-                  />
-                </div>
-                <ReferenceDropdown
-                  label="Ancestor"
-                  value={item.lineage.ancestorRef}
-                  onChange={(v) => updateField('lineage', { ...item.lineage, ancestorRef: v })}
-                  options={availableRefs.map((r) => ({ value: r, label: r }))}
-                  placeholder="Select ancestor..."
-                  style={{ minWidth: '120px' }}
-                />
-                <div style={styles.formGroup}>
-                  <label style={{ ...styles.label, fontSize: '10px' }}>Distance Range</label>
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      value={item.lineage.distanceRange?.min ?? 20}
-                      onChange={(e) => updateField('lineage', {
-                        ...item.lineage,
-                        distanceRange: { ...item.lineage.distanceRange, min: parseInt(e.target.value) || 0 },
-                      })}
-                      style={{ ...styles.input, width: '50px' }}
-                      min={0}
-                      max={100}
-                    />
-                    <span style={{ color: COLORS.textMuted }}>-</span>
-                    <input
-                      type="number"
-                      value={item.lineage.distanceRange?.max ?? 50}
-                      onChange={(e) => updateField('lineage', {
-                        ...item.lineage,
-                        distanceRange: { ...item.lineage.distanceRange, max: parseInt(e.target.value) || 100 },
-                      })}
-                      style={{ ...styles.input, width: '50px' }}
-                      min={0}
-                      max={100}
-                    />
-                  </div>
-                </div>
               </div>
             )}
           </div>

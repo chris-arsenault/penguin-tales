@@ -109,6 +109,9 @@ describe('eraSpawner', () => {
       },
       addHistoryEvent(event: any): void {
         graph.history.push(event);
+      },
+      log(_level: string, _message: string, _context?: any): void {
+        // no-op for tests
       }
     };
   });
@@ -122,14 +125,18 @@ describe('eraSpawner', () => {
     // Note: metadata removed - parameters are now passed via config
   });
 
-  describe('spawning behavior', () => {
-    it('should create era entities from config', () => {
+  describe('spawning behavior (lazy model)', () => {
+    // NEW MODEL: eraSpawner only spawns the FIRST era.
+    // Subsequent eras are spawned lazily by eraTransition when conditions are met.
+
+    it('should create only the first era entity (lazy spawning)', () => {
       const result = eraSpawner.apply(graph);
 
-      // Should create 3 eras from config
+      // Should create only the FIRST era (lazy spawning model)
       const eraEntities = Array.from(graph.entities.values()).filter(e => e.kind === 'era');
-      expect(eraEntities.length).toBe(3);
-      expect(result.description.toLowerCase()).toContain('spawned');
+      expect(eraEntities.length).toBe(1);
+      expect(eraEntities[0].name).toBe('Era One');
+      expect(result.description).toContain('Started first era');
     });
 
     it('should set first era to current status', () => {
@@ -140,20 +147,19 @@ describe('eraSpawner', () => {
       expect(currentEras[0].name).toBe('Era One');
     });
 
-    it('should set remaining eras to future status', () => {
+    it('should not spawn future eras (lazy spawning model)', () => {
       eraSpawner.apply(graph);
 
+      // No future eras should be created - they are spawned lazily by eraTransition
       const futureEras = Array.from(graph.entities.values()).filter(e => e.kind === 'era' && e.status === 'future');
-      expect(futureEras.length).toBe(2);
+      expect(futureEras.length).toBe(0);
     });
 
-    it('should create supersedes relationships', () => {
+    it('should not create supersedes relationships (lazy spawning model)', () => {
       const result = eraSpawner.apply(graph);
 
-      const supersedesRels = graph.relationships.filter(r => r.kind === 'supersedes');
-      // Should have N-1 supersedes relationships for N eras
-      // Check result or graph relationships
-      expect(supersedesRels.length + result.relationshipsAdded.filter((r: any) => r.kind === 'supersedes').length).toBeGreaterThanOrEqual(2);
+      // No supersedes relationships at init - they are created by eraTransition
+      expect(result.relationshipsAdded.length).toBe(0);
     });
 
     it('should only run once', () => {
@@ -185,6 +191,23 @@ describe('eraSpawner', () => {
       const eraEntities = Array.from(graph.entities.values()).filter(e => e.kind === 'era');
       expect(eraEntities.length).toBe(1);
       expect(eraEntities[0].status).toBe('current');
+    });
+
+    it('should set currentEra reference', () => {
+      eraSpawner.apply(graph);
+
+      expect(graph.currentEra.id).toBe('era1');
+      expect(graph.currentEra.name).toBe('Era One');
+    });
+
+    it('should apply entry effects for first era', () => {
+      graph.config.eras[0].entryEffects = {
+        pressureChanges: { exploration: 10, stability: 5 }
+      };
+
+      const result = eraSpawner.apply(graph);
+
+      expect(result.pressureChanges).toEqual({ exploration: 10, stability: 5 });
     });
   });
 

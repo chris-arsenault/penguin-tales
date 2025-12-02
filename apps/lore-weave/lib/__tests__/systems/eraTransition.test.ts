@@ -17,13 +17,14 @@ describe('eraTransition', () => {
     });
   };
 
-  // Helper to set conditions on the current era in the config
-  // (conditions are now per-era, not per-system)
-  const setEraConditions = (eraId: string, conditions?: any[], effects?: any) => {
+  // Helper to set exit/entry conditions on an era config using the NEW model
+  const setEraConditions = (eraId: string, exitConditions?: any[], exitEffects?: any, entryConditions?: any[], entryEffects?: any) => {
     const eraConfig = graph.config.eras.find(e => e.id === eraId);
     if (eraConfig) {
-      eraConfig.transitionConditions = conditions;
-      eraConfig.transitionEffects = effects;
+      eraConfig.exitConditions = exitConditions;
+      eraConfig.exitEffects = exitEffects;
+      eraConfig.entryConditions = entryConditions;
+      eraConfig.entryEffects = entryEffects;
     }
   };
 
@@ -46,14 +47,13 @@ describe('eraTransition', () => {
     eraTransition = createSystem();
 
     const _entities = new Map<string, HardState>();
+    // NEW MODEL: Only the first (current) era has an entity.
+    // Future eras are spawned lazily when transitioned into.
     _entities.set('era1', createEraEntity('era1', 'Early Age', 'current', 0));
-    _entities.set('era2', createEraEntity('era2', 'Middle Age', 'future', 0));
-    _entities.set('era3', createEraEntity('era3', 'Late Age', 'future', 0));
 
     let _relationships: Relationship[] = [];
 
     graph = {
-      // Keep entities/relationships getters for test code compatibility
       get entities() { return _entities; },
       get relationships() { return _relationships; },
       tick: 100,
@@ -62,9 +62,10 @@ describe('eraTransition', () => {
       relationshipCooldowns: new Map(),
       config: {
         eras: [
-          { id: 'era1', name: 'Early Age', description: 'First', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
-          { id: 'era2', name: 'Middle Age', description: 'Second', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
-          { id: 'era3', name: 'Late Age', description: 'Third', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, transitionConditions: [] },
+          // NEW MODEL: Use exitConditions/entryConditions instead of transitionConditions
+          { id: 'era1', name: 'Early Age', description: 'First', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, exitConditions: [], entryConditions: [] },
+          { id: 'era2', name: 'Middle Age', description: 'Second', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, exitConditions: [], entryConditions: [] },
+          { id: 'era3', name: 'Late Age', description: 'Third', templateWeights: {}, systemModifiers: {}, pressureModifiers: {}, exitConditions: [], entryConditions: [] },
         ],
         maxTicks: 500,
         domain: {
@@ -117,6 +118,7 @@ describe('eraTransition', () => {
         return true;
       },
       deleteEntity(id: string) { return _entities.delete(id); },
+      loadEntity(entity: HardState) { _entities.set(entity.id, entity); },
       _loadEntity(id: string, entity: HardState) { _entities.set(id, entity); },
       // Relationship read methods
       getRelationships() { return [..._relationships]; },
@@ -187,27 +189,33 @@ describe('eraTransition', () => {
       expect(currentEras.length).toBeGreaterThanOrEqual(0); // May be 0 or 1 depending on logic
     });
 
-    it('should handle no future eras', () => {
-      // Set all eras to past except current
-      graph.entities.get('era2')!.status = FRAMEWORK_STATUS.HISTORICAL;
-      graph.entities.get('era3')!.status = FRAMEWORK_STATUS.HISTORICAL;
+    it('should handle no future eras (final era)', () => {
+      // NEW MODEL: With only era1 in config, there are no future eras
+      // Remove era2 and era3 from config to test final era behavior
+      graph.config.eras = [graph.config.eras[0]];
 
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 100;
+
+      // Allow exit (empty conditions)
+      setEraConditions('era1', []);
+
       const result = eraTransition.apply(graph);
 
-      // Should indicate end of eras or stay in current
+      // Should indicate final era since no other eras can be transitioned to
       expect(result.description).toBeDefined();
-      expect(typeof result.description).toBe('string');
+      expect(result.description).toContain('final era');
     });
 
-    it('should handle missing current era by activating first future', () => {
-      // Remove current era status
-      graph.entities.get('era1')!.status = 'future';
+    it('should handle missing current era', () => {
+      // Remove current era status - this simulates no current era
+      graph.entities.get('era1')!.status = 'historical';
 
       const result = eraTransition.apply(graph);
 
-      const currentEras = Array.from(graph.entities.values()).filter(e => e.status === 'current');
-      expect(currentEras.length).toBe(1);
+      // Should warn about no current era
+      expect(result.description).toContain('No current era');
     });
   });
 
@@ -218,7 +226,7 @@ describe('eraTransition', () => {
       const result = eraTransition.apply(graph);
 
       expect(result).toBeDefined();
-      expect(result.description).toContain('No era');
+      expect(result.description).toContain('No current era');
     });
 
     it('should work with modifier parameter', () => {
@@ -298,43 +306,38 @@ describe('eraTransition', () => {
     });
   });
 
-  describe('era activation', () => {
-    it('should activate first era when none are current', () => {
-      // Set all eras to future
-      graph.entities.forEach(entity => {
-        if (entity.kind === 'era') {
-          entity.status = 'future';
-        }
-      });
+  describe('era initialization', () => {
+    it('should handle transition with temporal tracking not set', () => {
+      // NEW MODEL: Transition happens by spawning new era, not activating future entities
+      const currentEra = graph.entities.get('era1')!;
+      delete currentEra.temporal;
+      graph.tick = 200;
 
-      const result = eraTransition.apply(graph);
-
-      const currentEras = Array.from(graph.entities.values()).filter(e =>
-        e.kind === 'era' && e.status === 'current'
-      );
-
-      expect(currentEras.length).toBe(1);
-      expect(result.description).toContain('begins');
-    });
-
-    it('should initialize temporal tracking on first activation', () => {
-      graph.entities.forEach(entity => {
-        if (entity.kind === 'era') {
-          entity.status = 'future';
-          delete entity.temporal;
-        }
-      });
+      // Allow exit
+      setEraConditions('era1', []);
 
       eraTransition.apply(graph);
 
-      const currentEra = Array.from(graph.entities.values()).find(e =>
-        e.kind === 'era' && e.status === 'current'
-      );
+      // Should initialize temporal tracking on current era
+      expect(currentEra.temporal).toBeDefined();
+    });
 
-      expect(currentEra).toBeDefined();
-      expect(currentEra!.temporal).toBeDefined();
-      expect(currentEra!.temporal!.startTick).toBe(graph.tick);
-      expect(currentEra!.temporal!.endTick).toBeNull();
+    it('should spawn new era entity on transition', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 120;
+
+      // Allow exit (empty conditions = can exit)
+      setEraConditions('era1', []);
+
+      eraTransition.apply(graph);
+
+      // A new era entity should have been created (era2)
+      const era2Entities = Array.from(graph.entities.values()).filter(e =>
+        e.kind === 'era' && e.subtype === 'era2'
+      );
+      expect(era2Entities.length).toBe(1);
+      expect(era2Entities[0].status).toBe('current');
     });
   });
 
@@ -373,14 +376,16 @@ describe('eraTransition', () => {
       });
 
       graph.tick = 120;
-      setEraConditions('era1', []);
+      // NEW MODEL: Use exitConditions not transitionConditions
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       const result = eraTransition.apply(graph);
 
-      // Check that relationships were created
+      // Check that relationships were created (supersedes + active_during)
       expect(result.relationshipsAdded.length).toBeGreaterThan(0);
-      expect(result.relationshipsAdded[0].kind).toBe('active_during');
-      expect(result.relationshipsAdded[0].dst).toBe(currentEra.id);
+      const activeDuringRels = result.relationshipsAdded.filter(r => r.kind === 'active_during');
+      expect(activeDuringRels.length).toBeGreaterThan(0);
+      expect(activeDuringRels[0].dst).toBe(currentEra.id);
     });
 
     it('should limit active_during relationships to 10 entities', () => {
@@ -405,12 +410,13 @@ describe('eraTransition', () => {
       }
 
       graph.tick = 120;
-      setEraConditions('era1', []);
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       const result = eraTransition.apply(graph);
 
-      // Should be capped at 10
-      expect(result.relationshipsAdded.length).toBeLessThanOrEqual(10);
+      // active_during relationships should be capped at 10, plus 1 supersedes
+      const activeDuringRels = result.relationshipsAdded.filter(r => r.kind === 'active_during');
+      expect(activeDuringRels.length).toBeLessThanOrEqual(10);
     });
 
     it('should only link entities created during the era', () => {
@@ -448,25 +454,27 @@ describe('eraTransition', () => {
       });
 
       graph.tick = 120;
-      setEraConditions('era1', []);
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       const result = eraTransition.apply(graph);
 
       // Only entity created during era should be linked
-      const linkedEntities = result.relationshipsAdded.map(r => r.src);
+      const activeDuringRels = result.relationshipsAdded.filter(r => r.kind === 'active_during');
+      const linkedEntities = activeDuringRels.map(r => r.src);
       expect(linkedEntities).toContain('npc-during');
       expect(linkedEntities).not.toContain('npc-before');
     });
   });
 
-  describe('transition condition checking', () => {
-    it('should handle pressure-based conditions (above)', () => {
+  describe('exit condition checking', () => {
+    it('should handle pressure-based exit conditions (above)', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
       graph.pressures.set('conflict', 75);
 
+      // NEW MODEL: Use exitConditions
       setEraConditions('era1', [{
         type: 'pressure',
         pressureId: 'conflict',
@@ -476,11 +484,11 @@ describe('eraTransition', () => {
 
       const result = eraTransition.apply(graph);
 
-      // Should transition because pressure condition is met
+      // Should transition because exit condition is met
       expect(result.description).toContain('→');
     });
 
-    it('should handle pressure-based conditions (below)', () => {
+    it('should handle pressure-based exit conditions (below)', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
@@ -499,7 +507,7 @@ describe('eraTransition', () => {
       expect(result.description).toContain('→');
     });
 
-    it('should not transition if pressure condition not met', () => {
+    it('should not exit if pressure condition not met', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
@@ -519,7 +527,7 @@ describe('eraTransition', () => {
       expect(currentEra.status).toBe('current');
     });
 
-    it('should handle entity count conditions (above)', () => {
+    it('should handle entity count exit conditions (above)', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
@@ -599,7 +607,7 @@ describe('eraTransition', () => {
       expect(result.description).toContain('→');
     });
 
-    it('should handle time-based conditions', () => {
+    it('should handle time-based exit conditions', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 150;
@@ -614,7 +622,7 @@ describe('eraTransition', () => {
       expect(result.description).toContain('→');
     });
 
-    it('should require all conditions to be met (AND logic)', () => {
+    it('should require all exit conditions to be met (AND logic)', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
@@ -636,41 +644,46 @@ describe('eraTransition', () => {
 
       const result = eraTransition.apply(graph);
 
-      // Should not transition because time condition not met
+      // Should not exit because time condition not met
       expect(result.description).toContain('persists');
       expect(currentEra.status).toBe('current');
     });
   });
 
-  describe('missing config errors', () => {
-    it('should throw if era config not found', () => {
+  describe('missing config handling', () => {
+    it('should warn if era config not found', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.subtype = 'nonexistent_era'; // subtype doesn't match any config
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 150;
 
-      expect(() => eraTransition.apply(graph)).toThrow(/No era config found/);
+      // NEW MODEL: Gracefully handle missing config with warning instead of throwing
+      const result = eraTransition.apply(graph);
+      expect(result.description).toContain('persists');
+      expect(result.description).toContain('config not found');
     });
 
-    it('should throw if transitionConditions is undefined', () => {
-      const currentEra = graph.entities.get('era1')!;
-      currentEra.temporal = { startTick: 0, endTick: null };
-      graph.tick = 150;
-
-      // Remove transitionConditions from era1 config
-      const eraConfig = graph.config.eras.find((e: any) => e.id === 'era1');
-      delete eraConfig.transitionConditions;
-
-      expect(() => eraTransition.apply(graph)).toThrow(/no transitionConditions defined/);
-    });
-
-    it('should allow immediate transition with empty conditions array', () => {
+    it('should allow immediate transition with empty exit conditions array', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 1; // Very early
 
-      // Empty array = immediate transition
+      // Empty array = immediate transition allowed
       setEraConditions('era1', []);
+
+      const result = eraTransition.apply(graph);
+
+      expect(result.description).toContain('→');
+    });
+
+    it('should allow exit when exitConditions is undefined (empty)', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 150;
+
+      // NEW MODEL: undefined exitConditions treated as empty (allow immediate transition)
+      const eraConfig = graph.config.eras.find((e: any) => e.id === 'era1');
+      delete eraConfig.exitConditions;
 
       const result = eraTransition.apply(graph);
 
@@ -684,7 +697,7 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      setEraConditions('era1', []);
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       const historyLengthBefore = graph.history.length;
 
@@ -703,22 +716,24 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      setEraConditions('era1', []);
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       eraTransition.apply(graph);
 
       const lastEvent = graph.history[graph.history.length - 1];
-      expect(lastEvent.entitiesModified?.length).toBeGreaterThanOrEqual(2);
+      // NEW MODEL: entitiesModified only includes current era, entitiesCreated has new era
+      expect(lastEvent.entitiesModified?.length).toBeGreaterThanOrEqual(1);
+      expect(lastEvent.entitiesCreated?.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  describe('era transition effects', () => {
-    it('should apply config-defined transition effects', () => {
+  describe('era exit effects', () => {
+    it('should apply config-defined exit effects', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      // Set effects on era1 config (conditions are per-era now)
+      // NEW MODEL: Use exitEffects instead of transitionEffects
       setEraConditions('era1', [], {
         pressureChanges: {
           conflict: 20,
@@ -733,7 +748,7 @@ describe('eraTransition', () => {
       expect(result.pressureChanges['stability']).toBe(-10);
     });
 
-    it('should handle missing transition effects config', () => {
+    it('should handle missing exit effects config', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
@@ -747,14 +762,32 @@ describe('eraTransition', () => {
     });
   });
 
-  describe('final era behavior', () => {
-    it('should indicate final era when no future eras remain', () => {
+  describe('era entry effects', () => {
+    it('should apply entry effects from new era', () => {
       const currentEra = graph.entities.get('era1')!;
       currentEra.temporal = { startTick: 0, endTick: null };
-      graph.entities.get('era2')!.status = FRAMEWORK_STATUS.HISTORICAL;
-      graph.entities.get('era3')!.status = FRAMEWORK_STATUS.HISTORICAL;
       graph.tick = 120;
 
+      // Set entry effects on era2 (the destination era)
+      setEraConditions('era2', undefined, undefined, [], { pressureChanges: { innovation: 25 } });
+      // Allow exit from era1
+      setEraConditions('era1', []);
+
+      const result = eraTransition.apply(graph);
+
+      expect(result.pressureChanges).toBeDefined();
+      expect(result.pressureChanges['innovation']).toBe(25);
+    });
+  });
+
+  describe('final era behavior', () => {
+    it('should indicate final era when no valid next era exists', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 120;
+
+      // NEW MODEL: Remove era2 and era3 from config to make era1 the final era
+      graph.config.eras = [graph.config.eras[0]];
       setEraConditions('era1', []);
 
       const result = eraTransition.apply(graph);
@@ -770,13 +803,58 @@ describe('eraTransition', () => {
       currentEra.temporal = { startTick: 0, endTick: null };
       graph.tick = 120;
 
-      // subtype already matches config era id via createEraEntity
-
-      setEraConditions('era1', []);
+      setEraConditions('era1', []); // Empty exit conditions = can exit
 
       eraTransition.apply(graph);
 
       // graph.currentEra should now reference era2's config
+      expect(graph.currentEra.id).toBe('era2');
+    });
+  });
+
+  describe('entry conditions', () => {
+    it('should check entry conditions before spawning next era', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 120;
+
+      // Allow exit from era1
+      setEraConditions('era1', []);
+
+      // era2 has entry condition that isn't met
+      setEraConditions('era2', undefined, undefined, [
+        { type: 'pressure', pressureId: 'conflict', operator: 'above', threshold: 80 }
+      ]);
+
+      // era3 has no entry conditions (can enter)
+      setEraConditions('era3', undefined, undefined, []);
+
+      // Pressure is low
+      graph.pressures.set('conflict', 30);
+
+      const result = eraTransition.apply(graph);
+
+      // Should skip era2 and transition to era3
+      expect(graph.currentEra.id).toBe('era3');
+    });
+
+    it('should find first era whose entry conditions are met', () => {
+      const currentEra = graph.entities.get('era1')!;
+      currentEra.temporal = { startTick: 0, endTick: null };
+      graph.tick = 120;
+      graph.pressures.set('conflict', 90);
+
+      // Allow exit from era1
+      setEraConditions('era1', []);
+
+      // era2 has entry condition that IS met
+      setEraConditions('era2', undefined, undefined, [
+        { type: 'pressure', pressureId: 'conflict', operator: 'above', threshold: 80 }
+      ]);
+
+      const result = eraTransition.apply(graph);
+
+      // Should transition to era2 since its entry conditions are met
       expect(graph.currentEra.id).toBe('era2');
     });
   });

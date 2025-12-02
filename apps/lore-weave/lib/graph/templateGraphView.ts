@@ -48,6 +48,9 @@ export class TemplateGraphView {
     this.graph = graph;
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
+
+    // Wire up debug logging from coordinate context to graph view
+    this.coordinateContext.debugLog = (level, msg) => this.log(level as 'debug' | 'info' | 'warn' | 'error', msg);
   }
 
   // ============================================================================
@@ -418,16 +421,16 @@ export class TemplateGraphView {
    * @param srcId - Source entity ID
    * @param dstId - Destination entity ID
    * @param strength - Optional strength override
-   * @param distance - Optional distance for lineage relationships
+   * Distance is computed from entity coordinates.
    */
   createRelationship(
     kind: string,
     srcId: string,
     dstId: string,
-    strength?: number,
-    distance?: number
+    strength?: number
   ): void {
-    addRelationship(this.graph, kind, srcId, dstId, strength, distance);
+    // Distance is computed from coordinates
+    addRelationship(this.graph, kind, srcId, dstId, strength);
   }
 
   /**
@@ -689,14 +692,12 @@ export class TemplateGraphView {
    *
    * @param referenceEntities - Entities to derive position from (can be empty)
    * @param entityKind - Entity kind (used to check existing entities for overlap)
-   * @param _unused - Deprecated parameter (ignored for backward compatibility)
    * @param options - Placement options (maxDistance, minDistance)
    * @returns Point coordinates
    */
   deriveCoordinates(
     referenceEntities: HardState[],
     entityKind?: string,
-    _unused?: Record<string, boolean> | string[] | string,
     options?: { maxDistance?: number; minDistance?: number }
   ): Point | undefined {
     const hadReferenceEntities = referenceEntities.length > 0;

@@ -13,38 +13,32 @@ import { Relationship } from '../core/worldTypes';
 
 /**
  * Add a relationship between two entities.
+ * Distance is ALWAYS computed from Euclidean distance between coordinates.
  */
 export function addRelationship(
   graph: Graph,
   kind: string,
   srcId: string,
   dstId: string,
-  strength: number = 0.5,
-  distance?: number
+  strength: number = 0.5
 ): void {
-  graph.addRelationship(kind, srcId, dstId, strength, distance);
+  graph.addRelationship(kind, srcId, dstId, strength);
 }
 
 /**
- * Add a relationship with a bounded random distance (0-100 scale).
- * Distance represents Euclidean distance on the semantic plane.
+ * @deprecated Distance is now always computed from coordinates.
+ * Use addRelationship() instead - distance cannot be set manually.
  */
 export function addRelationshipWithDistance(
   graph: Graph,
   kind: string,
   srcId: string,
   dstId: string,
-  distanceRange: { min: number; max: number },
+  _distanceRangeIgnored: { min: number; max: number },
   strength: number = 0.5
 ): void {
-  // Validate range (0-100 scale, same as coordinates)
-  if (distanceRange.min < 0 || distanceRange.max > 100 || distanceRange.min > distanceRange.max) {
-    console.warn(`Invalid distance range: [${distanceRange.min}, ${distanceRange.max}]. Using [0, 100].`);
-    distanceRange = { min: 0, max: 100 };
-  }
-
-  const distance = distanceRange.min + Math.random() * (distanceRange.max - distanceRange.min);
-  addRelationship(graph, kind, srcId, dstId, strength, distance);
+  // Distance is computed from coordinates, not from the range
+  addRelationship(graph, kind, srcId, dstId, strength);
 }
 
 /**

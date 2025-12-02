@@ -1,10 +1,9 @@
-import { SimulationSystem, SystemResult } from '../engine/types';
+import { SimulationSystem, SystemResult, Era, EraTransitionEffects } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import { generateId } from '../utils';
 import {
   FRAMEWORK_ENTITY_KINDS,
-  FRAMEWORK_STATUS,
-  FRAMEWORK_RELATIONSHIP_KINDS
+  FRAMEWORK_STATUS
 } from '../core/frameworkPrimitives';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { EraSpawnerConfig } from '../engine/systemInterpreter';
@@ -12,35 +11,85 @@ import type { EraSpawnerConfig } from '../engine/systemInterpreter';
 /**
  * Era Spawner System
  *
- * Framework-level system that ensures era entities exist in the graph.
- * Creates era entities from the config and establishes lineage relationships.
+ * Framework-level system that ensures the first era entity exists in the graph.
+ *
+ * NEW LAZY SPAWNING MODEL:
+ * - Only the FIRST era is spawned at initialization
+ * - Subsequent eras are spawned by eraTransition when conditions are met
+ * - This supports divergent era paths where the next era depends on world state
  *
  * Era Lifecycle:
- * 1. All eras are spawned at initialization with status='future'
- * 2. First era is immediately activated to status='current'
- * 3. Eras are connected via 'supersedes' lineage with distance=(tick difference / total ticks)
- * 4. eraTransition system handles transitions from current→next based on conditions
+ * 1. First era is spawned at init with status='current'
+ * 2. eraTransition handles checking exitConditions and finding/spawning next era
+ * 3. Era entities are created on-demand when transitioned into
  *
- * This system only runs once to spawn eras if they don't exist.
+ * This system only runs once to spawn the first era if it doesn't exist.
  */
+
+/**
+ * Create an era entity from config.
+ * Exported so eraTransition can use it for lazy spawning.
+ */
+export function createEraEntity(
+  configEra: Era,
+  tick: number,
+  status: string,
+  previousEra?: HardState
+): { entity: HardState; relationship?: any } {
+  const eraEntity: HardState = {
+    id: generateId(FRAMEWORK_ENTITY_KINDS.ERA),
+    kind: FRAMEWORK_ENTITY_KINDS.ERA,
+    subtype: configEra.id,
+    name: configEra.name,
+    description: configEra.description,
+    status: status,
+    prominence: 'mythic',  // Eras are always mythic (world-defining)
+    culture: 'world',  // Eras are world-level entities
+    tags: { temporal: true, era: true, eraId: configEra.id },
+    links: [],
+    createdAt: tick,
+    updatedAt: tick,
+    coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map
+    temporal: status === FRAMEWORK_STATUS.CURRENT ? {
+      startTick: tick,
+      endTick: null
+    } : undefined
+  };
+
+  return { entity: eraEntity };
+}
+
+/**
+ * Apply entry effects when transitioning INTO an era.
+ */
+export function applyEntryEffects(
+  graphView: TemplateGraphView,
+  configEra: Era
+): Record<string, number> {
+  // Get entry effects (new model)
+  const entryEffects = configEra.entryEffects;
+
+  if (!entryEffects?.pressureChanges) {
+    return {};
+  }
+
+  return entryEffects.pressureChanges;
+}
 
 /**
  * Create an Era Spawner system with the given configuration.
  */
 export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSystem {
-  // Extract config with defaults
-  const ticksPerEra = config.ticksPerEra ?? 30;
-
   return {
     id: config.id || 'era_spawner',
     name: config.name || 'Era Initialization',
 
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
-      // Check if era entities already exist
+      // Check if any era entities already exist
       const existingEras = graphView.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA });
 
       if (existingEras.length > 0) {
-        // Eras already spawned - skip
+        // Eras already exist - skip
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -60,83 +109,41 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
         };
       }
 
-      // Create era entities
-      const entitiesCreated: HardState[] = [];
-      const relationshipsAdded: any[] = [];
-      let previousEra: HardState | null = null;
+      // LAZY SPAWNING: Only create the FIRST era at init
+      const firstEraConfig = configEras[0];
+      const { entity: firstEra } = createEraEntity(
+        firstEraConfig,
+        graphView.tick,
+        FRAMEWORK_STATUS.CURRENT
+      );
 
-      for (let i = 0; i < configEras.length; i++) {
-        const configEra = configEras[i];
-        const isFirst = i === 0;
+      // Add era entity to graph
+      graphView.loadEntity(firstEra);
 
-        const eraEntity: HardState = {
-          id: generateId(FRAMEWORK_ENTITY_KINDS.ERA),
-          kind: FRAMEWORK_ENTITY_KINDS.ERA,
-          subtype: configEra.id,
-          name: configEra.name,
-          description: configEra.description,
-          status: isFirst ? FRAMEWORK_STATUS.CURRENT : FRAMEWORK_STATUS.FUTURE,
-          prominence: 'mythic',  // Eras are always mythic (world-defining)
-          culture: 'world',  // Eras are world-level entities
-          tags: { temporal: true, era: true, eraId: configEra.id },
-          links: [],
-          createdAt: graphView.tick,
-          updatedAt: graphView.tick,
-          coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map
-          temporal: isFirst ? {
-            startTick: graphView.tick,
-            endTick: null
-          } : undefined
-        };
+      // Set currentEra reference
+      graphView.setCurrentEra(firstEraConfig);
 
-        entitiesCreated.push(eraEntity);
-
-        // Add lineage relationship to previous era
-        if (previousEra) {
-          // Distance = expected tick difference as percentage of total simulation (0-100 scale)
-          // For 30 ticks per era and 500 max ticks: distance = (30/500) * 100 = 6
-          const maxTicks = graphView.config.maxTicks || 500;
-          const distance = Math.min((ticksPerEra / maxTicks) * 100, 50);
-
-          relationshipsAdded.push({
-            kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
-            src: eraEntity.id,
-            dst: previousEra.id,
-            strength: 1.0,
-            distance: distance,
-            createdAt: graphView.tick
-          });
-        }
-
-        previousEra = eraEntity;
-      }
-
-      // Add entities to graph using TemplateGraphView method
-      entitiesCreated.forEach(entity => {
-        graphView.loadEntity(entity);
-      });
-
-      // Set currentEra reference to first era
-      if (entitiesCreated.length > 0) {
-        graphView.setCurrentEra(configEras[0]);
-      }
+      // Apply entry effects for the first era
+      const pressureChanges = applyEntryEffects(graphView, firstEraConfig);
 
       // Create history event
       graphView.addHistoryEvent({
         tick: graphView.tick,
-        era: configEras[0].id,
+        era: firstEraConfig.id,
         type: 'special',
-        description: `World timeline established: ${configEras.map(e => e.name).join(' → ')}`,
-        entitiesCreated: entitiesCreated.map(e => e.id),
-        relationshipsCreated: relationshipsAdded,
+        description: `${firstEraConfig.name} begins`,
+        entitiesCreated: [firstEra.id],
+        relationshipsCreated: [],
         entitiesModified: []
       });
 
+      graphView.log('info', `[EraSpawner] Started first era: ${firstEraConfig.name}`);
+
       return {
-        relationshipsAdded,
+        relationshipsAdded: [],
         entitiesModified: [],
-        pressureChanges: {},
-        description: `Spawned ${entitiesCreated.length} era entities (${configEras.map(e => e.name).join(', ')})`
+        pressureChanges,
+        description: `Started first era: ${firstEraConfig.name}`
       };
     }
   };

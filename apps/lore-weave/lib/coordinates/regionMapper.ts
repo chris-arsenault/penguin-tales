@@ -393,16 +393,11 @@ export class RegionMapper {
     const tags = this.getTagsForPoint(point);
     const result = this.lookup(point);
 
-    // Convert tags to array for event (backward compat for listeners)
-    const tagArray = Object.entries(tags).map(([k, v]) =>
-      v === true ? k : `${k}:${v}`
-    );
-
     this.emitEntityPlaced({
       entityId,
       point,
       region: result.primary,
-      appliedTags: tagArray
+      appliedTags: tags
     });
 
     return tags;

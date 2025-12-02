@@ -24,6 +24,7 @@ describe('RelationshipBuilder', () => {
         kind: 'trades_with',
         src: 'entity1',
         dst: 'entity2',
+        strength: 0.5,
       });
     });
 
@@ -60,11 +61,11 @@ describe('RelationshipBuilder', () => {
       expect(result).toHaveLength(2);
     });
 
-    it('should not add strength field when undefined', () => {
+    it('should default strength to 0.5 when not specified', () => {
       builder.add('trades_with', 'a', 'b');
       const result = builder.build();
 
-      expect(result[0]).not.toHaveProperty('strength');
+      expect(result[0].strength).toBe(0.5);
     });
 
     it('should handle strength of 0', () => {
@@ -81,9 +82,9 @@ describe('RelationshipBuilder', () => {
       const result = builder.build();
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony1' });
-      expect(result[1]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony2' });
-      expect(result[2]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony3' });
+      expect(result[0]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony1', strength: 0.5 });
+      expect(result[1]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony2', strength: 0.5 });
+      expect(result[2]).toEqual({ kind: 'trades_with', src: 'merchant', dst: 'colony3', strength: 0.5 });
     });
 
     it('should handle empty destinations array', () => {
@@ -118,9 +119,9 @@ describe('RelationshipBuilder', () => {
       const result = builder.build();
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({ kind: 'located_in', src: 'npc1', dst: 'colony' });
-      expect(result[1]).toEqual({ kind: 'located_in', src: 'npc2', dst: 'colony' });
-      expect(result[2]).toEqual({ kind: 'located_in', src: 'npc3', dst: 'colony' });
+      expect(result[0]).toEqual({ kind: 'located_in', src: 'npc1', dst: 'colony', strength: 0.5 });
+      expect(result[1]).toEqual({ kind: 'located_in', src: 'npc2', dst: 'colony', strength: 0.5 });
+      expect(result[2]).toEqual({ kind: 'located_in', src: 'npc3', dst: 'colony', strength: 0.5 });
     });
 
     it('should handle empty sources array', () => {
@@ -155,8 +156,8 @@ describe('RelationshipBuilder', () => {
       const result = builder.build();
 
       expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ kind: 'allied_with', src: 'faction1', dst: 'faction2' });
-      expect(result[1]).toEqual({ kind: 'allied_with', src: 'faction2', dst: 'faction1' });
+      expect(result[0]).toEqual({ kind: 'allied_with', src: 'faction1', dst: 'faction2', strength: 0.5 });
+      expect(result[1]).toEqual({ kind: 'allied_with', src: 'faction2', dst: 'faction1', strength: 0.5 });
     });
 
     it('should add bidirectional relationships with strength', () => {
@@ -184,7 +185,7 @@ describe('RelationshipBuilder', () => {
     beforeEach(() => {
       const _entities = new Map();
       let _relationships: Relationship[] = [
-        { kind: 'trades_with', src: 'a', dst: 'b' },
+        { kind: 'trades_with', src: 'a', dst: 'b', strength: 0.5 },
         { kind: 'allied_with', src: 'c', dst: 'd', strength: 0.5 },
       ];
 
@@ -241,7 +242,7 @@ describe('RelationshipBuilder', () => {
       const result = builder.build();
 
       expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({ kind: 'trades_with', src: 'e', dst: 'f' });
+      expect(result[0]).toEqual({ kind: 'trades_with', src: 'e', dst: 'f', strength: 0.5 });
     });
 
     it('should not add relationship if it already exists', () => {
@@ -397,13 +398,14 @@ describe('buildRelationships helper', () => {
 });
 
 describe('createRelationship helper', () => {
-  it('should create relationship without strength', () => {
+  it('should create relationship with default strength', () => {
     const rel = createRelationship('trades_with', 'a', 'b');
 
     expect(rel).toEqual({
       kind: 'trades_with',
       src: 'a',
       dst: 'b',
+      strength: 0.5,
     });
   });
 
@@ -423,9 +425,9 @@ describe('createRelationship helper', () => {
     expect(rel.strength).toBe(0);
   });
 
-  it('should not add strength property when undefined', () => {
+  it('should default strength to 0.5 when not specified', () => {
     const rel = createRelationship('trades_with', 'a', 'b');
-    expect(rel).not.toHaveProperty('strength');
+    expect(rel.strength).toBe(0.5);
   });
 
   it('should handle different relationship kinds', () => {

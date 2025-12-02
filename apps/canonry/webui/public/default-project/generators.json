@@ -73,18 +73,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$mentor"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 40,
-            "max": 70
-          },
-          "ancestorRef": "$mentor"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$hero",
+        "dst": "$mentor",
+        "strength": 1
+      },
       {
         "kind": "resident_of",
         "src": "$hero",
@@ -233,18 +231,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$colony"
-        },
-        "lineage": {
-          "relationshipKind": "believer_of",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "believer_of",
+        "src": "$successor",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "leader_of",
         "src": "$successor",
@@ -435,18 +431,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentOrca"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 20,
-            "max": 50
-          },
-          "ancestorRef": "$parentOrca"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$orca1",
+        "dst": "$parentOrca",
+        "strength": 1
+      },
       {
         "kind": "enemy_of",
         "src": "$orca1",
@@ -669,18 +663,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$location"
-        },
-        "lineage": {
-          "relationshipKind": "splinter_of",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 15,
-            "max": 40
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "splinter_of",
+        "src": "$splinter",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "splinter_of",
         "src": "$splinter",
@@ -1262,18 +1254,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "originated_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "originated_in",
+        "src": "$guild",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "controls",
         "src": "$guild",
@@ -1496,14 +1486,6 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "originated_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 20,
-            "max": 50
-          }
         }
       },
       {
@@ -1527,18 +1509,22 @@
         "placement": {
           "type": "near_entity",
           "entity": "$mentor"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 30,
-            "max": 60
-          },
-          "ancestorRef": "$mentor"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$prophet",
+        "dst": "$mentor",
+        "strength": 1
+      },
+      {
+        "kind": "originated_in",
+        "src": "$cult",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "occupies",
         "src": "$cult",
@@ -1789,18 +1775,16 @@
             "label": "Colony Territory",
             "description": "A settled region around the new colony"
           }
-        },
-        "lineage": {
-          "relationshipKind": "contained_by",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 15,
-            "max": 35
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "contained_by",
+        "src": "$colony",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "contained_by",
         "src": "$colony",
@@ -1924,18 +1908,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "adjacent_to",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 25,
-            "max": 55
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "adjacent_to",
+        "src": "$anomaly",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "adjacent_to",
         "src": "$anomaly",
@@ -2101,18 +2083,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "discovered_by",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 20,
-            "max": 45
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "discovered_by",
+        "src": "$resource",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "explorer_of",
         "src": "$target",
@@ -2265,18 +2245,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "discovered_by",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 20,
-            "max": 45
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "discovered_by",
+        "src": "$location",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "explorer_of",
         "src": "$target",
@@ -2425,18 +2403,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "discovered_by",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 25,
-            "max": 50
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "discovered_by",
+        "src": "$discovery",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "explorer_of",
         "src": "$target",
@@ -2592,14 +2568,6 @@
         "placement": {
           "type": "near_entity",
           "entity": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "adjacent_to",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 15,
-            "max": 40
-          }
         }
       },
       {
@@ -2620,18 +2588,22 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentMerchant"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 25,
-            "max": 55
-          },
-          "ancestorRef": "$parentMerchant"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$merchant",
+        "dst": "$parentMerchant",
+        "strength": 1
+      },
+      {
+        "kind": "adjacent_to",
+        "src": "$bloom",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "adjacent_to",
         "src": "$bloom",
@@ -2876,18 +2848,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "participant_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 35
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "participant_in",
+        "src": "$war",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "active_during",
         "src": "$war",
@@ -3013,18 +2983,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "participant_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "participant_in",
+        "src": "$crisis",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "active_during",
         "src": "$crisis",
@@ -3146,18 +3114,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "commemorates",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 15,
-            "max": 40
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "commemorates",
+        "src": "$memorial",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "commemorates",
         "src": "$memorial",
@@ -3289,18 +3255,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "originated_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "originated_in",
+        "src": "$rule",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "originated_in",
         "src": "$rule",
@@ -3458,18 +3422,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "originated_in",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "originated_in",
+        "src": "$festival",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "originated_in",
         "src": "$festival",
@@ -3733,18 +3695,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentTech"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 20,
-            "max": 50
-          },
-          "ancestorRef": "$parentTech"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$tech",
+        "dst": "$parentTech",
+        "strength": 1
+      },
       {
         "kind": "practitioner_of",
         "src": "$target",
@@ -3951,18 +3911,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$practitioner"
-        },
-        "lineage": {
-          "relationshipKind": "discovered_by",
-          "ancestorRef": "$practitioner",
-          "distanceRange": {
-            "min": 25,
-            "max": 55
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "discovered_by",
+        "src": "$site",
+        "dst": "$practitioner",
+        "strength": 1
+      },
       {
         "kind": "manifests_at",
         "src": "$target",
@@ -4107,18 +4065,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentTechnique"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 30,
-            "max": 60
-          },
-          "ancestorRef": "$parentTechnique"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$technique",
+        "dst": "$parentTechnique",
+        "strength": 1
+      },
       {
         "kind": "practitioner_of",
         "src": "$target",
@@ -4303,18 +4259,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentTech"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 10,
-            "max": 30
-          },
-          "ancestorRef": "$parentTech"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$technology",
+        "dst": "$parentTech",
+        "strength": 1
+      },
       {
         "kind": "practitioner_of",
         "src": "$target",
@@ -4543,18 +4497,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentMagic"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 20,
-            "max": 50
-          },
-          "ancestorRef": "$parentMagic"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$magic",
+        "dst": "$parentMagic",
+        "strength": 1
+      },
       {
         "kind": "discovered_by",
         "src": "$target",
@@ -4755,18 +4707,16 @@
         "placement": {
           "type": "near_entity",
           "entity": "$parentRule"
-        },
-        "lineage": {
-          "relationshipKind": "derived_from",
-          "distanceRange": {
-            "min": 25,
-            "max": 55
-          },
-          "ancestorRef": "$parentRule"
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$ideology",
+        "dst": "$parentRule",
+        "strength": 1
+      },
       {
         "kind": "believer_of",
         "src": "$target",
@@ -5062,18 +5012,16 @@
         "placement": {
           "type": "in_culture_region",
           "culture": "$target"
-        },
-        "lineage": {
-          "relationshipKind": "discovered_by",
-          "ancestorRef": "$target",
-          "distanceRange": {
-            "min": 20,
-            "max": 50
-          }
         }
       }
     ],
     "relationships": [
+      {
+        "kind": "discovered_by",
+        "src": "$site",
+        "dst": "$target",
+        "strength": 1
+      },
       {
         "kind": "explorer_of",
         "src": "$target",
