@@ -86,7 +86,6 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
       const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tags = settings.tags || {};
       const name = settings.name || `Test ${settings.kind}`;
-      tags.name = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const entity: HardState = {
         id, kind: settings.kind, subtype: settings.subtype, name,
         description: settings.description || '', status: settings.status || 'active',

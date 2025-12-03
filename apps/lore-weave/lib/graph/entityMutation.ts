@@ -10,7 +10,7 @@ import { generateId } from '../core/idGeneration';
 import { arrayToTags } from '../utils/tagUtils';
 
 /**
- * Name tag helpers (for deterministic slug tags that track final names)
+ * Slugify a name for use in IDs or other contexts
  */
 export function slugifyName(name: string): string {
   return name
@@ -18,15 +18,6 @@ export function slugifyName(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'unknown';
-}
-
-export function upsertNameTag(entity: HardState, sourceName: string): void {
-  const slug = slugifyName(sourceName);
-  if (!entity.tags) {
-    entity.tags = {};
-  }
-  // With KVP format, just set the name key directly
-  entity.tags.name = slug;
 }
 
 /**

@@ -15,7 +15,6 @@ import {
   weightedRandom,
   findEntities,
   getProminenceValue,
-  upsertNameTag,
   hasTag
 } from '../utils';
 import { initializeCatalystSmart } from '../systems/catalystHelpers';
@@ -1861,15 +1860,6 @@ export class WorldEngine {
   // These are stubs/no-ops. Connect illuminator for LLM enrichment.
   // =============================================================================
 
-  private syncNameTags(): void {
-    // Sync name tags from entity names
-    this.graph.forEachEntity((entity) => {
-      const hasNameTag = entity.tags?.name !== undefined;
-      if (!hasNameTag) return;
-      this.graph.updateEntity(entity.id, { tags: { ...entity.tags, name: entity.name } });
-    });
-  }
-
   // Era narrative - no-op without illuminator
   private queueEraNarrative(_fromEra: Era, _toEra: Era): void {
     // Enrichment moved to @illuminator - this is a no-op
@@ -1898,8 +1888,7 @@ export class WorldEngine {
   }
 
   public async finalizeEnrichments(): Promise<void> {
-    // Enrichment moved to @illuminator - just sync name tags
-    this.syncNameTags();
+    // Enrichment moved to @illuminator - this is now a no-op
   }
 
   public exportState(): any {

@@ -180,7 +180,7 @@ export class CoordinateContext {
   private readonly graphDensity: number;
 
   /** Debug logger matching TemplateGraphView.debug signature */
-  debug: (category: 'coordinates', message: string, context?: Record<string, unknown>) => void;
+  debug: (category: 'coordinates', message: string, context?: Record<string, unknown>) => void = () => {};
 
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];

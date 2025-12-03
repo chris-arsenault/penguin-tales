@@ -4,10 +4,10 @@ import { HardState, EntityTags } from '../core/worldTypes';
 import { TagHealthAnalyzer } from '../statistics/tagHealthAnalyzer';
 import { getTagMetadata } from '../statistics/tagRegistryHelpers';
 
-/** Helper to get tag keys from EntityTags, normalizing 'name' to 'name:*' for analysis */
+/** Helper to get tag keys from EntityTags */
 function getTagKeysNormalized(tags: EntityTags | undefined): string[] {
   if (!tags) return [];
-  return Object.keys(tags).map(key => key === 'name' ? 'name:*' : key);
+  return Object.keys(tags);
 }
 
 /** Helper to get tag key count */
@@ -63,11 +63,10 @@ export class ContractEnforcer {
     const oversaturatedTags: string[] = [];
 
     for (const tag of tagsToAdd) {
-      const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-      const def = getTagMetadata(this.registry, normalizedTag);
+      const def = getTagMetadata(this.registry, tag);
       if (!def || !def.maxUsage) continue;  // Unregistered tags can't be saturated
 
-      const currentCount = tagCounts.get(normalizedTag) || 0;
+      const currentCount = tagCounts.get(tag) || 0;
       const newCount = currentCount + 1;
 
       if (newCount > def.maxUsage) {
@@ -96,8 +95,7 @@ export class ContractEnforcer {
     const orphanTags: string[] = [];
 
     for (const tag of tagsToAdd) {
-      const normalizedTag = tag.startsWith('name:') ? 'name:*' : tag;
-      const def = getTagMetadata(this.registry, normalizedTag);
+      const def = getTagMetadata(this.registry, tag);
 
       if (!def) {
         orphanTags.push(tag);

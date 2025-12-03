@@ -122,8 +122,8 @@ export class TemplateGraphView {
   debug(category: DebugCategory, message: string, context?: Record<string, unknown>): void {
     const debugConfig = this.config?.debugConfig;
 
-    // If debug is disabled globally, skip
-    if (!debugConfig.enabled) {
+    // If debug is disabled globally or no config, skip
+    if (!debugConfig?.enabled) {
         return;
     }
 

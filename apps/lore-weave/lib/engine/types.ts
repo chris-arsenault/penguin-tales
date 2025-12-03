@@ -828,10 +828,6 @@ export class GraphStore implements Graph {
       );
     }
 
-    // Add slugified name to tags for tracking
-    const slugifiedName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    tags.name = slugifiedName;
-
     // Build the full entity
     const entity: HardState = {
       id,
@@ -877,7 +873,7 @@ export class GraphStore implements Graph {
     this.#entities.set(id, entity);
 
     // Debug log entity creation with full details
-    const tagList = Object.keys(tags).filter(t => t !== 'name');
+    const tagList = Object.keys(tags);
     const coords = settings.coordinates;
     this.debug('entities',
       `[Create] ${settings.kind}:${settings.subtype} "${name}" ` +
@@ -924,7 +920,7 @@ export class GraphStore implements Graph {
     this.#entities.set(id, entity);
 
     // Debug log initial state entity loading with full details
-    const tagList = Object.keys(entity.tags || {}).filter(t => t !== 'name');
+    const tagList = Object.keys(entity.tags || {});
     const coords = entity.coordinates;
     const coordStr = coords
       ? `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)})`

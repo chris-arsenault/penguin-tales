@@ -16,7 +16,6 @@ import {
   getProminenceValue,
   adjustProminence,
   slugifyName,
-  upsertNameTag,
   normalizeInitialState,
   addEntity,
   addRelationship,
@@ -178,7 +177,6 @@ function createMockGraph(): Graph {
       const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tags = settings.tags || {};
       const name = settings.name || `Test ${settings.kind}`;
-      tags.name = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const entity: HardState = {
         id, kind: settings.kind, subtype: settings.subtype, name,
         description: settings.description || '', status: settings.status || 'active',
@@ -800,27 +798,6 @@ describe('Name Tag Helpers', () => {
     });
   });
 
-  describe('upsertNameTag', () => {
-    it('should add name tag to entity', () => {
-      const entity = createMockEntity({ tags: {} });
-      upsertNameTag(entity, 'Test Name');
-      expect(entity.tags.name).toBe('test-name');
-    });
-
-    it('should replace existing name tag', () => {
-      const entity = createMockEntity({ tags: { name: 'old-name', other: 'tag' } });
-      upsertNameTag(entity, 'New Name');
-      expect(entity.tags.name).toBe('new-name');
-      expect(entity.tags.other).toBe('tag');
-    });
-
-    it('should handle empty tags object', () => {
-      const entity = createMockEntity({ tags: { a: '1', b: '2', c: '3', d: '4', e: '5' } });
-      upsertNameTag(entity, 'Test');
-      expect(entity.tags.name).toBe('test');
-      // KVP format doesn't have length limit, name just replaces
-    });
-  });
 });
 
 describe('Initial State Normalization', () => {
@@ -882,8 +859,7 @@ describe('Graph Modification', () => {
       const entity = graph.getEntity(id);
 
       expect(entity?.prominence).toBe('marginal');
-      // Tags will have auto-generated name tag
-      expect(entity?.tags).toHaveProperty('name');
+      expect(entity?.tags).toBeDefined();
       expect(entity?.links).toEqual([]);
       expect(entity?.createdAt).toBe(graph.tick);
     });
