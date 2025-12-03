@@ -179,8 +179,8 @@ export class CoordinateContext {
   /** Graph density - minimum distance between entities on semantic planes */
   private readonly graphDensity: number;
 
-  /** Optional debug logger */
-  debugLog?: (level: string, message: string) => void;
+  /** Debug logger matching TemplateGraphView.debug signature */
+  debug: (category: 'coordinates', message: string, context?: Record<string, unknown>) => void;
 
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];
@@ -275,9 +275,9 @@ export class CoordinateContext {
     const matching = regions.filter(r => r.culture === cultureId);
 
     // Debug: log what we're finding
-    if (this.debugLog && matching.length === 0 && regions.length > 0) {
+    if (this.debug && matching.length === 0 && regions.length > 0) {
       const cultures = [...new Set(regions.map(r => r.culture).filter(Boolean))];
-      this.debugLog('debug', `[CoordContext] getSeedRegionIds(${cultureId}, ${entityKind}): no match. Available cultures: [${cultures.join(', ')}]`);
+      this.debug('coordinates', `getSeedRegionIds(${cultureId}, ${entityKind}): no match. Available cultures: [${cultures.join(', ')}]`);
     }
 
     return matching.map(r => r.id);
@@ -619,10 +619,9 @@ export class CoordinateContext {
     existingPoints: Point[] = [],
     tick: number = 0
   ): { point: Point; emergentRegion?: { id: string; label: string } } | null {
-    const debug = (msg: string) => {
-      if (this.debugLog) {
-        this.debugLog('debug', `[CoordContext] ${msg}`);
-      }
+    this.debug('coordinates', `sampleWithCulture ENTRY: entityKind=${entityKind} culture=${context.cultureId} debug=${!!this.debug}`);
+    const log = (msg: string) => {
+      this.debug('coordinates', msg);
     };
 
     // If reference entity provided, sample near it
@@ -632,13 +631,13 @@ export class CoordinateContext {
         existingPoints
       );
       if (point) {
-        debug(`${entityKind} placed near ref @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+        log(`${entityKind} placed near ref @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
         return { point };
       }
     }
 
     const regions = this.getRegions(entityKind);
-    debug(`${entityKind} culture=${context.cultureId}: ${regions.length} total regions, seedRegionIds=[${context.seedRegionIds?.join(', ') || 'none'}]`);
+    log(`${entityKind} culture=${context.cultureId}: ${regions.length} total regions, seedRegionIds=[${context.seedRegionIds?.join(', ') || 'none'}]`);
 
     // Try seed regions first (regions belonging to this culture)
     if (context.seedRegionIds && context.seedRegionIds.length > 0) {
@@ -647,18 +646,18 @@ export class CoordinateContext {
       for (const regionId of shuffledSeeds) {
         const region = regions.find(r => r.id === regionId);
         if (!region) {
-          debug(`  seed region ${regionId} not found in regions list`);
+          log(`  seed region ${regionId} not found in regions list`);
           continue;
         }
 
         const point = this.sampleCircleRegion(region, existingPoints);
         if (point) {
-          debug(`  -> sampled in seed region "${region.label}" @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+          log(`  -> sampled in seed region "${region.label}" @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
           return { point };
         }
-        debug(`  seed region "${region.label}" failed (crowded?)`);
+        log(`  seed region "${region.label}" failed (crowded?)`);
       }
-      debug(`  all seed regions exhausted - attempting emergent region creation`);
+      log(`  all seed regions exhausted - attempting emergent region creation`);
 
       // Seed regions exhausted - try to create emergent region for this culture
       if (context.cultureId) {
@@ -669,7 +668,7 @@ export class CoordinateContext {
           tick
         );
         if (emergentResult) {
-          debug(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
+          log(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
           return {
             point: emergentResult.point,
             emergentRegion: {
@@ -678,7 +677,7 @@ export class CoordinateContext {
             }
           };
         }
-        debug(`  -> emergent region creation failed, skipping placement`);
+        log(`  -> emergent region creation failed, skipping placement`);
       }
 
       // Cannot place - return null instead of falling through to other cultures
@@ -686,7 +685,7 @@ export class CoordinateContext {
     }
 
     // No seed regions for this culture - try emergent region creation
-    debug(`  NO seed regions for culture=${context.cultureId}`);
+    log(`  NO seed regions for culture=${context.cultureId}`);
     if (context.cultureId) {
       const emergentResult = this.createEmergentRegionForCulture(
         entityKind,
@@ -695,7 +694,7 @@ export class CoordinateContext {
         tick
       );
       if (emergentResult) {
-        debug(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
+        log(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
         return {
           point: emergentResult.point,
           emergentRegion: {
@@ -707,7 +706,7 @@ export class CoordinateContext {
     }
 
     // No culture-aware placement possible - skip
-    debug(`  -> no valid placement for culture=${context.cultureId}, skipping`);
+    log(`  -> no valid placement for culture=${context.cultureId}, skipping`);
     return null;
   }
 
@@ -790,29 +789,71 @@ export class CoordinateContext {
       }
     }
 
-    // 2. Derive tags from axis positions
+    // 2. Derive tags from axis positions using gradient-based probability
+    // Probability scales linearly: 100% at extremes (0/100), 50% at quarter points (25/75), 0% at center (50)
     const semanticPlane = this.getSemanticPlane(entityKind);
+
+    // DEBUG: Log semantic plane lookup
+    this.debug?.('coordinates', `[TAG_DERIVE] entityKind="${entityKind}" point=(${point.x?.toFixed(1)},${point.y?.toFixed(1)},${point.z?.toFixed(1)}) semanticPlane=${semanticPlane ? 'FOUND' : 'NOT_FOUND'} configuredKinds=[${this.entityKinds.map(k => k.id).join(',')}]`);
+
     if (semanticPlane?.axes) {
       const { axes } = semanticPlane;
 
-      // X axis: low tag if < 33, high tag if > 66
+      // DEBUG: Log axes configuration
+      this.debug?.('coordinates', `[TAG_DERIVE] axes.x=${JSON.stringify(axes.x)} axes.y=${JSON.stringify(axes.y)} axes.z=${JSON.stringify(axes.z)}`);
+
+      /**
+       * Calculate tag probability based on distance from center.
+       * - At 0 or 100: distance = 50, probability = 100%
+       * - At 25 or 75: distance = 25, probability = 50%
+       * - At 50: distance = 0, probability = 0%
+       */
+      const shouldApplyTag = (value: number, isLowTag: boolean): boolean => {
+        // Only consider values on the appropriate side of center
+        if (isLowTag && value >= 50) return false;
+        if (!isLowTag && value <= 50) return false;
+
+        // Calculate probability: distance from center (0-50) mapped to 0-100%
+        const distanceFromCenter = Math.abs(value - 50);
+        const probability = (distanceFromCenter / 50) * 100;
+
+        // Roll the dice
+        const roll = Math.random() * 100;
+        const applies = roll < probability;
+        this.debug?.('coordinates', `[TAG_DERIVE] shouldApplyTag value=${value.toFixed(1)} isLow=${isLowTag} dist=${distanceFromCenter.toFixed(1)} prob=${probability.toFixed(1)}% roll=${roll.toFixed(1)} => ${applies}`);
+        return applies;
+      };
+
+      // X axis
       if (axes.x) {
-        if (point.x < 33) addTag(axes.x.lowTag);
-        else if (point.x > 66) addTag(axes.x.highTag);
+        if (axes.x.lowTag && shouldApplyTag(point.x, true)) {
+          addTag(axes.x.lowTag);
+        } else if (axes.x.highTag && shouldApplyTag(point.x, false)) {
+          addTag(axes.x.highTag);
+        }
       }
 
-      // Y axis: low tag if < 33, high tag if > 66
+      // Y axis
       if (axes.y) {
-        if (point.y < 33) addTag(axes.y.lowTag);
-        else if (point.y > 66) addTag(axes.y.highTag);
+        if (axes.y.lowTag && shouldApplyTag(point.y, true)) {
+          addTag(axes.y.lowTag);
+        } else if (axes.y.highTag && shouldApplyTag(point.y, false)) {
+          addTag(axes.y.highTag);
+        }
       }
 
-      // Z axis: low tag if < 33, high tag if > 66
+      // Z axis
       if (axes.z && point.z !== undefined) {
-        if (point.z < 33) addTag(axes.z.lowTag);
-        else if (point.z > 66) addTag(axes.z.highTag);
+        if (axes.z.lowTag && shouldApplyTag(point.z, true)) {
+          addTag(axes.z.lowTag);
+        } else if (axes.z.highTag && shouldApplyTag(point.z, false)) {
+          addTag(axes.z.highTag);
+        }
       }
     }
+
+    // DEBUG: Log final tags
+    this.debug?.('coordinates', `[TAG_DERIVE] Final tags for ${entityKind}: [${tags.join(', ')}] (regionTags from ${containingRegions.length} regions)`);
 
     return tags;
   }
@@ -828,6 +869,7 @@ export class CoordinateContext {
     context: PlacementContext,
     existingPoints: Point[] = []
   ): PlacementResult {
+    this.debug?.('coordinates', `placeWithCulture called: entityKind=${entityKind} culture=${context.cultureId} seedRegions=[${context.seedRegionIds?.join(',') || 'none'}]`);
     const result = this.sampleWithCulture(entityKind, context, existingPoints, tick);
     if (!result) {
       return {
@@ -855,6 +897,9 @@ export class CoordinateContext {
     for (const tag of derivedTagList) {
       derivedTags[tag] = true;
     }
+
+    // DEBUG: Log derived tags object
+    this.debug?.('coordinates', `[PLACE_CULTURE] entityKind="${entityKind}" derivedTagList=[${derivedTagList.join(',')}] derivedTags=${JSON.stringify(derivedTags)}`);
 
     return {
       success: true,

@@ -49,14 +49,9 @@ export class TemplateGraphView {
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
 
-    // Wire up debug logging from coordinate context to graph view with category support
-    this.coordinateContext.debugLog = (level, msg) => {
-      // Coordinate context messages go to 'coordinates' category
-      if (level === 'debug') {
-        this.debug('coordinates', msg.replace(/^\[CoordContext\]\s*/, ''));
-      } else {
-        this.log(level as 'debug' | 'info' | 'warn' | 'error', msg);
-      }
+    // Wire up debug logging from coordinate context
+    this.coordinateContext.debug = (category, msg, context) => {
+      this.debug(category, msg, context);
     };
   }
 
@@ -125,10 +120,13 @@ export class TemplateGraphView {
    * @param context - Optional additional context
    */
   debug(category: DebugCategory, message: string, context?: Record<string, unknown>): void {
-    const debugConfig = this.config?.debugConfig ?? DEFAULT_DEBUG_CONFIG;
+    const debugConfig = this.config?.debugConfig;
 
     // If debug is disabled globally, skip
-    if (!debugConfig.enabled) return;
+    if (!debugConfig.enabled) {
+        return;
+    }
+
 
     // If no categories specified, emit all; otherwise check if category is enabled
     if (debugConfig.enabledCategories.length > 0 && !debugConfig.enabledCategories.includes(category)) {
@@ -1216,7 +1214,7 @@ export class TemplateGraphView {
     regionId: string,
     context: PlacementContext
   ): Promise<string | null> {
-    const kind = entity.kind ?? 'npc';
+      const kind = entity.kind ?? 'npc';
     const existingPoints = this.getRegionPoints(kind, regionId);
 
     // Use CoordinateContext for culture-aware placement
@@ -1234,6 +1232,9 @@ export class TemplateGraphView {
 
     // Merge entity tags with derived tags
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, placementResult.derivedTags);
+
+    // DEBUG: Log tag merging
+    this.debug('coordinates', `[placeInRegion] entity.tags=${JSON.stringify(entity.tags)} derivedTags=${JSON.stringify(placementResult.derivedTags)} mergedTags=${JSON.stringify(mergedTags)}`);
 
     const entityWithCoords: Partial<HardState> = {
       ...entity,
@@ -1410,6 +1411,9 @@ export class TemplateGraphView {
 
     // Merge entity tags with derived tags
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, placementResult.derivedTags);
+
+    // DEBUG: Log tag merging
+    this.debug('coordinates', `[placeWithCulture] entity.tags=${JSON.stringify(entity.tags)} derivedTags=${JSON.stringify(placementResult.derivedTags)} mergedTags=${JSON.stringify(mergedTags)}`);
 
     const entityWithCoords: Partial<HardState> = {
       ...entity,

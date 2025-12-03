@@ -767,6 +767,9 @@ export class TemplateInterpreter {
       // Resolve placement
       const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
 
+      // Merge template tags with derived tags from placement (derived tags take precedence)
+      const mergedTags = { ...(rule.tags || {}), ...(placementResult.derivedTags || {}) };
+
       const entity: Partial<HardState> = {
         kind: rule.kind,
         subtype,
@@ -774,7 +777,7 @@ export class TemplateInterpreter {
         prominence: rule.prominence || 'marginal',
         culture,
         description,
-        tags: rule.tags || {},
+        tags: mergedTags,
         coordinates: placementResult.coordinates,
         links: []
       };
@@ -874,7 +877,7 @@ export class TemplateInterpreter {
     culture: string,
     _placeholder: string,
     entityKind: string
-  ): { coordinates: Point; strategy: string } {
+  ): { coordinates: Point; strategy: string; derivedTags?: Record<string, string | boolean> } {
     const { graphView } = context;
 
     const debug = (strategy: string, coords: Point, details?: string) => {
@@ -926,7 +929,7 @@ export class TemplateInterpreter {
         if (result) {
           const strategy = `in_culture_region:${cultureId}`;
           debug(strategy, result.coordinates, `culture=${cultureId} (from ${spec.culture})`);
-          return { coordinates: result.coordinates, strategy };
+          return { coordinates: result.coordinates, strategy, derivedTags: result.derivedTags };
         }
         graphView.debug('placement', `${entityKind} -> in_culture_region:${cultureId} FAILED, falling back`);
         break;
@@ -963,7 +966,7 @@ export class TemplateInterpreter {
         if (result) {
           const strategy = `derived_from_refs:${sameKindRefs.length}`;
           debug(strategy, result.coordinates, `refs=[${sameKindRefs.map(r => r.name).join(', ')}], culture=${cultureId}`);
-          return { coordinates: result.coordinates, strategy };
+          return { coordinates: result.coordinates, strategy, derivedTags: result.derivedTags };
         }
         graphView.debug('placement', `${entityKind} -> derived_from_refs FAILED, falling back`);
         break;
