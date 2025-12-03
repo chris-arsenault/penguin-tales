@@ -169,6 +169,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   const [showRelatedKinds, setShowRelatedKinds] = useState<boolean>(true);  // Show related entities from other kinds
   const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['regions', 'entities', 'relationships']));
   const [hoveredEntity, setHoveredEntity] = useState<HardState | null>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<RegionSchema | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   // Get entity kind schemas
@@ -394,13 +395,28 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       ctx.textAlign = 'center';
     }
 
+    // Parse selectedNodeId to check if a region is selected
+    const selectedRegionId = selectedNodeId?.startsWith('region:')
+      ? selectedNodeId.split(':')[2]
+      : null;
+
     // Draw regions if layer is visible
     if (visibleLayers.has('regions')) {
       regions.forEach(region => {
         const colors = getRegionColor(region);
-        ctx.fillStyle = colors.fill;
-        ctx.strokeStyle = colors.stroke;
-        ctx.lineWidth = 2;
+        const isHovered = hoveredRegion?.id === region.id;
+        const isSelected = selectedRegionId === region.id;
+
+        // Adjust colors for hover/selection state
+        ctx.fillStyle = isHovered || isSelected
+          ? colors.fill.replace(/[\d.]+\)$/, '0.3)')  // Brighter fill
+          : colors.fill;
+        ctx.strokeStyle = isSelected
+          ? '#ffffff'  // White stroke for selected
+          : isHovered
+            ? colors.stroke.replace(/[\d.]+\)$/, '1)')  // Full opacity on hover
+            : colors.stroke;
+        ctx.lineWidth = isSelected ? 3 : isHovered ? 2.5 : 2;
 
         if (region.bounds.shape === 'circle') {
           const center = worldToCanvas(region.bounds.center.x, region.bounds.center.y);
@@ -416,8 +432,8 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
           ctx.stroke();
 
           // Draw label
-          ctx.fillStyle = colors.stroke;
-          ctx.font = 'bold 12px sans-serif';
+          ctx.fillStyle = isHovered || isSelected ? '#ffffff' : colors.stroke;
+          ctx.font = isHovered || isSelected ? 'bold 13px sans-serif' : 'bold 12px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(region.label, center.x, center.y);
         } else if (region.bounds.shape === 'rect') {
@@ -430,8 +446,8 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
           ctx.stroke();
 
           // Draw label
-          ctx.fillStyle = colors.stroke;
-          ctx.font = 'bold 12px sans-serif';
+          ctx.fillStyle = isHovered || isSelected ? '#ffffff' : colors.stroke;
+          ctx.font = isHovered || isSelected ? 'bold 13px sans-serif' : 'bold 12px sans-serif';
           ctx.textAlign = 'center';
           const centerX = (topLeft.x + bottomRight.x) / 2;
           const centerY = (topLeft.y + bottomRight.y) / 2;
@@ -529,7 +545,20 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       });
     }
 
-  }, [data, dimensions, mapKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity, mapEntities]);
+  }, [data, dimensions, mapKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity, hoveredRegion, mapEntities]);
+
+  // Check if a point is inside a region
+  const isPointInRegion = (region: RegionSchema, worldX: number, worldY: number): boolean => {
+    if (region.bounds.shape === 'circle') {
+      const dx = worldX - region.bounds.center.x;
+      const dy = worldY - region.bounds.center.y;
+      return Math.sqrt(dx * dx + dy * dy) <= region.bounds.radius;
+    } else if (region.bounds.shape === 'rect') {
+      return worldX >= region.bounds.x1 && worldX <= region.bounds.x2 &&
+             worldY >= region.bounds.y1 && worldY <= region.bounds.y2;
+    }
+    return false;
+  };
 
   // Handle mouse events
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -544,7 +573,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
     // Find entity under cursor (only from visible entities)
     let foundEntity: HardState | null = null;
-    let minDist = 10; // Threshold in world units
+    let minDist = 3; // Threshold in world units - small to allow region selection
 
     mapEntities.forEach(entity => {
       const pos = entityPositions.get(entity.id);
@@ -561,11 +590,27 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     });
 
     setHoveredEntity(foundEntity);
+
+    // Find region under cursor (if no entity found and regions visible)
+    // Check regions in reverse order so topmost (last drawn) is selected first
+    let foundRegion: RegionSchema | null = null;
+    if (!foundEntity && visibleLayers.has('regions')) {
+      for (let i = regions.length - 1; i >= 0; i--) {
+        if (isPointInRegion(regions[i], worldPos.x, worldPos.y)) {
+          foundRegion = regions[i];
+          break;
+        }
+      }
+    }
+    setHoveredRegion(foundRegion);
   };
 
   const handleClick = () => {
     if (hoveredEntity) {
       onNodeSelect(hoveredEntity.id);
+    } else if (hoveredRegion) {
+      // Use prefixed ID for region selection: "region:{mapKind}:{regionId}"
+      onNodeSelect(`region:${mapKind}:${hoveredRegion.id}`);
     } else {
       onNodeSelect(undefined);
     }
@@ -591,7 +636,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
         height={dimensions.height}
         onMouseMove={handleMouseMove}
         onClick={handleClick}
-        style={{ cursor: hoveredEntity ? 'pointer' : 'default' }}
+        style={{ cursor: (hoveredEntity || hoveredRegion) ? 'pointer' : 'default' }}
       />
 
       {/* Controls */}

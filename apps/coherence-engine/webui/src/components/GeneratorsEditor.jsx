@@ -295,6 +295,68 @@ const styles = {
     backgroundColor: 'rgba(245, 158, 11, 0.05)',
   },
 
+  // Category section styles
+  categorySection: {
+    marginBottom: '24px',
+  },
+  categoryHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: COLORS.bgCard,
+    borderRadius: '8px',
+    border: `1px solid ${COLORS.border}`,
+    cursor: 'pointer',
+    marginBottom: '12px',
+    transition: 'all 0.15s',
+  },
+  categoryHeaderHover: {
+    borderColor: ACCENT_COLOR,
+  },
+  categoryIcon: {
+    fontSize: '18px',
+  },
+  categoryTitle: {
+    flex: 1,
+    fontSize: '15px',
+    fontWeight: 600,
+    color: COLORS.text,
+  },
+  categoryCount: {
+    fontSize: '12px',
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.bgDark,
+    padding: '2px 8px',
+    borderRadius: '10px',
+  },
+  categoryToggleAll: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '11px',
+    color: COLORS.textMuted,
+    padding: '4px 10px',
+    borderRadius: '4px',
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  categoryToggleAllActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderColor: COLORS.success,
+    color: COLORS.success,
+  },
+  categoryExpand: {
+    fontSize: '12px',
+    color: COLORS.textMuted,
+    transition: 'transform 0.2s',
+  },
+  categoryExpandOpen: {
+    transform: 'rotate(90deg)',
+  },
+
   // Modal
   modalOverlay: {
     position: 'fixed',
@@ -2424,6 +2486,67 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
 }
 
 // ============================================================================
+// CATEGORY SECTION COMPONENT
+// ============================================================================
+
+function CategorySection({
+  id,
+  icon,
+  label,
+  items,
+  expanded,
+  onToggleExpand,
+  allEnabled,
+  onToggleAll,
+  renderItem,
+}) {
+  const [hovering, setHovering] = useState(false);
+
+  return (
+    <div style={styles.categorySection}>
+      <div
+        style={{
+          ...styles.categoryHeader,
+          ...(hovering ? styles.categoryHeaderHover : {}),
+        }}
+        onClick={onToggleExpand}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <span
+          style={{
+            ...styles.categoryExpand,
+            ...(expanded ? styles.categoryExpandOpen : {}),
+          }}
+        >
+          ▶
+        </span>
+        <span style={styles.categoryIcon}>{icon}</span>
+        <span style={styles.categoryTitle}>{label}</span>
+        <span style={styles.categoryCount}>{items.length}</span>
+        <button
+          style={{
+            ...styles.categoryToggleAll,
+            ...(allEnabled ? styles.categoryToggleAllActive : {}),
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleAll();
+          }}
+        >
+          {allEnabled ? '✓ All On' : 'All Off'}
+        </button>
+      </div>
+      {expanded && (
+        <div style={styles.generatorGrid}>
+          {items.map(renderItem)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -2588,10 +2711,82 @@ function findMatchingNamingProfile(namingData, cultureId, entityKind, subtype, p
   return null;
 }
 
+// Default icons for entity kinds (used when schema doesn't provide one)
+const DEFAULT_KIND_ICONS = {
+  npc: '👤',
+  location: '📍',
+  faction: '🏛️',
+  abilities: '✨',
+  rules: '📜',
+  era: '🕰️',
+  occurrence: '⚡',
+};
+
 export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
   useHoverStyles();
   const [selectedGenerator, setSelectedGenerator] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+
+  // Build entity kind info map for icons and labels
+  const entityKindInfo = useMemo(() => {
+    const info = {};
+    (schema?.entityKinds || []).forEach((ek) => {
+      info[ek.kind] = {
+        label: ek.description || ek.name || ek.kind,
+        icon: ek.icon || DEFAULT_KIND_ICONS[ek.kind] || '📦',
+      };
+    });
+    return info;
+  }, [schema]);
+
+  // Group generators by the primary entity kind they create
+  const groupedGenerators = useMemo(() => {
+    const groups = {};
+
+    generators.forEach((generator) => {
+      // Get primary creation kind (first entity created, or target kind if no creation)
+      const createdKinds = (generator.creation || []).map(c => c.kind).filter(Boolean);
+      const primaryKind = createdKinds[0] || generator.selection?.kind || 'uncategorized';
+
+      if (!groups[primaryKind]) {
+        groups[primaryKind] = [];
+      }
+      groups[primaryKind].push(generator);
+    });
+
+    return groups;
+  }, [generators]);
+
+  // Get ordered list of categories
+  const categories = useMemo(() => {
+    // Order by schema entity kinds first, then any uncategorized
+    const schemaKinds = (schema?.entityKinds || []).map(ek => ek.kind);
+    const usedKinds = Object.keys(groupedGenerators);
+
+    // Sort: schema kinds in order, then others alphabetically
+    return usedKinds.sort((a, b) => {
+      const aIdx = schemaKinds.indexOf(a);
+      const bIdx = schemaKinds.indexOf(b);
+      if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+      if (aIdx >= 0) return -1;
+      if (bIdx >= 0) return 1;
+      return a.localeCompare(b);
+    });
+  }, [groupedGenerators, schema]);
+
+  // Initialize expanded state for new categories
+  useEffect(() => {
+    setExpandedCategories(prev => {
+      const updated = { ...prev };
+      categories.forEach(cat => {
+        if (updated[cat] === undefined) {
+          updated[cat] = true; // Start expanded
+        }
+      });
+      return updated;
+    });
+  }, [categories]);
 
   const handleGeneratorChange = useCallback((updated) => {
     const index = generators.findIndex((g) => g.id === selectedGenerator.id);
@@ -2634,6 +2829,30 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
     setSelectedGenerator(newGenerator);
   }, [generators, onChange]);
 
+  const toggleCategoryExpand = useCallback((kind) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [kind]: !prev[kind],
+    }));
+  }, []);
+
+  const toggleAllInCategory = useCallback((kind) => {
+    const categoryItems = groupedGenerators[kind] || [];
+    const allEnabled = categoryItems.every(g => g.enabled !== false);
+    const newEnabled = !allEnabled;
+
+    // Get IDs of generators in this category
+    const categoryIds = new Set(categoryItems.map(g => g.id));
+
+    const newGenerators = generators.map(g => {
+      if (categoryIds.has(g.id)) {
+        return { ...g, enabled: newEnabled };
+      }
+      return g;
+    });
+    onChange(newGenerators);
+  }, [generators, groupedGenerators, onChange]);
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -2641,19 +2860,43 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
         <p style={styles.subtitle}>Configure entity generators that populate your world. Click a generator to edit.</p>
       </div>
 
-      <div style={styles.generatorGrid}>
-        {generators.map((generator) => (
-          <GeneratorListCard
-            key={generator.id}
-            generator={generator}
-            onClick={() => setSelectedGenerator(generator)}
-            onToggle={() => handleToggle(generator)}
-            usageMap={usageMap}
-          />
-        ))}
+      {/* Category sections */}
+      {categories.map((kind) => {
+        const kindInfo = entityKindInfo[kind] || {
+          label: kind.charAt(0).toUpperCase() + kind.slice(1),
+          icon: DEFAULT_KIND_ICONS[kind] || '📦',
+        };
+        const categoryItems = groupedGenerators[kind] || [];
+        const allEnabled = categoryItems.every(g => g.enabled !== false);
 
+        return (
+          <CategorySection
+            key={kind}
+            id={kind}
+            icon={kindInfo.icon}
+            label={`${kindInfo.label} Generators`}
+            items={categoryItems}
+            expanded={expandedCategories[kind] !== false}
+            onToggleExpand={() => toggleCategoryExpand(kind)}
+            allEnabled={allEnabled}
+            onToggleAll={() => toggleAllInCategory(kind)}
+            renderItem={(generator) => (
+              <GeneratorListCard
+                key={generator.id}
+                generator={generator}
+                onClick={() => setSelectedGenerator(generator)}
+                onToggle={() => handleToggle(generator)}
+                usageMap={usageMap}
+              />
+            )}
+          />
+        );
+      })}
+
+      {/* Add Generator button */}
+      <div style={{ marginTop: '16px' }}>
         <div
-          style={{ ...styles.addCard, ...(addHovering ? styles.addCardHover : {}) }}
+          style={{ ...styles.addCard, ...(addHovering ? styles.addCardHover : {}), maxWidth: '320px' }}
           onClick={handleAdd}
           onMouseEnter={() => setAddHovering(true)}
           onMouseLeave={() => setAddHovering(false)}

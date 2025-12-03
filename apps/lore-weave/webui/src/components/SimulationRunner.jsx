@@ -314,6 +314,7 @@ export default function SimulationRunner({
   // Simulation parameters
   const [params, setParams] = useState({
     scaleFactor: 1.0,
+    graphDensity: 5,  // Min distance between entities on semantic planes (0-100 space)
     epochLength: 20,
     simulationTicksPerGrowth: 15,
     targetEntitiesPerKind: 30,
@@ -382,6 +383,7 @@ export default function SimulationRunner({
         history: simState.result.history,
         pressures: simState.result.pressures,
         distributionMetrics: simState.result.distributionMetrics,
+        coordinateState: simState.result.coordinateState,  // Includes emergent regions
       };
       onComplete(results);
     }
@@ -443,6 +445,7 @@ export default function SimulationRunner({
       maxTicks: params.maxTicks,
       maxRelationshipsPerType: 10,
       scaleFactor: params.scaleFactor,
+      graphDensity: params.graphDensity,
       coordinateContextConfig,
       seedRelationships: seedRelationships || [],
       debugConfig,
@@ -665,6 +668,19 @@ export default function SimulationRunner({
                 value={params.scaleFactor}
                 onChange={(e) => handleParamChange('scaleFactor', parseFloat(e.target.value) || 1)}
                 style={styles.input}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Graph Density</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                step="0.5"
+                value={params.graphDensity}
+                onChange={(e) => handleParamChange('graphDensity', parseFloat(e.target.value) || 5)}
+                style={styles.input}
+                title="Minimum distance between entities on semantic planes (lower = more dense)"
               />
             </div>
             <div style={styles.formGroup}>

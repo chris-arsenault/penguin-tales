@@ -132,6 +132,14 @@ export interface CoordinateContextConfig {
 
   /** Cultures array from canonry - each has axisBiases keyed by entity kind */
   cultures: CultureConfig[];
+
+  /**
+   * Graph density controls minimum distance between entities on semantic planes.
+   * Lower values = denser placement (more entities fit in regions)
+   * Higher values = sparser placement (entities spread out more)
+   * Default: 5 (units on 0-100 normalized coordinate space)
+   */
+  graphDensity?: number;
 }
 
 // =============================================================================
@@ -168,12 +176,16 @@ export class CoordinateContext {
   /** Counter for generating unique emergent region IDs */
   private emergentRegionCounter = 0;
 
+  /** Graph density - minimum distance between entities on semantic planes */
+  private readonly graphDensity: number;
+
   /** Optional debug logger */
   debugLog?: (level: string, message: string) => void;
 
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];
     this.cultures = config.cultures || [];
+    this.graphDensity = config.graphDensity ?? 5;
 
     // Initialize mutable region storage from entity kinds' semantic planes
     for (const entityKind of this.entityKinds) {
@@ -379,44 +391,44 @@ export class CoordinateContext {
 
   /**
    * Sample a point within a specific region.
+   * Uses graphDensity as the minimum distance between points.
    *
    * @param entityKind - Entity kind whose regions to use
    * @param regionId - Region to sample within
    * @param existingPoints - Points to avoid
-   * @param minDistance - Minimum distance from existing points
    * @returns Point or null if no valid point found
    */
   sampleInRegion(
     entityKind: string,
     regionId: string,
-    existingPoints: Point[] = [],
-    minDistance: number = 5
+    existingPoints: Point[] = []
   ): Point | null {
     const region = this.getRegion(entityKind, regionId);
     if (!region) return null;
-    return this.sampleCircleRegion(region, existingPoints, minDistance);
+    return this.sampleCircleRegion(region, existingPoints);
   }
 
   /**
    * Sample a point near a reference point.
+   * Uses graphDensity as the minimum distance between points.
    *
    * @param referencePoint - Point to place near
    * @param existingPoints - Points to avoid
-   * @param minDistance - Minimum distance from existing points
-   * @param maxSearchRadius - Maximum distance from reference
+   * @param maxSearchRadius - Maximum distance from reference (defaults to 4x graphDensity)
    * @returns Point or null if no valid point found
    */
   sampleNearPoint(
     referencePoint: Point,
     existingPoints: Point[] = [],
-    minDistance: number = 5,
-    maxSearchRadius: number = 20
+    maxSearchRadius?: number
   ): Point | null {
     const maxAttempts = 50;
+    const minDist = this.graphDensity;
+    const maxRadius = maxSearchRadius ?? minDist * 4;
 
     for (let i = 0; i < maxAttempts; i++) {
       // Sample in a ring around the reference point
-      const r = minDistance + Math.random() * (maxSearchRadius - minDistance);
+      const r = minDist + Math.random() * (maxRadius - minDist);
       const theta = Math.random() * 2 * Math.PI;
       const point: Point = {
         x: referencePoint.x + r * Math.cos(theta),
@@ -428,7 +440,7 @@ export class CoordinateContext {
       point.x = Math.max(0, Math.min(100, point.x));
       point.y = Math.max(0, Math.min(100, point.y));
 
-      if (this.isValidPlacement(point, existingPoints, minDistance)) {
+      if (this.isValidPlacement(point, existingPoints, minDist)) {
         return point;
       }
     }
@@ -505,23 +517,33 @@ export class CoordinateContext {
 
   /**
    * Generate a point biased toward the periphery of the coordinate space.
-   * Uses a ring sampling strategy that favors edges over center.
+   * Samples with bias toward edges, but keeps emergent regions fully in bounds.
+   * Valid range is [radius, 100-radius] so the full region circle stays in bounds.
    */
   private generatePeripheryBiasedPoint(): Point {
-    // Sample angle uniformly
-    const theta = Math.random() * 2 * Math.PI;
+    const radius = EMERGENT_DEFAULTS.radius;
+    const min = radius;        // 10
+    const max = 100 - radius;  // 90
+    const range = max - min;   // 80
+    const mid = min + range / 2; // 50
 
-    // Bias radius toward edges (inverse of center-biased sqrt distribution)
-    // This makes ~70% of points fall in the outer half of the space
-    const r = 50 * (1 - Math.sqrt(1 - Math.random()));
-
-    // Convert polar to cartesian, centered at (50, 50)
-    const x = 50 + r * Math.cos(theta);
-    const y = 50 + r * Math.sin(theta);
+    // Use inverse transform to bias toward edges of valid range
+    // This maps uniform [0,1] to values clustered near min and max
+    const biasedSample = (): number => {
+      const u = Math.random();
+      // Use a U-shaped distribution: values near min and max are more likely
+      if (u < 0.5) {
+        // Map [0, 0.5] -> [min, mid] with bias toward min
+        return min + (range / 2) * Math.pow(u * 2, 2);
+      } else {
+        // Map [0.5, 1] -> [mid, max] with bias toward max
+        return max - (range / 2) * Math.pow((1 - u) * 2, 2);
+      }
+    };
 
     return {
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y)),
+      x: biasedSample(),
+      y: biasedSample(),
       z: 50
     };
   }
@@ -550,11 +572,11 @@ export class CoordinateContext {
 
   /**
    * Sample a point within a region (circle bounds).
+   * Uses graphDensity as the minimum distance between points.
    */
   private sampleCircleRegion(
     region: import('./types').Region,
-    existingPoints: Point[],
-    minDistance: number
+    existingPoints: Point[]
   ): Point | null {
     if (region.bounds.shape !== 'circle') return null;
 
@@ -562,8 +584,8 @@ export class CoordinateContext {
     const maxAttempts = 50;
 
     for (let i = 0; i < maxAttempts; i++) {
-      // Sample with center bias
-      const r = radius * Math.sqrt(Math.random()) * 0.8;
+      // Sample with slight overshoot (1.1x) to use full region area
+      const r = radius * Math.sqrt(Math.random()) * 1.1;
       const theta = Math.random() * 2 * Math.PI;
       const point: Point = {
         x: center.x + r * Math.cos(theta),
@@ -571,7 +593,7 @@ export class CoordinateContext {
         z: 50 // default z
       };
 
-      if (this.isValidPlacement(point, existingPoints, minDistance)) {
+      if (this.isValidPlacement(point, existingPoints, this.graphDensity)) {
         return point;
       }
     }
@@ -580,13 +602,23 @@ export class CoordinateContext {
 
   /**
    * Sample a point biased toward culture's seed regions or near a reference entity.
+   * Uses graphDensity as the minimum distance between points.
+   *
+   * When seed regions are exhausted, attempts to create an emergent region
+   * with the culture. If that fails, returns null (skips placement).
+   *
+   * @param entityKind - Entity kind for placement
+   * @param context - Placement context with culture info
+   * @param existingPoints - Existing points to avoid
+   * @param tick - Current simulation tick (for emergent region creation)
+   * @returns Point and optional emergent region info, or null if placement impossible
    */
   sampleWithCulture(
     entityKind: string,
     context: PlacementContext,
     existingPoints: Point[] = [],
-    minDistance: number = 5
-  ): Point | null {
+    tick: number = 0
+  ): { point: Point; emergentRegion?: { id: string; label: string } } | null {
     const debug = (msg: string) => {
       if (this.debugLog) {
         this.debugLog('debug', `[CoordContext] ${msg}`);
@@ -597,13 +629,11 @@ export class CoordinateContext {
     if (context.referenceEntity?.coordinates) {
       const point = this.sampleNearPoint(
         context.referenceEntity.coordinates,
-        existingPoints,
-        minDistance,
-        minDistance * 4  // maxSearchRadius
+        existingPoints
       );
       if (point) {
         debug(`${entityKind} placed near ref @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
-        return point;
+        return { point };
       }
     }
 
@@ -621,38 +651,109 @@ export class CoordinateContext {
           continue;
         }
 
-        const point = this.sampleCircleRegion(region, existingPoints, minDistance);
+        const point = this.sampleCircleRegion(region, existingPoints);
         if (point) {
           debug(`  -> sampled in seed region "${region.label}" @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
-          return point;
+          return { point };
         }
         debug(`  seed region "${region.label}" failed (crowded?)`);
       }
-      debug(`  all seed regions exhausted`);
-    } else {
-      debug(`  NO seed regions for culture=${context.cultureId}`);
+      debug(`  all seed regions exhausted - attempting emergent region creation`);
+
+      // Seed regions exhausted - try to create emergent region for this culture
+      if (context.cultureId) {
+        const emergentResult = this.createEmergentRegionForCulture(
+          entityKind,
+          context.cultureId,
+          existingPoints,
+          tick
+        );
+        if (emergentResult) {
+          debug(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
+          return {
+            point: emergentResult.point,
+            emergentRegion: {
+              id: emergentResult.region.id,
+              label: emergentResult.region.label
+            }
+          };
+        }
+        debug(`  -> emergent region creation failed, skipping placement`);
+      }
+
+      // Cannot place - return null instead of falling through to other cultures
+      return null;
     }
 
-    // BUG WARNING: This falls through to ANY region, ignoring culture!
-    // TODO: Should this only try regions matching culture, or is this intentional?
-    debug(`  falling through to any-region (ignoring culture!)`);
-    for (const region of regions.sort(() => Math.random() - 0.5)) {
-      const point = this.sampleCircleRegion(region, existingPoints, minDistance);
-      if (point) {
-        debug(`  -> sampled in non-culture region "${region.label}" (culture=${region.culture}) @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
-        return point;
+    // No seed regions for this culture - try emergent region creation
+    debug(`  NO seed regions for culture=${context.cultureId}`);
+    if (context.cultureId) {
+      const emergentResult = this.createEmergentRegionForCulture(
+        entityKind,
+        context.cultureId,
+        existingPoints,
+        tick
+      );
+      if (emergentResult) {
+        debug(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
+        return {
+          point: emergentResult.point,
+          emergentRegion: {
+            id: emergentResult.region.id,
+            label: emergentResult.region.label
+          }
+        };
       }
     }
 
-    // Fallback: random point with culture bias applied
-    const biases = context.axisBiases || { x: 50, y: 50, z: 50 };
-    const fallbackPoint = {
-      x: biases.x + (Math.random() - 0.5) * 30,
-      y: biases.y + (Math.random() - 0.5) * 30,
-      z: biases.z
+    // No culture-aware placement possible - skip
+    debug(`  -> no valid placement for culture=${context.cultureId}, skipping`);
+    return null;
+  }
+
+  /**
+   * Attempt to create an emergent region for a culture.
+   * Finds a sparse area on the plane and creates a new region there.
+   */
+  private createEmergentRegionForCulture(
+    entityKind: string,
+    cultureId: string,
+    existingPoints: Point[],
+    tick: number
+  ): { point: Point; region: import('./types').Region } | null {
+    // Find a sparse area to place the new region
+    const sparseResult = this.findSparseArea({
+      existingPositions: existingPoints,
+      minDistanceFromEntities: this.graphDensity * 2,
+      preferPeriphery: true,
+      maxAttempts: 30
+    });
+
+    if (!sparseResult.success || !sparseResult.coordinates) {
+      return null;
+    }
+
+    // Create emergent region at the sparse location
+    const cultureName = this.getCultureConfig(cultureId)?.name || cultureId;
+    const regionResult = this.createEmergentRegion(
+      entityKind,
+      sparseResult.coordinates,
+      `${cultureName} Frontier`,
+      `An emerging ${cultureName} territory`,
+      tick
+    );
+
+    if (!regionResult.success || !regionResult.region) {
+      return null;
+    }
+
+    // Mark the region as belonging to this culture
+    regionResult.region.culture = cultureId;
+
+    return {
+      point: sparseResult.coordinates,
+      region: regionResult.region
     };
-    debug(`  -> FALLBACK random with biases @ (${fallbackPoint.x.toFixed(1)}, ${fallbackPoint.y.toFixed(1)})`);
-    return fallbackPoint;
   }
 
   /**
@@ -718,22 +819,24 @@ export class CoordinateContext {
 
   /**
    * Place an entity with culture context.
+   * Uses graphDensity as the minimum distance between points.
    */
   placeWithCulture(
     entityKind: string,
     _entityId: string,
-    _tick: number,
+    tick: number,
     context: PlacementContext,
-    existingPoints: Point[] = [],
-    minDistance: number = 5
+    existingPoints: Point[] = []
   ): PlacementResult {
-    const point = this.sampleWithCulture(entityKind, context, existingPoints, minDistance);
-    if (!point) {
+    const result = this.sampleWithCulture(entityKind, context, existingPoints, tick);
+    if (!result) {
       return {
         success: false,
-        failureReason: 'Could not find valid placement point'
+        failureReason: 'Could not find valid placement point for culture'
       };
     }
+
+    const { point, emergentRegion } = result;
 
     // Find which regions contain this point
     const regions = this.getRegions(entityKind);
@@ -759,7 +862,8 @@ export class CoordinateContext {
       regionId: containingRegion?.id ?? null,
       allRegionIds: containingRegions.map(r => r.id),
       derivedTags,
-      cultureId: context.cultureId
+      cultureId: context.cultureId,
+      emergentRegionCreated: emergentRegion
     };
   }
 

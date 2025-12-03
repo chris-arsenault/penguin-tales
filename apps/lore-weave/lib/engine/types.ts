@@ -526,6 +526,12 @@ export interface EngineConfig {
 
   // Scaling configuration
   scaleFactor?: number;  // Master scale multiplier for world size (default: 1.0)
+
+  // Graph density controls minimum distance between entities on semantic planes
+  // Lower values = denser placement (more entities fit in regions)
+  // Higher values = sparser placement (entities spread out more)
+  // Default: 5 (units on 0-100 normalized coordinate space)
+  graphDensity?: number;
   // LLM configuration moved to @illuminator
   // llmConfig?: LLMConfig;
   // enrichmentConfig?: EnrichmentConfig;

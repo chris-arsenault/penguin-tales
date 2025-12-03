@@ -897,8 +897,7 @@ export class TemplateGraphView {
       'placement', // name placeholder
       this.graph.tick,
       context,
-      existingPoints,
-      5 // minDistance
+      existingPoints
     );
 
     if (!placementResult.success || !placementResult.coordinates) {
@@ -1226,8 +1225,7 @@ export class TemplateGraphView {
       entity.name ?? 'unknown',
       this.graph.tick,
       { ...context, seedRegionIds: [regionId] },
-      existingPoints,
-      5
+      existingPoints
     );
 
     if (!placementResult.success || !placementResult.coordinates) {
@@ -1285,8 +1283,7 @@ export class TemplateGraphView {
       entity.name ?? 'unknown',
       this.graph.tick,
       fullContext,
-      existingPoints,
-      5
+      existingPoints
     );
 
     if (!placementResult.success || !placementResult.coordinates) {
@@ -1327,14 +1324,13 @@ export class TemplateGraphView {
     const kind = entity.kind ?? 'npc';
     const existingPoints = this.getAllRegionPoints();
 
-    // Emergent region creation is paused - just place normally
+    // Uses culture-aware placement with emergent region creation
     const placementResult = this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,
       context,
-      existingPoints,
-      5
+      existingPoints
     );
 
     if (!placementResult.success || !placementResult.coordinates) {
@@ -1383,8 +1379,7 @@ export class TemplateGraphView {
       entity.name ?? 'unknown',
       this.graph.tick,
       context,
-      existingPoints,
-      5
+      existingPoints
     );
 
     if (!placementResult.success || !placementResult.coordinates) {

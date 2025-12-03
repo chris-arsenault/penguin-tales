@@ -154,9 +154,8 @@ export default function App() {
 
   // Handle viewing simulation results in Archivist
   const handleViewInArchivist = useCallback((simulationResults) => {
-    // Build per-kind map configs and regions from semantic plane data
+    // Build per-kind map configs from semantic plane data
     const perKindMaps = {};
-    const perKindRegions = {};
 
     currentProject?.entityKinds?.forEach(ek => {
       if (ek.semanticPlane) {
@@ -173,23 +172,44 @@ export default function App() {
           yAxis: sp.axes?.y,
           zAxis: sp.axes?.z,
         };
-        // Convert semantic plane regions to archivist format
-        if (sp.regions && sp.regions.length > 0) {
-          perKindRegions[ek.kind] = sp.regions.map(r => ({
+      }
+    });
+
+    // Build per-kind regions from coordinateState (includes both seed and emergent regions)
+    // coordinateState is the authoritative source - it contains all regions after simulation
+    const perKindRegions = {};
+    const coordRegions = simulationResults.coordinateState?.regions;
+
+    // Build culture color lookup for emergent regions that don't have explicit colors
+    const cultureColors = {};
+    currentProject?.cultures?.forEach(c => {
+      if (c.id && c.color) {
+        cultureColors[c.id] = c.color;
+      }
+    });
+
+    if (coordRegions) {
+      Object.entries(coordRegions).forEach(([entityKind, regions]) => {
+        if (regions && regions.length > 0) {
+          perKindRegions[entityKind] = regions.map(r => ({
             id: r.id,
             label: r.label,
-            description: r.description || '',
+            description: r.description,
             bounds: r.bounds,
             metadata: {
-              color: r.color,
+              // Use region's color, or look up culture's color
+              color: r.color || (r.culture && cultureColors[r.culture]),
               culture: r.culture,
               tags: r.tags,
               subtype: r.culture ? 'colony' : 'default',
+              emergent: r.emergent,
+              createdAt: r.createdAt,
+              createdBy: r.createdBy,
             },
           }));
         }
-      }
-    });
+      });
+    }
 
     // Build uiSchema for Archivist
     const uiSchema = {

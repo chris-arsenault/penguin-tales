@@ -129,6 +129,33 @@ const SYSTEM_TYPES = {
   planeDiffusion: { label: 'Plane Diffusion', icon: '🌡️', color: '#38bdf8', desc: 'Value diffusion across space' },
 };
 
+// Framework systems are grouped together
+const FRAMEWORK_SYSTEM_TYPES = new Set([
+  'eraSpawner',
+  'eraTransition',
+  'universalCatalyst',
+  'relationshipMaintenance',
+]);
+
+// Category definitions for grouping systems
+const SYSTEM_CATEGORIES = {
+  framework: { label: 'Framework Systems', icon: '⚙️', order: 0 },
+  graphContagion: { label: 'Graph Contagion', icon: '🦠', order: 1 },
+  connectionEvolution: { label: 'Connection Evolution', icon: '🔗', order: 2 },
+  thresholdTrigger: { label: 'Threshold Trigger', icon: '⚡', order: 3 },
+  clusterFormation: { label: 'Cluster Formation', icon: '🎯', order: 4 },
+  tagDiffusion: { label: 'Tag Diffusion', icon: '🏷️', order: 5 },
+  planeDiffusion: { label: 'Plane Diffusion', icon: '🌡️', order: 6 },
+};
+
+// Map system type to category
+function getSystemCategory(systemType) {
+  if (FRAMEWORK_SYSTEM_TYPES.has(systemType)) {
+    return 'framework';
+  }
+  return systemType;
+}
+
 const CLUSTER_MODES = [
   { value: 'individual', label: 'Individual', desc: 'Apply to each entity separately' },
   { value: 'by_relationship', label: 'By Relationship', desc: 'Group by relationship clusters' },
@@ -297,8 +324,67 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    color: COLORS.textDim,
-    minHeight: '140px',
+  },
+  // Category section styles
+  categorySection: {
+    marginBottom: '24px',
+  },
+  categoryHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: COLORS.bgCard,
+    borderRadius: '8px',
+    border: `1px solid ${COLORS.border}`,
+    cursor: 'pointer',
+    marginBottom: '12px',
+    transition: 'all 0.15s',
+  },
+  categoryHeaderHover: {
+    borderColor: ACCENT_COLOR,
+  },
+  categoryIcon: {
+    fontSize: '18px',
+  },
+  categoryTitle: {
+    flex: 1,
+    fontSize: '15px',
+    fontWeight: 600,
+    color: COLORS.text,
+  },
+  categoryCount: {
+    fontSize: '12px',
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.bgDark,
+    padding: '2px 8px',
+    borderRadius: '10px',
+  },
+  categoryToggleAll: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '11px',
+    color: COLORS.textMuted,
+    padding: '4px 10px',
+    borderRadius: '4px',
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  categoryToggleAllActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderColor: COLORS.success,
+    color: COLORS.success,
+  },
+  categoryExpand: {
+    fontSize: '12px',
+    color: COLORS.textMuted,
+    transition: 'transform 0.2s',
+  },
+  categoryExpandOpen: {
+    transform: 'rotate(90deg)',
   },
   addCardHover: {
     borderColor: ACCENT_COLOR,
@@ -2683,6 +2769,67 @@ function SystemModal({ system, onChange, onClose, onDelete, schema, pressures })
 }
 
 // ============================================================================
+// CATEGORY SECTION COMPONENT
+// ============================================================================
+
+function CategorySection({
+  id,
+  icon,
+  label,
+  items,
+  expanded,
+  onToggleExpand,
+  allEnabled,
+  onToggleAll,
+  renderItem,
+}) {
+  const [hovering, setHovering] = useState(false);
+
+  return (
+    <div style={styles.categorySection}>
+      <div
+        style={{
+          ...styles.categoryHeader,
+          ...(hovering ? styles.categoryHeaderHover : {}),
+        }}
+        onClick={onToggleExpand}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        <span
+          style={{
+            ...styles.categoryExpand,
+            ...(expanded ? styles.categoryExpandOpen : {}),
+          }}
+        >
+          ▶
+        </span>
+        <span style={styles.categoryIcon}>{icon}</span>
+        <span style={styles.categoryTitle}>{label}</span>
+        <span style={styles.categoryCount}>{items.length}</span>
+        <button
+          style={{
+            ...styles.categoryToggleAll,
+            ...(allEnabled ? styles.categoryToggleAllActive : {}),
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleAll();
+          }}
+        >
+          {allEnabled ? '✓ All On' : 'All Off'}
+        </button>
+      </div>
+      {expanded && (
+        <div style={styles.systemGrid}>
+          {items.map(renderItem)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -2781,6 +2928,37 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
   const [selectedSystem, setSelectedSystem] = useState(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [addHovering, setAddHovering] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState(() => {
+    // Start with all categories expanded
+    return Object.keys(SYSTEM_CATEGORIES).reduce((acc, cat) => {
+      acc[cat] = true;
+      return acc;
+    }, {});
+  });
+
+  // Group systems by category (framework systems grouped together)
+  const groupedSystems = useMemo(() => {
+    const groups = {};
+    systems.forEach((system) => {
+      const category = getSystemCategory(system.systemType || 'unknown');
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(system);
+    });
+    return groups;
+  }, [systems]);
+
+  // Get ordered list of categories that have systems
+  const categories = useMemo(() => {
+    const usedCategories = Object.keys(groupedSystems);
+    // Sort by defined order in SYSTEM_CATEGORIES
+    return usedCategories.sort((a, b) => {
+      const orderA = SYSTEM_CATEGORIES[a]?.order ?? 999;
+      const orderB = SYSTEM_CATEGORIES[b]?.order ?? 999;
+      return orderA - orderB;
+    });
+  }, [groupedSystems]);
 
   const handleSystemChange = useCallback((updated) => {
     const index = systems.findIndex((s) => s.config?.id === selectedSystem.config?.id);
@@ -2822,6 +3000,30 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
     setShowTypePicker(false);
   }, [systems, onChange]);
 
+  const toggleCategoryExpand = useCallback((type) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  }, []);
+
+  const toggleAllInCategory = useCallback((category) => {
+    const categoryItems = groupedSystems[category] || [];
+    const allEnabled = categoryItems.every(s => s.enabled !== false);
+    const newEnabled = !allEnabled;
+
+    // Get IDs of systems in this category
+    const categoryIds = new Set(categoryItems.map(s => s.config?.id));
+
+    const newSystems = systems.map(s => {
+      if (categoryIds.has(s.config?.id)) {
+        return { ...s, enabled: newEnabled };
+      }
+      return s;
+    });
+    onChange(newSystems);
+  }, [systems, groupedSystems, onChange]);
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -2829,19 +3031,40 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
         <p style={styles.subtitle}>Configure simulation systems that run during the simulation phase. Click a system to edit.</p>
       </div>
 
-      <div style={styles.systemGrid}>
-        {systems.map((system) => (
-          <SystemListCard
-            key={system.config?.id}
-            system={system}
-            onClick={() => setSelectedSystem(system)}
-            onToggle={() => handleToggle(system)}
-            usageMap={usageMap}
-          />
-        ))}
+      {/* Category sections */}
+      {categories.map((category) => {
+        const categoryConfig = SYSTEM_CATEGORIES[category] || { icon: '⚙️', label: category };
+        const categoryItems = groupedSystems[category] || [];
+        const allEnabled = categoryItems.every(s => s.enabled !== false);
 
+        return (
+          <CategorySection
+            key={category}
+            id={category}
+            icon={categoryConfig.icon}
+            label={categoryConfig.label}
+            items={categoryItems}
+            expanded={expandedCategories[category] !== false}
+            onToggleExpand={() => toggleCategoryExpand(category)}
+            allEnabled={allEnabled}
+            onToggleAll={() => toggleAllInCategory(category)}
+            renderItem={(system) => (
+              <SystemListCard
+                key={system.config?.id}
+                system={system}
+                onClick={() => setSelectedSystem(system)}
+                onToggle={() => handleToggle(system)}
+                usageMap={usageMap}
+              />
+            )}
+          />
+        );
+      })}
+
+      {/* Add System button */}
+      <div style={{ marginTop: '16px' }}>
         <div
-          style={{ ...styles.addCard, ...(addHovering ? styles.addCardHover : {}) }}
+          style={{ ...styles.addCard, ...(addHovering ? styles.addCardHover : {}), maxWidth: '320px' }}
           onClick={() => setShowTypePicker(true)}
           onMouseEnter={() => setAddHovering(true)}
           onMouseLeave={() => setAddHovering(false)}

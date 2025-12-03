@@ -429,11 +429,16 @@ function ProgressOverview({ progress, status }) {
     );
   }
 
+  // Progress based on completed epochs (0-100%)
+  const epochProgress = progress.totalEpochs > 0
+    ? (progress.epoch / progress.totalEpochs) * 100
+    : 0;
+
   const percent = status === 'complete' ? 100 :
-    status === 'initializing' ? 5 :
-    status === 'validating' ? 10 :
-    status === 'finalizing' ? 95 :
-    Math.min(90, 15 + (progress.tick / progress.maxTicks) * 75);
+    status === 'initializing' ? 0 :
+    status === 'validating' ? 0 :
+    status === 'finalizing' ? 99 :
+    Math.round(epochProgress);
 
   return (
     <div style={styles.overviewBar}>

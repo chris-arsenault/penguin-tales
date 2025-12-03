@@ -254,10 +254,16 @@ export class WorldEngine {
         'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
       );
     }
-    this.coordinateContext = new CoordinateContext(config.coordinateContextConfig);
+    // Pass graphDensity from EngineConfig to CoordinateContext
+    const coordinateConfig = {
+      ...config.coordinateContextConfig,
+      graphDensity: config.graphDensity ?? config.coordinateContextConfig.graphDensity
+    };
+    this.coordinateContext = new CoordinateContext(coordinateConfig);
     this.emitter.log('info', 'Coordinate context initialized', {
       cultures: this.coordinateContext.getCultureIds().length,
-      entityKinds: this.coordinateContext.getConfiguredKinds().length
+      entityKinds: this.coordinateContext.getConfiguredKinds().length,
+      graphDensity: config.graphDensity ?? 5
     });
 
     // Initialize NameForgeService from cultures that have naming config

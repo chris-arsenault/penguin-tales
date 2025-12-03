@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore } from '../types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore, RegionSchema } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships, getTagsArray } from '../utils/dataTransform.ts';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
@@ -13,6 +13,106 @@ interface EntityDetailProps {
   loreData: LoreData | null;
   imageData: ImageMetadata | null;
   onRelatedClick: (entityId: string) => void;
+}
+
+// Parse selection ID - returns { type: 'entity', id } or { type: 'region', entityKind, regionId }
+function parseSelectionId(selectionId: string): { type: 'entity'; id: string } | { type: 'region'; entityKind: string; regionId: string } {
+  if (selectionId.startsWith('region:')) {
+    const parts = selectionId.split(':');
+    return { type: 'region', entityKind: parts[1], regionId: parts[2] };
+  }
+  return { type: 'entity', id: selectionId };
+}
+
+// Find a region by entityKind and regionId
+function findRegion(worldData: WorldState, entityKind: string, regionId: string): RegionSchema | undefined {
+  const regions = worldData.uiSchema?.perKindRegions?.[entityKind];
+  return regions?.find(r => r.id === regionId);
+}
+
+// Region metadata type for type safety
+interface RegionMetadata {
+  color?: string;
+  culture?: string;
+  tags?: string[];
+  subtype?: string;
+  emergent?: boolean;
+  createdAt?: number;
+  createdBy?: string;
+}
+
+// Region detail component
+function RegionDetail({ region, entityKind, worldData }: { region: RegionSchema; entityKind: string; worldData: WorldState }) {
+  const metadata = (region.metadata || {}) as RegionMetadata;
+  const culture = worldData.uiSchema?.cultures?.find(c => c.id === metadata.culture);
+
+  return (
+    <div className="entity-detail">
+      {/* Header */}
+      <div className="entity-detail-header">
+        <h2 className="entity-detail-name">{region.label}</h2>
+        <div className="entity-detail-badges">
+          <span className={`entity-badge ${metadata.emergent ? 'entity-badge-emergent' : ''}`}>
+            {metadata.emergent ? 'Emergent' : 'Seed'} Region
+          </span>
+          <span className="entity-badge entity-badge-kind">{entityKind}</span>
+          {culture && (
+            <span className="entity-badge entity-badge-culture" style={{ borderColor: culture.color, color: culture.color }}>
+              {culture.name}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      {region.description && (
+        <div className="detail-card">
+          <div className="section-header">Description</div>
+          <p className="detail-card-content" style={{ fontSize: '13px', color: '#bfdbfe', margin: 0 }}>
+            {region.description}
+          </p>
+        </div>
+      )}
+
+      {/* Region Properties */}
+      <div className="entity-meta-grid">
+        {region.bounds.shape === 'circle' && (
+          <>
+            <div className="entity-meta-item">
+              <span className="entity-meta-label">Radius</span>
+              <span className="entity-meta-value">{region.bounds.radius.toFixed(1)}</span>
+            </div>
+            <div className="entity-meta-item">
+              <span className="entity-meta-label">Center X</span>
+              <span className="entity-meta-value">{region.bounds.center.x.toFixed(1)}</span>
+            </div>
+            <div className="entity-meta-item">
+              <span className="entity-meta-label">Center Y</span>
+              <span className="entity-meta-value">{region.bounds.center.y.toFixed(1)}</span>
+            </div>
+          </>
+        )}
+        {metadata.emergent && metadata.createdAt !== undefined && (
+          <div className="entity-meta-item">
+            <span className="entity-meta-label">Created</span>
+            <span className="entity-meta-value">Tick {metadata.createdAt}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Tags */}
+      {metadata.tags && metadata.tags.length > 0 && (
+        <div className="entity-tags-section">
+          <div className="section-header">Tags</div>
+          <div className="tags-container">
+            {metadata.tags.map((tag: string) => (
+              <span key={tag} className="tag">{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function EntityDetail({ entityId, worldData, loreData, imageData, onRelatedClick }: EntityDetailProps) {
@@ -32,7 +132,22 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
     );
   }
 
-  const entity = getEntityById(worldData, entityId);
+  // Check if this is a region selection
+  const selection = parseSelectionId(entityId);
+
+  if (selection.type === 'region') {
+    const region = findRegion(worldData, selection.entityKind, selection.regionId);
+    if (!region) {
+      return (
+        <div className="entity-detail">
+          <div className="text-red-400 font-medium">Region not found</div>
+        </div>
+      );
+    }
+    return <RegionDetail region={region} entityKind={selection.entityKind} worldData={worldData} />;
+  }
+
+  const entity = getEntityById(worldData, selection.id);
 
   if (!entity) {
     return (
@@ -44,6 +159,11 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
 
   const relatedEntities = getRelatedEntities(worldData, entityId);
   const relationships = getRelationships(worldData, entityId);
+
+  // Look up culture info
+  const entityCulture = entity.culture
+    ? worldData.uiSchema?.cultures?.find(c => c.id === entity.culture)
+    : undefined;
 
   // Find lore for this entity
   const descriptionLore = loreData?.records.find(
@@ -126,31 +246,19 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
   return (
     <div className="entity-detail">
       {/* Header */}
-      <div className="mb-6 pb-6 border-b border-blue-500/20">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h2 className="text-2xl font-bold leading-tight flex-1 break-words"
-            style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, #93c5fd 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-            {entity.name}
-          </h2>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg flex-shrink-0 ${
-            entity.prominence === 'mythic' ? 'bg-purple-600 text-purple-100' :
-            entity.prominence === 'renowned' ? 'bg-blue-600 text-blue-100' :
-            entity.prominence === 'recognized' ? 'bg-green-600 text-green-100' :
-            entity.prominence === 'marginal' ? 'bg-yellow-600 text-yellow-100' :
-            'bg-gray-600 text-gray-100'
-          }`}>
+      <div className="entity-detail-header">
+        <h2 className="entity-detail-name">{entity.name}</h2>
+        <div className="entity-detail-badges">
+          <span className={`entity-badge prominence-${entity.prominence}`}>
             {entity.prominence}
           </span>
-        </div>
-        <div className="flex gap-3 text-sm flex-wrap">
-          <span className="capitalize font-medium text-blue-300">{entity.kind}</span>
-          <span className="text-blue-500">•</span>
-          <span className="capitalize text-blue-200">{entity.subtype}</span>
+          <span className="entity-badge entity-badge-kind">{entity.kind}</span>
+          <span className="entity-badge entity-badge-subtype">{entity.subtype}</span>
+          {entityCulture && (
+            <span className="entity-badge entity-badge-culture" style={{ borderColor: entityCulture.color, color: entityCulture.color }}>
+              {entityCulture.name}
+            </span>
+          )}
         </div>
       </div>
 
@@ -191,19 +299,25 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
         />
       )}
 
-      {/* Status */}
-      <div className="mb-6">
-        <div className="section-header">Status</div>
-        <div className="detail-card">
-          <div className="text-sm font-medium capitalize text-white break-words">
-            {entity.status}
-          </div>
+      {/* Status & Timeline */}
+      <div className="entity-meta-grid">
+        <div className="entity-meta-item">
+          <span className="entity-meta-label">Status</span>
+          <span className="entity-meta-value">{entity.status}</span>
+        </div>
+        <div className="entity-meta-item">
+          <span className="entity-meta-label">Created</span>
+          <span className="entity-meta-value">Tick {entity.createdAt}</span>
+        </div>
+        <div className="entity-meta-item">
+          <span className="entity-meta-label">Updated</span>
+          <span className="entity-meta-value">Tick {entity.updatedAt}</span>
         </div>
       </div>
 
       {/* Tags */}
       {getTagsArray(entity.tags).length > 0 && (
-        <div className="mb-6">
+        <div className="entity-tags-section">
           <div className="section-header">Tags</div>
           <div className="tags-container">
             {getTagsArray(entity.tags).map(tag => (
@@ -212,21 +326,6 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
           </div>
         </div>
       )}
-
-      {/* Timeline */}
-      <div className="detail-card">
-        <div className="section-header">Timeline</div>
-        <div className="detail-card-content">
-          <div className="timeline-row">
-            <span className="text-blue-400">Created:</span>
-            <span className="text-white font-semibold">Tick {entity.createdAt}</span>
-          </div>
-          <div className="timeline-row">
-            <span className="text-blue-400">Updated:</span>
-            <span className="text-white font-semibold">Tick {entity.updatedAt}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Outgoing Relationships */}
       {outgoingRels.length > 0 && (
