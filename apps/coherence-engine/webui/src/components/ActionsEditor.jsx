@@ -780,6 +780,16 @@ function PressureChangesEditor({ value = {}, onChange, pressures }) {
 // ============================================================================
 
 function OverviewTab({ action, onChange, onDelete }) {
+  // Local state for text inputs to prevent cursor jumping
+  const [localId, setLocalId] = useState(action.id || '');
+  const [localName, setLocalName] = useState(action.name || '');
+
+  // Sync local state when action changes
+  useEffect(() => {
+    setLocalId(action.id || '');
+    setLocalName(action.name || '');
+  }, [action.id, action.name]);
+
   const updateAction = (field, value) => {
     onChange({ ...action, [field]: value });
   };
@@ -795,8 +805,9 @@ function OverviewTab({ action, onChange, onDelete }) {
             <label style={styles.label}>ID</label>
             <input
               type="text"
-              value={action.id || ''}
-              onChange={(e) => updateAction('id', e.target.value)}
+              value={localId}
+              onChange={(e) => setLocalId(e.target.value)}
+              onBlur={() => updateAction('id', localId)}
               style={styles.input}
               placeholder="unique_action_id"
             />
@@ -805,8 +816,9 @@ function OverviewTab({ action, onChange, onDelete }) {
             <label style={styles.label}>Name</label>
             <input
               type="text"
-              value={action.name || ''}
-              onChange={(e) => updateAction('name', e.target.value)}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={() => updateAction('name', localName)}
               style={styles.input}
               placeholder="Action Name"
             />
@@ -1848,18 +1860,19 @@ function ActionListCard({ action, onClick, onToggle, usageMap }) {
 
 export default function ActionsEditor({ actions = [], onChange, schema, pressures = [], usageMap }) {
   useHoverStyles();
-  const [selectedAction, setSelectedAction] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
 
+  // Derive selected action from index
+  const selectedAction = selectedIndex !== null ? actions[selectedIndex] : null;
+
   const handleActionChange = useCallback((updated) => {
-    const index = actions.findIndex((a) => a.id === selectedAction.id);
-    if (index >= 0) {
+    if (selectedIndex !== null && selectedIndex < actions.length) {
       const newActions = [...actions];
-      newActions[index] = updated;
+      newActions[selectedIndex] = updated;
       onChange(newActions);
-      setSelectedAction(updated);
     }
-  }, [actions, onChange, selectedAction]);
+  }, [actions, onChange, selectedIndex]);
 
   const handleToggle = useCallback((action) => {
     const index = actions.findIndex((a) => a.id === action.id);
@@ -1871,11 +1884,13 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
   }, [actions, onChange]);
 
   const handleDelete = useCallback(() => {
-    if (selectedAction && confirm(`Delete action "${selectedAction.name || selectedAction.id}"?`)) {
-      onChange(actions.filter((a) => a.id !== selectedAction.id));
-      setSelectedAction(null);
+    if (selectedIndex !== null && selectedAction && confirm(`Delete action "${selectedAction.name || selectedAction.id}"?`)) {
+      const newActions = [...actions];
+      newActions.splice(selectedIndex, 1);
+      onChange(newActions);
+      setSelectedIndex(null);
     }
-  }, [actions, onChange, selectedAction]);
+  }, [actions, onChange, selectedIndex, selectedAction]);
 
   const handleAddAction = useCallback(() => {
     const newAction = {
@@ -1893,7 +1908,7 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
       },
     };
     onChange([...actions, newAction]);
-    setSelectedAction(newAction);
+    setSelectedIndex(actions.length); // New item will be at the end
   }, [actions, onChange]);
 
   // Collect unique pressures across all actions
@@ -1922,11 +1937,11 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
       </div>
 
       <div style={styles.actionGrid}>
-        {actions.map((action) => (
+        {actions.map((action, index) => (
           <ActionListCard
             key={action.id}
             action={action}
-            onClick={() => setSelectedAction(action)}
+            onClick={() => setSelectedIndex(index)}
             onToggle={() => handleToggle(action)}
             usageMap={usageMap}
           />
@@ -1947,7 +1962,7 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
         <ActionModal
           action={selectedAction}
           onChange={handleActionChange}
-          onClose={() => setSelectedAction(null)}
+          onClose={() => setSelectedIndex(null)}
           onDelete={handleDelete}
           schema={schema}
           pressures={pressures}

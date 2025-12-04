@@ -125,6 +125,36 @@ export function isFrameworkRelationship(relationship: Relationship): boolean {
 }
 
 // ===========================
+// FRAMEWORK SUBTYPES
+// ===========================
+
+/**
+ * Subtypes that have framework-level meaning.
+ * Domains should define naming profiles for these subtypes.
+ */
+export const FRAMEWORK_SUBTYPES = {
+  /**
+   * Used when naming emergent regions.
+   * Domains should define naming profiles for kind:region combinations
+   * to support emergent region naming in name-forge.
+   */
+  REGION: 'region',
+} as const;
+
+/** Type for framework subtype values */
+export type FrameworkSubtype = typeof FRAMEWORK_SUBTYPES[keyof typeof FRAMEWORK_SUBTYPES];
+
+/** Array of all framework subtype values */
+export const FRAMEWORK_SUBTYPE_VALUES: readonly FrameworkSubtype[] = Object.values(FRAMEWORK_SUBTYPES);
+
+/**
+ * Check if a subtype is a framework-level subtype
+ */
+export function isFrameworkSubtype(subtype: string): subtype is FrameworkSubtype {
+  return FRAMEWORK_SUBTYPE_VALUES.includes(subtype as FrameworkSubtype);
+}
+
+// ===========================
 // FRAMEWORK ENTITY SUBTYPES
 // ===========================
 

@@ -190,7 +190,9 @@ const styles = {
   generatorCard: {
     backgroundColor: COLORS.bgCard,
     borderRadius: '12px',
-    border: `1px solid ${COLORS.border}`,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: COLORS.border,
     padding: '20px',
     cursor: 'pointer',
     transition: 'all 0.2s',
@@ -442,7 +444,8 @@ const styles = {
     color: COLORS.textMuted,
   },
   tabBtnActive: {
-    background: ACCENT_GRADIENT,
+    backgroundImage: ACCENT_GRADIENT,
+    backgroundColor: 'transparent',
     color: COLORS.bgDark,
   },
   tabIcon: {
@@ -943,7 +946,17 @@ function ProminenceSelector({ value, onChange }) {
 // OVERVIEW TAB
 // ============================================================================
 
-function OverviewTab({ generator, onChange, onDelete }) {
+function OverviewTab({ generator, onChange, onDelete, onDuplicate }) {
+  // Local state for text inputs to prevent cursor jumping
+  const [localId, setLocalId] = useState(generator.id);
+  const [localName, setLocalName] = useState(generator.name || '');
+
+  // Sync local state when generator changes (e.g., switching generators)
+  useEffect(() => {
+    setLocalId(generator.id);
+    setLocalName(generator.name || '');
+  }, [generator.id, generator.name]);
+
   const updateField = (field, value) => {
     onChange({ ...generator, [field]: value });
   };
@@ -967,8 +980,9 @@ function OverviewTab({ generator, onChange, onDelete }) {
             <label style={styles.label}>Generator ID</label>
             <input
               type="text"
-              value={generator.id}
-              onChange={(e) => updateField('id', e.target.value)}
+              value={localId}
+              onChange={(e) => setLocalId(e.target.value)}
+              onBlur={() => updateField('id', localId)}
               style={styles.input}
             />
           </div>
@@ -976,8 +990,9 @@ function OverviewTab({ generator, onChange, onDelete }) {
             <label style={styles.label}>Display Name</label>
             <input
               type="text"
-              value={generator.name || ''}
-              onChange={(e) => updateField('name', e.target.value)}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={() => updateField('name', localName)}
               style={styles.input}
               placeholder="Optional friendly name"
             />
@@ -1035,7 +1050,10 @@ function OverviewTab({ generator, onChange, onDelete }) {
         </div>
       </div>
 
-      <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: `1px solid ${COLORS.border}` }}>
+      <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: `1px solid ${COLORS.border}`, display: 'flex', gap: '12px' }}>
+        <button style={{ ...styles.button }} onClick={onDuplicate}>
+          Duplicate Generator
+        </button>
         <button style={{ ...styles.button, ...styles.buttonDanger }} onClick={onDelete}>
           Delete Generator
         </button>
@@ -1331,6 +1349,799 @@ function ApplicabilityTab({ generator, onChange, schema, pressures, eras }) {
 }
 
 // ============================================================================
+// SELECTION FILTERS EDITOR
+// ============================================================================
+
+const FILTER_TYPES = {
+  has_tag: { label: 'Has Tag', icon: '🏷️', color: '#10b981' },
+  has_any_tag: { label: 'Has Any Tag', icon: '🏷️', color: '#10b981' },
+  has_relationship: { label: 'Has Relationship', icon: '🔗', color: '#8b5cf6' },
+  lacks_relationship: { label: 'Lacks Relationship', icon: '🚫', color: '#ef4444' },
+  exclude: { label: 'Exclude Entities', icon: '⛔', color: '#f59e0b' },
+  same_location: { label: 'Same Location', icon: '📍', color: '#3b82f6' },
+  not_at_war: { label: 'Not At War', icon: '🕊️', color: '#06b6d4' },
+  graph_path: { label: 'Graph Path', icon: '🔀', color: '#ec4899' },
+};
+
+const PATH_CHECK_TYPES = [
+  { value: 'exists', label: 'Path Exists' },
+  { value: 'not_exists', label: 'Path Does Not Exist' },
+  { value: 'count_min', label: 'Count At Least' },
+  { value: 'count_max', label: 'Count At Most' },
+];
+
+const PATH_DIRECTIONS = [
+  { value: 'out', label: 'Outgoing →' },
+  { value: 'in', label: '← Incoming' },
+  { value: 'any', label: '↔ Any' },
+];
+
+const PATH_CONSTRAINT_TYPES = [
+  { value: 'not_self', label: 'Not Self' },
+  { value: 'not_in', label: 'Not In Set' },
+  { value: 'in', label: 'In Set' },
+  { value: 'kind_equals', label: 'Kind Equals' },
+  { value: 'subtype_equals', label: 'Subtype Equals' },
+  { value: 'has_relationship', label: 'Has Relationship' },
+  { value: 'lacks_relationship', label: 'Lacks Relationship' },
+];
+
+function PathStepEditor({ step, onChange, onRemove, schema, stepIndex }) {
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const entityKindOptions = [
+    { value: '', label: 'Any kind' },
+    ...(schema?.entityKinds || []).map((ek) => ({
+      value: ek.kind,
+      label: ek.description || ek.kind,
+    })),
+  ];
+
+  const getSubtypeOptions = (kind) => {
+    if (!kind) return [{ value: '', label: 'Any subtype' }];
+    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
+    if (!ek?.subtypes) return [{ value: '', label: 'Any subtype' }];
+    return [
+      { value: '', label: 'Any subtype' },
+      ...ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id })),
+    ];
+  };
+
+  const updateStep = (field, value) => {
+    onChange({ ...step, [field]: value || undefined });
+  };
+
+  return (
+    <div style={{
+      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+      border: '1px solid rgba(139, 92, 246, 0.3)',
+      borderRadius: '6px',
+      padding: '10px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#a78bfa' }}>
+          Step {stepIndex + 1}
+        </span>
+        <button
+          onClick={onRemove}
+          style={{
+            padding: '2px 6px',
+            fontSize: '10px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '3px',
+            color: '#ef4444',
+            cursor: 'pointer',
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <div>
+          <label style={{ fontSize: '9px', color: COLORS.textMuted, display: 'block', marginBottom: '2px' }}>Via Relationship</label>
+          <ReferenceDropdown
+            value={step.via || ''}
+            onChange={(v) => updateStep('via', v)}
+            options={relationshipKindOptions}
+            placeholder="Select..."
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '9px', color: COLORS.textMuted, display: 'block', marginBottom: '2px' }}>Direction</label>
+          <ReferenceDropdown
+            value={step.direction || 'any'}
+            onChange={(v) => updateStep('direction', v)}
+            options={PATH_DIRECTIONS}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '9px', color: COLORS.textMuted, display: 'block', marginBottom: '2px' }}>Target Kind</label>
+          <ReferenceDropdown
+            value={step.targetKind || ''}
+            onChange={(v) => updateStep('targetKind', v)}
+            options={entityKindOptions}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '9px', color: COLORS.textMuted, display: 'block', marginBottom: '2px' }}>Target Subtype</label>
+          <ReferenceDropdown
+            value={step.targetSubtype || ''}
+            onChange={(v) => updateStep('targetSubtype', v)}
+            options={getSubtypeOptions(step.targetKind)}
+          />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={{ fontSize: '9px', color: COLORS.textMuted, display: 'block', marginBottom: '2px' }}>Store As Variable (optional)</label>
+          <input
+            type="text"
+            value={step.as || ''}
+            onChange={(e) => updateStep('as', e.target.value)}
+            style={{ ...styles.input, padding: '6px 8px', fontSize: '12px' }}
+            placeholder="e.g. $allies"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PathConstraintEditor({ constraint, onChange, onRemove, schema, availableRefs }) {
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+    value: ek.kind,
+    label: ek.description || ek.kind,
+  }));
+
+  const refOptions = (availableRefs || []).map((ref) => ({
+    value: ref,
+    label: ref,
+  }));
+
+  const updateConstraint = (field, value) => {
+    onChange({ ...constraint, [field]: value || undefined });
+  };
+
+  const renderConstraintFields = () => {
+    switch (constraint.type) {
+      case 'not_self':
+        return <span style={{ fontSize: '11px', color: COLORS.textMuted }}>Target cannot be the starting entity</span>;
+
+      case 'not_in':
+      case 'in':
+        return (
+          <div>
+            <label style={{ fontSize: '9px', color: COLORS.textMuted }}>Set Variable</label>
+            <ReferenceDropdown
+              value={constraint.set || ''}
+              onChange={(v) => updateConstraint('set', v)}
+              options={refOptions}
+              placeholder="e.g. $allies"
+            />
+          </div>
+        );
+
+      case 'kind_equals':
+        return (
+          <div>
+            <label style={{ fontSize: '9px', color: COLORS.textMuted }}>Entity Kind</label>
+            <ReferenceDropdown
+              value={constraint.kind || ''}
+              onChange={(v) => updateConstraint('kind', v)}
+              options={entityKindOptions}
+            />
+          </div>
+        );
+
+      case 'subtype_equals':
+        return (
+          <div>
+            <label style={{ fontSize: '9px', color: COLORS.textMuted }}>Subtype</label>
+            <input
+              type="text"
+              value={constraint.subtype || ''}
+              onChange={(e) => updateConstraint('subtype', e.target.value)}
+              style={{ ...styles.input, padding: '6px 8px', fontSize: '12px' }}
+              placeholder="subtype"
+            />
+          </div>
+        );
+
+      case 'has_relationship':
+      case 'lacks_relationship':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+            <div>
+              <label style={{ fontSize: '9px', color: COLORS.textMuted }}>Kind</label>
+              <ReferenceDropdown
+                value={constraint.kind || ''}
+                onChange={(v) => updateConstraint('kind', v)}
+                options={relationshipKindOptions}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', color: COLORS.textMuted }}>With</label>
+              <ReferenceDropdown
+                value={constraint.with || ''}
+                onChange={(v) => updateConstraint('with', v)}
+                options={refOptions}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', color: COLORS.textMuted }}>Direction</label>
+              <ReferenceDropdown
+                value={constraint.direction || 'any'}
+                onChange={(v) => updateConstraint('direction', v)}
+                options={PATH_DIRECTIONS}
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const constraintLabel = PATH_CONSTRAINT_TYPES.find(c => c.value === constraint.type)?.label || constraint.type;
+
+  return (
+    <div style={{
+      backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      border: '1px solid rgba(236, 72, 153, 0.3)',
+      borderRadius: '4px',
+      padding: '8px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <span style={{ fontSize: '10px', fontWeight: 600, color: '#f472b6' }}>{constraintLabel}</span>
+        <button
+          onClick={onRemove}
+          style={{
+            padding: '2px 6px',
+            fontSize: '10px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '3px',
+            color: '#ef4444',
+            cursor: 'pointer',
+          }}
+        >
+          ×
+        </button>
+      </div>
+      {renderConstraintFields()}
+    </div>
+  );
+}
+
+function GraphPathEditor({ assert, onChange, schema, availableRefs }) {
+  const [showConstraintMenu, setShowConstraintMenu] = useState(false);
+
+  const assertion = assert || { check: 'exists', path: [] };
+
+  const updateAssertion = (field, value) => {
+    onChange({ ...assertion, [field]: value });
+  };
+
+  const addStep = () => {
+    const newStep = { via: '', direction: 'any' };
+    updateAssertion('path', [...(assertion.path || []), newStep]);
+  };
+
+  const updateStep = (index, updated) => {
+    const newPath = [...(assertion.path || [])];
+    newPath[index] = updated;
+    updateAssertion('path', newPath);
+  };
+
+  const removeStep = (index) => {
+    updateAssertion('path', (assertion.path || []).filter((_, i) => i !== index));
+  };
+
+  const addConstraint = (type) => {
+    const newConstraint = { type };
+    if (type === 'has_relationship' || type === 'lacks_relationship') {
+      newConstraint.direction = 'any';
+    }
+    updateAssertion('where', [...(assertion.where || []), newConstraint]);
+    setShowConstraintMenu(false);
+  };
+
+  const updateConstraint = (index, updated) => {
+    const newWhere = [...(assertion.where || [])];
+    newWhere[index] = updated;
+    updateAssertion('where', newWhere);
+  };
+
+  const removeConstraint = (index) => {
+    const newWhere = (assertion.where || []).filter((_, i) => i !== index);
+    updateAssertion('where', newWhere.length > 0 ? newWhere : undefined);
+  };
+
+  // Collect variables from path steps for constraint references
+  const pathVars = (assertion.path || [])
+    .filter(s => s.as)
+    .map(s => s.as);
+  const allRefs = [...(availableRefs || []), ...pathVars];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Check type and count */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={{ fontSize: '10px', color: COLORS.textMuted, display: 'block', marginBottom: '3px' }}>Check Type</label>
+          <ReferenceDropdown
+            value={assertion.check || 'exists'}
+            onChange={(v) => updateAssertion('check', v)}
+            options={PATH_CHECK_TYPES}
+          />
+        </div>
+        {(assertion.check === 'count_min' || assertion.check === 'count_max') && (
+          <div>
+            <label style={{ fontSize: '10px', color: COLORS.textMuted, display: 'block', marginBottom: '3px' }}>Count</label>
+            <input
+              type="number"
+              value={assertion.count ?? 1}
+              onChange={(e) => updateAssertion('count', parseInt(e.target.value) || 1)}
+              style={{ ...styles.input, padding: '8px 10px', fontSize: '13px' }}
+              min={0}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Path steps */}
+      <div>
+        <label style={{ fontSize: '10px', color: COLORS.textMuted, display: 'block', marginBottom: '6px' }}>
+          Path Steps (traverse relationships)
+        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {(assertion.path || []).map((step, index) => (
+            <PathStepEditor
+              key={index}
+              step={step}
+              onChange={(updated) => updateStep(index, updated)}
+              onRemove={() => removeStep(index)}
+              schema={schema}
+              stepIndex={index}
+            />
+          ))}
+          {(assertion.path || []).length < 2 && (
+            <button
+              onClick={addStep}
+              style={{
+                padding: '8px',
+                fontSize: '12px',
+                backgroundColor: 'transparent',
+                border: '1px dashed rgba(139, 92, 246, 0.4)',
+                borderRadius: '6px',
+                color: '#a78bfa',
+                cursor: 'pointer',
+              }}
+            >
+              + Add Step {(assertion.path || []).length === 0 ? '(required)' : '(optional)'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Where constraints */}
+      <div>
+        <label style={{ fontSize: '10px', color: COLORS.textMuted, display: 'block', marginBottom: '6px' }}>
+          Where Constraints (optional)
+        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {(assertion.where || []).map((constraint, index) => (
+            <PathConstraintEditor
+              key={index}
+              constraint={constraint}
+              onChange={(updated) => updateConstraint(index, updated)}
+              onRemove={() => removeConstraint(index)}
+              schema={schema}
+              availableRefs={allRefs}
+            />
+          ))}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowConstraintMenu(!showConstraintMenu)}
+              style={{
+                width: '100%',
+                padding: '6px',
+                fontSize: '11px',
+                backgroundColor: 'transparent',
+                border: '1px dashed rgba(236, 72, 153, 0.4)',
+                borderRadius: '4px',
+                color: '#f472b6',
+                cursor: 'pointer',
+              }}
+            >
+              + Add Constraint
+            </button>
+            {showConstraintMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '2px',
+                backgroundColor: COLORS.bgCard,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: '6px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                zIndex: 100,
+                overflow: 'hidden',
+              }}>
+                {PATH_CONSTRAINT_TYPES.map(({ value, label }) => (
+                  <div
+                    key={value}
+                    onClick={() => addConstraint(value)}
+                    style={{
+                      padding: '8px 10px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      color: COLORS.text,
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.15)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectionFilterCard({ filter, onChange, onRemove, schema, availableRefs }) {
+  const [hovering, setHovering] = useState(false);
+  const typeConfig = FILTER_TYPES[filter.type] || { label: filter.type, icon: '❓', color: '#6b7280' };
+
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const tagOptions = (schema?.tagRegistry || []).map((t) => ({
+    value: t.tag,
+    label: t.tag,
+  }));
+
+  const refOptions = (availableRefs || []).map((ref) => ({
+    value: ref,
+    label: ref,
+  }));
+
+  const updateFilter = (field, value) => {
+    onChange({ ...filter, [field]: value });
+  };
+
+  const renderFilterFields = () => {
+    switch (filter.type) {
+      case 'has_tag':
+        return (
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 150px' }}>
+              <label style={{ ...styles.label, fontSize: '10px' }}>Tag</label>
+              <ReferenceDropdown
+                value={filter.tag || ''}
+                onChange={(v) => updateFilter('tag', v)}
+                options={tagOptions}
+                placeholder="Select tag..."
+              />
+            </div>
+            <div style={{ flex: '1 1 150px' }}>
+              <label style={{ ...styles.label, fontSize: '10px' }}>Value (optional)</label>
+              <input
+                type="text"
+                value={filter.value ?? ''}
+                onChange={(e) => updateFilter('value', e.target.value || undefined)}
+                style={{ ...styles.input, padding: '8px 10px', fontSize: '13px' }}
+                placeholder="Any value"
+              />
+            </div>
+          </div>
+        );
+
+      case 'has_any_tag':
+        return (
+          <div>
+            <label style={{ ...styles.label, fontSize: '10px' }}>Tags (comma-separated)</label>
+            <input
+              type="text"
+              value={(filter.tags || []).join(', ')}
+              onChange={(e) => updateFilter('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+              style={{ ...styles.input, padding: '8px 10px', fontSize: '13px' }}
+              placeholder="tag1, tag2, tag3"
+            />
+          </div>
+        );
+
+      case 'has_relationship':
+      case 'lacks_relationship':
+        return (
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 140px' }}>
+              <label style={{ ...styles.label, fontSize: '10px' }}>Relationship Kind</label>
+              <ReferenceDropdown
+                value={filter.kind || ''}
+                onChange={(v) => updateFilter('kind', v)}
+                options={relationshipKindOptions}
+                placeholder="Select kind..."
+              />
+            </div>
+            <div style={{ flex: '1 1 120px' }}>
+              <label style={{ ...styles.label, fontSize: '10px' }}>With Entity (optional)</label>
+              <ReferenceDropdown
+                value={filter.with || ''}
+                onChange={(v) => updateFilter('with', v || undefined)}
+                options={[{ value: '', label: 'Any entity' }, ...refOptions]}
+              />
+            </div>
+            {filter.type === 'has_relationship' && (
+              <div style={{ flex: '1 1 100px' }}>
+                <label style={{ ...styles.label, fontSize: '10px' }}>Direction</label>
+                <ReferenceDropdown
+                  value={filter.direction || 'both'}
+                  onChange={(v) => updateFilter('direction', v)}
+                  options={[
+                    { value: 'both', label: 'Both' },
+                    { value: 'src', label: 'Outgoing' },
+                    { value: 'dst', label: 'Incoming' },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
+        );
+
+      case 'exclude':
+        return (
+          <ChipSelect
+            label="Entities to Exclude"
+            value={filter.entities || []}
+            onChange={(v) => updateFilter('entities', v)}
+            options={refOptions}
+            placeholder="+ Add variable..."
+          />
+        );
+
+      case 'same_location':
+        return (
+          <div>
+            <label style={{ ...styles.label, fontSize: '10px' }}>Same Location As</label>
+            <ReferenceDropdown
+              value={filter.as || ''}
+              onChange={(v) => updateFilter('as', v)}
+              options={refOptions}
+              placeholder="Select variable..."
+            />
+          </div>
+        );
+
+      case 'not_at_war':
+        return (
+          <div>
+            <label style={{ ...styles.label, fontSize: '10px' }}>Not At War With</label>
+            <ReferenceDropdown
+              value={filter.with || ''}
+              onChange={(v) => updateFilter('with', v)}
+              options={refOptions}
+              placeholder="Select variable..."
+            />
+          </div>
+        );
+
+      case 'graph_path':
+        return (
+          <GraphPathEditor
+            assert={filter.assert}
+            onChange={(assert) => updateFilter('assert', assert)}
+            schema={schema}
+            availableRefs={availableRefs}
+          />
+        );
+
+      default:
+        return (
+          <div style={{ color: COLORS.textMuted, fontSize: '12px' }}>
+            Unknown filter type: {filter.type}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div
+      style={{
+        backgroundColor: COLORS.bgDark,
+        borderRadius: '8px',
+        border: `1px solid ${hovering ? typeConfig.color : COLORS.border}`,
+        padding: '12px',
+        transition: 'border-color 0.15s',
+      }}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              backgroundColor: `${typeConfig.color}20`,
+              fontSize: '14px',
+            }}
+          >
+            {typeConfig.icon}
+          </span>
+          <span style={{ fontWeight: 600, fontSize: '13px', color: COLORS.text }}>
+            {typeConfig.label}
+          </span>
+        </div>
+        <button
+          onClick={onRemove}
+          style={{
+            padding: '4px 8px',
+            fontSize: '11px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '4px',
+            color: '#ef4444',
+            cursor: 'pointer',
+          }}
+        >
+          Remove
+        </button>
+      </div>
+      {renderFilterFields()}
+    </div>
+  );
+}
+
+function SelectionFiltersEditor({ filters, onChange, schema, availableRefs }) {
+  const [addHovering, setAddHovering] = useState(false);
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
+
+  const handleAddFilter = (type) => {
+    const newFilter = { type };
+    // Set defaults based on type
+    if (type === 'has_any_tag') newFilter.tags = [];
+    if (type === 'exclude') newFilter.entities = [];
+    if (type === 'has_relationship') newFilter.direction = 'both';
+    onChange([...(filters || []), newFilter]);
+    setShowTypeMenu(false);
+  };
+
+  const handleUpdateFilter = (index, updated) => {
+    const newFilters = [...(filters || [])];
+    newFilters[index] = updated;
+    onChange(newFilters);
+  };
+
+  const handleRemoveFilter = (index) => {
+    onChange((filters || []).filter((_, i) => i !== index));
+  };
+
+  return (
+    <div>
+      {(filters || []).length === 0 ? (
+        <div style={{
+          padding: '16px',
+          textAlign: 'center',
+          color: COLORS.textMuted,
+          fontSize: '13px',
+          backgroundColor: COLORS.bgDark,
+          borderRadius: '8px',
+          border: `1px dashed ${COLORS.border}`,
+        }}>
+          No filters defined. Filters narrow down which entities can be selected as targets.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {(filters || []).map((filter, index) => (
+            <SelectionFilterCard
+              key={index}
+              filter={filter}
+              onChange={(updated) => handleUpdateFilter(index, updated)}
+              onRemove={() => handleRemoveFilter(index)}
+              schema={schema}
+              availableRefs={availableRefs}
+            />
+          ))}
+        </div>
+      )}
+
+      <div style={{ position: 'relative', marginTop: '12px' }}>
+        <button
+          onClick={() => setShowTypeMenu(!showTypeMenu)}
+          onMouseEnter={() => setAddHovering(true)}
+          onMouseLeave={() => setAddHovering(false)}
+          style={{
+            width: '100%',
+            padding: '10px',
+            fontSize: '13px',
+            backgroundColor: 'transparent',
+            border: `2px dashed ${addHovering ? ACCENT_COLOR : COLORS.border}`,
+            borderRadius: '8px',
+            color: addHovering ? ACCENT_COLOR : COLORS.textDim,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          + Add Filter
+        </button>
+
+        {showTypeMenu && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '4px',
+              backgroundColor: COLORS.bgCard,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: '8px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              zIndex: 100,
+              overflow: 'hidden',
+            }}
+          >
+            {Object.entries(FILTER_TYPES).map(([type, config]) => (
+              <div
+                key={type}
+                onClick={() => handleAddFilter(type)}
+                style={{
+                  padding: '10px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.1s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '4px',
+                    backgroundColor: `${config.color}20`,
+                    fontSize: '12px',
+                  }}
+                >
+                  {config.icon}
+                </span>
+                <span style={{ fontSize: '13px', color: COLORS.text }}>{config.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // TARGET TAB
 // ============================================================================
 
@@ -1386,44 +2197,67 @@ function TargetTab({ generator, onChange, schema }) {
 
         <div style={{ marginTop: '16px' }}>
           <div style={styles.formGrid}>
-            <ReferenceDropdown
-              label="Entity Kind"
-              value={selection.kind}
-              onChange={(v) => {
-                updateSelection('kind', v);
-                updateSelection('subtypes', undefined);
-              }}
-              options={entityKindOptions}
-              placeholder="Select entity kind..."
-            />
-            {selection.kind && (
-              <ChipSelect
-                label="Subtypes (optional)"
-                value={selection.subtypes || []}
-                onChange={(v) => updateSelection('subtypes', v.length > 0 ? v : undefined)}
-                options={getSubtypeOptions(selection.kind)}
-                placeholder="Any subtype"
-              />
+            {selection.strategy !== 'by_relationship' && (
+              <>
+                <ReferenceDropdown
+                  label="Entity Kind"
+                  value={selection.kind}
+                  onChange={(v) => {
+                    onChange({ ...generator, selection: { ...selection, kind: v, subtypes: undefined } });
+                  }}
+                  options={entityKindOptions}
+                  placeholder="Select entity kind..."
+                />
+                {selection.kind && (
+                  <ChipSelect
+                    label="Subtypes (optional)"
+                    value={selection.subtypes || []}
+                    onChange={(v) => updateSelection('subtypes', v.length > 0 ? v : undefined)}
+                    options={getSubtypeOptions(selection.kind)}
+                    placeholder="Any subtype"
+                  />
+                )}
+              </>
+            )}
+            {selection.strategy === 'by_relationship' && (
+              <>
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={selection.relationshipKind}
+                  onChange={(v) => updateSelection('relationshipKind', v)}
+                  options={(schema?.relationshipKinds || []).map((rk) => ({
+                    value: rk.kind,
+                    label: rk.description || rk.kind,
+                  }))}
+                  placeholder="Select relationship kind..."
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={selection.direction || 'any'}
+                  onChange={(v) => updateSelection('direction', v)}
+                  options={[
+                    { value: 'any', label: 'Any direction' },
+                    { value: 'outgoing', label: 'Outgoing (source)' },
+                    { value: 'incoming', label: 'Incoming (target)' },
+                  ]}
+                />
+              </>
             )}
           </div>
         </div>
 
-        {/* Filters - shown as JSON for now since they're complex */}
+        {/* Selection Filters */}
         <div style={{ marginTop: '24px' }}>
-          <label style={styles.label}>Advanced Filters (JSON)</label>
-          <div style={{ ...styles.infoBoxText, marginBottom: '8px', fontSize: '12px' }}>
-            Optional graph path filters to further narrow down target selection.
+          <label style={styles.label}>Selection Filters</label>
+          <div style={{ ...styles.infoBoxText, marginBottom: '12px', fontSize: '12px' }}>
+            Optional filters to narrow down which entities can be selected as the target.
+            All filters must pass for an entity to be selected.
           </div>
-          <textarea
-            value={selection.filters ? JSON.stringify(selection.filters, null, 2) : ''}
-            onChange={(e) => {
-              try {
-                const parsed = e.target.value ? JSON.parse(e.target.value) : undefined;
-                updateSelection('filters', parsed);
-              } catch {}
-            }}
-            style={styles.textarea}
-            placeholder="[]"
+          <SelectionFiltersEditor
+            filters={selection.filters}
+            onChange={(filters) => updateSelection('filters', filters.length > 0 ? filters : undefined)}
+            schema={schema}
+            availableRefs={['$target', ...(Object.keys(generator.variables || {}))]}
           />
         </div>
       </div>
@@ -1447,6 +2281,11 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
     label: ek.description || ek.kind,
   }));
 
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
   const getSubtypeOptions = (kind) => {
     const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
     if (!ek?.subtypes) return [];
@@ -1458,7 +2297,12 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
     onChange({ select: newSelect });
   };
 
-  const displayKind = selectConfig.kind || 'Not configured';
+  const updateSelectMultiple = (updates) => {
+    const newSelect = { ...selectConfig, ...updates };
+    onChange({ select: newSelect });
+  };
+
+  const displayKind = selectConfig.relationshipKind || selectConfig.kind || 'Not configured';
   const displayStrategy = selectConfig.pickStrategy || 'random';
 
   return (
@@ -1504,16 +2348,36 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
                 { value: 'by_relationship', label: 'By Relationship' },
               ]}
             />
-            <ReferenceDropdown
-              label="Entity Kind"
-              value={selectConfig.kind}
-              onChange={(v) => {
-                updateSelect('kind', v);
-                updateSelect('subtypes', undefined);
-              }}
-              options={entityKindOptions}
-              placeholder="Select kind..."
-            />
+            {selectConfig.strategy !== 'by_relationship' && (
+              <ReferenceDropdown
+                label="Entity Kind"
+                value={selectConfig.kind}
+                onChange={(v) => updateSelectMultiple({ kind: v, subtypes: undefined })}
+                options={entityKindOptions}
+                placeholder="Select kind..."
+              />
+            )}
+            {selectConfig.strategy === 'by_relationship' && (
+              <>
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={selectConfig.relationshipKind}
+                  onChange={(v) => updateSelect('relationshipKind', v)}
+                  options={relationshipKindOptions}
+                  placeholder="Select relationship..."
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={selectConfig.direction || 'any'}
+                  onChange={(v) => updateSelect('direction', v)}
+                  options={[
+                    { value: 'any', label: 'Any direction' },
+                    { value: 'outgoing', label: 'Outgoing (source)' },
+                    { value: 'incoming', label: 'Incoming (target)' },
+                  ]}
+                />
+              </>
+            )}
             <ReferenceDropdown
               label="Pick Strategy"
               value={selectConfig.pickStrategy || 'random'}
@@ -1521,7 +2385,7 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
               options={PICK_STRATEGIES}
             />
           </div>
-          {selectConfig.kind && (
+          {selectConfig.strategy !== 'by_relationship' && selectConfig.kind && (
             <div style={{ marginTop: '16px' }}>
               <ChipSelect
                 label="Subtypes (optional)"
@@ -2291,7 +3155,15 @@ function EffectsTab({ generator, onChange, pressures, schema }) {
                     <input
                       type="number"
                       value={update.delta ?? ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, delta: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow empty or minus sign while typing
+                        if (val === '' || val === '-') return;
+                        const num = parseFloat(val);
+                        if (!isNaN(num)) {
+                          handleUpdate(globalIdx, { ...update, delta: num });
+                        }
+                      }}
                       style={styles.input}
                     />
                   </div>
@@ -2410,7 +3282,7 @@ function TabValidationBadge({ count }) {
   );
 }
 
-function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressures, eras, usageMap, namingData, tagRegistry = [] }) {
+function GeneratorModal({ generator, onChange, onClose, onDelete, onDuplicate, schema, pressures, eras, usageMap, namingData, tagRegistry = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Compute validation for this generator
@@ -2422,7 +3294,7 @@ function GeneratorModal({ generator, onChange, onClose, onDelete, schema, pressu
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <OverviewTab generator={generator} onChange={onChange} onDelete={onDelete} />;
+        return <OverviewTab generator={generator} onChange={onChange} onDelete={onDelete} onDuplicate={onDuplicate} />;
       case 'applicability':
         return <ApplicabilityTab generator={generator} onChange={onChange} schema={schema} pressures={pressures} eras={eras} />;
       case 'target':
@@ -2724,9 +3596,12 @@ const DEFAULT_KIND_ICONS = {
 
 export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
   useHoverStyles();
-  const [selectedGenerator, setSelectedGenerator] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [addHovering, setAddHovering] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
+
+  // Derive selected generator from index - this ensures we always have the latest data
+  const selectedGenerator = selectedIndex !== null ? generators[selectedIndex] : null;
 
   // Build entity kind info map for icons and labels
   const entityKindInfo = useMemo(() => {
@@ -2789,14 +3664,12 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
   }, [categories]);
 
   const handleGeneratorChange = useCallback((updated) => {
-    const index = generators.findIndex((g) => g.id === selectedGenerator.id);
-    if (index >= 0) {
+    if (selectedIndex !== null && selectedIndex < generators.length) {
       const newGenerators = [...generators];
-      newGenerators[index] = updated;
+      newGenerators[selectedIndex] = updated;
       onChange(newGenerators);
-      setSelectedGenerator(updated);
     }
-  }, [generators, onChange, selectedGenerator]);
+  }, [generators, onChange, selectedIndex]);
 
   const handleToggle = useCallback((generator) => {
     const index = generators.findIndex((g) => g.id === generator.id);
@@ -2808,11 +3681,13 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
   }, [generators, onChange]);
 
   const handleDelete = useCallback(() => {
-    if (selectedGenerator && confirm(`Delete generator "${selectedGenerator.name || selectedGenerator.id}"?`)) {
-      onChange(generators.filter((g) => g.id !== selectedGenerator.id));
-      setSelectedGenerator(null);
+    if (selectedIndex !== null && selectedGenerator && confirm(`Delete generator "${selectedGenerator.name || selectedGenerator.id}"?`)) {
+      const newGenerators = [...generators];
+      newGenerators.splice(selectedIndex, 1);
+      onChange(newGenerators);
+      setSelectedIndex(null);
     }
-  }, [generators, onChange, selectedGenerator]);
+  }, [generators, onChange, selectedIndex, selectedGenerator]);
 
   const handleAdd = useCallback(() => {
     const newGenerator = {
@@ -2826,8 +3701,19 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
       variables: {},
     };
     onChange([...generators, newGenerator]);
-    setSelectedGenerator(newGenerator);
+    setSelectedIndex(generators.length); // New item will be at the end
   }, [generators, onChange]);
+
+  const handleDuplicate = useCallback(() => {
+    if (!selectedGenerator) return;
+    const duplicated = {
+      ...JSON.parse(JSON.stringify(selectedGenerator)), // Deep clone
+      id: `${selectedGenerator.id}_copy_${Date.now()}`,
+      name: `${selectedGenerator.name || selectedGenerator.id} (Copy)`,
+    };
+    onChange([...generators, duplicated]);
+    setSelectedIndex(generators.length); // New item will be at the end
+  }, [generators, onChange, selectedGenerator]);
 
   const toggleCategoryExpand = useCallback((kind) => {
     setExpandedCategories(prev => ({
@@ -2884,7 +3770,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
               <GeneratorListCard
                 key={generator.id}
                 generator={generator}
-                onClick={() => setSelectedGenerator(generator)}
+                onClick={() => setSelectedIndex(generators.findIndex(g => g.id === generator.id))}
                 onToggle={() => handleToggle(generator)}
                 usageMap={usageMap}
               />
@@ -2910,8 +3796,9 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
         <GeneratorModal
           generator={selectedGenerator}
           onChange={handleGeneratorChange}
-          onClose={() => setSelectedGenerator(null)}
+          onClose={() => setSelectedIndex(null)}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
           schema={schema}
           pressures={pressures}
           eras={eras}

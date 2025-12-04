@@ -80,6 +80,17 @@
               ["The", "slot:aurora_nature", "slot:aurora_nature"]
             ]
           }
+        },
+        {
+          "id": "aurora_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:aurora_nature", "Reaches"],
+              ["The", "domain:aurora_domain", "Expanse"],
+              ["slot:aurora_nature", "Territories"]
+            ]
+          }
         }
       ],
       "profiles": [
@@ -116,6 +127,22 @@
               },
               "strategies": [
                 { "type": "grammar", "weight": 2, "grammarId": "aurora_location" },
+                { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc", "location", "faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "aurora_region" },
                 { "type": "phonotactic", "weight": 1, "domainId": "aurora_domain" }
               ]
             },
@@ -213,6 +240,17 @@
               ["slot:nightshelf_shadow", "domain:nightshelf_domain"]
             ]
           }
+        },
+        {
+          "id": "nightshelf_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:nightshelf_shadow", "Depths"],
+              ["The", "domain:nightshelf_domain", "Reaches"],
+              ["slot:nightshelf_shadow", "Territories"]
+            ]
+          }
         }
       ],
       "profiles": [
@@ -249,6 +287,22 @@
               },
               "strategies": [
                 { "type": "grammar", "weight": 2, "grammarId": "nightshelf_location" },
+                { "type": "phonotactic", "weight": 1, "domainId": "nightshelf_domain" }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc", "location", "faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "nightshelf_region" },
                 { "type": "phonotactic", "weight": 1, "domainId": "nightshelf_domain" }
               ]
             },
@@ -330,6 +384,17 @@
               ["slot:orca_power", "domain:orca_domain"]
             ]
           }
+        },
+        {
+          "id": "orca_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              ["The", "slot:orca_power", "Waters"],
+              ["The", "domain:orca_domain", "Hunting Grounds"],
+              ["slot:orca_power", "Territories"]
+            ]
+          }
         }
       ],
       "profiles": [
@@ -337,6 +402,22 @@
           "id": "orca_default",
           "name": "Orca Default",
           "strategyGroups": [
+            {
+              "name": "Region Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": ["npc", "location", "faction"],
+                "prominence": [],
+                "subtypes": ["region"],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                { "type": "grammar", "weight": 3, "grammarId": "orca_region" },
+                { "type": "phonotactic", "weight": 1, "domainId": "orca_domain" }
+              ]
+            },
             {
               "name": "Default Fallback",
               "priority": 10,

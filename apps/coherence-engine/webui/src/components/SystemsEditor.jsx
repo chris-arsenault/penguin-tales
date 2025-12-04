@@ -926,6 +926,19 @@ function OverviewTab({ system, onChange, onDelete }) {
   const config = system.config || {};
   const typeConfig = SYSTEM_TYPES[system.systemType] || {};
 
+  // Local state for text inputs to prevent cursor jumping
+  const [localId, setLocalId] = useState(config.id || '');
+  const [localName, setLocalName] = useState(config.name || '');
+
+  // Sync local state when system changes externally
+  useEffect(() => {
+    setLocalId(config.id || '');
+  }, [config.id]);
+
+  useEffect(() => {
+    setLocalName(config.name || '');
+  }, [config.name]);
+
   const updateConfig = (field, value) => {
     onChange({ ...system, config: { ...config, [field]: value } });
   };
@@ -939,8 +952,13 @@ function OverviewTab({ system, onChange, onDelete }) {
             <label style={styles.label}>System ID</label>
             <input
               type="text"
-              value={config.id || ''}
-              onChange={(e) => updateConfig('id', e.target.value)}
+              value={localId}
+              onChange={(e) => setLocalId(e.target.value)}
+              onBlur={() => {
+                if (localId !== config.id) {
+                  updateConfig('id', localId);
+                }
+              }}
               style={styles.input}
             />
           </div>
@@ -948,8 +966,13 @@ function OverviewTab({ system, onChange, onDelete }) {
             <label style={styles.label}>Display Name</label>
             <input
               type="text"
-              value={config.name || ''}
-              onChange={(e) => updateConfig('name', e.target.value)}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={() => {
+                if (localName !== config.name) {
+                  updateConfig('name', localName);
+                }
+              }}
               style={styles.input}
             />
           </div>
@@ -2925,8 +2948,11 @@ function SystemListCard({ system, onClick, onToggle, usageMap }) {
 
 export default function SystemsEditor({ systems = [], onChange, schema, pressures = [], usageMap }) {
   useHoverStyles();
-  const [selectedSystem, setSelectedSystem] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
+
+  // Derive selectedSystem from index
+  const selectedSystem = selectedIndex !== null ? systems[selectedIndex] : null;
   const [addHovering, setAddHovering] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState(() => {
     // Start with all categories expanded
@@ -2961,14 +2987,12 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
   }, [groupedSystems]);
 
   const handleSystemChange = useCallback((updated) => {
-    const index = systems.findIndex((s) => s.config?.id === selectedSystem.config?.id);
-    if (index >= 0) {
+    if (selectedIndex !== null && selectedIndex >= 0 && selectedIndex < systems.length) {
       const newSystems = [...systems];
-      newSystems[index] = updated;
+      newSystems[selectedIndex] = updated;
       onChange(newSystems);
-      setSelectedSystem(updated);
     }
-  }, [systems, onChange, selectedSystem]);
+  }, [systems, onChange, selectedIndex]);
 
   const handleToggle = useCallback((system) => {
     const index = systems.findIndex((s) => s.config?.id === system.config?.id);
@@ -2980,11 +3004,12 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
   }, [systems, onChange]);
 
   const handleDelete = useCallback(() => {
-    if (selectedSystem && confirm(`Delete system "${selectedSystem.config?.name || selectedSystem.config?.id}"?`)) {
-      onChange(systems.filter((s) => s.config?.id !== selectedSystem.config?.id));
-      setSelectedSystem(null);
+    if (selectedIndex !== null && selectedSystem && confirm(`Delete system "${selectedSystem.config?.name || selectedSystem.config?.id}"?`)) {
+      const newSystems = systems.filter((_, i) => i !== selectedIndex);
+      onChange(newSystems);
+      setSelectedIndex(null);
     }
-  }, [systems, onChange, selectedSystem]);
+  }, [systems, onChange, selectedIndex, selectedSystem]);
 
   const handleAddSystem = useCallback((type) => {
     const newSystem = {
@@ -2996,7 +3021,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
       },
     };
     onChange([...systems, newSystem]);
-    setSelectedSystem(newSystem);
+    setSelectedIndex(systems.length); // Index of newly added system
     setShowTypePicker(false);
   }, [systems, onChange]);
 
@@ -3048,15 +3073,18 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
             onToggleExpand={() => toggleCategoryExpand(category)}
             allEnabled={allEnabled}
             onToggleAll={() => toggleAllInCategory(category)}
-            renderItem={(system) => (
-              <SystemListCard
-                key={system.config?.id}
-                system={system}
-                onClick={() => setSelectedSystem(system)}
-                onToggle={() => handleToggle(system)}
-                usageMap={usageMap}
-              />
-            )}
+            renderItem={(system) => {
+              const flatIndex = systems.findIndex((s) => s.config?.id === system.config?.id);
+              return (
+                <SystemListCard
+                  key={flatIndex}
+                  system={system}
+                  onClick={() => setSelectedIndex(flatIndex)}
+                  onToggle={() => handleToggle(system)}
+                  usageMap={usageMap}
+                />
+              );
+            }}
           />
         );
       })}
@@ -3105,7 +3133,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
         <SystemModal
           system={selectedSystem}
           onChange={handleSystemChange}
-          onClose={() => setSelectedSystem(null)}
+          onClose={() => setSelectedIndex(null)}
           onDelete={handleDelete}
           schema={schema}
           pressures={pressures}

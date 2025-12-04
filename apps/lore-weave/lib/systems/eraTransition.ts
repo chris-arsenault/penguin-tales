@@ -60,7 +60,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
 
       if (!currentEraEntity) {
         // No current era - this shouldn't happen as eraSpawner creates the first era
-        graphView.log('warn', '[EraTransition] No current era found');
+        graphView.debug('eras', 'No current era found');
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -114,8 +114,8 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
           return `${status} ${r.type}: ${details}`;
         }).join(' | ');
 
-        graphView.log('debug',
-          `[EraTransition] ${currentEraEntity.name}: exit conditions not met (age=${timeSinceStart}) [${conditionSummary}]`,
+        graphView.debug('eras',
+          `${currentEraEntity.name}: exit conditions not met (age=${timeSinceStart}) [${conditionSummary}]`,
           { eraAge: timeSinceStart, conditionResults }
         );
         return {
@@ -131,7 +131,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
 
       if (!nextEraConfig) {
         // No valid next era found - current era continues
-        graphView.log('debug', `[EraTransition] ${currentEraEntity.name}: final era or no valid next era`);
+        graphView.debug('eras', `${currentEraEntity.name}: final era or no valid next era`);
         return {
           relationshipsAdded: [],
           entitiesModified: [],
@@ -149,8 +149,8 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         return `${status} ${r.type}: ${details}`;
       }).join(' | ');
 
-      graphView.log('debug',
-        `[EraTransition] ${currentEraEntity.name}: exit conditions MET (age=${timeSinceStart}) [${conditionSummary}]`,
+      graphView.debug('eras',
+        `${currentEraEntity.name}: exit conditions MET (age=${timeSinceStart}) [${conditionSummary}]`,
         { eraAge: timeSinceStart, conditionResults }
       );
 
@@ -174,7 +174,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       graphView.setCurrentEra(nextEraConfig);
 
       // Log transition
-      graphView.log('info', `[EraTransition] TRANSITIONING: ${currentEraEntity.name} → ${nextEraEntity.name}`, {
+      graphView.debug('eras', `TRANSITIONING: ${currentEraEntity.name} → ${nextEraEntity.name}`, {
         tick: graphView.tick,
         fromEra: currentEraEntity.subtype,
         toEra: nextEraEntity.subtype
@@ -277,8 +277,8 @@ function findNextEra(
         return explicitNext;
       }
       // Entry conditions not met for explicit next era - log but don't fall through
-      graphView.log('debug',
-        `[EraTransition] Explicit nextEra "${explicitNext.id}" entry conditions not met`,
+      graphView.debug('eras',
+        `Explicit nextEra "${explicitNext.id}" entry conditions not met`,
         { currentEra: currentEraConfig.id }
       );
     }

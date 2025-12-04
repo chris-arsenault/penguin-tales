@@ -45,6 +45,7 @@ export class WorldEngine {
   private emitter: ISimulationEmitter;  // REQUIRED - emits all simulation events
   private runtimePressures: Pressure[];  // Converted from declarative pressures
   private runtimeTemplates: GrowthTemplate[];  // Converted from declarative templates
+  private declarativeTemplates: Map<string, DeclarativeTemplate>;  // Original declarative templates for diagnostics
   private runtimeSystems: SimulationSystem[];  // Converted from declarative systems
   private templateInterpreter: TemplateInterpreter;  // Interprets declarative templates
   private graph: Graph;
@@ -139,11 +140,14 @@ export class WorldEngine {
     // Convert declarative templates to runtime templates
     // If template already has canApply function, it's already a GrowthTemplate - use as-is
     this.templateInterpreter = new TemplateInterpreter();
+    this.declarativeTemplates = new Map();
     this.runtimeTemplates = config.templates.map(t => {
       if (typeof (t as any).canApply === 'function') {
         // Already a GrowthTemplate (e.g., from tests)
         return t as unknown as GrowthTemplate;
       }
+      // Store declarative template for diagnostics
+      this.declarativeTemplates.set(t.id, t);
       return createTemplateFromDeclarative(t, this.templateInterpreter);
     });
 
@@ -246,26 +250,8 @@ export class WorldEngine {
     this.targetSelector = new TargetSelector();
     this.emitter.log('info', 'Intelligent target selection enabled (anti-super-hub)');
 
-    // Initialize coordinate context (REQUIRED - no fallbacks)
-    if (!config.coordinateContextConfig) {
-      throw new Error(
-        'WorldEngine: coordinateContextConfig is required in EngineConfig. ' +
-        'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
-      );
-    }
-    // Pass graphDensity from EngineConfig to CoordinateContext
-    const coordinateConfig = {
-      ...config.coordinateContextConfig,
-      graphDensity: config.graphDensity ?? config.coordinateContextConfig.graphDensity
-    };
-    this.coordinateContext = new CoordinateContext(coordinateConfig);
-    this.emitter.log('info', 'Coordinate context initialized', {
-      cultures: this.coordinateContext.getCultureIds().length,
-      entityKinds: this.coordinateContext.getConfiguredKinds().length,
-      graphDensity: config.graphDensity ?? 5
-    });
-
     // Initialize NameForgeService from cultures that have naming config
+    // Must be done before CoordinateContext since it requires nameForgeService
     if (!config.cultures || config.cultures.length === 0) {
       throw new Error(
         'WorldEngine: cultures array is required in EngineConfig. ' +
@@ -273,17 +259,39 @@ export class WorldEngine {
       );
     }
     const culturesWithNaming = config.cultures.filter(c => c.naming);
-    if (culturesWithNaming.length > 0) {
-      this.nameForgeService = new NameForgeService(culturesWithNaming, this.emitter);
-      // Set on config so Graph can access it for entity name generation
-      this.config.nameForgeService = this.nameForgeService;
-      this.emitter.log('info', 'NameForgeService initialized', {
-        cultures: culturesWithNaming.length,
-        cultureIds: culturesWithNaming.map(c => c.id)
-      });
-    } else {
-      this.emitter.log('warn', 'No cultures have naming configuration - name generation will fail');
+    if (culturesWithNaming.length === 0) {
+      throw new Error(
+        'WorldEngine: No cultures have naming configuration. ' +
+        'At least one culture must have a naming property for name generation.'
+      );
     }
+    this.nameForgeService = new NameForgeService(culturesWithNaming, this.emitter);
+    // Set on config so Graph can access it for entity name generation
+    this.config.nameForgeService = this.nameForgeService;
+    this.emitter.log('info', 'NameForgeService initialized', {
+      cultures: culturesWithNaming.length,
+      cultureIds: culturesWithNaming.map(c => c.id)
+    });
+
+    // Initialize coordinate context (REQUIRED - no fallbacks)
+    if (!config.coordinateContextConfig) {
+      throw new Error(
+        'WorldEngine: coordinateContextConfig is required in EngineConfig. ' +
+        'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
+      );
+    }
+    // Pass graphDensity and nameForgeService to CoordinateContext
+    const coordinateConfig = {
+      ...config.coordinateContextConfig,
+      graphDensity: config.graphDensity ?? config.coordinateContextConfig.graphDensity,
+      nameForgeService: this.nameForgeService
+    };
+    this.coordinateContext = new CoordinateContext(coordinateConfig);
+    this.emitter.log('info', 'Coordinate context initialized', {
+      cultures: this.coordinateContext.getCultureIds().length,
+      entityKinds: this.coordinateContext.getConfiguredKinds().length,
+      graphDensity: config.graphDensity ?? 5
+    });
 
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
@@ -1210,19 +1218,42 @@ export class WorldEngine {
 
       // Re-filter applicable templates each iteration (graph state changes)
       // Note: Input conditions (enabledBy) are now handled via applicability rules in canApply()
+      const rejectionReasons: Map<string, string> = new Map();
       const applicableTemplates = this.runtimeTemplates.filter(t => {
-        // canApply includes all applicability rule evaluation
-        if (!t.canApply(graphView)) return false;
-
         // DIVERSITY PRESSURE: Hard cap on template runs
         const runCount = this.templateRunCounts.get(t.id) || 0;
-        if (runCount >= this.maxRunsPerTemplate) return false;
+        if (runCount >= this.maxRunsPerTemplate) {
+          rejectionReasons.set(t.id, `run_cap: ${runCount}/${this.maxRunsPerTemplate}`);
+          return false;
+        }
+
+        // canApply includes all applicability rule evaluation
+        if (!t.canApply(graphView)) {
+          // Get detailed diagnosis for why it failed
+          const declTemplate = this.declarativeTemplates.get(t.id);
+          if (declTemplate) {
+            const diag = this.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
+            if (!diag.applicabilityPassed) {
+              rejectionReasons.set(t.id, `applicability: ${diag.failedRules.join('; ')}`);
+            } else if (diag.selectionCount === 0) {
+              rejectionReasons.set(t.id, `selection(${diag.selectionStrategy}): no targets found`);
+            }
+          } else {
+            rejectionReasons.set(t.id, 'canApply: false');
+          }
+          return false;
+        }
 
         return true;
       });
 
       if (applicableTemplates.length === 0) {
         this.emitter.log('warn', `No applicable templates remaining (${entitiesCreated}/${targets} entities created)`);
+        // Emit detailed template rejection diagnostics
+        graphView.debug('templates', `[Filter] All ${this.runtimeTemplates.length} templates rejected:`);
+        for (const [templateId, reason] of rejectionReasons) {
+          graphView.debug('templates', `  ${templateId}: ${reason}`);
+        }
         break;
       }
 
@@ -1230,7 +1261,7 @@ export class WorldEngine {
       const template = this.sampleSingleTemplate(era, applicableTemplates, metrics);
       if (!template) {
         if (attempts < 5 || attempts % 50 === 0) {
-          this.emitter.log('debug', `[Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
+          graphView.debug('templates', `[Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
         }
         continue;
       }
@@ -1238,7 +1269,18 @@ export class WorldEngine {
       // Check if template can apply
       if (!template.canApply(graphView)) {
         if (attempts < 5 || attempts % 50 === 0) {
-          this.emitter.log('debug', `[Attempt ${attempts}] Template ${template.id} canApply returned false`);
+          // Get detailed diagnosis
+          const declTemplate = this.declarativeTemplates.get(template.id);
+          if (declTemplate) {
+            const diag = this.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
+            if (!diag.applicabilityPassed) {
+              graphView.debug('templates', `[Attempt ${attempts}] ${template.id} rejected: ${diag.failedRules.join('; ')}`);
+            } else {
+              graphView.debug('templates', `[Attempt ${attempts}] ${template.id} rejected: selection(${diag.selectionStrategy}) returned 0 targets`);
+            }
+          } else {
+            graphView.debug('templates', `[Attempt ${attempts}] ${template.id} canApply returned false`);
+          }
         }
         continue;
       }
@@ -1247,7 +1289,7 @@ export class WorldEngine {
       const templateTargets = template.findTargets(graphView);
       if (templateTargets.length === 0) {
         if (attempts < 5 || attempts % 50 === 0) {
-          this.emitter.log('debug', `[Attempt ${attempts}] Template ${template.id} found no targets`);
+          graphView.debug('selection', `[Attempt ${attempts}] ${template.id} found no targets via findTargets()`);
         }
         continue;
       }

@@ -1299,6 +1299,19 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
   const [addingFactorType, setAddingFactorType] = useState(null);
   const [addButtonHover, setAddButtonHover] = useState({ positive: false, negative: false });
 
+  // Local state for text inputs to prevent cursor jumping
+  const [localId, setLocalId] = useState(pressure.id || '');
+  const [localName, setLocalName] = useState(pressure.name || '');
+
+  // Sync local state when pressure changes externally
+  useEffect(() => {
+    setLocalId(pressure.id || '');
+  }, [pressure.id]);
+
+  useEffect(() => {
+    setLocalName(pressure.name || '');
+  }, [pressure.name]);
+
   // Get validation and usage info
   const validation = useMemo(() =>
     usageMap ? getElementValidation(usageMap, 'pressure', pressure.id) : { invalidRefs: [], isOrphan: false },
@@ -1472,8 +1485,13 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
                 <label style={styles.label}>ID</label>
                 <input
                   type="text"
-                  value={pressure.id}
-                  onChange={(e) => handleFieldChange('id', e.target.value)}
+                  value={localId}
+                  onChange={(e) => setLocalId(e.target.value)}
+                  onBlur={() => {
+                    if (localId !== pressure.id) {
+                      handleFieldChange('id', localId);
+                    }
+                  }}
                   style={styles.input}
                 />
               </div>
@@ -1481,8 +1499,13 @@ function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema
                 <label style={styles.label}>Name</label>
                 <input
                   type="text"
-                  value={pressure.name}
-                  onChange={(e) => handleFieldChange('name', e.target.value)}
+                  value={localName}
+                  onChange={(e) => setLocalName(e.target.value)}
+                  onBlur={() => {
+                    if (localName !== pressure.name) {
+                      handleFieldChange('name', localName);
+                    }
+                  }}
                   style={styles.input}
                 />
               </div>
@@ -1739,7 +1762,7 @@ export default function PressuresEditor({ pressures = [], onChange, schema, usag
       <div style={styles.pressureList}>
         {pressures.map((pressure, index) => (
           <PressureCard
-            key={pressure.id}
+            key={index}
             pressure={pressure}
             expanded={expandedPressure === index}
             onToggle={() => setExpandedPressure(expandedPressure === index ? null : index)}

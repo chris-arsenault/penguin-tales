@@ -861,11 +861,11 @@ export class TemplateGraphView {
    * @param referenceEntities - Optional entities to place near
    * @returns Object with coordinates and optional derived info, or undefined if failed
    */
-  deriveCoordinatesWithCulture(
+  async deriveCoordinatesWithCulture(
     cultureId: string,
     entityKind: string,
     referenceEntities?: HardState[]
-  ): { coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | undefined {
+  ): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | undefined> {
     // Build context from culture and entity kind
     const context = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
 
@@ -890,7 +890,7 @@ export class TemplateGraphView {
     }
 
     // Use culture-aware placement
-    const placementResult = this.coordinateContext.placeWithCulture(
+    const placementResult = await this.coordinateContext.placeWithCulture(
       entityKind,
       'placement', // name placeholder
       this.graph.tick,
@@ -1218,7 +1218,7 @@ export class TemplateGraphView {
     const existingPoints = this.getRegionPoints(kind, regionId);
 
     // Use CoordinateContext for culture-aware placement
-    const placementResult = this.coordinateContext.placeWithCulture(
+    const placementResult = await this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,
@@ -1279,7 +1279,7 @@ export class TemplateGraphView {
       }
     };
 
-    const placementResult = this.coordinateContext.placeWithCulture(
+    const placementResult = await this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,
@@ -1326,7 +1326,7 @@ export class TemplateGraphView {
     const existingPoints = this.getAllRegionPoints();
 
     // Uses culture-aware placement with emergent region creation
-    const placementResult = this.coordinateContext.placeWithCulture(
+    const placementResult = await this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,
@@ -1375,7 +1375,7 @@ export class TemplateGraphView {
     const context = this.coordinateContext.buildPlacementContext(cultureId, kind);
     const existingPoints = this.getAllRegionPoints();
 
-    const placementResult = this.coordinateContext.placeWithCulture(
+    const placementResult = await this.coordinateContext.placeWithCulture(
       kind,
       entity.name ?? 'unknown',
       this.graph.tick,

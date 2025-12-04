@@ -131,6 +131,14 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, o
   const [strategyUsage, setStrategyUsage] = useState(null);
   const [selectedProfileId, setSelectedProfileId] = useState(null);
 
+  // Local state for Profile ID input to prevent cursor jumping
+  const [localProfileId, setLocalProfileId] = useState('');
+
+  // Sync local profile ID when editedProfile changes
+  useEffect(() => {
+    setLocalProfileId(editedProfile?.id || '');
+  }, [editedProfile?.id]);
+
   // Autosave refs
   const autosaveTimeoutRef = useRef(null);
   const lastSavedProfileRef = useRef(null);
@@ -486,8 +494,13 @@ function ProfileTab({ cultureId, cultureConfig, onProfilesChange, worldSchema, o
       <div className="form-group">
         <label>Profile ID</label>
         <input
-          value={editedProfile.id}
-          onChange={(e) => setEditedProfile({ ...editedProfile, id: e.target.value })}
+          value={localProfileId}
+          onChange={(e) => setLocalProfileId(e.target.value)}
+          onBlur={() => {
+            if (localProfileId !== editedProfile.id) {
+              setEditedProfile({ ...editedProfile, id: localProfileId });
+            }
+          }}
           placeholder={`${cultureId}_profile`}
         />
       </div>

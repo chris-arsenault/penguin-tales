@@ -36,13 +36,31 @@ export function createMockEmitter(): ISimulationEmitter {
 }
 
 /**
- * Create minimal cultures for tests
- * These have no naming config - tests that need naming should provide their own
+ * Minimal naming config for test cultures
+ */
+const minimalNamingConfig = {
+  domains: [{ id: 'default', name: 'Default' }],
+  lexemeLists: {},
+  grammars: [{
+    id: 'simple',
+    domain: 'default',
+    patterns: [{ pattern: 'Test {id}', weight: 1 }]
+  }],
+  profiles: [{
+    id: 'default',
+    domain: 'default',
+    grammar: 'simple',
+    conditions: {}
+  }]
+};
+
+/**
+ * Create minimal cultures for tests with required naming config
  */
 export function createMockCultures(): Culture[] {
   return [
-    { id: 'default', name: 'Default Culture' },
-    { id: 'world', name: 'World Culture' },
+    { id: 'default', name: 'Default Culture', naming: minimalNamingConfig },
+    { id: 'world', name: 'World Culture', naming: minimalNamingConfig },
   ];
 }
 

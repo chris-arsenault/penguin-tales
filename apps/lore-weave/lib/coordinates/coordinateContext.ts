@@ -7,6 +7,22 @@
 
 import type { Point } from './types';
 import type { EntityTags } from '../core/worldTypes';
+import { FRAMEWORK_SUBTYPES } from '../core/frameworkPrimitives';
+
+/**
+ * Name generation service interface.
+ * Matches NameGenerationService from engine/types.ts to avoid circular imports.
+ */
+interface NameGenerationService {
+  generate(
+    kind: string,
+    subtype: string,
+    prominence: string,
+    tags: string[],
+    culture: string,
+    context?: Record<string, string>
+  ): Promise<string>;
+}
 
 // =============================================================================
 // CULTURE CONFIGURATION TYPES
@@ -140,6 +156,9 @@ export interface CoordinateContextConfig {
    * Default: 5 (units on 0-100 normalized coordinate space)
    */
   graphDensity?: number;
+
+  /** Name generation service for emergent region names */
+  nameForgeService: NameGenerationService;
 }
 
 // =============================================================================
@@ -179,6 +198,9 @@ export class CoordinateContext {
   /** Graph density - minimum distance between entities on semantic planes */
   private readonly graphDensity: number;
 
+  /** Name generation service for emergent region names */
+  private readonly nameForgeService: NameGenerationService;
+
   /** Debug logger matching TemplateGraphView.debug signature */
   debug: (category: 'coordinates', message: string, context?: Record<string, unknown>) => void = () => {};
 
@@ -186,6 +208,7 @@ export class CoordinateContext {
     this.entityKinds = config.entityKinds || [];
     this.cultures = config.cultures || [];
     this.graphDensity = config.graphDensity ?? 5;
+    this.nameForgeService = config.nameForgeService;
 
     // Initialize mutable region storage from entity kinds' semantic planes
     for (const entityKind of this.entityKinds) {
@@ -613,12 +636,12 @@ export class CoordinateContext {
    * @param tick - Current simulation tick (for emergent region creation)
    * @returns Point and optional emergent region info, or null if placement impossible
    */
-  sampleWithCulture(
+  async sampleWithCulture(
     entityKind: string,
     context: PlacementContext,
     existingPoints: Point[] = [],
     tick: number = 0
-  ): { point: Point; emergentRegion?: { id: string; label: string } } | null {
+  ): Promise<{ point: Point; emergentRegion?: { id: string; label: string } } | null> {
     this.debug('coordinates', `sampleWithCulture ENTRY: entityKind=${entityKind} culture=${context.cultureId} debug=${!!this.debug}`);
     const log = (msg: string) => {
       this.debug('coordinates', msg);
@@ -661,7 +684,7 @@ export class CoordinateContext {
 
       // Seed regions exhausted - try to create emergent region for this culture
       if (context.cultureId) {
-        const emergentResult = this.createEmergentRegionForCulture(
+        const emergentResult = await this.createEmergentRegionForCulture(
           entityKind,
           context.cultureId,
           existingPoints,
@@ -687,7 +710,7 @@ export class CoordinateContext {
     // No seed regions for this culture - try emergent region creation
     log(`  NO seed regions for culture=${context.cultureId}`);
     if (context.cultureId) {
-      const emergentResult = this.createEmergentRegionForCulture(
+      const emergentResult = await this.createEmergentRegionForCulture(
         entityKind,
         context.cultureId,
         existingPoints,
@@ -713,13 +736,14 @@ export class CoordinateContext {
   /**
    * Attempt to create an emergent region for a culture.
    * Finds a sparse area on the plane and creates a new region there.
+   * Uses name-forge to generate culturally-appropriate region names.
    */
-  private createEmergentRegionForCulture(
+  private async createEmergentRegionForCulture(
     entityKind: string,
     cultureId: string,
     existingPoints: Point[],
     tick: number
-  ): { point: Point; region: import('./types').Region } | null {
+  ): Promise<{ point: Point; region: import('./types').Region } | null> {
     // Find a sparse area to place the new region
     const sparseResult = this.findSparseArea({
       existingPositions: existingPoints,
@@ -732,13 +756,22 @@ export class CoordinateContext {
       return null;
     }
 
+    // Generate region name using name-forge with framework 'region' subtype
+    const regionLabel = await this.nameForgeService.generate(
+      entityKind,
+      FRAMEWORK_SUBTYPES.REGION,
+      'marginal',  // New territories start as marginal
+      [],          // No semantic tags for regions
+      cultureId
+    );
+    const regionDescription = `An emerging ${entityKind} region: ${regionLabel}`;
+
     // Create emergent region at the sparse location
-    const cultureName = this.getCultureConfig(cultureId)?.name || cultureId;
     const regionResult = this.createEmergentRegion(
       entityKind,
       sparseResult.coordinates,
-      `${cultureName} Frontier`,
-      `An emerging ${cultureName} territory`,
+      regionLabel,
+      regionDescription,
       tick
     );
 
@@ -862,15 +895,15 @@ export class CoordinateContext {
    * Place an entity with culture context.
    * Uses graphDensity as the minimum distance between points.
    */
-  placeWithCulture(
+  async placeWithCulture(
     entityKind: string,
     _entityId: string,
     tick: number,
     context: PlacementContext,
     existingPoints: Point[] = []
-  ): PlacementResult {
+  ): Promise<PlacementResult> {
     this.debug?.('coordinates', `placeWithCulture called: entityKind=${entityKind} culture=${context.cultureId} seedRegions=[${context.seedRegionIds?.join(',') || 'none'}]`);
-    const result = this.sampleWithCulture(entityKind, context, existingPoints, tick);
+    const result = await this.sampleWithCulture(entityKind, context, existingPoints, tick);
     if (!result) {
       return {
         success: false,

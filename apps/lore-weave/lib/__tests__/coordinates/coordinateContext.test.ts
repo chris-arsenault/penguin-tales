@@ -18,6 +18,13 @@ import {
 } from '../../coordinates/coordinateContext';
 import type { Region } from '../../coordinates/types';
 
+// Mock NameGenerationService for tests (matches interface in coordinateContext.ts)
+const mockNameForgeService = {
+  generate: async (kind: string, _subtype: string, _prominence: string, _tags: string[], cultureId: string) => {
+    return `${cultureId}-${kind}-frontier`;
+  }
+};
+
 describe('CoordinateContext', () => {
   // Regions for location kind (with culture associations)
   const locationRegions: Region[] = [
@@ -97,7 +104,8 @@ describe('CoordinateContext', () => {
 
   const validConfig: CoordinateContextConfig = {
     entityKinds,
-    cultures
+    cultures,
+    nameForgeService: mockNameForgeService
   };
 
   let context: CoordinateContext;
@@ -115,7 +123,8 @@ describe('CoordinateContext', () => {
     it('should accept empty config (no regions/cultures)', () => {
       const ctx = new CoordinateContext({
         entityKinds: [],
-        cultures: []
+        cultures: [],
+        nameForgeService: mockNameForgeService
       });
       expect(ctx.getCultureIds()).toHaveLength(0);
       expect(ctx.getConfiguredKinds()).toHaveLength(0);
@@ -218,27 +227,29 @@ describe('CoordinateContext', () => {
   });
 
   describe('Culture-Aware Sampling', () => {
-    it('should sample from seed regions when culture specified', () => {
+    it('should sample from seed regions when culture specified', async () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
 
       // Should sample from highlands region (center: 30, 70)
-      const point = context.sampleWithCulture('location', placementContext);
+      const result = await context.sampleWithCulture('location', placementContext);
 
-      expect(point).toBeDefined();
+      expect(result).toBeDefined();
+      const point = result!.point;
       // Should be within or near highlands region (radius 15)
-      expect(point!.x).toBeGreaterThan(10);
-      expect(point!.x).toBeLessThan(50);
-      expect(point!.y).toBeGreaterThan(50);
-      expect(point!.y).toBeLessThan(90);
+      expect(point.x).toBeGreaterThan(10);
+      expect(point.x).toBeLessThan(50);
+      expect(point.y).toBeGreaterThan(50);
+      expect(point.y).toBeLessThan(90);
     });
 
-    it('should respect minimum distance from existing points', () => {
+    it('should respect minimum distance from existing points', async () => {
       const existingPoints = [{ x: 30, y: 70, z: 50 }];
       const placementContext = context.buildPlacementContext('highland', 'location');
 
-      const point = context.sampleWithCulture('location', placementContext, existingPoints, 10);
+      const result = await context.sampleWithCulture('location', placementContext, existingPoints, 10);
 
-      if (point) {
+      if (result) {
+        const point = result.point;
         // Should be at least 10 units away from existing
         const dx = point.x - 30;
         const dy = point.y - 70;
@@ -247,20 +258,20 @@ describe('CoordinateContext', () => {
       }
     });
 
-    it('should fall back to axis biases when no seed regions available', () => {
+    it('should fall back to axis biases when no seed regions available', async () => {
       const placementContext = context.buildPlacementContext('highland', 'faction');
 
       // faction has no regions, should use axis biases (or default)
-      const point = context.sampleWithCulture('faction', placementContext);
-      expect(point).toBeDefined();
+      const result = await context.sampleWithCulture('faction', placementContext);
+      expect(result).toBeDefined();
     });
   });
 
   describe('Culture-Aware Placement', () => {
-    it('should place with full culture context', () => {
+    it('should place with full culture context', async () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
 
-      const result = context.placeWithCulture(
+      const result = await context.placeWithCulture(
         'location',
         'entity_1',
         100,
@@ -272,10 +283,10 @@ describe('CoordinateContext', () => {
       expect(result.cultureId).toBe('highland');
     });
 
-    it('should derive tags including culture', () => {
+    it('should derive tags including culture', async () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
 
-      const result = context.placeWithCulture(
+      const result = await context.placeWithCulture(
         'location',
         'entity_1',
         100,
@@ -285,10 +296,10 @@ describe('CoordinateContext', () => {
       expect(result.derivedTags?.culture).toBe('highland');
     });
 
-    it('should identify region containing placed point', () => {
+    it('should identify region containing placed point', async () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
 
-      const result = context.placeWithCulture(
+      const result = await context.placeWithCulture(
         'location',
         'entity_1',
         100,
@@ -343,15 +354,15 @@ describe('CoordinateContext', () => {
     it('should sample point near reference entity via sampleNearPoint', () => {
       const referencePoint = { x: 30, y: 70, z: 50 };
 
-      const point = context.sampleNearPoint(referencePoint, [], 5, 15);
+      const point = context.sampleNearPoint(referencePoint, []);
 
       expect(point).toBeDefined();
-      // Should be within maxSearchRadius (15) of reference
+      // Should be within maxSearchRadius (graphDensity * 4 = 20) of reference
       const dx = point!.x - referencePoint.x;
       const dy = point!.y - referencePoint.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      expect(distance).toBeLessThanOrEqual(15);
-      expect(distance).toBeGreaterThanOrEqual(5); // minDistance
+      expect(distance).toBeLessThanOrEqual(20);
+      expect(distance).toBeGreaterThanOrEqual(5); // minDistance = graphDensity
     });
 
     it('should respect minimum distance from existing points in sampleNearPoint', () => {
@@ -363,20 +374,20 @@ describe('CoordinateContext', () => {
         { x: 50, y: 45, z: 50 }
       ];
 
-      const point = context.sampleNearPoint(referencePoint, existingPoints, 8, 20);
+      const point = context.sampleNearPoint(referencePoint, existingPoints);
 
       if (point) {
-        // Should be at least 8 units from all existing points
+        // Should be at least graphDensity (5) units from all existing points
         for (const existing of existingPoints) {
           const dx = point.x - existing.x;
           const dy = point.y - existing.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          expect(dist).toBeGreaterThanOrEqual(8);
+          expect(dist).toBeGreaterThanOrEqual(5);
         }
       }
     });
 
-    it('should use referenceEntity in PlacementContext for sampleWithCulture', () => {
+    it('should use referenceEntity in PlacementContext for sampleWithCulture', async () => {
       const referenceEntity = {
         id: 'ref_entity',
         coordinates: { x: 70, y: 50, z: 50 } // In coastal region
@@ -385,18 +396,18 @@ describe('CoordinateContext', () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
       placementContext.referenceEntity = referenceEntity;
 
-      const point = context.sampleWithCulture('location', placementContext, [], 5);
+      const result = await context.sampleWithCulture('location', placementContext, [], 5);
 
-      expect(point).toBeDefined();
+      expect(result).toBeDefined();
       // Should be near the reference entity, not in highland region
-      const dx = point!.x - 70;
-      const dy = point!.y - 50;
+      const dx = result!.point.x - 70;
+      const dy = result!.point.y - 50;
       const distance = Math.sqrt(dx * dx + dy * dy);
       // Should be within maxSearchRadius (minDistance * 4 = 20)
       expect(distance).toBeLessThanOrEqual(20);
     });
 
-    it('should place entity near reference via placeWithCulture with referenceEntity', () => {
+    it('should place entity near reference via placeWithCulture with referenceEntity', async () => {
       const referenceEntity = {
         id: 'ref_entity',
         coordinates: { x: 30, y: 70, z: 50 } // In highlands region
@@ -405,13 +416,12 @@ describe('CoordinateContext', () => {
       const placementContext = context.buildPlacementContext('highland', 'location');
       placementContext.referenceEntity = referenceEntity;
 
-      const result = context.placeWithCulture(
+      const result = await context.placeWithCulture(
         'location',
         'new_entity',
         100,
         placementContext,
-        [],
-        5
+        []
       );
 
       expect(result.success).toBe(true);

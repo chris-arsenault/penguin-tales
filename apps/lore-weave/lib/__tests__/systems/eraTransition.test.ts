@@ -145,7 +145,9 @@ describe('eraTransition', () => {
       // Pressure methods (for TemplateGraphView compatibility)
       getPressure(id: string) { return graph.pressures.get(id) ?? 0; },
       // Logging (for TemplateGraphView compatibility)
-      log(_level: string, _message: string, _context?: any) { /* no-op for tests */ }
+      log(_level: string, _message: string, _context?: any) { /* no-op for tests */ },
+      // Debug (for category-based filtering)
+      debug(_category: string, _message: string, _context?: any) { /* no-op for tests */ }
     } as any;
   });
 

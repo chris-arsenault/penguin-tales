@@ -153,6 +153,128 @@ export class TemplateInterpreter {
   }
 
   /**
+   * Diagnose why a template can't apply.
+   * Returns detailed information about which checks failed.
+   */
+  diagnoseCanApply(template: DeclarativeTemplate, graphView: TemplateGraphView): {
+    canApply: boolean;
+    applicabilityPassed: boolean;
+    failedRules: string[];
+    selectionCount: number;
+    selectionStrategy: string;
+  } {
+    const context = new ExecutionContext(graphView);
+    const failedRules: string[] = [];
+
+    // Check each applicability rule individually
+    const rules = template.applicability || [];
+    for (const rule of rules) {
+      if (!this.evaluateApplicabilityRule(rule, context)) {
+        failedRules.push(this.describeRuleFailure(rule, context));
+      }
+    }
+
+    const applicabilityPassed = failedRules.length === 0;
+
+    // Check selection if applicability passed
+    let selectionCount = 0;
+    let selectionStrategy = 'none';
+    if (applicabilityPassed) {
+      const targets = this.executeSelection(template.selection, context);
+      selectionCount = targets.length;
+      selectionStrategy = template.selection?.strategy || 'random';
+    }
+
+    return {
+      canApply: applicabilityPassed && selectionCount > 0,
+      applicabilityPassed,
+      failedRules,
+      selectionCount,
+      selectionStrategy
+    };
+  }
+
+  /**
+   * Describe why a specific applicability rule failed.
+   */
+  private describeRuleFailure(rule: ApplicabilityRule, context: ExecutionContext): string {
+    const { graphView } = context;
+
+    switch (rule.type) {
+      case 'pressure_threshold': {
+        const pressure = graphView.getPressure(rule.pressureId) || 0;
+        return `pressure_threshold: ${rule.pressureId}=${pressure.toFixed(1)} (need ${rule.min}-${rule.max})`;
+      }
+
+      case 'pressure_any_above': {
+        const pressures = rule.pressureIds.map(id => `${id}=${(graphView.getPressure(id) || 0).toFixed(1)}`);
+        return `pressure_any_above: [${pressures.join(', ')}] (need >${rule.threshold})`;
+      }
+
+      case 'entity_count_min': {
+        let entities = graphView.findEntities({ kind: rule.kind });
+        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
+        if (rule.status) entities = entities.filter(e => e.status === rule.status);
+        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}${rule.status ? '(' + rule.status + ')' : ''}`;
+        return `entity_count_min: ${desc}=${entities.length} (need >=${rule.min})`;
+      }
+
+      case 'entity_count_max': {
+        const count = graphView.getEntityCount(rule.kind, rule.subtype);
+        const targets = graphView.config.distributionTargets;
+        const kindTargets = targets?.global?.entityKindDistribution?.targets;
+        const target = kindTargets?.[rule.kind] ?? rule.max;
+        const threshold = target * (rule.overshootFactor ?? 1.5);
+        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
+        return `entity_count_max: ${desc}=${count} (limit ${threshold.toFixed(0)})`;
+      }
+
+      case 'era_match': {
+        return `era_match: current=${graphView.currentEra.id} (need [${rule.eras.join(', ')}])`;
+      }
+
+      case 'random_chance': {
+        return `random_chance: ${(rule.chance * 100).toFixed(0)}% failed`;
+      }
+
+      case 'tag_exists': {
+        let entities = graphView.findEntities({ kind: rule.kind });
+        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
+        const withTag = entities.filter(e => hasTag(e.tags, rule.tag)).length;
+        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
+        return `tag_exists: ${desc} with tag '${rule.tag}'=${withTag} (need >=${rule.minCount ?? 1})`;
+      }
+
+      case 'tag_absent': {
+        let entities = graphView.findEntities({ kind: rule.kind });
+        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
+        const withTag = entities.filter(e => hasTag(e.tags, rule.tag)).length;
+        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
+        return `tag_absent: ${desc} has ${withTag} with tag '${rule.tag}' (need 0)`;
+      }
+
+      case 'graph_path': {
+        const startEntities = graphView.findEntities({
+          kind: rule.from.kind,
+          subtype: rule.from.subtype,
+          status: rule.from.status
+        });
+        const fromDesc = `${rule.from.kind}${rule.from.subtype ? ':' + rule.from.subtype : ''}`;
+        return `graph_path: no ${fromDesc} satisfies path (${startEntities.length} candidates)`;
+      }
+
+      case 'and':
+        return `and: one or more sub-rules failed`;
+
+      case 'or':
+        return `or: all sub-rules failed`;
+
+      default:
+        return `${(rule as ApplicabilityRule).type}: unknown rule failed`;
+    }
+  }
+
+  /**
    * Find valid targets for a template.
    */
   findTargets(template: DeclarativeTemplate, graphView: TemplateGraphView): HardState[] {
@@ -765,7 +887,7 @@ export class TemplateInterpreter {
       const description = this.resolveDescription(rule.description, context);
 
       // Resolve placement
-      const placementResult = this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
+      const placementResult = await this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
 
       // Merge template tags with derived tags from placement (derived tags take precedence)
       const mergedTags = { ...(rule.tags || {}), ...(placementResult.derivedTags || {}) };
@@ -871,13 +993,13 @@ export class TemplateInterpreter {
    * as the entity being created. Cross-kind near_entity placements are meaningless
    * because coordinates represent semantic similarity within a kind, not spatial location.
    */
-  private resolvePlacement(
+  private async resolvePlacement(
     spec: PlacementSpec,
     context: ExecutionContext,
     culture: string,
     _placeholder: string,
     entityKind: string
-  ): { coordinates: Point; strategy: string; derivedTags?: Record<string, string | boolean> } {
+  ): Promise<{ coordinates: Point; strategy: string; derivedTags?: Record<string, string | boolean> }> {
     const { graphView } = context;
 
     const debug = (strategy: string, coords: Point, details?: string) => {
@@ -925,7 +1047,7 @@ export class TemplateInterpreter {
         } else {
           cultureId = context.resolveString(spec.culture);
         }
-        const result = graphView.deriveCoordinatesWithCulture(cultureId, entityKind, []);
+        const result = await graphView.deriveCoordinatesWithCulture(cultureId, entityKind, []);
         if (result) {
           const strategy = `in_culture_region:${cultureId}`;
           debug(strategy, result.coordinates, `culture=${cultureId} (from ${spec.culture})`);
@@ -962,7 +1084,7 @@ export class TemplateInterpreter {
             cultureId = context.resolveString(spec.culture);
           }
         }
-        const result = graphView.deriveCoordinatesWithCulture(cultureId, entityKind, sameKindRefs);
+        const result = await graphView.deriveCoordinatesWithCulture(cultureId, entityKind, sameKindRefs);
         if (result) {
           const strategy = `derived_from_refs:${sameKindRefs.length}`;
           debug(strategy, result.coordinates, `refs=[${sameKindRefs.map(r => r.name).join(', ')}], culture=${cultureId}`);

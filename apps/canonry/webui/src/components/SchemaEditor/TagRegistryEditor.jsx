@@ -5,7 +5,7 @@
  * Tags can be referenced by templates, regions, and profiles.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { colors, typography, spacing, radius, components } from '../../theme';
 import UsageBadges from '../UsageBadges';
 
@@ -286,6 +286,39 @@ function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
+// Separate component for tag ID input to use local state and prevent cursor jumping
+function TagIdInput({ value, onChange, style, allTagIds }) {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (e) => {
+    const newId = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setLocalValue(newId);
+  };
+
+  const handleBlur = () => {
+    if (localValue && localValue !== value && !allTagIds.includes(localValue)) {
+      onChange(localValue);
+    } else if (!localValue || allTagIds.includes(localValue)) {
+      // Revert to original if invalid
+      setLocalValue(value);
+    }
+  };
+
+  return (
+    <input
+      style={style}
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      placeholder="tag_id"
+    />
+  );
+}
+
 export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], onChange, tagUsage = {} }) {
   const [expandedTags, setExpandedTags] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -340,7 +373,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
       relatedTags: [],
       conflictingTags: [],
     };
-    onChange([...tagRegistry, newTag]);
+    onChange([newTag, ...tagRegistry]);
     setExpandedTags((prev) => ({ ...prev, [newTag.tag]: true }));
   };
 
@@ -502,7 +535,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
         </div>
       ) : (
         <div style={styles.tagList}>
-          {filteredTags.map((tag) => {
+          {filteredTags.map((tag, index) => {
             const isExpanded = expandedTags[tag.tag];
             const catColor = CATEGORY_COLORS[tag.category] || CATEGORY_COLORS.trait;
             const rarColor = RARITY_COLORS[tag.rarity] || RARITY_COLORS.common;
@@ -555,32 +588,37 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <div style={styles.formRow}>
                       <div style={styles.formGroup}>
                         <label style={styles.label}>Tag ID</label>
-                        <input
+                        <TagIdInput
                           style={{ ...styles.input, fontFamily: 'monospace' }}
                           value={tag.tag}
-                          onChange={(e) => {
-                            const newId = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                            if (newId && !tagRegistry.some((t) => t.tag === newId && t.tag !== tag.tag)) {
-                              // Update tag ID and also update references in other tags
-                              const oldId = tag.tag;
-                              const updatedRegistry = tagRegistry.map(t => {
-                                if (t.tag === oldId) {
-                                  return { ...t, tag: newId };
-                                }
-                                // Update references in related/conflicting tags
-                                const updated = { ...t };
-                                if (t.relatedTags?.includes(oldId)) {
-                                  updated.relatedTags = t.relatedTags.map(r => r === oldId ? newId : r);
-                                }
-                                if (t.conflictingTags?.includes(oldId)) {
-                                  updated.conflictingTags = t.conflictingTags.map(c => c === oldId ? newId : c);
-                                }
-                                return updated;
-                              });
-                              onChange(updatedRegistry);
-                            }
+                          allTagIds={allTagNames.filter(t => t !== tag.tag)}
+                          onChange={(newId) => {
+                            const oldId = tag.tag;
+                            const updatedRegistry = tagRegistry.map(t => {
+                              if (t.tag === oldId) {
+                                return { ...t, tag: newId };
+                              }
+                              // Update references in related/conflicting tags
+                              const updated = { ...t };
+                              if (t.relatedTags?.includes(oldId)) {
+                                updated.relatedTags = t.relatedTags.map(r => r === oldId ? newId : r);
+                              }
+                              if (t.conflictingTags?.includes(oldId)) {
+                                updated.conflictingTags = t.conflictingTags.map(c => c === oldId ? newId : c);
+                              }
+                              return updated;
+                            });
+                            // Update expanded state to use new ID
+                            setExpandedTags(prev => {
+                              const updated = { ...prev };
+                              if (updated[oldId]) {
+                                updated[newId] = updated[oldId];
+                                delete updated[oldId];
+                              }
+                              return updated;
+                            });
+                            onChange(updatedRegistry);
                           }}
-                          placeholder="tag_id"
                         />
                       </div>
                       <div style={styles.formGroupSmall}>

@@ -196,11 +196,11 @@ function getProminence(
 /**
  * Create a meta-entity from a cluster
  */
-function createMetaEntity(
+async function createMetaEntity(
   cluster: HardState[],
   config: MetaEntityConfig,
   graphView: TemplateGraphView
-): Partial<HardState> {
+): Promise<Partial<HardState>> {
   // Determine subtype
   let subtype: string;
   if (config.subtypeFromMajority) {
@@ -253,7 +253,7 @@ function createMetaEntity(
   const prominence = getProminence(cluster.length, config.prominenceFromSize);
 
   // Derive coordinates from cluster using culture-aware placement
-  const placement = graphView.deriveCoordinatesWithCulture(
+  const placement = await graphView.deriveCoordinatesWithCulture(
     culture,
     config.kind,
     cluster
@@ -325,7 +325,7 @@ async function createGovernanceFaction(
   }
 
   // Derive coordinates for faction
-  const factionPlacement = graphView.deriveCoordinatesWithCulture(
+  const factionPlacement = await graphView.deriveCoordinatesWithCulture(
     primaryLocation.culture ?? 'default',
     'faction',
     [primaryLocation, metaEntity]
@@ -484,7 +484,7 @@ export function createClusterFormationSystem(
         if (cluster.score < clusterConfig.minimumScore) continue;
 
         // Create the meta-entity
-        const metaEntityPartial = createMetaEntity(cluster.entities, config.metaEntity, graphView);
+        const metaEntityPartial = await createMetaEntity(cluster.entities, config.metaEntity, graphView);
         const metaEntityId = await graphView.addEntity(metaEntityPartial);
         const metaEntity = graphView.getEntity(metaEntityId)!;
         metaEntitiesCreated.push(metaEntityId);
