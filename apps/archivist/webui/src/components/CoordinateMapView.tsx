@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig, AxisConfig } from '../types/world.ts';
+import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig } from '../types/world.ts';
 import type { EntityKindDefinition } from '@canonry/world-schema';
 import './CoordinateMapView.css';
 
@@ -326,8 +326,6 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     }
 
     // Draw axis labels - semantic tags at ends, numeric in middle
-    const padding = 40;
-
     // Draw semantic axis labels at ends
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
