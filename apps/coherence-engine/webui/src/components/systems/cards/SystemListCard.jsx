@@ -5,7 +5,7 @@
 import React, { useMemo } from 'react';
 import { SYSTEM_TYPES } from '../constants';
 import { ErrorBadge, OrphanBadge, EraBadges, EnableToggle } from '../../shared';
-import { getElementValidation } from '../../shared/utils/validation';
+import { getElementValidation } from '../../shared';
 
 /**
  * @param {Object} props

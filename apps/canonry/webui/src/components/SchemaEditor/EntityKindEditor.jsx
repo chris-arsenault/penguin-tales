@@ -6,12 +6,11 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { colors, typography, spacing, radius, components } from '../../theme';
-import UsageBadges, { getEntityKindUsageSummary } from '../UsageBadges';
+import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState, AddItemButton } from '@penguin-tales/shared-components';
+import { ToolUsageBadges as UsageBadges, getEntityKindUsageSummary } from '@penguin-tales/shared-components';
 
 /**
  * Compute naming profile usage for each entity kind
- * Returns { [entityKind]: { profiles: [{ cultureId, profileId, groupName }] } }
  */
 function computeNamingProfileUsage(namingData) {
   const usage = {};
@@ -26,23 +25,16 @@ function computeNamingProfileUsage(namingData) {
         const cond = group.conditions || {};
         const entityKinds = cond.entityKinds || [];
 
-        // If no entityKinds specified, this group matches all entity kinds
         if (entityKinds.length === 0) {
-          // Mark as "all" - we'll handle display separately
-          if (!usage['*']) {
-            usage['*'] = { profiles: [] };
-          }
+          if (!usage['*']) usage['*'] = { profiles: [] };
           usage['*'].profiles.push({
             cultureId,
             profileId: profile.id,
             groupName: group.name || 'Default',
           });
         } else {
-          // Specific entity kinds
           entityKinds.forEach((kind) => {
-            if (!usage[kind]) {
-              usage[kind] = { profiles: [] };
-            }
+            if (!usage[kind]) usage[kind] = { profiles: [] };
             usage[kind].profiles.push({
               cultureId,
               profileId: profile.id,
@@ -57,189 +49,6 @@ function computeNamingProfileUsage(namingData) {
   return usage;
 }
 
-const styles = {
-  container: {
-    maxWidth: '900px',
-  },
-  header: {
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    fontSize: typography.sizeTitle,
-    fontWeight: typography.weightSemibold,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: typography.sizeLg,
-    fontFamily: typography.fontFamily,
-  },
-  toolbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  count: {
-    color: colors.textMuted,
-    fontSize: typography.sizeMd,
-    fontFamily: typography.fontFamily,
-  },
-  addButton: {
-    ...components.buttonPrimary,
-  },
-  kindList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.sm,
-  },
-  kindCard: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.lg,
-    border: `1px solid ${colors.border}`,
-    overflow: 'hidden',
-  },
-  kindHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: `${spacing.md} ${spacing.lg}`,
-    cursor: 'pointer',
-  },
-  kindHeaderLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  expandIcon: {
-    fontSize: typography.sizeSm,
-    color: colors.textMuted,
-    transition: 'transform 0.2s',
-    width: '16px',
-  },
-  kindName: {
-    fontWeight: typography.weightMedium,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-  },
-  kindId: {
-    color: colors.textMuted,
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-  },
-  kindSummary: {
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    color: colors.textMuted,
-  },
-  kindBody: {
-    padding: spacing.lg,
-    borderTop: `1px solid ${colors.border}`,
-    backgroundColor: colors.bgTertiary,
-  },
-  formRow: {
-    display: 'flex',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    alignItems: 'flex-start',
-  },
-  formGroup: {
-    flex: 1,
-  },
-  label: {
-    ...components.label,
-  },
-  input: {
-    ...components.input,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.sizeMd,
-    fontWeight: typography.weightMedium,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  itemList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  item: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.sm,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-  },
-  itemRemove: {
-    background: 'none',
-    border: 'none',
-    color: colors.danger,
-    cursor: 'pointer',
-    padding: '0 2px',
-    fontSize: typography.sizeLg,
-  },
-  addItemRow: {
-    display: 'flex',
-    gap: spacing.sm,
-  },
-  addItemInput: {
-    flex: 1,
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.sm,
-    color: colors.textPrimary,
-  },
-  addItemButton: {
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.buttonSecondary,
-    color: colors.textSecondary,
-    border: 'none',
-    borderRadius: radius.sm,
-    cursor: 'pointer',
-  },
-  actionsRow: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginTop: spacing.lg,
-  },
-  deleteButton: {
-    ...components.buttonDanger,
-  },
-  emptyState: {
-    color: colors.textMuted,
-    fontSize: typography.sizeLg,
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-    padding: spacing.xxxl,
-  },
-  checkbox: {
-    marginRight: spacing.sm,
-  },
-  hint: {
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-};
-
-// Generate ID from name (lowercase, underscores)
 function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
@@ -249,20 +58,17 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   const [newSubtype, setNewSubtype] = useState({});
   const [newStatus, setNewStatus] = useState({});
 
-  // Compute naming profile usage for each entity kind
   const namingProfileUsage = useMemo(
     () => computeNamingProfileUsage(namingData),
     [namingData]
   );
 
-  // Get naming profile count for an entity kind
   const getNamingProfileCount = (kind) => {
     const specific = namingProfileUsage[kind]?.profiles?.length || 0;
     const wildcard = namingProfileUsage['*']?.profiles?.length || 0;
     return specific + wildcard;
   };
 
-  // Use stable key for expand/collapse tracking (falls back to kind for existing kinds)
   const getStableKey = (ek) => ek._key || ek.kind;
 
   const toggleKind = (stableKey) => {
@@ -277,16 +83,14 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
       subtypes: [],
       statuses: [{ id: 'active', name: 'Active', isTerminal: false }],
       defaultStatus: 'active',
-      _key: stableKey, // Stable key for React, never changes
+      _key: stableKey,
     };
     onChange([...entityKinds, newKind]);
     setExpandedKinds((prev) => ({ ...prev, [stableKey]: true }));
   };
 
   const updateKind = (kindKey, updates) => {
-    onChange(
-      entityKinds.map((k) => (k.kind === kindKey ? { ...k, ...updates } : k))
-    );
+    onChange(entityKinds.map((k) => (k.kind === kindKey ? { ...k, ...updates } : k)));
   };
 
   const deleteKind = (kindKey) => {
@@ -298,10 +102,8 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   const addSubtype = (kindKey) => {
     const name = newSubtype[kindKey]?.trim();
     if (!name) return;
-
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
-
     const subtype = { id: generateId(name), name };
     updateKind(kindKey, { subtypes: [...ek.subtypes, subtype] });
     setNewSubtype((prev) => ({ ...prev, [kindKey]: '' }));
@@ -310,18 +112,14 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   const removeSubtype = (kindKey, subtypeId) => {
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
-    updateKind(kindKey, {
-      subtypes: ek.subtypes.filter((s) => s.id !== subtypeId),
-    });
+    updateKind(kindKey, { subtypes: ek.subtypes.filter((s) => s.id !== subtypeId) });
   };
 
   const addStatus = (kindKey) => {
     const name = newStatus[kindKey]?.trim();
     if (!name) return;
-
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
-
     const status = { id: generateId(name), name, isTerminal: false };
     updateKind(kindKey, { statuses: [...ek.statuses, status] });
     setNewStatus((prev) => ({ ...prev, [kindKey]: '' }));
@@ -330,9 +128,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   const removeStatus = (kindKey, statusId) => {
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
-    updateKind(kindKey, {
-      statuses: ek.statuses.filter((s) => s.id !== statusId),
-    });
+    updateKind(kindKey, { statuses: ek.statuses.filter((s) => s.id !== statusId) });
   };
 
   const toggleStatusTerminal = (kindKey, statusId) => {
@@ -346,246 +142,175 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.title}>Entity Kinds</div>
-        <div style={styles.subtitle}>
-          Define the types of entities that exist in your world.
-        </div>
-      </div>
-
-      <div style={styles.toolbar}>
-        <span style={styles.count}>
-          {entityKinds.length} kind{entityKinds.length !== 1 ? 's' : ''}
-        </span>
-        <button style={styles.addButton} onClick={addEntityKind}>
-          + Add Entity Kind
-        </button>
-      </div>
+    <div className="editor-container" style={{ maxWidth: '900px' }}>
+      <SectionHeader
+        title="Entity Kinds"
+        description="Define the types of entities that exist in your world."
+        count={entityKinds.length}
+        actions={
+          <button className="btn btn-primary" onClick={addEntityKind}>
+            + Add Entity Kind
+          </button>
+        }
+      />
 
       {entityKinds.length === 0 ? (
-        <div style={styles.emptyState}>
-          No entity kinds defined yet. Add one to get started.
-        </div>
+        <EmptyState
+          icon="📦"
+          title="No entity kinds defined"
+          description="Add one to get started."
+        />
       ) : (
-        <div style={styles.kindList}>
+        <div className="list-stack">
           {entityKinds.map((ek) => {
             const stableKey = getStableKey(ek);
             const isExpanded = expandedKinds[stableKey];
+            const profileCount = getNamingProfileCount(ek.kind);
+
             return (
-              <div key={stableKey} style={styles.kindCard}>
-                <div
-                  style={styles.kindHeader}
-                  onClick={() => toggleKind(stableKey)}
-                >
-                  <div style={styles.kindHeaderLeft}>
-                    <span
-                      style={{
-                        ...styles.expandIcon,
-                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                      }}
-                    >
-                      ▶
-                    </span>
-                    <span style={styles.kindName}>{ek.description}</span>
-                    <span style={styles.kindId}>({ek.kind})</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+              <ExpandableCard
+                key={stableKey}
+                expanded={isExpanded}
+                onToggle={() => toggleKind(stableKey)}
+                title={ek.description}
+                subtitle={ek.kind}
+                actions={
+                  <>
                     <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, ek.kind)} compact />
-                    {/* Naming profile usage badge */}
-                    {(() => {
-                      const profileCount = getNamingProfileCount(ek.kind);
-                      return profileCount > 0 ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            padding: `2px ${spacing.sm}`,
-                            borderRadius: radius.sm,
-                            fontSize: typography.sizeXs,
-                            backgroundColor: 'rgba(251, 191, 36, 0.15)',
-                            border: '1px solid rgba(251, 191, 36, 0.4)',
-                            color: colors.accentNameForge,
-                          }}
-                          title={`Used in ${profileCount} naming profile group${profileCount !== 1 ? 's' : ''}`}
-                        >
-                          <span style={{ fontSize: '10px' }}>✎</span>
-                          <span>{profileCount}</span>
-                        </span>
-                      ) : null;
-                    })()}
-                    <span style={styles.kindSummary}>
+                    {profileCount > 0 && (
+                      <span
+                        className="badge badge-warning"
+                        title={`Used in ${profileCount} naming profile group${profileCount !== 1 ? 's' : ''}`}
+                      >
+                        ✎ {profileCount}
+                      </span>
+                    )}
+                    <span className="text-muted text-small">
                       {ek.subtypes.length} subtypes, {ek.statuses.length} statuses
                     </span>
+                  </>
+                }
+              >
+                {/* Display Name and Kind ID */}
+                <FormRow>
+                  <FormGroup label="Display Name">
+                    <input
+                      className="input"
+                      value={ek.description}
+                      onChange={(e) => updateKind(ek.kind, { description: e.target.value })}
+                      placeholder="Entity kind display name"
+                    />
+                  </FormGroup>
+                  <FormGroup label="Kind ID">
+                    <input
+                      className="input"
+                      value={ek.kind}
+                      onChange={(e) => {
+                        const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                        if (newKind && !entityKinds.some((k) => k.kind === newKind && k.kind !== ek.kind)) {
+                          updateKind(ek.kind, { kind: newKind });
+                        }
+                      }}
+                      placeholder="entity_kind_id"
+                    />
+                  </FormGroup>
+                </FormRow>
+
+                {/* Subtypes */}
+                <div className="section">
+                  <div className="section-title">Subtypes</div>
+                  <div className="chip-list">
+                    {ek.subtypes.map((subtype) => (
+                      <div key={subtype.id} className="chip">
+                        <span>{subtype.name}</span>
+                        <button
+                          className="chip-remove"
+                          onClick={() => removeSubtype(ek.kind, subtype.id)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="chip-input-row">
+                    <input
+                      className="input input-sm"
+                      value={newSubtype[ek.kind] || ''}
+                      onChange={(e) => setNewSubtype((prev) => ({ ...prev, [ek.kind]: e.target.value }))}
+                      placeholder="New subtype name"
+                      onKeyDown={(e) => e.key === 'Enter' && addSubtype(ek.kind)}
+                    />
+                    <button className="btn btn-secondary" onClick={() => addSubtype(ek.kind)}>
+                      Add
+                    </button>
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <div style={styles.kindBody}>
-                    {/* Description (display name) and Kind (ID) */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Display Name</label>
+                {/* Statuses */}
+                <div className="section">
+                  <div className="section-title">Statuses</div>
+                  <div className="chip-list">
+                    {ek.statuses.map((status) => (
+                      <div key={status.id} className="chip">
                         <input
-                          style={styles.input}
-                          value={ek.description}
-                          onChange={(e) =>
-                            updateKind(ek.kind, { description: e.target.value })
-                          }
-                          placeholder="Entity kind display name"
+                          type="checkbox"
+                          checked={status.isTerminal}
+                          onChange={() => toggleStatusTerminal(ek.kind, status.id)}
+                          title="Terminal status"
                         />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Kind ID</label>
-                        <input
-                          style={styles.input}
-                          value={ek.kind}
-                          onChange={(e) => {
-                            const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
-                            if (newKind && !entityKinds.some((k) => k.kind === newKind && k.kind !== ek.kind)) {
-                              updateKind(ek.kind, { kind: newKind });
-                            }
-                          }}
-                          placeholder="entity_kind_id"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Subtypes */}
-                    <div style={styles.section}>
-                      <div style={styles.sectionTitle}>Subtypes</div>
-                      <div style={styles.itemList}>
-                        {ek.subtypes.map((subtype) => (
-                          <div key={subtype.id} style={styles.item}>
-                            <span>{subtype.name}</span>
-                            <button
-                              style={styles.itemRemove}
-                              onClick={() => removeSubtype(ek.kind, subtype.id)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={styles.addItemRow}>
-                        <input
-                          style={styles.addItemInput}
-                          value={newSubtype[ek.kind] || ''}
-                          onChange={(e) =>
-                            setNewSubtype((prev) => ({
-                              ...prev,
-                              [ek.kind]: e.target.value,
-                            }))
-                          }
-                          placeholder="New subtype name"
-                          onKeyDown={(e) =>
-                            e.key === 'Enter' && addSubtype(ek.kind)
-                          }
-                        />
+                        <span style={{
+                          textDecoration: status.isTerminal ? 'line-through' : 'none',
+                          opacity: status.isTerminal ? 0.7 : 1,
+                        }}>
+                          {status.name}
+                        </span>
                         <button
-                          style={styles.addItemButton}
-                          onClick={() => addSubtype(ek.kind)}
+                          className="chip-remove"
+                          onClick={() => removeStatus(ek.kind, status.id)}
                         >
-                          Add
+                          ×
                         </button>
                       </div>
-                    </div>
-
-                    {/* Statuses */}
-                    <div style={styles.section}>
-                      <div style={styles.sectionTitle}>Statuses</div>
-                      <div style={styles.itemList}>
-                        {ek.statuses.map((status) => (
-                          <div key={status.id} style={styles.item}>
-                            <input
-                              type="checkbox"
-                              style={styles.checkbox}
-                              checked={status.isTerminal}
-                              onChange={() =>
-                                toggleStatusTerminal(ek.kind, status.id)
-                              }
-                              title="Terminal status"
-                            />
-                            <span
-                              style={{
-                                textDecoration: status.isTerminal
-                                  ? 'line-through'
-                                  : 'none',
-                                opacity: status.isTerminal ? 0.7 : 1,
-                              }}
-                            >
-                              {status.name}
-                            </span>
-                            <button
-                              style={styles.itemRemove}
-                              onClick={() => removeStatus(ek.kind, status.id)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={styles.addItemRow}>
-                        <input
-                          style={styles.addItemInput}
-                          value={newStatus[ek.kind] || ''}
-                          onChange={(e) =>
-                            setNewStatus((prev) => ({
-                              ...prev,
-                              [ek.kind]: e.target.value,
-                            }))
-                          }
-                          placeholder="New status name"
-                          onKeyDown={(e) =>
-                            e.key === 'Enter' && addStatus(ek.kind)
-                          }
-                        />
-                        <button
-                          style={styles.addItemButton}
-                          onClick={() => addStatus(ek.kind)}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div style={styles.hint}>
-                        Check the box to mark as terminal (entity "ends" in this status)
-                      </div>
-                    </div>
-
-                    {/* Default Status */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Default Status</label>
-                        <select
-                          style={styles.input}
-                          value={ek.defaultStatus || ''}
-                          onChange={(e) =>
-                            updateKind(ek.kind, { defaultStatus: e.target.value })
-                          }
-                        >
-                          <option value="">-- Select --</option>
-                          {ek.statuses.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Delete */}
-                    <div style={styles.actionsRow}>
-                      <button
-                        style={styles.deleteButton}
-                        onClick={() => deleteKind(ek.kind)}
-                      >
-                        Delete Entity Kind
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <div className="chip-input-row">
+                    <input
+                      className="input input-sm"
+                      value={newStatus[ek.kind] || ''}
+                      onChange={(e) => setNewStatus((prev) => ({ ...prev, [ek.kind]: e.target.value }))}
+                      placeholder="New status name"
+                      onKeyDown={(e) => e.key === 'Enter' && addStatus(ek.kind)}
+                    />
+                    <button className="btn btn-secondary" onClick={() => addStatus(ek.kind)}>
+                      Add
+                    </button>
+                  </div>
+                  <div className="hint">Check the box to mark as terminal (entity "ends" in this status)</div>
+                </div>
+
+                {/* Default Status */}
+                <FormRow>
+                  <FormGroup label="Default Status">
+                    <select
+                      className="input"
+                      value={ek.defaultStatus || ''}
+                      onChange={(e) => updateKind(ek.kind, { defaultStatus: e.target.value })}
+                    >
+                      <option value="">-- Select --</option>
+                      {ek.statuses.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </FormGroup>
+                </FormRow>
+
+                {/* Delete */}
+                <div className="danger-zone">
+                  <button className="btn btn-danger" onClick={() => deleteKind(ek.kind)}>
+                    Delete Entity Kind
+                  </button>
+                </div>
+              </ExpandableCard>
             );
           })}
         </div>

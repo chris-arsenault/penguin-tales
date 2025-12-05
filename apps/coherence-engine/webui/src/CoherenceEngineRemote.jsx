@@ -13,14 +13,14 @@
  */
 
 import React, { useMemo } from 'react';
-import './styles/index.css';
+import '@penguin-tales/shared-components/styles';
 import ErasEditor from './components/ErasEditor';
 import PressuresEditor from './components/PressuresEditor';
 import GeneratorsEditor from './components/GeneratorsEditor';
 import ActionsEditor from './components/ActionsEditor';
 import SystemsEditor from './components/SystemsEditor';
 import ValidationEditor, { getValidationStatus } from './components/ValidationEditor';
-import { computeUsageMap } from './utils/schemaUsageMap';
+import { computeUsageMap } from '@penguin-tales/shared-components';
 
 const TABS = [
   { id: 'validation', label: 'Validation' },

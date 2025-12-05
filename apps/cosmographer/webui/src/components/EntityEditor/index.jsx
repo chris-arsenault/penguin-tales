@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { generateEntityName } from '../../lib/name-generator.js';
-import { TagSelector, UsageBadges, getEntityKindUsageSummary } from '@lore-weave/shared-components';
+import { TagSelector, ToolUsageBadges as UsageBadges, getEntityKindUsageSummary } from '@lore-weave/shared-components';
 
 // Arctic Blue base theme with frost blue accent (Cosmographer)
 const ACCENT_COLOR = '#60a5fa';

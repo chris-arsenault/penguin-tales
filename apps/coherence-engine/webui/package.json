@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@canonry/world-schema": "file:../../../packages/world-schema",
-    "@lore-weave/shared-components": "file:../../../packages/shared-components",
+    "@penguin-tales/shared-components": "file:../../../packages/shared-components",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

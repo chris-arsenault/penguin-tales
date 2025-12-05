@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { getElementValidation } from '../../shared/utils/validation';
+import { getElementValidation } from '../../shared';
 
 export function ActionListCard({ action, onClick, onToggle, usageMap }) {
   const isEnabled = action.enabled !== false;

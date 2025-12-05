@@ -6,261 +6,10 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { colors, typography, spacing, radius, components } from '../../theme';
-import UsageBadges from '../UsageBadges';
+import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState } from '@penguin-tales/shared-components';
+import { ToolUsageBadges as UsageBadges } from '@penguin-tales/shared-components';
 
-const styles = {
-  container: {
-    maxWidth: '1100px',
-  },
-  header: {
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    fontSize: typography.sizeTitle,
-    fontWeight: typography.weightSemibold,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: typography.sizeLg,
-    fontFamily: typography.fontFamily,
-  },
-  toolbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    maxWidth: '300px',
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeLg,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.bgTertiary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.sm,
-    color: colors.textPrimary,
-  },
-  filterGroup: {
-    display: 'flex',
-    gap: spacing.sm,
-    alignItems: 'center',
-  },
-  filterSelect: {
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeMd,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.bgTertiary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.sm,
-    color: colors.textPrimary,
-  },
-  count: {
-    color: colors.textMuted,
-    fontSize: typography.sizeMd,
-    fontFamily: typography.fontFamily,
-  },
-  addButton: {
-    ...components.buttonPrimary,
-  },
-  tagList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.sm,
-  },
-  tagCard: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.lg,
-    border: `1px solid ${colors.border}`,
-    overflow: 'hidden',
-  },
-  tagHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: `${spacing.md} ${spacing.lg}`,
-    cursor: 'pointer',
-  },
-  tagHeaderLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  expandIcon: {
-    fontSize: typography.sizeSm,
-    color: colors.textMuted,
-    transition: 'transform 0.2s',
-    width: '16px',
-  },
-  tagName: {
-    fontWeight: typography.weightMedium,
-    fontFamily: 'monospace',
-    color: colors.textPrimary,
-  },
-  categoryBadge: {
-    padding: `2px ${spacing.sm}`,
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    borderRadius: radius.sm,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  rarityBadge: {
-    padding: `2px ${spacing.sm}`,
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    borderRadius: radius.sm,
-  },
-  tagSummary: {
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    color: colors.textMuted,
-    display: 'flex',
-    gap: spacing.md,
-  },
-  tagBody: {
-    padding: spacing.lg,
-    borderTop: `1px solid ${colors.border}`,
-    backgroundColor: colors.bgTertiary,
-  },
-  formRow: {
-    display: 'flex',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    alignItems: 'flex-start',
-  },
-  formGroup: {
-    flex: 1,
-  },
-  formGroupSmall: {
-    flex: '0 0 150px',
-  },
-  label: {
-    ...components.label,
-  },
-  input: {
-    ...components.input,
-  },
-  textarea: {
-    ...components.input,
-    minHeight: '60px',
-    resize: 'vertical',
-  },
-  select: {
-    ...components.input,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.sizeMd,
-    fontWeight: typography.weightMedium,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  itemList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  item: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.sm,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-  },
-  itemRemove: {
-    background: 'none',
-    border: 'none',
-    color: colors.danger,
-    cursor: 'pointer',
-    padding: '0 2px',
-    fontSize: typography.sizeLg,
-  },
-  addItemRow: {
-    display: 'flex',
-    gap: spacing.sm,
-  },
-  addItemInput: {
-    flex: 1,
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.bgSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: radius.sm,
-    color: colors.textPrimary,
-  },
-  addItemButton: {
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: typography.sizeSm,
-    fontFamily: typography.fontFamily,
-    backgroundColor: colors.buttonSecondary,
-    color: colors.textSecondary,
-    border: 'none',
-    borderRadius: radius.sm,
-    cursor: 'pointer',
-  },
-  actionsRow: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginTop: spacing.lg,
-  },
-  deleteButton: {
-    ...components.buttonDanger,
-  },
-  emptyState: {
-    color: colors.textMuted,
-    fontSize: typography.sizeLg,
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-    padding: spacing.xxxl,
-  },
-  hint: {
-    fontSize: typography.sizeXs,
-    fontFamily: typography.fontFamily,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  statsBar: {
-    display: 'flex',
-    gap: spacing.lg,
-    padding: spacing.md,
-    backgroundColor: colors.bgSecondary,
-    borderRadius: radius.md,
-    marginBottom: spacing.lg,
-    border: `1px solid ${colors.border}`,
-  },
-  stat: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: typography.sizeXl,
-    fontWeight: typography.weightSemibold,
-    color: colors.textPrimary,
-  },
-  statLabel: {
-    fontSize: typography.sizeXs,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-};
-
-// Category colors
+// Category colors (dynamic - keep as objects)
 const CATEGORY_COLORS = {
   status: { bg: 'rgba(34, 197, 94, 0.2)', color: '#22c55e' },
   trait: { bg: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' },
@@ -270,7 +19,7 @@ const CATEGORY_COLORS = {
   location: { bg: 'rgba(20, 184, 166, 0.2)', color: '#14b8a6' },
 };
 
-// Rarity colors
+// Rarity colors (dynamic - keep as objects)
 const RARITY_COLORS = {
   common: { bg: 'rgba(156, 163, 175, 0.2)', color: '#9ca3af' },
   uncommon: { bg: 'rgba(34, 197, 94, 0.2)', color: '#22c55e' },
@@ -281,13 +30,8 @@ const RARITY_COLORS = {
 const CATEGORIES = ['status', 'trait', 'affiliation', 'behavior', 'theme', 'location'];
 const RARITIES = ['common', 'uncommon', 'rare', 'legendary'];
 
-// Generate ID from name (lowercase, underscores)
-function generateId(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
-
-// Separate component for tag ID input to use local state and prevent cursor jumping
-function TagIdInput({ value, onChange, style, allTagIds }) {
+// Separate component for tag ID input to prevent cursor jumping
+function TagIdInput({ value, onChange, allTagIds }) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -303,14 +47,14 @@ function TagIdInput({ value, onChange, style, allTagIds }) {
     if (localValue && localValue !== value && !allTagIds.includes(localValue)) {
       onChange(localValue);
     } else if (!localValue || allTagIds.includes(localValue)) {
-      // Revert to original if invalid
       setLocalValue(value);
     }
   };
 
   return (
     <input
-      style={style}
+      className="input"
+      style={{ fontFamily: 'monospace' }}
       value={localValue}
       onChange={handleChange}
       onBlur={handleBlur}
@@ -334,12 +78,10 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
     const byRarity = {};
     CATEGORIES.forEach(c => byCategory[c] = 0);
     RARITIES.forEach(r => byRarity[r] = 0);
-
     tagRegistry.forEach(tag => {
       byCategory[tag.category] = (byCategory[tag.category] || 0) + 1;
       byRarity[tag.rarity] = (byRarity[tag.rarity] || 0) + 1;
     });
-
     return { total: tagRegistry.length, byCategory, byRarity };
   }, [tagRegistry]);
 
@@ -378,9 +120,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   };
 
   const updateTag = (tagId, updates) => {
-    onChange(
-      tagRegistry.map((t) => (t.tag === tagId ? { ...t, ...updates } : t))
-    );
+    onChange(tagRegistry.map((t) => (t.tag === tagId ? { ...t, ...updates } : t)));
   };
 
   const deleteTag = (tagId) => {
@@ -393,10 +133,8 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   const addRelatedTag = (tagId) => {
     const relatedTag = newRelatedTag[tagId]?.trim();
     if (!relatedTag) return;
-
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-
     const existingRelated = tag.relatedTags || [];
     if (!existingRelated.includes(relatedTag)) {
       updateTag(tagId, { relatedTags: [...existingRelated, relatedTag] });
@@ -407,19 +145,15 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   const removeRelatedTag = (tagId, relatedTag) => {
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-    updateTag(tagId, {
-      relatedTags: (tag.relatedTags || []).filter((r) => r !== relatedTag),
-    });
+    updateTag(tagId, { relatedTags: (tag.relatedTags || []).filter((r) => r !== relatedTag) });
   };
 
   // Conflicting tags management
   const addConflictingTag = (tagId) => {
     const conflictingTag = newConflictingTag[tagId]?.trim();
     if (!conflictingTag) return;
-
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-
     const existingConflicts = tag.conflictingTags || [];
     if (!existingConflicts.includes(conflictingTag)) {
       updateTag(tagId, { conflictingTags: [...existingConflicts, conflictingTag] });
@@ -430,19 +164,15 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   const removeConflictingTag = (tagId, conflictingTag) => {
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-    updateTag(tagId, {
-      conflictingTags: (tag.conflictingTags || []).filter((c) => c !== conflictingTag),
-    });
+    updateTag(tagId, { conflictingTags: (tag.conflictingTags || []).filter((c) => c !== conflictingTag) });
   };
 
   // Entity kinds management
   const addTagEntityKind = (tagId) => {
     const entityKind = newEntityKind[tagId]?.trim();
     if (!entityKind) return;
-
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-
     const existingKinds = tag.entityKinds || [];
     if (!existingKinds.includes(entityKind)) {
       updateTag(tagId, { entityKinds: [...existingKinds, entityKind] });
@@ -453,405 +183,261 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   const removeTagEntityKind = (tagId, entityKind) => {
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
-    updateTag(tagId, {
-      entityKinds: (tag.entityKinds || []).filter((k) => k !== entityKind),
-    });
+    updateTag(tagId, { entityKinds: (tag.entityKinds || []).filter((k) => k !== entityKind) });
   };
 
-  // Get all existing tag names for autocomplete suggestions
   const allTagNames = useMemo(() => tagRegistry.map(t => t.tag), [tagRegistry]);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.title}>Tag Registry</div>
-        <div style={styles.subtitle}>
-          Define tags that categorize entities. Tags provide governance through usage limits,
-          relationships, and conflicts.
-        </div>
-      </div>
+    <div className="editor-container" style={{ maxWidth: '1100px' }}>
+      <SectionHeader
+        title="Tag Registry"
+        description="Define tags that categorize entities. Tags provide governance through usage limits, relationships, and conflicts."
+      />
 
       {/* Stats Bar */}
-      <div style={styles.statsBar}>
-        <div style={styles.stat}>
-          <span style={styles.statValue}>{stats.total}</span>
-          <span style={styles.statLabel}>Total Tags</span>
+      <div className="summary-stats-grid" style={{ marginBottom: '16px' }}>
+        <div className="summary-stat">
+          <span className="summary-stat-value">{stats.total}</span>
+          <span className="summary-stat-label">Total</span>
         </div>
         {CATEGORIES.map(cat => (
-          <div key={cat} style={styles.stat}>
-            <span style={{ ...styles.statValue, color: CATEGORY_COLORS[cat].color }}>
+          <div key={cat} className="summary-stat">
+            <span className="summary-stat-value" style={{ color: CATEGORY_COLORS[cat].color }}>
               {stats.byCategory[cat] || 0}
             </span>
-            <span style={styles.statLabel}>{cat}</span>
+            <span className="summary-stat-label">{cat}</span>
           </div>
         ))}
       </div>
 
-      <div style={styles.toolbar}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
         <input
-          style={styles.searchInput}
+          className="input"
           type="text"
           placeholder="Search tags..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ maxWidth: '300px' }}
         />
-        <div style={styles.filterGroup}>
-          <select
-            style={styles.filterSelect}
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            {CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <select
-            style={styles.filterSelect}
-            value={rarityFilter}
-            onChange={(e) => setRarityFilter(e.target.value)}
-          >
-            <option value="all">All Rarities</option>
-            {RARITIES.map(r => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-        <span style={styles.count}>
-          {filteredTags.length} of {tagRegistry.length} tag{tagRegistry.length !== 1 ? 's' : ''}
-        </span>
-        <button style={styles.addButton} onClick={addTag}>
-          + Add Tag
-        </button>
+        <select className="input" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <option value="all">All Categories</option>
+          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+        <select className="input" value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)}>
+          <option value="all">All Rarities</option>
+          {RARITIES.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <span className="text-muted">{filteredTags.length} of {tagRegistry.length} tags</span>
+        <button className="btn btn-primary" onClick={addTag}>+ Add Tag</button>
       </div>
 
       {tagRegistry.length === 0 ? (
-        <div style={styles.emptyState}>
-          No tags defined yet. Add one to get started.
-        </div>
+        <EmptyState icon="🏷️" title="No tags defined" description="Add one to get started." />
       ) : filteredTags.length === 0 ? (
-        <div style={styles.emptyState}>
-          No tags match your filters.
-        </div>
+        <EmptyState icon="🔍" title="No matches" description="No tags match your filters." />
       ) : (
-        <div style={styles.tagList}>
-          {filteredTags.map((tag, index) => {
+        <div className="list-stack">
+          {filteredTags.map((tag) => {
             const isExpanded = expandedTags[tag.tag];
             const catColor = CATEGORY_COLORS[tag.category] || CATEGORY_COLORS.trait;
             const rarColor = RARITY_COLORS[tag.rarity] || RARITY_COLORS.common;
 
             return (
-              <div key={tag.tag} style={styles.tagCard}>
-                <div
-                  style={styles.tagHeader}
-                  onClick={() => toggleTag(tag.tag)}
-                >
-                  <div style={styles.tagHeaderLeft}>
-                    <span
-                      style={{
-                        ...styles.expandIcon,
-                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                      }}
-                    >
-                      ▶
-                    </span>
-                    <span style={styles.tagName}>{tag.tag}</span>
-                    <span style={{
-                      ...styles.categoryBadge,
-                      backgroundColor: catColor.bg,
-                      color: catColor.color,
-                    }}>
+              <ExpandableCard
+                key={tag.tag}
+                expanded={isExpanded}
+                onToggle={() => toggleTag(tag.tag)}
+                title={<span style={{ fontFamily: 'monospace' }}>{tag.tag}</span>}
+                actions={
+                  <>
+                    <span className="badge" style={{ backgroundColor: catColor.bg, color: catColor.color }}>
                       {tag.category}
                     </span>
-                    <span style={{
-                      ...styles.rarityBadge,
-                      backgroundColor: rarColor.bg,
-                      color: rarColor.color,
-                    }}>
+                    <span className="badge" style={{ backgroundColor: rarColor.bg, color: rarColor.color }}>
                       {tag.rarity}
                     </span>
-                    {tagUsage[tag.tag] && (
-                      <UsageBadges usage={tagUsage[tag.tag]} compact />
-                    )}
+                    {tagUsage[tag.tag] && <UsageBadges usage={tagUsage[tag.tag]} compact />}
+                    <span className="text-muted text-small">
+                      {tag.minUsage || 0}-{tag.maxUsage || '∞'} | {(tag.entityKinds || []).length} kinds
+                    </span>
+                  </>
+                }
+              >
+                {/* Tag ID and Category/Rarity */}
+                <FormRow>
+                  <FormGroup label="Tag ID">
+                    <TagIdInput
+                      value={tag.tag}
+                      allTagIds={allTagNames.filter(t => t !== tag.tag)}
+                      onChange={(newId) => {
+                        const oldId = tag.tag;
+                        const updatedRegistry = tagRegistry.map(t => {
+                          if (t.tag === oldId) return { ...t, tag: newId };
+                          const updated = { ...t };
+                          if (t.relatedTags?.includes(oldId)) {
+                            updated.relatedTags = t.relatedTags.map(r => r === oldId ? newId : r);
+                          }
+                          if (t.conflictingTags?.includes(oldId)) {
+                            updated.conflictingTags = t.conflictingTags.map(c => c === oldId ? newId : c);
+                          }
+                          return updated;
+                        });
+                        setExpandedTags(prev => {
+                          const updated = { ...prev };
+                          if (updated[oldId]) {
+                            updated[newId] = updated[oldId];
+                            delete updated[oldId];
+                          }
+                          return updated;
+                        });
+                        onChange(updatedRegistry);
+                      }}
+                    />
+                  </FormGroup>
+                  <FormGroup label="Category">
+                    <select className="input" value={tag.category} onChange={(e) => updateTag(tag.tag, { category: e.target.value })}>
+                      {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </FormGroup>
+                  <FormGroup label="Rarity">
+                    <select className="input" value={tag.rarity} onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })}>
+                      {RARITIES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </FormGroup>
+                </FormRow>
+
+                <FormRow>
+                  <FormGroup label="Description" wide>
+                    <textarea
+                      className="input"
+                      style={{ minHeight: '60px', resize: 'vertical' }}
+                      value={tag.description || ''}
+                      onChange={(e) => updateTag(tag.tag, { description: e.target.value })}
+                      placeholder="Describe what this tag represents..."
+                    />
+                  </FormGroup>
+                </FormRow>
+
+                {/* Usage Limits */}
+                <FormRow>
+                  <FormGroup label="Min Usage" hint="Minimum entities with this tag">
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      value={tag.minUsage || 0}
+                      onChange={(e) => updateTag(tag.tag, { minUsage: parseInt(e.target.value) || 0 })}
+                    />
+                  </FormGroup>
+                  <FormGroup label="Max Usage" hint="Maximum entities with this tag">
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      value={tag.maxUsage || 50}
+                      onChange={(e) => updateTag(tag.tag, { maxUsage: parseInt(e.target.value) || 50 })}
+                    />
+                  </FormGroup>
+                  <FormGroup label="Consolidate Into" hint="Suggest merging into this tag">
+                    <select
+                      className="input"
+                      value={tag.consolidateInto || ''}
+                      onChange={(e) => updateTag(tag.tag, { consolidateInto: e.target.value || undefined })}
+                    >
+                      <option value="">-- None --</option>
+                      {allTagNames.filter(t => t !== tag.tag).map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </FormGroup>
+                </FormRow>
+
+                {/* Entity Kinds */}
+                <div className="section">
+                  <div className="section-title">Applicable Entity Kinds</div>
+                  <div className="chip-list">
+                    {(tag.entityKinds || []).map((kind) => (
+                      <div key={kind} className="chip">
+                        <span>{kind}</span>
+                        <button className="chip-remove" onClick={() => removeTagEntityKind(tag.tag, kind)}>×</button>
+                      </div>
+                    ))}
                   </div>
-                  <div style={styles.tagSummary}>
-                    <span>Usage: {tag.minUsage || 0}-{tag.maxUsage || '∞'}</span>
-                    <span>{(tag.entityKinds || []).length} kinds</span>
-                    <span>{(tag.relatedTags || []).length} related</span>
-                    <span>{(tag.conflictingTags || []).length} conflicts</span>
+                  <div className="chip-input-row">
+                    <select
+                      className="input input-sm"
+                      value={newEntityKind[tag.tag] || ''}
+                      onChange={(e) => setNewEntityKind((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
+                    >
+                      <option value="">Select entity kind...</option>
+                      {entityKinds.filter(ek => !(tag.entityKinds || []).includes(ek.kind)).map(ek => (
+                        <option key={ek.kind} value={ek.kind}>{ek.description || ek.kind}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-secondary" onClick={() => addTagEntityKind(tag.tag)}>Add</button>
                   </div>
+                  <div className="hint">Which entity kinds can have this tag</div>
                 </div>
 
-                {isExpanded && (
-                  <div style={styles.tagBody}>
-                    {/* Tag ID and Description */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Tag ID</label>
-                        <TagIdInput
-                          style={{ ...styles.input, fontFamily: 'monospace' }}
-                          value={tag.tag}
-                          allTagIds={allTagNames.filter(t => t !== tag.tag)}
-                          onChange={(newId) => {
-                            const oldId = tag.tag;
-                            const updatedRegistry = tagRegistry.map(t => {
-                              if (t.tag === oldId) {
-                                return { ...t, tag: newId };
-                              }
-                              // Update references in related/conflicting tags
-                              const updated = { ...t };
-                              if (t.relatedTags?.includes(oldId)) {
-                                updated.relatedTags = t.relatedTags.map(r => r === oldId ? newId : r);
-                              }
-                              if (t.conflictingTags?.includes(oldId)) {
-                                updated.conflictingTags = t.conflictingTags.map(c => c === oldId ? newId : c);
-                              }
-                              return updated;
-                            });
-                            // Update expanded state to use new ID
-                            setExpandedTags(prev => {
-                              const updated = { ...prev };
-                              if (updated[oldId]) {
-                                updated[newId] = updated[oldId];
-                                delete updated[oldId];
-                              }
-                              return updated;
-                            });
-                            onChange(updatedRegistry);
-                          }}
-                        />
+                {/* Related Tags */}
+                <div className="section">
+                  <div className="section-title">Related Tags</div>
+                  <div className="chip-list">
+                    {(tag.relatedTags || []).map((relatedTag) => (
+                      <div key={relatedTag} className="chip">
+                        <span>{relatedTag}</span>
+                        <button className="chip-remove" onClick={() => removeRelatedTag(tag.tag, relatedTag)}>×</button>
                       </div>
-                      <div style={styles.formGroupSmall}>
-                        <label style={styles.label}>Category</label>
-                        <select
-                          style={styles.select}
-                          value={tag.category}
-                          onChange={(e) => updateTag(tag.tag, { category: e.target.value })}
-                        >
-                          {CATEGORIES.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div style={styles.formGroupSmall}>
-                        <label style={styles.label}>Rarity</label>
-                        <select
-                          style={styles.select}
-                          value={tag.rarity}
-                          onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })}
-                        >
-                          {RARITIES.map(r => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Description</label>
-                        <textarea
-                          style={styles.textarea}
-                          value={tag.description || ''}
-                          onChange={(e) => updateTag(tag.tag, { description: e.target.value })}
-                          placeholder="Describe what this tag represents..."
-                        />
-                      </div>
-                    </div>
-
-                    {/* Usage Limits */}
-                    <div style={styles.formRow}>
-                      <div style={styles.formGroupSmall}>
-                        <label style={styles.label}>Min Usage</label>
-                        <input
-                          style={styles.input}
-                          type="number"
-                          min="0"
-                          value={tag.minUsage || 0}
-                          onChange={(e) => updateTag(tag.tag, { minUsage: parseInt(e.target.value) || 0 })}
-                        />
-                        <div style={styles.hint}>Minimum entities with this tag</div>
-                      </div>
-                      <div style={styles.formGroupSmall}>
-                        <label style={styles.label}>Max Usage</label>
-                        <input
-                          style={styles.input}
-                          type="number"
-                          min="0"
-                          value={tag.maxUsage || 50}
-                          onChange={(e) => updateTag(tag.tag, { maxUsage: parseInt(e.target.value) || 50 })}
-                        />
-                        <div style={styles.hint}>Maximum entities with this tag</div>
-                      </div>
-                      <div style={styles.formGroupSmall}>
-                        <label style={styles.label}>Consolidate Into</label>
-                        <select
-                          style={styles.select}
-                          value={tag.consolidateInto || ''}
-                          onChange={(e) => updateTag(tag.tag, { consolidateInto: e.target.value || undefined })}
-                        >
-                          <option value="">-- None --</option>
-                          {allTagNames.filter(t => t !== tag.tag).map(t => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                        <div style={styles.hint}>Suggest merging into this tag</div>
-                      </div>
-                    </div>
-
-                    {/* Entity Kinds */}
-                    <div style={styles.section}>
-                      <div style={styles.sectionTitle}>Applicable Entity Kinds</div>
-                      <div style={styles.itemList}>
-                        {(tag.entityKinds || []).map((kind) => (
-                          <div key={kind} style={styles.item}>
-                            <span>{kind}</span>
-                            <button
-                              style={styles.itemRemove}
-                              onClick={() => removeTagEntityKind(tag.tag, kind)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={styles.addItemRow}>
-                        <select
-                          style={styles.addItemInput}
-                          value={newEntityKind[tag.tag] || ''}
-                          onChange={(e) =>
-                            setNewEntityKind((prev) => ({
-                              ...prev,
-                              [tag.tag]: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select entity kind...</option>
-                          {entityKinds
-                            .filter(ek => !(tag.entityKinds || []).includes(ek.kind))
-                            .map(ek => (
-                              <option key={ek.kind} value={ek.kind}>{ek.description || ek.kind}</option>
-                            ))}
-                        </select>
-                        <button
-                          style={styles.addItemButton}
-                          onClick={() => addTagEntityKind(tag.tag)}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div style={styles.hint}>
-                        Which entity kinds can have this tag
-                      </div>
-                    </div>
-
-                    {/* Related Tags */}
-                    <div style={styles.section}>
-                      <div style={styles.sectionTitle}>Related Tags</div>
-                      <div style={styles.itemList}>
-                        {(tag.relatedTags || []).map((relatedTag) => (
-                          <div key={relatedTag} style={styles.item}>
-                            <span>{relatedTag}</span>
-                            <button
-                              style={styles.itemRemove}
-                              onClick={() => removeRelatedTag(tag.tag, relatedTag)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={styles.addItemRow}>
-                        <select
-                          style={styles.addItemInput}
-                          value={newRelatedTag[tag.tag] || ''}
-                          onChange={(e) =>
-                            setNewRelatedTag((prev) => ({
-                              ...prev,
-                              [tag.tag]: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select related tag...</option>
-                          {allTagNames
-                            .filter(t => t !== tag.tag && !(tag.relatedTags || []).includes(t))
-                            .map(t => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
-                        <button
-                          style={styles.addItemButton}
-                          onClick={() => addRelatedTag(tag.tag)}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div style={styles.hint}>
-                        Tags that commonly appear together
-                      </div>
-                    </div>
-
-                    {/* Conflicting Tags */}
-                    <div style={styles.section}>
-                      <div style={styles.sectionTitle}>Conflicting Tags</div>
-                      <div style={styles.itemList}>
-                        {(tag.conflictingTags || []).map((conflictingTag) => (
-                          <div key={conflictingTag} style={{
-                            ...styles.item,
-                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                          }}>
-                            <span>{conflictingTag}</span>
-                            <button
-                              style={styles.itemRemove}
-                              onClick={() => removeConflictingTag(tag.tag, conflictingTag)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={styles.addItemRow}>
-                        <select
-                          style={styles.addItemInput}
-                          value={newConflictingTag[tag.tag] || ''}
-                          onChange={(e) =>
-                            setNewConflictingTag((prev) => ({
-                              ...prev,
-                              [tag.tag]: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select conflicting tag...</option>
-                          {allTagNames
-                            .filter(t => t !== tag.tag && !(tag.conflictingTags || []).includes(t))
-                            .map(t => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
-                        <button
-                          style={styles.addItemButton}
-                          onClick={() => addConflictingTag(tag.tag)}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div style={styles.hint}>
-                        Tags that should never appear together on the same entity
-                      </div>
-                    </div>
-
-                    {/* Delete */}
-                    <div style={styles.actionsRow}>
-                      <button
-                        style={styles.deleteButton}
-                        onClick={() => deleteTag(tag.tag)}
-                      >
-                        Delete Tag
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <div className="chip-input-row">
+                    <select
+                      className="input input-sm"
+                      value={newRelatedTag[tag.tag] || ''}
+                      onChange={(e) => setNewRelatedTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
+                    >
+                      <option value="">Select related tag...</option>
+                      {allTagNames.filter(t => t !== tag.tag && !(tag.relatedTags || []).includes(t)).map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-secondary" onClick={() => addRelatedTag(tag.tag)}>Add</button>
+                  </div>
+                  <div className="hint">Tags that commonly appear together</div>
+                </div>
+
+                {/* Conflicting Tags */}
+                <div className="section">
+                  <div className="section-title">Conflicting Tags</div>
+                  <div className="chip-list">
+                    {(tag.conflictingTags || []).map((conflictingTag) => (
+                      <div key={conflictingTag} className="chip" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}>
+                        <span>{conflictingTag}</span>
+                        <button className="chip-remove" onClick={() => removeConflictingTag(tag.tag, conflictingTag)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="chip-input-row">
+                    <select
+                      className="input input-sm"
+                      value={newConflictingTag[tag.tag] || ''}
+                      onChange={(e) => setNewConflictingTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
+                    >
+                      <option value="">Select conflicting tag...</option>
+                      {allTagNames.filter(t => t !== tag.tag && !(tag.conflictingTags || []).includes(t)).map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-secondary" onClick={() => addConflictingTag(tag.tag)}>Add</button>
+                  </div>
+                  <div className="hint">Tags that should never appear together</div>
+                </div>
+
+                {/* Delete */}
+                <div className="danger-zone">
+                  <button className="btn btn-danger" onClick={() => deleteTag(tag.tag)}>Delete Tag</button>
+                </div>
+              </ExpandableCard>
             );
           })}
         </div>

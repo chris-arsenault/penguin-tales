@@ -22,170 +22,6 @@ const DEBUG_CATEGORIES = [
   { id: 'naming', label: 'Naming', description: 'Name generation' },
 ];
 
-const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  modal: {
-    backgroundColor: '#1e3a5f',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-    maxWidth: '500px',
-    width: '90%',
-    maxHeight: '80vh',
-    overflow: 'auto',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-  },
-  title: {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#ffffff',
-    margin: 0,
-  },
-  closeButton: {
-    background: 'none',
-    border: 'none',
-    color: '#93c5fd',
-    fontSize: '24px',
-    cursor: 'pointer',
-    padding: '0 4px',
-  },
-  masterToggle: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
-    backgroundColor: '#0a1929',
-    borderRadius: '8px',
-    marginBottom: '16px',
-  },
-  masterLabel: {
-    fontSize: '14px',
-    fontWeight: 500,
-    color: '#ffffff',
-    flex: 1,
-  },
-  toggle: {
-    position: 'relative',
-    width: '44px',
-    height: '24px',
-    backgroundColor: '#0a1929',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-  },
-  toggleActive: {
-    backgroundColor: '#6d28d9',
-    borderColor: '#8b5cf6',
-  },
-  toggleKnob: {
-    position: 'absolute',
-    top: '2px',
-    left: '2px',
-    width: '18px',
-    height: '18px',
-    backgroundColor: '#ffffff',
-    borderRadius: '50%',
-    transition: 'transform 0.2s',
-  },
-  toggleKnobActive: {
-    transform: 'translateX(20px)',
-  },
-  categoryList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  categoryItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '10px 12px',
-    backgroundColor: '#0a1929',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s',
-  },
-  categoryItemDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
-  checkbox: {
-    width: '18px',
-    height: '18px',
-    borderRadius: '4px',
-    border: '2px solid #6d28d9',
-    backgroundColor: 'transparent',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  checkboxChecked: {
-    backgroundColor: '#6d28d9',
-  },
-  checkmark: {
-    color: '#ffffff',
-    fontSize: '12px',
-    fontWeight: 'bold',
-  },
-  categoryInfo: {
-    flex: 1,
-  },
-  categoryLabel: {
-    fontSize: '13px',
-    fontWeight: 500,
-    color: '#ffffff',
-    marginBottom: '2px',
-  },
-  categoryDesc: {
-    fontSize: '11px',
-    color: '#93c5fd',
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '20px',
-    paddingTop: '16px',
-    borderTop: '1px solid rgba(59, 130, 246, 0.3)',
-  },
-  selectAllButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: 'transparent',
-    color: '#93c5fd',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
-  clearButton: {
-    padding: '8px 16px',
-    fontSize: '13px',
-    backgroundColor: 'transparent',
-    color: '#93c5fd',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
-};
-
 export default function DebugSettingsModal({ isOpen, onClose, debugConfig, onDebugConfigChange }) {
   if (!isOpen) return null;
 
@@ -232,67 +68,53 @@ export default function DebugSettingsModal({ isOpen, onClose, debugConfig, onDeb
   };
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.header}>
-          <h2 style={styles.title}>Debug Settings</h2>
-          <button style={styles.closeButton} onClick={onClose}>×</button>
+    <div className="lw-modal-overlay" onClick={onClose}>
+      <div className="lw-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="lw-modal-header">
+          <h2 className="lw-modal-title">Debug Settings</h2>
+          <button className="lw-modal-close" onClick={onClose}>×</button>
         </div>
 
-        {/* Master toggle */}
-        <div style={styles.masterToggle}>
-          <span style={styles.masterLabel}>Enable Debug Output</span>
-          <div
-            style={{
-              ...styles.toggle,
-              ...(debugConfig.enabled ? styles.toggleActive : {}),
-            }}
-            onClick={handleMasterToggle}
-          >
+        <div className="lw-modal-body">
+          {/* Master toggle */}
+          <div className="lw-master-toggle">
+            <span className="lw-master-label">Enable Debug Output</span>
             <div
-              style={{
-                ...styles.toggleKnob,
-                ...(debugConfig.enabled ? styles.toggleKnobActive : {}),
-              }}
-            />
+              className={`lw-toggle ${debugConfig.enabled ? 'active' : ''}`}
+              onClick={handleMasterToggle}
+            >
+              <div className="lw-toggle-knob" />
+            </div>
+          </div>
+
+          {/* Category list */}
+          <div className="lw-category-list">
+            {DEBUG_CATEGORIES.map((category) => (
+              <div
+                key={category.id}
+                className={`lw-category-item ${!debugConfig.enabled ? 'disabled' : ''}`}
+                onClick={() => handleCategoryToggle(category.id)}
+              >
+                <div className={`lw-category-checkbox ${debugConfig.enabled && isCategoryEnabled(category.id) ? 'checked' : ''}`}>
+                  {debugConfig.enabled && isCategoryEnabled(category.id) && (
+                    <span className="checkmark">✓</span>
+                  )}
+                </div>
+                <div className="lw-category-info">
+                  <div className="lw-category-label">{category.label}</div>
+                  <div className="lw-category-desc">{category.description}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Category list */}
-        <div style={styles.categoryList}>
-          {DEBUG_CATEGORIES.map((category) => (
-            <div
-              key={category.id}
-              style={{
-                ...styles.categoryItem,
-                ...(!debugConfig.enabled ? styles.categoryItemDisabled : {}),
-              }}
-              onClick={() => handleCategoryToggle(category.id)}
-            >
-              <div
-                style={{
-                  ...styles.checkbox,
-                  ...(debugConfig.enabled && isCategoryEnabled(category.id) ? styles.checkboxChecked : {}),
-                }}
-              >
-                {debugConfig.enabled && isCategoryEnabled(category.id) && (
-                  <span style={styles.checkmark}>✓</span>
-                )}
-              </div>
-              <div style={styles.categoryInfo}>
-                <div style={styles.categoryLabel}>{category.label}</div>
-                <div style={styles.categoryDesc}>{category.description}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Footer with select/clear buttons */}
-        <div style={styles.footer}>
-          <button style={styles.clearButton} onClick={handleClearAll}>
+        <div className="lw-modal-footer">
+          <button className="lw-btn lw-btn-secondary" onClick={handleClearAll}>
             Clear All
           </button>
-          <button style={styles.selectAllButton} onClick={handleSelectAll}>
+          <button className="lw-btn lw-btn-secondary" onClick={handleSelectAll}>
             Select All
           </button>
         </div>

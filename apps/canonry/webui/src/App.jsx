@@ -12,7 +12,7 @@ import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
 import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
-import { computeTagUsage, computeSchemaUsage } from './components/UsageBadges';
+import { computeTagUsage, computeSchemaUsage } from '@penguin-tales/shared-components';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';

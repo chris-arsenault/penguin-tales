@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import CoherenceEngineRemote from './CoherenceEngineRemote';
-import './styles/index.css';
+import '@penguin-tales/shared-components/styles';
 
 // Standalone entry point for development
 // In production, this is loaded via Module Federation from The Canonry

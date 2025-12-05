@@ -12,10 +12,10 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import './App.css';
-import CultureSidebar from './components/CultureSidebar';
-import EntityWorkspace from './components/EntityWorkspace';
-import OptimizerWorkshop from './components/OptimizerWorkshop';
-import GenerateTab from './components/GenerateTab';
+import { CultureSidebar } from './components/sidebar';
+import { EntityWorkspace } from './components/workspace';
+import { OptimizerWorkshop } from './components/optimizer';
+import { GenerateTab } from './components/generator';
 
 /**
  * Convert Canonry schema format to Name Forge internal format
@@ -70,98 +70,6 @@ function extractNamingData(culture) {
     profiles: culture.profiles || [],
   };
 }
-
-// Name Forge accent gradient (gold) - Arctic Blue base theme
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #ffb366 0%, #ffc080 100%)';
-const HOVER_BG = 'rgba(255, 179, 102, 0.15)';
-const ACCENT_COLOR = '#ffb366';
-
-const styles = {
-  container: {
-    display: 'flex',
-    height: '100%',
-    backgroundColor: '#0a1929',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  },
-  sidebar: {
-    width: '200px',
-    backgroundColor: '#0c1f2e',
-    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
-    display: 'flex',
-    flexDirection: 'column',
-    flexShrink: 0,
-  },
-  nav: {
-    padding: '12px',
-    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-  },
-  navButton: {
-    display: 'block',
-    width: '100%',
-    padding: '10px 12px',
-    marginBottom: '4px',
-    fontSize: '13px',
-    fontWeight: 500,
-    textAlign: 'left',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-    fontFamily: 'inherit',
-  },
-  navButtonInactive: {
-    backgroundColor: 'transparent',
-    color: '#93c5fd',
-  },
-  navButtonActive: {
-    background: ACCENT_GRADIENT,
-    color: '#0a1929',
-    fontWeight: 600,
-  },
-  apiSection: {
-    padding: '12px',
-    borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-  },
-  apiButton: {
-    width: '100%',
-    padding: '8px 12px',
-    fontSize: '11px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  },
-  apiDropdown: {
-    marginTop: '8px',
-    padding: '12px',
-    backgroundColor: '#1e3a5f',
-    borderRadius: '6px',
-    border: '1px solid rgba(59, 130, 246, 0.3)',
-  },
-  cultureSection: {
-    flex: 1,
-    overflow: 'auto',
-  },
-  main: {
-    flex: 1,
-    display: 'flex',
-    overflow: 'hidden',
-  },
-  content: {
-    flex: 1,
-    overflow: 'auto',
-  },
-  noCultures: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-    textAlign: 'center',
-    color: '#60a5fa',
-  },
-};
 
 const TABS = [
   { id: 'workshop', label: 'Workshop' },
@@ -248,14 +156,10 @@ export default function NameForgeRemote({
 
   if (!hasCultures) {
     return (
-      <div style={styles.noCultures}>
-        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>
-
-        </div>
-        <div style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px', color: '#ffffff' }}>
-          No Cultures Defined
-        </div>
-        <div style={{ fontSize: '14px', maxWidth: '400px', color: '#93c5fd' }}>
+      <div className="nf-empty-state">
+        <div className="nf-empty-state-icon"></div>
+        <div className="nf-empty-state-title">No Cultures Defined</div>
+        <div className="nf-empty-state-desc">
           Add cultures in the <strong>Enumerist</strong> tab first, then return here
           to configure naming domains, grammars, and profiles.
         </div>
@@ -264,20 +168,15 @@ export default function NameForgeRemote({
   }
 
   return (
-    <div style={styles.container}>
+    <div className="nf-container">
       {/* Left sidebar with nav and cultures */}
-      <div style={styles.sidebar}>
-        <nav style={styles.nav}>
+      <div className="nf-sidebar">
+        <nav className="nf-nav">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                ...styles.navButton,
-                ...(activeTab === tab.id
-                  ? styles.navButtonActive
-                  : styles.navButtonInactive),
-              }}
+              className={`nf-nav-button ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.label}
             </button>
@@ -285,23 +184,17 @@ export default function NameForgeRemote({
         </nav>
 
         {/* API Key section */}
-        <div style={styles.apiSection}>
+        <div className="nf-api-section">
           <button
             onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-            style={{
-              ...styles.apiButton,
-              backgroundColor: apiKey ? '#ffb366' : '#1e3a5f',
-              color: apiKey ? '#0a1929' : '#93c5fd',
-            }}
+            className={`nf-api-button ${apiKey ? 'active' : ''}`}
           >
             {apiKey ? '✓ API Key Set' : 'Set API Key'}
           </button>
           {showApiKeyInput && (
-            <div style={styles.apiDropdown}>
-              <div style={{ marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>
-                Anthropic API Key
-              </div>
-              <p style={{ fontSize: '11px', color: '#93c5fd', marginBottom: '8px' }}>
+            <div className="nf-api-dropdown">
+              <div className="nf-api-dropdown-title">Anthropic API Key</div>
+              <p className="nf-api-dropdown-hint">
                 Required for LLM lexeme generation.
               </p>
               <input
@@ -309,25 +202,11 @@ export default function NameForgeRemote({
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="sk-ant-..."
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginBottom: '8px',
-                  fontSize: '12px',
-                  backgroundColor: '#2d4a6f',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  borderRadius: '4px',
-                  color: '#ffffff',
-                  boxSizing: 'border-box',
-                }}
+                className="nf-api-input"
               />
               <button
                 onClick={() => setShowApiKeyInput(false)}
-                style={{
-                  ...styles.apiButton,
-                  backgroundColor: '#ffb366',
-                  color: '#0a1929',
-                }}
+                className="nf-api-button active"
               >
                 Done
               </button>
@@ -336,7 +215,7 @@ export default function NameForgeRemote({
         </div>
 
         {/* Culture sidebar - always visible */}
-        <div style={styles.cultureSection}>
+        <div className="nf-culture-section">
           <CultureSidebar
             cultures={cultures}
             selectedCulture={selectedCulture}
@@ -348,9 +227,9 @@ export default function NameForgeRemote({
       </div>
 
       {/* Main content area */}
-      <div style={styles.main}>
+      <div className="nf-main">
         {activeTab === 'workshop' && (
-          <div style={styles.content}>
+          <div className="nf-content">
             <EntityWorkspace
               worldSchema={worldSchema}
               cultureId={selectedCulture}
@@ -367,7 +246,7 @@ export default function NameForgeRemote({
         )}
 
         {activeTab === 'optimizer' && (
-          <div style={styles.content}>
+          <div className="nf-content">
             <OptimizerWorkshop
               cultures={cultures}
               onCulturesChange={handleCulturesChange}
@@ -376,7 +255,7 @@ export default function NameForgeRemote({
         )}
 
         {activeTab === 'generate' && (
-          <div style={styles.content}>
+          <div className="nf-content">
             <GenerateTab
               worldSchema={worldSchema}
               cultures={cultures}

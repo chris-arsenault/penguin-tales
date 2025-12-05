@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { getElementValidation } from '../../utils/schemaUsageMap';
+import { getElementValidation } from '@penguin-tales/shared-components';
 import { TABS } from './constants';
 import { ModalShell, TabValidationBadge, OrphanBadge } from '../shared';
 import {

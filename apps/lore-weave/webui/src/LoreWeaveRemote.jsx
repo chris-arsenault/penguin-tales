@@ -19,10 +19,11 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import ConfigurationSummary from './components/ConfigurationSummary';
-import DistributionTargetsEditor from './components/DistributionTargetsEditor';
-import SimulationRunner from './components/SimulationRunner';
-import ResultsViewer from './components/ResultsViewer';
+import './App.css';
+import ConfigurationSummary from './components/config';
+import DistributionTargetsEditor from './components/targets';
+import SimulationRunner from './components/runner';
+import ResultsViewer from './components/results';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 
 const TABS = [
@@ -31,63 +32,6 @@ const TABS = [
   { id: 'run', label: 'Run' },
   { id: 'results', label: 'Results' },
 ];
-
-// Lore Weave accent gradient (purple) - Arctic Blue base theme
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)';
-const ACCENT_COLOR = '#6d28d9';
-
-const styles = {
-  container: {
-    display: 'flex',
-    height: '100%',
-    backgroundColor: '#0a1929',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  },
-  sidebar: {
-    width: '200px',
-    backgroundColor: '#0c1f2e',
-    borderRight: '1px solid rgba(59, 130, 246, 0.3)',
-    display: 'flex',
-    flexDirection: 'column',
-    flexShrink: 0,
-  },
-  nav: {
-    padding: '12px',
-  },
-  navButton: {
-    display: 'block',
-    width: '100%',
-    padding: '10px 12px',
-    marginBottom: '4px',
-    fontSize: '13px',
-    fontWeight: 500,
-    textAlign: 'left',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-    fontFamily: 'inherit',
-  },
-  navButtonInactive: {
-    backgroundColor: 'transparent',
-    color: '#93c5fd',
-  },
-  navButtonActive: {
-    background: ACCENT_GRADIENT,
-    color: 'white',
-    fontWeight: 600,
-  },
-  main: {
-    flex: 1,
-    display: 'flex',
-    overflow: 'hidden',
-  },
-  content: {
-    flex: 1,
-    padding: '24px',
-    overflowY: 'auto',
-  },
-};
 
 export default function LoreWeaveRemote({
   schema = { entityKinds: [], relationshipKinds: [], cultures: [] },
@@ -255,43 +199,19 @@ export default function LoreWeaveRemote({
   };
 
   return (
-    <div style={styles.container}>
+    <div className="lw-app-container">
       {/* Left sidebar with nav */}
-      <div style={styles.sidebar}>
-        <nav style={styles.nav}>
+      <div className="lw-sidebar">
+        <nav className="lw-sidebar-nav">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                ...styles.navButton,
-                ...(activeTab === tab.id
-                  ? styles.navButtonActive
-                  : styles.navButtonInactive),
-              }}
-              onMouseEnter={(e) => {
-                if (activeTab !== tab.id) {
-                  e.target.style.backgroundColor = 'rgba(109, 40, 217, 0.15)';
-                  e.target.style.color = ACCENT_COLOR;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== tab.id) {
-                  e.target.style.backgroundColor = 'transparent';
-                  e.target.style.color = '#93c5fd';
-                }
-              }}
+              className={`lw-nav-button ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.label}
               {tab.id === 'results' && simulationResults && (
-                <span style={{
-                  marginLeft: '8px',
-                  backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                  color: '#22c55e',
-                  fontSize: '10px',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}>
+                <span className="lw-nav-badge">
                   {simulationResults.metadata?.entityCount || 0}
                 </span>
               )}
@@ -301,8 +221,8 @@ export default function LoreWeaveRemote({
       </div>
 
       {/* Main content area */}
-      <div style={styles.main}>
-        <div style={styles.content}>
+      <div className="lw-main-area">
+        <div className="lw-content-area">
           {renderContent()}
         </div>
       </div>

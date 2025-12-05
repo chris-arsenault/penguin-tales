@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import LoreWeaveRemote from './LoreWeaveRemote';
+import './App.css';
 
 // Standalone entry point for development
 // In production, this is loaded via Module Federation from The Canonry

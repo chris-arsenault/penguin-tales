@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { getElementValidation } from '../../../utils/schemaUsageMap';
+import { getElementValidation } from '@penguin-tales/shared-components';
 import { ErrorBadge, OrphanBadge, EraBadges, EnableToggle } from '../../shared';
 
 /**
