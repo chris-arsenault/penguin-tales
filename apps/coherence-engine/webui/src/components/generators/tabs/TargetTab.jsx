@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { PICK_STRATEGIES } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
 import { SelectionFiltersEditor } from '../filters';
 
 /**
@@ -60,6 +60,15 @@ export function TargetTab({ generator, onChange, schema }) {
             value={selection.pickStrategy || 'random'}
             onChange={(v) => updateSelection('pickStrategy', v)}
             options={PICK_STRATEGIES}
+          />
+          <ReferenceDropdown
+            label="Min Prominence"
+            value={selection.minProminence || ''}
+            onChange={(v) => updateSelection('minProminence', v || undefined)}
+            options={[
+              { value: '', label: 'Any prominence' },
+              ...PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label })),
+            ]}
           />
         </div>
 

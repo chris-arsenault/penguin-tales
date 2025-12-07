@@ -392,69 +392,6 @@ export class TemplateGraphView {
   }
 
   // ============================================================================
-  // HELPER METHODS (DOMAIN-AGNOSTIC)
-  // ============================================================================
-
-  /**
-   * Get the location of an entity.
-   * Uses domain config locationRelationshipKinds if provided, otherwise falls back to defaults.
-   */
-  getLocation(entityId: string): HardState | undefined {
-    const entity = this.graph.getEntity(entityId);
-    if (!entity) return undefined;
-
-    // Use domain config or fallback to defaults
-    const locationKinds = this.config?.domain?.locationRelationshipKinds
-      ?? ['resident_of', 'located_at'];
-
-    const locationLink = entity.links.find(
-      link => locationKinds.includes(link.kind)
-    );
-
-    if (!locationLink) return undefined;
-
-    const locationId = locationLink.src === entityId ? locationLink.dst : locationLink.src;
-    return this.graph.getEntity(locationId);
-  }
-
-  /**
-   * Get all members of a faction.
-   * Uses domain config membershipRelationshipKinds if provided, otherwise falls back to defaults.
-   */
-  getFactionMembers(factionId: string): HardState[] {
-    const members: HardState[] = [];
-
-    // Use domain config or fallback to defaults
-    const membershipKinds = this.config?.domain?.membershipRelationshipKinds
-      ?? ['member_of'];
-
-    for (const entity of this.graph.getEntities()) {
-      if (entity.links.some(link => membershipKinds.includes(link.kind) && link.dst === factionId)) {
-        members.push(entity);
-      }
-    }
-
-    return members;
-  }
-
-  /**
-   * Get the leader of a faction.
-   * Uses domain config leadershipRelationshipKinds if provided, otherwise falls back to defaults.
-   */
-  getFactionLeader(factionId: string): HardState | undefined {
-    // Use domain config or fallback to defaults
-    const leadershipKinds = this.config?.domain?.leadershipRelationshipKinds
-      ?? ['leader_of'];
-
-    for (const entity of this.graph.getEntities()) {
-      if (entity.links.some(link => leadershipKinds.includes(link.kind) && link.dst === factionId)) {
-        return entity;
-      }
-    }
-    return undefined;
-  }
-
-  // ============================================================================
   // GRAPH MUTATIONS
   // ============================================================================
   // These methods allow systems to modify the graph without direct Graph access.

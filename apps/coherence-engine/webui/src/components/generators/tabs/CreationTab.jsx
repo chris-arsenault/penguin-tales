@@ -186,13 +186,12 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
     onChange({ ...item, [field]: value });
   };
 
-  // Safely handle subtype display - could be string, {inherit:...}, {random:...}, etc.
+  // Safely handle subtype display - could be string, {inherit:...}, {fromPressure:...}, etc.
   const subtypeDisplay = (() => {
-    if (item.subtype === null || item.subtype === undefined) return null;
-    if (typeof item.subtype === 'string') return item.subtype;
+    if (item.subtype === null || item.subtype === undefined) return '⚠ not set';
+    if (typeof item.subtype === 'string') return item.subtype || '⚠ not set';
     if (typeof item.subtype === 'object') {
-      if (item.subtype.inherit) return 'inherit';
-      if (item.subtype.random) return 'random';
+      if (item.subtype.inherit) return `inherit:${item.subtype.inherit}`;
       if (item.subtype.fromPressure) return 'from-pressure';
       console.warn('[CreationTab] Unknown subtype object format:', item.subtype);
       return '[complex]';
@@ -214,7 +213,7 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
             <span className="entity-ref">{item.entityRef}</span>
           </div>
           <div className="item-card-subtitle">
-            {safeDisplay(item.kind, '?', 'kind')}{subtypeDisplay ? `:${subtypeDisplay}` : ''} • {safeDisplay(item.prominence, 'no prominence', 'prominence')}
+            {safeDisplay(item.kind, '?', 'kind')}:{subtypeDisplay} • {safeDisplay(item.prominence, 'no prominence', 'prominence')}
           </div>
           {/* Naming profile indicator */}
           {cultureIds.length > 0 && (
@@ -266,14 +265,6 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
               }}
               options={entityKindOptions}
             />
-            {item.kind && typeof item.subtype !== 'object' && (
-              <ReferenceDropdown
-                label="Subtype"
-                value={item.subtype}
-                onChange={(v) => updateField('subtype', v)}
-                options={[{ value: '', label: 'Any' }, ...getSubtypeOptions(item.kind)]}
-              />
-            )}
             {item.kind && (
               <ReferenceDropdown
                 label="Status"
@@ -283,6 +274,59 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
               />
             )}
           </div>
+
+          {/* SUBTYPE EDITOR */}
+          {item.kind && (
+            <div style={{ marginTop: '16px' }}>
+              <label className="label">Subtype (required)</label>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <ReferenceDropdown
+                  value={
+                    typeof item.subtype === 'string' ? 'fixed' :
+                    item.subtype?.inherit ? 'inherit' :
+                    item.subtype?.fromPressure ? 'from_pressure' : ''
+                  }
+                  onChange={(v) => {
+                    if (v === 'fixed') updateField('subtype', '');
+                    else if (v === 'inherit') updateField('subtype', { inherit: '$target' });
+                    else if (v === 'from_pressure') updateField('subtype', { fromPressure: {} });
+                    else updateField('subtype', undefined);
+                  }}
+                  options={[
+                    { value: '', label: 'Select mode...' },
+                    { value: 'fixed', label: 'Fixed subtype' },
+                    { value: 'inherit', label: 'Inherit from entity' },
+                    { value: 'from_pressure', label: 'From pressure' },
+                  ]}
+                  placeholder="Select mode..."
+                  style={{ flex: 1 }}
+                />
+                {typeof item.subtype === 'string' && (
+                  <ReferenceDropdown
+                    value={item.subtype}
+                    onChange={(v) => updateField('subtype', v)}
+                    options={[{ value: '', label: 'Select subtype...' }, ...getSubtypeOptions(item.kind)]}
+                    placeholder="Select subtype..."
+                    style={{ flex: 1 }}
+                  />
+                )}
+                {item.subtype?.inherit && (
+                  <ReferenceDropdown
+                    value={item.subtype.inherit}
+                    onChange={(v) => updateField('subtype', { ...item.subtype, inherit: v })}
+                    options={availableRefs.map((r) => ({ value: r, label: r }))}
+                    placeholder="Select entity..."
+                    style={{ flex: 1 }}
+                  />
+                )}
+              </div>
+              {item.subtype?.fromPressure && (
+                <div className="form-help-text" style={{ marginTop: '8px' }}>
+                  From pressure mapping requires JSON editing for now.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="form-group mt-lg">
             <label className="label">Prominence</label>
@@ -431,6 +475,21 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
               tagRegistry={tagRegistry}
               onAddToRegistry={onAddToRegistry}
               placeholder="Select tags..."
+            />
+          </div>
+
+          {/* DESCRIPTION EDITOR */}
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Description (optional)</label>
+            <div className="form-help-text">
+              A description for the created entity. Leave empty to auto-generate.
+            </div>
+            <textarea
+              className="textarea"
+              value={typeof item.description === 'string' ? item.description : ''}
+              onChange={(e) => updateField('description', e.target.value || undefined)}
+              placeholder="Optional entity description..."
+              rows={2}
             />
           </div>
         </div>

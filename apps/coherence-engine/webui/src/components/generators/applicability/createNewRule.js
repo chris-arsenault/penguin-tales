@@ -9,21 +9,33 @@
  * @returns {Object} A new rule object with default values
  */
 export function createNewRule(type, pressures) {
+  // Create rules with empty required fields - validation will flag them
+  // No domain-specific defaults - user must explicitly select values
   const newRule = { type };
   if (type === 'entity_count_min') {
-    newRule.kind = 'npc';
-    newRule.min = 1;
-  } else if (type === 'entity_count_max') {
-    newRule.kind = 'npc';
-    newRule.max = 10;
-  } else if (type === 'pressure_threshold') {
-    newRule.pressureId = pressures?.[0]?.id || '';
+    newRule.kind = '';
     newRule.min = 0;
-    newRule.max = 100;
+  } else if (type === 'entity_count_max') {
+    newRule.kind = '';
+    newRule.max = 0;
+  } else if (type === 'pressure_threshold') {
+    newRule.pressureId = '';
   } else if (type === 'era_match') {
     newRule.eras = [];
+  } else if (type === 'random_chance') {
+    newRule.chance = 0;
+  } else if (type === 'cooldown_elapsed') {
+    newRule.cooldownTicks = 0;
+  } else if (type === 'creations_per_epoch') {
+    newRule.maxPerEpoch = 0;
   } else if (type === 'or' || type === 'and') {
     newRule.rules = [];
+  } else if (type === 'graph_path') {
+    newRule.from = { kind: '' };
+    newRule.assert = {
+      check: '',
+      path: [{ via: '', direction: '', targetKind: '', targetSubtype: '' }]
+    };
   }
   return newRule;
 }

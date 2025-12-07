@@ -542,14 +542,14 @@ export class TemplateInterpreter {
 
     let related = graphView.getRelatedEntities(entity.id, step.via, direction);
 
-    // Filter by target kind/subtype/status
-    if (step.targetKind) {
+    // Filter by target kind/subtype/status ("any" means no filtering)
+    if (step.targetKind && step.targetKind !== 'any') {
       related = related.filter(e => e.kind === step.targetKind);
     }
-    if (step.targetSubtype) {
+    if (step.targetSubtype && step.targetSubtype !== 'any') {
       related = related.filter(e => e.subtype === step.targetSubtype);
     }
-    if (step.targetStatus) {
+    if (step.targetStatus && step.targetStatus !== 'any') {
       related = related.filter(e => e.status === step.targetStatus);
     }
 
@@ -826,24 +826,27 @@ export class TemplateInterpreter {
         return entities.filter(entity => tagList.some(tag => hasTag(entity.tags, tag)));
       }
 
-      case 'same_location': {
-        const refEntity = context.resolveEntity(filter.as);
+      case 'shares_related': {
+        // Find entities that share a common related entity with the reference
+        const refEntity = context.resolveEntity(filter.with);
         if (!refEntity) return entities;
-        const refLocation = context.graphView.getLocation(refEntity.id);
-        if (!refLocation) return entities;
-        return entities.filter(e => {
-          const loc = context.graphView.getLocation(e.id);
-          return loc?.id === refLocation.id;
-        });
-      }
 
-      case 'not_at_war': {
-        const withEntity = context.resolveEntity(filter.with);
-        if (!withEntity) return entities;
-        return entities.filter(entity =>
-          !context.graphView.hasRelationship(entity.id, withEntity.id, 'at_war_with') &&
-          !context.graphView.hasRelationship(withEntity.id, entity.id, 'at_war_with')
-        );
+        // Get the related entities for the reference via the specified relationship kind
+        const refRelated = refEntity.links
+          .filter(link => link.kind === filter.relationshipKind)
+          .map(link => link.dst);
+
+        if (refRelated.length === 0) return [];
+
+        const refRelatedSet = new Set(refRelated);
+
+        // Filter entities that have at least one common related entity
+        return entities.filter(entity => {
+          const entityRelated = entity.links
+            .filter(link => link.kind === filter.relationshipKind)
+            .map(link => link.dst);
+          return entityRelated.some(id => refRelatedSet.has(id));
+        });
       }
 
       case 'graph_path': {
@@ -961,9 +964,8 @@ export class TemplateInterpreter {
       return context.target?.culture || 'world';
     }
 
-    // Handle plain string culture name
     if (typeof spec === 'string') {
-      return spec;
+      throw new Error(`Invalid culture spec: "${spec}". Use { fixed: "${spec}" } or { inherit: "entity_ref" }`);
     }
 
     if ('inherit' in spec) {
@@ -975,7 +977,7 @@ export class TemplateInterpreter {
       return spec.fixed;
     }
 
-    return 'world';
+    throw new Error(`Invalid culture spec: ${JSON.stringify(spec)}. Must have 'inherit' or 'fixed' property.`);
   }
 
   private resolveDescription(spec: DescriptionSpec | undefined, context: ExecutionContext): string {

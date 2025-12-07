@@ -271,8 +271,7 @@ export type SelectionFilter =
   | LacksRelationshipFilter
   | HasTagSelectionFilter
   | HasAnyTagSelectionFilter
-  | SameLocationFilter
-  | NotAtWarFilter
+  | SharesRelatedFilter
   | GraphPathSelectionFilter;
 
 /**
@@ -312,14 +311,14 @@ export interface HasAnyTagSelectionFilter {
   tags: string[];
 }
 
-export interface SameLocationFilter {
-  type: 'same_location';
-  as: string;  // Variable reference
-}
-
-export interface NotAtWarFilter {
-  type: 'not_at_war';
-  with: string;  // Variable reference
+/**
+ * Filter entities that share a common related entity with a reference.
+ * Example: Find entities that share the same location as $target via 'resident_of' relationship.
+ */
+export interface SharesRelatedFilter {
+  type: 'shares_related';
+  relationshipKind: string;  // Relationship kind to check (e.g., 'resident_of')
+  with: string;              // Reference entity (e.g., '$target')
 }
 
 
@@ -365,7 +364,6 @@ export type SubtypeSpec =
  * How to determine culture.
  */
 export type CultureSpec =
-  | string               // Direct culture name
   | { inherit: string }  // Inherit from reference entity
   | { fixed: string };   // Fixed culture
 
@@ -444,8 +442,7 @@ export interface RelationshipRule {
 export type RelationshipCondition =
   | { type: 'random_chance'; chance: number }
   | { type: 'entity_exists'; entity: string }
-  | { type: 'entity_has_relationship'; entity: string; relationshipKind: string }
-  | { type: 'custom'; filterId: string; params?: Record<string, unknown> };
+  | { type: 'entity_has_relationship'; entity: string; relationshipKind: string };
 
 // =============================================================================
 // STEP 5: STATE UPDATE RULES
@@ -478,11 +475,9 @@ export interface VariableSelectionRule {
   // Select from graph or from related entities
   from?: RelatedEntitiesSpec | 'graph';
 
-  // Selection strategy
-  strategy?: 'by_kind' | 'by_preference_order';
+  // Entity filtering (kind used when from='graph')
   kind?: string;
   subtypes?: string[];
-  subtypePreferences?: string[];
   statusFilter?: string;
 
   // Post-filters

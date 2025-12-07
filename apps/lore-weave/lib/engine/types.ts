@@ -574,9 +574,10 @@ export interface MetaEntityConfig {
     minSize: number;        // Minimum entities in cluster to form meta-entity
     maxSize?: number;       // Optional maximum size
     criteria: Array<{
-      type: 'shared_practitioner' | 'shared_location' | 'same_creator' | 'same_location' | 'shared_tags' | 'temporal_proximity';
+      type: 'shares_related' | 'shared_tags' | 'temporal_proximity';
       weight: number;       // Contribution to similarity score
       threshold?: number;   // Optional threshold for this criterion
+      relationshipKind?: string;  // Required for 'shares_related' - the relationship kind to check
     }>;
     minimumScore: number;   // Minimum similarity score to form cluster
   };

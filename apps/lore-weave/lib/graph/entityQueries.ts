@@ -96,42 +96,6 @@ export function hasRelationship(
   );
 }
 
-// Location helpers
-export function getResidents(graph: Graph, locationId: string): HardState[] {
-  return getRelated(graph, locationId, 'resident_of', 'dst');
-}
-
-export function getLocation(graph: Graph, npcId: string): HardState | undefined {
-  const locations = getRelated(graph, npcId, 'resident_of', 'src');
-  return locations[0];
-}
-
-// Faction helpers
-export function getFactionMembers(graph: Graph, factionId: string): HardState[] {
-  return getRelated(graph, factionId, 'member_of', 'dst');
-}
-
-export function getFactionLeader(graph: Graph, factionId: string): HardState | undefined {
-  const leaders = getRelated(graph, factionId, 'leader_of', 'dst');
-  return leaders[0];
-}
-
-// Strength-aware faction helpers
-export function getCoreFactionMembers(graph: Graph, factionId: string): HardState[] {
-  return getRelated(graph, factionId, 'member_of', 'dst', { minStrength: 0.7 });
-}
-
-export function getStrongAllies(graph: Graph, entityId: string): HardState[] {
-  return getRelated(graph, entityId, 'ally_of', 'src', { minStrength: 0.6 });
-}
-
-export function getWeakRelationships(graph: Graph, entityId: string): Relationship[] {
-  return graph.getRelationships().filter(r =>
-    (r.src === entityId || r.dst === entityId) &&
-    (r.strength ?? 0.5) < 0.3
-  );
-}
-
 // Prominence helpers
 export function getProminenceValue(prominence: HardState['prominence']): number {
   const values = {

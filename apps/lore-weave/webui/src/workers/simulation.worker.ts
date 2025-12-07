@@ -11,6 +11,7 @@
 
 import { WorldEngine } from '../../../lib/engine/worldEngine';
 import { SimulationEmitter } from '../../../lib/observer/SimulationEmitter';
+import { validateAllConfigs, formatValidationResult } from '../../../lib/engine/configSchemaValidator';
 import type {
   SimulationEvent,
   WorkerInboundMessage
@@ -33,6 +34,59 @@ function createWorkerEmitter(): SimulationEmitter {
   return new SimulationEmitter((event: SimulationEvent) => {
     ctx.postMessage(event);
   });
+}
+
+/**
+ * Validate configuration before starting simulation.
+ * Returns true if valid, false if invalid (error already emitted).
+ */
+function validateConfigBeforeRun(config: EngineConfig, workerEmitter: SimulationEmitter): boolean {
+  // Extract culture names from domain schema if available
+  const cultures = config.domain?.cultures?.map(c =>
+    typeof c === 'string' ? c : c.id
+  );
+
+  // Extract entity kinds from domain schema if available
+  const entityKinds = config.domain?.entityKinds?.map(k =>
+    typeof k === 'string' ? k : k.id
+  );
+
+  // Extract relationship kinds from domain schema if available
+  const relationshipKinds = config.domain?.relationshipKinds?.map(k =>
+    typeof k === 'string' ? k : k.id
+  );
+
+  const result = validateAllConfigs({
+    templates: config.templates,
+    pressures: config.pressures,
+    systems: config.systems,
+    eras: config.eras,
+    schema: {
+      cultures,
+      entityKinds,
+      relationshipKinds
+    }
+  });
+
+  if (!result.valid) {
+    workerEmitter.error({
+      message: `Configuration validation failed:\n\n${formatValidationResult(result)}`,
+      phase: 'validation',
+      context: {
+        errorCount: result.errors.length,
+        warningCount: result.warnings.length,
+        errors: result.errors
+      }
+    });
+    return false;
+  }
+
+  // Log warnings but don't block
+  if (result.warnings.length > 0) {
+    workerEmitter.log('warn', `Configuration warnings:\n${formatValidationResult(result)}`);
+  }
+
+  return true;
 }
 
 /**
@@ -81,6 +135,11 @@ async function runSimulation(config: EngineConfig, state: HardState[]): Promise<
   emitter = createWorkerEmitter();
   initialState = state;
 
+  // Validate configuration before starting
+  if (!validateConfigBeforeRun(config, emitter)) {
+    return; // Error already emitted
+  }
+
   try {
     // Create engine with the worker emitter
     const engineConfig: EngineConfig = {
@@ -112,6 +171,11 @@ async function runSimulation(config: EngineConfig, state: HardState[]): Promise<
 async function initializeForStepping(config: EngineConfig, state: HardState[]): Promise<void> {
   emitter = createWorkerEmitter();
   initialState = state;
+
+  // Validate configuration before starting
+  if (!validateConfigBeforeRun(config, emitter)) {
+    return; // Error already emitted
+  }
 
   try {
     // Create engine with the worker emitter

@@ -11,6 +11,7 @@ export { VariablesTab } from './VariablesTab';
 export { CreationTab } from './CreationTab';
 export { RelationshipsTab } from './RelationshipsTab';
 export { EffectsTab } from './EffectsTab';
+export { UnmappedTab } from './UnmappedTab';
 
 // Re-export ApplicabilityTab from applicability module
 // (will be moved here when applicability/ is refactored)

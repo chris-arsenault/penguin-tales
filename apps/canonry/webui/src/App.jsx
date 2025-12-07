@@ -13,6 +13,7 @@ import SchemaEditor from './components/SchemaEditor';
 import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
 import { computeTagUsage, computeSchemaUsage } from '@penguin-tales/shared-components';
+import { validateAllConfigs } from '../../../lore-weave/lib/engine/configSchemaValidator';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
@@ -60,7 +61,7 @@ const VALID_SUBNAV = {
   names: ['workshop', 'optimizer', 'generate'],
   cosmography: ['planes', 'cultures', 'entities', 'relationships'],
   coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
-  simulation: ['configure', 'targets', 'run', 'results'],
+  simulation: ['configure', 'targets', 'validate', 'run', 'results'],
   archivist: ['explorer'],
 };
 
@@ -434,6 +435,90 @@ export default function App() {
     currentProject?.seedEntities,
   ]);
 
+  // Compute structure validation for ValidationPopover
+  const validationResult = useMemo(() => {
+    if (!currentProject) return { valid: true, errors: [], warnings: [] };
+
+    const cultures = currentProject.cultures?.map(c => c.id) || [];
+    const entityKinds = currentProject.entityKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
+    const relationshipKinds = currentProject.relationshipKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
+
+    return validateAllConfigs({
+      templates: currentProject.generators || [],
+      pressures: currentProject.pressures || [],
+      systems: currentProject.systems || [],
+      eras: currentProject.eras || [],
+      schema: {
+        cultures,
+        entityKinds,
+        relationshipKinds,
+      },
+    });
+  }, [
+    currentProject?.generators,
+    currentProject?.pressures,
+    currentProject?.systems,
+    currentProject?.eras,
+    currentProject?.cultures,
+    currentProject?.entityKinds,
+    currentProject?.relationshipKinds,
+  ]);
+
+  // Navigate to validation tab
+  const handleNavigateToValidation = useCallback(() => {
+    setActiveTab('simulation');
+    setActiveSection('validate');
+    setShowHome(false);
+  }, []);
+
+  // Remove property from config at given path (for validation error quick-fix)
+  const handleRemoveProperty = useCallback((path, propName) => {
+    if (!currentProject || !path || !propName) return;
+
+    // Parse path like "item_id"/nested/path
+    const match = path.match(/^"([^"]+)"\/(.+)$/);
+    if (!match) return;
+
+    const [, itemId, restPath] = match;
+    const pathSegments = restPath.split('/');
+
+    // Try to find item in each config array
+    const configArrays = [
+      { key: 'generators', data: currentProject.generators, update: updateGenerators },
+      { key: 'systems', data: currentProject.systems, update: updateSystems },
+      { key: 'pressures', data: currentProject.pressures, update: updatePressures },
+      { key: 'eras', data: currentProject.eras, update: updateEras },
+      { key: 'actions', data: currentProject.actions, update: updateActions },
+    ];
+
+    for (const { data, update } of configArrays) {
+      if (!data) continue;
+      const itemIndex = data.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) continue;
+
+      // Deep clone the item
+      const newData = [...data];
+      const item = JSON.parse(JSON.stringify(data[itemIndex]));
+
+      // Navigate to parent of the property to delete
+      let obj = item;
+      for (let i = 0; i < pathSegments.length; i++) {
+        const seg = pathSegments[i];
+        if (obj[seg] === undefined) return; // Path doesn't exist
+        if (i === pathSegments.length - 1) {
+          // At the target object, delete the property
+          delete obj[seg][propName];
+        } else {
+          obj = obj[seg];
+        }
+      }
+
+      newData[itemIndex] = item;
+      update(newData);
+      return;
+    }
+  }, [currentProject, updateGenerators, updateSystems, updatePressures, updateEras, updateActions]);
+
   const renderContent = () => {
     // Show landing page if explicitly on home or no project selected
     if (showHome || !currentProject) {
@@ -580,6 +665,9 @@ export default function App() {
         onExportProject={exportProject}
         onImportProject={importProject}
         onGoHome={handleGoHome}
+        validationResult={validationResult}
+        onNavigateToValidation={handleNavigateToValidation}
+        onRemoveProperty={handleRemoveProperty}
       />
       {currentProject && !showHome && (
         <Navigation

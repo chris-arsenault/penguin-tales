@@ -22,6 +22,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import './App.css';
 import ConfigurationSummary from './components/config';
 import DistributionTargetsEditor from './components/targets';
+import ValidationPanel from './components/validation/ValidationPanel';
 import SimulationRunner from './components/runner';
 import ResultsViewer from './components/results';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
@@ -29,6 +30,7 @@ import { useSimulationWorker } from './hooks/useSimulationWorker';
 const TABS = [
   { id: 'configure', label: 'Configure' },
   { id: 'targets', label: 'Targets' },
+  { id: 'validate', label: 'Validate' },
   { id: 'run', label: 'Run' },
   { id: 'results', label: 'Results' },
 ];
@@ -158,6 +160,16 @@ export default function LoreWeaveRemote({
             distributionTargets={distributionTargets}
             schema={schema}
             onDistributionTargetsChange={onDistributionTargetsChange}
+          />
+        );
+      case 'validate':
+        return (
+          <ValidationPanel
+            schema={schema}
+            eras={eras}
+            generators={generators}
+            pressures={pressures}
+            systems={systems}
           />
         );
       case 'run':

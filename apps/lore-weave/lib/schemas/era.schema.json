@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "era.schema.json",
+  "title": "Era",
+  "description": "An era configuration defining a historical period in world generation",
+  "type": "object",
+  "required": ["id", "name", "description", "templateWeights", "systemModifiers"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this era"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of this historical period"
+    },
+    "templateWeights": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Weights for templates (0 = disabled, 2 = double chance)"
+    },
+    "systemModifiers": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Multipliers for system effects"
+    },
+    "pressureModifiers": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Multipliers for pressure effects"
+    },
+    "exitConditions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TransitionCondition" },
+      "description": "Criteria for this era to END (all must be met)"
+    },
+    "entryConditions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TransitionCondition" },
+      "description": "Criteria for this era to START (all must be met)"
+    },
+    "nextEra": {
+      "type": "string",
+      "description": "Optional explicit next era ID"
+    },
+    "exitEffects": {
+      "$ref": "#/$defs/EraTransitionEffects",
+      "description": "Effects applied when transitioning OUT of this era"
+    },
+    "entryEffects": {
+      "$ref": "#/$defs/EraTransitionEffects",
+      "description": "Effects applied when transitioning INTO this era"
+    }
+  },
+  "$defs": {
+    "TransitionCondition": {
+      "oneOf": [
+        { "$ref": "#/$defs/PressureTransitionCondition" },
+        { "$ref": "#/$defs/EntityCountTransitionCondition" },
+        { "$ref": "#/$defs/TimeTransitionCondition" }
+      ]
+    },
+    "PressureTransitionCondition": {
+      "type": "object",
+      "required": ["type", "pressureId", "operator", "threshold"],
+      "properties": {
+        "type": { "const": "pressure" },
+        "pressureId": { "type": "string" },
+        "operator": { "enum": ["above", "below"] },
+        "threshold": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "EntityCountTransitionCondition": {
+      "type": "object",
+      "required": ["type", "entityKind", "operator", "threshold"],
+      "properties": {
+        "type": { "const": "entity_count" },
+        "entityKind": { "type": "string" },
+        "subtype": { "type": "string" },
+        "status": { "type": "string" },
+        "operator": { "enum": ["above", "below"] },
+        "threshold": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "TimeTransitionCondition": {
+      "type": "object",
+      "required": ["type", "minTicks"],
+      "properties": {
+        "type": { "const": "time" },
+        "minTicks": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "EraTransitionEffects": {
+      "type": "object",
+      "properties": {
+        "pressureChanges": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Pressure changes to apply during transition"
+        }
+      }
+    }
+  }
+}

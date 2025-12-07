@@ -58,36 +58,36 @@ function getDecayRate(graphView: TemplateGraphView, kind: string): DecayRate {
   return def?.decayRate ?? 'medium';
 }
 
-/** Check if two entities are in proximity (share location or faction) */
-function areInProximity(graphView: TemplateGraphView, srcId: string, dstId: string): boolean {
+/**
+ * Check if two entities are in proximity via shared related entities.
+ * Entities are in proximity if they both have relationships of the specified kinds
+ * pointing to the same destination entity.
+ */
+function areInProximity(
+  graphView: TemplateGraphView,
+  srcId: string,
+  dstId: string,
+  proximityRelationshipKinds: string[]
+): boolean {
+  if (proximityRelationshipKinds.length === 0) return false;
+
   const srcEntity = graphView.getEntity(srcId);
   const dstEntity = graphView.getEntity(dstId);
   if (!srcEntity || !dstEntity) return false;
 
-  // Check if they share a location
-  const srcLocation = graphView.getLocation(srcId);
-  const dstLocation = graphView.getLocation(dstId);
-  if (srcLocation && dstLocation && srcLocation.id === dstLocation.id) {
-    return true;
-  }
-
-  // Check if they share a faction membership
-  const srcLinks = srcEntity.links || [];
-  const dstLinks = dstEntity.links || [];
-
-  const srcFactions = new Set(
-    srcLinks
-      .filter(l => l.kind === 'member_of' || l.kind === 'leader_of')
+  // Get destinations for src entity via proximity relationship kinds
+  const srcDestinations = new Set(
+    (srcEntity.links || [])
+      .filter(l => proximityRelationshipKinds.includes(l.kind))
       .map(l => l.dst)
   );
 
-  for (const link of dstLinks) {
-    if ((link.kind === 'member_of' || link.kind === 'leader_of') && srcFactions.has(link.dst)) {
-      return true;
-    }
-  }
+  if (srcDestinations.size === 0) return false;
 
-  return false;
+  // Check if dst entity shares any destination
+  return (dstEntity.links || []).some(
+    l => proximityRelationshipKinds.includes(l.kind) && srcDestinations.has(l.dst)
+  );
 }
 
 // =============================================================================
@@ -104,6 +104,7 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
   const gracePeriod = config.gracePeriod ?? 20;
   const reinforcementBonus = config.reinforcementBonus ?? 0.02;
   const maxStrength = config.maxStrength ?? 1.0;
+  const proximityRelationshipKinds = config.proximityRelationshipKinds ?? [];
 
   return {
     id: config.id || 'relationship_maintenance',
@@ -165,7 +166,8 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
 
         // === REINFORCEMENT ===
         // Strengthen relationships when entities are in proximity
-        if (areInProximity(graphView, rel.src, rel.dst)) {
+        if (proximityRelationshipKinds.length > 0 &&
+            areInProximity(graphView, rel.src, rel.dst, proximityRelationshipKinds)) {
           strength = Math.min(maxStrength, strength + reinforcementBonus * modifier);
           reinforced++;
         }

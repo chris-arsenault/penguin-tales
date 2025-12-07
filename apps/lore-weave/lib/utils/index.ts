@@ -34,17 +34,9 @@ export {
   findEntities,
   getRelated,
   hasRelationship,
-  getResidents,
-  getLocation,
-  getFactionMembers,
-  getFactionLeader,
-  getCoreFactionMembers,
-  getStrongAllies,
-  getWeakRelationships,
   getProminenceValue,
   adjustProminence,
-  getConnectionWeight,
-  getFactionRelationship
+  getConnectionWeight
 } from '../graph/entityQueries';
 export type { RelationshipQueryOptions } from '../graph/entityQueries';
 

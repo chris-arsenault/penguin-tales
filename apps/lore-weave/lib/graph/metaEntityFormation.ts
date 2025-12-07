@@ -202,45 +202,19 @@ export class MetaEntityFormation {
       let matches = false;
 
       switch (criterion.type) {
-        case 'shared_practitioner':
-          // Check if entities share a practitioner (practitioner_of relationship)
-          const e1Practitioners = graphView.getRelatedEntities(e1.id, 'practitioner_of', 'dst');
-          const e2Practitioners = graphView.getRelatedEntities(e2.id, 'practitioner_of', 'dst');
-          const e1PractitionerIds = new Set(e1Practitioners.map(p => p.id));
-          matches = e2Practitioners.some(p => e1PractitionerIds.has(p.id));
-          break;
-
-        case 'shared_location':
-          // Check if entities share applies_in or active_during location
-          const e1AppliesIn = graphView.getRelatedEntities(e1.id, 'applies_in', 'src');
-          const e2AppliesIn = graphView.getRelatedEntities(e2.id, 'applies_in', 'src');
-          const e1Locations = new Set(e1AppliesIn.map(l => l.id));
-          matches = e2AppliesIn.some(l => e1Locations.has(l.id));
-
-          // Also check active_during if applies_in doesn't match
-          if (!matches) {
-            const e1ActiveDuring = graphView.getRelatedEntities(e1.id, 'active_during', 'src');
-            const e2ActiveDuring = graphView.getRelatedEntities(e2.id, 'active_during', 'src');
-            const e1Eras = new Set(e1ActiveDuring.map(e => e.id));
-            matches = e2ActiveDuring.some(e => e1Eras.has(e.id));
+        case 'shares_related': {
+          // Generic check: do entities share a common related entity via specified relationship?
+          const relKind = criterion.relationshipKind;
+          if (!relKind) {
+            console.warn('[MetaEntityFormation] shares_related criterion missing relationshipKind');
+            break;
           }
+          const e1Related = graphView.getRelatedEntities(e1.id, relKind, 'src');
+          const e2Related = graphView.getRelatedEntities(e2.id, relKind, 'src');
+          const e1RelatedIds = new Set(e1Related.map(r => r.id));
+          matches = e2Related.some(r => e1RelatedIds.has(r.id));
           break;
-
-        case 'same_creator':
-          // Check if entities share a creator relationship
-          const e1Creators = graphView.getRelatedEntities(e1.id, 'created_by', 'src');
-          const e2Creators = graphView.getRelatedEntities(e2.id, 'created_by', 'src');
-          const e1CreatorIds = new Set(e1Creators.map(c => c.id));
-          matches = e2Creators.some(c => e1CreatorIds.has(c.id));
-          break;
-
-        case 'same_location':
-          // Check if entities are at the same location
-          const e1Location = graphView.getLocation(e1.id);
-          const e2Location = graphView.getLocation(e2.id);
-          matches = e1Location !== undefined && e2Location !== undefined &&
-                   e1Location.id === e2Location.id;
-          break;
+        }
 
         case 'shared_tags':
           // Check tag overlap (Jaccard similarity)

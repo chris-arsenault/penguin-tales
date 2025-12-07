@@ -1,9 +1,17 @@
 /**
- * ValidationEditor - Comprehensive pre-run validation for world configuration
+ * ValidationEditor - Semantic/Reference Validation
  *
- * Validates configuration to catch:
- * - ERRORS: Issues that will cause runtime crashes
- * - WARNINGS: Issues that will degrade story coherence
+ * Validates the semantic coherence of world configuration:
+ * - Reference integrity (do referenced entity kinds, pressures exist?)
+ * - Balance analysis (pressures have sources and sinks?)
+ * - Dead code detection (orphan generators not in any era?)
+ * - Cross-reference consistency (tags, cultures, subtypes)
+ *
+ * ERRORS: Issues that will cause runtime crashes (invalid references)
+ * WARNINGS: Issues that degrade story coherence (unbalanced pressures, orphans)
+ *
+ * Note: Structure validation (types, required fields, shapes) is handled by
+ * configSchemaValidator as a hard gate in the Simulation tab before running.
  */
 
 import React, { useMemo } from 'react';
@@ -70,8 +78,8 @@ export default function ValidationEditor({
               </span>
             </h1>
             <p className="validation-subtitle">
-              Pre-run validation checks for your world configuration.
-              Fix issues here before running the simulation.
+              Semantic validation: reference integrity, pressure balance, and dead code detection.
+              Structure validation runs automatically as a gate before simulation.
             </p>
           </div>
           {totalIssues > 0 && (

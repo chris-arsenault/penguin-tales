@@ -17,11 +17,21 @@ export function SelectionFiltersEditor({ filters, onChange, schema, availableRef
   const [showTypeMenu, setShowTypeMenu] = useState(false);
 
   const handleAddFilter = (type) => {
+    // Create with empty required fields - validation will flag them
     const newFilter = { type };
-    // Set defaults based on type
     if (type === 'has_any_tag') newFilter.tags = [];
     if (type === 'exclude') newFilter.entities = [];
-    if (type === 'has_relationship') newFilter.direction = 'both';
+    if (type === 'has_relationship') newFilter.kind = '';
+    if (type === 'lacks_relationship') newFilter.kind = '';
+    if (type === 'has_tag') newFilter.tag = '';
+    if (type === 'shares_related') {
+      newFilter.relationshipKind = '';
+      newFilter.with = '';
+    }
+    if (type === 'graph_path') newFilter.assert = {
+      check: '',
+      path: [{ via: '', direction: '', targetKind: '', targetSubtype: '' }]
+    };
     onChange([...(filters || []), newFilter]);
     setShowTypeMenu(false);
   };

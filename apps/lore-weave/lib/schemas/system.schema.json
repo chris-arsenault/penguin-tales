@@ -1,0 +1,416 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "system.schema.json",
+  "title": "DeclarativeSystem",
+  "description": "A declarative system definition for world simulation",
+  "oneOf": [
+    { "$ref": "#/$defs/ConnectionEvolutionSystem" },
+    { "$ref": "#/$defs/GraphContagionSystem" },
+    { "$ref": "#/$defs/ThresholdTriggerSystem" },
+    { "$ref": "#/$defs/ClusterFormationSystem" },
+    { "$ref": "#/$defs/TagDiffusionSystem" },
+    { "$ref": "#/$defs/PlaneDiffusionSystem" },
+    { "$ref": "#/$defs/EraSpawnerSystem" },
+    { "$ref": "#/$defs/EraTransitionSystem" },
+    { "$ref": "#/$defs/UniversalCatalystSystem" },
+    { "$ref": "#/$defs/RelationshipMaintenanceSystem" }
+  ],
+  "$defs": {
+    "BaseConfig": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for this system" },
+        "name": { "type": "string", "description": "Human-readable name" },
+        "description": { "type": "string", "description": "Description of what this system does" },
+        "enabled": { "type": "boolean", "description": "Whether this system is active (default: true)" }
+      }
+    },
+
+    "ConnectionEvolutionSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "connectionEvolution" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["entityKind", "metric", "rules"],
+              "properties": {
+                "entityKind": { "type": "string" },
+                "metric": { "$ref": "#/$defs/ConnectionMetric" },
+                "rules": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/EvolutionRule" }
+                },
+                "cooldown": { "type": "number" },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "GraphContagionSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "graphContagion" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["entityKind", "contagion", "vectors", "transmission", "infectionAction"],
+              "properties": {
+                "entityKind": { "type": "string" },
+                "contagion": {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": { "enum": ["tag", "relationship"] },
+                    "tag": { "type": "string" },
+                    "relationshipKind": { "type": "string" }
+                  }
+                },
+                "vectors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["relationshipKind"],
+                    "properties": {
+                      "relationshipKind": { "type": "string" },
+                      "direction": { "enum": ["src", "dst", "both"] },
+                      "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
+                    }
+                  }
+                },
+                "transmission": {
+                  "type": "object",
+                  "properties": {
+                    "baseRate": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "contactMultiplier": { "type": "number" },
+                    "maxProbability": { "type": "number", "minimum": 0, "maximum": 1 }
+                  }
+                },
+                "infectionAction": {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": { "enum": ["set_tag", "create_relationship"] },
+                    "tag": { "type": "string" },
+                    "value": {},
+                    "relationshipKind": { "type": "string" },
+                    "strength": { "type": "number", "minimum": 0, "maximum": 1 }
+                  }
+                },
+                "cooldown": { "type": "number" },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ThresholdTriggerSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "thresholdTrigger" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["triggers"],
+              "properties": {
+                "triggers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["condition", "action"],
+                    "properties": {
+                      "condition": {
+                        "type": "object",
+                        "required": ["type"],
+                        "properties": {
+                          "type": { "enum": ["pressure_above", "pressure_below", "entity_count_above", "entity_count_below"] },
+                          "pressureId": { "type": "string" },
+                          "threshold": { "type": "number" },
+                          "entityKind": { "type": "string" }
+                        }
+                      },
+                      "action": {
+                        "type": "object",
+                        "required": ["type"],
+                        "properties": {
+                          "type": { "enum": ["modify_pressure", "spawn_entity", "set_global_tag"] },
+                          "pressureId": { "type": "string" },
+                          "delta": { "type": "number" },
+                          "entityKind": { "type": "string" },
+                          "tag": { "type": "string" },
+                          "value": {}
+                        }
+                      },
+                      "cooldown": { "type": "number" }
+                    }
+                  }
+                },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ClusterFormationSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "clusterFormation" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["sourceKind", "metaKind", "clustering"],
+              "properties": {
+                "sourceKind": { "type": "string", "description": "Entity kind to cluster" },
+                "metaKind": { "type": "string", "description": "Meta-entity kind to create" },
+                "clustering": {
+                  "type": "object",
+                  "required": ["minSize", "criteria", "minimumScore"],
+                  "properties": {
+                    "minSize": { "type": "number", "minimum": 2 },
+                    "maxSize": { "type": "number" },
+                    "criteria": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["type", "weight"],
+                        "properties": {
+                          "type": { "enum": ["shares_related", "shared_tags", "temporal_proximity"] },
+                          "weight": { "type": "number" },
+                          "threshold": { "type": "number" },
+                          "relationshipKind": { "type": "string", "description": "Required for shares_related type" }
+                        }
+                      }
+                    },
+                    "minimumScore": { "type": "number" }
+                  }
+                },
+                "transformation": {
+                  "type": "object",
+                  "properties": {
+                    "markOriginalsHistorical": { "type": "boolean" },
+                    "transferRelationships": { "type": "boolean" },
+                    "redirectFutureRelationships": { "type": "boolean" },
+                    "preserveOriginalLinks": { "type": "boolean" }
+                  }
+                },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "TagDiffusionSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "tagDiffusion" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["entityKind", "tag", "spreadVia"],
+              "properties": {
+                "entityKind": { "type": "string" },
+                "tag": { "type": "string" },
+                "spreadVia": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["relationshipKind"],
+                    "properties": {
+                      "relationshipKind": { "type": "string" },
+                      "direction": { "enum": ["src", "dst", "both"] },
+                      "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
+                    }
+                  }
+                },
+                "spreadRate": { "type": "number", "minimum": 0, "maximum": 1 },
+                "cooldown": { "type": "number" },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "PlaneDiffusionSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "planeDiffusion" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "required": ["entityKind", "tag"],
+              "properties": {
+                "entityKind": { "type": "string" },
+                "tag": { "type": "string" },
+                "spreadRadius": { "type": "number" },
+                "spreadRate": { "type": "number", "minimum": 0, "maximum": 1 },
+                "cooldown": { "type": "number" },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "EraSpawnerSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "eraSpawner" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "properties": {
+                "ticksPerEra": { "type": "number", "minimum": 1 }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "EraTransitionSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "eraTransition" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "properties": {
+                "minTicksBeforeTransition": { "type": "number" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "UniversalCatalystSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "universalCatalyst" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "properties": {
+                "actionAttemptRate": { "type": "number", "minimum": 0, "maximum": 1 },
+                "influenceGain": { "type": "number" },
+                "influenceLoss": { "type": "number" },
+                "pressureMultiplier": { "type": "number" }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "RelationshipMaintenanceSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "relationshipMaintenance" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "properties": {
+                "maintenanceFrequency": { "type": "number", "minimum": 1 },
+                "cullThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
+                "gracePeriod": { "type": "number", "minimum": 0 },
+                "reinforcementBonus": { "type": "number" },
+                "maxStrength": { "type": "number", "minimum": 0, "maximum": 1 },
+                "proximityRelationshipKinds": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Relationship kinds that indicate entities are in proximity for reinforcement"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ConnectionMetric": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["shared_relationship", "proximity", "tag_similarity"] },
+        "sharedRelationshipKind": { "type": "string" },
+        "sharedDirection": { "enum": ["src", "dst", "both"] }
+      }
+    },
+
+    "EvolutionRule": {
+      "type": "object",
+      "required": ["condition", "action"],
+      "properties": {
+        "condition": {
+          "type": "object",
+          "required": ["operator", "threshold"],
+          "properties": {
+            "operator": { "enum": [">=", ">", "<=", "<", "=="] },
+            "threshold": { "type": "number" }
+          }
+        },
+        "action": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["create_relationship", "strengthen_relationship", "weaken_relationship"] },
+            "relationshipKind": { "type": "string" },
+            "strength": { "type": "number", "minimum": 0, "maximum": 1 },
+            "delta": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "PressureChanges": {
+      "type": "object",
+      "additionalProperties": { "type": "number" },
+      "description": "Map of pressure ID to delta value"
+    }
+  }
+}

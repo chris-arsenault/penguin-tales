@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { PICK_STRATEGIES } from '../constants';
+import { VARIABLE_PICK_STRATEGIES } from '../constants';
 import { ReferenceDropdown, ChipSelect } from '../../shared';
 
 /**
@@ -27,7 +27,7 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
 
-  // Handle the nested select structure: { select: { from, strategy, kind, pickStrategy } }
+  // Handle the nested select structure: { select: { from, kind, pickStrategy, ... } }
   const selectConfig = config.select || config;
 
   const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
@@ -56,8 +56,35 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
     onChange({ select: newSelect });
   };
 
-  const displayKind = safeDisplay(selectConfig.relationshipKind || selectConfig.kind, 'Not configured', 'kind');
-  const displayStrategy = safeDisplay(selectConfig.pickStrategy, 'random', 'pickStrategy');
+  // Determine mode: 'graph' (select by kind) or 'related' (select related entities)
+  // In lore-weave, from can be 'graph' or { relatedTo, relationship, direction }
+  const isRelatedMode = selectConfig.from && typeof selectConfig.from === 'object';
+  const fromSpec = isRelatedMode ? selectConfig.from : null;
+
+  const setMode = (mode) => {
+    if (mode === 'graph') {
+      // Clear related entity config, keep kind-based selection
+      const { from, ...rest } = selectConfig;
+      onChange({ select: { ...rest, from: 'graph' } });
+    } else {
+      // Switch to related entity mode
+      onChange({
+        select: {
+          ...selectConfig,
+          from: { relatedTo: '$target', relationship: '', direction: 'both' },
+        },
+      });
+    }
+  };
+
+  const updateFrom = (field, value) => {
+    const newFrom = { ...(fromSpec || { relatedTo: '$target', relationship: '', direction: 'both' }), [field]: value };
+    updateSelect('from', newFrom);
+  };
+
+  // Display info
+  const displayMode = isRelatedMode ? 'Related entities' : (selectConfig.kind || 'Not configured');
+  const displayStrategy = safeDisplay(selectConfig.pickStrategy, 'Not set', 'pickStrategy');
 
   return (
     <div className="item-card">
@@ -73,7 +100,7 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
             <span className="variable-ref">{name}</span>
           </div>
           <div className="item-card-subtitle">
-            {displayKind} • {displayStrategy}
+            {displayMode} • {displayStrategy}
           </div>
         </div>
         <div className="item-card-actions">
@@ -87,22 +114,15 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
           <div className="form-grid">
             <ReferenceDropdown
               label="Select From"
-              value={selectConfig.from || 'graph'}
-              onChange={(v) => updateSelect('from', v)}
+              value={isRelatedMode ? 'related' : 'graph'}
+              onChange={(v) => setMode(v)}
               options={[
-                { value: 'graph', label: 'Graph (existing entities)' },
+                { value: 'graph', label: 'Graph (by entity kind)' },
+                { value: 'related', label: 'Related Entities' },
               ]}
             />
-            <ReferenceDropdown
-              label="Strategy"
-              value={selectConfig.strategy || 'by_kind'}
-              onChange={(v) => updateSelect('strategy', v)}
-              options={[
-                { value: 'by_kind', label: 'By Entity Kind' },
-                { value: 'by_relationship', label: 'By Relationship' },
-              ]}
-            />
-            {selectConfig.strategy !== 'by_relationship' && (
+
+            {!isRelatedMode && (
               <ReferenceDropdown
                 label="Entity Kind"
                 value={selectConfig.kind}
@@ -111,35 +131,62 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
                 placeholder="Select kind..."
               />
             )}
-            {selectConfig.strategy === 'by_relationship' && (
+
+            {isRelatedMode && (
               <>
+                <div className="form-group">
+                  <label className="label">Related To</label>
+                  <input
+                    type="text"
+                    value={fromSpec?.relatedTo || '$target'}
+                    onChange={(e) => updateFrom('relatedTo', e.target.value)}
+                    className="input"
+                    placeholder="$target"
+                  />
+                </div>
                 <ReferenceDropdown
                   label="Relationship Kind"
-                  value={selectConfig.relationshipKind}
-                  onChange={(v) => updateSelect('relationshipKind', v)}
+                  value={fromSpec?.relationship || ''}
+                  onChange={(v) => updateFrom('relationship', v)}
                   options={relationshipKindOptions}
                   placeholder="Select relationship..."
                 />
                 <ReferenceDropdown
                   label="Direction"
-                  value={selectConfig.direction || 'any'}
-                  onChange={(v) => updateSelect('direction', v)}
+                  value={fromSpec?.direction || 'both'}
+                  onChange={(v) => updateFrom('direction', v)}
                   options={[
-                    { value: 'any', label: 'Any direction' },
-                    { value: 'outgoing', label: 'Outgoing (source)' },
-                    { value: 'incoming', label: 'Incoming (target)' },
+                    { value: 'both', label: 'Any direction' },
+                    { value: 'src', label: 'As source (outgoing)' },
+                    { value: 'dst', label: 'As target (incoming)' },
                   ]}
                 />
               </>
             )}
+
             <ReferenceDropdown
               label="Pick Strategy"
-              value={selectConfig.pickStrategy || 'random'}
+              value={selectConfig.pickStrategy || ''}
               onChange={(v) => updateSelect('pickStrategy', v)}
-              options={PICK_STRATEGIES}
+              options={VARIABLE_PICK_STRATEGIES}
+              placeholder="Select..."
             />
           </div>
-          {selectConfig.strategy !== 'by_relationship' && selectConfig.kind && (
+
+          {/* Entity kind filter - applies in both modes */}
+          {isRelatedMode && (
+            <div style={{ marginTop: '16px' }}>
+              <ReferenceDropdown
+                label="Filter by Entity Kind (optional)"
+                value={selectConfig.kind || ''}
+                onChange={(v) => updateSelectMultiple({ kind: v || undefined, subtypes: undefined })}
+                options={[{ value: '', label: 'Any kind' }, ...entityKindOptions]}
+              />
+            </div>
+          )}
+
+          {/* Subtype filter */}
+          {selectConfig.kind && (
             <div style={{ marginTop: '16px' }}>
               <ChipSelect
                 label="Subtypes (optional)"
@@ -175,11 +222,12 @@ export function VariablesTab({ generator, onChange, schema }) {
     if (!newVarName.trim()) return;
     // Ensure the name starts with $
     const name = newVarName.startsWith('$') ? newVarName : `$${newVarName}`;
+    // Create with empty required fields - validation will flag them
     onChange({
       ...generator,
       variables: {
         ...variables,
-        [name]: { select: { from: 'graph', strategy: 'by_kind', kind: 'npc', pickStrategy: 'random' } },
+        [name]: { select: { from: 'graph', kind: '', pickStrategy: '' } },
       },
     });
     setNewVarName('');

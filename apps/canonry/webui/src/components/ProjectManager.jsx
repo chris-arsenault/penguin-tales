@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import ValidationPopover from './ValidationPopover';
 
 export default function ProjectManager({
   projects,
@@ -14,6 +15,9 @@ export default function ProjectManager({
   onExportProject,
   onImportProject,
   onGoHome,
+  validationResult,
+  onNavigateToValidation,
+  onRemoveProperty,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -185,6 +189,13 @@ export default function ProjectManager({
       </div>
 
       <div className="app-header-right">
+        {currentProject && (
+          <ValidationPopover
+            validationResult={validationResult}
+            onNavigateToValidation={onNavigateToValidation}
+            onRemoveProperty={onRemoveProperty}
+          />
+        )}
         <button
           className="btn btn-secondary"
           onClick={handleExport}

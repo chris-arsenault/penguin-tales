@@ -127,29 +127,27 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
           />
         );
 
-      case 'same_location':
+      case 'shares_related':
         return (
-          <div>
-            <label className="label label-small">Same Location As</label>
-            <ReferenceDropdown
-              value={filter.as || ''}
-              onChange={(v) => updateFilter('as', v)}
-              options={refOptions}
-              placeholder="Select variable..."
-            />
-          </div>
-        );
-
-      case 'not_at_war':
-        return (
-          <div>
-            <label className="label label-small">Not At War With</label>
-            <ReferenceDropdown
-              value={filter.with || ''}
-              onChange={(v) => updateFilter('with', v)}
-              options={refOptions}
-              placeholder="Select variable..."
-            />
+          <div className="filter-fields">
+            <div style={{ flex: '1 1 140px' }}>
+              <label className="label label-small">Via Relationship</label>
+              <ReferenceDropdown
+                value={filter.relationshipKind || ''}
+                onChange={(v) => updateFilter('relationshipKind', v)}
+                options={relationshipKindOptions}
+                placeholder="Select kind..."
+              />
+            </div>
+            <div style={{ flex: '1 1 120px' }}>
+              <label className="label label-small">With Entity</label>
+              <ReferenceDropdown
+                value={filter.with || ''}
+                onChange={(v) => updateFilter('with', v)}
+                options={refOptions}
+                placeholder="Select variable..."
+              />
+            </div>
           </div>
         );
 

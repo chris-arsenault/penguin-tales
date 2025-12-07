@@ -51,6 +51,12 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
         return `${rule.pressureId || '?'} in [${rule.min ?? 0}, ${rule.max ?? 100}]`;
       case 'era_match':
         return rule.eras?.length ? rule.eras.join(', ') : 'No eras selected';
+      case 'random_chance':
+        return `${Math.round((rule.chance ?? 0.5) * 100)}% chance`;
+      case 'cooldown_elapsed':
+        return `${rule.cooldownTicks ?? '?'} ticks since last run`;
+      case 'creations_per_epoch':
+        return `max ${rule.maxPerEpoch ?? '?'} per epoch`;
       case 'or':
       case 'and':
         return `${rule.rules?.length || 0} sub-rules`;
@@ -160,6 +166,60 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                   onChange={(v) => updateField('eras', v)}
                   options={eraOptions}
                   placeholder="+ Add era"
+                />
+              </div>
+            )}
+
+            {rule.type === 'random_chance' && (
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Chance (%)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round((rule.chance ?? 0.5) * 100)}
+                    onChange={(e) => updateField('chance', parseInt(e.target.value) / 100)}
+                    style={{ flex: 1 }}
+                  />
+                  <input
+                    type="number"
+                    value={Math.round((rule.chance ?? 0.5) * 100)}
+                    onChange={(e) => updateField('chance', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) / 100)}
+                    className="input"
+                    min="0"
+                    max="100"
+                    style={{ width: '80px' }}
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+            )}
+
+            {rule.type === 'cooldown_elapsed' && (
+              <div className="form-group">
+                <label className="label">Cooldown (ticks)</label>
+                <input
+                  type="number"
+                  value={rule.cooldownTicks ?? ''}
+                  onChange={(e) => updateField('cooldownTicks', parseInt(e.target.value) || 0)}
+                  className="input"
+                  min="1"
+                  placeholder="10"
+                />
+              </div>
+            )}
+
+            {rule.type === 'creations_per_epoch' && (
+              <div className="form-group">
+                <label className="label">Max Creations Per Epoch</label>
+                <input
+                  type="number"
+                  value={rule.maxPerEpoch ?? ''}
+                  onChange={(e) => updateField('maxPerEpoch', parseInt(e.target.value) || 0)}
+                  className="input"
+                  min="1"
+                  placeholder="3"
                 />
               </div>
             )}

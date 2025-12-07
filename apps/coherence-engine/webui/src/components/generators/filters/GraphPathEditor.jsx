@@ -25,7 +25,8 @@ export function GraphPathEditor({ assert, onChange, schema, availableRefs }) {
   };
 
   const addStep = () => {
-    const newStep = { via: '', direction: 'any' };
+    // Create with empty required fields - validation will flag them
+    const newStep = { via: '', direction: '', targetKind: '', targetSubtype: '' };
     updateAssertion('path', [...(assertion.path || []), newStep]);
   };
 

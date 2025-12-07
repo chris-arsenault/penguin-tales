@@ -21,7 +21,7 @@ export function PathStepEditor({ step, onChange, onRemove, schema, stepIndex }) 
   }));
 
   const entityKindOptions = [
-    { value: '', label: 'Any kind' },
+    { value: 'any', label: 'Any kind' },
     ...(schema?.entityKinds || []).map((ek) => ({
       value: ek.kind,
       label: ek.description || ek.kind,
@@ -29,17 +29,17 @@ export function PathStepEditor({ step, onChange, onRemove, schema, stepIndex }) 
   ];
 
   const getSubtypeOptions = (kind) => {
-    if (!kind) return [{ value: '', label: 'Any subtype' }];
+    if (!kind || kind === 'any') return [{ value: 'any', label: 'Any subtype' }];
     const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
-    if (!ek?.subtypes) return [{ value: '', label: 'Any subtype' }];
+    if (!ek?.subtypes) return [{ value: 'any', label: 'Any subtype' }];
     return [
-      { value: '', label: 'Any subtype' },
+      { value: 'any', label: 'Any subtype' },
       ...ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id })),
     ];
   };
 
   const updateStep = (field, value) => {
-    onChange({ ...step, [field]: value || undefined });
+    onChange({ ...step, [field]: value });
   };
 
   return (
@@ -73,17 +73,19 @@ export function PathStepEditor({ step, onChange, onRemove, schema, stepIndex }) 
         <div>
           <label className="label label-micro">Target Kind</label>
           <ReferenceDropdown
-            value={step.targetKind || ''}
+            value={step.targetKind}
             onChange={(v) => updateStep('targetKind', v)}
             options={entityKindOptions}
+            placeholder="Select..."
           />
         </div>
         <div>
           <label className="label label-micro">Target Subtype</label>
           <ReferenceDropdown
-            value={step.targetSubtype || ''}
+            value={step.targetSubtype}
             onChange={(v) => updateStep('targetSubtype', v)}
             options={getSubtypeOptions(step.targetKind)}
+            placeholder="Select..."
           />
         </div>
         <div className="path-step-full-width">

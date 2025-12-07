@@ -18,6 +18,102 @@ function safeDisplay(value, fallback = '?', label = 'value') {
   return String(value);
 }
 
+// Condition types supported by lore-weave runtime
+const CONDITION_TYPES = [
+  { value: 'random_chance', label: 'Random Chance', desc: 'Probabilistic creation' },
+  { value: 'entity_exists', label: 'Entity Exists', desc: 'Only if entity reference resolves' },
+  { value: 'entity_has_relationship', label: 'Entity Has Relationship', desc: 'Only if entity has specific relationship' },
+];
+
+// ============================================================================
+// RelationshipConditionEditor - Edit a relationship condition
+// ============================================================================
+
+function RelationshipConditionEditor({ condition, onChange, onRemove, availableRefs, schema }) {
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const updateCondition = (field, value) => {
+    onChange({ ...condition, [field]: value });
+  };
+
+  return (
+    <div className="condition-editor">
+      <div className="condition-editor-header">
+        <ReferenceDropdown
+          value={condition.type || ''}
+          onChange={(v) => {
+            // Reset condition to new type with empty required fields
+            if (v === 'random_chance') {
+              onChange({ type: v, chance: 0 });
+            } else if (v === 'entity_exists') {
+              onChange({ type: v, entity: '' });
+            } else if (v === 'entity_has_relationship') {
+              onChange({ type: v, entity: '', relationshipKind: '' });
+            }
+          }}
+          options={CONDITION_TYPES}
+          placeholder="Select condition type..."
+        />
+        <button className="btn-icon btn-icon-danger" onClick={onRemove}>×</button>
+      </div>
+
+      {condition.type === 'random_chance' && (
+        <div className="condition-editor-body">
+          <div className="form-group">
+            <label className="label">Chance (0-1)</label>
+            <input
+              type="number"
+              value={condition.chance ?? ''}
+              onChange={(e) => updateCondition('chance', parseFloat(e.target.value) || 0)}
+              className="input"
+              step="0.1"
+              min="0"
+              max="1"
+              placeholder="0.5"
+            />
+          </div>
+        </div>
+      )}
+
+      {condition.type === 'entity_exists' && (
+        <div className="condition-editor-body">
+          <ReferenceDropdown
+            label="Entity Reference"
+            value={condition.entity || ''}
+            onChange={(v) => updateCondition('entity', v)}
+            options={availableRefs.map((r) => ({ value: r, label: r }))}
+            placeholder="Select entity..."
+          />
+        </div>
+      )}
+
+      {condition.type === 'entity_has_relationship' && (
+        <div className="condition-editor-body">
+          <div className="form-grid">
+            <ReferenceDropdown
+              label="Entity Reference"
+              value={condition.entity || ''}
+              onChange={(v) => updateCondition('entity', v)}
+              options={availableRefs.map((r) => ({ value: r, label: r }))}
+              placeholder="Select entity..."
+            />
+            <ReferenceDropdown
+              label="Relationship Kind"
+              value={condition.relationshipKind || ''}
+              onChange={(v) => updateCondition('relationshipKind', v)}
+              options={relationshipKindOptions}
+              placeholder="Select relationship..."
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================================
 // RelationshipCard - Individual relationship editor card
 // ============================================================================
@@ -108,18 +204,26 @@ function RelationshipCard({ rel, onChange, onRemove, schema, availableRefs }) {
             </div>
           </div>
 
-          {/* Condition - show as JSON */}
-          {rel.condition && (
-            <div style={{ marginTop: '16px' }}>
-              <label className="label">Condition (JSON)</label>
-              <textarea
-                value={JSON.stringify(rel.condition, null, 2)}
-                onChange={(e) => { try { updateField('condition', JSON.parse(e.target.value)); } catch { /* Ignore parse errors */ } }}
-                className="textarea"
-                style={{ minHeight: '60px' }}
+          {/* Condition */}
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Condition (optional)</label>
+            {rel.condition ? (
+              <RelationshipConditionEditor
+                condition={rel.condition}
+                onChange={(updated) => updateField('condition', updated)}
+                onRemove={() => updateField('condition', undefined)}
+                availableRefs={availableRefs}
+                schema={schema}
               />
-            </div>
-          )}
+            ) : (
+              <button
+                className="btn-add-inline"
+                onClick={() => updateField('condition', { type: '' })}
+              >
+                + Add Condition
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

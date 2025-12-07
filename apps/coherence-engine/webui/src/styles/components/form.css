@@ -294,6 +294,20 @@
   gap: var(--spacing-md);
 }
 
+.condition-editor-header {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.condition-editor-header > *:first-child {
+  flex: 1;
+}
+
+.condition-editor-body {
+  padding-top: var(--spacing-sm);
+}
+
 /* ==========================================================================
    Text utilities
    ========================================================================== */

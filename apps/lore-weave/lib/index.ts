@@ -98,8 +98,6 @@ export {
   pickMultiple,
   findEntities,
   getRelated,
-  getLocation,
-  getFactionMembers,
   hasRelationship,
   normalizeInitialState,
   slugifyName,
@@ -122,8 +120,7 @@ export {
   recordRelationshipFormation,
   getProminenceValue,
   adjustProminence,
-  getConnectionWeight,
-  getFactionRelationship
+  getConnectionWeight
 } from './utils';
 
 // Name generation service (wraps name-forge)

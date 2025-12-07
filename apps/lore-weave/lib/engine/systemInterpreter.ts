@@ -146,6 +146,13 @@ export interface RelationshipMaintenanceConfig extends FrameworkSystemConfig {
   reinforcementBonus?: number;
   /** Maximum relationship strength. Default: 1.0 */
   maxStrength?: number;
+  /**
+   * Relationship kinds that indicate entities are in "proximity" for reinforcement.
+   * Two entities are in proximity if they both have the same destination via any of these relationships.
+   * Example: ['resident_of', 'member_of'] means entities sharing a location or faction are in proximity.
+   * If not specified, proximity reinforcement is disabled.
+   */
+  proximityRelationshipKinds?: string[];
 }
 
 export interface DeclarativeEraSpawnerSystem {

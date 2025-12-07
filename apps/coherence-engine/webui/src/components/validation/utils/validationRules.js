@@ -1,5 +1,19 @@
 /**
- * Validation rule implementations
+ * Validation Rules - SEMANTIC/REFERENCE VALIDATION
+ *
+ * These rules validate the semantic coherence of the world configuration:
+ * - Reference integrity (do referenced entity kinds, pressures, etc. exist?)
+ * - Balance analysis (pressures have sources and sinks?)
+ * - Dead code detection (orphan generators/systems not in any era?)
+ * - Cross-reference consistency (tags, cultures, subtypes)
+ *
+ * BOUNDARY: This does NOT handle structure validation (handled by configSchemaValidator):
+ * - Required fields present
+ * - Correct types (string, number, object, array)
+ * - Valid shapes (CultureSpec, SubtypeSpec, generator format)
+ *
+ * Structure errors are caught before simulation run as a hard gate.
+ * Coherence issues are displayed in the Coherence Engine tab as editorial guidance.
  */
 
 import {
@@ -10,53 +24,6 @@ import {
 } from './collectors';
 
 export const validationRules = {
-  /**
-   * 0. Generator format must be declarative (ERROR)
-   */
-  invalidGeneratorFormat: (_schema, generators) => {
-    const invalid = [];
-
-    for (const gen of generators) {
-      if (gen.enabled === false) continue;
-
-      const problems = [];
-      if (gen.template) {
-        problems.push('uses legacy "template" wrapper');
-      }
-      if (!gen.selection) {
-        problems.push('missing selection');
-      } else {
-        if (!gen.selection.strategy) problems.push('missing selection.strategy');
-        if (!gen.selection.kind) problems.push('missing selection.kind');
-      }
-      if (!Array.isArray(gen.creation)) problems.push('creation must be an array');
-      if (!Array.isArray(gen.relationships)) problems.push('relationships must be an array');
-      if (!Array.isArray(gen.stateUpdates)) problems.push('stateUpdates must be an array');
-
-      if (problems.length > 0) {
-        invalid.push({
-          id: gen.id,
-          name: gen.name || gen.id,
-          detail: problems.join('; '),
-        });
-      }
-    }
-
-    if (invalid.length === 0) return null;
-
-    return {
-      id: 'invalid-generator-format',
-      title: 'Generators use legacy or invalid shape',
-      message: 'Generators must use the declarative template shape (selection/creation/relationships/stateUpdates). Legacy wrappers will crash the simulation.',
-      severity: 'error',
-      affectedItems: invalid.map(g => ({
-        id: g.id,
-        label: g.name,
-        detail: g.detail,
-      })),
-    };
-  },
-
   /**
    * 1. Invalid Entity Kind References (ERROR)
    */
@@ -755,8 +722,10 @@ export function runValidations(schema, eras, pressures, generators, systems) {
   };
 
   // Run each validation rule
+  // Note: Structure validation (generator format, required fields, types) is handled
+  // by configSchemaValidator.ts as a hard gate before simulation run.
+  // These rules focus on semantic coherence and reference integrity.
   const rules = [
-    () => validationRules.invalidGeneratorFormat(schema, generators),
     () => validationRules.invalidEntityKind(schema, generators, pressures, systems),
     () => validationRules.invalidRelationshipKind(schema, generators, pressures, systems),
     () => validationRules.invalidPressureId(pressures, generators, systems),
