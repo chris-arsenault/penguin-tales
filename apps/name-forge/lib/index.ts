@@ -13,7 +13,9 @@ export {
   generateOne,
   generateFromDomain,
   testDomain,
+  previewGrammar,
   type TestDomainResult,
+  type PreviewGrammarOptions,
 } from "./generate.js";
 
 // ============================================================================

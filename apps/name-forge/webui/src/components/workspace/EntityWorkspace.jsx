@@ -37,11 +37,13 @@ function EntityWorkspace({
   };
 
   // Handle lexemes change at culture level
-  const handleLexemesChange = (newLexemeLists, newLexemeSpecs) => {
+  // Optional third param allows atomic update with grammars (for copy operations)
+  const handleLexemesChange = (newLexemeLists, newLexemeSpecs, newGrammars) => {
     if (onCultureChange) {
       const updates = { ...cultureConfig };
       if (newLexemeLists !== undefined) updates.lexemeLists = newLexemeLists;
       if (newLexemeSpecs !== undefined) updates.lexemeSpecs = newLexemeSpecs;
+      if (newGrammars !== undefined) updates.grammars = newGrammars;
       onCultureChange(updates);
     }
   };
@@ -141,6 +143,7 @@ function EntityWorkspace({
             key={cultureId}
             cultureId={cultureId}
             cultureConfig={cultureConfig}
+            allCultures={allCultures}
             onLexemesChange={handleLexemesChange}
             apiKey={apiKey}
           />
@@ -151,7 +154,9 @@ function EntityWorkspace({
             key={cultureId}
             cultureId={cultureId}
             cultureConfig={cultureConfig}
+            allCultures={allCultures}
             onGrammarsChange={handleGrammarsChange}
+            onLexemesChange={handleLexemesChange}
           />
         )}
 

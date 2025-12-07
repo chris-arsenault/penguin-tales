@@ -11,7 +11,7 @@
  * - Single-select mode for choosing exactly one tag
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 
 // Category colors matching the tag registry editor
 const CATEGORY_COLORS = {
@@ -46,9 +46,22 @@ export default function TagSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [hoveredInvalidTag, setHoveredInvalidTag] = useState(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const hoverTimeoutRef = useRef(null);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Calculate dropdown position when opening
+  useLayoutEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [isOpen]);
 
   // Create a lookup map for quick tag validation
   const tagLookup = useMemo(() => {
@@ -418,21 +431,20 @@ export default function TagSelector({
         </div>
       )}
 
-      {/* Dropdown */}
+      {/* Dropdown - uses fixed positioning to escape overflow containers */}
       {isOpen && (
         <div
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            marginTop: '4px',
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
             background: '#0c1f2e',
             border: '1px solid rgba(59, 130, 246, 0.4)',
             borderRadius: '8px',
             maxHeight: '280px',
             overflowY: 'auto',
-            zIndex: 1000,
+            zIndex: 10000,
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
           }}
         >

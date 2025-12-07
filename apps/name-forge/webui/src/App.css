@@ -2326,6 +2326,158 @@ button.sm {
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+/* Grammar preview */
+.grammar-preview {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.grammar-preview.empty {
+  opacity: 0.6;
+}
+
+.grammar-preview.error {
+  color: var(--danger);
+}
+
+.grammar-preview-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.grammar-preview-name {
+  background: rgba(59, 130, 246, 0.15);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  color: var(--arctic-aurora);
+  font-style: italic;
+}
+
+/* Copy Grammar Modal */
+.copy-modal {
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.copy-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1rem;
+}
+
+.copy-preview {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.copy-preview-section {
+  margin-top: 1rem;
+}
+
+.copy-preview-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: var(--text-sm);
+  color: var(--arctic-frost);
+}
+
+.copy-preview-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.3);
+  margin-top: 1rem;
+}
+
+/* Copy list grid (for lexemes) */
+.copy-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: rgba(30, 58, 95, 0.3);
+  border-radius: 6px;
+}
+
+.copy-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.copy-list-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.copy-list-item input[type="checkbox"] {
+  margin-top: 2px;
+}
+
+.copy-list-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.copy-list-item-info strong {
+  font-family: monospace;
+  font-size: var(--text-sm);
+}
+
+/* Dependency checkboxes for grammar copy */
+.dependency-section {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(30, 58, 95, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dependency-section h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: var(--text-sm);
+  color: var(--arctic-frost);
+}
+
+.dependency-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dependency-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+}
+
+.dependency-item.missing {
+  color: var(--warning);
+}
+
+.dependency-item.exists {
+  color: var(--text-muted);
+}
+
 /* Collapsible panel */
 .collapsible-panel {
   background: rgba(30, 58, 95, 0.2);

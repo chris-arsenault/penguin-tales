@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { LEXEME_CATEGORIES } from '../../constants';
 import { generateLexemesWithAnthropic } from '../../../lib/anthropicClient';
+import { CopyLexemeModal } from './CopyLexemeModal';
 
-function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
+function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCultures }) {
   const [mode, setMode] = useState('view'); // 'view', 'create-spec', 'edit-spec', 'create-manual', 'edit-list'
   const [selectedList, setSelectedList] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
   const [editingSpecId, setEditingSpecId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showCopyModal, setShowCopyModal] = useState(false);
 
   // Form state for spec creation
   const [specForm, setSpecForm] = useState({
@@ -174,6 +176,11 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
         <div className="tab-header">
           <h3>Lexeme Lists</h3>
           <div className="flex gap-sm">
+            {allCultures && Object.keys(allCultures).length > 1 && (
+              <button className="secondary" onClick={() => setShowCopyModal(true)}>
+                Copy from...
+              </button>
+            )}
             <button className="primary" onClick={() => setMode('create-spec')}>
               + New Spec
             </button>
@@ -318,6 +325,19 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
           )}
         </div>
 
+        {showCopyModal && (
+          <CopyLexemeModal
+            cultureId={cultureId}
+            allCultures={allCultures}
+            existingListIds={Object.keys(lexemeLists)}
+            onCopy={(copiedLists) => {
+              const updatedLists = { ...lexemeLists, ...copiedLists };
+              onLexemesChange(updatedLists, undefined);
+              setShowCopyModal(false);
+            }}
+            onClose={() => setShowCopyModal(false)}
+          />
+        )}
       </div>
     );
   }

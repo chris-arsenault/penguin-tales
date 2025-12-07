@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { MARKOV_MODELS, CONTEXT_KEYS, COMMON_LITERALS } from '../../constants';
+import { previewGrammarNames } from '../../../lib/browser-generator';
+import { CopyGrammarModal } from './CopyGrammarModal';
 
-function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
+function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChange, allCultures }) {
   const [mode, setMode] = useState('view');
   const [editingGrammar, setEditingGrammar] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [formData, setFormData] = useState({
     id: `${cultureId}_grammar`,
     start: 'name',
@@ -151,6 +154,11 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
           <h3 className="mt-0">Context-Free Grammars</h3>
           <div className="flex gap-sm">
             <button className="secondary" onClick={() => setShowHelp(true)}>? Help</button>
+            {allCultures && Object.keys(allCultures).length > 1 && (
+              <button className="secondary" onClick={() => setShowCopyModal(true)}>
+                Copy from...
+              </button>
+            )}
             <button className="primary" onClick={handleAddNew}>+ New Grammar</button>
           </div>
         </div>
@@ -188,12 +196,37 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
                     </button>
                   </div>
                 </div>
+                <GrammarPreview
+                  grammar={grammar}
+                  domains={domains}
+                  lexemeLists={lexemeLists}
+                />
               </div>
             ))}
           </div>
         )}
 
         {showHelp && <GrammarHelpModal onClose={() => setShowHelp(false)} />}
+        {showCopyModal && (
+          <CopyGrammarModal
+            cultureId={cultureId}
+            cultureConfig={cultureConfig}
+            allCultures={allCultures}
+            existingGrammarIds={grammars.map(g => g.id)}
+            onCopy={(copiedGrammar, copiedLexemeLists) => {
+              const newGrammars = [...grammars, copiedGrammar];
+              // If copying lexeme lists, do atomic update with grammar
+              if (copiedLexemeLists && Object.keys(copiedLexemeLists).length > 0 && onLexemesChange) {
+                const updatedLists = { ...lexemeLists, ...copiedLexemeLists };
+                onLexemesChange(updatedLists, undefined, newGrammars);
+              } else {
+                onGrammarsChange(newGrammars);
+              }
+              setShowCopyModal(false);
+            }}
+            onClose={() => setShowCopyModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -543,6 +576,93 @@ function GrammarHelpModal({ onClose }) {
             <li><strong>MiXeD</strong> - "king of north" → "KiNg Of NoRtH"</li>
           </ul>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Live preview of grammar output - shows sample names
+ */
+function GrammarPreview({ grammar, domains, lexemeLists }) {
+  const [names, setNames] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Generate preview names when grammar changes
+  useEffect(() => {
+    if (!grammar || !grammar.rules || Object.keys(grammar.rules).length === 0) {
+      setNames([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    previewGrammarNames({
+      grammar,
+      domains,
+      lexemeLists,
+      count: 6
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setNames(result);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message);
+          setNames([]);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [grammar, domains, lexemeLists]);
+
+  if (!grammar.rules || Object.keys(grammar.rules).length === 0) {
+    return (
+      <div className="grammar-preview empty">
+        <span className="text-muted text-small">No rules defined</span>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="grammar-preview">
+        <span className="text-muted text-small">Generating...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="grammar-preview error">
+        <span className="text-small text-danger">{error}</span>
+      </div>
+    );
+  }
+
+  if (names.length === 0) {
+    return (
+      <div className="grammar-preview empty">
+        <span className="text-muted text-small">Could not generate preview</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grammar-preview">
+      <div className="grammar-preview-names">
+        {names.map((name, i) => (
+          <span key={i} className="grammar-preview-name">{name}</span>
+        ))}
       </div>
     </div>
   );

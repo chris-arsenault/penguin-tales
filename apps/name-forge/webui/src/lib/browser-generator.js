@@ -4,7 +4,7 @@
  * Thin wrapper around the name-forge lib.
  */
 
-import { generate, generateFromDomain } from '@lib/generate.js';
+import { generate, generateFromDomain, previewGrammar } from '@lib/generate.js';
 import { setMarkovBaseUrl } from '@lib/markov-loader.js';
 
 // Configure base URL for Markov models in browser
@@ -64,4 +64,35 @@ export async function generateTestNames({
  */
 export function generateNamesFromDomain(domain, count = 10, seed) {
   return generateFromDomain(domain, count, seed);
+}
+
+/**
+ * Preview a grammar by generating sample names.
+ * Used for live preview in the grammar editor.
+ *
+ * @param {Object} options
+ * @param {Object} options.grammar - The grammar to preview
+ * @param {Array} options.domains - Available domains
+ * @param {Object} options.lexemeLists - Available lexeme lists (keyed by id)
+ * @param {number} options.count - Number of names to generate (default 8)
+ * @returns {Promise<string[]>} Generated sample names
+ */
+export async function previewGrammarNames({ grammar, domains, lexemeLists, count = 8 }) {
+  if (!grammar || !grammar.rules || Object.keys(grammar.rules).length === 0) {
+    return [];
+  }
+
+  // Convert lexemeLists object to array format expected by lib
+  const lexemeListsArray = Object.entries(lexemeLists || {}).map(([id, list]) => ({
+    id,
+    entries: list.entries || [],
+    ...list
+  }));
+
+  return previewGrammar({
+    grammar,
+    domains: domains || [],
+    lexemeLists: lexemeListsArray,
+    count
+  });
 }

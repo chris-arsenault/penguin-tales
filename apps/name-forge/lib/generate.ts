@@ -947,3 +947,56 @@ export function testDomain(
     maxLength: Math.max(...lengths),
   };
 }
+
+// ============================================================================
+// Preview Grammar (for live UI preview)
+// ============================================================================
+
+export interface PreviewGrammarOptions {
+  grammar: Grammar;
+  domains: NamingDomain[];
+  lexemeLists: LexemeList[];
+  count?: number;
+  seed?: string;
+}
+
+/**
+ * Preview a grammar by generating sample names.
+ * Used by the UI to show live preview of grammar output.
+ *
+ * @returns Array of generated names (may contain duplicates if grammar is simple)
+ */
+export async function previewGrammar(
+  options: PreviewGrammarOptions
+): Promise<string[]> {
+  const { grammar, domains, lexemeLists, count = 8, seed } = options;
+
+  if (!grammar || !grammar.rules || Object.keys(grammar.rules).length === 0) {
+    return [];
+  }
+
+  // Preload Markov models if the grammar uses them
+  const markovModels = await preloadModels([grammar]);
+
+  const rng = createRNG(seed || `preview-${Date.now()}`);
+  const ctx: GenerationContext = {
+    rng,
+    domains: domains || [],
+    grammars: [grammar],
+    lexemeLists: lexemeLists || [],
+    markovModels,
+    userContext: {},
+  };
+
+  const names: string[] = [];
+  for (let i = 0; i < count; i++) {
+    try {
+      const result = expandGrammar(grammar, ctx);
+      names.push(result.name);
+    } catch {
+      // Grammar might have unresolved references - skip
+    }
+  }
+
+  return names;
+}
