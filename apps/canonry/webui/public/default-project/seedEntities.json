@@ -8,8 +8,16 @@
     "status": "thriving",
     "prominence": "recognized",
     "culture": "aurora-stack",
-    "tags": { "icy": true, "landmark": true, "multilevel": true },
-    "coordinates": { "x": 50, "y": 50, "z": 50 },
+    "tags": {
+      "icy": true,
+      "landmark": true,
+      "multilevel": true
+    },
+    "coordinates": {
+      "x": 50,
+      "y": 50,
+      "z": 50
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -23,8 +31,16 @@
     "status": "thriving",
     "prominence": "recognized",
     "culture": "aurora-stack",
-    "tags": { "colony": true, "trade": true, "organized": true },
-    "coordinates": { "x": 70, "y": 25, "z": 70 },
+    "tags": {
+      "colony": true,
+      "trade": true,
+      "organized": true
+    },
+    "coordinates": {
+      "x": 70,
+      "y": 25,
+      "z": 70
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -38,8 +54,16 @@
     "status": "thriving",
     "prominence": "recognized",
     "culture": "nightshelf",
-    "tags": { "colony": true, "criminal": true, "secretive": true },
-    "coordinates": { "x": 30, "y": 40, "z": 45 },
+    "tags": {
+      "colony": true,
+      "criminal": true,
+      "secretive": true
+    },
+    "coordinates": {
+      "x": 30,
+      "y": 40,
+      "z": 45
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -53,8 +77,16 @@
     "status": "thriving",
     "prominence": "recognized",
     "culture": "nightshelf",
-    "tags": { "anomaly": true, "mystical": true, "glowing": true },
-    "coordinates": { "x": 30, "y": 70, "z": 15 },
+    "tags": {
+      "anomaly": true,
+      "mystical": true,
+      "glowing": true
+    },
+    "coordinates": {
+      "x": 30,
+      "y": 70,
+      "z": 15
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -68,8 +100,16 @@
     "status": "active",
     "prominence": "recognized",
     "culture": "aurora-stack",
-    "tags": { "merchant": true, "trade": true, "organized": true },
-    "coordinates": { "x": 80, "y": 75, "z": 60 },
+    "tags": {
+      "merchant": true,
+      "trade": true,
+      "organized": true
+    },
+    "coordinates": {
+      "x": 80,
+      "y": 75,
+      "z": 60
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -83,8 +123,16 @@
     "status": "active",
     "prominence": "recognized",
     "culture": "nightshelf",
-    "tags": { "criminal": true, "secretive": true, "organized": true },
-    "coordinates": { "x": 25, "y": 40, "z": 50 },
+    "tags": {
+      "criminal": true,
+      "secretive": true,
+      "organized": true
+    },
+    "coordinates": {
+      "x": 25,
+      "y": 40,
+      "z": 50
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -98,8 +146,16 @@
     "status": "alive",
     "prominence": "recognized",
     "culture": "aurora-stack",
-    "tags": { "leader": true, "organized": true, "trade": true },
-    "coordinates": { "x": 75, "y": 65, "z": 35 },
+    "tags": {
+      "leader": true,
+      "organized": true,
+      "trade": true
+    },
+    "coordinates": {
+      "x": 75,
+      "y": 65,
+      "z": 35
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0
@@ -113,8 +169,16 @@
     "status": "alive",
     "prominence": "recognized",
     "culture": "nightshelf",
-    "tags": { "leader": true, "secretive": true, "charismatic": true },
-    "coordinates": { "x": 40, "y": 55, "z": 65 },
+    "tags": {
+      "leader": true,
+      "secretive": true,
+      "charismatic": true
+    },
+    "coordinates": {
+      "x": 40,
+      "y": 55,
+      "z": 65
+    },
     "links": [],
     "createdAt": 0,
     "updatedAt": 0

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { MARKOV_MODELS, CONTEXT_KEYS, COMMON_LITERALS } from '../../constants';
-import { getEffectiveDomain } from '../../utils';
 
 function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
   const [mode, setMode] = useState('view');
@@ -18,10 +17,11 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
   // Autosave refs
   const autosaveTimeoutRef = useRef(null);
   const lastSavedFormDataRef = useRef(null);
+  const lastSavedIdRef = useRef(null);
 
   const grammars = cultureConfig?.grammars || [];
   const lexemeLists = cultureConfig?.lexemeLists || {};
-  const effectiveDomain = getEffectiveDomain(cultureConfig);
+  const domains = cultureConfig?.domains || [];
 
   // Autosave effect
   useEffect(() => {
@@ -37,12 +37,21 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
     autosaveTimeoutRef.current = setTimeout(() => {
       if (!formData.id.trim()) return;
 
-      const newGrammars = editingGrammar === 'new'
-        ? [...grammars.filter(g => g.id !== formData.id), formData]
-        : grammars.map(g => g.id === editingGrammar ? formData : g);
+      // Track IDs to remove: both the previously saved ID and the current ID
+      // This handles the case where the user changes the ID during editing
+      const idsToRemove = new Set([formData.id]);
+      if (lastSavedIdRef.current) {
+        idsToRemove.add(lastSavedIdRef.current);
+      }
+      if (editingGrammar !== 'new') {
+        idsToRemove.add(editingGrammar);
+      }
+
+      const newGrammars = [...grammars.filter(g => !idsToRemove.has(g.id)), formData];
 
       onGrammarsChange(newGrammars);
       lastSavedFormDataRef.current = formDataStr;
+      lastSavedIdRef.current = formData.id;
     }, 1000);
 
     return () => {
@@ -55,6 +64,7 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
   useEffect(() => {
     if (mode === 'view') {
       lastSavedFormDataRef.current = null;
+      lastSavedIdRef.current = null;
     }
   }, [mode]);
 
@@ -88,9 +98,16 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
   const handleSave = () => {
     if (!formData.id.trim()) return;
 
-    const newGrammars = editingGrammar === 'new'
-      ? [...grammars.filter(g => g.id !== formData.id), formData]
-      : grammars.map(g => g.id === editingGrammar ? formData : g);
+    // Same logic as autosave: track all IDs that should be replaced
+    const idsToRemove = new Set([formData.id]);
+    if (lastSavedIdRef.current) {
+      idsToRemove.add(lastSavedIdRef.current);
+    }
+    if (editingGrammar !== 'new') {
+      idsToRemove.add(editingGrammar);
+    }
+
+    const newGrammars = [...grammars.filter(g => !idsToRemove.has(g.id)), formData];
 
     onGrammarsChange(newGrammars);
     setMode('view');
@@ -251,12 +268,13 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange }) {
         )}
 
         {/* Click-to-insert: Domain Phonology */}
-        {effectiveDomain && (
+        {domains.map(domain => (
           <DomainInsertSection
-            effectiveDomain={effectiveDomain}
+            key={domain.id}
+            domain={domain}
             onInsert={insertIntoRule}
           />
-        )}
+        ))}
 
         {/* Click-to-insert: Markov Chain Models */}
         <ClickToInsertSection
@@ -381,30 +399,30 @@ function ClickToInsertSection({ title, subtitle, items, onInsert, variant = 'blu
   );
 }
 
-function DomainInsertSection({ effectiveDomain, onInsert }) {
+function DomainInsertSection({ domain, onInsert }) {
   return (
     <div className="insert-panel domain">
       <div className="insert-panel-title text-purple">
-        <strong>Domain: {effectiveDomain.id}</strong>
+        <strong>Domain: {domain.id}</strong>
       </div>
 
       <div className="mb-sm">
         <code
           className="insert-chip gold domain-chip"
-          onClick={() => onInsert(`domain:${effectiveDomain.id}`)}
+          onClick={() => onInsert(`domain:${domain.id}`)}
           title="Generate phonotactic name from this domain"
         >
-          domain:{effectiveDomain.id}
+          domain:{domain.id}
         </code>
         <span className="text-xs text-muted ml-sm">
           (generates phonotactic names)
         </span>
       </div>
 
-      {effectiveDomain.morphology?.prefixes?.length > 0 && (
+      {domain.morphology?.prefixes?.length > 0 && (
         <div className="mb-sm">
           <span className="text-xs text-muted">Prefixes: </span>
-          {effectiveDomain.morphology.prefixes.slice(0, 8).map((p, i) => (
+          {domain.morphology.prefixes.slice(0, 8).map((p, i) => (
             <code
               key={i}
               className="morph-chip"
@@ -416,10 +434,10 @@ function DomainInsertSection({ effectiveDomain, onInsert }) {
         </div>
       )}
 
-      {effectiveDomain.morphology?.suffixes?.length > 0 && (
+      {domain.morphology?.suffixes?.length > 0 && (
         <div>
           <span className="text-xs text-muted">Suffixes: </span>
-          {effectiveDomain.morphology.suffixes.slice(0, 8).map((s, i) => (
+          {domain.morphology.suffixes.slice(0, 8).map((s, i) => (
             <code
               key={i}
               className="morph-chip"
@@ -494,7 +512,23 @@ function GrammarHelpModal({ onClose }) {
             <li><code>domain:id</code> - Phonotactic name</li>
             <li><code>markov:id</code> - Markov chain name</li>
             <li><code>context:key</code> - Related entity name</li>
-            <li><code>^suffix</code> - Attach suffix (e.g., <code>^'s</code>)</li>
+            <li><code>^</code> - Join without space:
+              <ul>
+                <li><code>domain:x^'s</code> → &lt;domain&gt;'s</li>
+                <li><code>^'slot:x</code> → '&lt;slot&gt;</li>
+                <li><code>domain:x^'^slot:y</code> → &lt;domain&gt;'&lt;slot&gt;</li>
+              </ul>
+            </li>
+            <li><code>~</code> - Per-token capitalization:
+              <ul>
+                <li><code>~cap</code> / <code>~c</code> - Capitalized</li>
+                <li><code>~lower</code> / <code>~l</code> - lowercase</li>
+                <li><code>~upper</code> / <code>~u</code> - UPPERCASE</li>
+                <li><code>~title</code> / <code>~t</code> - Title Case</li>
+              </ul>
+              <div className="mt-xs">Example: <code>domain:x~cap domain:y~lower^'^slot:z~cap</code></div>
+              <div>→ "Capital lower'Capital"</div>
+            </li>
             <li><code>|</code> - Alternatives</li>
           </ul>
 

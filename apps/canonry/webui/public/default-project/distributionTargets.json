@@ -13,7 +13,7 @@
       "targets": {
         "npc": 0.2,
         "location": 0.3,
-        "faction": 0.20,
+        "faction": 0.2,
         "rules": 0.15,
         "abilities": 0.15
       },
@@ -23,13 +23,13 @@
       "type": "normal",
       "comment": "Normal distribution centered on 'recognized'",
       "mean": "recognized",
-      "stdDev": 1.0,
+      "stdDev": 1,
       "targets": {
-        "forgotten": 0.10,
+        "forgotten": 0.1,
         "marginal": 0.25,
-        "recognized": 0.30,
+        "recognized": 0.3,
         "renowned": 0.25,
-        "mythic": 0.10
+        "mythic": 0.1
       },
       "perKind": {
         "enabled": true,
@@ -44,10 +44,10 @@
       "minTypeRatio": 0.02,
       "preferredDiversity": {
         "social": 0.25,
-        "political": 0.20,
+        "political": 0.2,
         "economic": 0.15,
-        "spatial": 0.20,
-        "cultural": 0.20
+        "spatial": 0.2,
+        "cultural": 0.2
       }
     },
     "graphConnectivity": {
@@ -86,7 +86,7 @@
       },
       "prominenceDistribution": {
         "marginal": 0.35,
-        "recognized": 0.30,
+        "recognized": 0.3,
         "comment": "More marginal entities during founding"
       },
       "relationshipDistribution": {
@@ -95,7 +95,7 @@
           "discovered_by",
           "founded_by"
         ],
-        "preferredRatio": 0.30
+        "preferredRatio": 0.3
       }
     },
     "The Faction Wars": {
@@ -105,7 +105,7 @@
         "faction": 0.25
       },
       "prominenceDistribution": {
-        "renowned": 0.30,
+        "renowned": 0.3,
         "mythic": 0.15,
         "comment": "Heroes rise during conflict"
       },
@@ -152,10 +152,10 @@
           "defended_by",
           "member_of"
         ],
-        "preferredRatio": 0.30
+        "preferredRatio": 0.3
       },
       "graphConnectivity": {
-        "interCluster": 0.20,
+        "interCluster": 0.2,
         "comment": "More cross-cluster connections during crisis"
       }
     },
@@ -163,11 +163,11 @@
       "comment": "Reconstruction era - rebuilding, stabilization",
       "entityKindDistribution": {
         "location": 0.28,
-        "rules": 0.20
+        "rules": 0.2
       },
       "prominenceDistribution": {
-        "recognized": 0.40,
-        "marginal": 0.20,
+        "recognized": 0.4,
+        "marginal": 0.2,
         "comment": "Shift back to normal prominence levels"
       },
       "relationshipDistribution": {
@@ -268,14 +268,14 @@
     "adjustmentSpeed": 0.3,
     "deviationSensitivity": 1.5,
     "minTemplateWeight": 0.05,
-    "maxTemplateWeight": 3.0,
+    "maxTemplateWeight": 3,
     "convergenceThreshold": 0.08,
     "measurementInterval": 5,
     "correctionStrength": {
       "entityKind": 1.2,
       "prominence": 0.8,
       "relationship": 1.5,
-      "connectivity": 1.0
+      "connectivity": 1
     }
   },
   "relationshipCategories": {

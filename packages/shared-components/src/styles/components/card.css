@@ -293,3 +293,178 @@
   font-weight: var(--font-weight-normal);
   color: var(--color-text-dim);
 }
+
+/* Weights accordion (used in Eras for generator/system weights) */
+.weights-accordion {
+  margin-top: var(--spacing-xl);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.weights-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-dark);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.weights-accordion-header:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.weights-accordion-header.expanded {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.weights-accordion-icon {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dim);
+  transition: transform var(--transition-fast);
+}
+
+.weights-accordion-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.weights-accordion-summary {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.weights-accordion-content {
+  padding: var(--spacing-lg);
+  background-color: var(--color-bg-card);
+}
+
+/* Transitions Grid - Two-column layout for entry/exit */
+.transitions-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+}
+
+.transitions-column {
+  background-color: var(--color-bg-dark);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+}
+
+.transitions-column-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.transitions-entry .transitions-column-header {
+  border-left: 3px solid var(--color-success);
+}
+
+.transitions-exit .transitions-column-header {
+  border-left: 3px solid var(--color-accent);
+}
+
+.transitions-column-icon {
+  font-size: var(--font-size-lg);
+}
+
+.transitions-column-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.transitions-column-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.transitions-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg) 0;
+}
+
+.transitions-arrow {
+  font-size: 24px;
+  color: var(--color-text-dim);
+}
+
+/* Mini sections within transitions columns */
+.transitions-mini-section {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.transitions-mini-section:last-child {
+  border-bottom: none;
+}
+
+.transitions-mini-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.transitions-mini-icon {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dim);
+}
+
+.transitions-mini-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transitions-mini-count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-card);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.transitions-mini-content {
+  padding-left: var(--spacing-sm);
+}
+
+.transitions-mini-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--spacing-sm) 0;
+}
+
+.transitions-add-effect {
+  margin-top: var(--spacing-sm);
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 900px) {
+  .transitions-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .transitions-divider {
+    display: none;
+  }
+}

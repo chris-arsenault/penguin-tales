@@ -365,7 +365,8 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                   </div>
                   <div className="chip-input-row">
                     <select
-                      className="input input-sm"
+                      className="input"
+                      style={{ flex: 1, maxWidth: '300px' }}
                       value={newEntityKind[tag.tag] || ''}
                       onChange={(e) => setNewEntityKind((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >
@@ -392,7 +393,8 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                   </div>
                   <div className="chip-input-row">
                     <select
-                      className="input input-sm"
+                      className="input"
+                      style={{ flex: 1, maxWidth: '300px' }}
                       value={newRelatedTag[tag.tag] || ''}
                       onChange={(e) => setNewRelatedTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >
@@ -419,7 +421,8 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                   </div>
                   <div className="chip-input-row">
                     <select
-                      className="input input-sm"
+                      className="input"
+                      style={{ flex: 1, maxWidth: '300px' }}
                       value={newConflictingTag[tag.tag] || ''}
                       onChange={(e) => setNewConflictingTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >

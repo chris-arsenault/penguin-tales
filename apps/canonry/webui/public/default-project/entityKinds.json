@@ -3,74 +3,357 @@
     "kind": "abilities",
     "description": "Abilities & Techniques",
     "subtypes": [
-      { "id": "technology", "name": "Technology" },
-      { "id": "combat", "name": "Combat Technique" },
-      { "id": "magic", "name": "Magic" }
+      {
+        "id": "technology",
+        "name": "Technology"
+      },
+      {
+        "id": "combat",
+        "name": "Combat Technique"
+      },
+      {
+        "id": "magic",
+        "name": "Magic"
+      }
     ],
     "statuses": [
-      { "id": "active", "name": "Active", "isTerminal": false },
-      { "id": "lost", "name": "Lost", "isTerminal": true },
-      { "id": "secret", "name": "Secret", "isTerminal": false },
-      { "id": "discovered", "name": "Discovered", "isTerminal": false },
-      { "id": "emergent", "name": "Emergent", "isTerminal": false }
-    ]
+      {
+        "id": "active",
+        "name": "Active",
+        "isTerminal": false
+      },
+      {
+        "id": "lost",
+        "name": "Lost",
+        "isTerminal": true
+      },
+      {
+        "id": "secret",
+        "name": "Secret",
+        "isTerminal": false
+      },
+      {
+        "id": "discovered",
+        "name": "Discovered",
+        "isTerminal": false
+      },
+      {
+        "id": "emergent",
+        "name": "Emergent",
+        "isTerminal": false
+      }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": {
+          "name": "Element",
+          "lowTag": "fire",
+          "highTag": "ice"
+        },
+        "y": {
+          "name": "Affinity",
+          "lowTag": "mundane",
+          "highTag": "mystical"
+        },
+        "z": {
+          "name": "Power",
+          "lowTag": "emergent",
+          "highTag": "legendary"
+        }
+      },
+      "regions": [
+        {
+          "id": "region_1764785235600",
+          "label": "Night Magic",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 84,
+              "y": 84
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "region_1764785261183",
+          "label": "Golden Auras",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 79,
+              "y": 49
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "region_1764785282607",
+          "label": "Orca Combats",
+          "color": "#2F4F4F",
+          "culture": "orca",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 16,
+              "y": 18
+            },
+            "radius": 15
+          }
+        }
+      ]
+    },
+    "defaultStatus": "emergent"
   },
   {
     "kind": "occurrence",
     "description": "Events & Occurrences",
     "subtypes": [
-      { "id": "war", "name": "War" },
-      { "id": "succession_crisis", "name": "Succession Crisis" },
-      { "id": "disaster", "name": "Disaster" },
-      { "id": "celebration", "name": "Celebration" }
+      {
+        "id": "war",
+        "name": "War"
+      },
+      {
+        "id": "succession_crisis",
+        "name": "Succession Crisis"
+      },
+      {
+        "id": "disaster",
+        "name": "Disaster"
+      },
+      {
+        "id": "celebration",
+        "name": "Celebration"
+      }
     ],
     "statuses": [
-      { "id": "active", "name": "Active", "isTerminal": false },
-      { "id": "historical", "name": "Historical", "isTerminal": true },
-      { "id": "brewing", "name": "Brewing", "isTerminal": false },
-      { "id": "legendary", "name": "Legendary", "isTerminal": false }
-    ]
+      {
+        "id": "active",
+        "name": "Active",
+        "isTerminal": false
+      },
+      {
+        "id": "historical",
+        "name": "Historical",
+        "isTerminal": true
+      },
+      {
+        "id": "brewing",
+        "name": "Brewing",
+        "isTerminal": false
+      },
+      {
+        "id": "legendary",
+        "name": "Legendary",
+        "isTerminal": false
+      }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": {
+          "name": "X Axis",
+          "lowTag": "low",
+          "highTag": "high"
+        },
+        "y": {
+          "name": "Y Axis",
+          "lowTag": "low",
+          "highTag": "high"
+        }
+      },
+      "regions": []
+    },
+    "defaultStatus": "brewing"
   },
   {
     "kind": "rules",
     "description": "Laws & Traditions",
     "subtypes": [
-      { "id": "law", "name": "Law" },
-      { "id": "social", "name": "Social Custom" },
-      { "id": "memorial", "name": "Memorial" },
-      { "id": "ideology", "name": "Ideology" },
-      { "id": "edict", "name": "Edict" },
-      { "id": "taboo", "name": "Taboo" }
+      {
+        "id": "law",
+        "name": "Law"
+      },
+      {
+        "id": "social",
+        "name": "Social Custom"
+      },
+      {
+        "id": "memorial",
+        "name": "Memorial"
+      },
+      {
+        "id": "ideology",
+        "name": "Ideology"
+      },
+      {
+        "id": "edict",
+        "name": "Edict"
+      },
+      {
+        "id": "taboo",
+        "name": "Taboo"
+      }
     ],
     "statuses": [
-      { "id": "active", "name": "Active", "isTerminal": false },
-      { "id": "repealed", "name": "Repealed", "isTerminal": true },
-      { "id": "contested", "name": "Contested", "isTerminal": false },
-      { "id": "enacted", "name": "Enacted", "isTerminal": false },
-      { "id": "proposed", "name": "Proposed", "isTerminal": false }
-    ]
+      {
+        "id": "active",
+        "name": "Active",
+        "isTerminal": false
+      },
+      {
+        "id": "repealed",
+        "name": "Repealed",
+        "isTerminal": true
+      },
+      {
+        "id": "contested",
+        "name": "Contested",
+        "isTerminal": false
+      },
+      {
+        "id": "enacted",
+        "name": "Enacted",
+        "isTerminal": false
+      },
+      {
+        "id": "proposed",
+        "name": "Proposed",
+        "isTerminal": false
+      }
+    ],
+    "semanticPlane": {
+      "axes": {
+        "x": {
+          "name": "Autonomy",
+          "lowTag": "authoritarian",
+          "highTag": "libertarian"
+        },
+        "y": {
+          "name": "Element",
+          "lowTag": "ice",
+          "highTag": "fire"
+        }
+      },
+      "regions": [
+        {
+          "id": "region_1765071910751",
+          "label": "Trade Edics",
+          "color": "#FFD700",
+          "culture": "aurora-stack",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 80,
+              "y": 51
+            },
+            "radius": 20
+          }
+        },
+        {
+          "id": "region_1765071940851",
+          "label": "Rules of Engagement",
+          "color": "#2F4F4F",
+          "culture": "orca",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 16,
+              "y": 84
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "region_1765071956803",
+          "label": "Secret Polices",
+          "color": "#9370DB",
+          "culture": "nightshelf",
+          "tags": [],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 58,
+              "y": 17
+            },
+            "radius": 9
+          }
+        }
+      ]
+    },
+    "defaultStatus": "proposed"
   },
   {
     "kind": "npc",
     "description": "NPCs",
     "subtypes": [
-      { "id": "merchant", "name": "Merchant" },
-      { "id": "mayor", "name": "Mayor" },
-      { "id": "hero", "name": "Hero" },
-      { "id": "outlaw", "name": "Outlaw" },
-      { "id": "orca", "name": "Orca" }
+      {
+        "id": "merchant",
+        "name": "Merchant"
+      },
+      {
+        "id": "mayor",
+        "name": "Mayor"
+      },
+      {
+        "id": "hero",
+        "name": "Hero"
+      },
+      {
+        "id": "outlaw",
+        "name": "Outlaw"
+      },
+      {
+        "id": "orca",
+        "name": "Orca"
+      }
     ],
     "statuses": [
-      { "id": "alive", "name": "Alive", "isTerminal": false },
-      { "id": "dead", "name": "Dead", "isTerminal": true },
-      { "id": "fictional", "name": "Fictional", "isTerminal": false },
-      { "id": "missing", "name": "Missing", "isTerminal": false }
+      {
+        "id": "alive",
+        "name": "Alive",
+        "isTerminal": false
+      },
+      {
+        "id": "dead",
+        "name": "Dead",
+        "isTerminal": true
+      },
+      {
+        "id": "fictional",
+        "name": "Fictional",
+        "isTerminal": false
+      },
+      {
+        "id": "missing",
+        "name": "Missing",
+        "isTerminal": false
+      }
     ],
     "semanticPlane": {
       "axes": {
-        "x": { "name": "Alignment", "lowTag": "hostile", "highTag": "friendly" },
-        "y": { "name": "Role", "lowTag": "follower", "highTag": "leader" },
-        "z": { "name": "Approach", "lowTag": "mundane", "highTag": "mystical" }
+        "x": {
+          "name": "Alignment",
+          "lowTag": "hostile",
+          "highTag": "friendly"
+        },
+        "y": {
+          "name": "Role",
+          "lowTag": "follower",
+          "highTag": "leader"
+        },
+        "z": {
+          "name": "Approach",
+          "lowTag": "mundane",
+          "highTag": "mystical"
+        }
       },
       "regions": [
         {
@@ -78,105 +361,270 @@
           "label": "Aurora Stack",
           "color": "#FFD700",
           "culture": "aurora-stack",
-          "tags": ["friendly", "trade", "organized"],
-          "bounds": { "shape": "circle", "center": { "x": 70, "y": 60 }, "radius": 15 }
+          "tags": [
+            "friendly",
+            "trade",
+            "organized"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 70,
+              "y": 60
+            },
+            "radius": 15
+          }
         },
         {
           "id": "nightfall_shelf",
           "label": "Nightfall Shelf",
           "color": "#9370DB",
           "culture": "nightshelf",
-          "tags": ["mystical", "secretive"],
-          "bounds": { "shape": "circle", "center": { "x": 35, "y": 45 }, "radius": 15 }
+          "tags": [
+            "mystical",
+            "secretive"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 35,
+              "y": 45
+            },
+            "radius": 15
+          }
         },
         {
           "id": "orca_waters",
           "label": "Orca Waters",
           "color": "#2F4F4F",
           "culture": "orca",
-          "tags": ["hostile", "raider", "external"],
-          "bounds": { "shape": "circle", "center": { "x": 15, "y": 55 }, "radius": 12 }
+          "tags": [
+            "hostile",
+            "raider",
+            "external"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 13,
+              "y": 87
+            },
+            "radius": 12
+          }
         }
       ]
-    }
+    },
+    "defaultStatus": "alive"
   },
   {
     "kind": "location",
     "description": "Locations",
     "subtypes": [
-      { "id": "iceberg", "name": "Iceberg" },
-      { "id": "colony", "name": "Colony" },
-      { "id": "igloo", "name": "Igloo" },
-      { "id": "geographic_feature", "name": "Geographic Feature" },
-      { "id": "anomaly", "name": "Anomaly" }
+      {
+        "id": "iceberg",
+        "name": "Iceberg"
+      },
+      {
+        "id": "colony",
+        "name": "Colony"
+      },
+      {
+        "id": "igloo",
+        "name": "Igloo"
+      },
+      {
+        "id": "geographic_feature",
+        "name": "Geographic Feature"
+      },
+      {
+        "id": "anomaly",
+        "name": "Anomaly"
+      }
     ],
     "statuses": [
-      { "id": "thriving", "name": "Thriving", "isTerminal": false },
-      { "id": "waning", "name": "Waning", "isTerminal": false },
-      { "id": "abandoned", "name": "Abandoned", "isTerminal": true },
-      { "id": "unspoiled", "name": "Unspoiled", "isTerminal": false }
+      {
+        "id": "thriving",
+        "name": "Thriving",
+        "isTerminal": false
+      },
+      {
+        "id": "waning",
+        "name": "Waning",
+        "isTerminal": false
+      },
+      {
+        "id": "abandoned",
+        "name": "Abandoned",
+        "isTerminal": true
+      },
+      {
+        "id": "unspoiled",
+        "name": "Unspoiled",
+        "isTerminal": false
+      }
     ],
     "semanticPlane": {
       "axes": {
-        "x": { "name": "Accessibility", "lowTag": "hidden", "highTag": "central" },
-        "y": { "name": "Nature", "lowTag": "mundane", "highTag": "anomaly" },
-        "z": { "name": "Safety", "lowTag": "dangerous", "highTag": "safe" }
+        "x": {
+          "name": "Accessibility",
+          "lowTag": "hidden",
+          "highTag": "central"
+        },
+        "y": {
+          "name": "Nature",
+          "lowTag": "mundane",
+          "highTag": "anomaly"
+        },
+        "z": {
+          "name": "Safety",
+          "lowTag": "dangerous",
+          "highTag": "safe"
+        }
       },
       "regions": [
         {
           "id": "aurora_berg",
           "label": "Aurora Berg",
           "color": "#4A90D9",
-          "tags": ["central", "safe", "trade"],
-          "bounds": { "shape": "circle", "center": { "x": 50, "y": 45 }, "radius": 30 }
+          "tags": [
+            "central",
+            "safe",
+            "trade"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 50,
+              "y": 45
+            },
+            "radius": 30
+          }
         },
         {
           "id": "aurora_stack_loc",
           "label": "Aurora Stack",
           "color": "#FFD700",
           "culture": "aurora-stack",
-          "tags": ["central", "trade", "thriving"],
-          "bounds": { "shape": "circle", "center": { "x": 65, "y": 25 }, "radius": 12 }
+          "tags": [
+            "central",
+            "trade",
+            "thriving"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 65,
+              "y": 25
+            },
+            "radius": 12
+          }
         },
         {
           "id": "nightfall_shelf_loc",
           "label": "Nightfall Shelf",
           "color": "#9370DB",
           "culture": "nightshelf",
-          "tags": ["hidden", "mystical", "secretive"],
-          "bounds": { "shape": "circle", "center": { "x": 35, "y": 35 }, "radius": 12 }
+          "tags": [
+            "hidden",
+            "mystical",
+            "secretive"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 35,
+              "y": 35
+            },
+            "radius": 12
+          }
         },
         {
           "id": "glow_fissure",
           "label": "The Glow-Fissure",
           "color": "#FF6347",
-          "tags": ["anomaly", "dangerous", "mystical"],
-          "bounds": { "shape": "circle", "center": { "x": 30, "y": 65 }, "radius": 8 }
+          "tags": [
+            "anomaly",
+            "dangerous",
+            "mystical"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 30,
+              "y": 65
+            },
+            "radius": 8
+          }
         }
       ]
-    }
+    },
+    "defaultStatus": "thriving"
   },
   {
     "kind": "faction",
     "description": "Factions",
     "subtypes": [
-      { "id": "political", "name": "Political" },
-      { "id": "criminal", "name": "Criminal" },
-      { "id": "cult", "name": "Cult" },
-      { "id": "company", "name": "Company" }
+      {
+        "id": "political",
+        "name": "Political"
+      },
+      {
+        "id": "criminal",
+        "name": "Criminal"
+      },
+      {
+        "id": "cult",
+        "name": "Cult"
+      },
+      {
+        "id": "company",
+        "name": "Company"
+      }
     ],
     "statuses": [
-      { "id": "active", "name": "Active", "isTerminal": false },
-      { "id": "disbanded", "name": "Disbanded", "isTerminal": true },
-      { "id": "waning", "name": "Waning", "isTerminal": false },
-      { "id": "state_sanctioned", "name": "State Sanctioned", "isTerminal": false },
-      { "id": "illegal", "name": "Illegal", "isTerminal": false }
+      {
+        "id": "active",
+        "name": "Active",
+        "isTerminal": false
+      },
+      {
+        "id": "disbanded",
+        "name": "Disbanded",
+        "isTerminal": true
+      },
+      {
+        "id": "waning",
+        "name": "Waning",
+        "isTerminal": false
+      },
+      {
+        "id": "state_sanctioned",
+        "name": "State Sanctioned",
+        "isTerminal": false
+      },
+      {
+        "id": "illegal",
+        "name": "Illegal",
+        "isTerminal": false
+      }
     ],
     "semanticPlane": {
       "axes": {
-        "x": { "name": "Structure", "lowTag": "chaotic", "highTag": "organized" },
-        "y": { "name": "Purpose", "lowTag": "hostile", "highTag": "friendly" },
-        "z": { "name": "Reach", "lowTag": "secretive", "highTag": "influential" }
+        "x": {
+          "name": "Structure",
+          "lowTag": "chaotic",
+          "highTag": "organized"
+        },
+        "y": {
+          "name": "Purpose",
+          "lowTag": "hostile",
+          "highTag": "friendly"
+        },
+        "z": {
+          "name": "Reach",
+          "lowTag": "secretive",
+          "highTag": "influential"
+        }
       },
       "regions": [
         {
@@ -184,18 +632,61 @@
           "label": "Aurora Stack",
           "color": "#FFD700",
           "culture": "aurora-stack",
-          "tags": ["organized", "friendly", "trade", "influential"],
-          "bounds": { "shape": "circle", "center": { "x": 75, "y": 70 }, "radius": 15 }
+          "tags": [
+            "organized",
+            "friendly",
+            "trade",
+            "influential"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 75,
+              "y": 70
+            },
+            "radius": 15
+          }
         },
         {
           "id": "nightfall_factions",
           "label": "Nightfall Shelf",
           "color": "#9370DB",
           "culture": "nightshelf",
-          "tags": ["secretive", "mystical", "cult"],
-          "bounds": { "shape": "circle", "center": { "x": 35, "y": 40 }, "radius": 15 }
+          "tags": [
+            "secretive",
+            "mystical",
+            "cult"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 35,
+              "y": 49
+            },
+            "radius": 15
+          }
+        },
+        {
+          "id": "region_1765071992810",
+          "label": "Orca Raiders",
+          "color": "#410f1e",
+          "culture": "orca",
+          "tags": [
+            "authoritarian",
+            "fire",
+            "hostile"
+          ],
+          "bounds": {
+            "shape": "circle",
+            "center": {
+              "x": 11,
+              "y": 10
+            },
+            "radius": 9
+          }
         }
       ]
-    }
+    },
+    "defaultStatus": "active"
   }
 ]

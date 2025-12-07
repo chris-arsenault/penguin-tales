@@ -27,6 +27,10 @@ export const LEXEME_CATEGORIES = {
   virtue: { label: 'Virtue', desc: 'Positive traits and values' },
   vice: { label: 'Vice', desc: 'Negative traits and flaws' },
   number: { label: 'Number', desc: 'Numeric and ordinal words' },
+
+  // Organization/Group
+  collective: { label: 'Collective', desc: 'Group type words (guild, order, brotherhood, council, syndicate)' },
+  organization: { label: 'Organization', desc: 'Formal group names (company, house, clan, legion)' },
 };
 
 // For backwards compatibility

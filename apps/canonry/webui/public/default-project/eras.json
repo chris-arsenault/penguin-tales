@@ -4,44 +4,62 @@
     "name": "The Great Thaw",
     "description": "A period of exploration and colony founding as the ice recedes",
     "templateWeights": {
-      "colony_founding": 2.0,
+      "colony_founding": 2,
       "resource_location_discovery": 2.5,
       "geographic_exploration": 2.5,
-      "krill_bloom_migration": 2.0,
-      "hero_emergence": 1.0,
-      "orca_raider_arrival": 0,
-      "guild_establishment": 1.0,
+      "krill_bloom_migration": 2,
+      "hero_emergence": 1,
+      "guild_establishment": 1,
       "faction_splinter": 0.2,
-      "crisis_legislation": 1.0,
+      "crisis_legislation": 1,
       "great_festival": 0.5,
       "ideology_emergence": 0.5,
-      "tech_innovation": 1.0,
-      "magic_discovery": 0.2,
-      "orca_combat_technique": 0,
+      "tech_innovation": 1,
+      "magic_discovery": 2,
       "territorial_expansion": 2.5,
       "trade_route_establishment": 1.5,
-      "magical_site_discovery": 1.0,
+      "magical_site_discovery": 1,
       "tech_breakthrough": 1.2,
-      "strategic_location_discovery": 1.0,
-      "anomaly_manifestation": 0.5
+      "strategic_location_discovery": 1,
+      "anomaly_manifestation": 0.5,
+      "wild_magic_discover": 0.5
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
       "cultural_drift": 0.5,
       "belief_contagion": 0.8,
-      "thermal_diffusion": 1.0,
+      "thermal_diffusion": 1,
       "resource_diffusion": 1.5
     },
     "entryEffects": {
-      "pressureChanges": { "exploration": 10, "stability": 5 }
+      "pressureChanges": {
+        "exploration": 10,
+        "stability": 5
+      }
     },
     "exitConditions": [
-      { "type": "time", "minTicks": 80 },
-      { "type": "entity_count", "entityKind": "location", "operator": "above", "threshold": 8 },
-      { "type": "pressure", "pressureId": "resource_scarcity", "operator": "above", "threshold": 40 }
+      {
+        "type": "time",
+        "minTicks": 80
+      },
+      {
+        "type": "entity_count",
+        "entityKind": "location",
+        "operator": "above",
+        "threshold": 8
+      },
+      {
+        "type": "pressure",
+        "pressureId": "resource_scarcity",
+        "operator": "above",
+        "threshold": 40
+      }
     ],
     "exitEffects": {
-      "pressureChanges": { "conflict": 20, "resource_scarcity": 15 }
+      "pressureChanges": {
+        "conflict": 20,
+        "resource_scarcity": 15
+      }
     }
   },
   {
@@ -54,40 +72,64 @@
       "krill_bloom_migration": 0.3,
       "hero_emergence": 1.5,
       "orca_raider_arrival": 0,
-      "faction_splinter": 2.0,
-      "crisis_legislation": 2.0,
-      "great_festival": 2.0,
+      "faction_splinter": 2,
+      "crisis_legislation": 2,
+      "great_festival": 2,
       "ideology_emergence": 2.5,
       "orca_combat_technique": 0,
-      "territorial_expansion": 3.0,
+      "territorial_expansion": 3,
       "trade_route_establishment": 0.3,
       "magical_site_discovery": 0.5,
       "tech_breakthrough": 0.8,
       "war_outbreak": 1.5,
-      "succession_crisis": 1.0,
+      "succession_crisis": 1,
       "legend_crystallization": 1.5
     },
     "systemModifiers": {
-      "conflict_contagion": 2.0,
-      "alliance_formation": 2.0,
-      "belief_contagion": 2.0,
+      "conflict_contagion": 2,
+      "alliance_formation": 2,
+      "belief_contagion": 2,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.2,
       "resource_diffusion": 0.5
     },
     "entryConditions": [
-      { "type": "pressure", "pressureId": "resource_scarcity", "operator": "above", "threshold": 30 }
+      {
+        "type": "pressure",
+        "pressureId": "resource_scarcity",
+        "operator": "above",
+        "threshold": 30
+      }
     ],
     "entryEffects": {
-      "pressureChanges": { "conflict": 15 }
+      "pressureChanges": {
+        "conflict": 15
+      }
     },
     "exitConditions": [
-      { "type": "time", "minTicks": 100 },
-      { "type": "pressure", "pressureId": "conflict", "operator": "below", "threshold": 30 },
-      { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 35 }
+      {
+        "type": "time",
+        "minTicks": 100
+      },
+      {
+        "type": "pressure",
+        "pressureId": "conflict",
+        "operator": "below",
+        "threshold": 30
+      },
+      {
+        "type": "pressure",
+        "pressureId": "stability",
+        "operator": "above",
+        "threshold": 35
+      }
     ],
     "exitEffects": {
-      "pressureChanges": { "stability": 15, "conflict": -10, "magical_instability": 10 }
+      "pressureChanges": {
+        "stability": 15,
+        "conflict": -10,
+        "magical_instability": 10
+      }
     }
   },
   {
@@ -97,44 +139,67 @@
     "templateWeights": {
       "anomaly_manifestation": 1.5,
       "resource_location_discovery": 0.8,
-      "krill_bloom_migration": 1.0,
+      "krill_bloom_migration": 1,
       "orca_raider_arrival": 0,
-      "guild_establishment": 2.0,
+      "guild_establishment": 2,
       "cult_formation": 0.1,
-      "great_festival": 1.0,
-      "ideology_emergence": 3.0,
-      "tech_innovation": 3.0,
+      "great_festival": 1,
+      "ideology_emergence": 3,
+      "tech_innovation": 3,
       "magic_discovery": 0.6,
       "orca_combat_technique": 0,
       "territorial_expansion": 0.8,
       "trade_route_establishment": 2.5,
-      "magical_site_discovery": 3.0,
+      "magical_site_discovery": 3,
       "tech_breakthrough": 3.5,
-      "strategic_location_discovery": 1.0,
-      "legend_crystallization": 1.0
+      "strategic_location_discovery": 1,
+      "legend_crystallization": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.5,
       "resource_diffusion": 1.2,
-      "magic_school_formation": 2.0,
+      "magic_school_formation": 2,
       "combat_technique_formation": 1.5,
-      "legal_code_formation": 2.0
+      "legal_code_formation": 2
     },
     "entryConditions": [
-      { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 25 }
+      {
+        "type": "pressure",
+        "pressureId": "stability",
+        "operator": "above",
+        "threshold": 25
+      }
     ],
     "entryEffects": {
-      "pressureChanges": { "innovation": 20 }
+      "pressureChanges": {
+        "innovation": 20
+      }
     },
     "exitConditions": [
-      { "type": "time", "minTicks": 90 },
-      { "type": "entity_count", "entityKind": "abilities", "operator": "above", "threshold": 5 },
-      { "type": "pressure", "pressureId": "magical_instability", "operator": "above", "threshold": 50 }
+      {
+        "type": "time",
+        "minTicks": 90
+      },
+      {
+        "type": "entity_count",
+        "entityKind": "abilities",
+        "operator": "above",
+        "threshold": 5
+      },
+      {
+        "type": "pressure",
+        "pressureId": "magical_instability",
+        "operator": "above",
+        "threshold": 50
+      }
     ],
     "exitEffects": {
-      "pressureChanges": { "external_threat": 30, "magical_instability": -15 }
+      "pressureChanges": {
+        "external_threat": 30,
+        "magical_instability": -15
+      }
     }
   },
   {
@@ -142,19 +207,19 @@
     "name": "The Orca Incursion",
     "description": "External threats unite the colonies against common enemies",
     "templateWeights": {
-      "strategic_location_discovery": 1.0,
+      "strategic_location_discovery": 1,
       "krill_bloom_migration": 0.2,
-      "hero_emergence": 2.0,
-      "orca_raider_arrival": 2.0,
+      "hero_emergence": 2,
+      "orca_raider_arrival": 2,
       "great_festival": 0.5,
-      "ideology_emergence": 1.0,
-      "orca_combat_technique": 3.0,
+      "ideology_emergence": 1,
+      "orca_combat_technique": 3,
       "territorial_expansion": 1.5,
       "trade_route_establishment": 0.2,
-      "magical_site_discovery": 1.0,
+      "magical_site_discovery": 1,
       "tech_breakthrough": 1.5,
-      "war_outbreak": 2.0,
-      "legend_crystallization": 2.0,
+      "war_outbreak": 2,
+      "legend_crystallization": 2,
       "crisis_legislation": 2.5
     },
     "systemModifiers": {
@@ -166,18 +231,44 @@
       "combat_technique_formation": 2.5
     },
     "entryConditions": [
-      { "type": "pressure", "pressureId": "external_threat", "operator": "above", "threshold": 25 }
+      {
+        "type": "pressure",
+        "pressureId": "external_threat",
+        "operator": "above",
+        "threshold": 25
+      }
     ],
     "entryEffects": {
-      "pressureChanges": { "unity": 20, "conflict": -10 }
+      "pressureChanges": {
+        "unity": 20,
+        "conflict": -10
+      }
     },
     "exitConditions": [
-      { "type": "time", "minTicks": 120 },
-      { "type": "pressure", "pressureId": "external_threat", "operator": "below", "threshold": 20 },
-      { "type": "entity_count", "entityKind": "npc", "subtype": "hero", "operator": "above", "threshold": 3 }
+      {
+        "type": "time",
+        "minTicks": 120
+      },
+      {
+        "type": "pressure",
+        "pressureId": "external_threat",
+        "operator": "below",
+        "threshold": 20
+      },
+      {
+        "type": "entity_count",
+        "entityKind": "npc",
+        "subtype": "hero",
+        "operator": "above",
+        "threshold": 3
+      }
     ],
     "exitEffects": {
-      "pressureChanges": { "stability": 25, "external_threat": -20, "diplomacy": 20 }
+      "pressureChanges": {
+        "stability": 25,
+        "external_threat": -20,
+        "diplomacy": 20
+      }
     }
   },
   {
@@ -187,33 +278,46 @@
     "templateWeights": {
       "geographic_exploration": 1.3,
       "krill_bloom_migration": 1.5,
-      "succession": 1.0,
+      "succession": 1,
       "orca_raider_arrival": 0,
-      "great_festival": 3.0,
-      "ideology_emergence": 2.0,
+      "great_festival": 3,
+      "ideology_emergence": 2,
       "orca_combat_technique": 0,
-      "territorial_expansion": 1.0,
-      "trade_route_establishment": 3.0,
+      "territorial_expansion": 1,
+      "trade_route_establishment": 3,
       "magical_site_discovery": 1.2,
       "tech_breakthrough": 1.8,
       "legend_crystallization": 2.5,
-      "guild_establishment": 2.0,
+      "guild_establishment": 2,
       "tech_innovation": 1.5
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
-      "belief_contagion": 1.0,
+      "belief_contagion": 1,
       "thermal_diffusion": 0.8,
-      "resource_diffusion": 2.0,
+      "resource_diffusion": 2,
       "alliance_formation": 1.5,
-      "legal_code_formation": 2.0
+      "legal_code_formation": 2
     },
     "entryConditions": [
-      { "type": "pressure", "pressureId": "external_threat", "operator": "below", "threshold": 25 },
-      { "type": "pressure", "pressureId": "stability", "operator": "above", "threshold": 20 }
+      {
+        "type": "pressure",
+        "pressureId": "external_threat",
+        "operator": "below",
+        "threshold": 25
+      },
+      {
+        "type": "pressure",
+        "pressureId": "stability",
+        "operator": "above",
+        "threshold": 20
+      }
     ],
     "entryEffects": {
-      "pressureChanges": { "prosperity": 15, "stability": 10 }
+      "pressureChanges": {
+        "prosperity": 15,
+        "stability": 10
+      }
     }
   }
 ]

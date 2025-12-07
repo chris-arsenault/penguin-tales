@@ -10,6 +10,7 @@ import EntityKindEditor from './EntityKindEditor';
 import RelationshipKindEditor from './RelationshipKindEditor';
 import CultureEditor from './CultureEditor';
 import TagRegistryEditor from './TagRegistryEditor';
+import RelationshipKindMatrix from '../coverage/RelationshipKindMatrix';
 import { colors, typography, spacing, radius, getAccentGradient, getHoverBg } from '../../theme';
 
 const styles = {
@@ -67,6 +68,7 @@ const styles = {
 const SECTIONS = [
   { id: 'entityKinds', label: 'Entity Kinds', countKey: 'entityKinds' },
   { id: 'relationshipKinds', label: 'Relationships', countKey: 'relationshipKinds' },
+  { id: 'relationshipMatrix', label: 'Rel. Matrix', countKey: null },
   { id: 'cultures', label: 'Cultures', countKey: 'cultures' },
   { id: 'tags', label: 'Tags', countKey: 'tagRegistry' },
 ];
@@ -115,6 +117,17 @@ export default function SchemaEditor({
           />
         );
 
+      case 'relationshipMatrix':
+        return (
+          <RelationshipKindMatrix
+            relationshipKinds={project.relationshipKinds}
+            entityKinds={project.entityKinds}
+            onNavigateToRelationship={(relKind) => {
+              onSectionChange('relationshipKinds');
+            }}
+          />
+        );
+
       case 'cultures':
         return (
           <CultureEditor
@@ -154,7 +167,9 @@ export default function SchemaEditor({
             onClick={() => onSectionChange(section.id)}
           >
             {section.label}
-            <span style={styles.sidebarCount}>{counts[section.countKey]}</span>
+            {section.countKey && (
+              <span style={styles.sidebarCount}>{counts[section.countKey]}</span>
+            )}
           </div>
         ))}
       </div>

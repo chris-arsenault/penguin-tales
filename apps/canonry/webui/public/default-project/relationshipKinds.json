@@ -1,26 +1,333 @@
 [
-  { "kind": "resident_of", "description": "Resident Of", "srcKinds": ["npc"], "dstKinds": ["location"], "cullable": false, "decayRate": "slow" },
-  { "kind": "member_of", "description": "Member Of", "srcKinds": ["npc"], "dstKinds": ["faction"], "cullable": false, "decayRate": "slow" },
-  { "kind": "leader_of", "description": "Leader Of", "srcKinds": ["npc"], "dstKinds": ["faction", "location"], "cullable": false, "decayRate": "slow" },
-  { "kind": "enemy_of", "description": "Enemy Of", "srcKinds": ["npc", "faction"], "dstKinds": ["npc", "faction"], "cullable": true, "decayRate": "medium" },
-  { "kind": "allied_with", "description": "Allied With", "srcKinds": ["faction", "npc"], "dstKinds": ["faction", "npc"], "cullable": true, "decayRate": "slow" },
-  { "kind": "at_war_with", "description": "At War With", "srcKinds": ["faction"], "dstKinds": ["faction"], "cullable": true, "decayRate": "slow" },
-  { "kind": "controls", "description": "Controls", "srcKinds": ["faction"], "dstKinds": ["location"], "cullable": true, "decayRate": "slow" },
-  { "kind": "adjacent_to", "description": "Adjacent To", "srcKinds": ["location"], "dstKinds": ["location"], "cullable": false, "decayRate": "none" },
-  { "kind": "practitioner_of", "description": "Practitioner Of", "srcKinds": ["npc", "faction"], "dstKinds": ["abilities"], "cullable": false, "decayRate": "slow" },
-  { "kind": "occupies", "description": "Occupies", "srcKinds": ["faction", "npc"], "dstKinds": ["location"], "cullable": true, "decayRate": "medium" },
-  { "kind": "trades_with", "description": "Trades With", "srcKinds": ["faction", "npc"], "dstKinds": ["faction", "npc"], "cullable": true, "decayRate": "medium" },
-  { "kind": "contained_by", "description": "Contained By", "srcKinds": ["location"], "dstKinds": ["location"], "cullable": false, "decayRate": "none" },
-  { "kind": "discovered_by", "description": "Discovered By", "srcKinds": ["location", "abilities"], "dstKinds": ["npc", "faction"], "cullable": false, "decayRate": "none" },
-  { "kind": "explorer_of", "description": "Explorer Of", "srcKinds": ["npc"], "dstKinds": ["location"], "cullable": true, "decayRate": "slow" },
-  { "kind": "active_during", "description": "Active During", "srcKinds": ["occurrence", "npc", "faction"], "dstKinds": ["occurrence"], "cullable": false, "decayRate": "none" },
-  { "kind": "participant_in", "description": "Participant In", "srcKinds": ["npc", "faction", "occurrence", "rules"], "dstKinds": ["occurrence", "npc", "faction", "location"], "cullable": false, "decayRate": "none" },
-  { "kind": "commemorates", "description": "Commemorates", "srcKinds": ["rules", "location"], "dstKinds": ["npc", "occurrence"], "cullable": false, "decayRate": "none" },
-  { "kind": "originated_in", "description": "Originated In", "srcKinds": ["abilities", "rules", "faction"], "dstKinds": ["location", "faction"], "cullable": false, "decayRate": "none" },
-  { "kind": "related_to", "description": "Related To", "srcKinds": ["npc", "faction", "abilities", "rules", "location"], "dstKinds": ["npc", "faction", "abilities", "rules", "location"], "cullable": true, "decayRate": "slow" },
-  { "kind": "celebrated_by", "description": "Celebrated By", "srcKinds": ["rules", "occurrence"], "dstKinds": ["faction", "npc", "location"], "cullable": true, "decayRate": "medium" },
-  { "kind": "derived_from", "description": "Derived From", "srcKinds": ["abilities", "rules", "npc"], "dstKinds": ["abilities", "rules", "npc", "occurrence"], "cullable": false, "decayRate": "none" },
-  { "kind": "manifests_at", "description": "Manifests At", "srcKinds": ["abilities", "occurrence"], "dstKinds": ["location"], "cullable": true, "decayRate": "medium" },
-  { "kind": "believer_of", "description": "Believer Of", "srcKinds": ["npc"], "dstKinds": ["rules", "faction", "npc"], "cullable": true, "decayRate": "medium" },
-  { "kind": "splinter_of", "description": "Splinter Of", "srcKinds": ["faction"], "dstKinds": ["faction"], "cullable": false, "decayRate": "none" }
+  {
+    "kind": "resident_of",
+    "description": "Resident Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "member_of",
+    "description": "Member Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "leader_of",
+    "description": "Leader Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "faction",
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "enemy_of",
+    "description": "Enemy Of",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "allied_with",
+    "description": "Allied With",
+    "srcKinds": [
+      "faction",
+      "npc"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "at_war_with",
+    "description": "At War With",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "controls",
+    "description": "Controls",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "adjacent_to",
+    "description": "Adjacent To",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "practitioner_of",
+    "description": "Practitioner Of",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "abilities"
+    ],
+    "cullable": false,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "occupies",
+    "description": "Occupies",
+    "srcKinds": [
+      "faction",
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "trades_with",
+    "description": "Trades With",
+    "srcKinds": [
+      "faction",
+      "npc"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "contained_by",
+    "description": "Contained By",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "discovered_by",
+    "description": "Discovered By",
+    "srcKinds": [
+      "location",
+      "abilities"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "explorer_of",
+    "description": "Explorer Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "active_during",
+    "description": "Active During",
+    "srcKinds": [
+      "occurrence",
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "participant_in",
+    "description": "Participant In",
+    "srcKinds": [
+      "npc",
+      "faction",
+      "occurrence",
+      "rules"
+    ],
+    "dstKinds": [
+      "occurrence",
+      "npc",
+      "faction",
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "commemorates",
+    "description": "Commemorates",
+    "srcKinds": [
+      "rules",
+      "location"
+    ],
+    "dstKinds": [
+      "npc",
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "originated_in",
+    "description": "Originated In",
+    "srcKinds": [
+      "abilities",
+      "rules",
+      "faction"
+    ],
+    "dstKinds": [
+      "location",
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "related_to",
+    "description": "Related To",
+    "srcKinds": [
+      "npc",
+      "faction",
+      "abilities",
+      "rules",
+      "location"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction",
+      "abilities",
+      "rules",
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
+    "kind": "celebrated_by",
+    "description": "Celebrated By",
+    "srcKinds": [
+      "rules",
+      "occurrence"
+    ],
+    "dstKinds": [
+      "faction",
+      "npc",
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "derived_from",
+    "description": "Derived From",
+    "srcKinds": [
+      "abilities",
+      "rules",
+      "npc"
+    ],
+    "dstKinds": [
+      "abilities",
+      "rules",
+      "npc",
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "manifests_at",
+    "description": "Manifests At",
+    "srcKinds": [
+      "abilities",
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "believer_of",
+    "description": "Believer Of",
+    "srcKinds": [
+      "npc"
+    ],
+    "dstKinds": [
+      "rules",
+      "faction",
+      "npc"
+    ],
+    "cullable": true,
+    "decayRate": "medium"
+  },
+  {
+    "kind": "splinter_of",
+    "description": "Splinter Of",
+    "srcKinds": [
+      "faction"
+    ],
+    "dstKinds": [
+      "faction"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  }
 ]

@@ -163,16 +163,27 @@ export const StrategyGroupSchema = z.object({
 
 /**
  * Naming profile - defines how to generate names for a culture
+ *
+ * Profile selection order:
+ * 1. First profile with matching entityKind (concrete match)
+ * 2. Fall back to profile marked isDefault: true
+ * 3. Error if no match and no default
  */
 export interface Profile {
   id: string;
   name?: string;
+  /** Entity kinds this profile applies to (empty = use isDefault logic) */
+  entityKinds?: string[];
+  /** Mark as default fallback profile */
+  isDefault?: boolean;
   strategyGroups: StrategyGroup[];
 }
 
 export const ProfileSchema = z.object({
   id: z.string(),
   name: z.string().optional(),
+  entityKinds: z.array(z.string()).optional(),
+  isDefault: z.boolean().optional(),
   strategyGroups: z.array(StrategyGroupSchema),
 });
 
@@ -256,9 +267,39 @@ export interface GenerateRequest {
 }
 
 /**
+ * Debug info for why a strategy group matched or didn't match
+ */
+export interface GroupMatchDebug {
+  groupName: string;
+  matched: boolean;
+  reason?: string;
+  priority?: number;
+}
+
+/**
+ * Debug info for a single generated name
+ */
+export interface NameDebugInfo {
+  /** Which strategy group was used */
+  groupUsed: string;
+  /** Which strategy within the group was selected */
+  strategyUsed: string;
+  /** What type of strategy (grammar, phonotactic, fallback) */
+  strategyType: string;
+  /** For grammar strategies, which grammar ID */
+  grammarId?: string;
+  /** For phonotactic strategies, which domain ID */
+  domainId?: string;
+  /** Debug info for all groups showing match status */
+  groupMatching: GroupMatchDebug[];
+}
+
+/**
  * Generation result - output from name generation
  */
 export interface GenerateResult {
   names: string[];
   strategyUsage: Record<string, number>;
+  /** Debug info for each name (same length as names array) */
+  debugInfo?: NameDebugInfo[];
 }

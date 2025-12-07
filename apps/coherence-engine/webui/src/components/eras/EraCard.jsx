@@ -7,8 +7,7 @@ import {
   BasicInfoSection,
   GeneratorsSection,
   SystemsSection,
-  ConditionsSection,
-  EffectsSection,
+  TransitionsGrid,
 } from './sections';
 
 /**
@@ -39,6 +38,7 @@ export function EraCard({
   allEras,
 }) {
   const [hovering, setHovering] = useState(false);
+  const [weightsExpanded, setWeightsExpanded] = useState(false);
 
   // Compute validation status for this era
   const validation = useMemo(() => {
@@ -295,81 +295,66 @@ export function EraCard({
         <div className="expandable-card-content">
           <BasicInfoSection era={era} onFieldChange={handleFieldChange} />
 
-          <GeneratorsSection
-            templateWeights={templateWeights}
-            activeCount={activeGenerators}
-            getGeneratorName={getGeneratorName}
-            onWeightChange={handleWeightChange}
-            onRemove={handleRemoveWeight}
-            availableGenerators={availableGenerators}
-            onAdd={handleAddWeight}
-          />
-
-          <SystemsSection
-            systemModifiers={systemModifiers}
-            activeCount={activeSystems}
-            getSystemName={getSystemName}
-            onModifierChange={handleModifierChange}
-            onRemove={handleRemoveModifier}
-            availableSystems={availableSystems}
-            onAdd={handleAddModifier}
-          />
-
-          <ConditionsSection
-            title="Entry Conditions"
-            icon="🚪"
-            description="All conditions must be met for this era to START. Empty = can always start when the previous era exits."
-            emptyMessage="No entry conditions. This era can start immediately when the previous era exits."
-            conditions={entryConditions}
-            onUpdate={handleUpdateEntryCondition}
-            onRemove={handleRemoveEntryCondition}
-            onAdd={handleAddEntryCondition}
-            addLabel="Add Entry Condition"
+          {/* Two-column transitions grid: Entry (left) | Exit (right) */}
+          <TransitionsGrid
+            entryConditions={entryConditions}
+            exitConditions={exitConditions}
+            entryPressureChanges={entryPressureChanges}
+            exitPressureChanges={exitPressureChanges}
+            onUpdateEntryCondition={handleUpdateEntryCondition}
+            onRemoveEntryCondition={handleRemoveEntryCondition}
+            onAddEntryCondition={handleAddEntryCondition}
+            onUpdateExitCondition={handleUpdateExitCondition}
+            onRemoveExitCondition={handleRemoveExitCondition}
+            onAddExitCondition={handleAddExitCondition}
+            onUpdateEntryEffect={handleUpdateEntryEffect}
+            onRemoveEntryEffect={handleRemoveEntryEffect}
+            onAddEntryEffect={handleAddEntryEffect}
+            onUpdateExitEffect={handleUpdateExitEffect}
+            onRemoveExitEffect={handleRemoveExitEffect}
+            onAddExitEffect={handleAddExitEffect}
+            availablePressuresForEntry={availablePressuresForEntry}
+            availablePressuresForExit={availablePressuresForExit}
             pressures={pressures}
             schema={schema}
           />
 
-          <EffectsSection
-            title="Entry Effects"
-            icon="✨"
-            description="Pressure changes applied when this era STARTS."
-            emptyMessage="No entry effects defined."
-            pressureChanges={entryPressureChanges}
-            onUpdate={handleUpdateEntryEffect}
-            onRemove={handleRemoveEntryEffect}
-            availablePressures={availablePressuresForEntry}
-            onAdd={handleAddEntryEffect}
-            addPlaceholder="Add entry effect..."
-            pressures={pressures}
-          />
+          {/* Weights Accordion - Generators & Systems */}
+          <div className="weights-accordion">
+            <div
+              className={`weights-accordion-header ${weightsExpanded ? 'expanded' : ''}`}
+              onClick={() => setWeightsExpanded(!weightsExpanded)}
+            >
+              <span className="weights-accordion-icon">{weightsExpanded ? '▼' : '▶'}</span>
+              <span className="weights-accordion-title">Generator & System Weights</span>
+              <span className="weights-accordion-summary">
+                {activeGenerators} generator{activeGenerators !== 1 ? 's' : ''}, {activeSystems} system{activeSystems !== 1 ? 's' : ''}
+              </span>
+            </div>
+            {weightsExpanded && (
+              <div className="weights-accordion-content">
+                <GeneratorsSection
+                  templateWeights={templateWeights}
+                  activeCount={activeGenerators}
+                  getGeneratorName={getGeneratorName}
+                  onWeightChange={handleWeightChange}
+                  onRemove={handleRemoveWeight}
+                  availableGenerators={availableGenerators}
+                  onAdd={handleAddWeight}
+                />
 
-          <ConditionsSection
-            title="Exit Conditions"
-            icon="🔄"
-            description="All conditions must be met for this era to END and transition to the next era."
-            emptyMessage="No exit conditions. The era will transition immediately when a valid next era is found."
-            conditions={exitConditions}
-            onUpdate={handleUpdateExitCondition}
-            onRemove={handleRemoveExitCondition}
-            onAdd={handleAddExitCondition}
-            addLabel="Add Exit Condition"
-            pressures={pressures}
-            schema={schema}
-          />
-
-          <EffectsSection
-            title="Exit Effects"
-            icon="💫"
-            description="Pressure changes applied when this era ENDS."
-            emptyMessage="No exit effects defined."
-            pressureChanges={exitPressureChanges}
-            onUpdate={handleUpdateExitEffect}
-            onRemove={handleRemoveExitEffect}
-            availablePressures={availablePressuresForExit}
-            onAdd={handleAddExitEffect}
-            addPlaceholder="Add exit effect..."
-            pressures={pressures}
-          />
+                <SystemsSection
+                  systemModifiers={systemModifiers}
+                  activeCount={activeSystems}
+                  getSystemName={getSystemName}
+                  onModifierChange={handleModifierChange}
+                  onRemove={handleRemoveModifier}
+                  availableSystems={availableSystems}
+                  onAdd={handleAddModifier}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Delete button */}
           <div className="card-footer">

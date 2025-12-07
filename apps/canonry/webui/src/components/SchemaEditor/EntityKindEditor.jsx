@@ -53,6 +53,20 @@ function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
+/**
+ * Get usage info for a specific subtype
+ */
+function getSubtypeUsage(schemaUsage, entityKind, subtypeId) {
+  const subtypeUsage = schemaUsage?.subtypes?.[entityKind]?.[subtypeId];
+  if (!subtypeUsage) {
+    return { generators: 0, systems: 0, seeds: 0, total: 0 };
+  }
+  const generators = subtypeUsage.generators?.length || 0;
+  const systems = subtypeUsage.systems?.length || 0;
+  const seeds = subtypeUsage.seeds?.length || 0;
+  return { generators, systems, seeds, total: generators + systems + seeds };
+}
+
 export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = {}, namingData = {} }) {
   const [expandedKinds, setExpandedKinds] = useState({});
   const [newSubtype, setNewSubtype] = useState({});
@@ -220,17 +234,41 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                 <div className="section">
                   <div className="section-title">Subtypes</div>
                   <div className="chip-list">
-                    {ek.subtypes.map((subtype) => (
-                      <div key={subtype.id} className="chip">
-                        <span>{subtype.name}</span>
-                        <button
-                          className="chip-remove"
-                          onClick={() => removeSubtype(ek.kind, subtype.id)}
+                    {ek.subtypes.map((subtype) => {
+                      const usage = getSubtypeUsage(schemaUsage, ek.kind, subtype.id);
+                      const isUnused = usage.total === 0;
+                      const tooltipParts = [];
+                      if (usage.generators > 0) tooltipParts.push(`${usage.generators} generator${usage.generators !== 1 ? 's' : ''}`);
+                      if (usage.systems > 0) tooltipParts.push(`${usage.systems} system${usage.systems !== 1 ? 's' : ''}`);
+                      if (usage.seeds > 0) tooltipParts.push(`${usage.seeds} seed${usage.seeds !== 1 ? 's' : ''}`);
+                      const tooltip = tooltipParts.length > 0 ? tooltipParts.join(', ') : 'Not used by any generator, system, or seed';
+
+                      return (
+                        <div
+                          key={subtype.id}
+                          className={`chip ${isUnused ? 'chip-unused' : ''}`}
+                          title={tooltip}
                         >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                          <span className="chip-content">
+                            {subtype.name}
+                            {usage.total > 0 && (
+                              <span className="chip-usage-indicators">
+                                {usage.generators > 0 && <span className="usage-dot generator" title={`${usage.generators} generator${usage.generators !== 1 ? 's' : ''}`}>G</span>}
+                                {usage.systems > 0 && <span className="usage-dot system" title={`${usage.systems} system${usage.systems !== 1 ? 's' : ''}`}>S</span>}
+                                {usage.seeds > 0 && <span className="usage-dot seed" title={`${usage.seeds} seed${usage.seeds !== 1 ? 's' : ''}`}>E</span>}
+                              </span>
+                            )}
+                            {isUnused && <span className="usage-dot unused" title="Unused">∅</span>}
+                          </span>
+                          <button
+                            className="chip-remove"
+                            onClick={() => removeSubtype(ek.kind, subtype.id)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="chip-input-row">
                     <input

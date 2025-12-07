@@ -172,7 +172,8 @@
         "crisis-driven",
         "individual"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "succession",
@@ -368,7 +369,8 @@
         "succession",
         "leadership-change"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "orca_raider_arrival",
@@ -604,7 +606,8 @@
         "invasion",
         "cluster"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "faction_splinter",
@@ -884,7 +887,8 @@
         "conflict",
         "faction-diversity"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "territorial_expansion",
@@ -1029,7 +1033,8 @@
         "political",
         "territorial"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "trade_route_establishment",
@@ -1182,7 +1187,8 @@
         "economic",
         "trade"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "guild_establishment",
@@ -1421,7 +1427,8 @@
         "colony-centric",
         "cluster-forming"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "cult_formation",
@@ -1719,7 +1726,8 @@
         "anomaly-driven",
         "cluster-forming"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "colony_founding",
@@ -1856,7 +1864,8 @@
         "colony-formation",
         "region-aware"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "anomaly_manifestation",
@@ -2028,7 +2037,8 @@
         "pressure-driven",
         "region-aware"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "resource_location_discovery",
@@ -2187,7 +2197,8 @@
         "resource",
         "scarcity-driven"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "emergent_location_discovery",
@@ -2340,7 +2351,8 @@
         "discovery",
         "adaptive"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "geographic_exploration",
@@ -2510,7 +2522,8 @@
         "exploration",
         "era-driven"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "krill_bloom_migration",
@@ -2802,7 +2815,8 @@
         "voronoi-placement",
         "frontier"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "war_outbreak",
@@ -2936,7 +2950,8 @@
         "occurrence",
         "war"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "succession_crisis",
@@ -3057,7 +3072,8 @@
         "occurrence",
         "political"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "legend_crystallization",
@@ -3187,7 +3203,8 @@
         "cultural",
         "legend"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "crisis_legislation",
@@ -3374,7 +3391,8 @@
         "crisis-driven",
         "legislation"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "great_festival",
@@ -3647,7 +3665,8 @@
         "unity",
         "cultural"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "tech_breakthrough",
@@ -3757,12 +3776,9 @@
       },
       "$leader": {
         "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationship": "leader_of",
-            "direction": "dst"
-          },
-          "pickStrategy": "first"
+          "from": "graph",
+          "pickStrategy": "first",
+          "kind": "abilities"
         }
       },
       "$existingTech": {
@@ -3864,7 +3880,8 @@
         "technological",
         "innovation"
       ]
-    }
+    },
+    "enabled": true
   },
   {
     "id": "magical_site_discovery",
@@ -4000,7 +4017,8 @@
         "magical",
         "discovery"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "orca_combat_technique",
@@ -4199,7 +4217,8 @@
         "external-threat",
         "ability-creation"
       ]
-    }
+    },
+    "enabled": true
   },
   {
     "id": "tech_innovation",
@@ -4425,7 +4444,8 @@
         "technology",
         "ability-creation"
       ]
-    }
+    },
+    "enabled": true
   },
   {
     "id": "magic_discovery",
@@ -4447,27 +4467,24 @@
       {
         "type": "entity_count_min",
         "kind": "npc",
-        "subtype": "hero",
         "min": 1
       }
     ],
     "selection": {
       "strategy": "by_kind",
       "kind": "npc",
-      "subtypes": [
-        "hero"
-      ],
       "filters": [
         {
           "type": "graph_path",
           "assert": {
             "check": "count_max",
-            "count": 1,
+            "count": 2,
             "path": [
               {
                 "via": "discovered_by",
                 "direction": "out",
-                "targetKind": "abilities"
+                "targetKind": "abilities",
+                "targetSubtype": "magic"
               }
             ]
           }
@@ -4495,8 +4512,8 @@
           "mystical": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentMagic"
+          "type": "in_culture_region",
+          "culture": "$target"
         }
       }
     ],
@@ -4638,7 +4655,8 @@
         "mystical",
         "ability-creation"
       ]
-    }
+    },
+    "enabled": true
   },
   {
     "id": "ideology_emergence",
@@ -4963,7 +4981,8 @@
         "cultural-shift",
         "belief-driven"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "strategic_location_discovery",
@@ -5107,7 +5126,8 @@
         "strategic",
         "conflict-driven"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "thermal_colony_decline",
@@ -5167,7 +5187,8 @@
       "thermal",
       "colony",
       "status-change"
-    ]
+    ],
+    "enabled": false
   },
   {
     "id": "thermal_colony_recovery",
@@ -5232,7 +5253,8 @@
       "thermal",
       "colony",
       "recovery"
-    ]
+    ],
+    "enabled": false
   },
   {
     "id": "thermal_migration",
@@ -5333,7 +5355,8 @@
       "thermal",
       "migration",
       "npc"
-    ]
+    ],
+    "enabled": false
   },
   {
     "id": "ice_memory_thaw",
@@ -5410,7 +5433,8 @@
       "thermal",
       "discovery",
       "abilities"
-    ]
+    ],
+    "enabled": false
   },
   {
     "id": "economic_colony_decline",
@@ -5470,7 +5494,8 @@
       "economic",
       "colony",
       "status-change"
-    ]
+    ],
+    "enabled": false
   },
   {
     "id": "economic_colony_recovery",
@@ -5535,6 +5560,137 @@
       "economic",
       "colony",
       "recovery"
-    ]
+    ],
+    "enabled": false
+  },
+  {
+    "id": "wild_magic_discover",
+    "name": "Wild Magical Discovery",
+    "applicability": [
+      {
+        "type": "pressure_threshold",
+        "pressureId": "magical_instability",
+        "min": 10,
+        "max": 70,
+        "extremeChance": 0.4
+      },
+      {
+        "type": "entity_count_max",
+        "kind": "abilities",
+        "subtype": "magic",
+        "max": 15
+      },
+      {
+        "type": "entity_count_min",
+        "kind": "abilities",
+        "min": 5,
+        "subtype": "magic"
+      }
+    ],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "subtypes": [
+        "anomaly"
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$magic",
+        "kind": "abilities",
+        "subtype": "magic",
+        "status": "secret",
+        "prominence": "recognized",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "Mystical ability discovered by {heroName}",
+          "replacements": {
+            "heroName": "$target.name"
+          }
+        },
+        "tags": {
+          "mystical": true
+        },
+        "placement": {
+          "type": "random_in_bounds"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "manifests_at",
+        "src": "$magic",
+        "dst": "$target",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$anomaly"
+        }
+      }
+    ],
+    "stateUpdates": [],
+    "variables": {},
+    "metadata": {
+      "produces": {
+        "entityKinds": [
+          {
+            "kind": "abilities",
+            "subtype": "magic",
+            "count": {
+              "min": 1,
+              "max": 1
+            },
+            "prominence": [
+              {
+                "level": "recognized",
+                "probability": 1
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "kind": "discovered_by",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Hero discovers magic"
+          },
+          {
+            "kind": "manifests_at",
+            "category": "immutable_fact",
+            "probability": 1,
+            "comment": "Magic manifests at anomaly"
+          },
+          {
+            "kind": "related_to",
+            "category": "immutable_fact",
+            "probability": 0.7,
+            "comment": "Related to existing magic"
+          }
+        ]
+      },
+      "effects": {
+        "graphDensity": 0.3,
+        "clusterFormation": 0.4,
+        "diversityImpact": 0.9,
+        "comment": "Creates mystical abilities linked to anomalies and heroes"
+      },
+      "parameters": {
+        "maxDiscoveriesPerHero": {
+          "value": 2,
+          "min": 1,
+          "max": 5,
+          "description": "Maximum abilities a single hero can discover"
+        }
+      },
+      "tags": [
+        "mystical",
+        "ability-creation"
+      ]
+    },
+    "enabled": true
   }
 ]

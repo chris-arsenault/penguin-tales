@@ -14,6 +14,7 @@ export default function ProfileModal({
   onSave,
   onClose,
   onDelete,
+  onDuplicate,
   cultureConfig,
   worldSchema,
   onAddTag,
@@ -125,6 +126,14 @@ export default function ProfileModal({
     }
   };
 
+  const handleDuplicate = () => {
+    // Save any pending changes first
+    if (editedProfile && JSON.stringify(editedProfile) !== lastSavedRef.current) {
+      handleSave(editedProfile);
+    }
+    onDuplicate(editedProfile);
+  };
+
   const handleAddGroup = (withConditions = false) => {
     const newGroup = {
       name: withConditions ? 'Conditional' : 'Default',
@@ -180,8 +189,10 @@ export default function ProfileModal({
           profile={editedProfile}
           onChange={setEditedProfile}
           onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
           onNavigateToGroup={(idx) => setActiveTab(`group-${idx}`)}
           generatorUsage={generatorUsage}
+          entityKinds={entityKinds}
         />
       );
     }
@@ -209,6 +220,7 @@ export default function ProfileModal({
             domains={domains}
             grammars={grammars}
             entityKinds={entityKinds}
+            worldSchema={worldSchema}
             tagRegistry={tagRegistry}
             onAddTag={onAddTag}
           />

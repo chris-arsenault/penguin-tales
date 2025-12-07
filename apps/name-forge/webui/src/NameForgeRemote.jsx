@@ -16,6 +16,7 @@ import { CultureSidebar } from './components/sidebar';
 import { EntityWorkspace } from './components/workspace';
 import { OptimizerWorkshop } from './components/optimizer';
 import { GenerateTab } from './components/generator';
+import ProfileCoverageMatrix from './components/coverage/ProfileCoverageMatrix';
 
 /**
  * Convert Canonry schema format to Name Forge internal format
@@ -51,6 +52,7 @@ function convertCulturesToInternal(schemaCultures, namingData) {
       description: culture.description || '',
       domains: naming?.domains || [],
       lexemeLists: naming?.lexemeLists || {},
+      lexemeSpecs: naming?.lexemeSpecs || [],
       grammars: naming?.grammars || [],
       profiles: naming?.profiles || [],
     };
@@ -66,6 +68,7 @@ function extractNamingData(culture) {
   return {
     domains: culture.domains || [],
     lexemeLists: culture.lexemeLists || {},
+    lexemeSpecs: culture.lexemeSpecs || [],
     grammars: culture.grammars || [],
     profiles: culture.profiles || [],
   };
@@ -75,6 +78,7 @@ const TABS = [
   { id: 'workshop', label: 'Workshop' },
   { id: 'optimizer', label: 'Optimizer' },
   { id: 'generate', label: 'Generate' },
+  { id: 'coverage', label: 'Coverage' },
 ];
 
 export default function NameForgeRemote({
@@ -261,6 +265,20 @@ export default function NameForgeRemote({
               cultures={cultures}
               formState={generateFormState}
               onFormStateChange={setGenerateFormState}
+            />
+          </div>
+        )}
+
+        {activeTab === 'coverage' && (
+          <div className="nf-content">
+            <ProfileCoverageMatrix
+              cultures={cultures}
+              worldSchema={worldSchema}
+              onNavigateToProfile={(cultureId, profileId) => {
+                setSelectedCulture(cultureId);
+                setWorkspaceTab('profiles');
+                setActiveTab('workshop');
+              }}
             />
           </div>
         )}

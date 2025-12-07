@@ -20,12 +20,14 @@ import GeneratorsEditor from './components/GeneratorsEditor';
 import ActionsEditor from './components/ActionsEditor';
 import SystemsEditor from './components/SystemsEditor';
 import ValidationEditor, { getValidationStatus } from './components/ValidationEditor';
+import { WeightMatrixEditor } from './components/weight-matrix';
 import { computeUsageMap } from '@penguin-tales/shared-components';
 
 const TABS = [
   { id: 'validation', label: 'Validation' },
   { id: 'pressures', label: 'Pressures' },
   { id: 'eras', label: 'Eras' },
+  { id: 'matrix', label: 'Weight Matrix' },
   { id: 'generators', label: 'Generators' },
   { id: 'actions', label: 'Actions' },
   { id: 'systems', label: 'Systems' },
@@ -146,6 +148,10 @@ const SECTION_INFO = {
     title: 'Eras',
     description: 'Define historical eras and their characteristics. Eras determine which templates and systems are active during different phases of world generation.',
   },
+  matrix: {
+    title: 'Weight Matrix',
+    description: 'Spreadsheet view for managing generator and system weights across all eras. Quickly assign weights, copy configurations, and identify gaps.',
+  },
   generators: {
     title: 'Generators',
     description: 'Configure entity generators (growth templates) that populate the world. Each generator creates entities with specific characteristics and relationships.',
@@ -234,6 +240,15 @@ export default function CoherenceEngineRemote({
             pressures={pressures}
             schema={schema}
             usageMap={usageMap}
+          />
+        );
+      case 'matrix':
+        return (
+          <WeightMatrixEditor
+            generators={generators}
+            systems={systems}
+            eras={eras}
+            onErasChange={onErasChange || (() => {})}
           />
         );
       case 'generators':

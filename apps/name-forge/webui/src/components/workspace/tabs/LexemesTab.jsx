@@ -3,9 +3,10 @@ import { LEXEME_CATEGORIES } from '../../constants';
 import { generateLexemesWithAnthropic } from '../../../lib/anthropicClient';
 
 function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
-  const [mode, setMode] = useState('view'); // 'view', 'create-spec', 'create-manual', 'edit-list'
+  const [mode, setMode] = useState('view'); // 'view', 'create-spec', 'edit-spec', 'create-manual', 'edit-list'
   const [selectedList, setSelectedList] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
+  const [editingSpecId, setEditingSpecId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -39,6 +40,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
     const updatedSpecs = [...lexemeSpecs.filter(s => s.id !== newSpec.id), newSpec];
     onLexemesChange(undefined, updatedSpecs);
     setMode('view');
+    setEditingSpecId(null);
     setSpecForm({
       id: `${cultureId}_nouns`,
       pos: 'noun',
@@ -46,6 +48,18 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
       targetCount: 30,
       qualityFilter: { minLength: 3, maxLength: 15 }
     });
+  };
+
+  const handleEditSpec = (spec) => {
+    setSpecForm({
+      id: spec.id,
+      pos: spec.pos || 'noun',
+      style: spec.style || '',
+      targetCount: spec.targetCount || 30,
+      qualityFilter: spec.qualityFilter || { minLength: 3, maxLength: 15 }
+    });
+    setEditingSpecId(spec.id);
+    setMode('edit-spec');
   };
 
   const handleDeleteSpec = (specId) => {
@@ -208,6 +222,9 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
                           View
                         </button>
                       )}
+                      <button className="secondary sm" onClick={() => handleEditSpec(spec)}>
+                        Edit
+                      </button>
                       <button
                         className="primary sm"
                         onClick={() => handleGenerate(spec)}
@@ -305,15 +322,16 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
     );
   }
 
-  // Create Spec Mode
-  if (mode === 'create-spec') {
+  // Create/Edit Spec Mode
+  if (mode === 'create-spec' || mode === 'edit-spec') {
+    const isEditing = mode === 'edit-spec';
     return (
       <div>
         <div className="tab-header">
-          <h3>New Lexeme Spec</h3>
+          <h3>{isEditing ? 'Edit Lexeme Spec' : 'New Lexeme Spec'}</h3>
           <div className="flex gap-sm">
             <button className="primary" onClick={handleSaveSpec}>Save</button>
-            <button className="secondary" onClick={() => setMode('view')}>Cancel</button>
+            <button className="secondary" onClick={() => { setMode('view'); setEditingSpecId(null); }}>Cancel</button>
           </div>
         </div>
 
@@ -329,6 +347,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
             value={specForm.id}
             onChange={(e) => setSpecForm({ ...specForm, id: e.target.value })}
             placeholder={`${cultureId}_nouns`}
+            disabled={isEditing}
           />
           <small className="text-muted">Unique identifier for this spec. Use with <code>slot:{specForm.id || 'id'}</code> in grammars.</small>
         </div>
@@ -352,6 +371,11 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey }) {
               </optgroup>
               <optgroup label="Semantic">
                 {['place', 'creature', 'element', 'material', 'celestial', 'color', 'kinship', 'occupation', 'virtue', 'vice', 'number'].map(key => (
+                  <option key={key} value={key}>{LEXEME_CATEGORIES[key].label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Organizations">
+                {['collective', 'organization'].map(key => (
                   <option key={key} value={key}>{LEXEME_CATEGORIES[key].label}</option>
                 ))}
               </optgroup>

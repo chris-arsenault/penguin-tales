@@ -38,7 +38,7 @@
       "cullThreshold": 0.15,
       "gracePeriod": 20,
       "reinforcementBonus": 0.02,
-      "maxStrength": 1.0
+      "maxStrength": 1
     }
   },
   {
@@ -53,8 +53,16 @@
         "relationshipKind": "enemy_of"
       },
       "vectors": [
-        { "relationshipKind": "allied_with", "direction": "both", "minStrength": 0.5 },
-        { "relationshipKind": "member_of", "direction": "both", "minStrength": 0.5 }
+        {
+          "relationshipKind": "allied_with",
+          "direction": "both",
+          "minStrength": 0.5
+        },
+        {
+          "relationshipKind": "member_of",
+          "direction": "both",
+          "minStrength": 0.5
+        }
       ],
       "transmission": {
         "baseRate": 0.15,
@@ -68,8 +76,11 @@
       },
       "throttleChance": 0.2,
       "cooldown": 8,
-      "pressureChanges": { "conflict": 5 }
-    }
+      "pressureChanges": {
+        "conflict": 5
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -99,8 +110,11 @@
         }
       ],
       "throttleChance": 0.3,
-      "pressureChanges": { "diplomacy": 3 }
-    }
+      "pressureChanges": {
+        "diplomacy": 3
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -129,7 +143,8 @@
         }
       ],
       "throttleChance": 0.2
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -165,8 +180,11 @@
       "minClusterSize": 2,
       "throttleChance": 0.3,
       "cooldownTag": "conflict_cooldown",
-      "pressureChanges": { "conflict": 5 }
-    }
+      "pressureChanges": {
+        "conflict": 5
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -207,8 +225,12 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.2,
-      "pressureChanges": { "stability": -15, "conflict": 10 }
-    }
+      "pressureChanges": {
+        "stability": -15,
+        "conflict": 10
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -241,7 +263,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.2
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -251,32 +274,58 @@
       "description": "Clusters magic abilities into unified schools to create narrative density",
       "entityFilter": {
         "kind": "abilities",
-        "excludeSubtypes": ["combat", "physical"]
+        "excludeSubtypes": [
+          "combat",
+          "physical"
+        ]
       },
       "runAtEpochEnd": true,
       "clustering": {
         "minSize": 3,
         "maxSize": 8,
         "criteria": [
-          { "type": "shared_relationship", "weight": 5.0, "relationshipKind": "practitioner_of", "direction": "dst" },
-          { "type": "same_culture", "weight": 4.0 },
-          { "type": "shared_tags", "weight": 2.0, "threshold": 0.3 },
-          { "type": "temporal_proximity", "weight": 1.5, "threshold": 50 }
+          {
+            "type": "shared_relationship",
+            "weight": 5,
+            "relationshipKind": "practitioner_of",
+            "direction": "dst"
+          },
+          {
+            "type": "same_culture",
+            "weight": 4
+          },
+          {
+            "type": "shared_tags",
+            "weight": 2,
+            "threshold": 0.3
+          },
+          {
+            "type": "temporal_proximity",
+            "weight": 1.5,
+            "threshold": 50
+          }
         ],
-        "minimumScore": 5.0
+        "minimumScore": 5
       },
       "metaEntity": {
         "kind": "abilities",
         "subtypeFromMajority": true,
         "status": "active",
-        "prominenceFromSize": { "marginal": 3, "recognized": 4, "renowned": 6 },
+        "prominenceFromSize": {
+          "marginal": 3,
+          "recognized": 4,
+          "renowned": 6
+        },
         "additionalTags": [],
         "descriptionTemplate": "A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins."
       },
       "postProcess": {
-        "pressureChanges": { "stability": 2 }
+        "pressureChanges": {
+          "stability": 2
+        }
       }
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -286,32 +335,60 @@
       "description": "Clusters combat abilities into unified fighting styles",
       "entityFilter": {
         "kind": "abilities",
-        "subtypes": ["combat", "physical"]
+        "subtypes": [
+          "combat",
+          "physical"
+        ]
       },
       "runAtEpochEnd": true,
       "clustering": {
         "minSize": 3,
         "maxSize": 8,
         "criteria": [
-          { "type": "shared_relationship", "weight": 5.0, "relationshipKind": "practitioner_of", "direction": "dst" },
-          { "type": "same_culture", "weight": 4.0 },
-          { "type": "shared_tags", "weight": 2.0, "threshold": 0.3 },
-          { "type": "temporal_proximity", "weight": 1.5, "threshold": 50 }
+          {
+            "type": "shared_relationship",
+            "weight": 5,
+            "relationshipKind": "practitioner_of",
+            "direction": "dst"
+          },
+          {
+            "type": "same_culture",
+            "weight": 4
+          },
+          {
+            "type": "shared_tags",
+            "weight": 2,
+            "threshold": 0.3
+          },
+          {
+            "type": "temporal_proximity",
+            "weight": 1.5,
+            "threshold": 50
+          }
         ],
-        "minimumScore": 5.0
+        "minimumScore": 5
       },
       "metaEntity": {
         "kind": "abilities",
         "subtypeFromMajority": true,
         "status": "active",
-        "prominenceFromSize": { "marginal": 3, "recognized": 4, "renowned": 6 },
-        "additionalTags": ["combat-style"],
+        "prominenceFromSize": {
+          "marginal": 3,
+          "recognized": 4,
+          "renowned": 6
+        },
+        "additionalTags": [
+          "combat-style"
+        ],
         "descriptionTemplate": "A unified combat tradition encompassing {names}. Mastered by warriors who practice {count} techniques in harmony."
       },
       "postProcess": {
-        "pressureChanges": { "stability": 2 }
+        "pressureChanges": {
+          "stability": 2
+        }
       }
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -326,16 +403,27 @@
       "clustering": {
         "minSize": 4,
         "criteria": [
-          { "type": "same_culture", "weight": 5.0 },
-          { "type": "temporal_proximity", "weight": 2.0, "threshold": 40 }
+          {
+            "type": "same_culture",
+            "weight": 5
+          },
+          {
+            "type": "temporal_proximity",
+            "weight": 2,
+            "threshold": 40
+          }
         ],
-        "minimumScore": 5.0
+        "minimumScore": 5
       },
       "metaEntity": {
         "kind": "rules",
         "subtypeFromMajority": true,
         "status": "enacted",
-        "prominenceFromSize": { "marginal": 4, "recognized": 5, "renowned": 7 },
+        "prominenceFromSize": {
+          "marginal": 4,
+          "recognized": 5,
+          "renowned": 7
+        },
         "additionalTags": [],
         "descriptionTemplate": "A unified legal system encompassing {names}. Codified from {count} related rules."
       },
@@ -343,9 +431,12 @@
         "createGovernanceFaction": true,
         "governanceFactionSubtype": "political",
         "governanceRelationship": "weaponized_by",
-        "pressureChanges": { "stability": 5 }
+        "pressureChanges": {
+          "stability": 5
+        }
       }
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "graphContagion",
@@ -360,8 +451,16 @@
         "relationshipKind": "believer_of"
       },
       "vectors": [
-        { "relationshipKind": "believer_of", "direction": "both", "minStrength": 0.3 },
-        { "relationshipKind": "member_of", "direction": "src", "minStrength": 0.3 }
+        {
+          "relationshipKind": "believer_of",
+          "direction": "both",
+          "minStrength": 0.3
+        },
+        {
+          "relationshipKind": "member_of",
+          "direction": "src",
+          "minStrength": 0.3
+        }
       ],
       "transmission": {
         "baseRate": 0.15,
@@ -376,15 +475,33 @@
       "recovery": {
         "baseRate": 0.03,
         "recoveryBonusTraits": [
-          { "tag": "traditional", "bonus": 0.15 },
-          { "tag": "conservative", "bonus": 0.15 }
+          {
+            "tag": "traditional",
+            "bonus": 0.15
+          },
+          {
+            "tag": "conservative",
+            "bonus": 0.15
+          }
         ]
       },
       "susceptibilityModifiers": [
-        { "tag": "traditional", "modifier": 0.3 },
-        { "tag": "conservative", "modifier": 0.3 },
-        { "tag": "radical", "modifier": -0.2 },
-        { "tag": "innovator", "modifier": -0.2 }
+        {
+          "tag": "traditional",
+          "modifier": 0.3
+        },
+        {
+          "tag": "conservative",
+          "modifier": 0.3
+        },
+        {
+          "tag": "radical",
+          "modifier": -0.2
+        },
+        {
+          "tag": "innovator",
+          "modifier": -0.2
+        }
       ],
       "phaseTransitions": [
         {
@@ -402,8 +519,12 @@
         "lowAdoptionThreshold": 0.05,
         "lowAdoptionStatus": "forgotten"
       },
-      "pressureChanges": { "cultural_tension": -10, "stability": 5 }
-    }
+      "pressureChanges": {
+        "cultural_tension": -10,
+        "stability": 5
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "tagDiffusion",
@@ -416,13 +537,22 @@
       "connectionKind": "adjacent_to",
       "connectionDirection": "both",
       "convergence": {
-        "tags": ["trade", "friendly", "central", "thriving"],
+        "tags": [
+          "trade",
+          "friendly",
+          "central",
+          "thriving"
+        ],
         "minConnections": 1,
         "probability": 0.3,
         "maxSharedTags": 2
       },
       "divergence": {
-        "tags": ["hidden", "secretive", "mystical"],
+        "tags": [
+          "hidden",
+          "secretive",
+          "mystical"
+        ],
         "maxConnections": 0,
         "probability": 0.3
       },
@@ -432,7 +562,8 @@
         "minDivergent": 2,
         "delta": 10
       }
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "planeDiffusion",
@@ -443,7 +574,7 @@
       "entityKind": "location",
       "sources": {
         "tagFilter": "anomaly",
-        "defaultStrength": 1.0
+        "defaultStrength": 1
       },
       "sinks": {
         "tagFilter": "central",
@@ -455,11 +586,18 @@
         "maxRadius": 50
       },
       "outputTags": [
-        { "tag": "dangerous", "minValue": 0.7 },
-        { "tag": "safe", "maxValue": 0.3 }
+        {
+          "tag": "dangerous",
+          "minValue": 0.7
+        },
+        {
+          "tag": "safe",
+          "maxValue": 0.3
+        }
       ],
       "valueTag": "temperature"
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -475,7 +613,10 @@
       "conditions": [
         {
           "type": "has_any_tag",
-          "tags": ["dangerous", "anomaly"]
+          "tags": [
+            "dangerous",
+            "anomaly"
+          ]
         }
       ],
       "actions": [
@@ -492,7 +633,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -526,7 +668,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -561,7 +704,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.5
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "planeDiffusion",
@@ -572,7 +716,7 @@
       "entityKind": "location",
       "sources": {
         "tagFilter": "resource",
-        "defaultStrength": 1.0
+        "defaultStrength": 1
       },
       "diffusion": {
         "rate": 0.15,
@@ -580,11 +724,18 @@
         "maxRadius": 40
       },
       "outputTags": [
-        { "tag": "thriving", "minValue": 0.6 },
-        { "tag": "stressed", "maxValue": 0.2 }
+        {
+          "tag": "thriving",
+          "minValue": 0.6
+        },
+        {
+          "tag": "stressed",
+          "maxValue": 0.2
+        }
       ],
       "valueTag": "resource_level"
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -620,8 +771,12 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3,
-      "pressureChanges": { "resource_scarcity": 15, "conflict": 5 }
-    }
+      "pressureChanges": {
+        "resource_scarcity": 15,
+        "conflict": 5
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -641,7 +796,10 @@
         },
         {
           "type": "has_any_tag",
-          "tags": ["trade", "resource"]
+          "tags": [
+            "trade",
+            "resource"
+          ]
         }
       ],
       "actions": [
@@ -658,8 +816,12 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3,
-      "pressureChanges": { "resource_scarcity": -5, "stability": 5 }
-    }
+      "pressureChanges": {
+        "resource_scarcity": -5,
+        "stability": 5
+      }
+    },
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -689,7 +851,8 @@
         }
       ],
       "throttleChance": 0.3
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -724,7 +887,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -759,7 +923,8 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.3
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -792,7 +957,10 @@
       ],
       "clusterMode": "individual",
       "throttleChance": 0.1,
-      "pressureChanges": { "external_threat": 10 }
-    }
+      "pressureChanges": {
+        "external_threat": 10
+      }
+    },
+    "enabled": false
   }
 ]

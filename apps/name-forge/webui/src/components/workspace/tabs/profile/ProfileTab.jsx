@@ -67,6 +67,27 @@ export default function ProfileTab({
     onProfilesChange(newProfiles);
   };
 
+  const handleDuplicateProfile = (profile) => {
+    // Generate unique ID
+    let newId = `${profile.id}_copy`;
+    let counter = 1;
+    while (profiles.some((p) => p.id === newId)) {
+      newId = `${profile.id}_copy${counter++}`;
+    }
+
+    // Deep clone the profile with new ID
+    const duplicated = {
+      ...JSON.parse(JSON.stringify(profile)),
+      id: newId,
+      isDefault: false, // Don't copy default status
+    };
+
+    // Add to profiles and open for editing
+    onProfilesChange([...profiles, duplicated]);
+    setEditingProfile(duplicated);
+    setIsNewProfile(false);
+  };
+
   const handleCloseModal = () => {
     setEditingProfile(null);
     setIsNewProfile(false);
@@ -116,11 +137,21 @@ export default function ProfileTab({
               >
                 <div className="profile-card-header">
                   <strong className="profile-card-title">{profile.id}</strong>
-                  {matchCount > 0 && (
-                    <span className="generator-match-pill">
-                      {matchCount} generator{matchCount !== 1 ? 's' : ''}
-                    </span>
-                  )}
+                  <div className="profile-badges">
+                    {profile.isDefault && (
+                      <span className="profile-badge default">Default</span>
+                    )}
+                    {profile.entityKinds?.length > 0 && (
+                      <span className="profile-badge kinds" title={profile.entityKinds.join(', ')}>
+                        {profile.entityKinds.length} kind{profile.entityKinds.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {matchCount > 0 && (
+                      <span className="generator-match-pill">
+                        {matchCount} generator{matchCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="profile-card-stats">
                   <span className="profile-stat">
@@ -150,6 +181,7 @@ export default function ProfileTab({
           onSave={handleSaveProfile}
           onClose={handleCloseModal}
           onDelete={handleDeleteProfile}
+          onDuplicate={handleDuplicateProfile}
           cultureConfig={cultureConfig}
           worldSchema={worldSchema}
           onAddTag={onAddTag}

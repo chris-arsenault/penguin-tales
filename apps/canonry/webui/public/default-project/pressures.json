@@ -8,8 +8,15 @@
       "positiveFeedback": [
         {
           "type": "ratio",
-          "numerator": { "type": "entity_count", "kind": "npc" },
-          "denominator": { "type": "entity_count", "kind": "location", "subtype": "colony" },
+          "numerator": {
+            "type": "entity_count",
+            "kind": "npc"
+          },
+          "denominator": {
+            "type": "entity_count",
+            "kind": "location",
+            "subtype": "colony"
+          },
           "fallbackValue": 0,
           "coefficient": 5,
           "cap": 10
@@ -40,14 +47,33 @@
       "positiveFeedback": [
         {
           "type": "ratio",
-          "numerator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "enemy_of", "at_war_with"] },
-          "denominator": { "type": "relationship_count", "relationshipKinds": ["enemy_of", "enemy_of", "at_war_with", "allied_with", "trades_with", "member_of"] },
+          "numerator": {
+            "type": "relationship_count",
+            "relationshipKinds": [
+              "enemy_of",
+              "enemy_of",
+              "at_war_with"
+            ]
+          },
+          "denominator": {
+            "type": "relationship_count",
+            "relationshipKinds": [
+              "enemy_of",
+              "enemy_of",
+              "at_war_with",
+              "allied_with",
+              "trades_with",
+              "member_of"
+            ]
+          },
           "fallbackValue": 0,
           "coefficient": 10
         },
         {
           "type": "relationship_count",
-          "relationshipKinds": ["at_war_with"],
+          "relationshipKinds": [
+            "at_war_with"
+          ],
           "coefficient": 2,
           "cap": 5
         }
@@ -68,12 +94,18 @@
     "initialValue": 30,
     "decay": 6,
     "growth": {
-      "baseGrowth": 2.0,
+      "baseGrowth": 2,
       "positiveFeedback": [
         {
           "type": "ratio",
-          "numerator": { "type": "entity_count", "kind": "location", "subtype": "anomaly" },
-          "denominator": { "type": "total_entities" },
+          "numerator": {
+            "type": "entity_count",
+            "kind": "location",
+            "subtype": "anomaly"
+          },
+          "denominator": {
+            "type": "total_entities"
+          },
           "fallbackValue": 0,
           "coefficient": 50,
           "cap": 5
@@ -93,8 +125,15 @@
         },
         {
           "type": "ratio",
-          "numerator": { "type": "entity_count", "kind": "abilities", "subtype": "magic" },
-          "denominator": { "type": "entity_count", "kind": "abilities" },
+          "numerator": {
+            "type": "entity_count",
+            "kind": "abilities",
+            "subtype": "magic"
+          },
+          "denominator": {
+            "type": "entity_count",
+            "kind": "abilities"
+          },
           "fallbackValue": 0,
           "coefficient": 5
         }
@@ -118,8 +157,21 @@
       "positiveFeedback": [
         {
           "type": "ratio",
-          "numerator": { "type": "relationship_count", "relationshipKinds": ["allied_with"] },
-          "denominator": { "type": "relationship_count", "relationshipKinds": ["allied_with", "enemy_of", "enemy_of", "at_war_with"] },
+          "numerator": {
+            "type": "relationship_count",
+            "relationshipKinds": [
+              "allied_with"
+            ]
+          },
+          "denominator": {
+            "type": "relationship_count",
+            "relationshipKinds": [
+              "allied_with",
+              "enemy_of",
+              "enemy_of",
+              "at_war_with"
+            ]
+          },
           "fallbackValue": 0.5,
           "coefficient": 7
         },
@@ -132,7 +184,9 @@
         },
         {
           "type": "relationship_count",
-          "relationshipKinds": ["leader_of"],
+          "relationshipKinds": [
+            "leader_of"
+          ],
           "coefficient": 0.3
         }
       ],
@@ -148,7 +202,11 @@
       "positiveFeedback": [
         {
           "type": "tag_count",
-          "tags": ["external", "hostile", "raider"],
+          "tags": [
+            "external",
+            "hostile",
+            "raider"
+          ],
           "coefficient": 10
         },
         {
@@ -170,13 +228,27 @@
       "positiveFeedback": [
         {
           "type": "cross_culture_ratio",
-          "relationshipKinds": ["believer_of", "enemy_of", "allied_with", "enemy_of", "allied_with"],
+          "relationshipKinds": [
+            "believer_of",
+            "enemy_of",
+            "allied_with",
+            "enemy_of",
+            "allied_with"
+          ],
           "coefficient": 10
         },
         {
           "type": "ratio",
-          "numerator": { "type": "relationship_count", "relationshipKinds": ["splinter_of"] },
-          "denominator": { "type": "entity_count", "kind": "faction" },
+          "numerator": {
+            "type": "relationship_count",
+            "relationshipKinds": [
+              "splinter_of"
+            ]
+          },
+          "denominator": {
+            "type": "entity_count",
+            "kind": "faction"
+          },
           "fallbackValue": 0,
           "coefficient": 5
         }
@@ -194,7 +266,10 @@
       "positiveFeedback": [
         {
           "type": "relationship_count",
-          "relationshipKinds": ["allied_with", "trades_with"],
+          "relationshipKinds": [
+            "allied_with",
+            "trades_with"
+          ],
           "coefficient": 0.5
         },
         {
@@ -207,7 +282,10 @@
       "negativeFeedback": [
         {
           "type": "relationship_count",
-          "relationshipKinds": ["at_war_with", "enemy_of"],
+          "relationshipKinds": [
+            "at_war_with",
+            "enemy_of"
+          ],
           "coefficient": 0.4
         }
       ]

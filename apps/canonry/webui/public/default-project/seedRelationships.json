@@ -3,19 +3,19 @@
     "kind": "contains",
     "src": "loc_aurora_berg",
     "dst": "loc_aurora_stack",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "contains",
     "src": "loc_aurora_berg",
     "dst": "loc_nightfall_shelf",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "contains",
     "src": "loc_aurora_berg",
     "dst": "loc_glow_fissure",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "adjacent_to",
@@ -45,24 +45,24 @@
     "kind": "leader_of",
     "src": "npc_selka",
     "dst": "faction_icebound_exchange",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "resident_of",
     "src": "npc_selka",
     "dst": "loc_aurora_stack",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "leader_of",
     "src": "npc_nyla",
     "dst": "faction_midnight_claws",
-    "strength": 1.0
+    "strength": 1
   },
   {
     "kind": "resident_of",
     "src": "npc_nyla",
     "dst": "loc_nightfall_shelf",
-    "strength": 1.0
+    "strength": 1
   }
 ]

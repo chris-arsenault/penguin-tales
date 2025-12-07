@@ -3,13 +3,16 @@
  */
 
 import { useState, useRef } from 'react';
+import MultiSelectPills from '../MultiSelectPills';
 
 export default function OverviewTab({
   profile,
   onChange,
   onDelete,
+  onDuplicate,
   onNavigateToGroup,
   generatorUsage,
+  entityKinds = [],
 }) {
   const matchCount = generatorUsage?.totalMatches || 0;
   const groups = profile.strategyGroups || [];
@@ -77,6 +80,35 @@ export default function OverviewTab({
         />
         <small className="text-muted">
           Unique identifier used to reference this profile in generators
+        </small>
+      </div>
+
+      {/* Default Profile Toggle */}
+      <div className="form-group">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={profile.isDefault || false}
+            onChange={(e) => onChange({ ...profile, isDefault: e.target.checked })}
+          />
+          <span>Default Profile</span>
+        </label>
+        <small className="text-muted">
+          Use this profile when no entity kind matches. Only one profile should be marked as default.
+        </small>
+      </div>
+
+      {/* Entity Kinds Binding */}
+      <div className="form-group">
+        <label>Entity Kinds</label>
+        <MultiSelectPills
+          options={entityKinds}
+          selected={profile.entityKinds || []}
+          onChange={(kinds) => onChange({ ...profile, entityKinds: kinds })}
+          allLabel="Any"
+        />
+        <small className="text-muted">
+          Profile applies when generating names for these entity kinds. "Any" means use default profile logic.
         </small>
       </div>
 
@@ -174,6 +206,13 @@ export default function OverviewTab({
         <p className="text-muted text-xs mt-sm">
           Groups are evaluated by priority (highest first). First matching group's strategies are used.
         </p>
+      </div>
+
+      {/* Actions */}
+      <div className="profile-actions">
+        <button className="secondary" onClick={onDuplicate}>
+          Duplicate Profile
+        </button>
       </div>
 
       {/* Danger Zone */}

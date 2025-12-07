@@ -44,6 +44,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
 
   // Results
   const [generatedNames, setGeneratedNames] = useState([]);
+  const [debugInfo, setDebugInfo] = useState([]);
   const [strategyUsage, setStrategyUsage] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -149,10 +150,12 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
       });
 
       setGeneratedNames(result.names || []);
+      setDebugInfo(result.debugInfo || []);
       setStrategyUsage(result.strategyUsage || null);
     } catch (err) {
       setError(err.message);
       setGeneratedNames([]);
+      setDebugInfo([]);
     } finally {
       setGenerating(false);
     }
@@ -417,16 +420,36 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
               </div>
             ) : (
               <div className="results-grid">
-                {generatedNames.map((name, i) => (
-                  <div
-                    key={i}
-                    className="name-card"
-                    onClick={() => navigator.clipboard.writeText(name)}
-                    title="Click to copy"
-                  >
-                    {name}
-                  </div>
-                ))}
+                {generatedNames.map((name, i) => {
+                  const debug = debugInfo[i];
+                  const tooltipLines = debug ? [
+                    `Group: ${debug.groupUsed}`,
+                    `Strategy: ${debug.strategyUsed}`,
+                    `Type: ${debug.strategyType}`,
+                    '',
+                    'Group Matching:',
+                    ...(debug.groupMatching || []).map(g =>
+                      `  ${g.matched ? '✓' : '✗'} ${g.groupName}: ${g.reason || ''}`
+                    )
+                  ] : [];
+                  const tooltip = tooltipLines.join('\n');
+
+                  return (
+                    <div
+                      key={i}
+                      className={`name-card ${debug?.strategyType === 'fallback' ? 'fallback' : ''}`}
+                      onClick={() => navigator.clipboard.writeText(name)}
+                      title={tooltip || 'Click to copy'}
+                    >
+                      {name}
+                      {debug && (
+                        <span className={`name-card-badge ${debug.strategyType}`}>
+                          {debug.strategyType}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

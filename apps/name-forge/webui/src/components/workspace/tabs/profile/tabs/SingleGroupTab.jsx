@@ -2,9 +2,9 @@
  * SingleGroupTab - Edit a single strategy group
  */
 
+import { useMemo } from 'react';
 import { TagSelector } from '@penguin-tales/shared-components';
 import MultiSelectPills from '../MultiSelectPills';
-import TagsInput from '../TagsInput';
 
 const PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
@@ -16,11 +16,34 @@ export default function SingleGroupTab({
   domains,
   grammars,
   entityKinds,
+  worldSchema,
   tagRegistry,
   onAddTag,
 }) {
   const hasConditions = !!group.conditions;
   const groupTotalWeight = group.strategies.reduce((sum, s) => sum + s.weight, 0);
+
+  // Compute available subtypes based on selected entity kinds
+  // worldSchema.hardState has: { kind, subtype: string[], status: string[] }
+  const availableSubtypes = useMemo(() => {
+    const selectedKinds = group.conditions?.entityKinds || [];
+    const entityDefs = worldSchema?.hardState || [];
+
+    // If no entity kinds selected, show all subtypes from all entity kinds
+    const kindsToCheck = selectedKinds.length > 0
+      ? entityDefs.filter(e => selectedKinds.includes(e.kind))
+      : entityDefs;
+
+    const subtypes = new Set();
+    kindsToCheck.forEach(entityDef => {
+      // subtype is already a string array in hardState format
+      (entityDef.subtype || []).forEach(st => {
+        if (st) subtypes.add(st);
+      });
+    });
+
+    return Array.from(subtypes).sort();
+  }, [group.conditions?.entityKinds, worldSchema]);
 
   const updateGroup = (updates) => {
     onChange({ ...group, ...updates });
@@ -152,11 +175,20 @@ export default function SingleGroupTab({
                   Match all
                 </label>
               </label>
-              <TagsInput
-                value={group.conditions?.subtypes || []}
-                onChange={(val) => handleConditionChange('subtypes', val)}
-                placeholder="Type and press Enter..."
-              />
+              {availableSubtypes.length > 0 ? (
+                <MultiSelectPills
+                  options={availableSubtypes}
+                  selected={group.conditions?.subtypes || []}
+                  onChange={(val) => handleConditionChange('subtypes', val)}
+                  allLabel="Any"
+                />
+              ) : (
+                <p className="text-muted text-small" style={{ margin: '8px 0' }}>
+                  {(group.conditions?.entityKinds?.length || 0) > 0
+                    ? 'Selected entity types have no subtypes defined'
+                    : 'Select entity types to see available subtypes'}
+                </p>
+              )}
             </div>
 
             <div className="condition-field">
