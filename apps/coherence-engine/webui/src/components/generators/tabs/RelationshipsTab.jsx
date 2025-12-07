@@ -5,6 +5,19 @@
 import React, { useState, useMemo } from 'react';
 import { ReferenceDropdown } from '../../shared';
 
+/**
+ * Safely display a value that should be a string.
+ * If it's an object, log a warning and return a fallback.
+ */
+function safeDisplay(value, fallback = '?', label = 'value') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'object') {
+    console.warn(`[RelationshipsTab] Expected string for ${label} but got object:`, value);
+    return `[object]`;
+  }
+  return String(value);
+}
+
 // ============================================================================
 // RelationshipCard - Individual relationship editor card
 // ============================================================================
@@ -31,11 +44,11 @@ function RelationshipCard({ rel, onChange, onRemove, schema, availableRefs }) {
         onMouseLeave={() => setHovering(false)}
       >
         <div className="rel-visual">
-          <span className="rel-ref">{rel.src || '?'}</span>
+          <span className="rel-ref">{safeDisplay(rel.src, '?', 'src')}</span>
           <span className="rel-arrow">→</span>
-          <span className="rel-kind">{rel.kind || '?'}</span>
+          <span className="rel-kind">{safeDisplay(rel.kind, '?', 'kind')}</span>
           <span className="rel-arrow">→</span>
-          <span className="rel-ref">{rel.dst || '?'}</span>
+          <span className="rel-ref">{safeDisplay(rel.dst, '?', 'dst')}</span>
           {rel.bidirectional && <span className="rel-bidirectional">↔</span>}
         </div>
         <div className="item-card-actions">

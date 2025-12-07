@@ -1,5 +1,5 @@
 import { Graph, GraphStore, EngineConfig, Era, GrowthTemplate, HistoryEvent, Pressure, SimulationSystem } from '../engine/types';
-import { createPressureFromDeclarative } from './pressureInterpreter';
+import { createPressureFromDeclarative, evaluatePressureGrowthWithBreakdown } from './pressureInterpreter';
 import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
 import { DeclarativeTemplate } from './declarativeTypes';
@@ -33,7 +33,7 @@ import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
 import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
-import type { ISimulationEmitter } from '../observer/types';
+import type { ISimulationEmitter, PressureChangeDetail, DiscretePressureModification, PressureModificationSource } from '../observer/types';
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
 
@@ -44,6 +44,7 @@ export class WorldEngine {
   private config: EngineConfig;
   private emitter: ISimulationEmitter;  // REQUIRED - emits all simulation events
   private runtimePressures: Pressure[];  // Converted from declarative pressures
+  private declarativePressures: Map<string, DeclarativePressure>;  // Original declarative pressures for breakdown
   private runtimeTemplates: GrowthTemplate[];  // Converted from declarative templates
   private declarativeTemplates: Map<string, DeclarativeTemplate>;  // Original declarative templates for diagnostics
   private runtimeSystems: SimulationSystem[];  // Converted from declarative systems
@@ -102,6 +103,9 @@ export class WorldEngine {
     clusterSize: number;
     clusterIds: string[];
   }> = [];
+
+  // Pressure modification tracking - accumulates discrete changes per tick
+  private pendingPressureModifications: DiscretePressureModification[] = [];
   
   constructor(
     config: EngineConfig,
@@ -129,11 +133,15 @@ export class WorldEngine {
 
     // Convert declarative pressures to runtime pressures
     // If pressure already has a growth function, it's already a runtime Pressure - use as-is
+    // Also store declarative definitions for detailed breakdown in pressure_update events
+    this.declarativePressures = new Map();
     this.runtimePressures = config.pressures.map(p => {
       if (typeof (p as any).growth === 'function') {
         // Already a runtime Pressure (e.g., from tests)
         return p as unknown as Pressure;
       }
+      // Store declarative pressure for breakdown
+      this.declarativePressures.set(p.id, p);
       return createPressureFromDeclarative(p);
     });
 
@@ -752,6 +760,9 @@ export class WorldEngine {
 
     // Simulation phase
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
+      // Update pressures each tick for responsive emergent behavior
+      this.updatePressures(era);
+
       await this.runSimulationTick(era);
       this.graph.tick++;
 
@@ -775,9 +786,6 @@ export class WorldEngine {
     }
 
     // Meta-entity formation is now handled by SimulationSystems (run at epoch end)
-
-    // Update pressures
-    this.updatePressures(era);
 
     // Prune and consolidate
     this.pruneAndConsolidate();
@@ -1297,8 +1305,17 @@ export class WorldEngine {
       // Apply template to random target
       const target = pickRandom(templateTargets);
       try {
+        // Set up pressure modification tracking for this template
+        graphView.setPressureModificationCallback((pressureId, delta, source) => {
+          this.trackPressureModification(pressureId, delta, source);
+        });
+        graphView.setCurrentSource({ type: 'template', templateId: template.id });
+
         // Execute template with restricted graph view
         const result = await template.expand(graphView, target);
+
+        // Clear source after template execution
+        graphView.clearCurrentSource();
 
         // ENFORCEMENT: Check tag saturation before creating entities
         // Collect unique tags that would be added (convert EntityTags to deduplicated array)
@@ -1706,10 +1723,11 @@ export class WorldEngine {
           modifiedEntityIds.push(mod.id);
         });
 
-        // Apply pressure changes
+        // Apply pressure changes and track for emitting
         for (const [pressure, delta] of Object.entries(result.pressureChanges)) {
           const current = this.graph.pressures.get(pressure) || 0;
           this.graph.pressures.set(pressure, Math.max(0, Math.min(100, current + delta)));
+          this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
         }
 
         totalRelationships += result.relationshipsAdded.length;
@@ -1748,15 +1766,28 @@ export class WorldEngine {
       ? this.calculateDistributionPressureAdjustments()
       : {};
 
+    // Collect detailed pressure changes for emitting
+    const pressureDetails: PressureChangeDetail[] = [];
+
     this.runtimePressures.forEach(pressure => {
-      const current = this.graph.pressures.get(pressure.id) || pressure.value;
-      const rawGrowth = pressure.growth(this.graph);
+      const previousValue = this.graph.pressures.get(pressure.id) || pressure.value;
+
+      // Get detailed breakdown if declarative definition is available
+      const declarativeDef = this.declarativePressures.get(pressure.id);
+      const breakdown = declarativeDef
+        ? evaluatePressureGrowthWithBreakdown(declarativeDef, this.graph)
+        : {
+            baseGrowth: 0,
+            positiveFeedback: [],
+            negativeFeedback: [],
+            totalGrowth: pressure.growth(this.graph)
+          };
 
       // Apply diminishing returns for high pressure values to prevent maxing out
       // Growth is scaled down as pressure approaches 100
       // Use exponential decay to prevent maxing out
-      const growthScaling = Math.max(0.1, 1 - Math.pow(current / 100, 2)); // At 80, ~36%; at 100, ~10%
-      const growth = rawGrowth * growthScaling;
+      const growthScaling = Math.max(0.1, 1 - Math.pow(previousValue / 100, 2)); // At 80, ~36%; at 100, ~10%
+      const scaledGrowth = breakdown.totalGrowth * growthScaling;
 
       // Decay always subtracts (no conditional flip)
       const decay = -pressure.decay;
@@ -1767,14 +1798,60 @@ export class WorldEngine {
       // Apply distribution feedback adjustment
       const distributionFeedback = distributionAdjustments[pressure.id] || 0;
 
-      const delta = (growth + decay) * eraModifier + distributionFeedback;
+      const rawDelta = (scaledGrowth + decay) * eraModifier + distributionFeedback;
 
-      // Smooth large changes to prevent spikes (max change per epoch: ±15)
-      const smoothedDelta = Math.max(-15, Math.min(15, delta));
+      // Smooth large changes to prevent spikes (max change per tick: ±2)
+      const smoothedDelta = Math.max(-2, Math.min(2, rawDelta));
 
-      const newValue = current + smoothedDelta;
-      this.graph.pressures.set(pressure.id, Math.max(0, Math.min(100, newValue)));
+      const newValue = Math.max(0, Math.min(100, previousValue + smoothedDelta));
+      this.graph.pressures.set(pressure.id, newValue);
+
+      // Build detailed change record
+      pressureDetails.push({
+        id: pressure.id,
+        name: pressure.name,
+        previousValue,
+        newValue,
+        delta: newValue - previousValue,
+        breakdown: {
+          baseGrowth: breakdown.baseGrowth,
+          positiveFeedback: breakdown.positiveFeedback,
+          negativeFeedback: breakdown.negativeFeedback,
+          totalGrowth: breakdown.totalGrowth,
+          growthScaling,
+          scaledGrowth,
+          decay,
+          eraModifier,
+          distributionFeedback,
+          rawDelta,
+          smoothedDelta
+        }
+      });
     });
+
+    // Emit pressure update event with full breakdown
+    this.emitter.pressureUpdate({
+      tick: this.graph.tick,
+      epoch: this.currentEpoch,
+      pressures: pressureDetails,
+      discreteModifications: [...this.pendingPressureModifications]
+    });
+
+    // Clear pending modifications for next tick
+    this.pendingPressureModifications = [];
+  }
+
+  /**
+   * Track a discrete pressure modification for inclusion in pressure_update event
+   */
+  private trackPressureModification(
+    pressureId: string,
+    delta: number,
+    source: PressureModificationSource
+  ): void {
+    if (delta !== 0) {
+      this.pendingPressureModifications.push({ pressureId, delta, source });
+    }
   }
 
   /**

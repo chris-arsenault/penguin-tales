@@ -365,6 +365,7 @@ export type SubtypeSpec =
  * How to determine culture.
  */
 export type CultureSpec =
+  | string               // Direct culture name
   | { inherit: string }  // Inherit from reference entity
   | { fixed: string };   // Fixed culture
 
@@ -405,10 +406,7 @@ export type PlacementSpec =
       type: 'in_sparse_area';
       minDistanceFromEntities?: number;  // Min distance from existing same-kind entities (default: 15)
       preferPeriphery?: boolean;         // Bias toward plane edges (default: false)
-      createRegion?: {                   // Optionally create an emergent region at the placement
-        label: string;                   // Region label (can use template vars)
-        description?: string;            // Region description
-      };
+      createRegion?: boolean;            // Create emergent region with Name Forge naming (requires culture)
     };
 
 export interface CountRange {

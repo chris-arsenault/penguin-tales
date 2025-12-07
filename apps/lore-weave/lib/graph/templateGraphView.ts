@@ -12,6 +12,16 @@ import type {
   RegionLookupResult,
   EmergentRegionResult
 } from '../coordinates/types';
+import type { PressureModificationSource } from '../observer/types';
+
+/**
+ * Callback for tracking pressure modifications with source attribution
+ */
+export type PressureModificationCallback = (
+  pressureId: string,
+  delta: number,
+  source: PressureModificationSource
+) => void;
 
 /**
  * TemplateGraphView
@@ -37,6 +47,12 @@ export class TemplateGraphView {
   // Shared coordinate context (REQUIRED - no internal instantiation)
   private readonly coordinateContext: CoordinateContext;
 
+  // Optional callback for tracking pressure modifications with source
+  private onPressureModify?: PressureModificationCallback;
+
+  // Current source context for pressure modifications (set before template/system execution)
+  private currentSource?: PressureModificationSource;
+
   constructor(graph: Graph, targetSelector: TargetSelector, coordinateContext: CoordinateContext) {
     if (!coordinateContext) {
       throw new Error(
@@ -53,6 +69,28 @@ export class TemplateGraphView {
     this.coordinateContext.debug = (category, msg, context) => {
       this.debug(category, msg, context);
     };
+  }
+
+  /**
+   * Set the callback for tracking pressure modifications with source attribution
+   */
+  setPressureModificationCallback(callback: PressureModificationCallback): void {
+    this.onPressureModify = callback;
+  }
+
+  /**
+   * Set the current source context for pressure modifications
+   * Call this before executing a template/system
+   */
+  setCurrentSource(source: PressureModificationSource): void {
+    this.currentSource = source;
+  }
+
+  /**
+   * Clear the current source context
+   */
+  clearCurrentSource(): void {
+    this.currentSource = undefined;
   }
 
   // ============================================================================
@@ -589,6 +627,11 @@ export class TemplateGraphView {
   modifyPressure(pressureId: string, delta: number): void {
     const current = this.graph.pressures.get(pressureId) || 0;
     this.graph.pressures.set(pressureId, Math.max(0, Math.min(100, current + delta)));
+
+    // Track modification if callback and source are set
+    if (delta !== 0 && this.onPressureModify && this.currentSource) {
+      this.onPressureModify(pressureId, delta, this.currentSource);
+    }
   }
 
   /**
@@ -1134,6 +1177,23 @@ export class TemplateGraphView {
       nearPoint,
       label,
       description,
+      this.graph.tick
+    );
+  }
+
+  /**
+   * Create an emergent region with Name Forge generating the label.
+   * Uses the culture's naming configuration to generate culturally-appropriate region names.
+   */
+  async createNamedEmergentRegion(
+    entityKind: string,
+    point: Point,
+    cultureId: string
+  ): Promise<EmergentRegionResult> {
+    return this.coordinateContext.createNamedEmergentRegion(
+      entityKind,
+      point,
+      cultureId,
       this.graph.tick
     );
   }

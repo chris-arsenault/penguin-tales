@@ -961,6 +961,11 @@ export class TemplateInterpreter {
       return context.target?.culture || 'world';
     }
 
+    // Handle plain string culture name
+    if (typeof spec === 'string') {
+      return spec;
+    }
+
     if ('inherit' in spec) {
       const refEntity = context.resolveEntity(spec.inherit);
       return refEntity?.culture || 'world';
@@ -1119,17 +1124,12 @@ export class TemplateInterpreter {
         }
 
         // Optionally create an emergent region at the placement location
-        if (spec.createRegion) {
-          const regionLabel = context.resolveString(spec.createRegion.label);
-          const regionDescription = spec.createRegion.description
-            ? context.resolveString(spec.createRegion.description)
-            : `Emergent region created at tick ${graphView.tick}`;
-
-          const regionResult = graphView.createEmergentRegion(
+        // Uses Name Forge to generate culturally-appropriate region names
+        if (spec.createRegion && culture) {
+          const regionResult = await graphView.createNamedEmergentRegion(
             entityKind,
             sparseResult.coordinates,
-            regionLabel,
-            regionDescription
+            culture
           );
 
           if (regionResult.success && regionResult.region) {
@@ -1144,14 +1144,14 @@ export class TemplateInterpreter {
 
     }
 
-    // Fallback
+    // Fallback: random across full semantic plane (0-100)
     const fallbackCoords = {
-      x: 50 + (Math.random() - 0.5) * 20,
-      y: 50 + (Math.random() - 0.5) * 20,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
       z: 50
     };
-    debug('fallback_random', fallbackCoords, `spec.type=${spec.type} did not resolve`);
-    return { coordinates: fallbackCoords, strategy: 'fallback_random' };
+    debug('random', fallbackCoords, `spec.type=${spec.type} did not resolve`);
+    return { coordinates: fallbackCoords, strategy: 'random' };
   }
 
   // ===========================================================================

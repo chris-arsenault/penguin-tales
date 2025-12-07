@@ -1471,3 +1471,149 @@
   padding: 2px 6px;
   border-radius: var(--lw-radius-sm);
 }
+
+/* ========================================
+   Pressure Tooltip
+   ======================================== */
+
+.lw-pressure-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 400px;
+  margin-top: 8px;
+  padding: var(--lw-space-md);
+  background-color: var(--lw-bg-secondary);
+  border: 1px solid var(--lw-border-color);
+  border-radius: var(--lw-radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+}
+
+.lw-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--lw-space-sm);
+  padding-bottom: var(--lw-space-sm);
+  border-bottom: 1px solid var(--lw-border-color);
+}
+
+.lw-tooltip-value {
+  font-family: monospace;
+  color: var(--lw-text-secondary);
+}
+
+.lw-tooltip-section {
+  margin-top: var(--lw-space-sm);
+  padding-top: var(--lw-space-sm);
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.lw-tooltip-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.lw-tooltip-subtitle {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--lw-text-muted);
+  margin-bottom: 6px;
+}
+
+.lw-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.lw-tooltip-row span:first-child {
+  color: var(--lw-text-secondary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lw-tooltip-row span:last-child {
+  font-family: monospace;
+  font-weight: 500;
+}
+
+.lw-tooltip-row .positive {
+  color: var(--lw-success);
+}
+
+.lw-tooltip-row .negative {
+  color: var(--lw-danger);
+}
+
+.lw-tooltip-subtotal {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+.lw-tooltip-final {
+  background-color: rgba(0, 0, 0, 0.2);
+  margin: var(--lw-space-sm) calc(-1 * var(--lw-space-md)) calc(-1 * var(--lw-space-md));
+  padding: var(--lw-space-sm) var(--lw-space-md);
+  border-radius: 0 0 var(--lw-radius-md) var(--lw-radius-md);
+}
+
+.lw-pressure-delta {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.lw-pressure-delta.positive {
+  color: var(--lw-success);
+}
+
+.lw-pressure-delta.negative {
+  color: var(--lw-danger);
+}
+
+/* Additional tooltip styles for cumulative epoch display */
+.lw-tooltip-epoch-info {
+  font-size: 10px;
+  color: var(--lw-text-muted);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+}
+
+.lw-tooltip-empty {
+  color: var(--lw-text-muted);
+  font-style: italic;
+}
+
+.lw-tooltip-mod-group {
+  margin-bottom: 6px;
+}
+
+.lw-tooltip-mod-header {
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.05);
+  margin: 0 -8px;
+  padding: 2px 8px;
+}
+
+.lw-tooltip-mod-detail {
+  font-size: 11px;
+  padding-left: 12px;
+  color: var(--lw-text-muted);
+}
+
+.lw-tooltip-actual-change {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+}

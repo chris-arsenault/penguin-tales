@@ -734,6 +734,49 @@ export class CoordinateContext {
   }
 
   /**
+   * Create an emergent region at a specific point with Name Forge generating the label.
+   * Uses the culture's naming configuration to generate culturally-appropriate region names.
+   *
+   * @param entityKind - Entity kind for the region's semantic plane
+   * @param point - Coordinates to create the region at
+   * @param cultureId - Culture to use for naming
+   * @param tick - Current simulation tick
+   * @returns Result with created region or failure reason
+   */
+  async createNamedEmergentRegion(
+    entityKind: string,
+    point: Point,
+    cultureId: string,
+    tick: number
+  ): Promise<import('./types').EmergentRegionResult> {
+    // Generate region name using name-forge with framework 'region' subtype
+    const regionLabel = await this.nameForgeService.generate(
+      entityKind,
+      FRAMEWORK_SUBTYPES.REGION,
+      'marginal',  // New territories start as marginal
+      [],          // No semantic tags for regions
+      cultureId
+    );
+    const regionDescription = `An emerging ${entityKind} region: ${regionLabel}`;
+
+    // Create emergent region at the location
+    const regionResult = this.createEmergentRegion(
+      entityKind,
+      point,
+      regionLabel,
+      regionDescription,
+      tick
+    );
+
+    // Mark the region as belonging to this culture
+    if (regionResult.success && regionResult.region) {
+      regionResult.region.culture = cultureId;
+    }
+
+    return regionResult;
+  }
+
+  /**
    * Attempt to create an emergent region for a culture.
    * Finds a sparse area on the plane and creates a new region there.
    * Uses name-forge to generate culturally-appropriate region names.
@@ -756,31 +799,17 @@ export class CoordinateContext {
       return null;
     }
 
-    // Generate region name using name-forge with framework 'region' subtype
-    const regionLabel = await this.nameForgeService.generate(
-      entityKind,
-      FRAMEWORK_SUBTYPES.REGION,
-      'marginal',  // New territories start as marginal
-      [],          // No semantic tags for regions
-      cultureId
-    );
-    const regionDescription = `An emerging ${entityKind} region: ${regionLabel}`;
-
-    // Create emergent region at the sparse location
-    const regionResult = this.createEmergentRegion(
+    // Create the region with naming at the sparse location
+    const regionResult = await this.createNamedEmergentRegion(
       entityKind,
       sparseResult.coordinates,
-      regionLabel,
-      regionDescription,
+      cultureId,
       tick
     );
 
     if (!regionResult.success || !regionResult.region) {
       return null;
     }
-
-    // Mark the region as belonging to this culture
-    regionResult.region.culture = cultureId;
 
     return {
       point: sparseResult.coordinates,

@@ -218,6 +218,64 @@ export interface SampleHistoryPayload {
   }>;
 }
 
+/**
+ * Detailed pressure change breakdown emitted per tick
+ * Allows UI to show exactly what's contributing to pressure changes
+ */
+export interface PressureUpdatePayload {
+  tick: number;
+  epoch: number;
+  pressures: PressureChangeDetail[];
+  /** Discrete modifications from templates, systems, era transitions, etc. */
+  discreteModifications: DiscretePressureModification[];
+}
+
+/**
+ * A discrete pressure modification from a specific source
+ * (as opposed to feedback-based per-tick growth)
+ */
+export interface DiscretePressureModification {
+  pressureId: string;
+  delta: number;
+  source: PressureModificationSource;
+}
+
+export type PressureModificationSource =
+  | { type: 'template'; templateId: string }
+  | { type: 'system'; systemId: string }
+  | { type: 'era_entry'; eraId: string }
+  | { type: 'era_exit'; eraId: string }
+  | { type: 'action'; actionId: string; actorId: string };
+
+export interface PressureChangeDetail {
+  id: string;
+  name: string;
+  previousValue: number;
+  newValue: number;
+  delta: number;
+  breakdown: {
+    baseGrowth: number;
+    positiveFeedback: FeedbackContribution[];
+    negativeFeedback: FeedbackContribution[];
+    totalGrowth: number;
+    growthScaling: number;  // Diminishing returns factor
+    scaledGrowth: number;
+    decay: number;
+    eraModifier: number;
+    distributionFeedback: number;
+    rawDelta: number;       // Before smoothing
+    smoothedDelta: number;  // After smoothing (max ±2)
+  };
+}
+
+export interface FeedbackContribution {
+  label: string;           // Human-readable description
+  type: string;            // Factor type (entity_count, ratio, etc.)
+  rawValue: number;        // Raw count/ratio before coefficient
+  coefficient: number;
+  contribution: number;    // Final contribution after coefficient & cap
+}
+
 export interface GrowthPhasePayload {
   epoch: number;
   entitiesCreated: number;
@@ -261,6 +319,7 @@ export type SimulationEvent =
   | { type: 'epoch_start'; payload: EpochStartPayload }
   | { type: 'epoch_stats'; payload: EpochStatsPayload }
   | { type: 'growth_phase'; payload: GrowthPhasePayload }
+  | { type: 'pressure_update'; payload: PressureUpdatePayload }
   | { type: 'population_report'; payload: PopulationPayload }
   | { type: 'template_usage'; payload: TemplateUsagePayload }
   | { type: 'coordinate_stats'; payload: CoordinateStatsPayload }
@@ -296,6 +355,7 @@ export interface ISimulationEmitter {
   epochStart(payload: EpochStartPayload): void;
   epochStats(payload: EpochStatsPayload): void;
   growthPhase(payload: GrowthPhasePayload): void;
+  pressureUpdate(payload: PressureUpdatePayload): void;
   populationReport(payload: PopulationPayload): void;
   templateUsage(payload: TemplateUsagePayload): void;
   coordinateStats(payload: CoordinateStatsPayload): void;

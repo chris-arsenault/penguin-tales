@@ -18,6 +18,7 @@ import type {
   EpochStartPayload,
   EpochStatsPayload,
   GrowthPhasePayload,
+  PressureUpdatePayload,
   PopulationPayload,
   TemplateUsagePayload,
   CoordinateStatsPayload,
@@ -45,6 +46,8 @@ export interface SimulationState {
   currentEpoch: EpochStartPayload | null;
   epochStats: EpochStatsPayload[];
   growthPhases: GrowthPhasePayload[];
+  /** Pressure updates with detailed breakdown - accumulates per epoch */
+  pressureUpdates: PressureUpdatePayload[];
   populationReport: PopulationPayload | null;
   templateUsage: TemplateUsagePayload | null;
   coordinateStats: CoordinateStatsPayload | null;
@@ -84,6 +87,7 @@ const initialState: SimulationState = {
   currentEpoch: null,
   epochStats: [],
   growthPhases: [],
+  pressureUpdates: [],
   populationReport: null,
   templateUsage: null,
   coordinateStats: null,
@@ -161,6 +165,17 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           return {
             ...prev,
             growthPhases: [...prev.growthPhases, message.payload]
+          };
+
+        case 'pressure_update':
+          // Keep only last 50 pressure updates to prevent memory bloat
+          const newPressureUpdates = [...prev.pressureUpdates, message.payload];
+          if (newPressureUpdates.length > 50) {
+            newPressureUpdates.splice(0, newPressureUpdates.length - 50);
+          }
+          return {
+            ...prev,
+            pressureUpdates: newPressureUpdates
           };
 
         case 'population_report':
@@ -249,19 +264,16 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     });
   }, []);
 
-  const start = useCallback((config: EngineConfig, initialState: HardState[]) => {
+  const start = useCallback((config: EngineConfig, initialEntities: HardState[]) => {
     // Terminate existing worker if any
     if (workerRef.current) {
       workerRef.current.terminate();
     }
 
-    // Reset state
+    // Reset state to initial values
     setState({
-      ...initialState as unknown as SimulationState,
-      status: 'initializing',
-      epochStats: [],
-      growthPhases: [],
-      logs: []
+      ...initialState,
+      status: 'initializing'
     });
 
     // Create new worker using Vite's web worker support
@@ -289,7 +301,7 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
     workerRef.current.postMessage({
       type: 'start',
       config,
-      initialState
+      initialState: initialEntities
     });
   }, [handleMessage]);
 
@@ -299,13 +311,10 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
       workerRef.current.terminate();
     }
 
-    // Reset state
+    // Reset state to initial values
     setState({
-      ...initialState as unknown as SimulationState,
-      status: 'initializing',
-      epochStats: [],
-      growthPhases: [],
-      logs: []
+      ...initialState,
+      status: 'initializing'
     });
 
     // Create new worker
@@ -356,6 +365,7 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
         status: 'initializing',
         epochStats: [],
         growthPhases: [],
+        pressureUpdates: [],
         populationReport: null,
         templateUsage: null,
         coordinateStats: null,

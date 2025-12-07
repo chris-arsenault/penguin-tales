@@ -443,6 +443,6 @@ function checkTimeCondition(condition: TimeTransitionCondition, currentEra: Hard
     ? graphView.tick - currentEra.temporal.startTick
     : graphView.tick - currentEra.createdAt;
 
-  return eraAge > condition.minTicks;
+  return eraAge >= condition.minTicks;
 }
 

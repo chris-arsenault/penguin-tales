@@ -6,6 +6,19 @@ import React, { useState } from 'react';
 import { PICK_STRATEGIES } from '../constants';
 import { ReferenceDropdown, ChipSelect } from '../../shared';
 
+/**
+ * Safely display a value that should be a string.
+ * If it's an object, log a warning and return a fallback.
+ */
+function safeDisplay(value, fallback = '?', label = 'value') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'object') {
+    console.warn(`[VariablesTab] Expected string for ${label} but got object:`, value);
+    return `[object]`;
+  }
+  return String(value);
+}
+
 // ============================================================================
 // VariableCard - Individual variable editor card
 // ============================================================================
@@ -43,8 +56,8 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
     onChange({ select: newSelect });
   };
 
-  const displayKind = selectConfig.relationshipKind || selectConfig.kind || 'Not configured';
-  const displayStrategy = selectConfig.pickStrategy || 'random';
+  const displayKind = safeDisplay(selectConfig.relationshipKind || selectConfig.kind, 'Not configured', 'kind');
+  const displayStrategy = safeDisplay(selectConfig.pickStrategy, 'random', 'pickStrategy');
 
   return (
     <div className="item-card">

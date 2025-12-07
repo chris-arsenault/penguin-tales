@@ -6,6 +6,19 @@ import React, { useState, useMemo, useCallback } from 'react';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
 import { ReferenceDropdown, LevelSelector, PROMINENCE_LEVELS } from '../../shared';
 
+/**
+ * Safely display a value that should be a string.
+ * If it's an object, log a warning and return a fallback.
+ */
+function safeDisplay(value, fallback = '?', label = 'value') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'object') {
+    console.warn(`[CreationTab] Expected string for ${label} but got object:`, value);
+    return `[object]`;
+  }
+  return String(value);
+}
+
 // ============================================================================
 // findMatchingNamingProfile - Helper for naming profile matching
 // ============================================================================
@@ -173,7 +186,19 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
     onChange({ ...item, [field]: value });
   };
 
-  const subtypeDisplay = typeof item.subtype === 'object' ? 'inherit' : item.subtype;
+  // Safely handle subtype display - could be string, {inherit:...}, {random:...}, etc.
+  const subtypeDisplay = (() => {
+    if (item.subtype === null || item.subtype === undefined) return null;
+    if (typeof item.subtype === 'string') return item.subtype;
+    if (typeof item.subtype === 'object') {
+      if (item.subtype.inherit) return 'inherit';
+      if (item.subtype.random) return 'random';
+      if (item.subtype.fromPressure) return 'from-pressure';
+      console.warn('[CreationTab] Unknown subtype object format:', item.subtype);
+      return '[complex]';
+    }
+    return String(item.subtype);
+  })();
 
   return (
     <div className="item-card">
@@ -189,7 +214,7 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
             <span className="entity-ref">{item.entityRef}</span>
           </div>
           <div className="item-card-subtitle">
-            {item.kind}{subtypeDisplay ? `:${subtypeDisplay}` : ''} • {item.prominence || 'no prominence'}
+            {safeDisplay(item.kind, '?', 'kind')}{subtypeDisplay ? `:${subtypeDisplay}` : ''} • {safeDisplay(item.prominence, 'no prominence', 'prominence')}
           </div>
           {/* Naming profile indicator */}
           {cultureIds.length > 0 && (
@@ -321,13 +346,13 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
                   if (v === 'none') updateField('placement', undefined);
                   else if (v === 'near_entity') updateField('placement', { type: 'near_entity', entity: '' });
                   else if (v === 'in_culture_region') updateField('placement', { type: 'in_culture_region', culture: '$target' });
-                  else if (v === 'random_in_bounds') updateField('placement', { type: 'random_in_bounds' });
+                  else if (v === 'in_sparse_area') updateField('placement', { type: 'in_sparse_area' });
                 }}
                 options={[
-                  { value: 'none', label: 'Default (random)' },
+                  { value: 'none', label: 'Random' },
                   { value: 'near_entity', label: 'Near same-kind entity' },
                   { value: 'in_culture_region', label: 'In culture region' },
-                  { value: 'random_in_bounds', label: 'Random in bounds' },
+                  { value: 'in_sparse_area', label: 'In sparse area' },
                 ]}
                 style={{ flex: 1 }}
               />
@@ -357,6 +382,34 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
               <div className="alert alert-error">
                 No same-kind ({item.kind}) variables or targets available. Define a variable that selects {item.kind} entities,
                 or use "In culture region" placement instead.
+              </div>
+            )}
+            {/* Sparse area options */}
+            {item.placement?.type === 'in_sparse_area' && (
+              <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={item.placement.preferPeriphery || false}
+                      onChange={(e) => updateField('placement', { ...item.placement, preferPeriphery: e.target.checked })}
+                    />
+                    Prefer periphery
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={item.placement.createRegion || false}
+                      onChange={(e) => updateField('placement', { ...item.placement, createRegion: e.target.checked })}
+                    />
+                    Create emergent region
+                  </label>
+                </div>
+                {item.placement.createRegion && (
+                  <div className="form-help-text" style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+                    Region will be named using Name Forge based on the entity's culture.
+                  </div>
+                )}
               </div>
             )}
           </div>
