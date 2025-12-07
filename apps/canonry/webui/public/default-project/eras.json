@@ -22,7 +22,7 @@
       "tech_breakthrough": 1.2,
       "strategic_location_discovery": 1,
       "anomaly_manifestation": 0.5,
-      "wild_magic_discover": 0.5
+      "wild_magic_discover": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -40,7 +40,7 @@
     "exitConditions": [
       {
         "type": "time",
-        "minTicks": 80
+        "minTicks": 30
       },
       {
         "type": "entity_count",
@@ -83,7 +83,8 @@
       "tech_breakthrough": 0.8,
       "war_outbreak": 1.5,
       "succession_crisis": 1,
-      "legend_crystallization": 1.5
+      "legend_crystallization": 1.5,
+      "wild_magic_discover": 1
     },
     "systemModifiers": {
       "conflict_contagion": 2,
@@ -153,7 +154,8 @@
       "magical_site_discovery": 3,
       "tech_breakthrough": 3.5,
       "strategic_location_discovery": 1,
-      "legend_crystallization": 1
+      "legend_crystallization": 1,
+      "wild_magic_discover": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
@@ -220,7 +222,8 @@
       "tech_breakthrough": 1.5,
       "war_outbreak": 2,
       "legend_crystallization": 2,
-      "crisis_legislation": 2.5
+      "crisis_legislation": 2.5,
+      "wild_magic_discover": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -289,7 +292,8 @@
       "tech_breakthrough": 1.8,
       "legend_crystallization": 2.5,
       "guild_establishment": 2,
-      "tech_innovation": 1.5
+      "tech_innovation": 1.5,
+      "wild_magic_discover": 1
     },
     "systemModifiers": {
       "cultural_drift": 1.5,

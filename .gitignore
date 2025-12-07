@@ -23,7 +23,7 @@ tsconfig.tsbuildinfo
 # Exclude .js and .d.ts in source folders but not in dist/
 **/lib/**/*.js
 **/lib/**/*.d.ts
-**/src/**/*.js
+#**/src/**/*.js
 **/src/**/*.d.ts
 # Allow config files
 !*.config.js
