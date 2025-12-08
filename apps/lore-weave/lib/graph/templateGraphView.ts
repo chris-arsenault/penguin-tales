@@ -12,6 +12,7 @@ import type {
   RegionLookupResult,
   EmergentRegionResult
 } from '../coordinates/types';
+import type { PlacementAnchor, PlacementFallback, PlacementRegionPolicy, PlacementSpacing } from '../engine/declarativeTypes';
 import type { PressureModificationSource } from '../observer/types';
 
 /**
@@ -1180,6 +1181,174 @@ export class TemplateGraphView {
       preferPeriphery: options.preferPeriphery ?? false,
       maxAttempts: options.maxAttempts ?? 50
     });
+  }
+
+  /**
+   * Helper: get regions containing a point for an entity kind.
+   */
+  private getRegionsAtPoint(entityKind: string, point: Point): Region[] {
+    return this.coordinateContext.getRegions(entityKind).filter((r) => this.pointInRegion(point, r));
+  }
+
+  /**
+   * Unified placement helper for the new placement spec (anchor/spacing/region policy).
+   * Returns coordinates plus derived tags/region info, or null if placement failed.
+   */
+  async placeWithPlacementOptions(
+    entityKind: string,
+    cultureId: string,
+    placement: {
+      anchor: PlacementAnchor;
+      spacing?: PlacementSpacing;
+      regionPolicy?: PlacementRegionPolicy;
+      fallback?: PlacementFallback[];
+    },
+    resolvedAnchors: import('../core/worldTypes').HardState[] = [],
+    avoidEntities: import('../core/worldTypes').HardState[] = [],
+    tick: number = this.graph.tick
+  ): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> {
+    const spacing = placement.spacing || {};
+    const regionPolicy = placement.regionPolicy || {};
+    const fallback = placement.fallback && placement.fallback.length > 0
+      ? placement.fallback
+      : ['anchor_region', 'seed_region', 'sparse', 'random'];
+
+    const spacingMin = spacing.minDistance ?? ((this.coordinateContext as unknown as { graphDensity?: number }).graphDensity ?? 5);
+    const avoidPoints = avoidEntities.map(e => e.coordinates).filter(Boolean) as Point[];
+    const existingPoints = [...this.getAllRegionPoints(), ...avoidPoints];
+
+    const deriveInfo = (point: Point) => {
+      const regions = this.getRegionsAtPoint(entityKind, point);
+      const derived = this.coordinateContext.deriveTagsFromPlacement(entityKind, point, regions);
+      const derivedTags: Record<string, string | boolean> = {};
+      for (const tag of derived) derivedTags[tag] = true;
+      if (cultureId) derivedTags.culture = cultureId;
+      return {
+        regionId: regions[0]?.id ?? null,
+        derivedTags
+      };
+    };
+
+    const tryPlaceWithContext = async (ctx: PlacementContext): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
+      const result = await this.coordinateContext.placeWithCulture(entityKind, 'placement', tick, ctx, existingPoints);
+      if (result.success && result.coordinates) {
+        return {
+          coordinates: result.coordinates,
+          regionId: result.regionId ?? null,
+          derivedTags: result.derivedTags
+        };
+      }
+      return null;
+    };
+
+    const trySparse = async (preferPeriphery?: boolean): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
+      const sparseResult = this.findSparseArea(entityKind, {
+        minDistanceFromEntities: spacingMin,
+        preferPeriphery: preferPeriphery ?? false
+      });
+      if (!sparseResult.success || !sparseResult.coordinates) return null;
+
+      const derived = deriveInfo(sparseResult.coordinates);
+      return { coordinates: sparseResult.coordinates, regionId: derived.regionId, derivedTags: derived.derivedTags };
+    };
+
+    const tryBounds = (bounds?: { x?: [number, number]; y?: [number, number]; z?: [number, number] }): { coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } => {
+      const b = bounds || { x: [0, 100], y: [0, 100] };
+      const coords: Point = {
+        x: (b.x?.[0] ?? 0) + Math.random() * ((b.x?.[1] ?? 100) - (b.x?.[0] ?? 0)),
+        y: (b.y?.[0] ?? 0) + Math.random() * ((b.y?.[1] ?? 100) - (b.y?.[0] ?? 0)),
+        z: b.z ? (b.z[0] + Math.random() * (b.z[1] - b.z[0])) : 50
+      };
+      const derived = deriveInfo(coords);
+      return { coordinates: coords, regionId: derived.regionId, derivedTags: derived.derivedTags };
+    };
+
+    // Anchor attempt
+    const anchor = placement.anchor;
+
+    const anchorAttempt = async (): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
+      switch (anchor.type) {
+        case 'entity': {
+          const refEntity = resolvedAnchors.find(e => e.id === anchor.ref || e.name === anchor.ref) || resolvedAnchors[0];
+          if (!refEntity || !refEntity.coordinates || refEntity.kind !== entityKind) return null;
+          const ctx = this.coordinateContext.buildPlacementContext(refEntity.culture || cultureId, entityKind);
+          ctx.referenceEntity = { id: refEntity.id, coordinates: refEntity.coordinates };
+          if (anchor.stickToRegion) {
+            const regions = this.getRegionsAtPoint(entityKind, refEntity.coordinates);
+            if (regions.length > 0) {
+              ctx.seedRegionIds = regions.map(r => r.id);
+            }
+          }
+          return tryPlaceWithContext(ctx);
+        }
+        case 'culture': {
+          const ctx = this.coordinateContext.buildPlacementContext(anchor.id || cultureId, entityKind);
+          return tryPlaceWithContext(ctx);
+        }
+        case 'refs_centroid': {
+          const refs = resolvedAnchors.filter(e => anchor.refs.includes(e.id) || anchor.refs.includes(e.name || ''));
+          const withCoords = refs.filter(r => r.coordinates && r.kind === entityKind);
+          if (withCoords.length === 0) return null;
+          const centroid: Point = {
+            x: withCoords.reduce((s, r) => s + (r.coordinates?.x ?? 50), 0) / withCoords.length,
+            y: withCoords.reduce((s, r) => s + (r.coordinates?.y ?? 50), 0) / withCoords.length,
+            z: withCoords.reduce((s, r) => s + (r.coordinates?.z ?? 50), 0) / withCoords.length
+          };
+          if (anchor.jitter) {
+            centroid.x += (Math.random() - 0.5) * anchor.jitter;
+            centroid.y += (Math.random() - 0.5) * anchor.jitter;
+          }
+          const ctx = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
+          ctx.referenceEntity = { id: 'centroid', coordinates: centroid };
+          return tryPlaceWithContext(ctx);
+        }
+        case 'sparse':
+          return trySparse(anchor.preferPeriphery ?? false);
+        case 'bounds':
+          return Promise.resolve(tryBounds(anchor.bounds));
+        default:
+          return null;
+      }
+    };
+
+    let result = await anchorAttempt();
+
+    // Fallback chain
+    if (!result) {
+      for (const fb of fallback) {
+        if (fb === 'anchor_region' || fb === 'ref_region') {
+          if (anchor.type === 'entity' && resolvedAnchors.length > 0) {
+            const refEntity = resolvedAnchors[0];
+            if (refEntity.coordinates) {
+              const regions = this.getRegionsAtPoint(entityKind, refEntity.coordinates);
+              if (regions.length > 0) {
+                const ctx = this.coordinateContext.buildPlacementContext(refEntity.culture || cultureId, entityKind);
+                ctx.seedRegionIds = regions.map(r => r.id);
+                result = await tryPlaceWithContext(ctx);
+                if (result) break;
+              }
+            }
+          }
+        } else if (fb === 'seed_region') {
+          const ctx = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
+          result = await tryPlaceWithContext(ctx);
+          if (result) break;
+        } else if (fb === 'sparse') {
+          result = await trySparse(anchor.type === 'sparse' ? anchor.preferPeriphery : false);
+          if (result) break;
+        } else if (fb === 'bounds') {
+          result = tryBounds(anchor.type === 'bounds' ? anchor.bounds : undefined);
+          if (result) break;
+        } else if (fb === 'random') {
+          const coords: Point = { x: Math.random() * 100, y: Math.random() * 100, z: 50 };
+          const derived = deriveInfo(coords);
+          result = { coordinates: coords, regionId: derived.regionId, derivedTags: derived.derivedTags };
+          break;
+        }
+      }
+    }
+
+    return result ?? null;
   }
 
   /**

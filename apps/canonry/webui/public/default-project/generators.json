@@ -65,8 +65,17 @@
           "emergent": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$mentor"
+          "anchor": {
+            "type": "entity",
+            "ref": "$mentor",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -121,7 +130,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "succession",
@@ -179,8 +188,19 @@
           "political": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$colony"
+          "anchor": {
+            "type": "culture",
+            "id": "$colony",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -267,7 +287,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "orca_raider_arrival",
@@ -328,8 +348,17 @@
           "external": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentOrca"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentOrca",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -443,7 +472,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "faction_splinter",
@@ -501,8 +530,19 @@
           "splinter": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$location"
+          "anchor": {
+            "type": "culture",
+            "id": "$location",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -614,7 +654,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "territorial_expansion",
@@ -685,7 +725,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "trade_route_establishment",
@@ -724,7 +764,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "guild_establishment",
@@ -773,8 +813,19 @@
           "organized": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -873,7 +924,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "cult_formation",
@@ -936,8 +987,19 @@
           "cult": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       },
       {
@@ -959,8 +1021,17 @@
           "mystical": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$mentor"
+          "anchor": {
+            "type": "entity",
+            "ref": "$mentor",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1078,7 +1149,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "colony_founding",
@@ -1126,10 +1197,20 @@
           "central": true
         },
         "placement": {
-          "type": "in_sparse_area",
-          "minDistanceFromEntities": 20,
-          "preferPeriphery": false,
-          "createRegion": true
+          "anchor": {
+            "type": "sparse",
+            "preferPeriphery": false
+          },
+          "spacing": {
+            "minDistance": 20
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1164,7 +1245,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "anomaly_manifestation",
@@ -1213,8 +1294,17 @@
           "hidden": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1269,7 +1359,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "resource_location_discovery",
@@ -1318,8 +1408,19 @@
           "discovered": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1364,7 +1465,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "emergent_location_discovery",
@@ -1416,8 +1517,19 @@
           "emergent": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1462,7 +1574,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "geographic_exploration",
@@ -1499,8 +1611,19 @@
           "discovered": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1545,7 +1668,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "krill_bloom_migration",
@@ -1601,8 +1724,17 @@
           "resource": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$target"
+          "anchor": {
+            "type": "entity",
+            "ref": "$target",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       },
       {
@@ -1621,8 +1753,17 @@
           "resource": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentMerchant"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentMerchant",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1743,7 +1884,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "war_outbreak",
@@ -1780,8 +1921,19 @@
           "conflict": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1841,7 +1993,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "succession_crisis",
@@ -1879,8 +2031,19 @@
           "conflict": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -1927,7 +2090,7 @@
       }
     ],
     "variables": {},
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "legend_crystallization",
@@ -1971,8 +2134,19 @@
           "cultural": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2041,7 +2215,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "crisis_legislation",
@@ -2107,8 +2281,19 @@
           "crisis": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2171,7 +2356,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "great_festival",
@@ -2217,8 +2402,19 @@
           "cultural": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2377,18 +2573,12 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "tech_breakthrough",
     "name": "Technological Breakthrough",
-    "applicability": [
-      {
-        "type": "entity_count_min",
-        "kind": "faction",
-        "min": 1
-      }
-    ],
+    "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "faction",
@@ -2396,7 +2586,8 @@
         {
           "type": "has_relationship",
           "kind": "controls",
-          "direction": "src"
+          "direction": "src",
+          "with": "$location"
         }
       ],
       "pickStrategy": "random"
@@ -2423,8 +2614,17 @@
           "innovation": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentTech"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentTech",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2449,7 +2649,13 @@
         "strength": 0.7
       }
     ],
-    "stateUpdates": [],
+    "stateUpdates": [
+      {
+        "type": "modify_pressure",
+        "pressureId": "cultural_tension",
+        "delta": 5
+      }
+    ],
     "variables": {
       "$location": {
         "select": {
@@ -2517,8 +2723,19 @@
           "mystical": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$practitioner"
+          "anchor": {
+            "type": "culture",
+            "id": "$practitioner",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2556,19 +2773,12 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "orca_combat_technique",
     "name": "Orca Combat Technique",
-    "applicability": [
-      {
-        "type": "entity_count_min",
-        "kind": "npc",
-        "subtype": "orca",
-        "min": 1
-      }
-    ],
+    "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "npc",
@@ -2617,8 +2827,17 @@
           "external": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentTechnique"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentTechnique",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2677,182 +2896,7 @@
         }
       }
     },
-    "enabled": true
-  },
-  {
-    "id": "tech_innovation",
-    "name": "Technology Development",
-    "applicability": [
-      {
-        "type": "entity_count_min",
-        "kind": "faction",
-        "subtype": "company",
-        "min": 1
-      }
-    ],
-    "selection": {
-      "strategy": "by_kind",
-      "kind": "faction",
-      "subtypes": [
-        "company"
-      ],
-      "filters": [
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "count_max",
-            "count": 3,
-            "path": [
-              {
-                "via": "practitioner_of",
-                "direction": "out",
-                "targetKind": "abilities",
-                "targetSubtype": "any"
-              }
-            ]
-          }
-        }
-      ],
-      "pickStrategy": "random"
-    },
-    "creation": [
-      {
-        "entityRef": "$technology",
-        "kind": "abilities",
-        "subtype": "technology",
-        "status": "discovered",
-        "prominence": "marginal",
-        "culture": {
-          "inherit": "$target"
-        },
-        "description": {
-          "template": "Innovation developed by {factionName}",
-          "replacements": {
-            "factionName": "$target.name"
-          }
-        },
-        "tags": {
-          "technology": true,
-          "innovation": true
-        },
-        "placement": {
-          "type": "near_entity",
-          "entity": "$parentTech"
-        }
-      }
-    ],
-    "relationships": [
-      {
-        "kind": "derived_from",
-        "src": "$technology",
-        "dst": "$parentTech",
-        "strength": 1
-      },
-      {
-        "kind": "practitioner_of",
-        "src": "$target",
-        "dst": "$technology",
-        "strength": 0.8
-      },
-      {
-        "kind": "practitioner_of",
-        "src": "$member1",
-        "dst": "$technology",
-        "strength": 0.7,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$member1"
-        }
-      },
-      {
-        "kind": "practitioner_of",
-        "src": "$member2",
-        "dst": "$technology",
-        "strength": 0.7,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$member2"
-        }
-      },
-      {
-        "kind": "practitioner_of",
-        "src": "$member3",
-        "dst": "$technology",
-        "strength": 0.7,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$member3"
-        }
-      }
-    ],
-    "stateUpdates": [
-      {
-        "type": "modify_pressure",
-        "pressureId": "magical_instability",
-        "delta": -5
-      }
-    ],
-    "variables": {
-      "$member1": {
-        "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationship": "member_of",
-            "direction": "dst"
-          },
-          "pickStrategy": "random"
-        }
-      },
-      "$member2": {
-        "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationship": "member_of",
-            "direction": "dst"
-          },
-          "filters": [
-            {
-              "type": "exclude",
-              "entities": [
-                "$member1"
-              ]
-            }
-          ],
-          "pickStrategy": "random"
-        }
-      },
-      "$member3": {
-        "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationship": "member_of",
-            "direction": "dst"
-          },
-          "filters": [
-            {
-              "type": "exclude",
-              "entities": [
-                "$member1",
-                "$member2"
-              ]
-            }
-          ],
-          "pickStrategy": "random"
-        }
-      },
-      "$parentTech": {
-        "select": {
-          "from": "graph",
-          "kind": "abilities",
-          "pickStrategy": "random",
-          "subtypes": [
-            "technology"
-          ],
-          "statusFilter": "discovered"
-        }
-      }
-    },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "magic_discovery",
@@ -2870,11 +2914,6 @@
         "kind": "abilities",
         "subtype": "magic",
         "max": 15
-      },
-      {
-        "type": "entity_count_min",
-        "kind": "npc",
-        "min": 1
       }
     ],
     "selection": {
@@ -2919,8 +2958,17 @@
           "mystical": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentMagic",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -2933,8 +2981,8 @@
       },
       {
         "kind": "discovered_by",
-        "src": "$target",
-        "dst": "$magic",
+        "src": "$magic",
+        "dst": "$target",
         "strength": 1
       },
       {
@@ -2945,16 +2993,6 @@
         "condition": {
           "type": "entity_exists",
           "entity": "$anomaly"
-        }
-      },
-      {
-        "kind": "related_to",
-        "src": "$magic",
-        "dst": "$existingMagic",
-        "strength": 0.5,
-        "condition": {
-          "type": "entity_exists",
-          "entity": "$existingMagic"
         }
       }
     ],
@@ -2976,22 +3014,6 @@
           "pickStrategy": "random"
         }
       },
-      "$existingMagic": {
-        "select": {
-          "from": "graph",
-          "kind": "abilities",
-          "subtypes": [
-            "magic"
-          ],
-          "filters": [
-            {
-              "type": "lacks_relationship",
-              "kind": "lost"
-            }
-          ],
-          "pickStrategy": "random"
-        }
-      },
       "$parentMagic": {
         "select": {
           "from": "graph",
@@ -3004,7 +3026,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "ideology_emergence",
@@ -3066,8 +3088,17 @@
           "cultural": true
         },
         "placement": {
-          "type": "near_entity",
-          "entity": "$parentRule"
+          "anchor": {
+            "type": "entity",
+            "ref": "$parentRule",
+            "stickToRegion": true
+          },
+          "fallback": [
+            "anchor_region",
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -3168,7 +3199,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "strategic_location_discovery",
@@ -3215,8 +3246,19 @@
           "discovered": true
         },
         "placement": {
-          "type": "in_culture_region",
-          "culture": "$target"
+          "anchor": {
+            "type": "culture",
+            "id": "$target",
+            "seedOnly": true
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -3261,7 +3303,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "thermal_colony_decline",
@@ -3302,7 +3344,7 @@
         "tag": "thermal_stress"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "thermal_colony_recovery",
@@ -3348,7 +3390,7 @@
         "tag": "climate_displaced"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "thermal_migration",
@@ -3421,7 +3463,7 @@
         "value": true
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "ice_memory_thaw",
@@ -3480,7 +3522,7 @@
         "tag": "thaw_candidate"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "economic_colony_decline",
@@ -3521,7 +3563,7 @@
         "tag": "economic_stress"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "economic_colony_recovery",
@@ -3567,7 +3609,7 @@
         "tag": "resource_depleted"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "wild_magic_discover",
@@ -3576,8 +3618,8 @@
       {
         "type": "pressure_threshold",
         "pressureId": "magical_instability",
-        "min": 10,
-        "max": 70,
+        "min": 50,
+        "max": 90,
         "extremeChance": 0.4
       },
       {
@@ -3609,7 +3651,7 @@
         "status": "secret",
         "prominence": "recognized",
         "culture": {
-          "inherit": "$target"
+          "fixed": "world"
         },
         "description": {
           "template": "Mystical ability discovered by {heroName}",
@@ -3622,9 +3664,18 @@
           "wild": true
         },
         "placement": {
-          "type": "in_sparse_area",
-          "createRegion": true,
-          "preferPeriphery": true
+          "anchor": {
+            "type": "sparse",
+            "preferPeriphery": true
+          },
+          "spacing": {},
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "fallback": [
+            "sparse",
+            "random"
+          ]
         }
       }
     ],
@@ -3638,28 +3689,34 @@
           "type": "entity_exists",
           "entity": "$anomaly"
         }
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$discoverer",
+        "dst": "$magic",
+        "strength": 0.8,
+        "bidirectional": false
       }
     ],
     "stateUpdates": [
       {
         "type": "modify_pressure",
         "pressureId": "magical_instability",
-        "delta": 15
+        "delta": -15
       }
     ],
     "variables": {
-      "$weeb": {
+      "$discoverer": {
         "select": {
-          "from": {
-            "relatedTo": "$target",
-            "relationship": "resident_of",
-            "direction": "both"
-          },
-          "kind": "occurrence",
-          "pickStrategy": "first"
+          "from": "graph",
+          "kind": "npc",
+          "pickStrategy": "random",
+          "subtypes": [
+            "hero"
+          ]
         }
       }
     },
-    "enabled": true
+    "enabled": false
   }
 ]

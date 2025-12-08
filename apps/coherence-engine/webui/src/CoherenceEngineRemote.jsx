@@ -22,10 +22,12 @@ import ActionsEditor from './components/ActionsEditor';
 import SystemsEditor from './components/SystemsEditor';
 import ValidationEditor, { getValidationStatus } from './components/ValidationEditor';
 import { WeightMatrixEditor } from './components/weight-matrix';
+import CausalLoopEditor from './components/CausalLoopEditor';
 import { computeUsageMap } from '@penguin-tales/shared-components';
 
 const TABS = [
   { id: 'validation', label: 'Validation' },
+  { id: 'causal', label: 'Causal Loop' },
   { id: 'pressures', label: 'Pressures' },
   { id: 'eras', label: 'Eras' },
   { id: 'matrix', label: 'Weight Matrix' },
@@ -141,6 +143,10 @@ const SECTION_INFO = {
     title: 'Validation',
     description: 'Pre-run validation checks for your world configuration. View and fix issues before running the simulation.',
   },
+  causal: {
+    title: 'Causal Loop Diagram',
+    description: 'Visualize feedback relationships between pressures, generators, systems, and entity kinds. Identify reinforcing and balancing loops.',
+  },
   pressures: {
     title: 'Pressures',
     description: 'Configure environmental and social pressures that drive world evolution. Pressures create constraints and opportunities that shape entity behavior.',
@@ -221,6 +227,16 @@ export default function CoherenceEngineRemote({
             usageMap={usageMap}
             namingData={namingData}
             onNavigateToGenerator={handleNavigateToGenerator}
+          />
+        );
+      case 'causal':
+        return (
+          <CausalLoopEditor
+            pressures={pressures}
+            generators={generators}
+            systems={systems}
+            actions={actions}
+            schema={schema}
           />
         );
       case 'pressures':

@@ -6,7 +6,8 @@
       "name": "Era Initialization",
       "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
       "ticksPerEra": 30
-    }
+    },
+    "enabled": true
   },
   {
     "systemType": "eraTransition",
@@ -14,7 +15,8 @@
       "id": "era_transition",
       "name": "Era Progression",
       "description": "Handles transitions between eras based on world state and per-era transitionConditions. Updates era status from future → current → historical."
-    }
+    },
+    "enabled": true
   },
   {
     "systemType": "universalCatalyst",
@@ -26,7 +28,8 @@
       "influenceGain": 0.1,
       "influenceLoss": 0.05,
       "pressureMultiplier": 1.5
-    }
+    },
+    "enabled": false
   },
   {
     "systemType": "relationshipMaintenance",
@@ -39,7 +42,8 @@
       "gracePeriod": 20,
       "reinforcementBonus": 0.02,
       "maxStrength": 1
-    }
+    },
+    "enabled": true
   },
   {
     "systemType": "graphContagion",
@@ -80,7 +84,7 @@
         "conflict": 5
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -114,7 +118,7 @@
         "diplomacy": 3
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -144,7 +148,7 @@
       ],
       "throttleChance": 0.2
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -184,7 +188,7 @@
         "conflict": 5
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -230,7 +234,7 @@
         "conflict": 10
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -264,7 +268,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.2
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -325,7 +329,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -388,7 +392,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "clusterFormation",
@@ -436,7 +440,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "graphContagion",
@@ -524,7 +528,7 @@
         "stability": 5
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "tagDiffusion",
@@ -563,7 +567,7 @@
         "delta": 10
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "planeDiffusion",
@@ -599,7 +603,7 @@
       "valueTag": "temperature",
       "entitySubtype": "colony"
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -631,7 +635,7 @@
       "entityKind": "location",
       "entitySubtype": "colony"
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -666,7 +670,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -702,7 +706,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.5
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "planeDiffusion",
@@ -732,7 +736,7 @@
       ],
       "valueTag": "resource_level"
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -773,7 +777,7 @@
         "conflict": 5
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -821,7 +825,7 @@
       "entityKind": "location",
       "entitySubtype": "colony"
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "connectionEvolution",
@@ -852,7 +856,7 @@
       ],
       "throttleChance": 0.3
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -888,7 +892,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -924,7 +928,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "systemType": "thresholdTrigger",
@@ -961,6 +965,6 @@
         "external_threat": 10
       }
     },
-    "enabled": true
+    "enabled": false
   }
 ]

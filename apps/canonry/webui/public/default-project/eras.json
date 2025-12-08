@@ -14,7 +14,6 @@
       "crisis_legislation": 1,
       "great_festival": 0.5,
       "ideology_emergence": 0.5,
-      "tech_innovation": 1,
       "magic_discovery": 2,
       "territorial_expansion": 2.5,
       "trade_route_establishment": 1.5,
@@ -57,8 +56,8 @@
     },
     "entryEffects": {
       "pressureChanges": {
-        "exploration": 10,
-        "stability": 5
+        "stability": 5,
+        "magical_instability": 10
       }
     },
     "exitConditions": [
@@ -186,7 +185,6 @@
       "cult_formation": 0.1,
       "great_festival": 1,
       "ideology_emergence": 3,
-      "tech_innovation": 3,
       "magic_discovery": 0.6,
       "orca_combat_technique": 0,
       "territorial_expansion": 0.8,
@@ -238,9 +236,7 @@
       }
     ],
     "entryEffects": {
-      "pressureChanges": {
-        "innovation": 20
-      }
+      "pressureChanges": {}
     },
     "exitConditions": [
       {
@@ -364,7 +360,6 @@
       "tech_breakthrough": 1.8,
       "legend_crystallization": 2.5,
       "guild_establishment": 2,
-      "tech_innovation": 1.5,
       "wild_magic_discover": 1,
       "thermal_colony_decline": 1,
       "thermal_colony_recovery": 1,
@@ -408,8 +403,8 @@
     ],
     "entryEffects": {
       "pressureChanges": {
-        "prosperity": 15,
-        "stability": 20
+        "stability": 20,
+        "resource_scarcity": -25
       }
     }
   }

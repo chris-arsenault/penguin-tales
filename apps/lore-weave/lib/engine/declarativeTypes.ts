@@ -339,7 +339,7 @@ export type DescriptionSpec =
  *
  * Distance values are on 0-100 scale (Euclidean distance on semantic plane).
  */
-export type PlacementSpec =
+export type LegacyPlacementSpec =
   | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }  // entity MUST be same kind!
   | { type: 'in_culture_region'; culture: string }
   | { type: 'derived_from_references'; references: string[]; culture?: string }  // references MUST be same kind!
@@ -350,6 +350,34 @@ export type PlacementSpec =
       preferPeriphery?: boolean;         // Bias toward plane edges (default: false)
       createRegion?: boolean;            // Create emergent region with Name Forge naming (requires culture)
     };
+
+export type PlacementAnchor =
+  | { type: 'entity'; ref: string; stickToRegion?: boolean }
+  | { type: 'culture'; id: string }
+  | { type: 'refs_centroid'; refs: string[]; jitter?: number }
+  | { type: 'sparse'; preferPeriphery?: boolean }
+  | { type: 'bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } };
+
+export interface PlacementSpacing {
+  minDistance?: number;
+  avoidRefs?: string[];
+}
+
+export interface PlacementRegionPolicy {
+  allowEmergent?: boolean;
+  emergentChance?: number;
+}
+
+export type PlacementFallback = 'anchor_region' | 'ref_region' | 'seed_region' | 'sparse' | 'bounds' | 'random';
+
+export interface PlacementV2Spec {
+  anchor: PlacementAnchor;
+  spacing?: PlacementSpacing;
+  regionPolicy?: PlacementRegionPolicy;
+  fallback?: PlacementFallback[];
+}
+
+export type PlacementSpec = LegacyPlacementSpec | PlacementV2Spec;
 
 export interface CountRange {
   min: number;

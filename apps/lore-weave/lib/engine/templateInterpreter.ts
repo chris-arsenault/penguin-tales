@@ -24,6 +24,10 @@ import type {
   CultureSpec,
   DescriptionSpec,
   PlacementSpec,
+  PlacementAnchor,
+  PlacementSpacing,
+  PlacementRegionPolicy,
+  PlacementFallback,
   CountRange,
   RelationshipCondition,
   GraphPathAssertion,
@@ -913,13 +917,64 @@ export class TemplateInterpreter {
     return result;
   }
 
+  // Normalized placement shape for internal use
+  private normalizePlacementSpec(spec: PlacementSpec): {
+    anchor: PlacementAnchor;
+    spacing?: PlacementSpacing;
+    regionPolicy?: PlacementRegionPolicy;
+    fallback?: PlacementFallback[];
+    legacyStrategy?: string;
+  } {
+    if ('anchor' in spec) {
+      return spec;
+    }
+
+    switch (spec.type) {
+      case 'near_entity':
+        return {
+          anchor: { type: 'entity', ref: spec.entity, stickToRegion: true },
+          spacing: { minDistance: spec.minDistance },
+          fallback: ['anchor_region', 'seed_region', 'sparse', 'random'],
+          legacyStrategy: `near_entity:${spec.entity}`
+        };
+      case 'in_culture_region':
+        return {
+          anchor: { type: 'culture', id: spec.culture },
+          regionPolicy: { allowEmergent: true },
+          fallback: ['seed_region', 'sparse', 'random'],
+          legacyStrategy: `in_culture_region:${spec.culture}`
+        };
+      case 'derived_from_references':
+        return {
+          anchor: { type: 'refs_centroid', refs: spec.references },
+          fallback: ['seed_region', 'sparse', 'random'],
+          legacyStrategy: `derived_from_refs:${spec.references.length}`
+        };
+      case 'random_in_bounds':
+        return {
+          anchor: { type: 'bounds', bounds: spec.bounds },
+          fallback: ['bounds', 'random'],
+          legacyStrategy: 'random_in_bounds'
+        };
+      case 'in_sparse_area':
+        return {
+          anchor: { type: 'sparse', preferPeriphery: spec.preferPeriphery },
+          spacing: { minDistance: spec.minDistanceFromEntities },
+          regionPolicy: { allowEmergent: !!spec.createRegion },
+          fallback: ['sparse', 'random'],
+          legacyStrategy: 'in_sparse_area'
+        };
+      default:
+        return {
+          anchor: { type: 'sparse' },
+          fallback: ['sparse', 'random'],
+          legacyStrategy: 'random'
+        };
+    }
+  }
+
   /**
-   * Resolve placement to coordinates.
-   *
-   * CRITICAL: Semantic planes are PER-ENTITY-KIND.
-   * The 'near_entity' placement type REQUIRES the reference entity to be the SAME KIND
-   * as the entity being created. Cross-kind near_entity placements are meaningless
-   * because coordinates represent semantic similarity within a kind, not spatial location.
+   * Resolve placement to coordinates using the unified placement spec.
    */
   private async resolvePlacement(
     spec: PlacementSpec,
@@ -929,151 +984,50 @@ export class TemplateInterpreter {
     entityKind: string
   ): Promise<{ coordinates: Point; strategy: string; derivedTags?: Record<string, string | boolean> }> {
     const { graphView } = context;
+    const normalized = this.normalizePlacementSpec(spec);
 
-    const debug = (strategy: string, coords: Point, details?: string) => {
-      graphView.debug('placement', `${entityKind} -> ${strategy} @ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})${details ? ` | ${details}` : ''}`);
-    };
+    const anchorEntities: HardState[] = [];
+    const avoidEntities: HardState[] = [];
 
-    switch (spec.type) {
-      case 'near_entity': {
-        const refEntity = context.resolveEntity(spec.entity);
-
-        // CRITICAL VALIDATION: Prevent cross-kind near_entity placements.
-        // Each entity kind has its own independent semantic plane.
-        // Placing an NPC "near" a location is MEANINGLESS - they exist on different planes.
-        if (refEntity && refEntity.kind !== entityKind) {
-          console.warn(
-            `[WARN] Cross-kind near_entity placement detected: ` +
-            `Creating ${entityKind} near ${spec.entity} (${refEntity.kind}). ` +
-            `Semantic planes are per-entity-kind - this placement is meaningless. ` +
-            `Use 'in_culture_region' instead. Falling back to random placement.`
-          );
-          break; // Fall through to default random placement
-        }
-
-        if (refEntity?.coordinates) {
-          const offset = spec.maxDistance || 10;
-          const coordinates = {
-            x: refEntity.coordinates.x + (Math.random() - 0.5) * offset,
-            y: refEntity.coordinates.y + (Math.random() - 0.5) * offset,
-            z: refEntity.coordinates.z
-          };
-          const strategy = `near_entity:${spec.entity}`;
-          debug(strategy, coordinates, `ref=${refEntity.name} @ (${refEntity.coordinates.x.toFixed(1)}, ${refEntity.coordinates.y.toFixed(1)}), offset=${offset}`);
-          return { coordinates, strategy };
-        }
-        graphView.debug('placement', `${entityKind} -> near_entity:${spec.entity} FAILED (no ref coords), falling back`);
-        break;
+    if (normalized.anchor.type === 'entity') {
+      const ref = context.resolveEntity(normalized.anchor.ref);
+      if (ref) anchorEntities.push(ref);
+    } else if (normalized.anchor.type === 'refs_centroid') {
+      for (const refId of normalized.anchor.refs) {
+        const ref = context.resolveEntity(refId);
+        if (ref) anchorEntities.push(ref);
       }
-
-      case 'in_culture_region': {
-        // Resolve culture - if it's an entity reference like "$target", get its culture property
-        let cultureId = spec.culture;
-        if (spec.culture.startsWith('$') && !spec.culture.includes('.')) {
-          const refEntity = context.resolveEntity(spec.culture);
-          cultureId = refEntity?.culture || context.resolveString(spec.culture);
-        } else {
-          cultureId = context.resolveString(spec.culture);
-        }
-        const result = await graphView.deriveCoordinatesWithCulture(cultureId, entityKind, []);
-        if (result) {
-          const strategy = `in_culture_region:${cultureId}`;
-          debug(strategy, result.coordinates, `culture=${cultureId} (from ${spec.culture})`);
-          return { coordinates: result.coordinates, strategy, derivedTags: result.derivedTags };
-        }
-        graphView.debug('placement', `${entityKind} -> in_culture_region:${cultureId} FAILED, falling back`);
-        break;
-      }
-
-      case 'derived_from_references': {
-        const refs = spec.references
-          .map(ref => context.resolveEntity(ref))
-          .filter((e): e is HardState => !!e);
-
-        // CRITICAL VALIDATION: References must be same kind as entity being created.
-        // Semantic planes are per-entity-kind - cross-kind references are meaningless.
-        const crossKindRefs = refs.filter(e => e.kind !== entityKind);
-        if (crossKindRefs.length > 0) {
-          console.warn(
-            `[WARN] Cross-kind derived_from_references detected for ${entityKind}. ` +
-            `References include: ${crossKindRefs.map(e => `${e.kind}`).join(', ')}. ` +
-            `Semantic planes are per-entity-kind. Filtering to same-kind only.`
-          );
-        }
-        const sameKindRefs = refs.filter(e => e.kind === entityKind);
-
-        // Resolve culture - if it's an entity reference like "$target", get its culture property
-        let cultureId = culture;
-        if (spec.culture) {
-          if (spec.culture.startsWith('$') && !spec.culture.includes('.')) {
-            const refEntity = context.resolveEntity(spec.culture);
-            cultureId = refEntity?.culture || context.resolveString(spec.culture);
-          } else {
-            cultureId = context.resolveString(spec.culture);
-          }
-        }
-        const result = await graphView.deriveCoordinatesWithCulture(cultureId, entityKind, sameKindRefs);
-        if (result) {
-          const strategy = `derived_from_refs:${sameKindRefs.length}`;
-          debug(strategy, result.coordinates, `refs=[${sameKindRefs.map(r => r.name).join(', ')}], culture=${cultureId}`);
-          return { coordinates: result.coordinates, strategy, derivedTags: result.derivedTags };
-        }
-        graphView.debug('placement', `${entityKind} -> derived_from_refs FAILED, falling back`);
-        break;
-      }
-
-      case 'random_in_bounds': {
-        const bounds = spec.bounds || { x: [0, 100], y: [0, 100] };
-        const coordinates = {
-          x: bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]),
-          y: bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]),
-          z: bounds.z ? bounds.z[0] + Math.random() * (bounds.z[1] - bounds.z[0]) : 50
-        };
-        debug('random_in_bounds', coordinates, `bounds=x[${bounds.x[0]},${bounds.x[1]}] y[${bounds.y[0]},${bounds.y[1]}]`);
-        return { coordinates, strategy: 'random_in_bounds' };
-      }
-
-      case 'in_sparse_area': {
-        // Find a sparse (unoccupied) area on the semantic plane
-        const sparseResult = graphView.findSparseArea(entityKind, {
-          minDistanceFromEntities: spec.minDistanceFromEntities ?? 15,
-          preferPeriphery: spec.preferPeriphery ?? false
-        });
-
-        if (!sparseResult.success || !sparseResult.coordinates) {
-          // Fall back to random placement if no sparse area found
-          graphView.debug('placement', `${entityKind} -> in_sparse_area FAILED: ${sparseResult.failureReason}, falling back`);
-          break; // Fall through to default random placement
-        }
-
-        // Optionally create an emergent region at the placement location
-        // Uses Name Forge to generate culturally-appropriate region names
-        if (spec.createRegion && culture) {
-          const regionResult = await graphView.createNamedEmergentRegion(
-            entityKind,
-            sparseResult.coordinates,
-            culture
-          );
-
-          if (regionResult.success && regionResult.region) {
-            graphView.log('info', `Created emergent region "${regionResult.region.label}" at (${sparseResult.coordinates.x.toFixed(1)}, ${sparseResult.coordinates.y.toFixed(1)})`);
-          }
-        }
-
-        const strategy = `in_sparse_area:dist=${sparseResult.minDistanceToEntity?.toFixed(1)}`;
-        debug(strategy, sparseResult.coordinates, `minDist=${spec.minDistanceFromEntities ?? 15}, periphery=${spec.preferPeriphery ?? false}`);
-        return { coordinates: sparseResult.coordinates, strategy };
-      }
-
     }
 
-    // Fallback: random across full semantic plane (0-100)
+    (normalized.spacing?.avoidRefs || []).forEach(refId => {
+      const ref = context.resolveEntity(refId);
+      if (ref) avoidEntities.push(ref);
+    });
+
+    const placementResult = await graphView.placeWithPlacementOptions(
+      entityKind,
+      culture,
+      normalized,
+      anchorEntities,
+      avoidEntities
+    );
+
+    if (placementResult) {
+      const strategy = normalized.legacyStrategy ?? 'placement_v2';
+      graphView.debug('placement', `${entityKind} -> ${strategy} @ (${placementResult.coordinates.x.toFixed(1)}, ${placementResult.coordinates.y.toFixed(1)})`);
+      return {
+        coordinates: placementResult.coordinates,
+        strategy,
+        derivedTags: placementResult.derivedTags
+      };
+    }
+
     const fallbackCoords = {
       x: Math.random() * 100,
       y: Math.random() * 100,
       z: 50
     };
-    debug('random', fallbackCoords, `spec.type=${spec.type} did not resolve`);
+    graphView.debug('placement', `${entityKind} -> random @ (${fallbackCoords.x.toFixed(1)}, ${fallbackCoords.y.toFixed(1)}) (fallback)`);
     return { coordinates: fallbackCoords, strategy: 'random' };
   }
 

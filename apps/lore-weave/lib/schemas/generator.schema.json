@@ -463,6 +463,94 @@
             "preferPeriphery": { "type": "boolean" },
             "createRegion": { "type": "boolean" }
           }
+        },
+        {
+          "type": "object",
+          "required": ["anchor"],
+          "additionalProperties": false,
+          "properties": {
+            "anchor": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["type", "ref"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "entity" },
+                    "ref": { "$ref": "#/$defs/NonEmptyString" },
+                    "stickToRegion": { "type": "boolean" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "culture" },
+                    "id": { "$ref": "#/$defs/NonEmptyString" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "refs"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "refs_centroid" },
+                    "refs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+                    "jitter": { "type": "number", "minimum": 0 }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "sparse" },
+                    "preferPeriphery": { "type": "boolean" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "bounds" },
+                    "bounds": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "x": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                        "y": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                        "z": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "spacing": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minDistance": { "type": "number", "minimum": 0 },
+                "avoidRefs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" } }
+              }
+            },
+            "regionPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "allowEmergent": { "type": "boolean" },
+                "emergentChance": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            },
+            "fallback": {
+              "type": "array",
+              "items": {
+                "enum": ["anchor_region", "ref_region", "seed_region", "sparse", "bounds", "random"]
+              }
+            }
+          }
         }
       ]
     },
