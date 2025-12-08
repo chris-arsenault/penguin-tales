@@ -15,10 +15,11 @@ interface WorldExplorerProps {
 }
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
-export type ViewMode = 'graph3d' | 'graph2d' | 'map';
+export type ViewMode = 'graph3d' | 'graph2d' | 'map' | 'timeline';
 
 const GraphView = lazy(() => import('./GraphView.tsx'));
 const GraphView3D = lazy(() => import('./GraphView3D.tsx'));
+const TimelineView3D = lazy(() => import('./TimelineView3D.tsx'));
 
 export default function WorldExplorer({ worldData, loreData, imageData }: WorldExplorerProps) {
   const [selectedEntityId, setSelectedEntityId] = useState<string | undefined>(undefined);
@@ -87,6 +88,16 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
                 onNodeSelect={setSelectedEntityId}
                 showCatalyzedBy={filters.showCatalyzedBy}
                 onRecalculateLayoutRef={(handler) => { recalculateLayoutRef.current = handler; }}
+              />
+            )}
+            {viewMode === 'timeline' && (
+              <TimelineView3D
+                key={`timeline-view-${edgeMetric}`}
+                data={filteredData}
+                selectedNodeId={selectedEntityId}
+                onNodeSelect={setSelectedEntityId}
+                showCatalyzedBy={filters.showCatalyzedBy}
+                edgeMetric={edgeMetric}
               />
             )}
           </Suspense>

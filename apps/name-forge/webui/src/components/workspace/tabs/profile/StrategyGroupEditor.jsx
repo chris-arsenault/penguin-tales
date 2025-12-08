@@ -1,5 +1,5 @@
 import React from 'react';
-import { TagSelector } from '@penguin-tales/shared-components';
+import { TagSelector, NumberInput } from '@penguin-tales/shared-components';
 import { getStrategyColor, getStrategyBorder } from '../../../utils';
 import MultiSelectPills from './MultiSelectPills';
 import TagsInput from './TagsInput';
@@ -63,15 +63,15 @@ export default function StrategyGroupEditor({
           />
           <div className="flex align-center gap-xs">
             <label className="text-xs text-muted">Priority:</label>
-            <input
-              type="number"
+            <NumberInput
               value={group.priority || 0}
-              onChange={(e) => {
+              onChange={(v) => {
                 const groups = [...editedProfile.strategyGroups];
-                groups[groupIdx] = { ...groups[groupIdx], priority: parseInt(e.target.value) || 0 };
+                groups[groupIdx] = { ...groups[groupIdx], priority: v ?? 0 };
                 setEditedProfile({ ...editedProfile, strategyGroups: groups });
               }}
               className="input-priority"
+              integer
             />
           </div>
           <button

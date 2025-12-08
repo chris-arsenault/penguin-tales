@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { RELATIONSHIP_REFS } from '../constants';
-import { ReferenceDropdown, PressureChangesEditor } from '../../shared';
+import { ReferenceDropdown, PressureChangesEditor, NumberInput } from '../../shared';
 
 export function OutcomeTab({ action, onChange, schema, pressures }) {
   const outcome = action.outcome || {};
@@ -94,14 +94,11 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
                 />
                 <div className="form-group">
                   <label className="label">Strength</label>
-                  <input
-                    type="number"
-                    value={rel.strength ?? ''}
-                    onChange={(e) => updateRelationship(index, { ...rel, strength: parseFloat(e.target.value) || 0 })}
-                    className="input"
-                    step="0.1"
-                    min="0"
-                    max="1"
+                  <NumberInput
+                    value={rel.strength}
+                    onChange={(v) => updateRelationship(index, { ...rel, strength: v ?? 0 })}
+                    min={0}
+                    max={1}
                   />
                 </div>
                 <div className="form-group">
@@ -146,12 +143,9 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
                 />
                 <div className="form-group">
                   <label className="label">Amount</label>
-                  <input
-                    type="number"
-                    value={item.amount ?? ''}
-                    onChange={(e) => updateStrengthen(index, { ...item, amount: parseFloat(e.target.value) || 0 })}
-                    className="input"
-                    step="0.05"
+                  <NumberInput
+                    value={item.amount}
+                    onChange={(v) => updateStrengthen(index, { ...item, amount: v ?? 0 })}
                   />
                 </div>
                 <div className="flex items-end">

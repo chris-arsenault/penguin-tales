@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 
 export default function EntityTargets({ entities, updateTargets, distributionTargets }) {
   // Group by entity kind
@@ -27,16 +28,16 @@ export default function EntityTargets({ entities, updateTargets, distributionTar
               <span className="lw-row-label">{subtype}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <label className="lw-label" style={{ marginBottom: 0 }}>Target:</label>
-                <input
-                  type="number"
+                <NumberInput
                   className="lw-input-small"
                   value={config.target || 0}
-                  onChange={(e) => {
+                  onChange={(v) => {
                     const newEntities = JSON.parse(JSON.stringify(distributionTargets.entities));
                     if (!newEntities[0][kind]) newEntities[0][kind] = {};
-                    newEntities[0][kind][subtype] = { ...config, target: parseInt(e.target.value) || 0 };
+                    newEntities[0][kind][subtype] = { ...config, target: v ?? 0 };
                     updateTargets('entities', newEntities);
                   }}
+                  integer
                 />
               </div>
               {config.comment && (

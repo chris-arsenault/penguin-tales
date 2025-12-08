@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import PlaneCanvas from './PlaneCanvas.jsx';
-import { TagSelector } from '@lore-weave/shared-components';
+import { TagSelector, NumberInput } from '@penguin-tales/shared-components';
 
 const styles = {
   container: {
@@ -662,26 +662,26 @@ export default function SemanticPlaneEditor({ project, onSave }) {
               <div style={styles.inputHalf}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Center X (0-100)</label>
-                  <input
+                  <NumberInput
                     style={styles.input}
-                    type="number"
-                    min="0"
-                    max="100"
+                    min={0}
+                    max={100}
                     value={newRegion.x}
-                    onChange={e => setNewRegion({ ...newRegion, x: e.target.value })}
+                    onChange={v => setNewRegion({ ...newRegion, x: v ?? 0 })}
+                    integer
                   />
                 </div>
               </div>
               <div style={styles.inputHalf}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Center Y (0-100)</label>
-                  <input
+                  <NumberInput
                     style={styles.input}
-                    type="number"
-                    min="0"
-                    max="100"
+                    min={0}
+                    max={100}
                     value={newRegion.y}
-                    onChange={e => setNewRegion({ ...newRegion, y: e.target.value })}
+                    onChange={v => setNewRegion({ ...newRegion, y: v ?? 0 })}
+                    integer
                   />
                 </div>
               </div>
@@ -689,13 +689,13 @@ export default function SemanticPlaneEditor({ project, onSave }) {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Radius</label>
-              <input
+              <NumberInput
                 style={styles.input}
-                type="number"
-                min="1"
-                max="50"
+                min={1}
+                max={50}
                 value={newRegion.radius}
-                onChange={e => setNewRegion({ ...newRegion, radius: e.target.value })}
+                onChange={v => setNewRegion({ ...newRegion, radius: v ?? 10 })}
+                integer
               />
             </div>
 

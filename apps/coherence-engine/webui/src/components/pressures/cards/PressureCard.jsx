@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { FactorCard } from './FactorCard';
 import { FactorEditorModal } from '../modals/FactorEditorModal';
-import { getElementValidation, useLocalInputState } from '../../shared';
+import { getElementValidation, useLocalInputState, NumberInput } from '../../shared';
 
 export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema, usageMap }) {
   const [hovering, setHovering] = useState(false);
@@ -203,44 +203,34 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
               </div>
               <div className="input-group">
                 <label className="label">Initial Value (0-100)</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={pressure.initialValue}
-                  onChange={(e) => handleFieldChange('initialValue', parseFloat(e.target.value) || 0)}
-                  className="input"
-                  min="0"
-                  max="100"
+                  onChange={(v) => handleFieldChange('initialValue', v ?? 0)}
+                  min={0}
+                  max={100}
                 />
               </div>
               <div className="input-group">
                 <label className="label">Decay (per tick)</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={pressure.decay}
-                  onChange={(e) => handleFieldChange('decay', parseFloat(e.target.value) || 0)}
-                  className="input"
-                  min="0"
-                  step="0.5"
+                  onChange={(v) => handleFieldChange('decay', v ?? 0)}
+                  min={0}
                 />
               </div>
               <div className="input-group">
                 <label className="label">Base Growth</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={pressure.growth?.baseGrowth || 0}
-                  onChange={(e) => handleGrowthChange('baseGrowth', parseFloat(e.target.value) || 0)}
-                  className="input"
-                  step="0.1"
+                  onChange={(v) => handleGrowthChange('baseGrowth', v ?? 0)}
                 />
               </div>
               <div className="input-group">
                 <label className="label">Max Growth (optional)</label>
-                <input
-                  type="number"
-                  value={pressure.growth?.maxGrowth ?? ''}
-                  onChange={(e) => handleGrowthChange('maxGrowth', e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="input"
-                  step="0.1"
+                <NumberInput
+                  value={pressure.growth?.maxGrowth}
+                  onChange={(v) => handleGrowthChange('maxGrowth', v)}
+                  allowEmpty
                   placeholder="No limit"
                 />
               </div>

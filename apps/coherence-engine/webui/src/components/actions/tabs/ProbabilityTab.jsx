@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { NumberInput } from '../../shared';
 
 export function ProbabilityTab({ action, onChange, pressures }) {
   const probability = action.probability || {};
@@ -65,13 +66,10 @@ export function ProbabilityTab({ action, onChange, pressures }) {
           Relative weight for action selection. Higher weight means more likely to be chosen.
         </div>
         <div className="form-group">
-          <input
-            type="number"
+          <NumberInput
             value={baseWeight}
-            onChange={(e) => updateProbability('baseWeight', parseFloat(e.target.value) || 1.0)}
-            className="input"
-            step="0.1"
-            min="0"
+            onChange={(v) => updateProbability('baseWeight', v ?? 1.0)}
+            min={0}
           />
         </div>
       </div>

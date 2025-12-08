@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
 
 /**
  * Safely display a value that should be a string.
@@ -64,14 +64,11 @@ function RelationshipConditionEditor({ condition, onChange, onRemove, availableR
         <div className="condition-editor-body">
           <div className="form-group">
             <label className="label">Chance (0-1)</label>
-            <input
-              type="number"
-              value={condition.chance ?? ''}
-              onChange={(e) => updateCondition('chance', parseFloat(e.target.value) || 0)}
-              className="input"
-              step="0.1"
-              min="0"
-              max="1"
+            <NumberInput
+              value={condition.chance}
+              onChange={(v) => updateCondition('chance', v ?? 0)}
+              min={0}
+              max={1}
               placeholder="0.5"
             />
           </div>
@@ -176,14 +173,12 @@ function RelationshipCard({ rel, onChange, onRemove, schema, availableRefs }) {
             />
             <div className="form-group">
               <label className="label">Strength</label>
-              <input
-                type="number"
-                value={rel.strength ?? ''}
-                onChange={(e) => updateField('strength', parseFloat(e.target.value) || undefined)}
-                className="input"
-                step="0.1"
-                min="0"
-                max="1"
+              <NumberInput
+                value={rel.strength}
+                onChange={(v) => updateField('strength', v)}
+                min={0}
+                max={1}
+                allowEmpty
                 placeholder="0.8"
               />
             </div>

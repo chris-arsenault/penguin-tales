@@ -245,7 +245,7 @@ export default function EpochTimeline({ epochStats, currentEpoch, pressures, pre
                   )}
                 </div>
                 <div className="lw-flex-col lw-gap-sm">
-                  {Object.entries(pressures).slice(0, 5).map(([name, value]) => (
+                  {Object.entries(pressures).map(([name, value]) => (
                     <PressureGauge
                       key={name}
                       name={name}

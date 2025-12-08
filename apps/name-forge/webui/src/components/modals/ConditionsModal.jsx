@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ModalShell } from '@penguin-tales/shared-components';
+import { ModalShell, TagSelector } from '@penguin-tales/shared-components';
 import { PROMINENCE_LEVELS } from '../constants';
 
-function ConditionsModal({ isOpen, onClose, conditions, onChange }) {
+function ConditionsModal({ isOpen, onClose, conditions, onChange, tagRegistry = [], onAddTag }) {
   const [localConditions, setLocalConditions] = useState(conditions || {});
 
   useEffect(() => {
@@ -32,28 +32,17 @@ function ConditionsModal({ isOpen, onClose, conditions, onChange }) {
       {/* Tags */}
       <div className="form-group">
         <label>Entity Tags</label>
-        <input
-          value={(localConditions.tags || []).join(', ')}
-          onChange={(e) => {
-            const tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
-            setLocalConditions({ ...localConditions, tags: tags.length > 0 ? tags : undefined });
-          }}
-          placeholder="e.g., royal, noble, legendary"
+        <TagSelector
+          value={localConditions.tags || []}
+          onChange={(tags) => setLocalConditions({ ...localConditions, tags: tags.length > 0 ? tags : undefined })}
+          tagRegistry={tagRegistry}
+          placeholder="Select tags..."
+          matchAllEnabled={true}
+          matchAll={localConditions.requireAllTags || false}
+          onMatchAllChange={(val) => setLocalConditions({ ...localConditions, requireAllTags: val || undefined })}
+          onAddToRegistry={onAddTag}
         />
-        <small className="text-muted">Comma-separated list of tags to match</small>
-        <div className="mt-sm">
-          <label className="flex align-center gap-sm text-small">
-            <input
-              type="checkbox"
-              checked={localConditions.requireAllTags || false}
-              onChange={(e) => setLocalConditions({
-                ...localConditions,
-                requireAllTags: e.target.checked || undefined
-              })}
-            />
-            Require ALL tags (default: match any tag)
-          </label>
-        </div>
+        <small className="text-muted">Use tags from the shared registry; toggle match-all when needed.</small>
       </div>
 
       {/* Prominence */}

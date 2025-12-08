@@ -217,6 +217,7 @@ export default function CoherenceEngineRemote({
             pressures={pressures}
             generators={generators}
             systems={systems}
+            actions={actions}
             usageMap={usageMap}
             namingData={namingData}
             onNavigateToGenerator={handleNavigateToGenerator}

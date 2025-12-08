@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { DIRECTIONS } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
 
 /**
  * @param {Object} props
@@ -116,14 +116,14 @@ export function GraphContagionTab({ system, onChange, schema }) {
                 />
                 <div className="form-group">
                   <label className="label">Min Strength</label>
-                  <input
-                    type="number"
-                    value={vector.minStrength ?? ''}
-                    onChange={(e) => updateVector(index, 'minStrength', parseFloat(e.target.value) || undefined)}
+                  <NumberInput
+                    value={vector.minStrength}
+                    onChange={(v) => updateVector(index, 'minStrength', v)}
                     className="input"
-                    step="0.1"
-                    min="0"
-                    max="1"
+                    step={0.1}
+                    min={0}
+                    max={1}
+                    allowEmpty
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -147,37 +147,37 @@ export function GraphContagionTab({ system, onChange, schema }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Base Rate</label>
-            <input
-              type="number"
-              value={config.transmission?.baseRate ?? ''}
-              onChange={(e) => updateTransmission('baseRate', parseFloat(e.target.value) || undefined)}
+            <NumberInput
+              value={config.transmission?.baseRate}
+              onChange={(v) => updateTransmission('baseRate', v)}
               className="input"
-              step="0.05"
-              min="0"
-              max="1"
+              step={0.05}
+              min={0}
+              max={1}
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Contact Multiplier</label>
-            <input
-              type="number"
-              value={config.transmission?.contactMultiplier ?? ''}
-              onChange={(e) => updateTransmission('contactMultiplier', parseFloat(e.target.value) || undefined)}
+            <NumberInput
+              value={config.transmission?.contactMultiplier}
+              onChange={(v) => updateTransmission('contactMultiplier', v)}
               className="input"
-              step="0.05"
-              min="0"
+              step={0.05}
+              min={0}
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Max Probability</label>
-            <input
-              type="number"
-              value={config.transmission?.maxProbability ?? ''}
-              onChange={(e) => updateTransmission('maxProbability', parseFloat(e.target.value) || undefined)}
+            <NumberInput
+              value={config.transmission?.maxProbability}
+              onChange={(v) => updateTransmission('maxProbability', v)}
               className="input"
-              step="0.05"
-              min="0"
-              max="1"
+              step={0.05}
+              min={0}
+              max={1}
+              allowEmpty
             />
           </div>
         </div>
@@ -208,14 +208,14 @@ export function GraphContagionTab({ system, onChange, schema }) {
               />
               <div className="form-group">
                 <label className="label">Strength</label>
-                <input
-                  type="number"
-                  value={config.infectionAction?.strength ?? ''}
-                  onChange={(e) => updateInfectionAction('strength', parseFloat(e.target.value) || undefined)}
+                <NumberInput
+                  value={config.infectionAction?.strength}
+                  onChange={(v) => updateInfectionAction('strength', v)}
                   className="input"
-                  step="0.1"
-                  min="0"
-                  max="1"
+                  step={0.1}
+                  min={0}
+                  max={1}
+                  allowEmpty
                 />
               </div>
             </>

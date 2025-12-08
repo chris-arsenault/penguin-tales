@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState } from '@penguin-tales/shared-components';
+import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState, NumberInput } from '@penguin-tales/shared-components';
 import { ToolUsageBadges as UsageBadges } from '@penguin-tales/shared-components';
 
 // Category colors (dynamic - keep as objects)
@@ -323,21 +323,21 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                 {/* Usage Limits */}
                 <FormRow>
                   <FormGroup label="Min Usage" hint="Minimum entities with this tag">
-                    <input
+                    <NumberInput
                       className="input"
-                      type="number"
-                      min="0"
+                      min={0}
                       value={tag.minUsage || 0}
-                      onChange={(e) => updateTag(tag.tag, { minUsage: parseInt(e.target.value) || 0 })}
+                      onChange={(v) => updateTag(tag.tag, { minUsage: v ?? 0 })}
+                      integer
                     />
                   </FormGroup>
                   <FormGroup label="Max Usage" hint="Maximum entities with this tag">
-                    <input
+                    <NumberInput
                       className="input"
-                      type="number"
-                      min="0"
+                      min={0}
                       value={tag.maxUsage || 50}
-                      onChange={(e) => updateTag(tag.tag, { maxUsage: parseInt(e.target.value) || 50 })}
+                      onChange={(v) => updateTag(tag.tag, { maxUsage: v ?? 50 })}
+                      integer
                     />
                   </FormGroup>
                   <FormGroup label="Consolidate Into" hint="Suggest merging into this tag">

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { METRIC_TYPES, DIRECTIONS } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
 
 /**
  * RuleCard - Expandable card for rule configuration
@@ -77,25 +77,21 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
             {rule.condition?.threshold === 'prominence_scaled' && (
               <div className="form-group">
                 <label className="label">Multiplier</label>
-                <input
-                  type="number"
-                  value={rule.condition?.multiplier ?? ''}
-                  onChange={(e) => updateCondition('multiplier', parseFloat(e.target.value) || undefined)}
-                  className="input"
+                <NumberInput
+                  value={rule.condition?.multiplier}
+                  onChange={(v) => updateCondition('multiplier', v)}
+                  allowEmpty
                   placeholder="6"
                 />
               </div>
             )}
             <div className="form-group">
               <label className="label">Probability</label>
-              <input
-                type="number"
-                value={rule.probability ?? ''}
-                onChange={(e) => onChange({ ...rule, probability: parseFloat(e.target.value) || 0 })}
-                className="input"
-                step="0.05"
-                min="0"
-                max="1"
+              <NumberInput
+                value={rule.probability}
+                onChange={(v) => onChange({ ...rule, probability: v ?? 0 })}
+                min={0}
+                max={1}
               />
             </div>
           </div>
@@ -145,14 +141,12 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
                   </div>
                   <div className="form-group">
                     <label className="label">Strength</label>
-                    <input
-                      type="number"
-                      value={rule.action?.strength ?? ''}
-                      onChange={(e) => updateAction('strength', parseFloat(e.target.value) || undefined)}
-                      className="input"
-                      step="0.1"
-                      min="0"
-                      max="1"
+                    <NumberInput
+                      value={rule.action?.strength}
+                      onChange={(v) => updateAction('strength', v)}
+                      min={0}
+                      max={1}
+                      allowEmpty
                     />
                   </div>
                 </>
@@ -375,14 +369,12 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
           )}
           <div className="form-group">
             <label className="label">Min Strength</label>
-            <input
-              type="number"
-              value={config.metric?.minStrength ?? ''}
-              onChange={(e) => updateMetric('minStrength', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.1"
-              min="0"
-              max="1"
+            <NumberInput
+              value={config.metric?.minStrength}
+              onChange={(v) => updateMetric('minStrength', v)}
+              min={0}
+              max={1}
+              allowEmpty
               placeholder="0"
             />
           </div>
@@ -431,12 +423,9 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
                 />
                 <div className="form-group">
                   <label className="label">Bonus</label>
-                  <input
-                    type="number"
-                    value={bonus.bonus ?? ''}
-                    onChange={(e) => updateSubtypeBonus(index, { ...bonus, bonus: parseFloat(e.target.value) || 0 })}
-                    className="input"
-                    step="1"
+                  <NumberInput
+                    value={bonus.bonus}
+                    onChange={(v) => updateSubtypeBonus(index, { ...bonus, bonus: v ?? 0 })}
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>

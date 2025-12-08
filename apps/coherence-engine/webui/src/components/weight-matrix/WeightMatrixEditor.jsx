@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { NumberInput } from '../shared';
 import './WeightMatrixEditor.css';
 
 // Weight levels for heatmap coloring
@@ -205,10 +206,10 @@ export default function WeightMatrixEditor({
   };
 
   // Quick set weight for bulk operations
-  const [quickSetValue, setQuickSetValue] = useState('1');
+  const [quickSetValue, setQuickSetValue] = useState(1);
 
   const handleQuickSetSelected = () => {
-    const value = parseFloat(quickSetValue) || 0;
+    const value = quickSetValue ?? 0;
     selectedRows.forEach((itemId) => {
       applyToAllEras(itemId, value);
     });
@@ -277,14 +278,13 @@ export default function WeightMatrixEditor({
           {selectedRows.size > 0 && (
             <div className="bulk-actions">
               <span className="selection-count">{selectedRows.size} selected</span>
-              <input
-                type="number"
+              <NumberInput
                 className="quick-set-input"
                 value={quickSetValue}
-                onChange={(e) => setQuickSetValue(e.target.value)}
-                min="0"
-                max="10"
-                step="0.1"
+                onChange={setQuickSetValue}
+                min={0}
+                max={10}
+                step={0.1}
               />
               <button className="btn btn-secondary" onClick={handleQuickSetSelected}>
                 Set All Eras

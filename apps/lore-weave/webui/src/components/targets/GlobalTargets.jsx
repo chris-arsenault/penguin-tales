@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 
 export default function GlobalTargets({ global, updateTargets }) {
   return (
@@ -13,21 +14,20 @@ export default function GlobalTargets({ global, updateTargets }) {
         <div className="lw-form-grid">
           <div className="lw-form-group">
             <label className="lw-label">Target Count</label>
-            <input
-              type="number"
+            <NumberInput
               className="lw-input"
               value={global.totalEntities?.target || 150}
-              onChange={(e) => updateTargets('global.totalEntities.target', parseInt(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.totalEntities.target', v ?? 0)}
+              integer
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Tolerance (%)</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={(global.totalEntities?.tolerance || 0.1) * 100}
-              onChange={(e) => updateTargets('global.totalEntities.tolerance', (parseFloat(e.target.value) || 0) / 100)}
+              onChange={(v) => updateTargets('global.totalEntities.tolerance', (v ?? 0) / 100)}
             />
           </div>
         </div>
@@ -46,15 +46,14 @@ export default function GlobalTargets({ global, updateTargets }) {
               <div className="lw-percentage-bar">
                 <div className="lw-percentage-fill" style={{ width: `${ratio * 100}%` }} />
               </div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
+                step={0.01}
+                min={0}
+                max={1}
                 className="lw-input-small"
                 value={ratio}
-                onChange={(e) => {
-                  const newTargets = { ...global.entityKindDistribution.targets, [kind]: parseFloat(e.target.value) || 0 };
+                onChange={(v) => {
+                  const newTargets = { ...global.entityKindDistribution.targets, [kind]: v ?? 0 };
                   updateTargets('global.entityKindDistribution.targets', newTargets);
                 }}
               />
@@ -79,15 +78,14 @@ export default function GlobalTargets({ global, updateTargets }) {
               <div className="lw-percentage-bar">
                 <div className="lw-percentage-fill" style={{ width: `${ratio * 100}%` }} />
               </div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
+                step={0.01}
+                min={0}
+                max={1}
                 className="lw-input-small"
                 value={ratio}
-                onChange={(e) => {
-                  const newTargets = { ...global.prominenceDistribution.targets, [level]: parseFloat(e.target.value) || 0 };
+                onChange={(v) => {
+                  const newTargets = { ...global.prominenceDistribution.targets, [level]: v ?? 0 };
                   updateTargets('global.prominenceDistribution.targets', newTargets);
                 }}
               />
@@ -102,33 +100,31 @@ export default function GlobalTargets({ global, updateTargets }) {
         <div className="lw-form-grid">
           <div className="lw-form-group">
             <label className="lw-label">Max Single Type Ratio</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={global.relationshipDistribution?.maxSingleTypeRatio || 0.15}
-              onChange={(e) => updateTargets('global.relationshipDistribution.maxSingleTypeRatio', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.relationshipDistribution.maxSingleTypeRatio', v ?? 0)}
             />
             <div className="lw-comment">Prevents any one relationship type from dominating</div>
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Min Types Present</label>
-            <input
-              type="number"
+            <NumberInput
               className="lw-input"
               value={global.relationshipDistribution?.minTypesPresent || 12}
-              onChange={(e) => updateTargets('global.relationshipDistribution.minTypesPresent', parseInt(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.relationshipDistribution.minTypesPresent', v ?? 0)}
+              integer
             />
             <div className="lw-comment">Minimum number of different relationship types</div>
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Min Type Ratio</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={global.relationshipDistribution?.minTypeRatio || 0.02}
-              onChange={(e) => updateTargets('global.relationshipDistribution.minTypeRatio', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.relationshipDistribution.minTypeRatio', v ?? 0)}
             />
             <div className="lw-comment">Minimum ratio for any present relationship type</div>
           </div>
@@ -141,70 +137,66 @@ export default function GlobalTargets({ global, updateTargets }) {
         <div className="lw-form-grid">
           <div className="lw-form-group">
             <label className="lw-label">Target Clusters (Min)</label>
-            <input
-              type="number"
+            <NumberInput
               className="lw-input"
               value={global.graphConnectivity?.targetClusters?.min || 3}
-              onChange={(e) => updateTargets('global.graphConnectivity.targetClusters.min', parseInt(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.targetClusters.min', v ?? 0)}
+              integer
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Target Clusters (Max)</label>
-            <input
-              type="number"
+            <NumberInput
               className="lw-input"
               value={global.graphConnectivity?.targetClusters?.max || 8}
-              onChange={(e) => updateTargets('global.graphConnectivity.targetClusters.max', parseInt(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.targetClusters.max', v ?? 0)}
+              integer
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Target Clusters (Preferred)</label>
-            <input
-              type="number"
+            <NumberInput
               className="lw-input"
               value={global.graphConnectivity?.targetClusters?.preferred || 5}
-              onChange={(e) => updateTargets('global.graphConnectivity.targetClusters.preferred', parseInt(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.targetClusters.preferred', v ?? 0)}
+              integer
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Clustering Threshold</label>
-            <input
-              type="number"
-              step="0.1"
+            <NumberInput
+              step={0.1}
               className="lw-input"
               value={global.graphConnectivity?.clusteringStrengthThreshold || 0.6}
-              onChange={(e) => updateTargets('global.graphConnectivity.clusteringStrengthThreshold', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.clusteringStrengthThreshold', v ?? 0)}
             />
             <div className="lw-comment">Relationship strength needed to form clusters</div>
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Intra-Cluster Density</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={global.graphConnectivity?.densityTargets?.intraCluster || 0.65}
-              onChange={(e) => updateTargets('global.graphConnectivity.densityTargets.intraCluster', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.densityTargets.intraCluster', v ?? 0)}
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Inter-Cluster Density</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={global.graphConnectivity?.densityTargets?.interCluster || 0.12}
-              onChange={(e) => updateTargets('global.graphConnectivity.densityTargets.interCluster', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.densityTargets.interCluster', v ?? 0)}
             />
           </div>
           <div className="lw-form-group">
             <label className="lw-label">Max Isolated Node Ratio</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
+              step={0.01}
               className="lw-input"
               value={global.graphConnectivity?.isolatedNodeRatio?.max || 0.05}
-              onChange={(e) => updateTargets('global.graphConnectivity.isolatedNodeRatio.max', parseFloat(e.target.value) || 0)}
+              onChange={(v) => updateTargets('global.graphConnectivity.isolatedNodeRatio.max', v ?? 0)}
             />
             <div className="lw-comment">Maximum percentage of unconnected nodes</div>
           </div>

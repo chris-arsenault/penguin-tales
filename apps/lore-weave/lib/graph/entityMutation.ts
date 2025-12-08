@@ -8,6 +8,12 @@ import { Graph } from '../engine/types';
 import { HardState, EntityTags } from '../core/worldTypes';
 import { generateId } from '../core/idGeneration';
 import { arrayToTags } from '../utils/tagUtils';
+import {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_RELATIONSHIP_PROPERTIES,
+  FRAMEWORK_STATUS
+} from '../core/frameworkPrimitives';
 
 /**
  * Slugify a name for use in IDs or other contexts
@@ -96,7 +102,7 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
   // Use validated coords to satisfy TypeScript (already validated above)
   const validCoords = { x: coords.x, y: coords.y, z: coords.z ?? 50 };
 
-  return graph.createEntity({
+  const entityId = await graph.createEntity({
     kind: entity.kind || 'npc',
     subtype: entity.subtype || 'default',
     coordinates: validCoords,
@@ -110,6 +116,26 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     source,
     placementStrategy
   });
+
+  // Create CREATED_DURING relationship to current era (unless entity is an era itself)
+  // This is a framework-level temporal relationship distinct from spatial "originated_in"
+  if (entity.kind !== FRAMEWORK_ENTITY_KINDS.ERA) {
+    const currentEraEntity = graph.findEntities({
+      kind: FRAMEWORK_ENTITY_KINDS.ERA,
+      status: FRAMEWORK_STATUS.CURRENT
+    })[0];
+
+    if (currentEraEntity) {
+      graph.addRelationship(
+        FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
+        entityId,
+        currentEraEntity.id,
+        FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
+      );
+    }
+  }
+
+  return entityId;
 }
 
 /**

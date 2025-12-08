@@ -9,6 +9,7 @@ export { ReferenceDropdown } from './ReferenceDropdown';
 export { ChipSelect } from './ChipSelect';
 export { SearchableDropdown } from './SearchableDropdown';
 export { LevelSelector, STRENGTH_LEVELS, PROMINENCE_LEVELS } from './LevelSelector';
+export { NumberInput } from './NumberInput';
 
 // UI components
 export { EnableToggle } from './EnableToggle';

@@ -4,7 +4,7 @@ import { getAllTags, getAllRelationshipTypes, getRelationshipTypeCounts } from '
 import './FilterPanel.css';
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
-export type ViewMode = 'graph3d' | 'graph2d' | 'map';
+export type ViewMode = 'graph3d' | 'graph2d' | 'map' | 'timeline';
 
 interface FilterPanelProps {
   filters: Filters;
@@ -41,15 +41,22 @@ export default function FilterPanel({
 
   const [isRelTypesExpanded, setIsRelTypesExpanded] = useState(false);
 
-  // Get entity kinds and prominence levels from uiSchema (with fallbacks for older data)
+  // Dynamically discover entity kinds from actual entities in world data
+  // This makes archivist domain-agnostic - it shows ALL kinds present in the data
+  const kindsFromEntities = [...new Set(worldData.hardState.map(e => e.kind))];
+
+  // Also get kinds from uiSchema for display names (if available)
   const entityKindSchemas = worldData.uiSchema?.entityKinds ?? [];
-  const entityKinds: EntityKind[] = entityKindSchemas.length > 0
-    ? entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind)
-    : ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
+  const kindsFromSchema = entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind);
+
+  // Merge both sources: discovered kinds + schema kinds (schema may define kinds with no entities yet)
+  const allKindsSet = new Set([...kindsFromEntities, ...kindsFromSchema]);
+  const entityKinds: EntityKind[] = [...allKindsSet].sort();
+
   const prominenceLevels: Prominence[] = worldData.uiSchema?.prominenceLevels
     ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
-  // Build a map from kind to display name
+  // Build a map from kind to display name (from schema if available, otherwise use kind as-is)
   const kindDisplayNames = Object.fromEntries(
     entityKindSchemas.map(ek => [ek.kind, ek.description || ek.kind])
   );
@@ -72,19 +79,16 @@ export default function FilterPanel({
     let relationshipTypes: string[];
 
     if (filters.relationshipTypes.length === 0) {
-      // Currently showing all, uncheck one means select all EXCEPT this one
-      relationshipTypes = sortedRelationshipTypes.filter(t => t !== type);
+      // Currently showing all - user wants to filter to ONLY this type
+      relationshipTypes = [type];
     } else if (filters.relationshipTypes.includes(type)) {
-      // Currently checked, uncheck it
+      // Type is selected, uncheck it
       relationshipTypes = filters.relationshipTypes.filter(t => t !== type);
+      // If nothing left selected, go back to showing all
+      // (empty array = no filter = show all)
     } else {
-      // Currently unchecked, check it
+      // Type not selected, add it
       relationshipTypes = [...filters.relationshipTypes, type];
-
-      // If all are now checked, go back to "show all" (empty array)
-      if (relationshipTypes.length === sortedRelationshipTypes.length) {
-        relationshipTypes = [];
-      }
     }
 
     onChange({ ...filters, relationshipTypes });
@@ -115,6 +119,13 @@ export default function FilterPanel({
             title="Coordinate Map View"
           >
             Map
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('timeline')}
+            title="Timeline View - Eras along axis"
+          >
+            Time
           </button>
         </div>
         <div className="view-actions">
@@ -207,8 +218,6 @@ export default function FilterPanel({
             <span className="filter-accordion-badge">
               {filters.relationshipTypes.length === 0
                 ? 'All'
-                : filters.relationshipTypes.length === sortedRelationshipTypes.length
-                ? 'None'
                 : filters.relationshipTypes.length}
             </span>
           </button>
@@ -219,21 +228,14 @@ export default function FilterPanel({
                   onClick={() => onChange({ ...filters, relationshipTypes: [] })}
                   className="filter-accordion-control-btn"
                 >
-                  Select All
-                </button>
-                <button
-                  onClick={() => onChange({ ...filters, relationshipTypes: sortedRelationshipTypes })}
-                  className="filter-accordion-control-btn"
-                >
-                  Clear All
+                  Show All
                 </button>
               </div>
               {sortedRelationshipTypes.map(type => {
-                // Empty array = all checked
-                // Array with all types = all unchecked (special "none" case)
-                // Otherwise = checked if included
-                const isChecked = filters.relationshipTypes.length === 0 ? true
-                  : filters.relationshipTypes.length === sortedRelationshipTypes.length ? false
+                // Empty array = show all (all appear checked)
+                // Non-empty = only selected types are checked
+                const isChecked = filters.relationshipTypes.length === 0
+                  ? true
                   : filters.relationshipTypes.includes(type);
                 return (
                   <label key={type} className="filter-checkbox-label">

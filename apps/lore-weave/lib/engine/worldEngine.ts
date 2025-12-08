@@ -33,6 +33,7 @@ import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
 import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
+import { createEraEntity } from '../systems/eraSpawner';
 import type { ISimulationEmitter, PressureChangeDetail, DiscretePressureModification, PressureModificationSource } from '../observer/types';
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
@@ -432,11 +433,50 @@ export class WorldEngine {
     this.emitter.log('info', 'Starting world generation...');
     this.emitter.log('info', `Initial state: ${this.graph.getEntityCount()} entities`);
 
+    // Ensure first era entity exists BEFORE any growth phase runs
+    // This is critical so entities created in the first growth phase can have ORIGINATED_IN relationships
+    this.ensureFirstEraExists();
+
     // Reset coordinate statistics for this run
     coordinateStats.reset();
 
     // Emit running progress
     this.emitProgress('running');
+  }
+
+  /**
+   * Ensure the first era entity exists in the graph.
+   * This must be called before the first growth phase so that ORIGINATED_IN
+   * relationships can be created for all template-generated entities.
+   */
+  private ensureFirstEraExists(): void {
+    // Check if any era entities already exist
+    const existingEras = this.graph.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA });
+
+    if (existingEras.length > 0) {
+      // Era already exists - nothing to do
+      return;
+    }
+
+    // Get first era from config
+    const configEras = this.config.eras;
+    if (!configEras || configEras.length === 0) {
+      this.emitter.log('warn', 'No eras defined in config - entities will not have ORIGINATED_IN relationships');
+      return;
+    }
+
+    // Create the first era entity
+    const firstEraConfig = configEras[0];
+    const { entity: firstEra } = createEraEntity(
+      firstEraConfig,
+      this.graph.tick,
+      FRAMEWORK_STATUS.CURRENT
+    );
+
+    // Add era entity to graph directly (bypasses addEntity to avoid circular ORIGINATED_IN)
+    this.graph._loadEntity(firstEra.id, firstEra);
+
+    this.emitter.log('info', `[WorldEngine] Initialized first era: ${firstEraConfig.name}`);
   }
 
   /**

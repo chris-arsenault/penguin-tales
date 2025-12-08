@@ -27,13 +27,14 @@ export default function ValidationEditor({
   pressures = [],
   generators = [],
   systems = [],
+  actions = [],
   usageMap = null,
   namingData = {},
   onNavigateToGenerator,
 }) {
   const validationResults = useMemo(() =>
-    runValidations(schema, eras, pressures, generators, systems),
-    [schema, eras, pressures, generators, systems]
+    runValidations(schema, eras, pressures, generators, systems, actions),
+    [schema, eras, pressures, generators, systems, actions]
   );
 
   // Count orphans from usageMap for summary
@@ -214,15 +215,15 @@ export default function ValidationEditor({
         <ul className="validation-rule-list">
           <li className="validation-rule-item">
             <span className="validation-rule-bullet text-danger">●</span>
-            <strong>Format & Reference Validation:</strong> Generator shape, entity kinds, relationship kinds, pressure IDs, era references
+            <strong>Reference Validation:</strong> Entity kinds (generators, pressures, systems), relationship kinds (generators, pressures, systems), pressure IDs (generators, systems, eras, actions), era→generator/system references
           </li>
           <li className="validation-rule-item">
             <span className="validation-rule-bullet text-warning">●</span>
-            <strong>Balance Validation:</strong> Pressure sources/sinks, orphan generators/systems
+            <strong>Balance Validation:</strong> Pressure sources/sinks (baseGrowth, decay, feedback, generators, systems), orphan generators/systems (not in any era)
           </li>
           <li className="validation-rule-item">
             <span className="validation-rule-bullet text-warning">●</span>
-            <strong>Configuration Quality:</strong> Subtypes, statuses, cultures, numeric ranges
+            <strong>Configuration Quality:</strong> Subtypes, statuses, cultures, tags, numeric ranges
           </li>
         </ul>
       </div>
@@ -233,13 +234,14 @@ export default function ValidationEditor({
 /**
  * Export validation status calculation for use by parent
  */
-export function getValidationStatus(schema, eras, pressures, generators, systems) {
+export function getValidationStatus(schema, eras, pressures, generators, systems, actions = []) {
   const results = runValidations(
     schema || { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] },
     eras || [],
     pressures || [],
     generators || [],
-    systems || []
+    systems || [],
+    actions || []
   );
   return {
     status: getOverallStatus(results),

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 import { getAllDomains } from '../../utils';
 
 function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
@@ -265,24 +266,24 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
               <div className="flex-row-responsive">
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Min Length</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={formData.phonology?.lengthRange?.[0] || 2}
-                    onChange={(e) => setFormData({
+                    onChange={(v) => setFormData({
                       ...formData,
-                      phonology: {...formData.phonology, lengthRange: [parseInt(e.target.value) || 2, formData.phonology?.lengthRange?.[1] || 4]}
+                      phonology: {...formData.phonology, lengthRange: [v ?? 2, formData.phonology?.lengthRange?.[1] || 4]}
                     })}
+                    integer
                   />
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Max Length</label>
-                  <input
-                    type="number"
+                  <NumberInput
                     value={formData.phonology?.lengthRange?.[1] || 4}
-                    onChange={(e) => setFormData({
+                    onChange={(v) => setFormData({
                       ...formData,
-                      phonology: {...formData.phonology, lengthRange: [formData.phonology?.lengthRange?.[0] || 2, parseInt(e.target.value) || 4]}
+                      phonology: {...formData.phonology, lengthRange: [formData.phonology?.lengthRange?.[0] || 2, v ?? 4]}
                     })}
+                    integer
                   />
                 </div>
               </div>
@@ -412,29 +413,27 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
               </div>
               <div className="form-group">
                 <label>Apostrophe Rate</label>
-                <input
-                  type="number"
-                  step="0.05"
-                  min="0"
-                  max="1"
+                <NumberInput
+                  step={0.05}
+                  min={0}
+                  max={1}
                   value={formData.style?.apostropheRate || 0}
-                  onChange={(e) => setFormData({
+                  onChange={(v) => setFormData({
                     ...formData,
-                    style: {...formData.style, apostropheRate: parseFloat(e.target.value) || 0}
+                    style: {...formData.style, apostropheRate: v ?? 0}
                   })}
                 />
               </div>
               <div className="form-group">
                 <label>Hyphen Rate</label>
-                <input
-                  type="number"
-                  step="0.05"
-                  min="0"
-                  max="1"
+                <NumberInput
+                  step={0.05}
+                  min={0}
+                  max={1}
                   value={formData.style?.hyphenRate || 0}
-                  onChange={(e) => setFormData({
+                  onChange={(v) => setFormData({
                     ...formData,
-                    style: {...formData.style, hyphenRate: parseFloat(e.target.value) || 0}
+                    style: {...formData.style, hyphenRate: v ?? 0}
                   })}
                 />
               </div>
@@ -451,13 +450,12 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
               </div>
               <div className="form-group">
                 <label>Ending Boost</label>
-                <input
-                  type="number"
-                  step="0.1"
+                <NumberInput
+                  step={0.1}
                   value={formData.style?.preferredEndingBoost || 1.0}
-                  onChange={(e) => setFormData({
+                  onChange={(v) => setFormData({
                     ...formData,
-                    style: {...formData.style, preferredEndingBoost: parseFloat(e.target.value) || 1.0}
+                    style: {...formData.style, preferredEndingBoost: v ?? 1.0}
                   })}
                 />
               </div>

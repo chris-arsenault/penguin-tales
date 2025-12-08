@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { ItemRow } from '../../shared';
+import { ItemRow, NumberInput } from '../../shared';
 
 /**
  * @param {Object} props
@@ -24,11 +24,11 @@ export function TransitionEffectItem({ pressureId, value, onChange, onRemove, pr
       onRemove={onRemove}
       removeTitle="Remove effect"
     >
-      <input
-        type="number"
+      <NumberInput
         value={value}
-        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        onChange={(v) => onChange(v ?? 0)}
         className={`input input-compact input-centered ${value >= 0 ? 'text-success' : 'text-danger'}`}
+        integer
       />
       <span className="text-dim text-sm" style={{ minWidth: '80px' }}>
         {value >= 0 ? '+' : ''}{value} pressure

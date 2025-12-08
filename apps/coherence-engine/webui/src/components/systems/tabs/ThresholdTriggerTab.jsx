@@ -4,7 +4,8 @@
 
 import React, { useState } from 'react';
 import { CLUSTER_MODES, CONDITION_TYPES, ACTION_TYPES, DIRECTIONS } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * ConditionCard - Expandable card for condition configuration
@@ -21,6 +22,7 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
     value: rk.kind,
     label: rk.description || rk.kind,
   }));
+  const tagRegistry = schema?.tagRegistry || [];
 
   const update = (field, value) => {
     onChange({ ...condition, [field]: value });
@@ -119,22 +121,22 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
               <>
                 <div className="form-group">
                   <label className="label">Min Count</label>
-                  <input
-                    type="number"
-                    value={condition.minCount ?? ''}
-                    onChange={(e) => update('minCount', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
+                  <NumberInput
+                    value={condition.minCount}
+                    onChange={(v) => update('minCount', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
                 <div className="form-group">
                   <label className="label">Max Count</label>
-                  <input
-                    type="number"
-                    value={condition.maxCount ?? ''}
-                    onChange={(e) => update('maxCount', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
+                  <NumberInput
+                    value={condition.maxCount}
+                    onChange={(v) => update('maxCount', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
               </>
@@ -142,23 +144,24 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
             {condition.type === 'time_since_update' && (
               <div className="form-group">
                 <label className="label">Min Ticks</label>
-                <input
-                  type="number"
-                  value={condition.minTicks ?? ''}
-                  onChange={(e) => update('minTicks', parseInt(e.target.value) || undefined)}
-                  className="input"
-                  min="0"
+                <NumberInput
+                  value={condition.minTicks}
+                  onChange={(v) => update('minTicks', v)}
+                  min={0}
+                  integer
+                  allowEmpty
                 />
               </div>
             )}
             {(condition.type === 'tag_exists' || condition.type === 'tag_absent') && (
               <div className="form-group">
                 <label className="label">Tag</label>
-                <input
-                  type="text"
-                  value={condition.tag || ''}
-                  onChange={(e) => update('tag', e.target.value)}
-                  className="input"
+                <TagSelector
+                  value={condition.tag ? [condition.tag] : []}
+                  onChange={(tags) => update('tag', tags[0] || '')}
+                  tagRegistry={tagRegistry}
+                  placeholder="Select tag..."
+                  singleSelect
                 />
               </div>
             )}
@@ -199,12 +202,10 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
                 </div>
                 <div className="form-group">
                   <label className="label">Threshold</label>
-                  <input
-                    type="number"
-                    value={condition.threshold ?? ''}
-                    onChange={(e) => update('threshold', parseFloat(e.target.value) || undefined)}
-                    className="input"
-                    step="0.1"
+                  <NumberInput
+                    value={condition.threshold}
+                    onChange={(v) => update('threshold', v)}
+                    allowEmpty
                   />
                 </div>
               </>
@@ -213,22 +214,22 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
               <>
                 <div className="form-group">
                   <label className="label">Min Connections</label>
-                  <input
-                    type="number"
-                    value={condition.minConnections ?? ''}
-                    onChange={(e) => update('minConnections', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
+                  <NumberInput
+                    value={condition.minConnections}
+                    onChange={(v) => update('minConnections', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
                 <div className="form-group">
                   <label className="label">Max Connections</label>
-                  <input
-                    type="number"
-                    value={condition.maxConnections ?? ''}
-                    onChange={(e) => update('maxConnections', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
+                  <NumberInput
+                    value={condition.maxConnections}
+                    onChange={(v) => update('maxConnections', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
               </>
@@ -250,6 +251,7 @@ function ActionCard({ action, onChange, onRemove, schema }) {
     value: rk.kind,
     label: rk.description || rk.kind,
   }));
+  const tagRegistry = schema?.tagRegistry || [];
 
   const update = (field, value) => {
     onChange({ ...action, [field]: value });
@@ -297,11 +299,12 @@ function ActionCard({ action, onChange, onRemove, schema }) {
             {(action.type === 'set_tag' || action.type === 'set_cluster_tag' || action.type === 'remove_tag') && (
               <div className="form-group">
                 <label className="label">Tag</label>
-                <input
-                  type="text"
-                  value={action.tag || ''}
-                  onChange={(e) => update('tag', e.target.value)}
-                  className="input"
+                <TagSelector
+                  value={action.tag ? [action.tag] : []}
+                  onChange={(tags) => update('tag', tags[0] || '')}
+                  tagRegistry={tagRegistry}
+                  placeholder="Select tag..."
+                  singleSelect
                 />
               </div>
             )}
@@ -333,14 +336,12 @@ function ActionCard({ action, onChange, onRemove, schema }) {
                 />
                 <div className="form-group">
                   <label className="label">Strength</label>
-                  <input
-                    type="number"
-                    value={action.relationshipStrength ?? ''}
-                    onChange={(e) => update('relationshipStrength', parseFloat(e.target.value) || undefined)}
-                    className="input"
-                    step="0.1"
-                    min="0"
-                    max="1"
+                  <NumberInput
+                    value={action.relationshipStrength}
+                    onChange={(v) => update('relationshipStrength', v)}
+                    min={0}
+                    max={1}
+                    allowEmpty
                     placeholder="0.5"
                   />
                 </div>
@@ -370,12 +371,9 @@ function ActionCard({ action, onChange, onRemove, schema }) {
                 </div>
                 <div className="form-group">
                   <label className="label">Delta</label>
-                  <input
-                    type="number"
-                    value={action.delta ?? ''}
-                    onChange={(e) => update('delta', parseFloat(e.target.value) || 0)}
-                    className="input"
-                    step="0.1"
+                  <NumberInput
+                    value={action.delta}
+                    onChange={(v) => update('delta', v ?? 0)}
                   />
                 </div>
               </>
@@ -405,6 +403,7 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
     value: rk.kind,
     label: rk.description || rk.kind,
   }));
+  const tagRegistry = schema?.tagRegistry || [];
 
   const getStatusOptions = (kind) => {
     const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
@@ -476,22 +475,22 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
           )}
           <div className="form-group">
             <label className="label">Has Tag</label>
-            <input
-              type="text"
-              value={config.entityFilter?.hasTag || ''}
-              onChange={(e) => updateEntityFilter('hasTag', e.target.value || undefined)}
-              className="input"
-              placeholder="Optional"
+            <TagSelector
+              value={config.entityFilter?.hasTag ? [config.entityFilter.hasTag] : []}
+              onChange={(tags) => updateEntityFilter('hasTag', tags[0] || undefined)}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
           <div className="form-group">
             <label className="label">Not Has Tag</label>
-            <input
-              type="text"
-              value={config.entityFilter?.notHasTag || ''}
-              onChange={(e) => updateEntityFilter('notHasTag', e.target.value || undefined)}
-              className="input"
-              placeholder="Optional"
+            <TagSelector
+              value={config.entityFilter?.notHasTag ? [config.entityFilter.notHasTag] : []}
+              onChange={(tags) => updateEntityFilter('notHasTag', tags[0] || undefined)}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
         </div>
@@ -558,12 +557,12 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
               />
               <div className="form-group">
                 <label className="label">Min Cluster Size</label>
-                <input
-                  type="number"
-                  value={config.minClusterSize ?? ''}
-                  onChange={(e) => updateConfig('minClusterSize', parseInt(e.target.value) || undefined)}
-                  className="input"
-                  min="1"
+                <NumberInput
+                  value={config.minClusterSize}
+                  onChange={(v) => updateConfig('minClusterSize', v)}
+                  min={1}
+                  integer
+                  allowEmpty
                 />
               </div>
             </>

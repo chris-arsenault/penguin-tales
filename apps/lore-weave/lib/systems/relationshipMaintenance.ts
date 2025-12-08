@@ -3,6 +3,7 @@ import { Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { DecayRate, RelationshipKindDefinition } from '../domainInterface/domainSchema';
 import type { RelationshipMaintenanceConfig } from '../engine/systemInterpreter';
+import { isFrameworkRelationshipKind } from '../core/frameworkPrimitives';
 
 /**
  * Relationship Maintenance System
@@ -46,6 +47,10 @@ function getRelationshipKindDef(
 
 /** Check if a relationship kind is cullable */
 function isCullable(graphView: TemplateGraphView, kind: string): boolean {
+  // Framework relationships are NEVER cullable - they are structural
+  if (isFrameworkRelationshipKind(kind)) {
+    return false;
+  }
   const def = getRelationshipKindDef(graphView, kind);
   // Default to true if not specified
   return def?.cullable !== false;
@@ -53,6 +58,10 @@ function isCullable(graphView: TemplateGraphView, kind: string): boolean {
 
 /** Get decay rate for a relationship kind */
 function getDecayRate(graphView: TemplateGraphView, kind: string): DecayRate {
+  // Framework relationships NEVER decay - they are permanent structural links
+  if (isFrameworkRelationshipKind(kind)) {
+    return 'none';
+  }
   const def = getRelationshipKindDef(graphView, kind);
   // Default to 'medium' if not specified
   return def?.decayRate ?? 'medium';

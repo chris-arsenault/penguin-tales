@@ -21,11 +21,10 @@ function MiniSection({ title, icon, count, children, isEmpty, emptyMessage }) {
         <span className="transitions-mini-count">{count}</span>
       </div>
       <div className="transitions-mini-content">
-        {isEmpty ? (
+        {isEmpty && (
           <div className="transitions-mini-empty">{emptyMessage}</div>
-        ) : (
-          children
         )}
+        {children}
       </div>
     </div>
   );

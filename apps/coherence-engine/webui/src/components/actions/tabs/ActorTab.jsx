@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { PROMINENCE_LEVELS } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
 
 function PressureRequirementsEditor({ value = {}, onChange }) {
   const entries = Object.entries(value);
@@ -41,11 +41,11 @@ function PressureRequirementsEditor({ value = {}, onChange }) {
             placeholder="Pressure ID"
           />
           <span className="text-muted text-xs">≥</span>
-          <input
-            type="number"
+          <NumberInput
             value={minValue}
-            onChange={(e) => updatePressure(pressureId, parseInt(e.target.value) || 0)}
+            onChange={(v) => updatePressure(pressureId, v ?? 0)}
             className="input input-xs"
+            integer
           />
           <button className="btn-icon btn-icon-danger" onClick={() => removePressure(pressureId)}>
             ×

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { PATH_CHECK_TYPES, PATH_CONSTRAINT_TYPES } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
 import { PathStepEditor } from './PathStepEditor';
 import { PathConstraintEditor } from './PathConstraintEditor';
 
@@ -81,12 +81,12 @@ export function GraphPathEditor({ assert, onChange, schema, availableRefs }) {
         {(assertion.check === 'count_min' || assertion.check === 'count_max') && (
           <div>
             <label className="label label-tiny">Count</label>
-            <input
-              type="number"
+            <NumberInput
               value={assertion.count ?? 1}
-              onChange={(e) => updateAssertion('count', parseInt(e.target.value) || 1)}
-              className="input input-compact"
+              onChange={(v) => updateAssertion('count', v ?? 1)}
               min={0}
+              integer
+              className="input input-compact"
             />
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 import { LEXEME_CATEGORIES } from '../../constants';
 import { generateLexemesWithAnthropic } from '../../../lib/anthropicClient';
 import { CopyLexemeModal } from './CopyLexemeModal';
@@ -405,10 +406,10 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
 
           <div className="form-group">
             <label>Target Count</label>
-            <input
-              type="number"
+            <NumberInput
               value={specForm.targetCount}
-              onChange={(e) => setSpecForm({ ...specForm, targetCount: parseInt(e.target.value) || 30 })}
+              onChange={(v) => setSpecForm({ ...specForm, targetCount: v ?? 30 })}
+              integer
             />
           </div>
         </div>
@@ -429,24 +430,24 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
         <div className="form-grid-2">
           <div className="form-group">
             <label>Min Length</label>
-            <input
-              type="number"
+            <NumberInput
               value={specForm.qualityFilter.minLength}
-              onChange={(e) => setSpecForm({
+              onChange={(v) => setSpecForm({
                 ...specForm,
-                qualityFilter: { ...specForm.qualityFilter, minLength: parseInt(e.target.value) || 3 }
+                qualityFilter: { ...specForm.qualityFilter, minLength: v ?? 3 }
               })}
+              integer
             />
           </div>
           <div className="form-group">
             <label>Max Length</label>
-            <input
-              type="number"
+            <NumberInput
               value={specForm.qualityFilter.maxLength}
-              onChange={(e) => setSpecForm({
+              onChange={(v) => setSpecForm({
                 ...specForm,
-                qualityFilter: { ...specForm.qualityFilter, maxLength: parseInt(e.target.value) || 15 }
+                qualityFilter: { ...specForm.qualityFilter, maxLength: v ?? 15 }
               })}
+              integer
             />
           </div>
         </div>

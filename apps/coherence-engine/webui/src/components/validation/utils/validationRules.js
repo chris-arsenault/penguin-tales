@@ -37,8 +37,10 @@ export const validationRules = {
     // Group by invalid kind
     const byKind = {};
     for (const r of invalid) {
-      if (!byKind[r.kind]) byKind[r.kind] = [];
-      byKind[r.kind].push(r);
+      // Ensure kind is a string for proper grouping and display
+      const kindStr = typeof r.kind === 'object' ? JSON.stringify(r.kind) : String(r.kind);
+      if (!byKind[kindStr]) byKind[kindStr] = [];
+      byKind[kindStr].push(r);
     }
 
     return {
@@ -66,8 +68,10 @@ export const validationRules = {
 
     const byKind = {};
     for (const r of invalid) {
-      if (!byKind[r.kind]) byKind[r.kind] = [];
-      byKind[r.kind].push(r);
+      // Ensure kind is a string for proper grouping and display
+      const kindStr = typeof r.kind === 'object' ? JSON.stringify(r.kind) : String(r.kind);
+      if (!byKind[kindStr]) byKind[kindStr] = [];
+      byKind[kindStr].push(r);
     }
 
     return {
@@ -86,23 +90,25 @@ export const validationRules = {
   /**
    * 3. Invalid Pressure ID References (ERROR)
    */
-  invalidPressureId: (pressures, generators, systems) => {
+  invalidPressureId: (pressures, generators, systems, eras, actions) => {
     const validIds = new Set(pressures.map(p => p.id));
-    const refs = collectPressureIdRefs(generators, systems);
+    const refs = collectPressureIdRefs(generators, systems, eras, actions);
     const invalid = refs.filter(r => !validIds.has(r.id));
 
     if (invalid.length === 0) return null;
 
     const byId = {};
     for (const r of invalid) {
-      if (!byId[r.id]) byId[r.id] = [];
-      byId[r.id].push(r);
+      // Ensure ID is a string for proper grouping and display
+      const idStr = typeof r.id === 'object' ? JSON.stringify(r.id) : String(r.id);
+      if (!byId[idStr]) byId[idStr] = [];
+      byId[idStr].push(r);
     }
 
     return {
       id: 'invalid-pressure-id',
       title: 'Invalid pressure ID references',
-      message: 'These configurations reference pressure IDs that do not exist. This will cause runtime crashes when modifying pressures.',
+      message: 'These configurations reference pressure IDs that do not exist. This will cause runtime failures when evaluating or modifying pressures.',
       severity: 'error',
       affectedItems: Object.entries(byId).map(([id, sources]) => ({
         id,
@@ -281,44 +287,7 @@ export const validationRules = {
   },
 
   /**
-   * 8. Generator Missing Lineage (WARNING)
-   */
-  generatorMissingLineage: (generators) => {
-    const warnings = [];
-
-    for (const gen of generators) {
-      if (gen.enabled === false) continue;
-      const createsEntities = gen.creation && gen.creation.length > 0;
-      if (!createsEntities) continue;
-
-      const hasContractLineage = gen.contract?.lineage != null;
-      const hasInlineLineage = gen.creation.some(c => c.lineage != null);
-
-      if (!hasContractLineage && !hasInlineLineage) {
-        const entityTypes = gen.creation.map(c =>
-          c.subtype ? `${c.kind}:${c.subtype}` : c.kind
-        ).join(', ');
-        warnings.push({ id: gen.id, name: gen.name || gen.id, entityTypes });
-      }
-    }
-
-    if (warnings.length === 0) return null;
-
-    return {
-      id: 'generator-missing-lineage',
-      title: 'Generators missing lineage configuration',
-      message: 'These generators create entities but do not define lineage in their contract. Lineage ensures new entities are properly connected to existing ones.',
-      severity: 'warning',
-      affectedItems: warnings.map(w => ({
-        id: w.id,
-        label: w.name,
-        detail: `Creates: ${w.entityTypes}`,
-      })),
-    };
-  },
-
-  /**
-   * 9. Orphan Generators (WARNING)
+   * 8. Orphan Generators (WARNING)
    */
   orphanGenerators: (eras, generators) => {
     const referencedIds = new Set();
@@ -348,7 +317,7 @@ export const validationRules = {
   },
 
   /**
-   * 10. Orphan Systems (WARNING)
+   * 9. Orphan Systems (WARNING)
    */
   orphanSystems: (eras, systems) => {
     const referencedIds = new Set();
@@ -384,7 +353,7 @@ export const validationRules = {
   },
 
   /**
-   * 11. Zero-Weight Generators in All Eras (WARNING)
+   * 10. Zero-Weight Generators in All Eras (WARNING)
    */
   zeroWeightGenerators: (eras, generators) => {
     const zeroInAll = [];
@@ -425,7 +394,7 @@ export const validationRules = {
   },
 
   /**
-   * 12. Invalid Subtype References (WARNING)
+   * 11. Invalid Subtype References (WARNING)
    */
   invalidSubtypeRef: (schema, generators, pressures) => {
     // Build map of valid subtypes per kind
@@ -502,7 +471,7 @@ export const validationRules = {
   },
 
   /**
-   * 13. Invalid Status References (WARNING)
+   * 12. Invalid Status References (WARNING)
    */
   invalidStatusRef: (schema, generators) => {
     // Build map of valid statuses per kind
@@ -542,7 +511,7 @@ export const validationRules = {
   },
 
   /**
-   * 14. Invalid Culture References (WARNING)
+   * 13. Invalid Culture References (WARNING)
    */
   invalidCultureRef: (schema, _entityKinds) => {
     const validCultures = new Set((schema.cultures || []).map(c => c.id));
@@ -575,7 +544,7 @@ export const validationRules = {
   },
 
   /**
-   * 15. Undefined Tag References (WARNING)
+   * 14. Undefined Tag References (WARNING)
    */
   undefinedTagRefs: (schema, generators, systems, pressures) => {
     const definedTags = new Set((schema.tagRegistry || []).map(t => t.tag));
@@ -607,7 +576,7 @@ export const validationRules = {
   },
 
   /**
-   * 16. Conflicting Tags (WARNING) - Tags assigned together that are marked as conflicting
+   * 15. Conflicting Tags (WARNING) - Tags assigned together that are marked as conflicting
    */
   conflictingTagsInUse: (schema, generators) => {
     const tagRegistry = schema.tagRegistry || [];
@@ -663,7 +632,7 @@ export const validationRules = {
   },
 
   /**
-   * 17. Numeric Range Validation (WARNING)
+   * 16. Numeric Range Validation (WARNING)
    */
   numericRangeIssues: (pressures, eras) => {
     const issues = [];
@@ -715,7 +684,7 @@ export const validationRules = {
 /**
  * Run all validations
  */
-export function runValidations(schema, eras, pressures, generators, systems) {
+export function runValidations(schema, eras, pressures, generators, systems, actions = []) {
   const results = {
     errors: [],
     warnings: [],
@@ -728,12 +697,11 @@ export function runValidations(schema, eras, pressures, generators, systems) {
   const rules = [
     () => validationRules.invalidEntityKind(schema, generators, pressures, systems),
     () => validationRules.invalidRelationshipKind(schema, generators, pressures, systems),
-    () => validationRules.invalidPressureId(pressures, generators, systems),
+    () => validationRules.invalidPressureId(pressures, generators, systems, eras, actions),
     () => validationRules.invalidEraTemplateRef(eras, generators),
     () => validationRules.invalidEraSystemRef(eras, systems),
     () => validationRules.pressureWithoutSources(pressures, generators, systems),
     () => validationRules.pressureWithoutSinks(pressures, generators, systems),
-    () => validationRules.generatorMissingLineage(generators),
     () => validationRules.orphanGenerators(eras, generators),
     () => validationRules.orphanSystems(eras, systems),
     () => validationRules.zeroWeightGenerators(eras, generators),

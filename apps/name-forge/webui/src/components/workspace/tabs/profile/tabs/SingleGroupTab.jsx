@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { TagSelector } from '@penguin-tales/shared-components';
+import { TagSelector, NumberInput } from '@penguin-tales/shared-components';
 import MultiSelectPills from '../MultiSelectPills';
 
 const PROMINENCE_LEVELS = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
@@ -117,10 +117,10 @@ export default function SingleGroupTab({
           </div>
           <div className="form-group priority-field">
             <label>Priority</label>
-            <input
-              type="number"
+            <NumberInput
               value={group.priority || 0}
-              onChange={(e) => updateGroup({ priority: parseInt(e.target.value) || 0 })}
+              onChange={(v) => updateGroup({ priority: v ?? 0 })}
+              integer
             />
           </div>
         </div>

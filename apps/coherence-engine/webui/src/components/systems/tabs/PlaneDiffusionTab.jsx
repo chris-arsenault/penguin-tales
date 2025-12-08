@@ -3,15 +3,18 @@
  */
 
 import React from 'react';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * @param {Object} props
  * @param {Object} props.system - The system being edited
  * @param {Function} props.onChange - Called when system changes
+ * @param {Object} props.schema - Domain schema (for tag registry)
  */
-export function PlaneDiffusionTab({ system, onChange }) {
+export function PlaneDiffusionTab({ system, onChange, schema }) {
   const config = system.config || {};
+  const tagRegistry = schema?.tagRegistry || [];
 
   const updateConfig = (field, value) => {
     onChange({ ...system, config: { ...config, [field]: value } });
@@ -53,23 +56,21 @@ export function PlaneDiffusionTab({ system, onChange }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Tag Filter</label>
-            <input
-              type="text"
-              value={config.sources?.tagFilter || ''}
-              onChange={(e) => updateSources('tagFilter', e.target.value)}
-              className="input"
-              placeholder="e.g., volcanic"
+            <TagSelector
+              value={config.sources?.tagFilter ? [config.sources.tagFilter] : []}
+              onChange={(tags) => updateSources('tagFilter', tags[0] || '')}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
           <div className="form-group">
             <label className="label">Default Strength</label>
-            <input
-              type="number"
-              value={config.sources?.defaultStrength ?? ''}
-              onChange={(e) => updateSources('defaultStrength', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.1"
-              min="0"
+            <NumberInput
+              value={config.sources?.defaultStrength}
+              onChange={(v) => updateSources('defaultStrength', v)}
+              min={0}
+              allowEmpty
             />
           </div>
         </div>
@@ -80,23 +81,21 @@ export function PlaneDiffusionTab({ system, onChange }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Tag Filter</label>
-            <input
-              type="text"
-              value={config.sinks?.tagFilter || ''}
-              onChange={(e) => updateSinks('tagFilter', e.target.value)}
-              className="input"
-              placeholder="e.g., deep_ice"
+            <TagSelector
+              value={config.sinks?.tagFilter ? [config.sinks.tagFilter] : []}
+              onChange={(tags) => updateSinks('tagFilter', tags[0] || '')}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
           <div className="form-group">
             <label className="label">Default Strength</label>
-            <input
-              type="number"
-              value={config.sinks?.defaultStrength ?? ''}
-              onChange={(e) => updateSinks('defaultStrength', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.1"
-              min="0"
+            <NumberInput
+              value={config.sinks?.defaultStrength}
+              onChange={(v) => updateSinks('defaultStrength', v)}
+              min={0}
+              allowEmpty
             />
           </div>
         </div>
@@ -107,13 +106,11 @@ export function PlaneDiffusionTab({ system, onChange }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Rate</label>
-            <input
-              type="number"
-              value={config.diffusion?.rate ?? ''}
-              onChange={(e) => updateDiffusion('rate', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.05"
-              min="0"
+            <NumberInput
+              value={config.diffusion?.rate}
+              onChange={(v) => updateDiffusion('rate', v)}
+              min={0}
+              allowEmpty
             />
           </div>
           <ReferenceDropdown
@@ -128,12 +125,12 @@ export function PlaneDiffusionTab({ system, onChange }) {
           />
           <div className="form-group">
             <label className="label">Max Radius</label>
-            <input
-              type="number"
-              value={config.diffusion?.maxRadius ?? ''}
-              onChange={(e) => updateDiffusion('maxRadius', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="1"
+            <NumberInput
+              value={config.diffusion?.maxRadius}
+              onChange={(v) => updateDiffusion('maxRadius', v)}
+              min={1}
+              integer
+              allowEmpty
             />
           </div>
         </div>
@@ -151,35 +148,32 @@ export function PlaneDiffusionTab({ system, onChange }) {
               <div className="form-grid">
                 <div className="form-group">
                   <label className="label">Tag</label>
-                  <input
-                    type="text"
-                    value={tag.tag || ''}
-                    onChange={(e) => updateOutputTag(index, { ...tag, tag: e.target.value })}
-                    className="input"
+                  <TagSelector
+                    value={tag.tag ? [tag.tag] : []}
+                    onChange={(tags) => updateOutputTag(index, { ...tag, tag: tags[0] || '' })}
+                    tagRegistry={tagRegistry}
+                    placeholder="Select tag..."
+                    singleSelect
                   />
                 </div>
                 <div className="form-group">
                   <label className="label">Min Value</label>
-                  <input
-                    type="number"
-                    value={tag.minValue ?? ''}
-                    onChange={(e) => updateOutputTag(index, { ...tag, minValue: parseFloat(e.target.value) || undefined })}
-                    className="input"
-                    step="0.05"
-                    min="0"
-                    max="1"
+                  <NumberInput
+                    value={tag.minValue}
+                    onChange={(v) => updateOutputTag(index, { ...tag, minValue: v })}
+                    min={0}
+                    max={1}
+                    allowEmpty
                   />
                 </div>
                 <div className="form-group">
                   <label className="label">Max Value</label>
-                  <input
-                    type="number"
-                    value={tag.maxValue ?? ''}
-                    onChange={(e) => updateOutputTag(index, { ...tag, maxValue: parseFloat(e.target.value) || undefined })}
-                    className="input"
-                    step="0.05"
-                    min="0"
-                    max="1"
+                  <NumberInput
+                    value={tag.maxValue}
+                    onChange={(v) => updateOutputTag(index, { ...tag, maxValue: v })}
+                    min={0}
+                    max={1}
+                    allowEmpty
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -200,12 +194,12 @@ export function PlaneDiffusionTab({ system, onChange }) {
         <div style={{ marginTop: '16px' }}>
           <div className="form-group">
             <label className="label">Value Tag</label>
-            <input
-              type="text"
-              value={config.valueTag || ''}
-              onChange={(e) => updateConfig('valueTag', e.target.value)}
-              className="input"
-              placeholder="e.g., temperature"
+            <TagSelector
+              value={config.valueTag ? [config.valueTag] : []}
+              onChange={(tags) => updateConfig('valueTag', tags[0] || '')}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
         </div>

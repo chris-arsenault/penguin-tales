@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 import { generateTestNames } from '../../../../../lib/browser-generator.js';
 
 export default function TestTab({ profile, cultureConfig }) {
@@ -42,12 +43,12 @@ export default function TestTab({ profile, cultureConfig }) {
       <div className="test-controls">
         <div className="test-count-control">
           <label>Count:</label>
-          <input
-            type="number"
-            min="1"
-            max="100"
+          <NumberInput
+            min={1}
+            max={100}
             value={count}
-            onChange={(e) => setCount(Math.min(100, Math.max(1, parseInt(e.target.value) || 10)))}
+            onChange={(v) => setCount(v ?? 10)}
+            integer
           />
         </div>
         <button

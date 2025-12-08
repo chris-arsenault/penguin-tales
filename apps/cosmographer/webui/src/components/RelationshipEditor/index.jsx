@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 
 // Arctic Blue base theme with frost blue accent (Cosmographer)
 const ACCENT_COLOR = '#60a5fa';
@@ -381,14 +382,13 @@ export default function RelationshipEditor({ project, onSave }) {
 
             <div style={styles.formGroup}>
               <label style={styles.label}>Strength (0-1)</label>
-              <input
+              <NumberInput
                 style={styles.input}
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
+                min={0}
+                max={1}
+                step={0.1}
                 value={newRel.strength}
-                onChange={(e) => setNewRel({ ...newRel, strength: e.target.value })}
+                onChange={(v) => setNewRel({ ...newRel, strength: v ?? 0.5 })}
               />
             </div>
 

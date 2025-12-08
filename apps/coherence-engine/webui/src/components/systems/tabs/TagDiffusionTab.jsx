@@ -4,7 +4,8 @@
 
 import React from 'react';
 import { DIRECTIONS } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * @param {Object} props
@@ -14,6 +15,7 @@ import { ReferenceDropdown } from '../../shared';
  */
 export function TagDiffusionTab({ system, onChange, schema }) {
   const config = system.config || {};
+  const tagRegistry = schema?.tagRegistry || [];
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
@@ -51,12 +53,12 @@ export function TagDiffusionTab({ system, onChange, schema }) {
           />
           <div className="form-group">
             <label className="label">Max Tags</label>
-            <input
-              type="number"
-              value={config.maxTags ?? ''}
-              onChange={(e) => updateConfig('maxTags', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="1"
+            <NumberInput
+              value={config.maxTags}
+              onChange={(v) => updateConfig('maxTags', v)}
+              min={1}
+              integer
+              allowEmpty
             />
           </div>
         </div>
@@ -69,34 +71,32 @@ export function TagDiffusionTab({ system, onChange, schema }) {
         </div>
         <div className="form-grid">
           <div className="form-group">
-            <label className="label">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={(config.convergence?.tags || []).join(', ')}
-              onChange={(e) => updateConvergence('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-              className="input"
+            <label className="label">Tags</label>
+            <TagSelector
+              value={config.convergence?.tags || []}
+              onChange={(tags) => updateConvergence('tags', tags)}
+              tagRegistry={tagRegistry}
+              placeholder="Select tags..."
             />
           </div>
           <div className="form-group">
             <label className="label">Min Connections</label>
-            <input
-              type="number"
-              value={config.convergence?.minConnections ?? ''}
-              onChange={(e) => updateConvergence('minConnections', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="0"
+            <NumberInput
+              value={config.convergence?.minConnections}
+              onChange={(v) => updateConvergence('minConnections', v)}
+              min={0}
+              integer
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Probability</label>
-            <input
-              type="number"
-              value={config.convergence?.probability ?? ''}
-              onChange={(e) => updateConvergence('probability', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.1"
-              min="0"
-              max="1"
+            <NumberInput
+              value={config.convergence?.probability}
+              onChange={(v) => updateConvergence('probability', v)}
+              min={0}
+              max={1}
+              allowEmpty
             />
           </div>
         </div>
@@ -109,34 +109,32 @@ export function TagDiffusionTab({ system, onChange, schema }) {
         </div>
         <div className="form-grid">
           <div className="form-group">
-            <label className="label">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={(config.divergence?.tags || []).join(', ')}
-              onChange={(e) => updateDivergence('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-              className="input"
+            <label className="label">Tags</label>
+            <TagSelector
+              value={config.divergence?.tags || []}
+              onChange={(tags) => updateDivergence('tags', tags)}
+              tagRegistry={tagRegistry}
+              placeholder="Select tags..."
             />
           </div>
           <div className="form-group">
             <label className="label">Max Connections</label>
-            <input
-              type="number"
-              value={config.divergence?.maxConnections ?? ''}
-              onChange={(e) => updateDivergence('maxConnections', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="0"
+            <NumberInput
+              value={config.divergence?.maxConnections}
+              onChange={(v) => updateDivergence('maxConnections', v)}
+              min={0}
+              integer
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Probability</label>
-            <input
-              type="number"
-              value={config.divergence?.probability ?? ''}
-              onChange={(e) => updateDivergence('probability', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.1"
-              min="0"
-              max="1"
+            <NumberInput
+              value={config.divergence?.probability}
+              onChange={(v) => updateDivergence('probability', v)}
+              min={0}
+              max={1}
+              allowEmpty
             />
           </div>
         </div>

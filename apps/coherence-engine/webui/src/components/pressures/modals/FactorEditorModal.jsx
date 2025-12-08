@@ -4,7 +4,8 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FACTOR_TYPES } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 export function FactorEditorModal({
   isOpen,
@@ -48,14 +49,6 @@ export function FactorEditorModal({
     return (schema?.relationshipKinds || []).map(rk => ({
       value: rk.kind,
       label: rk.description || rk.kind,
-    }));
-  }, [schema]);
-
-  const tagOptions = useMemo(() => {
-    return (schema?.tagRegistry || []).map(t => ({
-      value: t.tag,
-      label: t.tag,
-      meta: t.category,
     }));
   }, [schema]);
 
@@ -237,11 +230,11 @@ export function FactorEditorModal({
             {/* Tag Count fields */}
             {selectedType === 'tag_count' && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <ChipSelect
-                  label="Tags"
+                <label className="label">Tags</label>
+                <TagSelector
                   value={localFactor.tags || []}
                   onChange={(v) => updateField('tags', v)}
-                  options={tagOptions}
+                  tagRegistry={schema?.tagRegistry || []}
                   placeholder="Select tags..."
                 />
               </div>
@@ -298,23 +291,19 @@ export function FactorEditorModal({
             {/* Common numeric fields */}
             <div className="input-group">
               <label className="label">Coefficient</label>
-              <input
-                type="number"
+              <NumberInput
                 value={localFactor.coefficient ?? 1}
-                onChange={(e) => updateField('coefficient', parseFloat(e.target.value) || 0)}
-                className="input"
-                step="0.1"
+                onChange={(v) => updateField('coefficient', v ?? 0)}
               />
             </div>
 
             {(selectedType === 'entity_count' || selectedType === 'relationship_count' || selectedType === 'ratio') && (
               <div className="input-group">
                 <label className="label">Cap (optional)</label>
-                <input
-                  type="number"
-                  value={localFactor.cap ?? ''}
-                  onChange={(e) => updateField('cap', e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="input"
+                <NumberInput
+                  value={localFactor.cap}
+                  onChange={(v) => updateField('cap', v)}
+                  allowEmpty
                   placeholder="No cap"
                 />
               </div>
@@ -323,12 +312,9 @@ export function FactorEditorModal({
             {selectedType === 'ratio' && (
               <div className="input-group">
                 <label className="label">Fallback Value</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={localFactor.fallbackValue ?? 0}
-                  onChange={(e) => updateField('fallbackValue', parseFloat(e.target.value) || 0)}
-                  className="input"
-                  step="0.1"
+                  onChange={(v) => updateField('fallbackValue', v ?? 0)}
                 />
               </div>
             )}

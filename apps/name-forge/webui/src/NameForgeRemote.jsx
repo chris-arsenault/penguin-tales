@@ -106,7 +106,7 @@ export default function NameForgeRemote({
     selectedProfile: '',
     selectedKind: '',
     selectedSubKind: '',
-    tags: '',
+    tags: [],
     prominence: '',
     count: 20,
     contextPairs: [{ key: '', value: '' }],

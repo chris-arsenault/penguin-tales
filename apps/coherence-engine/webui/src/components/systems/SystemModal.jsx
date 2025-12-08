@@ -90,7 +90,7 @@ export function SystemModal({ system, onChange, onClose, onDelete, schema, press
           case 'tagDiffusion':
             return <TagDiffusionTab system={system} onChange={onChange} schema={schema} />;
           case 'planeDiffusion':
-            return <PlaneDiffusionTab system={system} onChange={onChange} />;
+            return <PlaneDiffusionTab system={system} onChange={onChange} schema={schema} />;
           default:
             return null;
         }

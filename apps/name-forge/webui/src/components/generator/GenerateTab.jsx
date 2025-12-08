@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { TagSelector, NumberInput } from '@penguin-tales/shared-components';
 import { generateTestNames } from '../../lib/browser-generator.js';
 
 /**
@@ -15,7 +16,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
     selectedProfile: '',
     selectedKind: '',
     selectedSubKind: '',
-    tags: '',
+    tags: [],
     prominence: '',
     count: 20,
     contextPairs: [{ key: '', value: '' }] // Start with one empty row
@@ -52,6 +53,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
   // Get available options from schema
   const cultureIds = Object.keys(cultures || {});
   const entityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
+  const tagRegistry = worldSchema?.tagRegistry || [];
 
   // Get profiles for selected culture
   const availableProfiles = useMemo(() => {
@@ -117,10 +119,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
       }
 
       // Parse tags for condition matching
-      const tagList = tags
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t);
+      const tagList = Array.isArray(tags) ? tags : [];
 
       // Build context object from key-value pairs for grammar context:key slots
       const userContext = {};
@@ -263,12 +262,12 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
               {/* Tags */}
               <div className="form-group">
                 <label>Tags</label>
-                <input
-                  value={tags}
-                  onChange={(e) => updateField('tags', e.target.value)}
-                  placeholder="noble, ancient, warrior"
+                <TagSelector
+                  value={tags || []}
+                  onChange={(vals) => updateField('tags', vals)}
+                  tagRegistry={tagRegistry}
+                  placeholder="Select tags..."
                 />
-                <small className="text-muted">Comma-separated</small>
               </div>
 
               {/* Prominence */}
@@ -331,12 +330,12 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
             {/* Count */}
             <div className="form-group">
               <label>Number of Names</label>
-              <input
-                type="number"
+              <NumberInput
                 value={count}
-                onChange={(e) => updateField('count', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                onChange={(v) => updateField('count', v ?? 1)}
                 min={1}
                 max={100}
+                integer
               />
             </div>
 

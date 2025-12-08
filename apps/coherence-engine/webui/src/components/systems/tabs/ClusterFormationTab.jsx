@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { CLUSTERING_CRITERIA_TYPES } from '../constants';
-import { ReferenceDropdown } from '../../shared';
+import { ReferenceDropdown, NumberInput } from '../../shared';
 
 /**
  * @param {Object} props
@@ -77,33 +77,31 @@ export function ClusterFormationTab({ system, onChange, schema }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Min Size</label>
-            <input
-              type="number"
-              value={config.clustering?.minSize ?? ''}
-              onChange={(e) => updateClustering('minSize', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="2"
+            <NumberInput
+              value={config.clustering?.minSize}
+              onChange={(v) => updateClustering('minSize', v)}
+              min={2}
+              integer
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Max Size</label>
-            <input
-              type="number"
-              value={config.clustering?.maxSize ?? ''}
-              onChange={(e) => updateClustering('maxSize', parseInt(e.target.value) || undefined)}
-              className="input"
-              min="2"
+            <NumberInput
+              value={config.clustering?.maxSize}
+              onChange={(v) => updateClustering('maxSize', v)}
+              min={2}
+              integer
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Minimum Score</label>
-            <input
-              type="number"
-              value={config.clustering?.minimumScore ?? ''}
-              onChange={(e) => updateClustering('minimumScore', parseFloat(e.target.value) || undefined)}
-              className="input"
-              step="0.5"
-              min="0"
+            <NumberInput
+              value={config.clustering?.minimumScore}
+              onChange={(v) => updateClustering('minimumScore', v)}
+              min={0}
+              allowEmpty
             />
           </div>
         </div>
@@ -124,13 +122,10 @@ export function ClusterFormationTab({ system, onChange, schema }) {
                 />
                 <div className="form-group">
                   <label className="label">Weight</label>
-                  <input
-                    type="number"
-                    value={crit.weight ?? ''}
-                    onChange={(e) => updateCriterion(index, { ...crit, weight: parseFloat(e.target.value) || 0 })}
-                    className="input"
-                    step="0.5"
-                    min="0"
+                  <NumberInput
+                    value={crit.weight}
+                    onChange={(v) => updateCriterion(index, { ...crit, weight: v ?? 0 })}
+                    min={0}
                   />
                 </div>
                 {crit.type === 'shared_relationship' && (

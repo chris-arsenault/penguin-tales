@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { APPLICABILITY_TYPES } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
 import { AddRuleButton } from './AddRuleButton';
 import { createNewRule } from './createNewRule';
 
@@ -114,12 +114,11 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                 </div>
                 <div className="form-group">
                   <label className="label">{rule.type === 'entity_count_min' ? 'Minimum' : 'Maximum'}</label>
-                  <input
-                    type="number"
-                    value={rule.type === 'entity_count_min' ? (rule.min ?? '') : (rule.max ?? '')}
-                    onChange={(e) => updateField(rule.type === 'entity_count_min' ? 'min' : 'max', parseInt(e.target.value) || 0)}
-                    className="input"
-                    min="0"
+                  <NumberInput
+                    value={rule.type === 'entity_count_min' ? rule.min : rule.max}
+                    onChange={(v) => updateField(rule.type === 'entity_count_min' ? 'min' : 'max', v ?? 0)}
+                    min={0}
+                    integer
                   />
                 </div>
               </>
@@ -135,25 +134,25 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                 />
                 <div className="form-group">
                   <label className="label">Min Value</label>
-                  <input
-                    type="number"
-                    value={rule.min ?? ''}
-                    onChange={(e) => updateField('min', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
-                    max="100"
+                  <NumberInput
+                    value={rule.min}
+                    onChange={(v) => updateField('min', v)}
+                    min={0}
+                    max={100}
+                    integer
+                    allowEmpty
                     placeholder="0"
                   />
                 </div>
                 <div className="form-group">
                   <label className="label">Max Value</label>
-                  <input
-                    type="number"
-                    value={rule.max ?? ''}
-                    onChange={(e) => updateField('max', parseInt(e.target.value) || undefined)}
-                    className="input"
-                    min="0"
-                    max="100"
+                  <NumberInput
+                    value={rule.max}
+                    onChange={(v) => updateField('max', v)}
+                    min={0}
+                    max={100}
+                    integer
+                    allowEmpty
                     placeholder="100"
                   />
                 </div>
@@ -184,13 +183,12 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                     onChange={(e) => updateField('chance', parseInt(e.target.value) / 100)}
                     style={{ flex: 1 }}
                   />
-                  <input
-                    type="number"
+                  <NumberInput
                     value={Math.round((rule.chance ?? 0.5) * 100)}
-                    onChange={(e) => updateField('chance', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) / 100)}
-                    className="input"
-                    min="0"
-                    max="100"
+                    onChange={(v) => updateField('chance', Math.max(0, Math.min(100, v ?? 0)) / 100)}
+                    min={0}
+                    max={100}
+                    integer
                     style={{ width: '80px' }}
                   />
                   <span>%</span>
@@ -201,12 +199,11 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
             {rule.type === 'cooldown_elapsed' && (
               <div className="form-group">
                 <label className="label">Cooldown (ticks)</label>
-                <input
-                  type="number"
-                  value={rule.cooldownTicks ?? ''}
-                  onChange={(e) => updateField('cooldownTicks', parseInt(e.target.value) || 0)}
-                  className="input"
-                  min="1"
+                <NumberInput
+                  value={rule.cooldownTicks}
+                  onChange={(v) => updateField('cooldownTicks', v ?? 0)}
+                  min={1}
+                  integer
                   placeholder="10"
                 />
               </div>
@@ -215,12 +212,11 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
             {rule.type === 'creations_per_epoch' && (
               <div className="form-group">
                 <label className="label">Max Creations Per Epoch</label>
-                <input
-                  type="number"
-                  value={rule.maxPerEpoch ?? ''}
-                  onChange={(e) => updateField('maxPerEpoch', parseInt(e.target.value) || 0)}
-                  className="input"
-                  min="1"
+                <NumberInput
+                  value={rule.maxPerEpoch}
+                  onChange={(v) => updateField('maxPerEpoch', v ?? 0)}
+                  min={1}
+                  integer
                   placeholder="3"
                 />
               </div>
@@ -239,13 +235,12 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                 </div>
                 <div className="form-group">
                   <label className="label">Threshold</label>
-                  <input
-                    type="number"
-                    value={rule.threshold ?? ''}
-                    onChange={(e) => updateField('threshold', parseInt(e.target.value) || 0)}
-                    className="input"
-                    min="0"
-                    max="100"
+                  <NumberInput
+                    value={rule.threshold}
+                    onChange={(v) => updateField('threshold', v ?? 0)}
+                    min={0}
+                    max={100}
+                    integer
                     placeholder="50"
                   />
                 </div>

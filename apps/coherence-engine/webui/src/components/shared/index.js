@@ -13,6 +13,7 @@ export {
   LevelSelector,
   STRENGTH_LEVELS,
   PROMINENCE_LEVELS,
+  NumberInput,
 
   // UI components
   EnableToggle,

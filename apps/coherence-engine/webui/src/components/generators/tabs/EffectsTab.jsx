@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import { ReferenceDropdown, AddItemButton } from '../../shared';
+import { ReferenceDropdown, AddItemButton, NumberInput } from '../../shared';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 // All supported stateUpdate types
 const STATE_UPDATE_TYPES = [
@@ -35,18 +36,18 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
 
   const pressureOptions = (pressures || []).map((p) => ({ value: p.id, label: p.name || p.id }));
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({ value: rk.kind, label: rk.description || rk.kind }));
+  const tagRegistry = schema?.tagRegistry || [];
 
-  // Build status options from entity kinds
-  const statusOptions = [];
-  const seenStatuses = new Set();
-  (schema?.entityKinds || []).forEach(ek => {
-    (ek.statusValues || []).forEach(status => {
-      if (!seenStatuses.has(status)) {
-        seenStatuses.add(status);
-        statusOptions.push({ value: status, label: status });
-      }
-    });
-  });
+  // Build entity kind options for status updates
+  const entityKinds = schema?.entityKinds || [];
+  const entityKindOptions = entityKinds.map((ek) => ({ value: ek.kind, label: ek.kind }));
+
+  // Get status options for a specific entity kind
+  const getStatusOptionsForKind = (entityKind) => {
+    const ek = entityKinds.find(e => e.kind === entityKind);
+    if (!ek?.statusValues?.length) return [];
+    return ek.statusValues.map(status => ({ value: status, label: status }));
+  };
 
   const handleAdd = (type) => {
     let newUpdate;
@@ -58,7 +59,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         newUpdate = { type: 'archive_relationship', entity: '$target', relationshipKind: '', with: '' };
         break;
       case 'update_entity_status':
-        newUpdate = { type: 'update_entity_status', entity: '$target', newStatus: 'active' };
+        newUpdate = { type: 'update_entity_status', entity: '$target', entityKind: entityKinds[0]?.kind || '', newStatus: '' };
         break;
       case 'set_tag':
         newUpdate = { type: 'set_tag', entity: '$target', tag: '', value: true };
@@ -174,18 +175,9 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                   />
                   <div className="form-group">
                     <label className="label">Delta</label>
-                    <input
-                      type="number"
-                      value={update.delta ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || val === '-') return;
-                        const num = parseFloat(val);
-                        if (!isNaN(num)) {
-                          handleUpdate(globalIdx, { ...update, delta: num });
-                        }
-                      }}
-                      className="input"
+                    <NumberInput
+                      value={update.delta}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, delta: v })}
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -256,12 +248,13 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
 
         {statusUpdates.map((update) => {
           const globalIdx = stateUpdates.indexOf(update);
+          const statusOptionsForKind = getStatusOptionsForKind(update.entityKind);
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label className="label">Entity</label>
+                    <label className="label">Entity Reference</label>
                     <input
                       type="text"
                       value={update.entity || ''}
@@ -270,23 +263,27 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                       placeholder="$target"
                     />
                   </div>
-                  {statusOptions.length > 0 ? (
+                  <ReferenceDropdown
+                    label="Entity Kind"
+                    value={update.entityKind || ''}
+                    onChange={(v) => handleUpdate(globalIdx, { ...update, entityKind: v, newStatus: '' })}
+                    options={entityKindOptions}
+                    placeholder="Select entity kind..."
+                  />
+                  {statusOptionsForKind.length > 0 ? (
                     <ReferenceDropdown
                       label="New Status"
-                      value={update.newStatus}
+                      value={update.newStatus || ''}
                       onChange={(v) => handleUpdate(globalIdx, { ...update, newStatus: v })}
-                      options={statusOptions}
+                      options={statusOptionsForKind}
+                      placeholder="Select status..."
                     />
                   ) : (
                     <div className="form-group">
                       <label className="label">New Status</label>
-                      <input
-                        type="text"
-                        value={update.newStatus || ''}
-                        onChange={(e) => handleUpdate(globalIdx, { ...update, newStatus: e.target.value })}
-                        className="input"
-                        placeholder="active"
-                      />
+                      <div className="input" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        {update.entityKind ? 'No statuses defined for this kind' : 'Select entity kind first'}
+                      </div>
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -324,12 +321,12 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                   </div>
                   <div className="form-group">
                     <label className="label">Tag</label>
-                    <input
-                      type="text"
-                      value={update.tag || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, tag: e.target.value })}
-                      className="input"
-                      placeholder="at_war"
+                    <TagSelector
+                      value={update.tag ? [update.tag] : []}
+                      onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
+                      tagRegistry={tagRegistry}
+                      placeholder="Select tag..."
+                      singleSelect
                     />
                   </div>
                   <div className="form-group">
@@ -383,12 +380,12 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                   </div>
                   <div className="form-group">
                     <label className="label">Tag</label>
-                    <input
-                      type="text"
-                      value={update.tag || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, tag: e.target.value })}
-                      className="input"
-                      placeholder="at_war"
+                    <TagSelector
+                      value={update.tag ? [update.tag] : []}
+                      onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
+                      tagRegistry={tagRegistry}
+                      placeholder="Select tag..."
+                      singleSelect
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>

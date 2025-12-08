@@ -52,6 +52,8 @@ export const FRAMEWORK_RELATIONSHIP_KINDS = {
   EPICENTER_OF: 'epicenter_of',
   /** Occurrence was triggered by an entity/event */
   TRIGGERED_BY: 'triggered_by',
+  /** Entity was created during this era (temporal origin) */
+  CREATED_DURING: 'created_during',
 } as const;
 
 /** Type for framework relationship kinds */
@@ -206,6 +208,10 @@ export const FRAMEWORK_RELATIONSHIP_PROPERTIES = {
   [FRAMEWORK_RELATIONSHIP_KINDS.TRIGGERED_BY]: {
     defaultStrength: 0.8,
     description: 'Occurrence was triggered by entity/event',
+  },
+  [FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING]: {
+    defaultStrength: 0.5,
+    description: 'Entity was created during this era (temporal origin)',
   },
 } as const;
 

@@ -6,6 +6,7 @@ import React from 'react';
 import { FILTER_TYPES } from '../constants';
 import { ReferenceDropdown, ChipSelect } from '../../shared';
 import { GraphPathEditor } from './GraphPathEditor';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * @param {Object} props
@@ -21,11 +22,6 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
     label: rk.description || rk.kind,
-  }));
-
-  const tagOptions = (schema?.tagRegistry || []).map((t) => ({
-    value: t.tag,
-    label: t.tag,
   }));
 
   const refOptions = (availableRefs || []).map((ref) => ({
@@ -44,11 +40,12 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
           <div className="filter-fields">
             <div style={{ flex: '1 1 150px' }}>
               <label className="label label-small">Tag</label>
-              <ReferenceDropdown
-                value={filter.tag || ''}
-                onChange={(v) => updateFilter('tag', v)}
-                options={tagOptions}
+              <TagSelector
+                value={filter.tag ? [filter.tag] : []}
+                onChange={(v) => updateFilter('tag', v[0] || '')}
+                tagRegistry={schema?.tagRegistry || []}
                 placeholder="Select tag..."
+                singleSelect
               />
             </div>
             <div style={{ flex: '1 1 150px' }}>
@@ -67,13 +64,12 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
       case 'has_any_tag':
         return (
           <div>
-            <label className="label label-small">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={(filter.tags || []).join(', ')}
-              onChange={(e) => updateFilter('tags', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-              className="input input-compact"
-              placeholder="tag1, tag2, tag3"
+            <label className="label label-small">Tags</label>
+            <TagSelector
+              value={filter.tags || []}
+              onChange={(v) => updateFilter('tags', v)}
+              tagRegistry={schema?.tagRegistry || []}
+              placeholder="Select tags..."
             />
           </div>
         );

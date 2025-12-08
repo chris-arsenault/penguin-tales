@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { ReferenceDropdown, PressureChangesEditor } from '../../shared';
+import { ReferenceDropdown, PressureChangesEditor, NumberInput } from '../../shared';
 
 /**
  * @param {Object} props
@@ -77,26 +77,27 @@ export function CommonSettingsTab({ system, onChange, schema, pressures }) {
         <div className="form-grid">
           <div className="form-group">
             <label className="label">Throttle Chance (0-1)</label>
-            <input
-              type="number"
-              value={config.throttleChance ?? ''}
-              onChange={(e) => updateConfig('throttleChance', parseFloat(e.target.value) || undefined)}
+            <NumberInput
+              value={config.throttleChance}
+              onChange={(v) => updateConfig('throttleChance', v)}
               className="input"
-              step="0.1"
-              min="0"
-              max="1"
+              min={0}
+              max={1}
+              step={0.1}
               placeholder="0.2"
+              allowEmpty
             />
           </div>
           <div className="form-group">
             <label className="label">Cooldown (ticks)</label>
-            <input
-              type="number"
-              value={config.cooldown ?? ''}
-              onChange={(e) => updateConfig('cooldown', parseInt(e.target.value) || undefined)}
+            <NumberInput
+              value={config.cooldown}
+              onChange={(v) => updateConfig('cooldown', v)}
               className="input"
-              min="0"
+              min={0}
               placeholder="0"
+              allowEmpty
+              integer
             />
           </div>
         </div>

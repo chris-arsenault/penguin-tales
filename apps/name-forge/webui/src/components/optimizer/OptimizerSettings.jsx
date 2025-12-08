@@ -1,4 +1,5 @@
 import React from 'react';
+import { NumberInput } from '@penguin-tales/shared-components';
 import { ALGORITHMS } from './constants';
 
 /**
@@ -34,10 +35,9 @@ export default function OptimizerSettings({
         {Object.entries(config.params).map(([key, param]) => (
           <div key={key} className="flex flex-col gap-xs">
             <label className="text-small">{param.label}</label>
-            <input
-              type="number"
+            <NumberInput
               value={algorithmParams[key] ?? param.default}
-              onChange={(e) => onAlgorithmParamsChange(prev => ({ ...prev, [key]: parseFloat(e.target.value) || param.default }))}
+              onChange={(v) => onAlgorithmParamsChange(prev => ({ ...prev, [key]: v ?? param.default }))}
               min={param.min}
               max={param.max}
               step={param.step || 1}
@@ -86,24 +86,24 @@ export default function OptimizerSettings({
           <div className="optimizer-param-grid-small">
             <div className="flex flex-col gap-xs">
               <label className="text-small">Sample Size</label>
-              <input
-                type="number"
+              <NumberInput
                 value={validationSettings.requiredNames}
-                onChange={(e) => onValidationSettingsChange(prev => ({ ...prev, requiredNames: parseInt(e.target.value) || 500 }))}
+                onChange={(v) => onValidationSettingsChange(prev => ({ ...prev, requiredNames: v ?? 500 }))}
                 min={100}
                 max={5000}
                 className="optimizer-input"
+                integer
               />
             </div>
             <div className="flex flex-col gap-xs">
               <label className="text-small">Sample Factor</label>
-              <input
-                type="number"
+              <NumberInput
                 value={validationSettings.sampleFactor}
-                onChange={(e) => onValidationSettingsChange(prev => ({ ...prev, sampleFactor: parseInt(e.target.value) || 10 }))}
+                onChange={(v) => onValidationSettingsChange(prev => ({ ...prev, sampleFactor: v ?? 10 }))}
                 min={1}
                 max={50}
                 className="optimizer-input"
+                integer
               />
             </div>
           </div>
@@ -123,13 +123,12 @@ export default function OptimizerSettings({
             ].map(({ key, label, title }) => (
               <div key={key} className="flex flex-col gap-xs">
                 <label className="text-small" title={title}>{label}</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
+                <NumberInput
+                  step={0.1}
+                  min={0}
+                  max={1}
                   value={fitnessWeights[key]}
-                  onChange={(e) => onFitnessWeightsChange(prev => ({ ...prev, [key]: parseFloat(e.target.value) || 0 }))}
+                  onChange={(v) => onFitnessWeightsChange(prev => ({ ...prev, [key]: v ?? 0 }))}
                   title={title}
                   disabled={key === 'separation' && allDomains.length <= 1}
                   className={`optimizer-input ${key === 'separation' && allDomains.length <= 1 ? 'disabled' : ''}`}

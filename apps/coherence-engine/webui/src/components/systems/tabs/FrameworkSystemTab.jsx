@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { NumberInput } from '../../shared';
 
 /**
  * @param {Object} props
@@ -32,12 +33,13 @@ export function FrameworkSystemTab({ system, onChange }) {
           <div className="form-grid">
             <div className="form-group">
               <label className="label">Ticks Per Era</label>
-              <input
-                type="number"
-                value={config.ticksPerEra ?? ''}
-                onChange={(e) => updateConfig('ticksPerEra', parseInt(e.target.value) || undefined)}
+              <NumberInput
+                value={config.ticksPerEra}
+                onChange={(v) => updateConfig('ticksPerEra', v)}
                 className="input"
-                min="1"
+                min={1}
+                allowEmpty
+                integer
               />
             </div>
           </div>
@@ -56,47 +58,47 @@ export function FrameworkSystemTab({ system, onChange }) {
           <div className="form-grid">
             <div className="form-group">
               <label className="label">Action Attempt Rate</label>
-              <input
-                type="number"
-                value={config.actionAttemptRate ?? ''}
-                onChange={(e) => updateConfig('actionAttemptRate', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.actionAttemptRate}
+                onChange={(v) => updateConfig('actionAttemptRate', v)}
                 className="input"
-                step="0.1"
-                min="0"
-                max="1"
+                step={0.1}
+                min={0}
+                max={1}
+                allowEmpty
               />
             </div>
             <div className="form-group">
               <label className="label">Influence Gain</label>
-              <input
-                type="number"
-                value={config.influenceGain ?? ''}
-                onChange={(e) => updateConfig('influenceGain', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.influenceGain}
+                onChange={(v) => updateConfig('influenceGain', v)}
                 className="input"
-                step="0.05"
-                min="0"
+                step={0.05}
+                min={0}
+                allowEmpty
               />
             </div>
             <div className="form-group">
               <label className="label">Influence Loss</label>
-              <input
-                type="number"
-                value={config.influenceLoss ?? ''}
-                onChange={(e) => updateConfig('influenceLoss', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.influenceLoss}
+                onChange={(v) => updateConfig('influenceLoss', v)}
                 className="input"
-                step="0.05"
-                min="0"
+                step={0.05}
+                min={0}
+                allowEmpty
               />
             </div>
             <div className="form-group">
               <label className="label">Pressure Multiplier</label>
-              <input
-                type="number"
-                value={config.pressureMultiplier ?? ''}
-                onChange={(e) => updateConfig('pressureMultiplier', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.pressureMultiplier}
+                onChange={(v) => updateConfig('pressureMultiplier', v)}
                 className="input"
-                step="0.1"
-                min="0"
+                step={0.1}
+                min={0}
+                allowEmpty
               />
             </div>
           </div>
@@ -106,45 +108,47 @@ export function FrameworkSystemTab({ system, onChange }) {
           <div className="form-grid">
             <div className="form-group">
               <label className="label">Maintenance Frequency</label>
-              <input
-                type="number"
-                value={config.maintenanceFrequency ?? ''}
-                onChange={(e) => updateConfig('maintenanceFrequency', parseInt(e.target.value) || undefined)}
+              <NumberInput
+                value={config.maintenanceFrequency}
+                onChange={(v) => updateConfig('maintenanceFrequency', v)}
                 className="input"
-                min="1"
+                min={1}
+                allowEmpty
+                integer
               />
             </div>
             <div className="form-group">
               <label className="label">Cull Threshold</label>
-              <input
-                type="number"
-                value={config.cullThreshold ?? ''}
-                onChange={(e) => updateConfig('cullThreshold', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.cullThreshold}
+                onChange={(v) => updateConfig('cullThreshold', v)}
                 className="input"
-                step="0.05"
-                min="0"
-                max="1"
+                step={0.05}
+                min={0}
+                max={1}
+                allowEmpty
               />
             </div>
             <div className="form-group">
               <label className="label">Grace Period</label>
-              <input
-                type="number"
-                value={config.gracePeriod ?? ''}
-                onChange={(e) => updateConfig('gracePeriod', parseInt(e.target.value) || undefined)}
+              <NumberInput
+                value={config.gracePeriod}
+                onChange={(v) => updateConfig('gracePeriod', v)}
                 className="input"
-                min="0"
+                min={0}
+                allowEmpty
+                integer
               />
             </div>
             <div className="form-group">
               <label className="label">Reinforcement Bonus</label>
-              <input
-                type="number"
-                value={config.reinforcementBonus ?? ''}
-                onChange={(e) => updateConfig('reinforcementBonus', parseFloat(e.target.value) || undefined)}
+              <NumberInput
+                value={config.reinforcementBonus}
+                onChange={(v) => updateConfig('reinforcementBonus', v)}
                 className="input"
-                step="0.01"
-                min="0"
+                step={0.01}
+                min={0}
+                allowEmpty
               />
             </div>
           </div>

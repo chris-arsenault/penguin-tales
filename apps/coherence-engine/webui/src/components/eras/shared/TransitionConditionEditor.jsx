@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { ItemRow } from '../../shared';
+import { ItemRow, NumberInput } from '../../shared';
 import { CONDITION_TYPES, OPERATORS } from '../constants';
 
 /**
@@ -55,12 +55,12 @@ export function TransitionConditionEditor({ condition, index, onChange, onRemove
       {condition.type === 'time' && (
         <div className="flex items-center gap-md">
           <label className="label-inline">Min Ticks</label>
-          <input
-            type="number"
+          <NumberInput
             value={condition.minTicks ?? 50}
-            onChange={(e) => handleFieldChange('minTicks', parseInt(e.target.value) || 0)}
+            onChange={(v) => handleFieldChange('minTicks', v ?? 0)}
             className="input input-sm"
-            min="0"
+            min={0}
+            integer
           />
           <span className="text-muted text-sm">Era must run at least this many ticks</span>
         </div>
@@ -87,13 +87,13 @@ export function TransitionConditionEditor({ condition, index, onChange, onRemove
               <option key={op.value} value={op.value}>{op.label}</option>
             ))}
           </select>
-          <input
-            type="number"
+          <NumberInput
             value={condition.threshold ?? 50}
-            onChange={(e) => handleFieldChange('threshold', parseInt(e.target.value) || 0)}
+            onChange={(v) => handleFieldChange('threshold', v ?? 0)}
             className="input input-xs"
-            min="0"
-            max="100"
+            min={0}
+            max={100}
+            integer
           />
         </div>
       )}
@@ -131,12 +131,12 @@ export function TransitionConditionEditor({ condition, index, onChange, onRemove
               <option key={op.value} value={op.value}>{op.label}</option>
             ))}
           </select>
-          <input
-            type="number"
+          <NumberInput
             value={condition.threshold ?? 10}
-            onChange={(e) => handleFieldChange('threshold', parseInt(e.target.value) || 0)}
+            onChange={(v) => handleFieldChange('threshold', v ?? 0)}
             className="input input-xs"
-            min="0"
+            min={0}
+            integer
           />
         </div>
       )}
