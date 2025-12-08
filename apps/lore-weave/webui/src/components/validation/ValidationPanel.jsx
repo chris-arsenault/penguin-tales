@@ -249,6 +249,7 @@ export default function ValidationPanel({
   generators,
   pressures,
   systems,
+  actions,
 }) {
   // Run validation
   const validationResult = useMemo(() => {
@@ -257,18 +258,35 @@ export default function ValidationPanel({
     const entityKinds = schema?.entityKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
     const relationshipKinds = schema?.relationshipKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
 
-    return validateAllConfigs({
+    // Debug: log what we're validating
+    console.log('[ValidationPanel] Validating actions:', actions?.length, 'items');
+    if (actions?.length > 0) {
+      const corruptLocation = actions.find(a => a.id === 'corrupt_location');
+      if (corruptLocation) {
+        console.log('[ValidationPanel] corrupt_location outcome:', JSON.stringify(corruptLocation.outcome, null, 2));
+      }
+    }
+
+    const result = validateAllConfigs({
       templates: generators,
       pressures: pressures,
       systems: systems,
       eras: eras,
+      actions: actions,
       schema: {
         cultures,
         entityKinds,
         relationshipKinds,
       },
     });
-  }, [schema, eras, generators, pressures, systems]);
+
+    console.log('[ValidationPanel] Validation result:', result.errors.length, 'errors,', result.warnings.length, 'warnings');
+    if (result.errors.length > 0) {
+      console.log('[ValidationPanel] Errors:', result.errors);
+    }
+
+    return result;
+  }, [schema, eras, generators, pressures, systems, actions]);
 
   const { valid, errors, warnings } = validationResult;
 
@@ -353,6 +371,10 @@ export default function ValidationPanel({
         <div style={styles.statCard}>
           <div style={styles.statValue}>{systems?.length || 0}</div>
           <div style={styles.statLabel}>Systems</div>
+        </div>
+        <div style={styles.statCard}>
+          <div style={styles.statValue}>{actions?.length || 0}</div>
+          <div style={styles.statLabel}>Actions</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statValue}>{eras?.length || 0}</div>

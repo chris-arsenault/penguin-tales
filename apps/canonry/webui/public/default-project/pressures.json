@@ -2,8 +2,8 @@
   {
     "id": "resource_scarcity",
     "name": "Resource Scarcity",
-    "initialValue": 20,
-    "decay": 18,
+    "initialValue": 60,
+    "decay": 0,
     "growth": {
       "positiveFeedback": [
         {
@@ -18,7 +18,7 @@
             "subtype": "colony"
           },
           "fallbackValue": 0,
-          "coefficient": 5,
+          "coefficient": 0.5,
           "cap": 10
         },
         {
@@ -35,7 +35,8 @@
           "subtype": "geographic_feature",
           "coefficient": 0.6
         }
-      ]
+      ],
+      "baseGrowth": 1
     }
   },
   {
@@ -195,7 +196,7 @@
   },
   {
     "id": "external_threat",
-    "name": "External Danger",
+    "name": "External Threat",
     "initialValue": 0,
     "decay": 6,
     "growth": {
@@ -207,16 +208,18 @@
             "hostile",
             "raider"
           ],
-          "coefficient": 10
-        },
-        {
-          "type": "entity_count",
-          "kind": "npc",
-          "subtype": "orca",
-          "coefficient": 0.8
+          "coefficient": 1
         }
       ],
-      "negativeFeedback": []
+      "negativeFeedback": [
+        {
+          "type": "entity_count",
+          "coefficient": 1,
+          "kind": "npc",
+          "subtype": "hero",
+          "status": "alive"
+        }
+      ]
     }
   },
   {

@@ -22,14 +22,38 @@
       "tech_breakthrough": 1.2,
       "strategic_location_discovery": 1,
       "anomaly_manifestation": 0.5,
-      "wild_magic_discover": 1
+      "wild_magic_discover": 1,
+      "emergent_location_discovery": 1,
+      "thermal_colony_decline": 0,
+      "thermal_colony_recovery": 0,
+      "thermal_migration": 0,
+      "ice_memory_thaw": 0,
+      "economic_colony_decline": 0,
+      "economic_colony_recovery": 0
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
       "cultural_drift": 0.5,
       "belief_contagion": 0.8,
       "thermal_diffusion": 1,
-      "resource_diffusion": 1.5
+      "resource_diffusion": 1.5,
+      "era_spawner": 1,
+      "era_transition": 1,
+      "universal_catalyst": 1,
+      "relationship_maintenance": 1,
+      "prominence_evolution": 1,
+      "war_brewing_detector": 1,
+      "power_vacuum_detector": 1,
+      "legend_ripe_detector": 1,
+      "orca_raider_hostility": 0,
+      "cult_mystical_influence": 1,
+      "guild_trade_expansion": 1,
+      "merchant_prosperity": 1,
+      "economic_prosperity_detector": 1,
+      "economic_stress_detector": 1,
+      "discovery_candidate_detector": 1,
+      "thermal_recovery_detector": 1,
+      "thermal_stress_detector": 1
     },
     "entryEffects": {
       "pressureChanges": {
@@ -40,7 +64,7 @@
     "exitConditions": [
       {
         "type": "time",
-        "minTicks": 30
+        "minTicks": 20
       },
       {
         "type": "entity_count",
@@ -51,7 +75,7 @@
       {
         "type": "pressure",
         "pressureId": "resource_scarcity",
-        "operator": "above",
+        "operator": "below",
         "threshold": 40
       }
     ],
@@ -84,7 +108,13 @@
       "war_outbreak": 1.5,
       "succession_crisis": 1,
       "legend_crystallization": 1.5,
-      "wild_magic_discover": 1
+      "wild_magic_discover": 1,
+      "thermal_colony_decline": 0,
+      "thermal_colony_recovery": 0,
+      "thermal_migration": 0,
+      "ice_memory_thaw": 0,
+      "economic_colony_decline": 0,
+      "economic_colony_recovery": 0
     },
     "systemModifiers": {
       "conflict_contagion": 2,
@@ -92,16 +122,26 @@
       "belief_contagion": 2,
       "cultural_drift": 1.5,
       "thermal_diffusion": 1.2,
-      "resource_diffusion": 0.5
+      "resource_diffusion": 0.5,
+      "era_spawner": 1,
+      "era_transition": 1,
+      "universal_catalyst": 1,
+      "relationship_maintenance": 1,
+      "prominence_evolution": 1,
+      "war_brewing_detector": 1,
+      "power_vacuum_detector": 1,
+      "legend_ripe_detector": 1,
+      "orca_raider_hostility": 0,
+      "cult_mystical_influence": 0,
+      "guild_trade_expansion": 0,
+      "merchant_prosperity": 0,
+      "economic_prosperity_detector": 0,
+      "economic_stress_detector": 0,
+      "discovery_candidate_detector": 1,
+      "thermal_recovery_detector": 1,
+      "thermal_stress_detector": 1
     },
-    "entryConditions": [
-      {
-        "type": "pressure",
-        "pressureId": "resource_scarcity",
-        "operator": "above",
-        "threshold": 30
-      }
-    ],
+    "entryConditions": [],
     "entryEffects": {
       "pressureChanges": {
         "conflict": 15
@@ -110,7 +150,7 @@
     "exitConditions": [
       {
         "type": "time",
-        "minTicks": 100
+        "minTicks": 20
       },
       {
         "type": "pressure",
@@ -155,7 +195,13 @@
       "tech_breakthrough": 3.5,
       "strategic_location_discovery": 1,
       "legend_crystallization": 1,
-      "wild_magic_discover": 1
+      "wild_magic_discover": 1,
+      "thermal_colony_decline": 1,
+      "thermal_colony_recovery": 1,
+      "thermal_migration": 1,
+      "ice_memory_thaw": 1,
+      "economic_colony_decline": 1,
+      "economic_colony_recovery": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
@@ -164,7 +210,24 @@
       "resource_diffusion": 1.2,
       "magic_school_formation": 2,
       "combat_technique_formation": 1.5,
-      "legal_code_formation": 2
+      "legal_code_formation": 2,
+      "era_spawner": 1,
+      "era_transition": 1,
+      "universal_catalyst": 1,
+      "relationship_maintenance": 1,
+      "prominence_evolution": 1,
+      "war_brewing_detector": 1,
+      "power_vacuum_detector": 1,
+      "legend_ripe_detector": 1,
+      "orca_raider_hostility": 0,
+      "cult_mystical_influence": 1,
+      "guild_trade_expansion": 1,
+      "merchant_prosperity": 1,
+      "economic_prosperity_detector": 1,
+      "economic_stress_detector": 1,
+      "discovery_candidate_detector": 1,
+      "thermal_recovery_detector": 1,
+      "thermal_stress_detector": 1
     },
     "entryConditions": [
       {
@@ -182,7 +245,7 @@
     "exitConditions": [
       {
         "type": "time",
-        "minTicks": 90
+        "minTicks": 20
       },
       {
         "type": "entity_count",
@@ -194,7 +257,7 @@
         "type": "pressure",
         "pressureId": "magical_instability",
         "operator": "above",
-        "threshold": 50
+        "threshold": 23
       }
     ],
     "exitEffects": {
@@ -223,7 +286,13 @@
       "war_outbreak": 2,
       "legend_crystallization": 2,
       "crisis_legislation": 2.5,
-      "wild_magic_discover": 1
+      "wild_magic_discover": 1,
+      "thermal_colony_decline": 1,
+      "thermal_colony_recovery": 1,
+      "thermal_migration": 1,
+      "ice_memory_thaw": 1,
+      "economic_colony_decline": 0,
+      "economic_colony_recovery": 0
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -231,39 +300,42 @@
       "thermal_diffusion": 1.8,
       "belief_contagion": 1.2,
       "resource_diffusion": 0.8,
-      "combat_technique_formation": 2.5
+      "combat_technique_formation": 2.5,
+      "era_spawner": 1,
+      "era_transition": 1,
+      "universal_catalyst": 1,
+      "relationship_maintenance": 1,
+      "prominence_evolution": 1,
+      "war_brewing_detector": 1,
+      "power_vacuum_detector": 1,
+      "legend_ripe_detector": 1,
+      "orca_raider_hostility": 1,
+      "cult_mystical_influence": 0,
+      "guild_trade_expansion": 0,
+      "merchant_prosperity": 0,
+      "economic_prosperity_detector": 1,
+      "economic_stress_detector": 1,
+      "discovery_candidate_detector": 1,
+      "thermal_recovery_detector": 1,
+      "thermal_stress_detector": 1
     },
-    "entryConditions": [
-      {
-        "type": "pressure",
-        "pressureId": "external_threat",
-        "operator": "above",
-        "threshold": 25
-      }
-    ],
+    "entryConditions": [],
     "entryEffects": {
       "pressureChanges": {
-        "unity": 20,
-        "conflict": -10
+        "conflict": -10,
+        "external_threat": 40
       }
     },
     "exitConditions": [
       {
         "type": "time",
-        "minTicks": 120
+        "minTicks": 20
       },
       {
         "type": "pressure",
         "pressureId": "external_threat",
         "operator": "below",
         "threshold": 20
-      },
-      {
-        "type": "entity_count",
-        "entityKind": "npc",
-        "subtype": "hero",
-        "operator": "above",
-        "threshold": 3
       }
     ],
     "exitEffects": {
@@ -283,7 +355,7 @@
       "krill_bloom_migration": 1.5,
       "succession": 1,
       "orca_raider_arrival": 0,
-      "great_festival": 3,
+      "great_festival": 0,
       "ideology_emergence": 2,
       "orca_combat_technique": 0,
       "territorial_expansion": 1,
@@ -293,7 +365,13 @@
       "legend_crystallization": 2.5,
       "guild_establishment": 2,
       "tech_innovation": 1.5,
-      "wild_magic_discover": 1
+      "wild_magic_discover": 1,
+      "thermal_colony_decline": 1,
+      "thermal_colony_recovery": 1,
+      "thermal_migration": 1,
+      "ice_memory_thaw": 1,
+      "economic_colony_decline": 1,
+      "economic_colony_recovery": 1
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
@@ -301,7 +379,24 @@
       "thermal_diffusion": 0.8,
       "resource_diffusion": 2,
       "alliance_formation": 1.5,
-      "legal_code_formation": 2
+      "legal_code_formation": 2,
+      "era_spawner": 1,
+      "era_transition": 1,
+      "universal_catalyst": 1,
+      "relationship_maintenance": 1,
+      "prominence_evolution": 1,
+      "war_brewing_detector": 1,
+      "power_vacuum_detector": 1,
+      "legend_ripe_detector": 1,
+      "orca_raider_hostility": 1,
+      "cult_mystical_influence": 1,
+      "guild_trade_expansion": 1,
+      "merchant_prosperity": 1,
+      "economic_prosperity_detector": 1,
+      "economic_stress_detector": 1,
+      "discovery_candidate_detector": 1,
+      "thermal_recovery_detector": 1,
+      "thermal_stress_detector": 1
     },
     "entryConditions": [
       {
@@ -309,18 +404,12 @@
         "pressureId": "external_threat",
         "operator": "below",
         "threshold": 25
-      },
-      {
-        "type": "pressure",
-        "pressureId": "stability",
-        "operator": "above",
-        "threshold": 20
       }
     ],
     "entryEffects": {
       "pressureChanges": {
         "prosperity": 15,
-        "stability": 10
+        "stability": 20
       }
     }
   }

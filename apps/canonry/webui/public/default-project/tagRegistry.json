@@ -1,5 +1,18 @@
 [
   {
+    "tag": "wild",
+    "category": "trait",
+    "rarity": "rare",
+    "description": "New magic appears at random",
+    "usageCount": 0,
+    "templates": [],
+    "entityKinds": [],
+    "minUsage": 1,
+    "maxUsage": 50,
+    "relatedTags": [],
+    "conflictingTags": []
+  },
+  {
     "tag": "libertarian",
     "category": "trait",
     "rarity": "common",

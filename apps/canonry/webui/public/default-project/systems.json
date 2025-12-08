@@ -80,7 +80,7 @@
         "conflict": 5
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -114,7 +114,7 @@
         "diplomacy": 3
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -132,7 +132,7 @@
         {
           "condition": {
             "operator": ">=",
-            "threshold": "prominence_scaled",
+            "threshold": 5,
             "multiplier": 6
           },
           "probability": 0.1,
@@ -144,7 +144,7 @@
       ],
       "throttleChance": 0.2
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -184,7 +184,7 @@
         "conflict": 5
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -230,7 +230,7 @@
         "conflict": 10
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -264,7 +264,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.2
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -325,7 +325,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -388,7 +388,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -436,7 +436,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "graphContagion",
@@ -524,7 +524,7 @@
         "stability": 5
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "tagDiffusion",
@@ -563,7 +563,7 @@
         "delta": 10
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "planeDiffusion",
@@ -587,17 +587,19 @@
       },
       "outputTags": [
         {
-          "tag": "dangerous",
+          "tag": "safe",
           "minValue": 0.7
         },
         {
-          "tag": "safe",
-          "maxValue": 0.3
+          "tag": "dangerous",
+          "minValue": 0.3,
+          "maxValue": 0.7
         }
       ],
-      "valueTag": "temperature"
+      "valueTag": "temperature",
+      "entitySubtype": "colony"
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -608,17 +610,10 @@
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
-        "status": "thriving"
+        "status": "thriving",
+        "hasTag": "dangerous"
       },
-      "conditions": [
-        {
-          "type": "has_any_tag",
-          "tags": [
-            "dangerous",
-            "anomaly"
-          ]
-        }
-      ],
+      "conditions": [],
       "actions": [
         {
           "type": "set_tag",
@@ -632,9 +627,11 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3
+      "throttleChance": 0.3,
+      "entityKind": "location",
+      "entitySubtype": "colony"
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -669,7 +666,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -705,7 +702,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "planeDiffusion",
@@ -735,7 +732,7 @@
       ],
       "valueTag": "resource_level"
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -776,7 +773,7 @@
         "conflict": 5
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -787,7 +784,8 @@
       "entityFilter": {
         "kind": "location",
         "subtype": "colony",
-        "hasTag": "thriving"
+        "hasTag": "thriving",
+        "notHasTag": "stressed"
       },
       "conditions": [
         {
@@ -795,7 +793,7 @@
           "tag": "stressed"
         },
         {
-          "type": "has_any_tag",
+          "type": "tag_exists",
           "tags": [
             "trade",
             "resource"
@@ -819,9 +817,11 @@
       "pressureChanges": {
         "resource_scarcity": -5,
         "stability": 5
-      }
+      },
+      "entityKind": "location",
+      "entitySubtype": "colony"
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -832,7 +832,7 @@
       "entityKind": "faction",
       "entitySubtype": "company",
       "metric": {
-        "type": "tagged_connection_count",
+        "type": "connection_count",
         "relationshipKind": "controls",
         "direction": "src",
         "targetTag": "thriving"
@@ -852,7 +852,7 @@
       ],
       "throttleChance": 0.3
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -888,7 +888,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -924,7 +924,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.3
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -961,6 +961,6 @@
         "external_threat": 10
       }
     },
-    "enabled": false
+    "enabled": true
   }
 ]

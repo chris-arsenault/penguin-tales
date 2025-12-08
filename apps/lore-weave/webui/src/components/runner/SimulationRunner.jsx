@@ -40,6 +40,7 @@ export default function SimulationRunner({
   pressures,
   generators,
   systems,
+  actions,
   seedEntities,
   seedRelationships,
   namingData,
@@ -166,6 +167,7 @@ export default function SimulationRunner({
       pressures: pressures,
       templates: (generators || []).filter(g => g.enabled !== false),
       systems: (systems || []).filter(s => s.enabled !== false),
+      actions: (actions || []).filter(a => a.enabled !== false),
       tagRegistry: schema.tagRegistry || [],
       epochLength: params.epochLength,
       simulationTicksPerGrowth: params.simulationTicksPerGrowth,
@@ -178,7 +180,7 @@ export default function SimulationRunner({
       seedRelationships: seedRelationships || [],
       debugConfig,
     };
-  }, [schema, eras, pressures, generators, systems, params, coordinateContextConfig, seedRelationships, namingData, debugConfig]);
+  }, [schema, eras, pressures, generators, systems, actions, params, coordinateContextConfig, seedRelationships, namingData, debugConfig]);
 
   // Run simulation
   const runSimulation = useCallback(() => {

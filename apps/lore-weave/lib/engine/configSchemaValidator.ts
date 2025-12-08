@@ -26,6 +26,7 @@ import generatorSchema from '../schemas/generator.schema.json';
 import pressureSchema from '../schemas/pressure.schema.json';
 import systemSchema from '../schemas/system.schema.json';
 import eraSchema from '../schemas/era.schema.json';
+import actionSchema from '../schemas/action.schema.json';
 
 // =============================================================================
 // TYPES
@@ -62,6 +63,7 @@ const validateGenerator = ajv.compile(generatorSchema);
 const validatePressure = ajv.compile(pressureSchema);
 const validateSystem = ajv.compile(systemSchema);
 const validateEra = ajv.compile(eraSchema);
+const validateAction = ajv.compile(actionSchema);
 
 // =============================================================================
 // ERROR FORMATTING
@@ -276,6 +278,41 @@ export function validateEras(eras: unknown): SchemaValidationResult {
   };
 }
 
+export function validateActions(actions: unknown): SchemaValidationResult {
+  const errors: SchemaError[] = [];
+  const warnings: SchemaError[] = [];
+
+  if (!Array.isArray(actions)) {
+    errors.push({
+      path: 'actions',
+      message: 'Expected array',
+      value: actions,
+      expected: 'array',
+    });
+    return { valid: false, errors, warnings };
+  }
+
+  actions.forEach((action, index) => {
+    // Skip disabled actions
+    if (typeof action === 'object' && action !== null &&
+        'enabled' in action && (action as { enabled: unknown }).enabled === false) {
+      return;
+    }
+
+    const itemId = getItemId(action) || `[${index}]`;
+
+    if (!validateAction(action)) {
+      errors.push(...formatAjvErrors(validateAction.errors, itemId));
+    }
+  });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
 /**
  * Validate all configuration files at once
  */
@@ -284,6 +321,7 @@ export function validateAllConfigs(config: {
   pressures?: unknown;
   systems?: unknown;
   eras?: unknown;
+  actions?: unknown;
   schema?: {
     cultures?: string[];
     entityKinds?: string[];
@@ -313,6 +351,12 @@ export function validateAllConfigs(config: {
 
   if (config.eras !== undefined) {
     const result = validateEras(config.eras);
+    allErrors.push(...result.errors);
+    allWarnings.push(...result.warnings);
+  }
+
+  if (config.actions !== undefined) {
+    const result = validateActions(config.actions);
     allErrors.push(...result.errors);
     allWarnings.push(...result.warnings);
   }

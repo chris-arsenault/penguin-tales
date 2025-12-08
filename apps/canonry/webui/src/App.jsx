@@ -448,6 +448,7 @@ export default function App() {
       pressures: currentProject.pressures || [],
       systems: currentProject.systems || [],
       eras: currentProject.eras || [],
+      actions: currentProject.actions || [],
       schema: {
         cultures,
         entityKinds,
@@ -459,6 +460,7 @@ export default function App() {
     currentProject?.pressures,
     currentProject?.systems,
     currentProject?.eras,
+    currentProject?.actions,
     currentProject?.cultures,
     currentProject?.entityKinds,
     currentProject?.relationshipKinds,
@@ -631,6 +633,7 @@ export default function App() {
                 pressures={currentProject?.pressures || []}
                 generators={currentProject?.generators || []}
                 systems={currentProject?.systems || []}
+                actions={currentProject?.actions || []}
                 seedEntities={currentProject?.seedEntities || []}
                 seedRelationships={currentProject?.seedRelationships || []}
                 namingData={namingData}

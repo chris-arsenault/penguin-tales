@@ -41,6 +41,7 @@ export default function LoreWeaveRemote({
   pressures = [],
   generators = [],
   systems = [],
+  actions = [],
   seedEntities = [],
   seedRelationships = [],
   namingData = {},
@@ -170,6 +171,7 @@ export default function LoreWeaveRemote({
             generators={generators}
             pressures={pressures}
             systems={systems}
+            actions={actions}
           />
         );
       case 'run':
@@ -180,6 +182,7 @@ export default function LoreWeaveRemote({
             pressures={pressures}
             generators={generators}
             systems={systems}
+            actions={actions}
             seedEntities={seedEntities}
             seedRelationships={seedRelationships}
             namingData={namingData}

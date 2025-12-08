@@ -29,7 +29,6 @@ const PROJECT_FILES = [
   'seedEntities',
   'seedRelationships',
   'distributionTargets',
-  'namingData',
 ];
 
 /**
@@ -123,6 +122,9 @@ async function createProjectZip(project) {
   if (project.systems) {
     zip.file('systems.json', JSON.stringify(project.systems, null, 2));
   }
+  if (project.actions) {
+    zip.file('actions.json', JSON.stringify(project.actions, null, 2));
+  }
   if (project.seedEntities) {
     zip.file('seedEntities.json', JSON.stringify(project.seedEntities, null, 2));
   }
@@ -131,9 +133,6 @@ async function createProjectZip(project) {
   }
   if (project.distributionTargets) {
     zip.file('distributionTargets.json', JSON.stringify(project.distributionTargets, null, 2));
-  }
-  if (project.namingData) {
-    zip.file('namingData.json', JSON.stringify(project.namingData, null, 2));
   }
 
   return zip.generateAsync({ type: 'blob' });
@@ -166,19 +165,16 @@ async function extractProjectZip(zipBlob) {
     'pressures',
     'generators',
     'systems',
+    'actions',
     'seedEntities',
     'seedRelationships',
     'distributionTargets',
-    'namingData',
   ];
 
   for (const fileName of fileNames) {
     const file = zip.file(`${fileName}.json`);
     if (file) {
       project[fileName] = JSON.parse(await file.async('string'));
-    } else if (fileName === 'namingData') {
-      // namingData is an object, not an array - leave undefined if not present
-      project[fileName] = null;
     } else {
       project[fileName] = [];
     }
