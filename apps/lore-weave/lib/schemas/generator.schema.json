@@ -540,8 +540,7 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "allowEmergent": { "type": "boolean" },
-                "emergentChance": { "type": "number", "minimum": 0, "maximum": 1 }
+                "allowEmergent": { "type": "boolean" }
               }
             },
             "fallback": {

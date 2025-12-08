@@ -675,29 +675,13 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
                       checked={placement.regionPolicy?.allowEmergent || false}
                       onChange={(e) => {
                         const allowEmergent = e.target.checked;
-                        const emergentChance = placement.regionPolicy?.emergentChance;
-                        setRegionPolicy({ ...(allowEmergent && { allowEmergent }), ...(emergentChance !== undefined && { emergentChance }) });
+                        setRegionPolicy(allowEmergent ? { allowEmergent } : {});
                       }}
                     />
                     Allow Emergent Regions
                   </label>
+                  <div className="hint">When enabled, creates new regions when existing regions are at capacity</div>
                 </div>
-                {placement.regionPolicy?.allowEmergent && (
-                  <div className="form-group">
-                    <label className="label">Emergent Chance</label>
-                    <NumberInput
-                      value={placement.regionPolicy?.emergentChance ?? ''}
-                      onChange={(v) => {
-                        const emergentChance = v === '' ? undefined : Number(v);
-                        setRegionPolicy({ allowEmergent: true, ...(emergentChance !== undefined && { emergentChance }) });
-                      }}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      placeholder="0.0 - 1.0"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* FALLBACK SECTION */}

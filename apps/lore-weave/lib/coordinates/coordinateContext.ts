@@ -59,6 +59,9 @@ export interface PlacementContext {
     id: string;
     coordinates: Point;
   };
+
+  /** Whether to allow emergent region creation when seed regions are at capacity (default: true) */
+  allowEmergent?: boolean;
 }
 
 /**
@@ -680,10 +683,11 @@ export class CoordinateContext {
         }
         log(`  seed region "${region.label}" failed (crowded?)`);
       }
-      log(`  all seed regions exhausted - attempting emergent region creation`);
+      log(`  all seed regions exhausted`);
 
-      // Seed regions exhausted - try to create emergent region for this culture
-      if (context.cultureId) {
+      // Seed regions exhausted - try to create emergent region for this culture (if allowed)
+      if (context.allowEmergent !== false && context.cultureId) {
+        log(`  attempting emergent region creation`);
         const emergentResult = await this.createEmergentRegionForCulture(
           entityKind,
           context.cultureId,
@@ -701,15 +705,17 @@ export class CoordinateContext {
           };
         }
         log(`  -> emergent region creation failed, skipping placement`);
+      } else if (context.allowEmergent === false) {
+        log(`  emergent regions disabled, skipping placement`);
       }
 
       // Cannot place - return null instead of falling through to other cultures
       return null;
     }
 
-    // No seed regions for this culture - try emergent region creation
+    // No seed regions for this culture - try emergent region creation (if allowed)
     log(`  NO seed regions for culture=${context.cultureId}`);
-    if (context.cultureId) {
+    if (context.allowEmergent !== false && context.cultureId) {
       const emergentResult = await this.createEmergentRegionForCulture(
         entityKind,
         context.cultureId,
@@ -726,6 +732,8 @@ export class CoordinateContext {
           }
         };
       }
+    } else if (context.allowEmergent === false) {
+      log(`  emergent regions disabled, skipping placement`);
     }
 
     // No culture-aware placement possible - skip

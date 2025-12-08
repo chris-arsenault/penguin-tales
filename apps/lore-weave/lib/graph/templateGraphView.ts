@@ -1230,6 +1230,8 @@ export class TemplateGraphView {
     };
 
     const tryPlaceWithContext = async (ctx: PlacementContext): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
+      // Pass allowEmergent from regionPolicy to the placement context
+      ctx.allowEmergent = regionPolicy.allowEmergent;
       const result = await this.coordinateContext.placeWithCulture(entityKind, 'placement', tick, ctx, existingPoints);
       if (result.success && result.coordinates) {
         return {

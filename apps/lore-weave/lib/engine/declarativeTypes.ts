@@ -365,7 +365,6 @@ export interface PlacementSpacing {
 
 export interface PlacementRegionPolicy {
   allowEmergent?: boolean;
-  emergentChance?: number;
 }
 
 export type PlacementFallback = 'anchor_region' | 'ref_region' | 'seed_region' | 'sparse' | 'bounds' | 'random';
