@@ -1,0 +1,310 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "action.schema.json",
+  "title": "Declarative Action",
+  "description": "Schema for declarative action configurations used by the universal catalyst system",
+  "type": "object",
+  "required": ["id", "name", "description", "actor", "targeting", "outcome", "probability"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique identifier for this action"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name for this action"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Description of what this action does"
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether this action is active (default: true)"
+    },
+    "actor": { "$ref": "#/$defs/ActionActorConfig" },
+    "actorResolution": { "$ref": "#/$defs/ActionActorResolution" },
+    "targeting": { "$ref": "#/$defs/ActionTargetConfig" },
+    "outcome": { "$ref": "#/$defs/ActionOutcomeConfig" },
+    "probability": { "$ref": "#/$defs/ActionProbabilityConfig" }
+  },
+
+  "$defs": {
+    "ActionActorConfig": {
+      "type": "object",
+      "required": ["kinds"],
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "Entity kinds that can be actors"
+        },
+        "subtypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional subtype filter"
+        },
+        "minProminence": {
+          "type": "string",
+          "enum": ["forgotten", "marginal", "recognized", "renowned", "mythic"],
+          "description": "Minimum prominence required"
+        },
+        "requiredRelationships": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Must have these relationship kinds (from actor)"
+        },
+        "requiredPressures": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Pressures must exceed these thresholds"
+        }
+      }
+    },
+
+    "ActionActorResolution": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["self", "via_relationship"],
+          "description": "Resolution type"
+        },
+        "relationshipKind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relationship kind to follow (for via_relationship)"
+        },
+        "targetKind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Expected kind of resolved entity"
+        },
+        "requireSubtype": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Require specific subtype on resolved entity"
+        }
+      }
+    },
+
+    "RelationshipFilter": {
+      "type": "object",
+      "required": ["kind", "direction"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relationship kind"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["src", "dst", "both"],
+          "description": "Direction from the entity being filtered"
+        },
+        "fromResolvedActor": {
+          "type": "boolean",
+          "description": "Relationship must be from the resolved actor"
+        },
+        "toResolvedActor": {
+          "type": "boolean",
+          "description": "Relationship must be to the resolved actor"
+        },
+        "toActor": {
+          "type": "boolean",
+          "description": "Relationship must be to the actor"
+        }
+      }
+    },
+
+    "AdjacencyRequirement": {
+      "type": "object",
+      "required": ["relationshipKind"],
+      "additionalProperties": false,
+      "properties": {
+        "relationshipKind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relationship kind for adjacency"
+        },
+        "actorControlsVia": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Actor controls the adjacent entity via this relationship"
+        },
+        "toResolvedActor": {
+          "type": "boolean",
+          "description": "Must be adjacent to the resolved actor"
+        }
+      }
+    },
+
+    "ActionTargetConfig": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target entity kind"
+        },
+        "subtypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Filter by subtype"
+        },
+        "statuses": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Filter by status"
+        },
+        "selectTwo": {
+          "type": "boolean",
+          "description": "Select two targets (for actions like trade routes)"
+        },
+        "excludeSelf": {
+          "type": "boolean",
+          "description": "Exclude self (for faction-to-faction actions)"
+        },
+        "exclude": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingRelationship": { "$ref": "#/$defs/RelationshipFilter" }
+          }
+        },
+        "excludeMultiple": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "existingRelationship": { "$ref": "#/$defs/RelationshipFilter" }
+            }
+          }
+        },
+        "require": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "adjacentTo": { "$ref": "#/$defs/AdjacencyRequirement" },
+            "hasRelationship": { "$ref": "#/$defs/RelationshipFilter" }
+          }
+        }
+      }
+    },
+
+    "OutcomeRelationship": {
+      "type": "object",
+      "required": ["kind", "src", "dst", "strength"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relationship kind"
+        },
+        "src": {
+          "type": "string",
+          "enum": ["actor", "target", "target2", "resolved_actor", "corruption_source"],
+          "description": "Source entity"
+        },
+        "dst": {
+          "type": "string",
+          "enum": ["actor", "target", "target2", "resolved_actor", "corruption_source"],
+          "description": "Destination entity"
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Initial strength"
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "description": "Create reverse relationship too"
+        }
+      }
+    },
+
+    "RelationshipStrengthening": {
+      "type": "object",
+      "required": ["kind", "amount"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relationship kind to strengthen"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount to increase strength"
+        }
+      }
+    },
+
+    "ActionOutcomeConfig": {
+      "type": "object",
+      "required": ["descriptionTemplate"],
+      "additionalProperties": false,
+      "properties": {
+        "relationships": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/OutcomeRelationship" },
+          "description": "Relationships to create"
+        },
+        "strengthenRelationships": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RelationshipStrengthening" },
+          "description": "Relationships to strengthen"
+        },
+        "pressureChanges": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Pressure changes"
+        },
+        "descriptionTemplate": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Description template (supports {actor.name}, {target.name}, etc.)"
+        }
+      }
+    },
+
+    "ActionProbabilityConfig": {
+      "type": "object",
+      "required": ["baseSuccessChance", "baseWeight"],
+      "additionalProperties": false,
+      "properties": {
+        "baseSuccessChance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Base success chance (0-1)"
+        },
+        "baseWeight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Selection weight for weighted random"
+        },
+        "pressureModifiers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Pressure IDs that affect this action's weight"
+        }
+      }
+    }
+  }
+}
