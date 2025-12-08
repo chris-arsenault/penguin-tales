@@ -125,7 +125,8 @@ export function FactorEditorModal({
                   label="Subtype (optional)"
                   value={countObj?.subtype || ''}
                   onChange={(v) => onCountChange({ ...countObj, subtype: v || undefined })}
-                  options={[{ value: '', label: 'Any subtype' }, ...getSubtypeOptions(countObj.kind)]}
+                  options={getSubtypeOptions(countObj.kind)}
+                  placeholder="Any subtype"
                 />
               )}
             </>
@@ -204,7 +205,8 @@ export function FactorEditorModal({
                     label="Subtype (optional)"
                     value={localFactor.subtype || ''}
                     onChange={(v) => updateField('subtype', v || undefined)}
-                    options={[{ value: '', label: 'Any subtype' }, ...getSubtypeOptions(localFactor.kind)]}
+                    options={getSubtypeOptions(localFactor.kind)}
+                    placeholder="Any subtype"
                   />
                 )}
                 {localFactor.kind && (
@@ -212,7 +214,8 @@ export function FactorEditorModal({
                     label="Status (optional)"
                     value={localFactor.status || ''}
                     onChange={(v) => updateField('status', v || undefined)}
-                    options={[{ value: '', label: 'Any status' }, ...getStatusOptions(localFactor.kind)]}
+                    options={getStatusOptions(localFactor.kind)}
+                    placeholder="Any status"
                   />
                 )}
               </>
@@ -263,7 +266,8 @@ export function FactorEditorModal({
                     label="Subtype (optional)"
                     value={localFactor.subtype || ''}
                     onChange={(v) => updateField('subtype', v || undefined)}
-                    options={[{ value: '', label: 'Any subtype' }, ...getSubtypeOptions(localFactor.kind)]}
+                    options={getSubtypeOptions(localFactor.kind)}
+                    placeholder="Any subtype"
                   />
                 )}
                 {localFactor.kind && (

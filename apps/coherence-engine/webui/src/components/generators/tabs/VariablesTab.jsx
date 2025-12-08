@@ -180,7 +180,8 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
                 label="Filter by Entity Kind (optional)"
                 value={selectConfig.kind || ''}
                 onChange={(v) => updateSelectMultiple({ kind: v || undefined, subtypes: undefined })}
-                options={[{ value: '', label: 'Any kind' }, ...entityKindOptions]}
+                options={entityKindOptions}
+                placeholder="Any kind"
               />
             </div>
           )}

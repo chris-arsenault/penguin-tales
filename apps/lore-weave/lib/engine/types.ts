@@ -1,5 +1,5 @@
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
-import { TemplateMetadata, SystemMetadata, DistributionTargets } from '../statistics/types';
+import { DistributionTargets } from '../statistics/types';
 import { DomainSchema } from '../domainInterface/domainSchema';
 import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 import type { ISimulationEmitter } from '../observer/types';
@@ -323,7 +323,6 @@ export interface GrowthTemplate {
   id: string;
   name: string;
   requiredEra?: string[];  // optional era restrictions
-  metadata?: TemplateMetadata;  // Statistical metadata for distribution tuning
 
   // Check if template can be applied
   // Uses TemplateGraphView for safe, restricted graph access
@@ -350,7 +349,6 @@ export interface TemplateResult {
 export interface SimulationSystem {
   id: string;
   name: string;
-  metadata?: SystemMetadata;  // Statistical metadata for distribution tuning
 
   // Run one tick of this system
   // graphView provides access to graph queries AND coordinate context
@@ -756,7 +754,7 @@ export class GraphStore implements Graph {
     const results: HardState[] = [];
     for (const [id, entity] of this.#entities) {
       if (criteria.exclude?.includes(id)) continue;
-      if (criteria.kind && entity.kind !== criteria.kind) continue;
+      if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) continue;
       if (criteria.subtype && entity.subtype !== criteria.subtype) continue;
       if (criteria.status && entity.status !== criteria.status) continue;
       if (criteria.prominence && entity.prominence !== criteria.prominence) continue;

@@ -460,34 +460,6 @@ export function createThresholdTriggerSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: config.actions
-          .filter(a => a.type === 'create_relationship')
-          .map(a => ({
-            kind: a.relationshipKind || 'unknown',
-            frequency: 'uncommon' as const,
-            comment: `Created by ${config.name}`
-          })),
-        modifications: [
-          { type: 'tags', frequency: 'common', comment: config.description || config.name }
-        ]
-      },
-      effects: {
-        graphDensity: 0.1,
-        clusterFormation: 0.3,
-        diversityImpact: 0.2,
-        comment: config.description || config.name
-      },
-      parameters: {},
-      triggers: {
-        graphConditions: config.conditions.map(c => c.type),
-        comment: `Evaluates ${config.entityFilter.kind} entities for threshold conditions`
-      }
-    },
-
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {

@@ -7,7 +7,6 @@
  */
 
 import type { Prominence } from '../core/worldTypes';
-import type { TemplateMetadata } from '../statistics/types';
 
 // =============================================================================
 // MAIN TEMPLATE STRUCTURE
@@ -47,9 +46,6 @@ export interface DeclarativeTemplate {
 
   // Named entity references computed during execution
   variables?: Record<string, VariableDefinition>;
-
-  // Metadata for UI/introspection
-  metadata?: TemplateMetadata;
 }
 
 // =============================================================================
@@ -69,9 +65,6 @@ export type ApplicabilityRule =
   | RandomChanceRule
   | CooldownElapsedRule
   | CreationsPerEpochRule
-  | GraphPathApplicabilityRule
-  | TagExistsApplicabilityRule
-  | TagAbsentApplicabilityRule
   | CompositeApplicabilityRule;
 
 export interface PressureThresholdRule {
@@ -125,57 +118,8 @@ export interface CreationsPerEpochRule {
 }
 
 /**
- * Tag existence rule - checks if any entity of a kind has a specific tag.
- * Used for threshold-trigger patterns where systems set tags that templates react to.
- *
- * Example: { type: 'tag_exists', kind: 'faction', tag: 'power_vacuum' }
- *   - Template can run when at least one faction has the 'power_vacuum' tag set
+ * Graph path assertion - used by selection filters.
  */
-export interface TagExistsApplicabilityRule {
-  type: 'tag_exists';
-  kind: string;
-  subtype?: string;
-  status?: string;
-  tag: string;
-  /** If specified, tag value must match (for cluster ID tags) */
-  tagValue?: string | boolean;
-  /** Minimum number of entities with the tag (default 1) */
-  minCount?: number;
-}
-
-/**
- * Tag absence rule - checks that no entity of a kind has a specific tag.
- * Useful for preventing duplicate processing.
- *
- * Example: { type: 'tag_absent', kind: 'faction', tag: 'war_processed' }
- *   - Template can run when no faction has been processed yet
- */
-export interface TagAbsentApplicabilityRule {
-  type: 'tag_absent';
-  kind: string;
-  subtype?: string;
-  status?: string;
-  tag: string;
-}
-
-/**
- * Graph path filter - general purpose graph-aware filtering.
- * Supports up to 2 hops of traversal with existence/count checks.
- */
-export interface GraphPathApplicabilityRule {
-  type: 'graph_path';
-
-  // Starting point - what entities to check
-  from: {
-    kind: string;
-    subtype?: string;
-    status?: string;
-  };
-
-  // What we're looking for
-  assert: GraphPathAssertion;
-}
-
 export interface GraphPathAssertion {
   // Type of assertion
   check: 'exists' | 'not_exists' | 'count_min' | 'count_max';

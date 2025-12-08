@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DynamicWeightCalculator, WeightAdjustment } from '../../selection/dynamicWeightCalculator';
+import { DynamicWeightCalculator, WeightAdjustment, TemplateCreationInfo } from '../../selection/dynamicWeightCalculator';
 import { GrowthTemplate } from '../../engine/types';
 import { PopulationMetrics, EntityMetric } from '../../statistics/populationTracker';
 
@@ -45,8 +45,8 @@ describe('DynamicWeightCalculator', () => {
       });
     });
 
-    describe('templates without metadata', () => {
-      it('should return base weight when no metadata', () => {
+    describe('templates without creation info', () => {
+      it('should return base weight when no creation info', () => {
         const result = calculator.calculateWeight(mockTemplate, 1.5, mockMetrics);
 
         expect(result.adjustedWeight).toBe(1.5);
@@ -54,34 +54,10 @@ describe('DynamicWeightCalculator', () => {
         expect(result.reason).toBe('No tracked entity output');
       });
 
-      it('should return base weight when metadata has no produces', () => {
-        mockTemplate.metadata = {} as any;
+      it('should return base weight when creation info has empty entityKinds', () => {
+        const creationInfo: TemplateCreationInfo = { entityKinds: [] };
 
-        const result = calculator.calculateWeight(mockTemplate, 2.0, mockMetrics);
-
-        expect(result.adjustedWeight).toBe(2.0);
-        expect(result.adjustmentFactor).toBe(1.0);
-      });
-
-      it('should return base weight when produces has no entityKinds', () => {
-        mockTemplate.metadata = {
-          produces: {}
-        } as any;
-
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
-
-        expect(result.adjustedWeight).toBe(1.0);
-        expect(result.adjustmentFactor).toBe(1.0);
-      });
-
-      it('should return base weight when entityKinds array is empty', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: []
-          }
-        } as any;
-
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBe(1.0);
         expect(result.adjustmentFactor).toBe(1.0);
@@ -90,11 +66,9 @@ describe('DynamicWeightCalculator', () => {
 
     describe('population above target (suppression)', () => {
       it('should suppress when population exceeds target by >20%', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -106,7 +80,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBeLessThan(1.0);
         expect(result.adjustmentFactor).toBeLessThan(1.0);
@@ -114,11 +88,9 @@ describe('DynamicWeightCalculator', () => {
       });
 
       it('should suppress more when population is way over target', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -130,18 +102,16 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBeCloseTo(0.2, 5); // Maximum suppression (80% capped, so 1 - 0.8 = 0.2)
         expect(result.adjustmentFactor).toBeCloseTo(0.2, 5);
       });
 
       it('should not suppress when deviation is below threshold', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -153,7 +123,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBe(1.0);
         expect(result.adjustmentFactor).toBe(1.0);
@@ -161,11 +131,9 @@ describe('DynamicWeightCalculator', () => {
       });
 
       it('should include deviation percentage in reason', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -177,7 +145,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.reason).toContain('50%');
         expect(result.reason).toContain('75/50');
@@ -186,11 +154,9 @@ describe('DynamicWeightCalculator', () => {
 
     describe('population below target (boosting)', () => {
       it('should boost when population is below target by >20%', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -202,7 +168,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBeGreaterThan(1.0);
         expect(result.adjustmentFactor).toBeGreaterThan(1.0);
@@ -210,11 +176,9 @@ describe('DynamicWeightCalculator', () => {
       });
 
       it('should boost more when population is way under target', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -226,18 +190,16 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBe(1.8); // 1.0 * (1 + 0.8)
         expect(result.adjustmentFactor).toBe(1.8);
       });
 
       it('should cap boost at 200% (maxBoostFactor)', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -249,18 +211,16 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBeCloseTo(2.0, 5); // Capped at maxBoostFactor
         expect(result.adjustmentFactor).toBeCloseTo(2.0, 5);
       });
 
       it('should include deviation percentage in reason', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -272,7 +232,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.reason).toContain('50%');
         expect(result.reason).toContain('25/50');
@@ -281,14 +241,12 @@ describe('DynamicWeightCalculator', () => {
 
     describe('multiple entity kinds', () => {
       it('should apply cumulative adjustments for multiple kinds', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [
-              { kind: 'npc', subtype: 'merchant' },
-              { kind: 'npc', subtype: 'warrior' }
-            ]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [
+            { kind: 'npc', subtype: 'merchant' },
+            { kind: 'npc', subtype: 'warrior' }
+          ]
+        };
 
         // Both over target
         mockMetrics.entities.set('npc:merchant', {
@@ -311,7 +269,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         // Should apply both suppressions cumulatively
         expect(result.adjustmentFactor).toBeLessThan(1.0);
@@ -320,14 +278,12 @@ describe('DynamicWeightCalculator', () => {
       });
 
       it('should handle mixed over/under targets', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [
-              { kind: 'npc', subtype: 'merchant' },
-              { kind: 'npc', subtype: 'warrior' }
-            ]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [
+            { kind: 'npc', subtype: 'merchant' },
+            { kind: 'npc', subtype: 'warrior' }
+          ]
+        };
 
         // One over, one under
         mockMetrics.entities.set('npc:merchant', {
@@ -350,7 +306,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         // Adjustments should offset somewhat
         expect(result.reason).toContain('npc:merchant');
@@ -358,14 +314,12 @@ describe('DynamicWeightCalculator', () => {
       });
 
       it('should skip entity kinds with no metrics', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [
-              { kind: 'npc', subtype: 'merchant' },
-              { kind: 'npc', subtype: 'nonexistent' }
-            ]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [
+            { kind: 'npc', subtype: 'merchant' },
+            { kind: 'npc', subtype: 'nonexistent' }
+          ]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -377,20 +331,16 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.reason).toContain('npc:merchant');
         expect(result.reason).not.toContain('nonexistent');
       });
 
       it('should skip entity kinds with zero target', () => {
-        mockTemplate.metadata = {
-          produces: {
-            entityKinds: [
-              { kind: 'npc', subtype: 'merchant' }
-            ]
-          }
-        } as any;
+        const creationInfo: TemplateCreationInfo = {
+          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+        };
 
         mockMetrics.entities.set('npc:merchant', {
           kind: 'npc',
@@ -402,7 +352,7 @@ describe('DynamicWeightCalculator', () => {
           history: []
         });
 
-        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
         expect(result.adjustedWeight).toBe(1.0);
         expect(result.reason).toBe('No adjustment needed');
@@ -418,24 +368,14 @@ describe('DynamicWeightCalculator', () => {
           name: 'Template 1',
           canApply: () => true,
           findTargets: () => [],
-          expand: () => ({ entities: [], relationships: [], description: '' }),
-          metadata: {
-            produces: {
-              entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-            }
-          } as any
+          expand: () => ({ entities: [], relationships: [], description: '' })
         },
         {
           id: 'template2',
           name: 'Template 2',
           canApply: () => true,
           findTargets: () => [],
-          expand: () => ({ entities: [], relationships: [], description: '' }),
-          metadata: {
-            produces: {
-              entityKinds: [{ kind: 'npc', subtype: 'warrior' }]
-            }
-          } as any
+          expand: () => ({ entities: [], relationships: [], description: '' })
         }
       ];
 
@@ -444,7 +384,12 @@ describe('DynamicWeightCalculator', () => {
         ['template2', 1.5]
       ]);
 
-      const result = calculator.calculateAllWeights(templates, baseWeights, mockMetrics);
+      const creationInfoMap = new Map<string, TemplateCreationInfo>([
+        ['template1', { entityKinds: [{ kind: 'npc', subtype: 'merchant' }] }],
+        ['template2', { entityKinds: [{ kind: 'npc', subtype: 'warrior' }] }]
+      ]);
+
+      const result = calculator.calculateAllWeights(templates, baseWeights, mockMetrics, creationInfoMap);
 
       expect(result.size).toBe(2);
       expect(result.has('template1')).toBe(true);
@@ -474,6 +419,38 @@ describe('DynamicWeightCalculator', () => {
       const result = calculator.calculateAllWeights([], new Map(), mockMetrics);
 
       expect(result.size).toBe(0);
+    });
+
+    it('should use creation info from map when provided', () => {
+      const templates: GrowthTemplate[] = [
+        {
+          id: 'template1',
+          name: 'Template 1',
+          canApply: () => true,
+          findTargets: () => [],
+          expand: () => ({ entities: [], relationships: [], description: '' })
+        }
+      ];
+
+      const baseWeights = new Map([['template1', 1.0]]);
+
+      const creationInfoMap = new Map<string, TemplateCreationInfo>([
+        ['template1', { entityKinds: [{ kind: 'npc', subtype: 'merchant' }] }]
+      ]);
+
+      mockMetrics.entities.set('npc:merchant', {
+        kind: 'npc',
+        subtype: 'merchant',
+        count: 75,
+        target: 50,
+        deviation: 0.5,
+        trend: 0,
+        history: []
+      });
+
+      const result = calculator.calculateAllWeights(templates, baseWeights, mockMetrics, creationInfoMap);
+
+      expect(result.get('template1')?.adjustmentFactor).toBeLessThan(1.0);
     });
   });
 
@@ -621,11 +598,9 @@ describe('DynamicWeightCalculator', () => {
     it('should update deviation threshold', () => {
       calculator.configure({ deviationThreshold: 0.3 });
 
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -637,7 +612,7 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
       // Should not suppress because deviation < new threshold
       expect(result.adjustedWeight).toBe(1.0);
@@ -646,11 +621,9 @@ describe('DynamicWeightCalculator', () => {
     it('should update max suppression factor', () => {
       calculator.configure({ maxSuppressionFactor: 0.5 });
 
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -662,7 +635,7 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
       // Max suppression is now 50% instead of 80%
       expect(result.adjustedWeight).toBe(0.5); // 1.0 * (1 - 0.5)
@@ -671,11 +644,9 @@ describe('DynamicWeightCalculator', () => {
     it('should update max boost factor', () => {
       calculator.configure({ maxBoostFactor: 3.0 });
 
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -687,7 +658,7 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
       // Max boost is now 300% instead of 200%
       expect(result.adjustedWeight).toBe(3.0); // Capped at new maxBoostFactor
@@ -716,11 +687,9 @@ describe('DynamicWeightCalculator', () => {
 
   describe('edge cases', () => {
     it('should handle exactly at threshold deviation', () => {
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -732,18 +701,16 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
       // Should not adjust at exactly threshold
       expect(result.adjustedWeight).toBe(1.0);
     });
 
     it('should handle zero count', () => {
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -755,17 +722,15 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
 
       expect(result.adjustedWeight).toBe(2.0); // Maximum boost
     });
 
     it('should handle very large base weight', () => {
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -777,7 +742,7 @@ describe('DynamicWeightCalculator', () => {
         history: []
       });
 
-      const result = calculator.calculateWeight(mockTemplate, 100.0, mockMetrics);
+      const result = calculator.calculateWeight(mockTemplate, 100.0, mockMetrics, creationInfo);
 
       expect(result.adjustedWeight).toBeGreaterThan(100.0);
       expect(result.baseWeight).toBe(100.0);
@@ -791,11 +756,9 @@ describe('DynamicWeightCalculator', () => {
     });
 
     it('should handle NaN deviation', () => {
-      mockTemplate.metadata = {
-        produces: {
-          entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
-        }
-      } as any;
+      const creationInfo: TemplateCreationInfo = {
+        entityKinds: [{ kind: 'npc', subtype: 'merchant' }]
+      };
 
       mockMetrics.entities.set('npc:merchant', {
         kind: 'npc',
@@ -808,7 +771,7 @@ describe('DynamicWeightCalculator', () => {
       });
 
       expect(() => {
-        calculator.calculateWeight(mockTemplate, 1.0, mockMetrics);
+        calculator.calculateWeight(mockTemplate, 1.0, mockMetrics, creationInfo);
       }).not.toThrow();
     });
   });

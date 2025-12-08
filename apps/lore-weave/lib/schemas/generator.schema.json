@@ -19,8 +19,7 @@
     "creation": { "type": "array", "description": "Entities to create", "items": { "$ref": "#/$defs/CreationRule" } },
     "relationships": { "type": "array", "description": "Relationships to form", "items": { "$ref": "#/$defs/RelationshipRule" } },
     "stateUpdates": { "type": "array", "description": "State updates to apply", "items": { "$ref": "#/$defs/StateUpdateRule" } },
-    "variables": { "type": "object", "description": "Named entity references computed during execution", "additionalProperties": { "$ref": "#/$defs/VariableDefinition" } },
-    "metadata": { "type": "object", "description": "Metadata for UI/introspection" }
+    "variables": { "type": "object", "description": "Named entity references computed during execution", "additionalProperties": { "$ref": "#/$defs/VariableDefinition" } }
   },
   "$defs": {
     "NonEmptyString": { "type": "string", "minLength": 1 },
@@ -40,9 +39,6 @@
         { "$ref": "#/$defs/RandomChanceRule" },
         { "$ref": "#/$defs/CooldownElapsedRule" },
         { "$ref": "#/$defs/CreationsPerEpochRule" },
-        { "$ref": "#/$defs/GraphPathApplicabilityRule" },
-        { "$ref": "#/$defs/TagExistsApplicabilityRule" },
-        { "$ref": "#/$defs/TagAbsentApplicabilityRule" },
         { "$ref": "#/$defs/CompositeApplicabilityRule" }
       ]
     },
@@ -134,54 +130,6 @@
       "properties": {
         "type": { "const": "creations_per_epoch" },
         "maxPerEpoch": { "type": "integer", "minimum": 1 }
-      }
-    },
-
-    "GraphPathApplicabilityRule": {
-      "type": "object",
-      "required": ["type", "from", "assert"],
-      "additionalProperties": false,
-      "properties": {
-        "type": { "const": "graph_path" },
-        "from": {
-          "type": "object",
-          "required": ["kind"],
-          "additionalProperties": false,
-          "properties": {
-            "kind": { "$ref": "#/$defs/NonEmptyString" },
-            "subtype": { "$ref": "#/$defs/NonEmptyString" },
-            "status": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        "assert": { "$ref": "#/$defs/GraphPathAssertion" }
-      }
-    },
-
-    "TagExistsApplicabilityRule": {
-      "type": "object",
-      "required": ["type", "kind", "tag"],
-      "additionalProperties": false,
-      "properties": {
-        "type": { "const": "tag_exists" },
-        "kind": { "$ref": "#/$defs/NonEmptyString" },
-        "subtype": { "$ref": "#/$defs/NonEmptyString" },
-        "status": { "$ref": "#/$defs/NonEmptyString" },
-        "tag": { "$ref": "#/$defs/NonEmptyString" },
-        "tagValue": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] },
-        "minCount": { "type": "integer", "minimum": 1 }
-      }
-    },
-
-    "TagAbsentApplicabilityRule": {
-      "type": "object",
-      "required": ["type", "kind", "tag"],
-      "additionalProperties": false,
-      "properties": {
-        "type": { "const": "tag_absent" },
-        "kind": { "$ref": "#/$defs/NonEmptyString" },
-        "subtype": { "$ref": "#/$defs/NonEmptyString" },
-        "status": { "$ref": "#/$defs/NonEmptyString" },
-        "tag": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
 

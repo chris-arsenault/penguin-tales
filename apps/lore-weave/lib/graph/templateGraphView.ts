@@ -258,7 +258,7 @@ export class TemplateGraphView {
     for (const entity of this.graph.getEntities()) {
       let matches = true;
 
-      if (criteria.kind && entity.kind !== criteria.kind) matches = false;
+      if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) matches = false;
       if (criteria.subtype && entity.subtype !== criteria.subtype) matches = false;
       if (criteria.status && entity.status !== criteria.status) matches = false;
       if (criteria.prominence && entity.prominence !== criteria.prominence) matches = false;

@@ -12,6 +12,11 @@ import { ReferenceDropdown } from '../../shared';
 function ConditionCard({ condition, onChange, onRemove, schema }) {
   const [expanded, setExpanded] = useState(false);
 
+  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+    value: ek.kind,
+    label: ek.description || ek.kind,
+  }));
+
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
     label: rk.description || rk.kind,
@@ -25,13 +30,26 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
     switch (condition.type) {
       case 'relationship_count':
         return `${condition.relationshipKind || 'any'} count ${condition.minCount !== undefined ? `>= ${condition.minCount}` : ''} ${condition.maxCount !== undefined ? `<= ${condition.maxCount}` : ''}`;
+      case 'relationship_exists': {
+        let summary = `has ${condition.relationshipKind || '?'} relationship`;
+        if (condition.targetKind) summary += ` to ${condition.targetKind}`;
+        if (condition.targetStatus) summary += ` (${condition.targetStatus})`;
+        return summary;
+      }
+      case 'entity_status':
+        return condition.notStatus ? `status != ${condition.notStatus}` : `status = ${condition.status || '?'}`;
+      case 'tag_exists':
+        return `has tag "${condition.tag || '?'}"`;
+      case 'tag_absent':
+        return `missing tag "${condition.tag || '?'}"`;
+      case 'pressure_above':
+        return `${condition.pressureId || '?'} > ${condition.threshold ?? '?'}`;
+      case 'pressure_below':
+        return `${condition.pressureId || '?'} < ${condition.threshold ?? '?'}`;
       case 'time_since_update':
         return `${condition.minTicks || '?'} ticks since update`;
-      case 'has_tag':
-      case 'has_any_tag':
-        return `has tag ${condition.tag || condition.tags?.join(', ') || '?'}`;
-      case 'tag_absent':
-        return `missing tag ${condition.tag || '?'}`;
+      case 'connection_count':
+        return `connections ${condition.minConnections !== undefined ? `>= ${condition.minConnections}` : ''} ${condition.maxConnections !== undefined ? `<= ${condition.maxConnections}` : ''}`;
       default:
         return condition.type;
     }
@@ -76,6 +94,27 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
                 />
               </>
             )}
+            {condition.type === 'relationship_exists' && (
+              <>
+                <ReferenceDropdown
+                  label="Target Kind"
+                  value={condition.targetKind}
+                  onChange={(v) => update('targetKind', v)}
+                  options={entityKindOptions}
+                  placeholder="Any"
+                />
+                <div className="form-group">
+                  <label className="label">Target Status</label>
+                  <input
+                    type="text"
+                    value={condition.targetStatus || ''}
+                    onChange={(e) => update('targetStatus', e.target.value || undefined)}
+                    className="input"
+                    placeholder="Any"
+                  />
+                </div>
+              </>
+            )}
             {condition.type === 'relationship_count' && (
               <>
                 <div className="form-group">
@@ -112,7 +151,7 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
                 />
               </div>
             )}
-            {(condition.type === 'has_tag' || condition.type === 'tag_absent') && (
+            {(condition.type === 'tag_exists' || condition.type === 'tag_absent') && (
               <div className="form-group">
                 <label className="label">Tag</label>
                 <input
@@ -122,6 +161,77 @@ function ConditionCard({ condition, onChange, onRemove, schema }) {
                   className="input"
                 />
               </div>
+            )}
+            {condition.type === 'entity_status' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Status</label>
+                  <input
+                    type="text"
+                    value={condition.status || ''}
+                    onChange={(e) => update('status', e.target.value || undefined)}
+                    className="input"
+                    placeholder="Required status"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Not Status</label>
+                  <input
+                    type="text"
+                    value={condition.notStatus || ''}
+                    onChange={(e) => update('notStatus', e.target.value || undefined)}
+                    className="input"
+                    placeholder="Excluded status"
+                  />
+                </div>
+              </>
+            )}
+            {(condition.type === 'pressure_above' || condition.type === 'pressure_below') && (
+              <>
+                <div className="form-group">
+                  <label className="label">Pressure ID</label>
+                  <input
+                    type="text"
+                    value={condition.pressureId || ''}
+                    onChange={(e) => update('pressureId', e.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Threshold</label>
+                  <input
+                    type="number"
+                    value={condition.threshold ?? ''}
+                    onChange={(e) => update('threshold', parseFloat(e.target.value) || undefined)}
+                    className="input"
+                    step="0.1"
+                  />
+                </div>
+              </>
+            )}
+            {condition.type === 'connection_count' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Min Connections</label>
+                  <input
+                    type="number"
+                    value={condition.minConnections ?? ''}
+                    onChange={(e) => update('minConnections', parseInt(e.target.value) || undefined)}
+                    className="input"
+                    min="0"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Max Connections</label>
+                  <input
+                    type="number"
+                    value={condition.maxConnections ?? ''}
+                    onChange={(e) => update('maxConnections', parseInt(e.target.value) || undefined)}
+                    className="input"
+                    min="0"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -152,8 +262,10 @@ function ActionCard({ action, onChange, onRemove, schema }) {
         return `${action.tag} = ${action.tagValue !== undefined ? String(action.tagValue) : 'true'}`;
       case 'remove_tag':
         return `remove ${action.tag}`;
+      case 'modify_pressure':
+        return `${action.pressureId || '?'} ${action.delta >= 0 ? '+' : ''}${action.delta ?? '?'}`;
       case 'create_relationship':
-        return `create ${action.relationshipKind}`;
+        return `create ${action.relationshipKind || '?'}${action.betweenMatching ? ' (all pairs)' : ''}`;
       default:
         return action.type;
     }
@@ -212,12 +324,61 @@ function ActionCard({ action, onChange, onRemove, schema }) {
               </div>
             )}
             {action.type === 'create_relationship' && (
-              <ReferenceDropdown
-                label="Relationship Kind"
-                value={action.relationshipKind}
-                onChange={(v) => update('relationshipKind', v)}
-                options={relationshipKindOptions}
-              />
+              <>
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={action.relationshipKind}
+                  onChange={(v) => update('relationshipKind', v)}
+                  options={relationshipKindOptions}
+                />
+                <div className="form-group">
+                  <label className="label">Strength</label>
+                  <input
+                    type="number"
+                    value={action.relationshipStrength ?? ''}
+                    onChange={(e) => update('relationshipStrength', parseFloat(e.target.value) || undefined)}
+                    className="input"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    placeholder="0.5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">
+                    <input
+                      type="checkbox"
+                      checked={action.betweenMatching || false}
+                      onChange={(e) => update('betweenMatching', e.target.checked)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Between All Matching
+                  </label>
+                </div>
+              </>
+            )}
+            {action.type === 'modify_pressure' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Pressure ID</label>
+                  <input
+                    type="text"
+                    value={action.pressureId || ''}
+                    onChange={(e) => update('pressureId', e.target.value)}
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Delta</label>
+                  <input
+                    type="number"
+                    value={action.delta ?? ''}
+                    onChange={(e) => update('delta', parseFloat(e.target.value) || 0)}
+                    className="input"
+                    step="0.1"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -300,16 +461,17 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
         <div className="form-grid">
           <ReferenceDropdown
             label="Kind"
-            value={config.entityFilter?.kind}
+            value={config.entityFilter?.kind || 'any'}
             onChange={(v) => updateEntityFilter('kind', v)}
-            options={entityKindOptions}
+            options={[{ value: 'any', label: 'All Kinds' }, ...entityKindOptions]}
           />
-          {config.entityFilter?.kind && (
+          {config.entityFilter?.kind && config.entityFilter?.kind !== 'any' && (
             <ReferenceDropdown
               label="Status"
               value={config.entityFilter?.status}
               onChange={(v) => updateEntityFilter('status', v)}
-              options={[{ value: '', label: 'Any' }, ...getStatusOptions(config.entityFilter.kind)]}
+              options={getStatusOptions(config.entityFilter.kind)}
+              placeholder="Any"
             />
           )}
           <div className="form-group">

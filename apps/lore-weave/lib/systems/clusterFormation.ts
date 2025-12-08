@@ -392,45 +392,6 @@ export function createClusterFormationSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: [
-          { kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF, category: 'structural', frequency: 'rare', comment: 'Links entities to meta-entity' }
-        ],
-        modifications: []
-      },
-      effects: {
-        graphDensity: 0.2,
-        clusterFormation: 0.8,
-        diversityImpact: -0.3,
-        comment: config.description || `Consolidates ${config.entityFilter.kind} entities into meta-entities`
-      },
-      parameters: {
-        minClusterSize: {
-          value: config.clustering.minSize,
-          min: 2,
-          max: 10,
-          description: 'Minimum entities to form a cluster'
-        },
-        minimumScore: {
-          value: config.clustering.minimumScore,
-          min: 1.0,
-          max: 15.0,
-          description: 'Minimum similarity score for clustering'
-        }
-      },
-      triggers: {
-        graphConditions: config.runAtEpochEnd
-          ? ['Epoch end', `Sufficient ${config.entityFilter.kind} entities`]
-          : [`Sufficient ${config.entityFilter.kind} entities`],
-        comment: config.runAtEpochEnd
-          ? 'Runs at epoch end when enough entities exist'
-          : 'Runs every tick when enough entities exist'
-      }
-    },
-
     apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
       // Check epoch end if required
       if (config.runAtEpochEnd) {

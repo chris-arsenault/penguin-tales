@@ -277,30 +277,6 @@ export function createGraphContagionSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: config.infectionAction.type === 'create_relationship'
-          ? [{ kind: config.infectionAction.relationshipKind || 'unknown', frequency: 'common', comment: `Created by ${config.name}` }]
-          : [],
-        modifications: [
-          { type: 'tags', frequency: 'common', comment: config.description || config.name }
-        ]
-      },
-      effects: {
-        graphDensity: 0.3,
-        clusterFormation: 0.6,
-        diversityImpact: 0.5,
-        comment: config.description || config.name
-      },
-      parameters: {},
-      triggers: {
-        graphConditions: ['Infected entities exist', 'Contact networks'],
-        comment: `SIR-style contagion through ${config.vectors.map(v => v.relationshipKind).join(', ')}`
-      }
-    },
-
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {

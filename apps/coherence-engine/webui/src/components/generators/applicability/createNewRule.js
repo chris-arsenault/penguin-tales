@@ -30,12 +30,9 @@ export function createNewRule(type, pressures) {
     newRule.maxPerEpoch = 0;
   } else if (type === 'or' || type === 'and') {
     newRule.rules = [];
-  } else if (type === 'graph_path') {
-    newRule.from = { kind: '' };
-    newRule.assert = {
-      check: '',
-      path: [{ via: '', direction: '', targetKind: '', targetSubtype: '' }]
-    };
+  } else if (type === 'pressure_any_above') {
+    newRule.pressureIds = [];
+    newRule.threshold = 0;
   }
   return newRule;
 }

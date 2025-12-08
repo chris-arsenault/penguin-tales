@@ -237,32 +237,6 @@ export class TemplateInterpreter {
         return `random_chance: ${(rule.chance * 100).toFixed(0)}% failed`;
       }
 
-      case 'tag_exists': {
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
-        const withTag = entities.filter(e => hasTag(e.tags, rule.tag)).length;
-        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
-        return `tag_exists: ${desc} with tag '${rule.tag}'=${withTag} (need >=${rule.minCount ?? 1})`;
-      }
-
-      case 'tag_absent': {
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
-        const withTag = entities.filter(e => hasTag(e.tags, rule.tag)).length;
-        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
-        return `tag_absent: ${desc} has ${withTag} with tag '${rule.tag}' (need 0)`;
-      }
-
-      case 'graph_path': {
-        const startEntities = graphView.findEntities({
-          kind: rule.from.kind,
-          subtype: rule.from.subtype,
-          status: rule.from.status
-        });
-        const fromDesc = `${rule.from.kind}${rule.from.subtype ? ':' + rule.from.subtype : ''}`;
-        return `graph_path: no ${fromDesc} satisfies path (${startEntities.length} candidates)`;
-      }
-
       case 'and':
         return `and: one or more sub-rules failed`;
 
@@ -400,59 +374,6 @@ export class TemplateInterpreter {
 
       case 'creations_per_epoch': {
         return graphView.rateLimitState.creationsThisEpoch < rule.maxPerEpoch;
-      }
-
-      case 'graph_path': {
-        // Find starting entities
-        const startEntities = graphView.findEntities({
-          kind: rule.from.kind,
-          subtype: rule.from.subtype,
-          status: rule.from.status
-        });
-
-        // Check if ANY starting entity satisfies the assertion
-        return startEntities.some(startEntity => {
-          // Create a fresh context for this entity's path evaluation
-          const pathContext = new ExecutionContext(graphView);
-          pathContext.target = startEntity;
-          return this.evaluateGraphPath(startEntity, rule.assert, pathContext);
-        });
-      }
-
-      case 'tag_exists': {
-        // Find entities matching the filter criteria
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) {
-          entities = entities.filter(e => e.subtype === rule.subtype);
-        }
-        if (rule.status) {
-          entities = entities.filter(e => e.status === rule.status);
-        }
-        // Filter to those with the tag
-        const entitiesWithTag = entities.filter(e => {
-          if (!hasTag(e.tags, rule.tag)) return false;
-          // If specific value required, check it matches
-          if (rule.tagValue !== undefined) {
-            const value = getTagValue(e.tags, rule.tag);
-            return value === rule.tagValue;
-          }
-          return true;
-        });
-        const minCount = rule.minCount ?? 1;
-        return entitiesWithTag.length >= minCount;
-      }
-
-      case 'tag_absent': {
-        // Find entities matching the filter criteria
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) {
-          entities = entities.filter(e => e.subtype === rule.subtype);
-        }
-        if (rule.status) {
-          entities = entities.filter(e => e.status === rule.status);
-        }
-        // Check that NO entities have the tag
-        return entities.every(e => !hasTag(e.tags, rule.tag));
       }
 
       case 'and': {
@@ -1403,7 +1324,6 @@ export function createTemplateFromDeclarative(
   return {
     id: template.id,
     name: template.name,
-    metadata: template.metadata,
 
     canApply: (graphView: TemplateGraphView) => {
       return interpreter.canApply(template, graphView);

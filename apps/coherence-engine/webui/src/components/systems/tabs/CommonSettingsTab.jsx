@@ -47,25 +47,26 @@ export function CommonSettingsTab({ system, onChange, schema, pressures }) {
         <div className="form-grid">
           <ReferenceDropdown
             label="Entity Kind"
-            value={config.entityKind}
+            value={config.entityKind || 'any'}
             onChange={(v) => updateConfig('entityKind', v)}
-            options={entityKindOptions}
-            placeholder="All kinds"
+            options={[{ value: 'any', label: 'All Kinds' }, ...entityKindOptions]}
           />
-          {config.entityKind && (
+          {config.entityKind && config.entityKind !== 'any' && (
             <ReferenceDropdown
               label="Entity Subtype"
               value={config.entitySubtype}
               onChange={(v) => updateConfig('entitySubtype', v)}
-              options={[{ value: '', label: 'Any' }, ...getSubtypeOptions(config.entityKind)]}
+              options={getSubtypeOptions(config.entityKind)}
+              placeholder="Any"
             />
           )}
-          {config.entityKind && (
+          {config.entityKind && config.entityKind !== 'any' && (
             <ReferenceDropdown
               label="Entity Status"
               value={config.entityStatus}
               onChange={(v) => updateConfig('entityStatus', v)}
-              options={[{ value: '', label: 'Any' }, ...getStatusOptions(config.entityKind)]}
+              options={getStatusOptions(config.entityKind)}
+              placeholder="Any"
             />
           )}
         </div>

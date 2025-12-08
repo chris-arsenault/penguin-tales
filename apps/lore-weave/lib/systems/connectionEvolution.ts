@@ -253,35 +253,6 @@ export function createConnectionEvolutionSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: config.rules
-          .filter(r => r.action.type === 'create_relationship')
-          .map(r => ({
-            kind: (r.action as { type: 'create_relationship'; kind: string }).kind,
-            category: (r.action as { type: 'create_relationship'; category?: string }).category,
-            frequency: 'uncommon' as const,
-            comment: `Created by ${config.name}`
-          })),
-        modifications: [
-          { type: 'prominence', frequency: 'common', comment: config.description || config.name }
-        ]
-      },
-      effects: {
-        graphDensity: 0.3,
-        clusterFormation: 0.4,
-        diversityImpact: 0.4,
-        comment: config.description || config.name
-      },
-      parameters: {},
-      triggers: {
-        graphConditions: ['Entity connection metrics'],
-        comment: `Evaluates ${config.entityKind} based on ${config.metric.type}`
-      }
-    },
-
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {

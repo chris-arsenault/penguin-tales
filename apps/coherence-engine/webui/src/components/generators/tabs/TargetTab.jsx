@@ -65,10 +65,8 @@ export function TargetTab({ generator, onChange, schema }) {
             label="Min Prominence"
             value={selection.minProminence || ''}
             onChange={(v) => updateSelection('minProminence', v || undefined)}
-            options={[
-              { value: '', label: 'Any prominence' },
-              ...PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label })),
-            ]}
+            options={PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label }))}
+            placeholder="Any prominence"
           />
         </div>
 

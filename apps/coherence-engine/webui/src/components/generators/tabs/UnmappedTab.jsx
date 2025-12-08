@@ -18,7 +18,6 @@ const KNOWN_PROPERTIES = new Set([
   'relationships',
   'stateUpdates',
   'variables',
-  'metadata',
 ]);
 
 /**

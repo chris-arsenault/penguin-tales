@@ -129,50 +129,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "npc",
-            "subtype": "hero",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "practitioner_of",
-            "category": "cultural",
-            "probability": 0.8,
-            "comment": "If abilities exist"
-          },
-          {
-            "kind": "resident_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Hero lives in colony"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.2,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.5,
-        "comment": "Creates individual heroes with potential for ability practice"
-      },
-      "tags": [
-        "crisis-driven",
-        "individual"
-      ]
-    },
     "enabled": false
   },
   {
@@ -319,56 +275,6 @@
           "pickStrategy": "first"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "npc",
-            "subtype": "mayor",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "leader_of",
-            "category": "political",
-            "probability": 1.5,
-            "comment": "Leads colony and possibly faction"
-          },
-          {
-            "kind": "resident_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Lives in governed colony"
-          },
-          {
-            "kind": "member_of",
-            "category": "political",
-            "probability": 0.5,
-            "comment": "Joins faction if predecessor led one"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.3,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.2,
-        "comment": "Replaces dead/old leaders with new ones, maintaining political structure"
-      },
-      "tags": [
-        "succession",
-        "leadership-change"
-      ]
     },
     "enabled": false
   },
@@ -553,59 +459,6 @@
           "statusFilter": "alive"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "npc",
-            "subtype": "orca",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 0.6
-              },
-              {
-                "level": "recognized",
-                "probability": 0.3
-              },
-              {
-                "level": "renowned",
-                "probability": 0.1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "enemy_of",
-            "category": "conflict",
-            "probability": 0.9,
-            "comment": "Orcas vs colonies and heroes"
-          },
-          {
-            "kind": "practitioner_of",
-            "category": "cultural",
-            "probability": 0.7,
-            "comment": "Orcas use abilities"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.2,
-        "diversityImpact": 0.8,
-        "comment": "Injects external threat cluster into the world"
-      },
-      "tags": [
-        "external-threat",
-        "invasion",
-        "cluster"
-      ]
     },
     "enabled": false
   },
@@ -818,76 +671,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "faction",
-            "subtype": "various",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "splinter_of",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Splinter lineage with ideological distance"
-          },
-          {
-            "kind": "leader_of",
-            "category": "institutional",
-            "probability": 1,
-            "comment": "Defector leads splinter"
-          },
-          {
-            "kind": "member_of",
-            "category": "institutional",
-            "probability": 1,
-            "comment": "Defector joins splinter"
-          },
-          {
-            "kind": "at_war_with",
-            "category": "political",
-            "probability": 1,
-            "comment": "Splinter wars with parent"
-          },
-          {
-            "kind": "occupies",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Splinter occupies location"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.6,
-        "diversityImpact": 0.7,
-        "comment": "Creates new faction clusters with conflict relationships"
-      },
-      "parameters": {
-        "leaderHeroChance": {
-          "value": 0.5,
-          "min": 0,
-          "max": 1,
-          "description": "Probability splinter leader is hero vs outlaw"
-        }
-      },
-      "tags": [
-        "conflict",
-        "faction-diversity"
-      ]
-    },
     "enabled": false
   },
   {
@@ -995,44 +778,6 @@
           "fallback": "$target"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [],
-        "relationships": [
-          {
-            "kind": "controls",
-            "category": "political",
-            "probability": 1,
-            "comment": "Faction expands territorial control"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.3,
-        "clusterFormation": 0.6,
-        "diversityImpact": 0.4,
-        "comment": "Factions expand territory, creating political power structures"
-      },
-      "parameters": {
-        "expansionAggressiveness": {
-          "value": 0.5,
-          "min": 0.2,
-          "max": 1,
-          "description": "How readily factions expand into adjacent territories"
-        },
-        "leaderProminenceBonus": {
-          "value": 0.3,
-          "min": 0,
-          "max": 0.6,
-          "description": "Prominence bonus for faction leaders on successful expansion"
-        }
-      },
-      "tags": [
-        "world-level",
-        "political",
-        "territorial"
-      ]
     },
     "enabled": false
   },
@@ -1149,44 +894,6 @@
           "fallback": "$target"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [],
-        "relationships": [
-          {
-            "kind": "trades_with",
-            "category": "economic",
-            "probability": 1,
-            "comment": "Faction establishes trade route"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.5,
-        "clusterFormation": 0.7,
-        "diversityImpact": 0.4,
-        "comment": "Creates economic networks between factions"
-      },
-      "parameters": {
-        "tradeFormationRate": {
-          "value": 0.6,
-          "min": 0.2,
-          "max": 1,
-          "description": "How readily factions establish trade relationships"
-        },
-        "merchantInfluence": {
-          "value": 0.2,
-          "min": 0,
-          "max": 0.5,
-          "description": "Influence gain for merchants facilitating trade"
-        }
-      },
-      "tags": [
-        "world-level",
-        "economic",
-        "trade"
-      ]
     },
     "enabled": false
   },
@@ -1376,57 +1083,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "faction",
-            "subtype": "company",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "controls",
-            "category": "political",
-            "probability": 1,
-            "comment": "Guild controls colony trade"
-          },
-          {
-            "kind": "member_of",
-            "category": "political",
-            "probability": 2,
-            "comment": "Merchants join guild"
-          },
-          {
-            "kind": "resident_of",
-            "category": "spatial",
-            "probability": 2,
-            "comment": "Merchants reside in colony"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.6,
-        "clusterFormation": 0.8,
-        "diversityImpact": 0.4,
-        "comment": "Forms tight economic clusters within colonies"
-      },
-      "tags": [
-        "economic",
-        "colony-centric",
-        "cluster-forming"
-      ]
     },
     "enabled": false
   },
@@ -1636,97 +1292,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "faction",
-            "subtype": "cult",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          },
-          {
-            "kind": "npc",
-            "subtype": "hero",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "occupies",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Cult occupies anomaly/location"
-          },
-          {
-            "kind": "leader_of",
-            "category": "political",
-            "probability": 1,
-            "comment": "Prophet leads cult"
-          },
-          {
-            "kind": "resident_of",
-            "category": "spatial",
-            "probability": 2,
-            "comment": "Prophet + cultist reside"
-          },
-          {
-            "kind": "member_of",
-            "category": "political",
-            "probability": 1,
-            "comment": "Cultist joins"
-          },
-          {
-            "kind": "related_to",
-            "category": "cultural",
-            "probability": 0.8,
-            "comment": "Cult seeks magic if exists"
-          },
-          {
-            "kind": "practitioner_of",
-            "category": "cultural",
-            "probability": 0.8,
-            "comment": "Prophet practices magic if exists"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.7,
-        "clusterFormation": 0.9,
-        "diversityImpact": 0.5,
-        "comment": "Creates tight mystical clusters near anomalies"
-      },
-      "parameters": {
-        "numCultists": {
-          "value": 1,
-          "min": 1,
-          "max": 3,
-          "description": "Number of initial cultist followers"
-        }
-      },
-      "tags": [
-        "mystical",
-        "anomaly-driven",
-        "cluster-forming"
-      ]
-    },
     "enabled": false
   },
   {
@@ -1817,53 +1382,6 @@
           "pickStrategy": "first"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "colony",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "contained_by",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Colony on iceberg"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.1,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.3,
-        "comment": "Adds new colony nodes with realistic spatial placement"
-      },
-      "parameters": {
-        "minDistanceFromColonies": {
-          "value": 20,
-          "min": 10,
-          "max": 40,
-          "description": "Minimum distance from existing colonies"
-        }
-      },
-      "tags": [
-        "expansion",
-        "colony-formation",
-        "region-aware"
-      ]
     },
     "enabled": false
   },
@@ -1972,71 +1490,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "anomaly",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Adjacent to existing location"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "spatial",
-            "probability": 0.7,
-            "comment": "Magic user discovers it"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.3,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.8,
-        "comment": "Creates mystical locations in the wilderness between settlements"
-      },
-      "parameters": {
-        "activationChance": {
-          "value": 0.2,
-          "min": 0.05,
-          "max": 0.5,
-          "description": "Probability of manifestation when magical_instability is low"
-        },
-        "minDistanceFromColonies": {
-          "value": 8,
-          "min": 5,
-          "max": 20,
-          "description": "Minimum distance from colony centers"
-        },
-        "maxDistanceFromColonies": {
-          "value": 25,
-          "min": 15,
-          "max": 40,
-          "description": "Maximum distance from any colony (for discoverability)"
-        }
-      },
-      "tags": [
-        "mystical",
-        "pressure-driven",
-        "region-aware"
-      ]
     },
     "enabled": false
   },
@@ -2147,57 +1600,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "geographic_feature",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Explorer finds resource"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Resource discovered"
-          },
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 0.8,
-            "comment": "Adjacent to nearby location"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.6,
-        "comment": "Procedurally generates resource locations based on scarcity"
-      },
-      "tags": [
-        "emergent",
-        "resource",
-        "scarcity-driven"
-      ]
-    },
     "enabled": false
   },
   {
@@ -2300,57 +1702,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "geographic_feature",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Explorer discovers location"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Location discovered"
-          },
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 0.8,
-            "comment": "Adjacent to nearby location"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.7,
-        "comment": "Procedurally generates locations based on world state (conflict, magic, scarcity)"
-      },
-      "tags": [
-        "emergent",
-        "discovery",
-        "adaptive"
-      ]
     },
     "enabled": false
   },
@@ -2463,65 +1814,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "various",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "NPC explores location"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Location discovered by NPC"
-          },
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 0.8,
-            "comment": "Adjacent to nearby location"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.7,
-        "comment": "Procedurally generates neutral locations based on era themes"
-      },
-      "parameters": {
-        "baseChance": {
-          "value": 0.08,
-          "min": 0.01,
-          "max": 0.3,
-          "description": "Base probability of discovery when other conditions met"
-        }
-      },
-      "tags": [
-        "emergent",
-        "exploration",
-        "era-driven"
-      ]
     },
     "enabled": false
   },
@@ -2725,97 +2017,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "geographic_feature",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          },
-          {
-            "kind": "npc",
-            "subtype": "merchant",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 1.5,
-            "comment": "Bloom connected to colonies"
-          },
-          {
-            "kind": "resident_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Merchant resides"
-          },
-          {
-            "kind": "member_of",
-            "category": "political",
-            "probability": 0.8,
-            "comment": "Merchant joins faction"
-          },
-          {
-            "kind": "explorer_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Merchant explores bloom"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "cultural",
-            "probability": 0.1,
-            "comment": "Rare tech discovery"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.7,
-        "clusterFormation": 0.5,
-        "diversityImpact": 0.6,
-        "comment": "Creates resource frontier using Voronoi-like placement"
-      },
-      "parameters": {
-        "activationChance": {
-          "value": 0.05,
-          "min": 0.01,
-          "max": 0.2,
-          "description": "Probability when scarcity is low"
-        },
-        "techDiscoveryChance": {
-          "value": 0.1,
-          "min": 0,
-          "max": 0.5,
-          "description": "Probability of discovering fishing technology"
-        }
-      },
-      "tags": [
-        "resource",
-        "voronoi-placement",
-        "frontier"
-      ]
-    },
     "enabled": false
   },
   {
@@ -2943,14 +2144,6 @@
         }
       }
     },
-    "metadata": {
-      "description": "Creates war occurrence when factions are tagged as war_brewing by the threshold system",
-      "tags": [
-        "threshold-triggered",
-        "occurrence",
-        "war"
-      ]
-    },
     "enabled": false
   },
   {
@@ -3064,14 +2257,6 @@
           "pickStrategy": "first"
         }
       }
-    },
-    "metadata": {
-      "description": "Creates succession crisis occurrence when factions are tagged as power_vacuum by the threshold system",
-      "tags": [
-        "threshold-triggered",
-        "occurrence",
-        "political"
-      ]
     },
     "enabled": false
   },
@@ -3195,14 +2380,6 @@
           "pickStrategy": "first"
         }
       }
-    },
-    "metadata": {
-      "description": "Transforms dead heroes into legends when tagged as legend_ripe by the threshold system. Creates memorial traditions and updates NPC status to fictional.",
-      "tags": [
-        "threshold-triggered",
-        "cultural",
-        "legend"
-      ]
     },
     "enabled": false
   },
@@ -3341,56 +2518,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "rules",
-            "subtype": "various",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "originated_in",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Law applies in colony"
-          },
-          {
-            "kind": "derived_from",
-            "category": "immutable_fact",
-            "probability": 0.4,
-            "comment": "Supersedes existing law"
-          },
-          {
-            "kind": "related_to",
-            "category": "immutable_fact",
-            "probability": 0.6,
-            "comment": "Related to existing rule"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.2,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.5,
-        "comment": "Creates emergency laws in response to crises"
-      },
-      "tags": [
-        "crisis-driven",
-        "legislation"
-      ]
     },
     "enabled": false
   },
@@ -3603,69 +2730,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "rules",
-            "subtype": "social",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 0.7
-              },
-              {
-                "level": "renowned",
-                "probability": 0.3
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "originated_in",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Festival originated in colony"
-          },
-          {
-            "kind": "celebrated_by",
-            "category": "cultural",
-            "probability": 3,
-            "comment": "2-4 factions celebrate"
-          },
-          {
-            "kind": "allied_with",
-            "category": "political",
-            "probability": 6,
-            "comment": "Temporary festival alliances"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.8,
-        "clusterFormation": 0.7,
-        "diversityImpact": 0.6,
-        "comment": "Creates festivals that unite factions and reduce conflict"
-      },
-      "parameters": {
-        "stableActivationChance": {
-          "value": 0.05,
-          "min": 0.01,
-          "max": 0.2,
-          "description": "Probability when conflict is low (peaceful festivals)"
-        }
-      },
-      "tags": [
-        "festival",
-        "unity",
-        "cultural"
-      ]
-    },
     "enabled": false
   },
   {
@@ -3822,65 +2886,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "abilities",
-            "subtype": "technology",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "practitioner_of",
-            "category": "institutional",
-            "probability": 1,
-            "comment": "Faction adopts new tech"
-          },
-          {
-            "kind": "originated_in",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Tech originated at location"
-          },
-          {
-            "kind": "derived_from",
-            "category": "immutable_fact",
-            "probability": 0.8,
-            "comment": "Tech lineage from existing tech"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.5,
-        "diversityImpact": 0.8,
-        "comment": "Expands technological capabilities"
-      },
-      "parameters": {
-        "innovationRate": {
-          "value": 0.5,
-          "min": 0.2,
-          "max": 0.9,
-          "description": "How frequently technological breakthroughs occur"
-        }
-      },
-      "tags": [
-        "world-level",
-        "technological",
-        "innovation"
-      ]
-    },
     "enabled": true
   },
   {
@@ -3964,59 +2969,6 @@
           "pickStrategy": "random"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "anomaly",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "manifests_at",
-            "category": "magical",
-            "probability": 1,
-            "comment": "Magic manifests at discovered location"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "attribution",
-            "probability": 1,
-            "comment": "Practitioner discovers site"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.5,
-        "diversityImpact": 0.7,
-        "comment": "Expands magical landscape with new anomaly locations"
-      },
-      "parameters": {
-        "discoveryRate": {
-          "value": 0.4,
-          "min": 0.1,
-          "max": 0.8,
-          "description": "How frequently practitioners discover new magical sites"
-        }
-      },
-      "tags": [
-        "world-level",
-        "magical",
-        "discovery"
-      ]
     },
     "enabled": false
   },
@@ -4168,55 +3120,6 @@
           ]
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "abilities",
-            "subtype": "combat",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 0.6
-              },
-              {
-                "level": "renowned",
-                "probability": 0.4
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "practitioner_of",
-            "category": "institutional",
-            "probability": 1,
-            "comment": "Orcas practice technique"
-          },
-          {
-            "kind": "related_to",
-            "category": "immutable_fact",
-            "probability": 0.5,
-            "comment": "Related to existing combat technique"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.2,
-        "clusterFormation": 0.3,
-        "diversityImpact": 0.7,
-        "comment": "Creates fearsome orca combat techniques"
-      },
-      "tags": [
-        "combat",
-        "external-threat",
-        "ability-creation"
-      ]
     },
     "enabled": true
   },
@@ -4387,64 +3290,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "abilities",
-            "subtype": "technology",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "practitioner_of",
-            "category": "cultural",
-            "probability": 1,
-            "comment": "Faction wields technology"
-          },
-          {
-            "kind": "practitioner_of",
-            "category": "cultural",
-            "probability": 2,
-            "comment": "1-3 faction members practice"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.5,
-        "diversityImpact": 0.7,
-        "comment": "Creates technology abilities developed by merchant factions"
-      },
-      "parameters": {
-        "maxPractitioners": {
-          "value": 3,
-          "min": 1,
-          "max": 10,
-          "description": "Maximum number of faction members who practice new technology"
-        },
-        "maxTechPerFaction": {
-          "value": 4,
-          "min": 1,
-          "max": 10,
-          "description": "Maximum technologies per faction"
-        }
-      },
-      "tags": [
-        "technology",
-        "ability-creation"
-      ]
-    },
     "enabled": true
   },
   {
@@ -4597,64 +3442,6 @@
           "statusFilter": "discovered"
         }
       }
-    },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "abilities",
-            "subtype": "magic",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "discovered_by",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Hero discovers magic"
-          },
-          {
-            "kind": "manifests_at",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Magic manifests at anomaly"
-          },
-          {
-            "kind": "related_to",
-            "category": "immutable_fact",
-            "probability": 0.7,
-            "comment": "Related to existing magic"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.3,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.9,
-        "comment": "Creates mystical abilities linked to anomalies and heroes"
-      },
-      "parameters": {
-        "maxDiscoveriesPerHero": {
-          "value": 2,
-          "min": 1,
-          "max": 5,
-          "description": "Maximum abilities a single hero can discover"
-        }
-      },
-      "tags": [
-        "mystical",
-        "ability-creation"
-      ]
     },
     "enabled": true
   },
@@ -4917,71 +3704,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "rules",
-            "subtype": "various",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "marginal",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "believer_of",
-            "category": "social",
-            "probability": 1,
-            "comment": "Champion promotes ideology"
-          },
-          {
-            "kind": "originated_in",
-            "category": "immutable_fact",
-            "probability": 0.8,
-            "comment": "Ideology originated in location"
-          },
-          {
-            "kind": "believer_of",
-            "category": "social",
-            "probability": 7,
-            "comment": "3-8 initial believers"
-          },
-          {
-            "kind": "related_to",
-            "category": "immutable_fact",
-            "probability": 0.5,
-            "comment": "Related to existing ideology"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.6,
-        "clusterFormation": 0.7,
-        "diversityImpact": 0.8,
-        "comment": "Creates ideological movements that spread through social networks"
-      },
-      "parameters": {
-        "unstableActivationChance": {
-          "value": 0.3,
-          "min": 0.1,
-          "max": 0.7,
-          "description": "Probability when stability is low"
-        }
-      },
-      "tags": [
-        "ideology",
-        "cultural-shift",
-        "belief-driven"
-      ]
-    },
     "enabled": false
   },
   {
@@ -5076,57 +3798,6 @@
         }
       }
     },
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "location",
-            "subtype": "geographic_feature",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "explorer_of",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Scout finds strategic position"
-          },
-          {
-            "kind": "discovered_by",
-            "category": "spatial",
-            "probability": 1,
-            "comment": "Strategic location discovered"
-          },
-          {
-            "kind": "adjacent_to",
-            "category": "spatial",
-            "probability": 0.8,
-            "comment": "Adjacent to nearby location"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.4,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.7,
-        "comment": "Creates strategic locations discovered during conflict"
-      },
-      "tags": [
-        "emergent",
-        "strategic",
-        "conflict-driven"
-      ]
-    },
     "enabled": false
   },
   {
@@ -5177,12 +3848,6 @@
         "tag": "thermal_stress"
       }
     ],
-    "effects": {
-      "graphDensity": 0,
-      "clusterFormation": 0,
-      "diversityImpact": 0.3,
-      "comment": "Colonies in extreme temperatures decline"
-    },
     "tags": [
       "thermal",
       "colony",
@@ -5243,12 +3908,6 @@
         "tag": "climate_displaced"
       }
     ],
-    "effects": {
-      "graphDensity": 0,
-      "clusterFormation": 0,
-      "diversityImpact": 0.2,
-      "comment": "Colonies recover in temperate zones"
-    },
     "tags": [
       "thermal",
       "colony",
@@ -5345,12 +4004,6 @@
         "value": true
       }
     ],
-    "effects": {
-      "graphDensity": 0.2,
-      "clusterFormation": 0.3,
-      "diversityImpact": 0.4,
-      "comment": "Population displacement due to temperature"
-    },
     "tags": [
       "thermal",
       "migration",
@@ -5423,12 +4076,6 @@
         "tag": "thaw_candidate"
       }
     ],
-    "effects": {
-      "graphDensity": 0.3,
-      "clusterFormation": 0.2,
-      "diversityImpact": 0.5,
-      "comment": "Ice memory thaw reveals frozen abilities"
-    },
     "tags": [
       "thermal",
       "discovery",
@@ -5484,12 +4131,6 @@
         "tag": "economic_stress"
       }
     ],
-    "effects": {
-      "graphDensity": 0,
-      "clusterFormation": 0,
-      "diversityImpact": 0.3,
-      "comment": "Resource-scarce colonies decline"
-    },
     "tags": [
       "economic",
       "colony",
@@ -5550,12 +4191,6 @@
         "tag": "resource_depleted"
       }
     ],
-    "effects": {
-      "graphDensity": 0,
-      "clusterFormation": 0,
-      "diversityImpact": 0.2,
-      "comment": "Colonies recover with abundant resources"
-    },
     "tags": [
       "economic",
       "colony",
@@ -5633,64 +4268,6 @@
     ],
     "stateUpdates": [],
     "variables": {},
-    "metadata": {
-      "produces": {
-        "entityKinds": [
-          {
-            "kind": "abilities",
-            "subtype": "magic",
-            "count": {
-              "min": 1,
-              "max": 1
-            },
-            "prominence": [
-              {
-                "level": "recognized",
-                "probability": 1
-              }
-            ]
-          }
-        ],
-        "relationships": [
-          {
-            "kind": "discovered_by",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Hero discovers magic"
-          },
-          {
-            "kind": "manifests_at",
-            "category": "immutable_fact",
-            "probability": 1,
-            "comment": "Magic manifests at anomaly"
-          },
-          {
-            "kind": "related_to",
-            "category": "immutable_fact",
-            "probability": 0.7,
-            "comment": "Related to existing magic"
-          }
-        ]
-      },
-      "effects": {
-        "graphDensity": 0.3,
-        "clusterFormation": 0.4,
-        "diversityImpact": 0.9,
-        "comment": "Creates mystical abilities linked to anomalies and heroes"
-      },
-      "parameters": {
-        "maxDiscoveriesPerHero": {
-          "value": 2,
-          "min": 1,
-          "max": 5,
-          "description": "Maximum abilities a single hero can discover"
-        }
-      },
-      "tags": [
-        "mystical",
-        "ability-creation"
-      ]
-    },
     "enabled": true
   }
 ]

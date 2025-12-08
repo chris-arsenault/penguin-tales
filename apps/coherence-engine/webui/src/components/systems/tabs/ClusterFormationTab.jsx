@@ -65,9 +65,9 @@ export function ClusterFormationTab({ system, onChange, schema }) {
         <div className="form-grid">
           <ReferenceDropdown
             label="Kind"
-            value={config.entityFilter?.kind}
+            value={config.entityFilter?.kind || 'any'}
             onChange={(v) => updateEntityFilter('kind', v)}
-            options={entityKindOptions}
+            options={[{ value: 'any', label: 'All Kinds' }, ...entityKindOptions]}
           />
         </div>
       </div>

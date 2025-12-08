@@ -1477,11 +1477,26 @@ export class WorldEngine {
       baseEraWeights[t.id] = getTemplateWeight(era, t.id);
     });
 
+    // Build creation info map from declarative templates for homeostatic control
+    const creationInfoMap = new Map<string, { entityKinds: Array<{ kind: string; subtype: string }> }>();
+    applicableTemplates.forEach(t => {
+      const declTemplate = this.declarativeTemplates.get(t.id);
+      if (declTemplate?.creation) {
+        creationInfoMap.set(t.id, {
+          entityKinds: declTemplate.creation.map(c => ({
+            kind: c.kind,
+            subtype: typeof c.subtype === 'string' ? c.subtype : 'default'
+          }))
+        });
+      }
+    });
+
     // Apply dynamic weight adjustments (homeostatic control)
     const adjustments = this.dynamicWeightCalculator.calculateAllWeights(
       applicableTemplates,
       new Map(Object.entries(baseEraWeights)),
-      metrics
+      metrics,
+      creationInfoMap
     );
 
     // Build final weights with diversity pressure
@@ -1590,19 +1605,18 @@ export class WorldEngine {
       const eraWeight = getTemplateWeight(era, template.id);
       if (eraWeight === 0) continue; // Template disabled in this era
 
-      // Estimate what entity kind(s) this template creates
-      // by looking at template naming convention or ID
+      // Determine what entity kind(s) this template creates by introspecting the creation array
       let deficitWeight = 1.0;
 
-      // Use template metadata to determine what entity kinds it produces
-      // No more string matching heuristics!
-      if (template.metadata?.produces?.entityKinds) {
-        // Calculate average deficit across all kinds this template produces
+      // Get the original declarative template to introspect its creation rules
+      const declTemplate = this.declarativeTemplates.get(template.id);
+      if (declTemplate?.creation && declTemplate.creation.length > 0) {
+        // Calculate average deficit across all kinds this template creates
         let totalDeficit = 0;
         let kindCount = 0;
 
-        for (const entityKindDef of template.metadata.produces.entityKinds) {
-          const deficit = deficits.get(entityKindDef.kind) || 0;
+        for (const creationRule of declTemplate.creation) {
+          const deficit = deficits.get(creationRule.kind) || 0;
           totalDeficit += deficit;
           kindCount++;
         }
@@ -1611,8 +1625,7 @@ export class WorldEngine {
           deficitWeight = (totalDeficit / kindCount) + 1;
         }
       }
-      // Fallback: if no metadata, use default weight (no deficit bonus)
-      // This encourages templates to have proper metadata
+      // If no creation rules, use default weight (templates that only modify existing entities)
 
       // Normalize deficit weight to be a multiplier (0.5x to 3x)
       // This ensures templates for underrepresented kinds are 2-6x more likely

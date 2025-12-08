@@ -83,30 +83,34 @@ export const DIRECTIONS = [
   { value: 'both', label: 'Both' },
 ];
 
-// Condition type options
+// Condition type options (must match thresholdTrigger.ts ConditionType)
 export const CONDITION_TYPES = [
   { value: 'relationship_count', label: 'Relationship Count' },
   { value: 'relationship_exists', label: 'Relationship Exists' },
-  { value: 'time_since_update', label: 'Time Since Update' },
-  { value: 'has_tag', label: 'Has Tag' },
-  { value: 'has_any_tag', label: 'Has Any Tag' },
+  { value: 'entity_status', label: 'Entity Status' },
+  { value: 'tag_exists', label: 'Tag Exists' },
   { value: 'tag_absent', label: 'Tag Absent' },
+  { value: 'pressure_above', label: 'Pressure Above' },
+  { value: 'pressure_below', label: 'Pressure Below' },
+  { value: 'time_since_update', label: 'Time Since Update' },
+  { value: 'connection_count', label: 'Connection Count' },
 ];
 
-// Action type options
+// Action type options (must match thresholdTrigger.ts TriggerActionType)
 export const ACTION_TYPES = [
   { value: 'set_tag', label: 'Set Tag' },
   { value: 'set_cluster_tag', label: 'Set Cluster Tag' },
   { value: 'remove_tag', label: 'Remove Tag' },
+  { value: 'modify_pressure', label: 'Modify Pressure' },
   { value: 'create_relationship', label: 'Create Relationship' },
-  { value: 'adjust_prominence', label: 'Adjust Prominence' },
 ];
 
-// Metric type options
+// Metric type options (must match connectionEvolution.ts MetricType)
 export const METRIC_TYPES = [
-  { value: 'connection_count', label: 'Connection Count' },
-  { value: 'shared_relationship', label: 'Shared Relationship' },
-  { value: 'tagged_connection_count', label: 'Tagged Connection Count' },
+  { value: 'connection_count', label: 'Connection Count', desc: 'Total relationships involving entity' },
+  { value: 'relationship_count', label: 'Relationship Count', desc: 'Count of specific relationship kind(s)' },
+  { value: 'shared_relationship', label: 'Shared Relationship', desc: 'Count entities sharing a specific relationship' },
+  { value: 'catalyzed_events', label: 'Catalyzed Events', desc: 'Number of catalyst events for entity' },
 ];
 
 // Clustering criteria type options

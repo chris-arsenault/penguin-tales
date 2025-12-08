@@ -183,45 +183,6 @@ export function createTagDiffusionSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: [],
-        modifications: [
-          { type: 'tags', frequency: 'common', comment: config.description || 'Tag diffusion based on connectivity' }
-        ]
-      },
-      effects: {
-        graphDensity: 0.0,
-        clusterFormation: 0.5,
-        diversityImpact: 0.8,
-        comment: config.description || 'Connected entities converge, isolated entities diverge'
-      },
-      parameters: {
-        ...(config.convergence ? {
-          convergenceProbability: {
-            value: config.convergence.probability,
-            min: 0.1,
-            max: 0.9,
-            description: 'Probability connected entities adopt shared tags'
-          }
-        } : {}),
-        ...(config.divergence ? {
-          divergenceProbability: {
-            value: config.divergence.probability,
-            min: 0.1,
-            max: 0.9,
-            description: 'Probability isolated entities develop unique tags'
-          }
-        } : {})
-      },
-      triggers: {
-        graphConditions: [`${config.entityKind} count >= 2`],
-        comment: `Requires ${config.entityKind} entities to compare`
-      }
-    },
-
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {

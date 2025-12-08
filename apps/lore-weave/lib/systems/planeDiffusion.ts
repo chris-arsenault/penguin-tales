@@ -199,41 +199,6 @@ export function createPlaneDiffusionSystem(
     id: config.id,
     name: config.name,
 
-    // Note: contract removed - systems don't need lineage and affects is redundant
-
-    metadata: {
-      produces: {
-        relationships: [],
-        modifications: [
-          { type: 'tags', frequency: 'common', comment: config.description || 'Diffusion field tags' }
-        ]
-      },
-      effects: {
-        graphDensity: 0.0,
-        clusterFormation: 0.3,
-        diversityImpact: 0.5,
-        comment: config.description || 'Computes diffusion field and sets tags based on values'
-      },
-      parameters: {
-        rate: {
-          value: config.diffusion.rate,
-          min: 0.01,
-          max: 1.0,
-          description: 'Diffusion rate'
-        },
-        maxRadius: {
-          value: maxRadius,
-          min: 10,
-          max: 200,
-          description: 'Maximum radius of effect'
-        }
-      },
-      triggers: {
-        graphConditions: [`${config.entityKind} entities with coordinates`],
-        comment: `Diffuses from sources tagged '${config.sources.tagFilter}'`
-      }
-    },
-
     apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {

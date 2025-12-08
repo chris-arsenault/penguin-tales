@@ -60,6 +60,8 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
       case 'or':
       case 'and':
         return `${rule.rules?.length || 0} sub-rules`;
+      case 'pressure_any_above':
+        return `Any of [${rule.pressureIds?.join(', ') || '?'}] > ${rule.threshold ?? '?'}`;
       default:
         return rule.type;
     }
@@ -222,6 +224,32 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                   placeholder="3"
                 />
               </div>
+            )}
+
+            {rule.type === 'pressure_any_above' && (
+              <>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <ChipSelect
+                    label="Pressures"
+                    value={rule.pressureIds || []}
+                    onChange={(v) => updateField('pressureIds', v)}
+                    options={pressureOptions}
+                    placeholder="+ Add pressure"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Threshold</label>
+                  <input
+                    type="number"
+                    value={rule.threshold ?? ''}
+                    onChange={(e) => updateField('threshold', parseInt(e.target.value) || 0)}
+                    className="input"
+                    min="0"
+                    max="100"
+                    placeholder="50"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

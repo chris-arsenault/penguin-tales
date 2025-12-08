@@ -96,7 +96,8 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
               <ReferenceDropdown
                 value={filter.with || ''}
                 onChange={(v) => updateFilter('with', v || undefined)}
-                options={[{ value: '', label: 'Any entity' }, ...refOptions]}
+                options={refOptions}
+                placeholder="Any entity"
               />
             </div>
             {filter.type === 'has_relationship' && (

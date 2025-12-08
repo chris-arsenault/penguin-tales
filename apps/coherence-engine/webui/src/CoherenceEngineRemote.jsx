@@ -14,6 +14,7 @@
 
 import React, { useMemo } from 'react';
 import '@penguin-tales/shared-components/styles';
+import './styles/index.css';
 import ErasEditor from './components/ErasEditor';
 import PressuresEditor from './components/PressuresEditor';
 import GeneratorsEditor from './components/GeneratorsEditor';

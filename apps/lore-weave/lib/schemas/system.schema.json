@@ -39,13 +39,26 @@
               "type": "object",
               "required": ["entityKind", "metric", "rules"],
               "properties": {
-                "entityKind": { "type": "string" },
+                "entityKind": { "type": "string", "description": "Entity kind to operate on, or 'any' for all kinds" },
+                "entitySubtypes": { "type": "array", "items": { "type": "string" }, "description": "Only evaluate these subtypes" },
+                "entityStatus": { "type": "string", "description": "Only evaluate entities with this status" },
                 "metric": { "$ref": "#/$defs/ConnectionMetric" },
                 "rules": {
                   "type": "array",
                   "items": { "$ref": "#/$defs/EvolutionRule" }
                 },
-                "cooldown": { "type": "number" },
+                "subtypeBonuses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["subtype", "bonus"],
+                    "properties": {
+                      "subtype": { "type": "string" },
+                      "bonus": { "type": "number" }
+                    }
+                  },
+                  "description": "Bonuses added to metric value based on entity subtype"
+                },
                 "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
                 "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
               }
@@ -67,7 +80,7 @@
               "type": "object",
               "required": ["entityKind", "contagion", "vectors", "transmission", "infectionAction"],
               "properties": {
-                "entityKind": { "type": "string" },
+                "entityKind": { "type": "string", "description": "Entity kind to operate on, or 'any' for all kinds" },
                 "contagion": {
                   "type": "object",
                   "required": ["type"],
@@ -128,40 +141,34 @@
             { "$ref": "#/$defs/BaseConfig" },
             {
               "type": "object",
-              "required": ["triggers"],
+              "required": ["entityFilter", "conditions", "actions"],
               "properties": {
-                "triggers": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": ["condition", "action"],
-                    "properties": {
-                      "condition": {
-                        "type": "object",
-                        "required": ["type"],
-                        "properties": {
-                          "type": { "enum": ["pressure_above", "pressure_below", "entity_count_above", "entity_count_below"] },
-                          "pressureId": { "type": "string" },
-                          "threshold": { "type": "number" },
-                          "entityKind": { "type": "string" }
-                        }
-                      },
-                      "action": {
-                        "type": "object",
-                        "required": ["type"],
-                        "properties": {
-                          "type": { "enum": ["modify_pressure", "spawn_entity", "set_global_tag"] },
-                          "pressureId": { "type": "string" },
-                          "delta": { "type": "number" },
-                          "entityKind": { "type": "string" },
-                          "tag": { "type": "string" },
-                          "value": {}
-                        }
-                      },
-                      "cooldown": { "type": "number" }
-                    }
+                "entityFilter": {
+                  "type": "object",
+                  "required": ["kind"],
+                  "properties": {
+                    "kind": { "type": "string", "description": "Entity kind to evaluate, or 'any' for all kinds" },
+                    "subtypes": { "type": "array", "items": { "type": "string" } },
+                    "status": { "type": "string" },
+                    "notStatus": { "type": "string" },
+                    "hasTag": { "type": "string" },
+                    "notHasTag": { "type": "string" }
                   }
                 },
+                "conditions": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/TriggerCondition" }
+                },
+                "actions": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/TriggerAction" }
+                },
+                "clusterMode": { "enum": ["individual", "all_matching", "by_relationship"] },
+                "clusterRelationshipKind": { "type": "string" },
+                "minClusterSize": { "type": "number", "minimum": 1 },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
+                "cooldownTag": { "type": "string" },
+                "cooldownTicks": { "type": "number", "minimum": 0 },
                 "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
               }
             }
@@ -180,10 +187,19 @@
             { "$ref": "#/$defs/BaseConfig" },
             {
               "type": "object",
-              "required": ["sourceKind", "metaKind", "clustering"],
+              "required": ["entityFilter", "clustering", "metaEntity"],
               "properties": {
-                "sourceKind": { "type": "string", "description": "Entity kind to cluster" },
-                "metaKind": { "type": "string", "description": "Meta-entity kind to create" },
+                "entityFilter": {
+                  "type": "object",
+                  "required": ["kind"],
+                  "properties": {
+                    "kind": { "type": "string", "description": "Entity kind to cluster, or 'any' for all kinds" },
+                    "subtypes": { "type": "array", "items": { "type": "string" } },
+                    "excludeSubtypes": { "type": "array", "items": { "type": "string" } },
+                    "status": { "type": "string" }
+                  }
+                },
+                "runAtEpochEnd": { "type": "boolean", "description": "Whether to only run at epoch end" },
                 "clustering": {
                   "type": "object",
                   "required": ["minSize", "criteria", "minimumScore"],
@@ -196,26 +212,49 @@
                         "type": "object",
                         "required": ["type", "weight"],
                         "properties": {
-                          "type": { "enum": ["shares_related", "shared_tags", "temporal_proximity"] },
+                          "type": { "enum": ["shared_relationship", "same_culture", "shared_tags", "temporal_proximity"] },
                           "weight": { "type": "number" },
                           "threshold": { "type": "number" },
-                          "relationshipKind": { "type": "string", "description": "Required for shares_related type" }
+                          "relationshipKind": { "type": "string", "description": "For shared_relationship type" },
+                          "direction": { "enum": ["src", "dst"], "description": "For shared_relationship type" }
                         }
                       }
                     },
                     "minimumScore": { "type": "number" }
                   }
                 },
-                "transformation": {
+                "metaEntity": {
                   "type": "object",
+                  "required": ["kind", "status"],
                   "properties": {
-                    "markOriginalsHistorical": { "type": "boolean" },
-                    "transferRelationships": { "type": "boolean" },
-                    "redirectFutureRelationships": { "type": "boolean" },
-                    "preserveOriginalLinks": { "type": "boolean" }
+                    "kind": { "type": "string", "description": "Kind for the meta-entity" },
+                    "subtypeFromMajority": { "type": "boolean", "description": "Use majority subtype from cluster" },
+                    "fixedSubtype": { "type": "string", "description": "Fixed subtype if subtypeFromMajority is false" },
+                    "status": { "type": "string", "description": "Status for the meta-entity" },
+                    "prominenceFromSize": {
+                      "type": "object",
+                      "properties": {
+                        "marginal": { "type": "number" },
+                        "recognized": { "type": "number" },
+                        "renowned": { "type": "number" }
+                      }
+                    },
+                    "additionalTags": { "type": "array", "items": { "type": "string" } },
+                    "descriptionTemplate": { "type": "string", "description": "Use {count} for cluster size, {names} for entity names" }
                   }
                 },
-                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+                "postProcess": {
+                  "type": "object",
+                  "properties": {
+                    "createGovernanceFaction": { "type": "boolean" },
+                    "governanceFactionSubtype": { "type": "string" },
+                    "governanceRelationship": { "type": "string" },
+                    "pressureChanges": { "$ref": "#/$defs/PressureChanges" },
+                    "createEmergentRegion": { "type": "boolean" },
+                    "emergentRegionLabel": { "type": "string" },
+                    "emergentRegionDescription": { "type": "string" }
+                  }
+                }
               }
             }
           ]
@@ -233,25 +272,44 @@
             { "$ref": "#/$defs/BaseConfig" },
             {
               "type": "object",
-              "required": ["entityKind", "tag", "spreadVia"],
+              "required": ["entityKind", "connectionKind"],
               "properties": {
-                "entityKind": { "type": "string" },
-                "tag": { "type": "string" },
-                "spreadVia": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": ["relationshipKind"],
-                    "properties": {
-                      "relationshipKind": { "type": "string" },
-                      "direction": { "enum": ["src", "dst", "both"] },
-                      "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
-                    }
+                "entityKind": { "type": "string", "description": "Entity kind to evaluate, or 'any' for all kinds" },
+                "entitySubtype": { "type": "string", "description": "Only evaluate entities with this subtype" },
+                "entityStatus": { "type": "string", "description": "Only evaluate entities with this status" },
+                "connectionKind": { "type": "string", "description": "Relationship kind that indicates connection between entities" },
+                "connectionDirection": { "enum": ["src", "dst", "both"], "description": "Direction to check for connections" },
+                "convergence": {
+                  "type": "object",
+                  "required": ["tags", "minConnections", "probability"],
+                  "properties": {
+                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Tags that can be added to connected entities" },
+                    "minConnections": { "type": "number", "minimum": 0, "description": "Minimum connections required to trigger convergence" },
+                    "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of adding a convergence tag per tick" },
+                    "maxSharedTags": { "type": "number", "description": "Maximum shared tags before stopping convergence" }
                   }
                 },
-                "spreadRate": { "type": "number", "minimum": 0, "maximum": 1 },
-                "cooldown": { "type": "number" },
-                "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
+                "divergence": {
+                  "type": "object",
+                  "required": ["tags", "maxConnections", "probability"],
+                  "properties": {
+                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Tags that can be added to isolated entities" },
+                    "maxConnections": { "type": "number", "minimum": 0, "description": "Maximum connections to count as isolated" },
+                    "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of adding a divergence tag per tick" }
+                  }
+                },
+                "maxTags": { "type": "number", "description": "Maximum tags per entity to prevent tag bloat" },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
+                "pressureChanges": { "$ref": "#/$defs/PressureChanges" },
+                "divergencePressure": {
+                  "type": "object",
+                  "required": ["pressureName", "minDivergent", "delta"],
+                  "properties": {
+                    "pressureName": { "type": "string", "description": "Pressure name to modify" },
+                    "minDivergent": { "type": "number", "description": "Minimum divergent entities to trigger pressure" },
+                    "delta": { "type": "number", "description": "Pressure delta when triggered" }
+                  }
+                }
               }
             }
           ]
@@ -269,13 +327,51 @@
             { "$ref": "#/$defs/BaseConfig" },
             {
               "type": "object",
-              "required": ["entityKind", "tag"],
+              "required": ["entityKind", "sources", "diffusion", "outputTags"],
               "properties": {
-                "entityKind": { "type": "string" },
-                "tag": { "type": "string" },
-                "spreadRadius": { "type": "number" },
-                "spreadRate": { "type": "number", "minimum": 0, "maximum": 1 },
-                "cooldown": { "type": "number" },
+                "entityKind": { "type": "string", "description": "Entity kind to operate on (defines the semantic plane)" },
+                "entityStatus": { "type": "string", "description": "Only process entities with this status" },
+                "sources": {
+                  "type": "object",
+                  "required": ["tagFilter", "defaultStrength"],
+                  "properties": {
+                    "tagFilter": { "type": "string", "description": "Tag that marks an entity as a source" },
+                    "strengthTag": { "type": "string", "description": "Optional tag containing numeric strength value" },
+                    "defaultStrength": { "type": "number", "description": "Default strength if strengthTag not present" }
+                  }
+                },
+                "sinks": {
+                  "type": "object",
+                  "required": ["tagFilter", "defaultStrength"],
+                  "properties": {
+                    "tagFilter": { "type": "string", "description": "Tag that marks an entity as a sink" },
+                    "strengthTag": { "type": "string", "description": "Optional tag containing numeric strength value" },
+                    "defaultStrength": { "type": "number", "description": "Default strength if strengthTag not present" }
+                  }
+                },
+                "diffusion": {
+                  "type": "object",
+                  "required": ["rate", "falloff"],
+                  "properties": {
+                    "rate": { "type": "number", "description": "Diffusivity rate (affects exponential falloff)" },
+                    "falloff": { "enum": ["linear", "inverse_square", "exponential"], "description": "How value decreases with distance" },
+                    "maxRadius": { "type": "number", "description": "Maximum radius of effect" }
+                  }
+                },
+                "outputTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["tag"],
+                    "properties": {
+                      "tag": { "type": "string", "description": "Tag to set on entity" },
+                      "minValue": { "type": "number", "description": "Minimum field value to set this tag (inclusive)" },
+                      "maxValue": { "type": "number", "description": "Maximum field value to set this tag (exclusive)" }
+                    }
+                  }
+                },
+                "valueTag": { "type": "string", "description": "Optional: store raw field value as a tag" },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
                 "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
               }
             }
@@ -376,34 +472,86 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": { "enum": ["shared_relationship", "proximity", "tag_similarity"] },
+        "type": { "enum": ["connection_count", "relationship_count", "shared_relationship", "catalyzed_events"] },
+        "relationshipKinds": { "type": "array", "items": { "type": "string" } },
+        "direction": { "enum": ["src", "dst", "both"] },
         "sharedRelationshipKind": { "type": "string" },
-        "sharedDirection": { "enum": ["src", "dst", "both"] }
+        "sharedDirection": { "enum": ["src", "dst"] },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
 
     "EvolutionRule": {
       "type": "object",
-      "required": ["condition", "action"],
+      "required": ["condition", "probability", "action"],
       "properties": {
         "condition": {
           "type": "object",
           "required": ["operator", "threshold"],
           "properties": {
             "operator": { "enum": [">=", ">", "<=", "<", "=="] },
-            "threshold": { "type": "number" }
+            "threshold": {
+              "oneOf": [
+                { "type": "number" },
+                { "const": "prominence_scaled" }
+              ]
+            },
+            "multiplier": { "type": "number", "description": "Multiplier for prominence_scaled threshold (default: 6)" }
           }
         },
+        "probability": { "type": "number", "minimum": 0, "maximum": 1 },
         "action": {
           "type": "object",
           "required": ["type"],
           "properties": {
-            "type": { "enum": ["create_relationship", "strengthen_relationship", "weaken_relationship"] },
-            "relationshipKind": { "type": "string" },
-            "strength": { "type": "number", "minimum": 0, "maximum": 1 },
-            "delta": { "type": "number" }
+            "type": { "enum": ["adjust_prominence", "create_relationship", "change_status", "add_tag"] },
+            "direction": { "enum": ["up", "down"], "description": "For adjust_prominence" },
+            "kind": { "type": "string", "description": "For create_relationship" },
+            "category": { "type": "string", "description": "For create_relationship" },
+            "strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "For create_relationship" },
+            "newStatus": { "type": "string", "description": "For change_status" },
+            "tag": { "type": "string", "description": "For add_tag" },
+            "value": { "description": "For add_tag" }
           }
-        }
+        },
+        "betweenMatching": { "type": "boolean", "description": "For create_relationship: pair entities that both pass condition" }
+      }
+    },
+
+    "TriggerCondition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["relationship_count", "relationship_exists", "entity_status", "tag_exists", "tag_absent", "pressure_above", "pressure_below", "time_since_update", "connection_count"] },
+        "relationshipKind": { "type": "string", "description": "For relationship_count, relationship_exists" },
+        "relationshipDirection": { "enum": ["src", "dst", "both"], "description": "For relationship_count" },
+        "minCount": { "type": "number", "description": "For relationship_count" },
+        "maxCount": { "type": "number", "description": "For relationship_count" },
+        "targetKind": { "type": "string", "description": "For relationship_exists" },
+        "targetStatus": { "type": "string", "description": "For relationship_exists" },
+        "status": { "type": "string", "description": "For entity_status" },
+        "notStatus": { "type": "string", "description": "For entity_status" },
+        "tag": { "type": "string", "description": "For tag_exists, tag_absent" },
+        "pressureId": { "type": "string", "description": "For pressure_above, pressure_below" },
+        "threshold": { "type": "number", "description": "For pressure_above, pressure_below" },
+        "minTicks": { "type": "number", "description": "For time_since_update" },
+        "minConnections": { "type": "number", "description": "For connection_count" },
+        "maxConnections": { "type": "number", "description": "For connection_count" }
+      }
+    },
+
+    "TriggerAction": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["set_tag", "set_cluster_tag", "remove_tag", "modify_pressure", "create_relationship"] },
+        "tag": { "type": "string", "description": "For set_tag, set_cluster_tag, remove_tag" },
+        "tagValue": { "description": "For set_tag, set_cluster_tag" },
+        "pressureId": { "type": "string", "description": "For modify_pressure" },
+        "delta": { "type": "number", "description": "For modify_pressure" },
+        "relationshipKind": { "type": "string", "description": "For create_relationship" },
+        "relationshipStrength": { "type": "number", "minimum": 0, "maximum": 1, "description": "For create_relationship" },
+        "betweenMatching": { "type": "boolean", "description": "For create_relationship: create between all matching entities" }
       }
     },
 

@@ -24,6 +24,7 @@ export const APPLICABILITY_TYPES = {
   entity_count_min: { label: 'Min Entities', icon: '📊', color: '#3b82f6', desc: 'Requires minimum entity count' },
   entity_count_max: { label: 'Max Entities', icon: '📉', color: '#8b5cf6', desc: 'Stops at maximum entity count' },
   pressure_threshold: { label: 'Pressure Range', icon: '🌡️', color: '#f59e0b', desc: 'Runs when pressure is in range' },
+  pressure_any_above: { label: 'Any Pressure Above', icon: '🌡️', color: '#f97316', desc: 'Runs when any pressure exceeds threshold' },
   era_match: { label: 'Era Match', icon: '🕰️', color: '#10b981', desc: 'Only runs in specific eras' },
   random_chance: { label: 'Random Chance', icon: '🎲', color: '#a855f7', desc: 'Runs with a probability (0-100%)' },
   cooldown_elapsed: { label: 'Cooldown', icon: '⏱️', color: '#06b6d4', desc: 'Wait N ticks since last run' },

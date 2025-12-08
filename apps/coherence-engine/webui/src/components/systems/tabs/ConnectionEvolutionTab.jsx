@@ -71,8 +71,21 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
                   updateCondition('threshold', isNaN(Number(v)) ? v : Number(v));
                 }}
                 className="input"
+                placeholder="Number or 'prominence_scaled'"
               />
             </div>
+            {rule.condition?.threshold === 'prominence_scaled' && (
+              <div className="form-group">
+                <label className="label">Multiplier</label>
+                <input
+                  type="number"
+                  value={rule.condition?.multiplier ?? ''}
+                  onChange={(e) => updateCondition('multiplier', parseFloat(e.target.value) || undefined)}
+                  className="input"
+                  placeholder="6"
+                />
+              </div>
+            )}
             <div className="form-group">
               <label className="label">Probability</label>
               <input
@@ -92,14 +105,26 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
             <div className="form-grid">
               <ReferenceDropdown
                 label="Type"
-                value={rule.action?.type || 'create_relationship'}
+                value={rule.action?.type || 'adjust_prominence'}
                 onChange={(v) => updateAction('type', v)}
                 options={[
-                  { value: 'create_relationship', label: 'Create Relationship' },
                   { value: 'adjust_prominence', label: 'Adjust Prominence' },
-                  { value: 'set_tag', label: 'Set Tag' },
+                  { value: 'create_relationship', label: 'Create Relationship' },
+                  { value: 'change_status', label: 'Change Status' },
+                  { value: 'add_tag', label: 'Add Tag' },
                 ]}
               />
+              {rule.action?.type === 'adjust_prominence' && (
+                <ReferenceDropdown
+                  label="Direction"
+                  value={rule.action?.direction || 'up'}
+                  onChange={(v) => updateAction('direction', v)}
+                  options={[
+                    { value: 'up', label: 'Up' },
+                    { value: 'down', label: 'Down' },
+                  ]}
+                />
+              )}
               {rule.action?.type === 'create_relationship' && (
                 <>
                   <ReferenceDropdown
@@ -108,6 +133,16 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
                     onChange={(v) => updateAction('kind', v)}
                     options={relationshipKindOptions}
                   />
+                  <div className="form-group">
+                    <label className="label">Category</label>
+                    <input
+                      type="text"
+                      value={rule.action?.category || ''}
+                      onChange={(e) => updateAction('category', e.target.value || undefined)}
+                      className="input"
+                      placeholder="Optional"
+                    />
+                  </div>
                   <div className="form-group">
                     <label className="label">Strength</label>
                     <input
@@ -122,19 +157,56 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
                   </div>
                 </>
               )}
-              {rule.action?.type === 'adjust_prominence' && (
-                <ReferenceDropdown
-                  label="Direction"
-                  value={rule.action?.direction || 'up'}
-                  onChange={(v) => updateAction('direction', v)}
-                  options={[
-                    { value: 'up', label: 'Up' },
-                    { value: 'down', label: 'Down' },
-                  ]}
-                />
+              {rule.action?.type === 'change_status' && (
+                <div className="form-group">
+                  <label className="label">New Status</label>
+                  <input
+                    type="text"
+                    value={rule.action?.newStatus || ''}
+                    onChange={(e) => updateAction('newStatus', e.target.value)}
+                    className="input"
+                  />
+                </div>
+              )}
+              {rule.action?.type === 'add_tag' && (
+                <>
+                  <div className="form-group">
+                    <label className="label">Tag</label>
+                    <input
+                      type="text"
+                      value={rule.action?.tag || ''}
+                      onChange={(e) => updateAction('tag', e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Value (optional)</label>
+                    <input
+                      type="text"
+                      value={rule.action?.value ?? ''}
+                      onChange={(e) => updateAction('value', e.target.value || undefined)}
+                      className="input"
+                      placeholder="true"
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
+
+          {rule.action?.type === 'create_relationship' && (
+            <div style={{ marginTop: '16px' }}>
+              <label className="label">
+                <input
+                  type="checkbox"
+                  checked={rule.betweenMatching || false}
+                  onChange={(e) => onChange({ ...rule, betweenMatching: e.target.checked })}
+                  style={{ marginRight: '8px' }}
+                />
+                Between Matching (create relationships between all entity pairs that pass condition)
+              </label>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -150,10 +222,27 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
 export function ConnectionEvolutionTab({ system, onChange, schema }) {
   const config = system.config || {};
 
+  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+    value: ek.kind,
+    label: ek.description || ek.kind,
+  }));
+
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
     label: rk.description || rk.kind,
   }));
+
+  const getSubtypeOptions = (kind) => {
+    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
+    if (!ek?.subtypes) return [];
+    return ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id }));
+  };
+
+  const getStatusOptions = (kind) => {
+    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
+    if (!ek?.statuses) return [];
+    return ek.statuses.map((st) => ({ value: st.id, label: st.name || st.id }));
+  };
 
   const updateConfig = (field, value) => {
     onChange({ ...system, config: { ...config, [field]: value } });
@@ -170,7 +259,7 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
     updateConfig('rules', [...rules, {
       condition: { operator: '>=', threshold: 1 },
       probability: 0.1,
-      action: { type: 'create_relationship', kind: '' },
+      action: { type: 'adjust_prominence', direction: 'up' },
     }]);
   };
 
@@ -184,8 +273,54 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
     updateConfig('rules', rules.filter((_, i) => i !== index));
   };
 
+  // Subtype bonuses
+  const subtypeBonuses = config.subtypeBonuses || [];
+
+  const addSubtypeBonus = () => {
+    updateConfig('subtypeBonuses', [...subtypeBonuses, { subtype: '', bonus: 0 }]);
+  };
+
+  const updateSubtypeBonus = (index, bonus) => {
+    const newBonuses = [...subtypeBonuses];
+    newBonuses[index] = bonus;
+    updateConfig('subtypeBonuses', newBonuses);
+  };
+
+  const removeSubtypeBonus = (index) => {
+    updateConfig('subtypeBonuses', subtypeBonuses.filter((_, i) => i !== index));
+  };
+
   return (
     <div>
+      <div className="section">
+        <div className="section-title">Entity Filter</div>
+        <div className="section-desc">
+          Which entities this system evaluates.
+        </div>
+        <div className="form-grid">
+          <div className="form-group">
+            <label className="label">Subtypes (comma-separated)</label>
+            <input
+              type="text"
+              value={(config.entitySubtypes || []).join(', ')}
+              onChange={(e) => {
+                const subtypes = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                updateConfig('entitySubtypes', subtypes.length > 0 ? subtypes : undefined);
+              }}
+              className="input"
+              placeholder="Leave empty for all subtypes"
+            />
+          </div>
+          <ReferenceDropdown
+            label="Status"
+            value={config.entityStatus}
+            onChange={(v) => updateConfig('entityStatus', v)}
+            options={getStatusOptions(config.entityKind)}
+            placeholder="Any"
+          />
+        </div>
+      </div>
+
       <div className="section">
         <div className="section-title">Metric</div>
         <div className="section-desc">
@@ -204,33 +339,53 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
             onChange={(v) => updateMetric('direction', v)}
             options={DIRECTIONS}
           />
-          {config.metric?.type === 'shared_relationship' && (
-            <ReferenceDropdown
-              label="Shared Relationship Kind"
-              value={config.metric?.sharedRelationshipKind}
-              onChange={(v) => updateMetric('sharedRelationshipKind', v)}
-              options={relationshipKindOptions}
-            />
+          {(config.metric?.type === 'connection_count' || config.metric?.type === 'relationship_count') && (
+            <div className="form-group">
+              <label className="label">Filter by Relationship Kinds (optional)</label>
+              <input
+                type="text"
+                value={(config.metric?.relationshipKinds || []).join(', ')}
+                onChange={(e) => {
+                  const kinds = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                  updateMetric('relationshipKinds', kinds.length > 0 ? kinds : undefined);
+                }}
+                className="input"
+                placeholder="Leave empty for all kinds"
+              />
+            </div>
           )}
-          {config.metric?.type === 'tagged_connection_count' && (
+          {config.metric?.type === 'shared_relationship' && (
             <>
               <ReferenceDropdown
-                label="Relationship Kind"
-                value={config.metric?.relationshipKind}
-                onChange={(v) => updateMetric('relationshipKind', v)}
+                label="Shared Relationship Kind"
+                value={config.metric?.sharedRelationshipKind}
+                onChange={(v) => updateMetric('sharedRelationshipKind', v)}
                 options={relationshipKindOptions}
               />
-              <div className="form-group">
-                <label className="label">Target Tag</label>
-                <input
-                  type="text"
-                  value={config.metric?.targetTag || ''}
-                  onChange={(e) => updateMetric('targetTag', e.target.value)}
-                  className="input"
-                />
-              </div>
+              <ReferenceDropdown
+                label="Shared Direction"
+                value={config.metric?.sharedDirection || 'src'}
+                onChange={(v) => updateMetric('sharedDirection', v)}
+                options={[
+                  { value: 'src', label: 'Source (outgoing)' },
+                  { value: 'dst', label: 'Destination (incoming)' },
+                ]}
+              />
             </>
           )}
+          <div className="form-group">
+            <label className="label">Min Strength</label>
+            <input
+              type="number"
+              value={config.metric?.minStrength ?? ''}
+              onChange={(e) => updateMetric('minStrength', parseFloat(e.target.value) || undefined)}
+              className="input"
+              step="0.1"
+              min="0"
+              max="1"
+              placeholder="0"
+            />
+          </div>
         </div>
       </div>
 
@@ -255,6 +410,48 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
           onClick={addRule}
         >
           + Add Rule
+        </button>
+      </div>
+
+      <div className="section">
+        <div className="section-title">Subtype Bonuses ({subtypeBonuses.length})</div>
+        <div className="section-desc">
+          Bonuses added to metric value based on entity subtype.
+        </div>
+
+        {subtypeBonuses.map((bonus, index) => (
+          <div key={index} className="item-card">
+            <div style={{ padding: '12px 16px' }}>
+              <div className="form-grid">
+                <ReferenceDropdown
+                  label="Subtype"
+                  value={bonus.subtype}
+                  onChange={(v) => updateSubtypeBonus(index, { ...bonus, subtype: v })}
+                  options={getSubtypeOptions(config.entityKind)}
+                />
+                <div className="form-group">
+                  <label className="label">Bonus</label>
+                  <input
+                    type="number"
+                    value={bonus.bonus ?? ''}
+                    onChange={(e) => updateSubtypeBonus(index, { ...bonus, bonus: parseFloat(e.target.value) || 0 })}
+                    className="input"
+                    step="1"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button className="btn-icon btn-icon-danger" onClick={() => removeSubtypeBonus(index)}>x</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button
+          className="btn-add"
+          onClick={addSubtypeBonus}
+        >
+          + Add Subtype Bonus
         </button>
       </div>
     </div>

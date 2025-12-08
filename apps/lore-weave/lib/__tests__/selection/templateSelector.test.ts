@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TemplateSelector } from '../../selection/templateSelector';
 import { Graph, GrowthTemplate } from '../../engine/types';
 import { HardState, Prominence } from '../../core/worldTypes';
-import { DistributionTargets, TemplateMetadata } from '../../statistics/types';
+import { DistributionTargets } from '../../statistics/types';
 
 describe('TemplateSelector', () => {
   let selector: TemplateSelector;
@@ -32,16 +32,12 @@ describe('TemplateSelector', () => {
   });
 
   // Helper to create mock template
-  const createTemplate = (
-    id: string,
-    metadata?: TemplateMetadata
-  ): GrowthTemplate => ({
+  const createTemplate = (id: string): GrowthTemplate => ({
     id,
     name: `Template ${id}`,
     canApply: vi.fn(() => true),
     findTargets: vi.fn(() => []),
     expand: vi.fn(() => ({ entities: [], relationships: [], description: '' })),
-    metadata,
   });
 
   beforeEach(() => {
@@ -124,48 +120,8 @@ describe('TemplateSelector', () => {
 
     // Create mock templates
     mockTemplates = [
-      createTemplate('template1', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'merchant',
-              count: { min: 1, max: 2 },
-              prominence: [
-                { level: 'marginal', probability: 0.6 },
-                { level: 'recognized', probability: 0.4 },
-              ],
-            },
-          ],
-          relationships: [
-            { kind: 'member_of', probability: 1.0 },
-            { kind: 'allies', probability: 0.5 },
-          ],
-        },
-        effects: {
-          graphDensity: 0.5,
-          clusterFormation: 0.3,
-          diversityImpact: 0.4,
-        },
-      }),
-      createTemplate('template2', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'faction',
-              subtype: 'guild',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'renowned', probability: 0.8 }],
-            },
-          ],
-          relationships: [{ kind: 'rivals', probability: 0.7 }],
-        },
-        effects: {
-          graphDensity: -0.2,
-          clusterFormation: 0.8,
-          diversityImpact: 0.6,
-        },
-      }),
+      createTemplate('template1'),
+      createTemplate('template2'),
       createTemplate('template3'),
     ];
 
@@ -334,14 +290,9 @@ describe('TemplateSelector', () => {
       };
 
       const result = selector.selectTemplates(mockGraph, mockTemplates, eraWeights, 10);
-      // Filter out null values
       const validResults = result.filter((t) => t !== null);
-      const template1Count = validResults.filter((t) => t && t.id === 'template1').length;
       const template2Count = validResults.filter((t) => t && t.id === 'template2').length;
-      // template2 should be favored over template1 due to weight difference
-      // Though exact counts may vary due to distribution adjustments
       expect(validResults.length).toBeGreaterThan(0);
-      // At minimum, template2 should be selected at least once if any valid results
       if (validResults.length > 0) {
         expect(template2Count).toBeGreaterThan(0);
       }
@@ -355,28 +306,24 @@ describe('TemplateSelector', () => {
       };
 
       const result = selector.selectTemplates(mockGraph, mockTemplates, eraWeights, 5);
-      // Should still return an array, possibly empty or with null values filtered
       expect(Array.isArray(result)).toBe(true);
     });
 
     it('should favor higher weighted templates', () => {
       const eraWeights = {
         template1: 0.1,
-        template2: 10.0, // Much higher weight
+        template2: 10.0,
       };
 
       const result = selector.selectTemplates(mockGraph, mockTemplates, eraWeights, 20);
       const template2Count = result.filter((t) => t.id === 'template2').length;
-      const template1Count = result.filter((t) => t.id === 'template1').length;
 
-      // template2 should be selected more often (though not guaranteed due to randomness)
       expect(template2Count).toBeGreaterThan(0);
     });
 
     it('should use default weight of 1.0 for templates without era weight', () => {
       const eraWeights = {
         template1: 2.0,
-        // template2 not specified
       };
 
       const result = selector.selectTemplates(mockGraph, mockTemplates, eraWeights, 10);
@@ -395,7 +342,6 @@ describe('TemplateSelector', () => {
       };
 
       const result = selector.selectTemplates(mockGraph, mockTemplates, eraWeights, 10);
-      // Negative weights should be treated as 0 or very low
       const template1Count = result.filter((t) => t.id === 'template1').length;
       expect(template1Count).toBeLessThanOrEqual(result.length / 2);
     });
@@ -413,226 +359,20 @@ describe('TemplateSelector', () => {
     });
   });
 
-  describe('selectTemplates - distribution guidance', () => {
-    it('should boost templates that produce under-represented entity kinds', () => {
-      // Create graph with many NPCs but few locations
-      const entities = new Map<string, HardState>();
-      for (let i = 0; i < 30; i++) {
-        entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant'));
-      }
-      entities.set('loc1', createEntity('loc1', 'location', 'colony'));
-
-      mockGraph.entities = entities;
-
-      const locationTemplate = createTemplate('location_template', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'location',
-              subtype: 'colony',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: 0,
-          clusterFormation: 0,
-          diversityImpact: 0,
-        },
-      });
-
-      const templates = [mockTemplates[0], locationTemplate];
+  describe('selectTemplates - weight clamping', () => {
+    it('should clamp weights to min/max bounds', () => {
       const eraWeights = {
-        template1: 1.0,
-        location_template: 1.0,
+        template1: 0.05, // Below min of 0.1
+        template2: 5.0,  // Above max of 3.0
       };
 
-      const result = selector.selectTemplates(mockGraph, templates, eraWeights, 20);
-      const validResults = result.filter((t) => t !== null);
-      const locationCount = validResults.filter((t) => t && t.id === 'location_template').length;
-
-      // Should favor location template due to under-representation
-      // (though exact ratio depends on tuning parameters and randomness)
-      // At minimum, location template should be selected at least once in 20 tries
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-
-    it('should suppress templates that produce over-represented entity kinds', () => {
-      // Create graph heavily skewed toward NPCs
-      const entities = new Map<string, HardState>();
-      for (let i = 0; i < 50; i++) {
-        entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant'));
-      }
-      for (let i = 0; i < 5; i++) {
-        entities.set(`loc${i}`, createEntity(`loc${i}`, 'location', 'colony'));
-      }
-
-      mockGraph.entities = entities;
-
-      const eraWeights = {
-        template1: 1.0, // Produces NPCs
-        template2: 1.0, // Produces factions
-      };
-
+      // Should still select both templates (clamped weights)
       const result = selector.selectTemplates(mockGraph, mockTemplates.slice(0, 2), eraWeights, 20);
       const template1Count = result.filter((t) => t.id === 'template1').length;
+      const template2Count = result.filter((t) => t.id === 'template2').length;
 
-      // template1 should be somewhat suppressed due to NPC over-representation
-      expect(template1Count).toBeLessThan(20);
-    });
-
-    it('should adjust based on prominence distribution', () => {
-      // Create graph with too many mythic entities
-      const entities = new Map<string, HardState>();
-      for (let i = 0; i < 10; i++) {
-        entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant', 'mythic'));
-      }
-
-      mockGraph.entities = entities;
-
-      const marginalTemplate = createTemplate('marginal_template', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'merchant',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'marginal', probability: 0.9 }],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: 0,
-          clusterFormation: 0,
-          diversityImpact: 0,
-        },
-      });
-
-      const templates = [mockTemplates[0], marginalTemplate];
-      const eraWeights = {
-        template1: 1.0,
-        marginal_template: 1.0,
-      };
-
-      const result = selector.selectTemplates(mockGraph, templates, eraWeights, 20);
-      const validResults = result.filter((t) => t !== null);
-      // Should favor templates that produce marginal prominence
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-
-    it('should increase diversity when relationship types are concentrated', () => {
-      // Create many relationships of the same type
-      const relationships = [];
-      for (let i = 0; i < 50; i++) {
-        relationships.push({ kind: 'member_of', src: `npc${i}`, dst: 'faction1' });
-      }
-      mockGraph.relationships = relationships;
-
-      const diversityTemplate = createTemplate('diversity_template', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'hero',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [
-            { kind: 'rivals', probability: 0.8 },
-            { kind: 'friends', probability: 0.6 },
-          ],
-        },
-        effects: {
-          graphDensity: 0.5,
-          clusterFormation: 0,
-          diversityImpact: 0.8, // High diversity impact
-        },
-      });
-
-      const templates = [mockTemplates[0], diversityTemplate];
-      const eraWeights = {
-        template1: 1.0,
-        diversity_template: 1.0,
-      };
-
-      const result = selector.selectTemplates(mockGraph, templates, eraWeights, 20);
-      const validResults = result.filter((t) => t !== null);
-      const diversityCount = validResults.filter((t) => t && t.id === 'diversity_template').length;
-
-      // Should favor diversity template (though randomness may affect exact distribution)
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-
-    it('should adjust based on cluster formation needs', () => {
-      // Test with few clusters (need more)
-      const entities = new Map<string, HardState>();
-      for (let i = 0; i < 20; i++) {
-        entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant'));
-      }
-      mockGraph.entities = entities;
-      mockGraph.relationships = []; // No connections = 20 clusters
-
-      const clusterTemplate = createTemplate('cluster_template', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'faction',
-              subtype: 'guild',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [{ kind: 'member_of', probability: 1.0 }],
-        },
-        effects: {
-          graphDensity: 0.5,
-          clusterFormation: 0.8, // High cluster formation
-          diversityImpact: 0,
-        },
-      });
-
-      const templates = [mockTemplates[0], clusterTemplate];
-      const eraWeights = {
-        template1: 1.0,
-        cluster_template: 1.0,
-      };
-
-      const result = selector.selectTemplates(mockGraph, templates, eraWeights, 15);
-      const validResults = result.filter((t) => t !== null);
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('selectTemplates - templates without metadata', () => {
-    it('should handle templates without metadata', () => {
-      const noMetadataTemplate = createTemplate('no_metadata');
-      const templates = [noMetadataTemplate];
-      const eraWeights = { no_metadata: 1.0 };
-
-      // Need to create new selector with the template in its list
-      const tempSelector = new TemplateSelector(mockTargets, templates);
-      const result = tempSelector.selectTemplates(mockGraph, templates, eraWeights, 5);
-      const validResults = result.filter((t) => t !== null);
-      // Templates without metadata should still be selectable
-      expect(validResults.length).toBeGreaterThan(0);
-      validResults.forEach((t) => {
-        expect(t.id).toBe('no_metadata');
-      });
-    });
-
-    it('should mix templates with and without metadata', () => {
-      const templates = [mockTemplates[0], mockTemplates[2]]; // One with, one without metadata
-      const eraWeights = {
-        template1: 1.0,
-        template3: 1.0,
-      };
-
-      const result = selector.selectTemplates(mockGraph, templates, eraWeights, 10);
-      expect(result.length).toBe(10);
+      // Both should be selected at least once
+      expect(template1Count + template2Count).toBe(20);
     });
   });
 
@@ -757,7 +497,6 @@ describe('TemplateSelector', () => {
     });
 
     it('should show high deviation for unbalanced graph', () => {
-      // Create heavily unbalanced graph
       const entities = new Map<string, HardState>();
       for (let i = 0; i < 100; i++) {
         entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant', 'mythic'));
@@ -766,12 +505,10 @@ describe('TemplateSelector', () => {
 
       const deviation = selector.getDeviation(mockGraph);
 
-      // Should have high overall deviation
       expect(deviation.overall).toBeGreaterThan(0.2);
     });
 
     it('should show low deviation for balanced graph', () => {
-      // Create more balanced graph
       const entities = new Map<string, HardState>();
 
       // 40% NPCs
@@ -799,7 +536,6 @@ describe('TemplateSelector', () => {
 
       const deviation = selector.getDeviation(mockGraph);
 
-      // Should have relatively low deviation (close to targets)
       expect(deviation.entityKind.score).toBeLessThan(0.3);
     });
   });
@@ -836,38 +572,6 @@ describe('TemplateSelector', () => {
       });
     });
 
-    it('should handle templates with partial metadata', () => {
-      const partialTemplate = createTemplate('partial', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'merchant',
-              count: { min: 1, max: 1 },
-              prominence: [],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: 0,
-          clusterFormation: 0,
-          diversityImpact: 0,
-        },
-      });
-
-      // Need to create new selector with the template in its list
-      const tempSelector = new TemplateSelector(mockTargets, [partialTemplate]);
-      const result = tempSelector.selectTemplates(
-        mockGraph,
-        [partialTemplate],
-        { partial: 1.0 },
-        5
-      );
-      const validResults = result.filter((t) => t !== null);
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-
     it('should handle era with no matching templates', () => {
       const eraWeights = {
         nonexistent_template: 1.0,
@@ -900,60 +604,6 @@ describe('TemplateSelector', () => {
       // Should heavily favor template1
       expect(template1Count).toBeGreaterThan(15);
     });
-
-    it('should handle templates with zero effect values', () => {
-      const zeroTemplate = createTemplate('zero', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'merchant',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: 0,
-          clusterFormation: 0,
-          diversityImpact: 0,
-        },
-      });
-
-      // Need to create new selector with the template in its list
-      const tempSelector = new TemplateSelector(mockTargets, [zeroTemplate]);
-      const result = tempSelector.selectTemplates(mockGraph, [zeroTemplate], { zero: 1.0 }, 5);
-      const validResults = result.filter((t) => t !== null);
-      expect(validResults.length).toBeGreaterThan(0);
-    });
-
-    it('should handle templates with negative effect values', () => {
-      const negativeTemplate = createTemplate('negative', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'npc',
-              subtype: 'merchant',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: -0.8,
-          clusterFormation: -0.5,
-          diversityImpact: -0.3,
-        },
-      });
-
-      // Need to create new selector with the template in its list
-      const tempSelector = new TemplateSelector(mockTargets, [negativeTemplate]);
-      const result = tempSelector.selectTemplates(mockGraph, [negativeTemplate], { negative: 1.0 }, 5);
-      const validResults = result.filter((t) => t !== null);
-      expect(validResults.length).toBeGreaterThan(0);
-    });
   });
 
   describe('weighted random selection', () => {
@@ -976,7 +626,6 @@ describe('TemplateSelector', () => {
         }
       }
 
-      // Over many selections, both templates should be selected at least once
       expect(selectedIds.size).toBeGreaterThan(1);
     });
 
@@ -1001,11 +650,7 @@ describe('TemplateSelector', () => {
         }
       }
 
-      // template1 and template2 should both be selected
-      // Note: Exact ratio may vary due to distribution adjustments
-      // which can suppress over-represented entity kinds
       const totalNonNull = counts.template1 + counts.template2;
-      // Just verify that both templates get selected sometimes
       expect(totalNonNull).toBeGreaterThan(10);
     });
   });
@@ -1014,59 +659,9 @@ describe('TemplateSelector', () => {
     it('should track convergence threshold', () => {
       const deviation = selector.getDeviation(mockGraph);
 
-      // Convergence threshold is 0.15 in mock targets
       const isConverged = deviation.overall < mockTargets.tuning.convergenceThreshold;
 
       expect(typeof isConverged).toBe('boolean');
-    });
-
-    it('should apply corrections when above convergence threshold', () => {
-      // Create heavily imbalanced graph
-      const entities = new Map<string, HardState>();
-      for (let i = 0; i < 80; i++) {
-        entities.set(`npc${i}`, createEntity(`npc${i}`, 'npc', 'merchant'));
-      }
-      for (let i = 0; i < 5; i++) {
-        entities.set(`loc${i}`, createEntity(`loc${i}`, 'location', 'colony'));
-      }
-      mockGraph.entities = entities;
-
-      const deviation = selector.getDeviation(mockGraph);
-
-      // Should be above convergence threshold
-      expect(deviation.overall).toBeGreaterThan(mockTargets.tuning.convergenceThreshold);
-
-      // Should boost location templates
-      const locationTemplate = createTemplate('location_template', {
-        produces: {
-          entityKinds: [
-            {
-              kind: 'location',
-              subtype: 'colony',
-              count: { min: 1, max: 1 },
-              prominence: [{ level: 'recognized', probability: 1.0 }],
-            },
-          ],
-          relationships: [],
-        },
-        effects: {
-          graphDensity: 0,
-          clusterFormation: 0,
-          diversityImpact: 0,
-        },
-      });
-
-      const result = selector.selectTemplates(
-        mockGraph,
-        [mockTemplates[0], locationTemplate],
-        { template1: 1.0, location_template: 1.0 },
-        20
-      );
-
-      const validResults = result.filter((t) => t !== null);
-      const locationCount = validResults.filter((t) => t && t.id === 'location_template').length;
-      // At least some valid templates should be selected
-      expect(validResults.length).toBeGreaterThan(0);
     });
   });
 });

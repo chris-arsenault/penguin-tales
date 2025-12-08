@@ -475,12 +475,25 @@ export default function App() {
   const handleRemoveProperty = useCallback((path, propName) => {
     if (!currentProject || !path || !propName) return;
 
-    // Parse path like "item_id"/nested/path
-    const match = path.match(/^"([^"]+)"\/(.+)$/);
-    if (!match) return;
+    // Parse path - formats:
+    // 1. Top-level property: "item_id" or "item_id/" (trailing slash from validator)
+    // 2. Nested property: "item_id"/nested/path
+    const topLevelMatch = path.match(/^"([^"]+)"(?:\/)?$/);
+    const nestedMatch = path.match(/^"([^"]+)"\/(.+)$/);
 
-    const [, itemId, restPath] = match;
-    const pathSegments = restPath.split('/');
+    let itemId;
+    let pathSegments = [];
+
+    if (nestedMatch) {
+      // Nested property (check first since it's more specific)
+      itemId = nestedMatch[1];
+      pathSegments = nestedMatch[2].split('/');
+    } else if (topLevelMatch) {
+      // Top-level property like "metadata" on the item itself
+      itemId = topLevelMatch[1];
+    } else {
+      return;
+    }
 
     // Try to find item in each config array
     const configArrays = [
@@ -500,16 +513,21 @@ export default function App() {
       const newData = [...data];
       const item = JSON.parse(JSON.stringify(data[itemIndex]));
 
-      // Navigate to parent of the property to delete
-      let obj = item;
-      for (let i = 0; i < pathSegments.length; i++) {
-        const seg = pathSegments[i];
-        if (obj[seg] === undefined) return; // Path doesn't exist
-        if (i === pathSegments.length - 1) {
-          // At the target object, delete the property
-          delete obj[seg][propName];
-        } else {
-          obj = obj[seg];
+      if (pathSegments.length === 0) {
+        // Top-level property - delete directly from item
+        delete item[propName];
+      } else {
+        // Navigate to parent of the property to delete
+        let obj = item;
+        for (let i = 0; i < pathSegments.length; i++) {
+          const seg = pathSegments[i];
+          if (obj[seg] === undefined) return; // Path doesn't exist
+          if (i === pathSegments.length - 1) {
+            // At the target object, delete the property
+            delete obj[seg][propName];
+          } else {
+            obj = obj[seg];
+          }
         }
       }
 
