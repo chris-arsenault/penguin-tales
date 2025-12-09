@@ -33,7 +33,11 @@ import type {
   GraphPathAssertion,
   PathStep,
   PathConstraint,
-  ExecutionContext as IExecutionContext
+  ExecutionContext as IExecutionContext,
+  TemplateVariants,
+  TemplateVariant,
+  VariantCondition,
+  VariantEffects
 } from './declarativeTypes';
 
 // =============================================================================
@@ -312,6 +316,12 @@ export class TemplateInterpreter {
     // Execute state updates
     for (const rule of template.stateUpdates) {
       this.executeStateUpdate(rule, context);
+    }
+
+    // Apply variant effects based on world state
+    const matchingVariants = this.getMatchingVariants(template.variants, context);
+    for (const variant of matchingVariants) {
+      this.applyVariantEffects(variant.apply, entities, entityRefs, relationships, context);
     }
 
     return {
@@ -1213,6 +1223,151 @@ export class TemplateInterpreter {
           graphView.updateEntity(entity.id, { tags: newTags });
         }
         break;
+      }
+    }
+  }
+
+  // ===========================================================================
+  // STEP 6: VARIANT EVALUATION
+  // ===========================================================================
+
+  /**
+   * Get all matching variants based on current world state.
+   */
+  private getMatchingVariants(
+    variants: TemplateVariants | undefined,
+    context: ExecutionContext
+  ): TemplateVariant[] {
+    if (!variants || !variants.options || variants.options.length === 0) {
+      return [];
+    }
+
+    const matching: TemplateVariant[] = [];
+
+    for (const variant of variants.options) {
+      if (this.evaluateVariantCondition(variant.when, context)) {
+        matching.push(variant);
+        if (variants.selection === 'first_match') {
+          break;
+        }
+      }
+    }
+
+    return matching;
+  }
+
+  /**
+   * Evaluate a variant condition.
+   */
+  private evaluateVariantCondition(condition: VariantCondition, context: ExecutionContext): boolean {
+    const { graphView } = context;
+
+    switch (condition.type) {
+      case 'pressure': {
+        const pressure = graphView.getPressure(condition.pressureId) || 0;
+        if (condition.min !== undefined && pressure < condition.min) return false;
+        if (condition.max !== undefined && pressure > condition.max) return false;
+        return true;
+      }
+
+      case 'pressure_compare': {
+        const pressureA = graphView.getPressure(condition.pressureA) || 0;
+        const pressureB = graphView.getPressure(condition.pressureB) || 0;
+        return pressureA > pressureB;
+      }
+
+      case 'entity_count': {
+        let entities = graphView.findEntities({ kind: condition.kind });
+        if (condition.subtype) {
+          entities = entities.filter(e => e.subtype === condition.subtype);
+        }
+        const count = entities.length;
+        if (condition.min !== undefined && count < condition.min) return false;
+        if (condition.max !== undefined && count > condition.max) return false;
+        return true;
+      }
+
+      case 'has_tag': {
+        const entity = context.resolveEntity(condition.entity);
+        if (!entity) return false;
+        return hasTag(entity.tags, condition.tag);
+      }
+
+      case 'random': {
+        return Math.random() < condition.chance;
+      }
+
+      case 'always': {
+        return true;
+      }
+
+      case 'and': {
+        return condition.conditions.every(c => this.evaluateVariantCondition(c, context));
+      }
+
+      case 'or': {
+        return condition.conditions.some(c => this.evaluateVariantCondition(c, context));
+      }
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Apply variant effects to entities, relationships, and state updates.
+   */
+  private applyVariantEffects(
+    effects: VariantEffects,
+    entities: Partial<HardState>[],
+    entityRefs: Map<string, string[]>,
+    relationships: Relationship[],
+    context: ExecutionContext
+  ): void {
+    // Apply subtype overrides
+    if (effects.subtype) {
+      for (const [entityRef, newSubtype] of Object.entries(effects.subtype)) {
+        const placeholders = entityRefs.get(entityRef);
+        if (placeholders) {
+          // Find the entity indices matching these placeholders
+          for (let i = 0; i < entities.length; i++) {
+            // Entities are created in order, match by index to placeholder
+            const placeholder = `will-be-assigned-${i}`;
+            if (placeholders.includes(placeholder)) {
+              entities[i].subtype = newSubtype;
+            }
+          }
+        }
+      }
+    }
+
+    // Apply additional tags
+    if (effects.tags) {
+      for (const [entityRef, tagMap] of Object.entries(effects.tags)) {
+        const placeholders = entityRefs.get(entityRef);
+        if (placeholders) {
+          for (let i = 0; i < entities.length; i++) {
+            const placeholder = `will-be-assigned-${i}`;
+            if (placeholders.includes(placeholder)) {
+              entities[i].tags = { ...(entities[i].tags || {}), ...tagMap };
+            }
+          }
+        }
+      }
+    }
+
+    // Apply additional relationships
+    if (effects.relationships) {
+      for (const rule of effects.relationships) {
+        const rels = this.executeRelationship(rule, context, entityRefs);
+        relationships.push(...rels);
+      }
+    }
+
+    // Apply additional state updates
+    if (effects.stateUpdates) {
+      for (const rule of effects.stateUpdates) {
+        this.executeStateUpdate(rule, context);
       }
     }
   }

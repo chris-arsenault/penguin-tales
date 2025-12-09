@@ -448,21 +448,6 @@
   color: var(--lw-text-secondary);
 }
 
-/* Recharts brush styling */
-.lw-trace-view-chart-area .recharts-brush-slide {
-  fill: var(--lw-accent);
-  fill-opacity: 0.3;
-}
-
-.lw-trace-view-chart-area .recharts-brush-traveller rect {
-  fill: var(--lw-accent);
-}
-
-.lw-trace-view-chart-area .recharts-brush text {
-  fill: var(--lw-text-muted);
-  font-size: 10px;
-}
-
 /* Template detail panel styles */
 .lw-trace-view-template-app {
   background: rgba(34, 197, 94, 0.08);

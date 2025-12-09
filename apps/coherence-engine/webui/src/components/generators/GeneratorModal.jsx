@@ -28,6 +28,7 @@ const KNOWN_PROPERTIES = new Set([
   'relationships',
   'stateUpdates',
   'variables',
+  'variants',
 ]);
 
 // Known stateUpdate types
@@ -125,7 +126,7 @@ export function GeneratorModal({ generator, onChange, onClose, onDelete, onDupli
       case 'variables':
         return <VariablesTab generator={generator} onChange={onChange} schema={schema} />;
       case 'creation':
-        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} tagRegistry={tagRegistry} />;
+        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} tagRegistry={tagRegistry} pressures={pressures} />;
       case 'relationships':
         return <RelationshipsTab generator={generator} onChange={onChange} schema={schema} />;
       case 'effects':

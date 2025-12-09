@@ -46,6 +46,9 @@ export interface DeclarativeTemplate {
 
   // Named entity references computed during execution
   variables?: Record<string, VariableDefinition>;
+
+  // Step 6: Conditional variants that modify the template based on world state
+  variants?: TemplateVariants;
 }
 
 // =============================================================================
@@ -457,7 +460,69 @@ export interface RelatedEntitiesSpec {
 }
 
 // =============================================================================
-// CUSTOM FILTER REGISTRY TYPES
+// STEP 6: TEMPLATE VARIANTS
+// =============================================================================
+
+/**
+ * Conditional variants that modify template output based on world state.
+ * Allows a single template to produce different outcomes (tags, relationships,
+ * state updates) depending on pressures, entity counts, or random chance.
+ */
+export interface TemplateVariants {
+  /** How to select which variant(s) to apply */
+  selection: 'first_match' | 'all_matching';
+
+  /** Available variant options */
+  options: TemplateVariant[];
+}
+
+/**
+ * A single variant option with its condition and effects.
+ */
+export interface TemplateVariant {
+  /** Human-readable name for this variant */
+  name: string;
+
+  /** Condition that must be met for this variant to apply */
+  when: VariantCondition;
+
+  /** Effects to apply when this variant is selected */
+  apply: VariantEffects;
+}
+
+/**
+ * Conditions for variant selection.
+ */
+export type VariantCondition =
+  | { type: 'pressure'; pressureId: string; min?: number; max?: number }
+  | { type: 'pressure_compare'; pressureA: string; pressureB: string }
+  | { type: 'entity_count'; kind: string; subtype?: string; min?: number; max?: number }
+  | { type: 'has_tag'; entity: string; tag: string }
+  | { type: 'random'; chance: number }
+  | { type: 'always' }
+  | { type: 'and'; conditions: VariantCondition[] }
+  | { type: 'or'; conditions: VariantCondition[] };
+
+/**
+ * Effects applied when a variant is selected.
+ * All fields are optional - only specified fields are applied.
+ */
+export interface VariantEffects {
+  /** Override subtype for created entities. Key is entityRef (e.g., "$location") */
+  subtype?: Record<string, string>;
+
+  /** Additional tags to add to created entities. Key is entityRef */
+  tags?: Record<string, Record<string, boolean>>;
+
+  /** Additional relationships to create */
+  relationships?: RelationshipRule[];
+
+  /** Additional state updates to apply */
+  stateUpdates?: StateUpdateRule[];
+}
+
+// =============================================================================
+// EXECUTION CONTEXT
 // =============================================================================
 
 /**

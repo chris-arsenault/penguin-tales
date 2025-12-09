@@ -715,7 +715,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "trade_route_establishment",
@@ -754,7 +754,7 @@
         }
       }
     },
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "guild_establishment",
@@ -1560,7 +1560,27 @@
         }
       }
     },
-    "enabled": true
+    "enabled": true,
+    "variants": {
+      "selection": "first_match",
+      "options": [
+        {
+          "name": "Variant 1",
+          "when": {
+            "type": "always"
+          },
+          "apply": {
+            "stateUpdates": [
+              {
+                "type": "modify_pressure",
+                "pressureId": "conflict",
+                "delta": -10
+              }
+            ]
+          }
+        }
+      ]
+    }
   },
   {
     "id": "geographic_exploration",
@@ -3322,7 +3342,7 @@
         "tag": "thermal_stress"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "thermal_colony_recovery",
@@ -3368,7 +3388,7 @@
         "tag": "climate_displaced"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "thermal_migration",
@@ -3441,7 +3461,7 @@
         "value": true
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "ice_memory_thaw",
@@ -3500,7 +3520,7 @@
         "tag": "thaw_candidate"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "economic_colony_decline",
@@ -3541,7 +3561,7 @@
         "tag": "economic_stress"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "economic_colony_recovery",
@@ -3587,7 +3607,7 @@
         "tag": "resource_depleted"
       }
     ],
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "wild_magic_discover",

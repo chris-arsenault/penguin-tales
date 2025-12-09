@@ -2,15 +2,13 @@
  * SimulationDashboard - Real-time visualization of simulation progress
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import ProgressOverview from './ProgressOverview';
 import EpochTimeline from './EpochTimeline';
 import PopulationMetrics from './PopulationMetrics';
 import TemplateUsage from './TemplateUsage';
 import FinalDiagnostics from './FinalDiagnostics';
 import LogStream from './LogStream';
-import SimulationTrace from './SimulationTrace';
-import { SimulationTraceVisx as SimulationTraceView } from './trace';
 
 /**
  * Aggregate all pressure updates for the current epoch into a single summary.
@@ -160,8 +158,6 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
 }
 
 export default function SimulationDashboard({ simState, onClearLogs }) {
-  const [showTraceView, setShowTraceView] = useState(false);
-
   const {
     status,
     progress,
@@ -197,9 +193,6 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
   const showFinalDiagnostics = status === 'complete' ||
     entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
 
-  const handleOpenTrace = useCallback(() => setShowTraceView(true), []);
-  const handleCloseTrace = useCallback(() => setShowTraceView(false), []);
-
   return (
     <div className="lw-dashboard">
       {/* Overview Bar */}
@@ -228,13 +221,6 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
         </div>
       </div>
 
-      {/* Simulation Trace Summary */}
-      <SimulationTrace
-        pressureUpdates={pressureUpdates}
-        epochStats={epochStats}
-        onOpenTrace={handleOpenTrace}
-      />
-
       {/* Final Diagnostics (shown after completion) */}
       {showFinalDiagnostics && (
         <FinalDiagnostics
@@ -248,17 +234,6 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
 
       {/* Log Stream */}
       <LogStream logs={logs} onClear={onClearLogs} />
-
-      {/* Full-screen Trace View */}
-      {showTraceView && (
-        <SimulationTraceView
-          pressureUpdates={pressureUpdates}
-          epochStats={epochStats}
-          templateApplications={templateApplications}
-          systemActions={systemActions}
-          onClose={handleCloseTrace}
-        />
-      )}
     </div>
   );
 }

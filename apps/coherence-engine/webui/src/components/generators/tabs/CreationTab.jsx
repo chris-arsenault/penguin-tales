@@ -744,6 +744,520 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
 }
 
 // ============================================================================
+// Variant Components - Conditional template modifications
+// ============================================================================
+
+function VariantConditionEditor({ condition, onChange, pressureOptions = [], entityKindOptions = [] }) {
+  const conditionType = condition?.type || 'always';
+
+  const setCondition = (newCondition) => {
+    onChange(newCondition);
+  };
+
+  return (
+    <div className="form-grid">
+      <ReferenceDropdown
+        label="Condition Type"
+        value={conditionType}
+        onChange={(type) => {
+          if (type === 'pressure') setCondition({ type: 'pressure', pressureId: pressureOptions[0]?.value || '', min: 30 });
+          else if (type === 'pressure_compare') setCondition({ type: 'pressure_compare', pressureA: pressureOptions[0]?.value || '', pressureB: pressureOptions[1]?.value || '' });
+          else if (type === 'entity_count') setCondition({ type: 'entity_count', kind: entityKindOptions[0]?.value || 'npc', min: 1 });
+          else if (type === 'has_tag') setCondition({ type: 'has_tag', entity: '$target', tag: '' });
+          else if (type === 'random') setCondition({ type: 'random', chance: 0.5 });
+          else setCondition({ type: 'always' });
+        }}
+        options={[
+          { value: 'always', label: 'Always (default)' },
+          { value: 'pressure', label: 'Pressure threshold' },
+          { value: 'pressure_compare', label: 'Pressure A > B' },
+          { value: 'entity_count', label: 'Entity count' },
+          { value: 'has_tag', label: 'Entity has tag' },
+          { value: 'random', label: 'Random chance' },
+        ]}
+      />
+
+      {conditionType === 'pressure' && (
+        <>
+          <ReferenceDropdown
+            label="Pressure"
+            value={condition.pressureId || ''}
+            onChange={(v) => setCondition({ ...condition, pressureId: v })}
+            options={pressureOptions}
+            placeholder="Select pressure..."
+          />
+          <div className="form-group">
+            <label className="label">Min Value</label>
+            <NumberInput
+              value={condition.min}
+              onChange={(v) => setCondition({ ...condition, min: v })}
+              integer
+              allowEmpty
+              placeholder="0"
+            />
+          </div>
+          <div className="form-group">
+            <label className="label">Max Value</label>
+            <NumberInput
+              value={condition.max}
+              onChange={(v) => setCondition({ ...condition, max: v })}
+              integer
+              allowEmpty
+              placeholder="100"
+            />
+          </div>
+        </>
+      )}
+
+      {conditionType === 'pressure_compare' && (
+        <>
+          <ReferenceDropdown
+            label="Pressure A"
+            value={condition.pressureA || ''}
+            onChange={(v) => setCondition({ ...condition, pressureA: v })}
+            options={pressureOptions}
+            placeholder="Select pressure..."
+          />
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '8px' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '18px' }}>&gt;</span>
+          </div>
+          <ReferenceDropdown
+            label="Pressure B"
+            value={condition.pressureB || ''}
+            onChange={(v) => setCondition({ ...condition, pressureB: v })}
+            options={pressureOptions}
+            placeholder="Select pressure..."
+          />
+        </>
+      )}
+
+      {conditionType === 'entity_count' && (
+        <>
+          <ReferenceDropdown
+            label="Entity Kind"
+            value={condition.kind || ''}
+            onChange={(v) => setCondition({ ...condition, kind: v })}
+            options={entityKindOptions}
+            placeholder="Select kind..."
+          />
+          <div className="form-group">
+            <label className="label">Min Count</label>
+            <NumberInput
+              value={condition.min}
+              onChange={(v) => setCondition({ ...condition, min: v })}
+              integer
+              allowEmpty
+              placeholder="0"
+            />
+          </div>
+          <div className="form-group">
+            <label className="label">Max Count</label>
+            <NumberInput
+              value={condition.max}
+              onChange={(v) => setCondition({ ...condition, max: v })}
+              integer
+              allowEmpty
+              placeholder="No limit"
+            />
+          </div>
+        </>
+      )}
+
+      {conditionType === 'has_tag' && (
+        <>
+          <div className="form-group">
+            <label className="label">Entity Reference</label>
+            <input
+              type="text"
+              value={condition.entity || ''}
+              onChange={(e) => setCondition({ ...condition, entity: e.target.value })}
+              className="input"
+              placeholder="$target"
+            />
+          </div>
+          <div className="form-group">
+            <label className="label">Tag Name</label>
+            <input
+              type="text"
+              value={condition.tag || ''}
+              onChange={(e) => setCondition({ ...condition, tag: e.target.value })}
+              className="input"
+              placeholder="explorer"
+            />
+          </div>
+        </>
+      )}
+
+      {conditionType === 'random' && (
+        <div className="form-group">
+          <label className="label">Chance (0-1)</label>
+          <NumberInput
+            value={condition.chance ?? 0.5}
+            onChange={(v) => setCondition({ ...condition, chance: v ?? 0.5 })}
+            step={0.1}
+            placeholder="0.5"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOptions = [], tagRegistry = [] }) {
+  const currentEffects = effects || {};
+  const [selectedEntity, setSelectedEntity] = useState(creationRefs[0] || '');
+
+  const updateEffects = (key, value) => {
+    const newEffects = { ...currentEffects };
+    if (value === undefined || (typeof value === 'object' && Object.keys(value).length === 0) || (Array.isArray(value) && value.length === 0)) {
+      delete newEffects[key];
+    } else {
+      newEffects[key] = value;
+    }
+    onChange(newEffects);
+  };
+
+  // Get all tags from all entity refs combined
+  const getAllTags = () => {
+    const allTags = [];
+    if (currentEffects.tags) {
+      Object.entries(currentEffects.tags).forEach(([ref, tagMap]) => {
+        Object.keys(tagMap).forEach(tag => {
+          if (tagMap[tag]) allTags.push({ ref, tag });
+        });
+      });
+    }
+    return allTags;
+  };
+
+  const addTag = (ref, tag) => {
+    if (!ref || !tag) return;
+    const newTags = { ...(currentEffects.tags || {}) };
+    newTags[ref] = { ...(newTags[ref] || {}), [tag]: true };
+    updateEffects('tags', newTags);
+  };
+
+  const removeTag = (ref, tag) => {
+    const newTags = { ...(currentEffects.tags || {}) };
+    if (newTags[ref]) {
+      delete newTags[ref][tag];
+      if (Object.keys(newTags[ref]).length === 0) {
+        delete newTags[ref];
+      }
+    }
+    updateEffects('tags', newTags);
+  };
+
+  const allTags = getAllTags();
+
+  return (
+    <div>
+      {/* Tags section */}
+      <div className="nested-section">
+        <div className="nested-title">Additional Tags</div>
+        <div className="form-help-text" style={{ marginBottom: '8px' }}>
+          Add tags to created entities when this variant applies.
+        </div>
+
+        {allTags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+            {allTags.map(({ ref, tag }, idx) => (
+              <div key={idx} className="chip">
+                <span style={{ opacity: 0.7, marginRight: '4px' }}>{ref}:</span>
+                <span>{tag}</span>
+                <button
+                  className="chip-remove"
+                  onClick={() => removeTag(ref, tag)}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {creationRefs.length > 0 ? (
+          <div className="form-grid">
+            <ReferenceDropdown
+              label="Entity"
+              value={selectedEntity}
+              onChange={setSelectedEntity}
+              options={creationRefs.map(r => ({ value: r, label: r }))}
+              placeholder="Select entity..."
+            />
+            <div className="form-group">
+              <label className="label">Tag</label>
+              <TagSelector
+                value={[]}
+                onChange={(tags) => {
+                  if (tags.length > 0 && selectedEntity) {
+                    addTag(selectedEntity, tags[0]);
+                  }
+                }}
+                tagRegistry={tagRegistry}
+                placeholder="Select or type tag..."
+                singleSelect
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="form-help-text" style={{ fontStyle: 'italic' }}>
+            Define entity creation rules first to add variant tags.
+          </div>
+        )}
+      </div>
+
+      {/* Pressure Modifications section */}
+      <div className="nested-section" style={{ marginTop: '16px' }}>
+        <div className="nested-title">Pressure Modifications</div>
+        <div className="form-help-text" style={{ marginBottom: '8px' }}>
+          Modify pressure values when this variant applies.
+        </div>
+
+        {(currentEffects.stateUpdates || []).map((update, idx) => (
+          <div key={idx} className="item-card" style={{ marginBottom: '8px' }}>
+            <div style={{ padding: '12px' }}>
+              <div className="form-grid">
+                <ReferenceDropdown
+                  label="Pressure"
+                  value={update.pressureId || ''}
+                  onChange={(v) => {
+                    const newUpdates = [...currentEffects.stateUpdates];
+                    newUpdates[idx] = { ...update, pressureId: v };
+                    updateEffects('stateUpdates', newUpdates);
+                  }}
+                  options={pressureOptions}
+                  placeholder="Select pressure..."
+                />
+                <div className="form-group">
+                  <label className="label">Delta</label>
+                  <NumberInput
+                    value={update.delta}
+                    onChange={(v) => {
+                      const newUpdates = [...currentEffects.stateUpdates];
+                      newUpdates[idx] = { ...update, delta: v ?? 0 };
+                      updateEffects('stateUpdates', newUpdates);
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button
+                    className="btn-icon btn-icon-danger"
+                    onClick={() => {
+                      const newUpdates = currentEffects.stateUpdates.filter((_, i) => i !== idx);
+                      updateEffects('stateUpdates', newUpdates);
+                    }}
+                  >×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button
+          className="btn-add"
+          onClick={() => {
+            const newUpdates = [...(currentEffects.stateUpdates || []), {
+              type: 'modify_pressure',
+              pressureId: pressureOptions[0]?.value || '',
+              delta: -10
+            }];
+            updateEffects('stateUpdates', newUpdates);
+          }}
+        >
+          + Add Pressure Modification
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entityKindOptions = [], creationRefs = [], tagRegistry = [] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Build condition summary
+  const getConditionSummary = () => {
+    const when = variant.when;
+    if (!when) return 'No condition';
+    switch (when.type) {
+      case 'pressure':
+        return `${when.pressureId || '?'} in [${when.min ?? 0}, ${when.max ?? 100}]`;
+      case 'pressure_compare':
+        return `${when.pressureA || '?'} > ${when.pressureB || '?'}`;
+      case 'entity_count':
+        return `${when.kind || '?'} count in [${when.min ?? 0}, ${when.max ?? '∞'}]`;
+      case 'has_tag':
+        return `${when.entity || '?'} has "${when.tag || '?'}"`;
+      case 'random':
+        return `${Math.round((when.chance ?? 0.5) * 100)}% chance`;
+      case 'always':
+        return 'Always applies';
+      default:
+        return when.type;
+    }
+  };
+
+  return (
+    <div className="item-card">
+      <div
+        className="item-card-header"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="item-card-icon item-card-icon-variant">⚡</div>
+        <div className="item-card-info">
+          <div className="item-card-title">{variant.name || 'Unnamed Variant'}</div>
+          <div className="item-card-subtitle">{getConditionSummary()}</div>
+        </div>
+        <div className="item-card-actions">
+          <button className="btn-icon">{expanded ? '▲' : '▼'}</button>
+          <button className="btn-icon btn-icon-danger" onClick={(e) => { e.stopPropagation(); onRemove(); }}>×</button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="item-card-body">
+          <div className="form-group">
+            <label className="label">Variant Name</label>
+            <input
+              type="text"
+              value={variant.name || ''}
+              onChange={(e) => onChange({ ...variant, name: e.target.value })}
+              className="input"
+              placeholder="e.g., Resource Site"
+            />
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Condition</label>
+            <div className="form-help-text">When should this variant apply?</div>
+            <VariantConditionEditor
+              condition={variant.when}
+              onChange={(when) => onChange({ ...variant, when })}
+              pressureOptions={pressureOptions}
+              entityKindOptions={entityKindOptions}
+            />
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Effects</label>
+            <div className="form-help-text">What modifications to apply when this variant is selected.</div>
+            <VariantEffectsEditor
+              effects={variant.apply}
+              onChange={(apply) => onChange({ ...variant, apply })}
+              creationRefs={creationRefs}
+              pressureOptions={pressureOptions}
+              tagRegistry={tagRegistry}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VariantsSection({ generator, onChange, pressures = [], schema, tagRegistry = [] }) {
+  const variants = generator.variants || { selection: 'first_match', options: [] };
+
+  // Build pressure options from pressures array
+  const pressureOptions = useMemo(() =>
+    (pressures || []).map(p => ({ value: p.id, label: p.name || p.id })),
+    [pressures]
+  );
+
+  // Build entity kind options
+  const entityKindOptions = useMemo(() =>
+    (schema?.entityKinds || []).map(ek => ({ value: ek.kind, label: ek.description || ek.kind })),
+    [schema]
+  );
+
+  // Collect entity refs from creation rules (for tag targeting)
+  const creationRefs = useMemo(() => {
+    const refs = [];
+    (generator.creation || []).forEach(c => {
+      if (c.entityRef) refs.push(c.entityRef);
+    });
+    return refs;
+  }, [generator.creation]);
+
+  const updateVariants = (newVariants) => {
+    if (newVariants.options.length === 0) {
+      // Remove variants entirely if empty
+      const { variants: _, ...rest } = generator;
+      onChange(rest);
+    } else {
+      onChange({ ...generator, variants: newVariants });
+    }
+  };
+
+  const addVariant = () => {
+    updateVariants({
+      ...variants,
+      options: [...variants.options, {
+        name: `Variant ${variants.options.length + 1}`,
+        when: { type: 'always' },
+        apply: {}
+      }]
+    });
+  };
+
+  return (
+    <div className="section" style={{ marginTop: '24px' }}>
+      <div className="section-title"><span>⚡</span> Conditional Variants</div>
+      <div className="section-desc">
+        Define variants that modify tags or pressure effects based on world state.
+        This allows a single template to produce different outcomes depending on conditions.
+      </div>
+
+      {variants.options.length > 0 && (
+        <div style={{ marginBottom: '16px' }}>
+          <ReferenceDropdown
+            label="Selection Mode"
+            value={variants.selection}
+            onChange={(v) => updateVariants({ ...variants, selection: v })}
+            options={[
+              { value: 'first_match', label: 'First Match - Apply first matching variant only' },
+              { value: 'all_matching', label: 'All Matching - Apply all matching variants' },
+            ]}
+          />
+        </div>
+      )}
+
+      {variants.options.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">⚡</div>
+          <div className="empty-state-title">No variants defined</div>
+          <div className="empty-state-desc">
+            Add variants to make this template produce different outcomes based on world state.
+          </div>
+        </div>
+      ) : (
+        variants.options.map((variant, idx) => (
+          <VariantCard
+            key={idx}
+            variant={variant}
+            onChange={(updated) => {
+              const newOptions = [...variants.options];
+              newOptions[idx] = updated;
+              updateVariants({ ...variants, options: newOptions });
+            }}
+            onRemove={() => {
+              updateVariants({ ...variants, options: variants.options.filter((_, i) => i !== idx) });
+            }}
+            pressureOptions={pressureOptions}
+            entityKindOptions={entityKindOptions}
+            creationRefs={creationRefs}
+            tagRegistry={tagRegistry}
+          />
+        ))
+      )}
+
+      <button className="btn-add" onClick={addVariant}>
+        + Add Variant
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
 // CreationTab - Main tab component
 // ============================================================================
 
@@ -755,8 +1269,9 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
  * @param {Object} props.namingData - Naming configuration data
  * @param {Array} props.tagRegistry - Available tags
  * @param {Function} props.onAddToRegistry - Callback to add new tag to registry
+ * @param {Array} props.pressures - Available pressure definitions
  */
-export function CreationTab({ generator, onChange, schema, namingData = {}, tagRegistry = [], onAddToRegistry }) {
+export function CreationTab({ generator, onChange, schema, namingData = {}, tagRegistry = [], onAddToRegistry, pressures = [] }) {
   const creation = generator.creation || [];
 
   const availableRefs = useMemo(() => {
@@ -823,6 +1338,14 @@ export function CreationTab({ generator, onChange, schema, namingData = {}, tagR
           + Add Entity Creation
         </button>
       </div>
+
+      <VariantsSection
+        generator={generator}
+        onChange={onChange}
+        pressures={pressures}
+        schema={schema}
+        tagRegistry={tagRegistry}
+      />
     </div>
   );
 }

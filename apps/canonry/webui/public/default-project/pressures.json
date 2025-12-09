@@ -42,7 +42,7 @@
   {
     "id": "conflict",
     "name": "Conflict Tension",
-    "initialValue": 15,
+    "initialValue": 0,
     "decay": 2,
     "growth": {
       "positiveFeedback": [
@@ -152,7 +152,7 @@
   {
     "id": "stability",
     "name": "Political Stability",
-    "initialValue": 50,
+    "initialValue": 0,
     "decay": 3,
     "growth": {
       "positiveFeedback": [
@@ -225,7 +225,7 @@
   {
     "id": "cultural_tension",
     "name": "Cultural Divergence",
-    "initialValue": 5,
+    "initialValue": 0,
     "decay": 15,
     "growth": {
       "positiveFeedback": [
@@ -263,7 +263,7 @@
   {
     "id": "diplomacy",
     "name": "Diplomatic Relations",
-    "initialValue": 30,
+    "initialValue": 0,
     "decay": 5,
     "growth": {
       "positiveFeedback": [

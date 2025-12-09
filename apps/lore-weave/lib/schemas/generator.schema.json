@@ -19,7 +19,8 @@
     "creation": { "type": "array", "description": "Entities to create", "items": { "$ref": "#/$defs/CreationRule" } },
     "relationships": { "type": "array", "description": "Relationships to form", "items": { "$ref": "#/$defs/RelationshipRule" } },
     "stateUpdates": { "type": "array", "description": "State updates to apply", "items": { "$ref": "#/$defs/StateUpdateRule" } },
-    "variables": { "type": "object", "description": "Named entity references computed during execution", "additionalProperties": { "$ref": "#/$defs/VariableDefinition" } }
+    "variables": { "type": "object", "description": "Named entity references computed during execution", "additionalProperties": { "$ref": "#/$defs/VariableDefinition" } },
+    "variants": { "$ref": "#/$defs/TemplateVariants", "description": "Conditional variants that modify template output based on world state" }
   },
   "$defs": {
     "NonEmptyString": { "type": "string", "minLength": 1 },
@@ -738,6 +739,140 @@
         "relatedTo": { "$ref": "#/$defs/NonEmptyString" },
         "relationship": { "$ref": "#/$defs/NonEmptyString" },
         "direction": { "enum": ["src", "dst", "both"] }
+      }
+    },
+
+    "TemplateVariants": {
+      "type": "object",
+      "required": ["selection", "options"],
+      "additionalProperties": false,
+      "properties": {
+        "selection": { "enum": ["first_match", "all_matching"] },
+        "options": { "type": "array", "items": { "$ref": "#/$defs/TemplateVariant" }, "minItems": 1 }
+      }
+    },
+
+    "TemplateVariant": {
+      "type": "object",
+      "required": ["name", "when", "apply"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/NonEmptyString" },
+        "when": { "$ref": "#/$defs/VariantCondition" },
+        "apply": { "$ref": "#/$defs/VariantEffects" }
+      }
+    },
+
+    "VariantCondition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "pressureId"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "pressure" },
+            "pressureId": { "$ref": "#/$defs/NonEmptyString" },
+            "min": { "type": "number", "minimum": 0, "maximum": 100 },
+            "max": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "pressureA", "pressureB"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "pressure_compare" },
+            "pressureA": { "$ref": "#/$defs/NonEmptyString" },
+            "pressureB": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "entity_count" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "subtype": { "$ref": "#/$defs/NonEmptyString" },
+            "min": { "type": "integer", "minimum": 0 },
+            "max": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "entity", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_tag" },
+            "entity": { "$ref": "#/$defs/NonEmptyString" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "chance"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "random" },
+            "chance": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "always" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "conditions"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "and" },
+            "conditions": { "type": "array", "items": { "$ref": "#/$defs/VariantCondition" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "conditions"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "or" },
+            "conditions": { "type": "array", "items": { "$ref": "#/$defs/VariantCondition" }, "minItems": 1 }
+          }
+        }
+      ]
+    },
+
+    "VariantEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "subtype": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/NonEmptyString" },
+          "description": "Override subtype for created entities. Key is entityRef (e.g., $location)"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "boolean" }
+          },
+          "description": "Additional tags to add. Key is entityRef, value is tag map"
+        },
+        "relationships": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RelationshipRule" },
+          "description": "Additional relationships to create"
+        },
+        "stateUpdates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateUpdateRule" },
+          "description": "Additional state updates to apply"
+        }
       }
     }
   }
