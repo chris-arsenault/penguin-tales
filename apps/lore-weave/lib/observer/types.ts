@@ -344,6 +344,26 @@ export interface SystemHealthPayload {
 }
 
 /**
+ * System action payload - emitted when a system does meaningful work
+ * Only emitted when the system actually changes something (not every tick)
+ */
+export interface SystemActionPayload {
+  tick: number;
+  epoch: number;
+  systemId: string;
+  systemName: string;
+
+  // Summary of what the system did
+  relationshipsAdded: number;
+  entitiesModified: number;
+  pressureChanges: Record<string, number>;
+  description: string;
+
+  // Loosely typed details for system-specific information
+  details?: Record<string, unknown>;
+}
+
+/**
  * State export payload - emitted on request for intermediate state export
  * Contains the same structure as SimulationResultPayload but for in-progress simulation
  */
@@ -381,6 +401,7 @@ export type SimulationEvent =
   | { type: 'coordinate_stats'; payload: CoordinateStatsPayload }
   | { type: 'tag_health'; payload: TagHealthPayload }
   | { type: 'system_health'; payload: SystemHealthPayload }
+  | { type: 'system_action'; payload: SystemActionPayload }
   | { type: 'entity_breakdown'; payload: EntityBreakdownPayload }
   | { type: 'catalyst_stats'; payload: CatalystStatsPayload }
   | { type: 'relationship_breakdown'; payload: RelationshipBreakdownPayload }
@@ -418,6 +439,7 @@ export interface ISimulationEmitter {
   coordinateStats(payload: CoordinateStatsPayload): void;
   tagHealth(payload: TagHealthPayload): void;
   systemHealth(payload: SystemHealthPayload): void;
+  systemAction(payload: SystemActionPayload): void;
   // Final diagnostics (emitted at simulation end)
   entityBreakdown(payload: EntityBreakdownPayload): void;
   catalystStats(payload: CatalystStatsPayload): void;

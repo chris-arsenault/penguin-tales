@@ -461,7 +461,6 @@ export type {
   DeclarativeEraSpawnerSystem,
   DeclarativeEraTransitionSystem,
   DeclarativeUniversalCatalystSystem,
-  GrowthSystemConfig,
   // Era system config types
   EraTransitionConfig,
   EraSpawnerConfig

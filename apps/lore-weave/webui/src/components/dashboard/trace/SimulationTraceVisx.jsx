@@ -132,63 +132,140 @@ function transformPressureData(pressureUpdates) {
 }
 
 /**
- * Transform template applications for event markers
- * Each marker is colored by the kind of the first entity created
+ * Transform template applications and system actions for event markers
+ * Each marker is colored by the kind of the first entity created or system type
  */
-function transformEventData(templateApplications, pressureData) {
+function transformEventData(templateApplications, systemActions, pressureData) {
   const events = {
     template: [],
     system: [],
     action: [],
   };
 
-  if (!templateApplications?.length) return events;
-
-  // Group templates by tick for stacking
-  const byTick = new Map();
-  for (const app of templateApplications) {
-    if (!byTick.has(app.tick)) {
-      byTick.set(app.tick, []);
+  // Process template applications
+  if (templateApplications?.length) {
+    // Group templates by tick for stacking
+    const byTick = new Map();
+    for (const app of templateApplications) {
+      if (!byTick.has(app.tick)) {
+        byTick.set(app.tick, []);
+      }
+      byTick.get(app.tick).push(app);
     }
-    byTick.get(app.tick).push(app);
-  }
 
-  // Create event markers with entity-based coloring
-  for (const [tick, apps] of byTick) {
-    apps.forEach((app, stackIndex) => {
-      // Get the kind of the first entity created (for coloring)
-      const firstEntityKind = app.entitiesCreated?.[0]?.kind || null;
-      const color = getEntityKindColor(firstEntityKind);
+    // Create event markers with entity-based coloring
+    for (const [tick, apps] of byTick) {
+      apps.forEach((app, stackIndex) => {
+        // Get the kind of the first entity created (for coloring)
+        const firstEntityKind = app.entitiesCreated?.[0]?.kind || null;
+        const color = getEntityKindColor(firstEntityKind);
 
-      const uniqueId = `${tick}-${app.templateId}-${stackIndex}`;
-      events.template.push({
-        tick,
-        uniqueId,
-        templateId: app.templateId,
-        data: app,
-        stackIndex,
-        totalAtTick: apps.length,
-        entityKind: firstEntityKind,
-        color,
+        const uniqueId = `template-${tick}-${app.templateId}-${stackIndex}`;
+        events.template.push({
+          tick,
+          uniqueId,
+          templateId: app.templateId,
+          data: app,
+          stackIndex,
+          totalAtTick: apps.length,
+          entityKind: firstEntityKind,
+          color,
+        });
       });
-    });
+    }
   }
 
-  // TODO: Add system and action events when available
+  // Process system actions (including era transitions)
+  // Filter out framework_growth - it's already shown via template applications
+  if (systemActions?.length) {
+    const filteredActions = systemActions.filter(a => a.systemId !== 'framework-growth');
+
+    // Group by tick for stacking
+    const byTick = new Map();
+    for (const action of filteredActions) {
+      if (!byTick.has(action.tick)) {
+        byTick.set(action.tick, []);
+      }
+      byTick.get(action.tick).push(action);
+    }
+
+    for (const [tick, actions] of byTick) {
+      actions.forEach((action, stackIndex) => {
+        // Era transitions get special highlighting
+        const isEraTransition = !!action.details?.eraTransition;
+        const uniqueId = `system-${tick}-${action.systemId}-${stackIndex}`;
+
+        events.system.push({
+          tick,
+          uniqueId,
+          systemId: action.systemId,
+          systemName: action.systemName,
+          data: action,
+          stackIndex,
+          totalAtTick: actions.length,
+          isEraTransition,
+          color: isEraTransition ? '#f59e0b' : EVENT_COLORS.system,
+        });
+      });
+    }
+  }
 
   return events;
 }
 
 /**
- * Extract era boundaries
+ * Extract era boundaries from actual era transitions (systemActions)
+ * Falls back to epoch-based boundaries if no transition data available
  */
-function extractEraBoundaries(pressureUpdates, epochStats) {
+function extractEraBoundaries(pressureUpdates, epochStats, systemActions) {
+  if (!pressureUpdates?.length) return [];
+
+  const minTick = pressureUpdates[0].tick;
+  const maxTick = pressureUpdates[pressureUpdates.length - 1].tick;
+
+  // Find era transitions from systemActions
+  const eraTransitions = (systemActions || [])
+    .filter(a => a.details?.eraTransition)
+    .sort((a, b) => a.tick - b.tick);
+
+  if (eraTransitions.length > 0) {
+    // Use actual era transitions
+    const boundaries = [];
+
+    // First era: from start to first transition
+    const firstTransition = eraTransitions[0];
+    boundaries.push({
+      era: firstTransition.details.eraTransition.fromEra,
+      eraId: firstTransition.details.eraTransition.fromEraId,
+      epoch: firstTransition.epoch,
+      startTick: minTick,
+      endTick: firstTransition.tick,
+    });
+
+    // Subsequent eras from transitions
+    for (let i = 0; i < eraTransitions.length; i++) {
+      const transition = eraTransitions[i];
+      const nextTransition = eraTransitions[i + 1];
+
+      boundaries.push({
+        era: transition.details.eraTransition.toEra,
+        eraId: transition.details.eraTransition.toEraId,
+        epoch: transition.epoch,
+        startTick: transition.tick,
+        endTick: nextTransition?.tick ?? maxTick,
+      });
+    }
+
+    return boundaries;
+  }
+
+  // Fallback: use epoch-based boundaries
   const boundaries = [];
   let currentEpoch = -1;
   let currentEra = null;
   let startTick = 0;
 
-  for (const update of pressureUpdates || []) {
+  for (const update of pressureUpdates) {
     if (update.epoch !== currentEpoch) {
       if (currentEra !== null) {
         boundaries.push({ era: currentEra, epoch: currentEpoch, startTick, endTick: update.tick });
@@ -200,12 +277,12 @@ function extractEraBoundaries(pressureUpdates, epochStats) {
     }
   }
 
-  if (currentEra !== null && pressureUpdates?.length > 0) {
+  if (currentEra !== null) {
     boundaries.push({
       era: currentEra,
       epoch: currentEpoch,
       startTick,
-      endTick: pressureUpdates[pressureUpdates.length - 1].tick,
+      endTick: maxTick,
     });
   }
 
@@ -653,6 +730,158 @@ function TemplateDetailPanel({ template, isLocked, onClear }) {
 }
 
 /**
+ * System action detail panel - shows system activity, especially era transitions
+ */
+function SystemActionDetailPanel({ systemAction, isEraTransition, isLocked, onClear }) {
+  if (!systemAction) {
+    return (
+      <div className="lw-trace-view-detail">
+        <div className="lw-trace-view-detail-empty">
+          <div className="lw-trace-view-detail-empty-icon">&#9632;</div>
+          <div>Hover over a system marker to see details</div>
+          <div className="lw-trace-view-detail-hint">Click to lock selection</div>
+        </div>
+      </div>
+    );
+  }
+
+  const action = systemAction;
+  const eraTransition = action.details?.eraTransition;
+
+  return (
+    <div className="lw-trace-view-detail">
+      <div className="lw-trace-view-detail-header">
+        <span>
+          <span style={{ color: isEraTransition ? '#f59e0b' : EVENT_COLORS.system, marginRight: 6 }}>
+            {isEraTransition ? '★' : '■'}
+          </span>
+          Tick {action.tick} / Epoch {action.epoch}
+        </span>
+        {isLocked && (
+          <button className="lw-trace-view-detail-unlock" onClick={onClear}>
+            Clear
+          </button>
+        )}
+      </div>
+
+      <div className="lw-trace-view-detail-content">
+        <div className="lw-trace-view-template-app">
+          <div className="lw-trace-view-template-header">
+            <span className="lw-trace-view-template-id">{action.systemName}</span>
+            <span className="lw-trace-view-template-target">
+              ({action.systemId})
+            </span>
+          </div>
+
+          {action.description && (
+            <div className="lw-trace-view-template-desc">{action.description}</div>
+          )}
+
+          {/* Era Transition Details */}
+          {eraTransition && (
+            <div className="lw-trace-view-template-section">
+              <div className="lw-trace-view-detail-section-header">
+                Era Transition
+              </div>
+              <div className="lw-trace-view-era-transition">
+                <div className="lw-trace-view-era-flow">
+                  <span className="lw-trace-view-era-from">{eraTransition.fromEra}</span>
+                  <span className="lw-trace-view-era-arrow">→</span>
+                  <span className="lw-trace-view-era-to">{eraTransition.toEra}</span>
+                </div>
+
+                <div className="lw-trace-view-entity-placement-grid">
+                  <div className="lw-trace-view-entity-placement-row">
+                    <span className="lw-trace-view-entity-placement-label">Duration</span>
+                    <span className="lw-trace-view-entity-placement-value">
+                      {eraTransition.tickInEra} ticks
+                    </span>
+                  </div>
+
+                  <div className="lw-trace-view-entity-placement-row">
+                    <span className="lw-trace-view-entity-placement-label">From Era ID</span>
+                    <span className="lw-trace-view-entity-placement-value mono">
+                      {eraTransition.fromEraId}
+                    </span>
+                  </div>
+
+                  <div className="lw-trace-view-entity-placement-row">
+                    <span className="lw-trace-view-entity-placement-label">To Era ID</span>
+                    <span className="lw-trace-view-entity-placement-value mono">
+                      {eraTransition.toEraId}
+                    </span>
+                  </div>
+
+                  {eraTransition.prominentEntitiesLinked > 0 && (
+                    <div className="lw-trace-view-entity-placement-row">
+                      <span className="lw-trace-view-entity-placement-label">Entities Linked</span>
+                      <span className="lw-trace-view-entity-placement-value">
+                        {eraTransition.prominentEntitiesLinked} prominent entities
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Exit conditions that triggered transition */}
+                {eraTransition.exitConditionsMet?.length > 0 && (
+                  <div className="lw-trace-view-entity-tags-section">
+                    <div className="lw-trace-view-entity-section-label">Exit Conditions Met</div>
+                    <div className="lw-trace-view-entity-tags">
+                      {eraTransition.exitConditionsMet.map((cond, i) => (
+                        <span key={i} className="lw-trace-view-tag">
+                          {cond.type}
+                          {cond.pressureId && `: ${cond.pressureId} ${cond.operator} ${cond.threshold}`}
+                          {cond.entityKind && `: ${cond.entityKind} ${cond.operator} ${cond.threshold}`}
+                          {cond.minTicks && `: ${cond.currentAge}/${cond.minTicks} ticks`}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Summary stats */}
+          <div className="lw-trace-view-template-section">
+            <div className="lw-trace-view-detail-section-header">Activity Summary</div>
+            <div className="lw-trace-view-entity-placement-grid">
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Relationships Added</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {action.relationshipsAdded}
+                </span>
+              </div>
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Entities Modified</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {action.entitiesModified}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pressure Changes */}
+          {Object.keys(action.pressureChanges || {}).length > 0 && (
+            <div className="lw-trace-view-template-section">
+              <div className="lw-trace-view-detail-section-header">Pressure Changes</div>
+              {Object.entries(action.pressureChanges).map(([pressureId, delta]) => (
+                <div key={pressureId} className="lw-trace-view-detail-row">
+                  <span className="lw-trace-view-detail-label">{pressureId}</span>
+                  <span className={delta >= 0 ? 'positive' : 'negative'}>
+                    {delta >= 0 ? '+' : ''}{delta.toFixed(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main trace visualization component
  */
 function TraceVisualization({
@@ -973,6 +1202,88 @@ function TraceVisualization({
               </g>
             );
           })}
+
+          {/* System action markers - rendered AFTER template markers */}
+          {visibleEvents.system.map((event) => {
+            // Position at tick + 0.5, but offset vertically from templates
+            const cx = xScale(event.tick + 0.5);
+            // Stack above templates - use margin.top area for system events
+            const cy = margin.top - 10 - (event.stackIndex * MARKER_STACK_OFFSET);
+            const isHovered = event.uniqueId === hoveredEventId;
+            const isSelected = event.uniqueId === selectedEventId;
+            const size = isSelected ? MARKER_SIZE + 3 : isHovered ? MARKER_SIZE + 2 : MARKER_SIZE;
+            const opacity = isSelected ? 1 : isHovered ? 0.9 : 0.7;
+
+            // Era transitions get a star shape, other systems get a diamond
+            if (event.isEraTransition) {
+              // Star shape for era transitions
+              const outerRadius = size * 0.8;
+              const innerRadius = size * 0.4;
+              const points = [];
+              for (let i = 0; i < 10; i++) {
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const angle = (i * Math.PI / 5) - Math.PI / 2;
+                points.push(`${cx + radius * Math.cos(angle)},${cy + radius * Math.sin(angle)}`);
+              }
+
+              return (
+                <g
+                  key={event.uniqueId}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => onEventHover(event.uniqueId)}
+                  onMouseLeave={() => onEventHover(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick(event.uniqueId);
+                  }}
+                >
+                  <polygon
+                    points={points.join(' ')}
+                    fill={event.color}
+                    fillOpacity={opacity}
+                    stroke={isSelected ? '#fff' : isHovered ? event.color : 'rgba(0,0,0,0.3)'}
+                    strokeWidth={isSelected ? 2 : 1}
+                  />
+                  {/* Vertical line extending into chart for era transitions */}
+                  <line
+                    x1={cx}
+                    y1={cy + outerRadius}
+                    x2={cx}
+                    y2={chartBottom}
+                    stroke={event.color}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                    strokeOpacity={0.5}
+                  />
+                </g>
+              );
+            } else {
+              // Diamond shape for other system actions
+              const halfSize = size * 0.6;
+              const points = `${cx},${cy - halfSize} ${cx + halfSize},${cy} ${cx},${cy + halfSize} ${cx - halfSize},${cy}`;
+
+              return (
+                <g
+                  key={event.uniqueId}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => onEventHover(event.uniqueId)}
+                  onMouseLeave={() => onEventHover(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick(event.uniqueId);
+                  }}
+                >
+                  <polygon
+                    points={points}
+                    fill={event.color}
+                    fillOpacity={opacity}
+                    stroke={isSelected ? '#fff' : isHovered ? event.color : 'rgba(0,0,0,0.3)'}
+                    strokeWidth={isSelected ? 2 : 1}
+                  />
+                </g>
+              );
+            }
+          })}
         </svg>
       </div>
 
@@ -1032,6 +1343,7 @@ export default function SimulationTraceVisx({
   pressureUpdates = [],
   epochStats = [],
   templateApplications = [],
+  systemActions = [],
   onClose,
 }) {
   // State
@@ -1049,22 +1361,40 @@ export default function SimulationTraceVisx({
   );
 
   const eventData = useMemo(
-    () => transformEventData(templateApplications, pressureData),
-    [templateApplications, pressureData]
+    () => transformEventData(templateApplications, systemActions, pressureData),
+    [templateApplications, systemActions, pressureData]
   );
 
   const eraBoundaries = useMemo(
-    () => extractEraBoundaries(pressureUpdates, epochStats),
-    [pressureUpdates, epochStats]
+    () => extractEraBoundaries(pressureUpdates, epochStats, systemActions),
+    [pressureUpdates, epochStats, systemActions]
   );
 
-  // Get selected template for detail panel
-  const selectedTemplate = useMemo(() => {
+  // Get selected event for detail panel (template or system action)
+  const selectedEvent = useMemo(() => {
     const eventId = selectedEventId || hoveredEventId;
     if (!eventId) return null;
-    const event = eventData.template.find(e => e.uniqueId === eventId);
-    return event?.data || null;
+
+    // Check templates first
+    const templateEvent = eventData.template.find(e => e.uniqueId === eventId);
+    if (templateEvent) {
+      return { type: 'template', data: templateEvent.data };
+    }
+
+    // Check system actions
+    const systemEvent = eventData.system.find(e => e.uniqueId === eventId);
+    if (systemEvent) {
+      return { type: 'system', data: systemEvent.data, isEraTransition: systemEvent.isEraTransition };
+    }
+
+    return null;
   }, [eventData, selectedEventId, hoveredEventId]);
+
+  // Count era transitions for display
+  const eraTransitionCount = useMemo(
+    () => eventData.system.filter(e => e.isEraTransition).length,
+    [eventData]
+  );
 
   // Handlers
   const handleTickHover = useCallback((tick) => {
@@ -1120,7 +1450,7 @@ export default function SimulationTraceVisx({
           <div className="lw-trace-view-title">
             Simulation Trace
             <span className="lw-trace-view-subtitle">
-              {pressureData.length} ticks / {pressureIds.length} pressures / {eventData.template.length} templates
+              {pressureData.length} ticks / {pressureIds.length} pressures / {eventData.template.length} templates / {eraTransitionCount} era transitions
             </span>
           </div>
           <button className="lw-trace-view-close" onClick={onClose}>
@@ -1182,9 +1512,16 @@ export default function SimulationTraceVisx({
           </div>
 
           {/* Right: Detail panel */}
-          {selectedTemplate ? (
+          {selectedEvent?.type === 'template' ? (
             <TemplateDetailPanel
-              template={selectedTemplate}
+              template={selectedEvent.data}
+              isLocked={!!selectedEventId}
+              onClear={handleClearEvent}
+            />
+          ) : selectedEvent?.type === 'system' ? (
+            <SystemActionDetailPanel
+              systemAction={selectedEvent.data}
+              isEraTransition={selectedEvent.isEraTransition}
               isLocked={!!selectedEventId}
               onClear={handleClearEvent}
             />

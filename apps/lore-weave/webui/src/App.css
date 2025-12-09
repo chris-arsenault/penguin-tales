@@ -2505,3 +2505,43 @@
   padding: 2px 8px;
   border-radius: 4px;
 }
+
+/* Era transition display */
+.lw-trace-view-era-transition {
+  padding: 8px 0;
+}
+
+.lw-trace-view-era-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.lw-trace-view-era-from,
+.lw-trace-view-era-to {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.lw-trace-view-era-from {
+  background: rgba(107, 114, 128, 0.3);
+  color: #9ca3af;
+}
+
+.lw-trace-view-era-to {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.lw-trace-view-era-arrow {
+  font-size: 18px;
+  color: #f59e0b;
+  font-weight: 600;
+}

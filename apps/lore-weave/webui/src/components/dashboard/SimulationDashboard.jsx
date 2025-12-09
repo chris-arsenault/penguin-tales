@@ -169,6 +169,7 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
     epochStats,
     templateApplications,
     pressureUpdates,
+    systemActions,
     populationReport,
     templateUsage,
     systemHealth,
@@ -254,6 +255,7 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
           pressureUpdates={pressureUpdates}
           epochStats={epochStats}
           templateApplications={templateApplications}
+          systemActions={systemActions}
           onClose={handleCloseTrace}
         />
       )}

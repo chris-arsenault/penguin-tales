@@ -1526,6 +1526,27 @@ export class WorldEngine {
           this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
         }
 
+        // Emit systemAction event if meaningful work was done
+        const didMeaningfulWork =
+          directAdded > 0 ||
+          addedFromResult > 0 ||
+          result.entitiesModified.length > 0 ||
+          Object.keys(result.pressureChanges).length > 0;
+
+        if (didMeaningfulWork) {
+          this.emitter.systemAction({
+            tick: this.graph.tick,
+            epoch: this.currentEpoch,
+            systemId: system.id,
+            systemName: system.name,
+            relationshipsAdded: directAdded + addedFromResult,
+            entitiesModified: result.entitiesModified.length,
+            pressureChanges: result.pressureChanges,
+            description: result.description,
+            details: result.details,
+          });
+        }
+
         totalModifications += result.entitiesModified.length;
 
       } catch (error) {

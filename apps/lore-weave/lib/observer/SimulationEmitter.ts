@@ -22,6 +22,7 @@ import {
   CoordinateStatsPayload,
   TagHealthPayload,
   SystemHealthPayload,
+  SystemActionPayload,
   EntityBreakdownPayload,
   CatalystStatsPayload,
   RelationshipBreakdownPayload,
@@ -111,6 +112,10 @@ export class SimulationEmitter implements ISimulationEmitter {
 
   systemHealth(payload: SystemHealthPayload): void {
     this.emit({ type: 'system_health', payload });
+  }
+
+  systemAction(payload: SystemActionPayload): void {
+    this.emit({ type: 'system_action', payload });
   }
 
   entityBreakdown(payload: EntityBreakdownPayload): void {

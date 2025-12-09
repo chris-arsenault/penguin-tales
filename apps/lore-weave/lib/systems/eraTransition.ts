@@ -236,7 +236,22 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
           { id: currentEraEntity.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEraEntity.temporal } }
         ],
         pressureChanges,
-        description: `Era transition: ${currentEraEntity.name} → ${nextEraEntity.name} (${prominentEntities.length} entities linked)`
+        description: `Era transition: ${currentEraEntity.name} → ${nextEraEntity.name} (${prominentEntities.length} entities linked)`,
+        details: {
+          eraTransition: {
+            fromEra: currentEraEntity.name,
+            fromEraId: currentEraConfig.id,
+            toEra: nextEraEntity.name,
+            toEraId: nextEraConfig.id,
+            tickInEra: timeSinceStart,
+            exitConditionsMet: conditionResults.filter(r => r.passed).map(r => ({
+              type: r.type,
+              ...r.details
+            })),
+            prominentEntitiesLinked: prominentEntities.length,
+            pressureEffects: pressureChanges
+          }
+        }
       };
     }
   };

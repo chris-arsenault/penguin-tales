@@ -25,6 +25,7 @@ import type {
   CoordinateStatsPayload,
   TagHealthPayload,
   SystemHealthPayload,
+  SystemActionPayload,
   EntityBreakdownPayload,
   CatalystStatsPayload,
   RelationshipBreakdownPayload,
@@ -56,6 +57,8 @@ export interface SimulationState {
   coordinateStats: CoordinateStatsPayload | null;
   tagHealth: TagHealthPayload | null;
   systemHealth: SystemHealthPayload | null;
+  /** System action events - when systems do meaningful work */
+  systemActions: SystemActionPayload[];
   // Final diagnostics
   entityBreakdown: EntityBreakdownPayload | null;
   catalystStats: CatalystStatsPayload | null;
@@ -97,6 +100,7 @@ const initialState: SimulationState = {
   coordinateStats: null,
   tagHealth: null,
   systemHealth: null,
+  systemActions: [],
   entityBreakdown: null,
   catalystStats: null,
   relationshipBreakdown: null,
@@ -221,6 +225,17 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           return {
             ...prev,
             systemHealth: message.payload
+          };
+
+        case 'system_action':
+          // Keep only last 500 system actions
+          const newSystemActions = [...prev.systemActions, message.payload];
+          if (newSystemActions.length > 500) {
+            newSystemActions.splice(0, newSystemActions.length - 500);
+          }
+          return {
+            ...prev,
+            systemActions: newSystemActions
           };
 
         case 'entity_breakdown':
@@ -386,6 +401,7 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
         coordinateStats: null,
         tagHealth: null,
         systemHealth: null,
+        systemActions: [],
         entityBreakdown: null,
         catalystStats: null,
         relationshipBreakdown: null,

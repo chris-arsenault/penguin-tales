@@ -378,6 +378,8 @@ export interface SystemResult {
   }>;
   pressureChanges: Record<string, number>;
   description: string;
+  /** Optional structured details for system-specific information (e.g., era transitions) */
+  details?: Record<string, unknown>;
 }
 
 // Component Purpose Taxonomy
