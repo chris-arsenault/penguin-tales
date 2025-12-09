@@ -10,7 +10,7 @@ import TemplateUsage from './TemplateUsage';
 import FinalDiagnostics from './FinalDiagnostics';
 import LogStream from './LogStream';
 import SimulationTrace from './SimulationTrace';
-import SimulationTraceView from './SimulationTraceView';
+import { SimulationTraceVisx as SimulationTraceView } from './trace';
 
 /**
  * Aggregate all pressure updates for the current epoch into a single summary.

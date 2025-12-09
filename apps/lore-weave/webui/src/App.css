@@ -2027,6 +2027,11 @@
   opacity: 0.6;
 }
 
+.lw-trace-view-detail-row-indent {
+  padding-left: 12px;
+  font-size: 11px;
+}
+
 .lw-trace-view-detail-label {
   color: var(--lw-text-muted);
   display: flex;
@@ -2222,6 +2227,40 @@
   background: rgba(255, 255, 255, 0.1);
   padding: 3px 8px;
   border-radius: 4px;
+}
+
+/* Entity details (culture, prominence, region) */
+.lw-trace-view-entity-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lw-trace-view-entity-tag {
+  font-size: 10px;
+  color: var(--lw-text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.lw-trace-view-entity-tag-label {
+  color: var(--lw-text-muted);
+  margin-right: 4px;
+}
+
+.lw-trace-view-entity-placement {
+  font-size: 10px;
+  color: var(--lw-text-muted);
+  margin-top: 4px;
+}
+
+.lw-trace-view-entity-coords {
+  font-size: 9px;
+  color: var(--lw-text-muted);
+  font-family: monospace;
+  margin-top: 2px;
 }
 
 /* Attributes row */
