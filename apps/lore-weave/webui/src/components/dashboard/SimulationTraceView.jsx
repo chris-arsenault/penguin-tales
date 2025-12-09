@@ -2,7 +2,7 @@
  * SimulationTraceView - Full-screen trace visualization with detail panel
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ComposedChart,
   Line,
@@ -49,6 +49,35 @@ const EVENT_SYMBOLS = {
   system: '◆',
   action: '●',
 };
+
+/**
+ * Memoized template marker shape - prevents recreating functions on every render
+ */
+const TemplateMarkerShape = React.memo(function TemplateMarkerShape({
+  cx, cy, point, isSelected, isHovered, onClick, onMouseEnter, onMouseLeave
+}) {
+  if (cx === undefined || cy === undefined) return null;
+
+  const size = isSelected ? 10 : isHovered ? 9 : 7;
+  const opacity = isSelected ? 1 : isHovered ? 0.9 : 0.65;
+
+  return (
+    <g
+      style={{ cursor: 'pointer' }}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <polygon
+        points={`${cx},${cy - size} ${cx - size * 0.866},${cy + size / 2} ${cx + size * 0.866},${cy + size / 2}`}
+        fill={isSelected ? '#22c55e' : isHovered ? '#4ade80' : '#22c55e'}
+        fillOpacity={opacity}
+        stroke={isSelected ? '#fff' : isHovered ? '#4ade80' : 'none'}
+        strokeWidth={isSelected ? 2 : 1}
+      />
+    </g>
+  );
+});
 
 /**
  * Transform template applications for scatter overlay on pressure chart
@@ -756,9 +785,19 @@ export default function SimulationTraceView({
     return max || 100;
   }, [pressureData, pressureIds]);
 
+  // Throttle ref for mouse events (50ms = 20fps, plenty responsive)
+  const lastMouseMoveRef = useRef(0);
+  const THROTTLE_MS = 50;
+
   // Handle mouse move on chart to update detail panel (only if not locked)
   const handleChartMouseMove = useCallback((state) => {
     if (lockedTick !== null) return; // Don't update if locked
+
+    // Throttle updates
+    const now = Date.now();
+    if (now - lastMouseMoveRef.current < THROTTLE_MS) return;
+    lastMouseMoveRef.current = now;
+
     if (state?.activeLabel !== undefined) {
       setSelectedTick(state.activeLabel);
     }
@@ -961,8 +1000,9 @@ export default function SimulationTraceView({
             {/* Chart area */}
             <div className={`lw-trace-view-chart-area ${lockedTick !== null ? 'locked' : ''}`}>
               {activeChart === 'pressure' ? (
-                <>
-                <ResponsiveContainer width="100%" height={maxScrollOffset > 0 ? 'calc(100% - 40px)' : '100%'}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={visiblePressureData}
                     margin={{ top: 20, right: 30, left: 40, bottom: 40 }}
@@ -1008,16 +1048,16 @@ export default function SimulationTraceView({
                       />
                     )}
 
-                    <XAxis dataKey="tick" stroke="#93c5fd" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#93c5fd" fontSize={11} tickLine={false} />
-                    <Tooltip content={<SimpleTooltip />} />
+                    <XAxis dataKey="tick" stroke="#93c5fd" fontSize={11} tickLine={false} allowDataOverflow />
+                    <YAxis stroke="#93c5fd" fontSize={11} tickLine={false} allowDataOverflow />
+                    <Tooltip content={<SimpleTooltip />} isAnimationActive={false} />
 
                     {visiblePressures.map((id) => {
                       const colorIndex = pressureIds.indexOf(id);
                       return (
                         <Line
                           key={id}
-                          type="monotone"
+                          type="linear"
                           dataKey={id}
                           name={pressureData[0]?.[`${id}_name`] || id}
                           stroke={PRESSURE_COLORS[colorIndex % PRESSURE_COLORS.length]}
@@ -1032,7 +1072,7 @@ export default function SimulationTraceView({
                     {/* Template icons - rendered as ReferenceDots for exact positioning */}
                     {visibleTemplateData.map((point) => (
                       <ReferenceDot
-                        key={`${point.uniqueId}-${visibleTemplateData.length}`}
+                        key={point.uniqueId}
                         x={point.tick}
                         y={point.y}
                         r={0}
@@ -1041,7 +1081,6 @@ export default function SimulationTraceView({
                           const { cx, cy } = props;
                           if (cx === undefined || cy === undefined) return null;
 
-                          // Check selection/hover inside shape to get fresh values
                           const isSelected = point.uniqueId === selectedTemplateId;
                           const isHovered = point.uniqueId === hoveredTemplateId;
                           const size = isSelected ? 10 : isHovered ? 9 : 7;
@@ -1069,6 +1108,7 @@ export default function SimulationTraceView({
 
                   </ComposedChart>
                 </ResponsiveContainer>
+                </div>
                 {/* Scroll slider for navigating through data */}
                 {maxScrollOffset > 0 && (
                   <div className="lw-trace-view-scroll">
@@ -1088,7 +1128,7 @@ export default function SimulationTraceView({
                     </span>
                   </div>
                 )}
-              </>
+                </div>
               ) : activeChart === 'population' ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart

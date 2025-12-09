@@ -172,10 +172,10 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           };
 
         case 'template_application':
-          // Keep only last 200 template applications to prevent memory bloat
+          // Keep only last 1000 template applications (for trace visualization)
           const newTemplateApps = [...prev.templateApplications, message.payload];
-          if (newTemplateApps.length > 200) {
-            newTemplateApps.splice(0, newTemplateApps.length - 200);
+          if (newTemplateApps.length > 1000) {
+            newTemplateApps.splice(0, newTemplateApps.length - 1000);
           }
           return {
             ...prev,
@@ -183,10 +183,10 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           };
 
         case 'pressure_update':
-          // Keep only last 50 pressure updates to prevent memory bloat
+          // Keep only last 500 pressure updates (enough for ~33 epochs at 15 ticks each)
           const newPressureUpdates = [...prev.pressureUpdates, message.payload];
-          if (newPressureUpdates.length > 50) {
-            newPressureUpdates.splice(0, newPressureUpdates.length - 50);
+          if (newPressureUpdates.length > 500) {
+            newPressureUpdates.splice(0, newPressureUpdates.length - 500);
           }
           return {
             ...prev,
