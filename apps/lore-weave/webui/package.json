@@ -13,7 +13,8 @@
   "dependencies": {
     "@penguin-tales/shared-components": "file:../../../packages/shared-components",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "recharts": "^3.5.1"
   },
   "devDependencies": {
     "@module-federation/vite": "^1.1.0",

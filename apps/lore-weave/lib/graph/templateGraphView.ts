@@ -15,6 +15,22 @@ import type {
 import type { PlacementAnchor, PlacementFallback, PlacementRegionPolicy, PlacementSpacing } from '../engine/declarativeTypes';
 import type { PressureModificationSource } from '../observer/types';
 
+/** Result of placement with debug info */
+export interface PlacementResultWithDebug {
+  coordinates: Point;
+  regionId?: string | null;
+  allRegionIds?: string[];
+  derivedTags?: Record<string, string | boolean>;
+  debug: {
+    anchorType: string;
+    anchorEntity?: { id: string; name: string; kind: string };
+    anchorCulture?: string;
+    resolvedVia: string;
+    seedRegionsAvailable?: string[];
+    emergentRegionCreated?: { id: string; label: string };
+  };
+}
+
 /**
  * Callback for tracking pressure modifications with source attribution
  */
@@ -65,11 +81,6 @@ export class TemplateGraphView {
     this.graph = graph;
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
-
-    // Wire up debug logging from coordinate context
-    this.coordinateContext.debug = (category, msg, context) => {
-      this.debug(category, msg, context);
-    };
   }
 
   /**
@@ -1206,7 +1217,7 @@ export class TemplateGraphView {
     resolvedAnchors: import('../core/worldTypes').HardState[] = [],
     avoidEntities: import('../core/worldTypes').HardState[] = [],
     tick: number = this.graph.tick
-  ): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> {
+  ): Promise<PlacementResultWithDebug | null> {
     const spacing = placement.spacing || {};
     const regionPolicy = placement.regionPolicy || {};
     const fallback = placement.fallback && placement.fallback.length > 0
@@ -1217,6 +1228,14 @@ export class TemplateGraphView {
     const avoidPoints = avoidEntities.map(e => e.coordinates).filter(Boolean) as Point[];
     const existingPoints = [...this.getAllRegionPoints(), ...avoidPoints];
 
+    const anchor = placement.anchor;
+
+    // Build base debug info
+    const baseDebug = {
+      anchorType: anchor.type,
+      anchorCulture: anchor.type === 'culture' ? (anchor as { id: string }).id : cultureId,
+    };
+
     const deriveInfo = (point: Point) => {
       const regions = this.getRegionsAtPoint(entityKind, point);
       const derived = this.coordinateContext.deriveTagsFromPlacement(entityKind, point, regions);
@@ -1225,36 +1244,58 @@ export class TemplateGraphView {
       if (cultureId) derivedTags.culture = cultureId;
       return {
         regionId: regions[0]?.id ?? null,
+        allRegionIds: regions.map(r => r.id),
         derivedTags
       };
     };
 
-    const tryPlaceWithContext = async (ctx: PlacementContext): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
-      // Pass allowEmergent from regionPolicy to the placement context
+    const tryPlaceWithContext = async (
+      ctx: PlacementContext,
+      resolvedVia: string
+    ): Promise<PlacementResultWithDebug | null> => {
       ctx.allowEmergent = regionPolicy.allowEmergent;
       const result = await this.coordinateContext.placeWithCulture(entityKind, 'placement', tick, ctx, existingPoints);
       if (result.success && result.coordinates) {
         return {
           coordinates: result.coordinates,
           regionId: result.regionId ?? null,
-          derivedTags: result.derivedTags
+          allRegionIds: result.allRegionIds,
+          derivedTags: result.derivedTags,
+          debug: {
+            ...baseDebug,
+            resolvedVia,
+            seedRegionsAvailable: ctx.seedRegionIds,
+            emergentRegionCreated: result.emergentRegionCreated
+          }
         };
       }
       return null;
     };
 
-    const trySparse = async (preferPeriphery?: boolean): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
+    const trySparse = async (
+      preferPeriphery: boolean,
+      resolvedVia: string
+    ): Promise<PlacementResultWithDebug | null> => {
       const sparseResult = this.findSparseArea(entityKind, {
         minDistanceFromEntities: spacingMin,
-        preferPeriphery: preferPeriphery ?? false
+        preferPeriphery
       });
       if (!sparseResult.success || !sparseResult.coordinates) return null;
 
       const derived = deriveInfo(sparseResult.coordinates);
-      return { coordinates: sparseResult.coordinates, regionId: derived.regionId, derivedTags: derived.derivedTags };
+      return {
+        coordinates: sparseResult.coordinates,
+        regionId: derived.regionId,
+        allRegionIds: derived.allRegionIds,
+        derivedTags: derived.derivedTags,
+        debug: { ...baseDebug, resolvedVia }
+      };
     };
 
-    const tryBounds = (bounds?: { x?: [number, number]; y?: [number, number]; z?: [number, number] }): { coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } => {
+    const tryBounds = (
+      bounds: { x?: [number, number]; y?: [number, number]; z?: [number, number] } | undefined,
+      resolvedVia: string
+    ): PlacementResultWithDebug => {
       const b = bounds || { x: [0, 100], y: [0, 100] };
       const coords: Point = {
         x: (b.x?.[0] ?? 0) + Math.random() * ((b.x?.[1] ?? 100) - (b.x?.[0] ?? 0)),
@@ -1262,17 +1303,22 @@ export class TemplateGraphView {
         z: b.z ? (b.z[0] + Math.random() * (b.z[1] - b.z[0])) : 50
       };
       const derived = deriveInfo(coords);
-      return { coordinates: coords, regionId: derived.regionId, derivedTags: derived.derivedTags };
+      return {
+        coordinates: coords,
+        regionId: derived.regionId,
+        allRegionIds: derived.allRegionIds,
+        derivedTags: derived.derivedTags,
+        debug: { ...baseDebug, resolvedVia }
+      };
     };
 
-    // Anchor attempt
-    const anchor = placement.anchor;
+    // Try anchor placement first
+    let result: PlacementResultWithDebug | null = null;
 
-    const anchorAttempt = async (): Promise<{ coordinates: Point; regionId?: string | null; derivedTags?: Record<string, string | boolean> } | null> => {
-      switch (anchor.type) {
-        case 'entity': {
-          const refEntity = resolvedAnchors.find(e => e.id === anchor.ref || e.name === anchor.ref) || resolvedAnchors[0];
-          if (!refEntity || !refEntity.coordinates || refEntity.kind !== entityKind) return null;
+    switch (anchor.type) {
+      case 'entity': {
+        const refEntity = resolvedAnchors.find(e => e.id === anchor.ref || e.name === anchor.ref) || resolvedAnchors[0];
+        if (refEntity && refEntity.coordinates && refEntity.kind === entityKind) {
           const ctx = this.coordinateContext.buildPlacementContext(refEntity.culture || cultureId, entityKind);
           ctx.referenceEntity = { id: refEntity.id, coordinates: refEntity.coordinates };
           if (anchor.stickToRegion) {
@@ -1281,16 +1327,22 @@ export class TemplateGraphView {
               ctx.seedRegionIds = regions.map(r => r.id);
             }
           }
-          return tryPlaceWithContext(ctx);
+          result = await tryPlaceWithContext(ctx, 'anchor');
+          if (result) {
+            result.debug.anchorEntity = { id: refEntity.id, name: refEntity.name, kind: refEntity.kind };
+          }
         }
-        case 'culture': {
-          const ctx = this.coordinateContext.buildPlacementContext(anchor.id || cultureId, entityKind);
-          return tryPlaceWithContext(ctx);
-        }
-        case 'refs_centroid': {
-          const refs = resolvedAnchors.filter(e => anchor.refs.includes(e.id) || anchor.refs.includes(e.name || ''));
-          const withCoords = refs.filter(r => r.coordinates && r.kind === entityKind);
-          if (withCoords.length === 0) return null;
+        break;
+      }
+      case 'culture': {
+        const ctx = this.coordinateContext.buildPlacementContext(anchor.id || cultureId, entityKind);
+        result = await tryPlaceWithContext(ctx, 'anchor');
+        break;
+      }
+      case 'refs_centroid': {
+        const refs = resolvedAnchors.filter(e => anchor.refs.includes(e.id) || anchor.refs.includes(e.name || ''));
+        const withCoords = refs.filter(r => r.coordinates && r.kind === entityKind);
+        if (withCoords.length > 0) {
           const centroid: Point = {
             x: withCoords.reduce((s, r) => s + (r.coordinates?.x ?? 50), 0) / withCoords.length,
             y: withCoords.reduce((s, r) => s + (r.coordinates?.y ?? 50), 0) / withCoords.length,
@@ -1302,20 +1354,19 @@ export class TemplateGraphView {
           }
           const ctx = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
           ctx.referenceEntity = { id: 'centroid', coordinates: centroid };
-          return tryPlaceWithContext(ctx);
+          result = await tryPlaceWithContext(ctx, 'anchor');
         }
-        case 'sparse':
-          return trySparse(anchor.preferPeriphery ?? false);
-        case 'bounds':
-          return Promise.resolve(tryBounds(anchor.bounds));
-        default:
-          return null;
+        break;
       }
-    };
+      case 'sparse':
+        result = await trySparse(anchor.preferPeriphery ?? false, 'anchor');
+        break;
+      case 'bounds':
+        result = tryBounds(anchor.bounds, 'anchor');
+        break;
+    }
 
-    let result = await anchorAttempt();
-
-    // Fallback chain
+    // Fallback chain if anchor failed
     if (!result) {
       for (const fb of fallback) {
         if (fb === 'anchor_region' || fb === 'ref_region') {
@@ -1326,31 +1377,40 @@ export class TemplateGraphView {
               if (regions.length > 0) {
                 const ctx = this.coordinateContext.buildPlacementContext(refEntity.culture || cultureId, entityKind);
                 ctx.seedRegionIds = regions.map(r => r.id);
-                result = await tryPlaceWithContext(ctx);
-                if (result) break;
+                result = await tryPlaceWithContext(ctx, 'anchor_region');
+                if (result) {
+                  result.debug.anchorEntity = { id: refEntity.id, name: refEntity.name, kind: refEntity.kind };
+                  break;
+                }
               }
             }
           }
         } else if (fb === 'seed_region') {
           const ctx = this.coordinateContext.buildPlacementContext(cultureId, entityKind);
-          result = await tryPlaceWithContext(ctx);
+          result = await tryPlaceWithContext(ctx, 'seed_region');
           if (result) break;
         } else if (fb === 'sparse') {
-          result = await trySparse(anchor.type === 'sparse' ? anchor.preferPeriphery : false);
+          result = await trySparse(anchor.type === 'sparse' ? (anchor.preferPeriphery ?? false) : false, 'sparse');
           if (result) break;
         } else if (fb === 'bounds') {
-          result = tryBounds(anchor.type === 'bounds' ? anchor.bounds : undefined);
-          if (result) break;
+          result = tryBounds(anchor.type === 'bounds' ? anchor.bounds : undefined, 'bounds');
+          break;
         } else if (fb === 'random') {
           const coords: Point = { x: Math.random() * 100, y: Math.random() * 100, z: 50 };
           const derived = deriveInfo(coords);
-          result = { coordinates: coords, regionId: derived.regionId, derivedTags: derived.derivedTags };
+          result = {
+            coordinates: coords,
+            regionId: derived.regionId,
+            allRegionIds: derived.allRegionIds,
+            derivedTags: derived.derivedTags,
+            debug: { ...baseDebug, resolvedVia: 'random' }
+          };
           break;
         }
       }
     }
 
-    return result ?? null;
+    return result;
   }
 
   /**
@@ -1399,10 +1459,8 @@ export class TemplateGraphView {
     }
 
     // Merge entity tags with derived tags
+    // Debug info (derivedTags) now captured in structured template_application event
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, placementResult.derivedTags);
-
-    // DEBUG: Log tag merging
-    this.debug('coordinates', `[placeInRegion] entity.tags=${JSON.stringify(entity.tags)} derivedTags=${JSON.stringify(placementResult.derivedTags)} mergedTags=${JSON.stringify(mergedTags)}`);
 
     const entityWithCoords: Partial<HardState> = {
       ...entity,
@@ -1578,10 +1636,8 @@ export class TemplateGraphView {
     });
 
     // Merge entity tags with derived tags
+    // Debug info (derivedTags) now captured in structured template_application event
     const mergedTags = mergeTags(entity.tags as EntityTags | undefined, placementResult.derivedTags);
-
-    // DEBUG: Log tag merging
-    this.debug('coordinates', `[placeWithCulture] entity.tags=${JSON.stringify(entity.tags)} derivedTags=${JSON.stringify(placementResult.derivedTags)} mergedTags=${JSON.stringify(mergedTags)}`);
 
     const entityWithCoords: Partial<HardState> = {
       ...entity,

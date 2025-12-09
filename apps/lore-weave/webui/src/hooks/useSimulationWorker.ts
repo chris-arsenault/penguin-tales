@@ -18,6 +18,7 @@ import type {
   EpochStartPayload,
   EpochStatsPayload,
   GrowthPhasePayload,
+  TemplateApplicationPayload,
   PressureUpdatePayload,
   PopulationPayload,
   TemplateUsagePayload,
@@ -46,6 +47,8 @@ export interface SimulationState {
   currentEpoch: EpochStartPayload | null;
   epochStats: EpochStatsPayload[];
   growthPhases: GrowthPhasePayload[];
+  /** Individual template application events with detailed entity/relationship info */
+  templateApplications: TemplateApplicationPayload[];
   /** Pressure updates with detailed breakdown - accumulates per epoch */
   pressureUpdates: PressureUpdatePayload[];
   populationReport: PopulationPayload | null;
@@ -87,6 +90,7 @@ const initialState: SimulationState = {
   currentEpoch: null,
   epochStats: [],
   growthPhases: [],
+  templateApplications: [],
   pressureUpdates: [],
   populationReport: null,
   templateUsage: null,
@@ -165,6 +169,17 @@ export function useSimulationWorker(): UseSimulationWorkerReturn {
           return {
             ...prev,
             growthPhases: [...prev.growthPhases, message.payload]
+          };
+
+        case 'template_application':
+          // Keep only last 200 template applications to prevent memory bloat
+          const newTemplateApps = [...prev.templateApplications, message.payload];
+          if (newTemplateApps.length > 200) {
+            newTemplateApps.splice(0, newTemplateApps.length - 200);
+          }
+          return {
+            ...prev,
+            templateApplications: newTemplateApps
           };
 
         case 'pressure_update':

@@ -2,13 +2,15 @@
  * SimulationDashboard - Real-time visualization of simulation progress
  */
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import ProgressOverview from './ProgressOverview';
 import EpochTimeline from './EpochTimeline';
 import PopulationMetrics from './PopulationMetrics';
 import TemplateUsage from './TemplateUsage';
 import FinalDiagnostics from './FinalDiagnostics';
 import LogStream from './LogStream';
+import SimulationTrace from './SimulationTrace';
+import SimulationTraceView from './SimulationTraceView';
 
 /**
  * Aggregate all pressure updates for the current epoch into a single summary.
@@ -158,11 +160,14 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
 }
 
 export default function SimulationDashboard({ simState, onClearLogs }) {
+  const [showTraceView, setShowTraceView] = useState(false);
+
   const {
     status,
     progress,
     currentEpoch,
     epochStats,
+    templateApplications,
     pressureUpdates,
     populationReport,
     templateUsage,
@@ -190,6 +195,9 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
   // Show final diagnostics when simulation is complete or we have diagnostic data
   const showFinalDiagnostics = status === 'complete' ||
     entityBreakdown || catalystStats || relationshipBreakdown || notableEntities || sampleHistory;
+
+  const handleOpenTrace = useCallback(() => setShowTraceView(true), []);
+  const handleCloseTrace = useCallback(() => setShowTraceView(false), []);
 
   return (
     <div className="lw-dashboard">
@@ -219,6 +227,13 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
         </div>
       </div>
 
+      {/* Simulation Trace Summary */}
+      <SimulationTrace
+        pressureUpdates={pressureUpdates}
+        epochStats={epochStats}
+        onOpenTrace={handleOpenTrace}
+      />
+
       {/* Final Diagnostics (shown after completion) */}
       {showFinalDiagnostics && (
         <FinalDiagnostics
@@ -232,6 +247,16 @@ export default function SimulationDashboard({ simState, onClearLogs }) {
 
       {/* Log Stream */}
       <LogStream logs={logs} onClear={onClearLogs} />
+
+      {/* Full-screen Trace View */}
+      {showTraceView && (
+        <SimulationTraceView
+          pressureUpdates={pressureUpdates}
+          epochStats={epochStats}
+          templateApplications={templateApplications}
+          onClose={handleCloseTrace}
+        />
+      )}
     </div>
   );
 }

@@ -338,11 +338,25 @@ export interface GrowthTemplate {
   expand: (graphView: import('../graph/templateGraphView').TemplateGraphView, target?: HardState) => Promise<TemplateResult> | TemplateResult;
 }
 
+/** Placement debug info for a single entity */
+export interface PlacementDebug {
+  anchorType: string;
+  anchorEntity?: { id: string; name: string; kind: string };
+  anchorCulture?: string;
+  resolvedVia: string;
+  seedRegionsAvailable?: string[];
+  emergentRegionCreated?: { id: string; label: string };
+  regionId?: string | null;
+  allRegionIds?: string[];
+}
+
 export interface TemplateResult {
   entities: Partial<HardState>[];
   relationships: Relationship[];  // Can use placeholder IDs like 'will-be-assigned-0'
   description: string;
   placementStrategies?: string[];  // Optional - for debugging, parallel to entities array
+  derivedTagsList?: Record<string, string | boolean>[];  // Tags derived from placement per entity
+  placementDebugList?: PlacementDebug[];  // Detailed placement debug info per entity
 }
 
 // Simulation system interface
@@ -871,32 +885,6 @@ export class GraphStore implements Graph {
 
     this.#entities.set(id, entity);
 
-    // Debug log entity creation with full details
-    const tagList = Object.keys(tags);
-    const coords = settings.coordinates;
-    this.debug('entities',
-      `[Create] ${settings.kind}:${settings.subtype} "${name}" ` +
-      `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)}) ` +
-      `[${settings.culture || 'world'}] ` +
-      `tags:[${tagList.join(',')}]`,
-      {
-        id,
-        kind: settings.kind,
-        subtype: settings.subtype,
-        name,
-        culture: settings.culture || 'world',
-        prominence: settings.prominence || 'marginal',
-        status: settings.status || 'active',
-        plane: `${settings.kind}-plane`,
-        x: parseFloat(coords.x.toFixed(2)),
-        y: parseFloat(coords.y.toFixed(2)),
-        z: parseFloat((coords.z ?? 50).toFixed(2)),
-        tags: tagList,
-        placement: settings.placementStrategy || 'default',
-        source: settings.source || 'unknown'
-      }
-    );
-
     return id;
   }
 
@@ -917,36 +905,6 @@ export class GraphStore implements Graph {
    */
   _loadEntity(id: string, entity: HardState): void {
     this.#entities.set(id, entity);
-
-    // Debug log initial state entity loading with full details
-    const tagList = Object.keys(entity.tags || {});
-    const coords = entity.coordinates;
-    const coordStr = coords
-      ? `@ (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)}, ${(coords.z ?? 50).toFixed(1)})`
-      : '@ (no coords)';
-
-    this.debug('entities',
-      `[Load] ${entity.kind}:${entity.subtype} "${entity.name}" ` +
-      `${coordStr} ` +
-      `[${entity.culture || 'world'}] ` +
-      `tags:[${tagList.join(',')}]`,
-      {
-        id,
-        kind: entity.kind,
-        subtype: entity.subtype,
-        name: entity.name,
-        culture: entity.culture || 'world',
-        prominence: entity.prominence || 'marginal',
-        status: entity.status || 'active',
-        plane: `${entity.kind}-plane`,
-        x: coords ? parseFloat(coords.x.toFixed(2)) : null,
-        y: coords ? parseFloat(coords.y.toFixed(2)) : null,
-        z: coords ? parseFloat((coords.z ?? 50).toFixed(2)) : null,
-        tags: tagList,
-        placement: 'initial_state',
-        source: 'initial_state'
-      }
-    );
   }
 
   // ===========================================================================

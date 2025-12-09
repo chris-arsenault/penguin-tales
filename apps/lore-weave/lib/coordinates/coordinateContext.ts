@@ -204,8 +204,7 @@ export class CoordinateContext {
   /** Name generation service for emergent region names */
   private readonly nameForgeService: NameGenerationService;
 
-  /** Debug logger matching TemplateGraphView.debug signature */
-  debug: (category: 'coordinates', message: string, context?: Record<string, unknown>) => void = () => {};
+  // Note: Placement debug info is captured in structured template_application events
 
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];
@@ -299,12 +298,6 @@ export class CoordinateContext {
   getSeedRegionIds(cultureId: string, entityKind: string): string[] {
     const regions = this.getRegions(entityKind);
     const matching = regions.filter(r => r.culture === cultureId);
-
-    // Debug: log what we're finding
-    if (this.debug && matching.length === 0 && regions.length > 0) {
-      const cultures = [...new Set(regions.map(r => r.culture).filter(Boolean))];
-      this.debug('coordinates', `getSeedRegionIds(${cultureId}, ${entityKind}): no match. Available cultures: [${cultures.join(', ')}]`);
-    }
 
     return matching.map(r => r.id);
   }
@@ -645,11 +638,6 @@ export class CoordinateContext {
     existingPoints: Point[] = [],
     tick: number = 0
   ): Promise<{ point: Point; emergentRegion?: { id: string; label: string } } | null> {
-    this.debug('coordinates', `sampleWithCulture ENTRY: entityKind=${entityKind} culture=${context.cultureId} debug=${!!this.debug}`);
-    const log = (msg: string) => {
-      this.debug('coordinates', msg);
-    };
-
     // If reference entity provided, sample near it
     if (context.referenceEntity?.coordinates) {
       const point = this.sampleNearPoint(
@@ -657,13 +645,11 @@ export class CoordinateContext {
         existingPoints
       );
       if (point) {
-        log(`${entityKind} placed near ref @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
         return { point };
       }
     }
 
     const regions = this.getRegions(entityKind);
-    log(`${entityKind} culture=${context.cultureId}: ${regions.length} total regions, seedRegionIds=[${context.seedRegionIds?.join(', ') || 'none'}]`);
 
     // Try seed regions first (regions belonging to this culture)
     if (context.seedRegionIds && context.seedRegionIds.length > 0) {
@@ -671,23 +657,16 @@ export class CoordinateContext {
 
       for (const regionId of shuffledSeeds) {
         const region = regions.find(r => r.id === regionId);
-        if (!region) {
-          log(`  seed region ${regionId} not found in regions list`);
-          continue;
-        }
+        if (!region) continue;
 
         const point = this.sampleCircleRegion(region, existingPoints);
         if (point) {
-          log(`  -> sampled in seed region "${region.label}" @ (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
           return { point };
         }
-        log(`  seed region "${region.label}" failed (crowded?)`);
       }
-      log(`  all seed regions exhausted`);
 
       // Seed regions exhausted - try to create emergent region for this culture (if allowed)
       if (context.allowEmergent !== false && context.cultureId) {
-        log(`  attempting emergent region creation`);
         const emergentResult = await this.createEmergentRegionForCulture(
           entityKind,
           context.cultureId,
@@ -695,7 +674,6 @@ export class CoordinateContext {
           tick
         );
         if (emergentResult) {
-          log(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
           return {
             point: emergentResult.point,
             emergentRegion: {
@@ -704,9 +682,6 @@ export class CoordinateContext {
             }
           };
         }
-        log(`  -> emergent region creation failed, skipping placement`);
-      } else if (context.allowEmergent === false) {
-        log(`  emergent regions disabled, skipping placement`);
       }
 
       // Cannot place - return null instead of falling through to other cultures
@@ -714,7 +689,6 @@ export class CoordinateContext {
     }
 
     // No seed regions for this culture - try emergent region creation (if allowed)
-    log(`  NO seed regions for culture=${context.cultureId}`);
     if (context.allowEmergent !== false && context.cultureId) {
       const emergentResult = await this.createEmergentRegionForCulture(
         entityKind,
@@ -723,7 +697,6 @@ export class CoordinateContext {
         tick
       );
       if (emergentResult) {
-        log(`  -> created emergent region "${emergentResult.region.label}" @ (${emergentResult.point.x.toFixed(1)}, ${emergentResult.point.y.toFixed(1)})`);
         return {
           point: emergentResult.point,
           emergentRegion: {
@@ -732,12 +705,9 @@ export class CoordinateContext {
           }
         };
       }
-    } else if (context.allowEmergent === false) {
-      log(`  emergent regions disabled, skipping placement`);
     }
 
     // No culture-aware placement possible - skip
-    log(`  -> no valid placement for culture=${context.cultureId}, skipping`);
     return null;
   }
 
@@ -863,14 +833,8 @@ export class CoordinateContext {
     // Probability scales linearly: 100% at extremes (0/100), 50% at quarter points (25/75), 0% at center (50)
     const semanticPlane = this.getSemanticPlane(entityKind);
 
-    // DEBUG: Log semantic plane lookup
-    this.debug?.('coordinates', `[TAG_DERIVE] entityKind="${entityKind}" point=(${point.x?.toFixed(1)},${point.y?.toFixed(1)},${point.z?.toFixed(1)}) semanticPlane=${semanticPlane ? 'FOUND' : 'NOT_FOUND'} configuredKinds=[${this.entityKinds.map(k => k.id).join(',')}]`);
-
     if (semanticPlane?.axes) {
       const { axes } = semanticPlane;
-
-      // DEBUG: Log axes configuration
-      this.debug?.('coordinates', `[TAG_DERIVE] axes.x=${JSON.stringify(axes.x)} axes.y=${JSON.stringify(axes.y)} axes.z=${JSON.stringify(axes.z)}`);
 
       /**
        * Calculate tag probability based on distance from center.
@@ -888,10 +852,7 @@ export class CoordinateContext {
         const probability = (distanceFromCenter / 50) * 100;
 
         // Roll the dice
-        const roll = Math.random() * 100;
-        const applies = roll < probability;
-        this.debug?.('coordinates', `[TAG_DERIVE] shouldApplyTag value=${value.toFixed(1)} isLow=${isLowTag} dist=${distanceFromCenter.toFixed(1)} prob=${probability.toFixed(1)}% roll=${roll.toFixed(1)} => ${applies}`);
-        return applies;
+        return Math.random() * 100 < probability;
       };
 
       // X axis
@@ -922,9 +883,6 @@ export class CoordinateContext {
       }
     }
 
-    // DEBUG: Log final tags
-    this.debug?.('coordinates', `[TAG_DERIVE] Final tags for ${entityKind}: [${tags.join(', ')}] (regionTags from ${containingRegions.length} regions)`);
-
     return tags;
   }
 
@@ -939,7 +897,6 @@ export class CoordinateContext {
     context: PlacementContext,
     existingPoints: Point[] = []
   ): Promise<PlacementResult> {
-    this.debug?.('coordinates', `placeWithCulture called: entityKind=${entityKind} culture=${context.cultureId} seedRegions=[${context.seedRegionIds?.join(',') || 'none'}]`);
     const result = await this.sampleWithCulture(entityKind, context, existingPoints, tick);
     if (!result) {
       return {
@@ -967,9 +924,6 @@ export class CoordinateContext {
     for (const tag of derivedTagList) {
       derivedTags[tag] = true;
     }
-
-    // DEBUG: Log derived tags object
-    this.debug?.('coordinates', `[PLACE_CULTURE] entityKind="${entityKind}" derivedTagList=[${derivedTagList.join(',')}] derivedTags=${JSON.stringify(derivedTags)}`);
 
     return {
       success: true,

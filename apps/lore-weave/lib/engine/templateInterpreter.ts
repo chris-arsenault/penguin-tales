@@ -7,7 +7,7 @@
 
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { TemplateGraphView } from '../graph/templateGraphView';
-import type { TemplateResult } from './types';
+import type { TemplateResult, PlacementDebug } from './types';
 import { pickRandom, hasTag, getTagValue } from '../utils';
 import type { Point } from '../coordinates/types';
 
@@ -284,12 +284,16 @@ export class TemplateInterpreter {
     const entities: Partial<HardState>[] = [];
     const entityRefs: Map<string, string[]> = new Map();  // Track created entity placeholders
     const placementStrategies: string[] = [];  // For debugging
+    const derivedTagsList: Record<string, string | boolean>[] = [];  // Tags from placement
+    const placementDebugList: PlacementDebug[] = [];  // Detailed placement debug info
 
     for (const rule of template.creation) {
       const created = await this.executeCreation(rule, context, entities.length);
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
       placementStrategies.push(...created.placementStrategies);
+      derivedTagsList.push(...created.derivedTagsList);
+      placementDebugList.push(...created.placementDebugList);
     }
 
     // Execute relationship rules
@@ -308,7 +312,9 @@ export class TemplateInterpreter {
       entities,
       relationships,
       description: `${template.name} executed`,
-      placementStrategies
+      placementStrategies,
+      derivedTagsList,
+      placementDebugList
     };
   }
 
@@ -793,10 +799,18 @@ export class TemplateInterpreter {
     rule: CreationRule,
     context: ExecutionContext,
     startIndex: number
-  ): Promise<{ entities: Partial<HardState>[]; placeholders: string[]; placementStrategies: string[] }> {
+  ): Promise<{
+    entities: Partial<HardState>[];
+    placeholders: string[];
+    placementStrategies: string[];
+    derivedTagsList: Record<string, string | boolean>[];
+    placementDebugList: PlacementDebug[];
+  }> {
     const entities: Partial<HardState>[] = [];
     const placeholders: string[] = [];
     const placementStrategies: string[] = [];
+    const derivedTagsList: Record<string, string | boolean>[] = [];
+    const placementDebugList: PlacementDebug[] = [];
 
     // Determine count
     const count = this.resolveCount(rule.count);
@@ -818,7 +832,8 @@ export class TemplateInterpreter {
       const placementResult = await this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
 
       // Merge template tags with derived tags from placement (derived tags take precedence)
-      const mergedTags = { ...(rule.tags || {}), ...(placementResult.derivedTags || {}) };
+      const derivedTags = placementResult.derivedTags || {};
+      const mergedTags = { ...(rule.tags || {}), ...derivedTags };
 
       const entity: Partial<HardState> = {
         kind: rule.kind,
@@ -834,9 +849,22 @@ export class TemplateInterpreter {
 
       entities.push(entity);
       placementStrategies.push(placementResult.strategy);
+      derivedTagsList.push(derivedTags);
+
+      // Collect placement debug info
+      placementDebugList.push({
+        anchorType: placementResult.debug?.anchorType || rule.placement.anchor.type,
+        anchorEntity: placementResult.debug?.anchorEntity,
+        anchorCulture: placementResult.debug?.anchorCulture,
+        resolvedVia: placementResult.debug?.resolvedVia || placementResult.strategy,
+        seedRegionsAvailable: placementResult.debug?.seedRegionsAvailable,
+        emergentRegionCreated: placementResult.debug?.emergentRegionCreated,
+        regionId: placementResult.regionId,
+        allRegionIds: placementResult.allRegionIds
+      });
     }
 
-    return { entities, placeholders, placementStrategies };
+    return { entities, placeholders, placementStrategies, derivedTagsList, placementDebugList };
   }
 
   private resolveCount(count: number | CountRange | undefined): number {
@@ -917,64 +945,28 @@ export class TemplateInterpreter {
     return result;
   }
 
-  // Normalized placement shape for internal use
-  private normalizePlacementSpec(spec: PlacementSpec): {
-    anchor: PlacementAnchor;
-    spacing?: PlacementSpacing;
-    regionPolicy?: PlacementRegionPolicy;
-    fallback?: PlacementFallback[];
-    legacyStrategy?: string;
-  } {
-    if ('anchor' in spec) {
-      return spec;
-    }
-
-    switch (spec.type) {
-      case 'near_entity':
-        return {
-          anchor: { type: 'entity', ref: spec.entity, stickToRegion: true },
-          spacing: { minDistance: spec.minDistance },
-          fallback: ['anchor_region', 'seed_region', 'sparse', 'random'],
-          legacyStrategy: `near_entity:${spec.entity}`
-        };
-      case 'in_culture_region':
-        return {
-          anchor: { type: 'culture', id: spec.culture },
-          regionPolicy: { allowEmergent: true },
-          fallback: ['seed_region', 'sparse', 'random'],
-          legacyStrategy: `in_culture_region:${spec.culture}`
-        };
-      case 'derived_from_references':
-        return {
-          anchor: { type: 'refs_centroid', refs: spec.references },
-          fallback: ['seed_region', 'sparse', 'random'],
-          legacyStrategy: `derived_from_refs:${spec.references.length}`
-        };
-      case 'random_in_bounds':
-        return {
-          anchor: { type: 'bounds', bounds: spec.bounds },
-          fallback: ['bounds', 'random'],
-          legacyStrategy: 'random_in_bounds'
-        };
-      case 'in_sparse_area':
-        return {
-          anchor: { type: 'sparse', preferPeriphery: spec.preferPeriphery },
-          spacing: { minDistance: spec.minDistanceFromEntities },
-          regionPolicy: { allowEmergent: !!spec.createRegion },
-          fallback: ['sparse', 'random'],
-          legacyStrategy: 'in_sparse_area'
-        };
+  /**
+   * Derive strategy name from placement anchor type.
+   */
+  private getStrategyFromAnchor(anchor: PlacementAnchor): string {
+    switch (anchor.type) {
+      case 'entity':
+        return 'near_entity';
+      case 'culture':
+        return 'within_culture';
+      case 'refs_centroid':
+        return 'near_centroid';
+      case 'bounds':
+        return 'within_bounds';
+      case 'sparse':
+        return anchor.preferPeriphery ? 'sparse_periphery' : 'sparse_area';
       default:
-        return {
-          anchor: { type: 'sparse' },
-          fallback: ['sparse', 'random'],
-          legacyStrategy: 'random'
-        };
+        return 'unknown';
     }
   }
 
   /**
-   * Resolve placement to coordinates using the unified placement spec.
+   * Resolve placement to coordinates.
    */
   private async resolvePlacement(
     spec: PlacementSpec,
@@ -982,24 +974,38 @@ export class TemplateInterpreter {
     culture: string,
     _placeholder: string,
     entityKind: string
-  ): Promise<{ coordinates: Point; strategy: string; derivedTags?: Record<string, string | boolean> }> {
+  ): Promise<{
+    coordinates: Point;
+    strategy: string;
+    derivedTags?: Record<string, string | boolean>;
+    regionId?: string | null;
+    allRegionIds?: string[];
+    debug?: {
+      anchorType: string;
+      anchorEntity?: { id: string; name: string; kind: string };
+      anchorCulture?: string;
+      resolvedVia: string;
+      seedRegionsAvailable?: string[];
+      emergentRegionCreated?: { id: string; label: string };
+    };
+  }> {
     const { graphView } = context;
-    const normalized = this.normalizePlacementSpec(spec);
 
+    // Collect anchor entities for placement
     const anchorEntities: HardState[] = [];
     const avoidEntities: HardState[] = [];
 
-    if (normalized.anchor.type === 'entity') {
-      const ref = context.resolveEntity(normalized.anchor.ref);
+    if (spec.anchor.type === 'entity') {
+      const ref = context.resolveEntity(spec.anchor.ref);
       if (ref) anchorEntities.push(ref);
-    } else if (normalized.anchor.type === 'refs_centroid') {
-      for (const refId of normalized.anchor.refs) {
+    } else if (spec.anchor.type === 'refs_centroid') {
+      for (const refId of spec.anchor.refs) {
         const ref = context.resolveEntity(refId);
         if (ref) anchorEntities.push(ref);
       }
     }
 
-    (normalized.spacing?.avoidRefs || []).forEach(refId => {
+    (spec.spacing?.avoidRefs || []).forEach(refId => {
       const ref = context.resolveEntity(refId);
       if (ref) avoidEntities.push(ref);
     });
@@ -1007,28 +1013,36 @@ export class TemplateInterpreter {
     const placementResult = await graphView.placeWithPlacementOptions(
       entityKind,
       culture,
-      normalized,
+      spec,
       anchorEntities,
       avoidEntities
     );
 
     if (placementResult) {
-      const strategy = normalized.legacyStrategy ?? 'placement_v2';
-      graphView.debug('placement', `${entityKind} -> ${strategy} @ (${placementResult.coordinates.x.toFixed(1)}, ${placementResult.coordinates.y.toFixed(1)})`);
       return {
         coordinates: placementResult.coordinates,
-        strategy,
-        derivedTags: placementResult.derivedTags
+        strategy: this.getStrategyFromAnchor(spec.anchor),
+        derivedTags: placementResult.derivedTags,
+        regionId: placementResult.regionId,
+        allRegionIds: placementResult.allRegionIds,
+        debug: placementResult.debug
       };
     }
 
+    // Fallback to random placement (shouldn't happen if placeWithPlacementOptions handles fallbacks)
     const fallbackCoords = {
       x: Math.random() * 100,
       y: Math.random() * 100,
       z: 50
     };
-    graphView.debug('placement', `${entityKind} -> random @ (${fallbackCoords.x.toFixed(1)}, ${fallbackCoords.y.toFixed(1)}) (fallback)`);
-    return { coordinates: fallbackCoords, strategy: 'random' };
+    return {
+      coordinates: fallbackCoords,
+      strategy: 'random_fallback',
+      debug: {
+        anchorType: spec.anchor.type,
+        resolvedVia: 'interpreter_fallback'
+      }
+    };
   }
 
   // ===========================================================================

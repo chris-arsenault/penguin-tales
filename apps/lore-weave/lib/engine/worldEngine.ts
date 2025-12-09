@@ -107,6 +107,9 @@ export class WorldEngine {
 
   // Pressure modification tracking - accumulates discrete changes per tick
   private pendingPressureModifications: DiscretePressureModification[] = [];
+
+  // Starting pressure values for each tick (captured before any modifications)
+  private tickStartPressures: Map<string, number> = new Map();
   
   constructor(
     config: EngineConfig,
@@ -800,10 +803,18 @@ export class WorldEngine {
 
     // Simulation phase
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
-      // Update pressures each tick for responsive emergent behavior
-      this.updatePressures(era);
+      // Capture pressure values BEFORE any modifications this tick
+      // This ensures previousValue in pressure_update reflects true start-of-tick values
+      this.tickStartPressures.clear();
+      for (const [pressureId, value] of this.graph.pressures) {
+        this.tickStartPressures.set(pressureId, value);
+      }
 
+      // Run simulation tick first so system pressure changes are tracked
       await this.runSimulationTick(era);
+
+      // Update pressures (calculates feedback, emits pressure_update with all mods from this tick)
+      this.updatePressures(era);
       this.graph.tick++;
 
       // Emit progress every few ticks
@@ -1345,6 +1356,9 @@ export class WorldEngine {
       // Apply template to random target
       const target = pickRandom(templateTargets);
       try {
+        // Track pressure modifications count before template execution
+        const pressureModsBeforeCount = this.pendingPressureModifications.length;
+
         // Set up pressure modification tracking for this template
         graphView.setPressureModificationCallback((pressureId, delta, source) => {
           this.trackPressureModification(pressureId, delta, source);
@@ -1459,6 +1473,64 @@ export class WorldEngine {
           entitiesCreated: newIds,
           relationshipsCreated: result.relationships as Relationship[],
           entitiesModified: []
+        });
+
+        // Emit detailed template application event
+        // Collect pressure changes from this template (since pressureModsBeforeCount)
+        const templatePressureMods = this.pendingPressureModifications.slice(pressureModsBeforeCount);
+        const pressureChanges: Record<string, number> = {};
+        for (const mod of templatePressureMods) {
+          pressureChanges[mod.pressureId] = (pressureChanges[mod.pressureId] || 0) + mod.delta;
+        }
+
+        // Build resolved relationships with actual IDs
+        const resolvedRelationships = result.relationships.map(rel => ({
+          kind: rel.kind,
+          srcId: rel.src.startsWith('will-be-assigned-')
+            ? newIds[parseInt(rel.src.split('-')[3])]
+            : rel.src,
+          dstId: rel.dst.startsWith('will-be-assigned-')
+            ? newIds[parseInt(rel.dst.split('-')[3])]
+            : rel.dst,
+          strength: rel.strength
+        }));
+
+        this.emitter.templateApplication({
+          tick: this.graph.tick,
+          epoch: this.currentEpoch,
+          templateId: template.id,
+          targetEntityId: target.id,
+          targetEntityName: target.name,
+          targetEntityKind: target.kind,
+          description: result.description,
+          entitiesCreated: clusterEntities.map((e, i) => {
+            const strategy = result.placementStrategies?.[i] || 'unknown';
+            const placementDebug = result.placementDebugList?.[i];
+            return {
+              id: e.id,
+              name: e.name,
+              kind: e.kind,
+              subtype: e.subtype,
+              culture: e.culture,
+              prominence: e.prominence,
+              tags: e.tags,
+              placementStrategy: strategy,
+              coordinates: e.coordinates,
+              regionId: placementDebug?.regionId ?? e.regionId,
+              allRegionIds: placementDebug?.allRegionIds ?? e.allRegionIds,
+              derivedTags: result.derivedTagsList?.[i],
+              placement: placementDebug ? {
+                anchorType: placementDebug.anchorType,
+                anchorEntity: placementDebug.anchorEntity,
+                anchorCulture: placementDebug.anchorCulture,
+                resolvedVia: placementDebug.resolvedVia,
+                seedRegionsAvailable: placementDebug.seedRegionsAvailable,
+                emergentRegionCreated: placementDebug.emergentRegionCreated
+              } : undefined
+            };
+          }),
+          relationshipsCreated: resolvedRelationships,
+          pressureChanges
         });
 
         entitiesCreated += result.entities.length;
@@ -1823,7 +1895,13 @@ export class WorldEngine {
     const pressureDetails: PressureChangeDetail[] = [];
 
     this.runtimePressures.forEach(pressure => {
-      const previousValue = this.graph.pressures.get(pressure.id) || pressure.value;
+      // previousValue = tick start value (before systems ran) for accurate delta reporting
+      const previousValue = this.tickStartPressures.get(pressure.id)
+        ?? this.graph.pressures.get(pressure.id)
+        ?? pressure.value;
+
+      // currentValue = value AFTER systems ran (includes discrete modifications)
+      const currentValueAfterSystems = this.graph.pressures.get(pressure.id) ?? pressure.value;
 
       // Get detailed breakdown if declarative definition is available
       const declarativeDef = this.declarativePressures.get(pressure.id);
@@ -1839,7 +1917,7 @@ export class WorldEngine {
       // Apply diminishing returns for high pressure values to prevent maxing out
       // Growth is scaled down as pressure approaches 100
       // Use exponential decay to prevent maxing out
-      const growthScaling = Math.max(0.1, 1 - Math.pow(previousValue / 100, 2)); // At 80, ~36%; at 100, ~10%
+      const growthScaling = Math.max(0.1, 1 - Math.pow(currentValueAfterSystems / 100, 2)); // At 80, ~36%; at 100, ~10%
       const scaledGrowth = breakdown.totalGrowth * growthScaling;
 
       // Decay always subtracts (no conditional flip)
@@ -1856,7 +1934,8 @@ export class WorldEngine {
       // Smooth large changes to prevent spikes (max change per tick: ±2)
       const smoothedDelta = Math.max(-2, Math.min(2, rawDelta));
 
-      const newValue = Math.max(0, Math.min(100, previousValue + smoothedDelta));
+      // Apply feedback delta ON TOP OF system modifications
+      const newValue = Math.max(0, Math.min(100, currentValueAfterSystems + smoothedDelta));
       this.graph.pressures.set(pressure.id, newValue);
 
       // Build detailed change record

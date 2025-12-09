@@ -319,38 +319,16 @@ export type DescriptionSpec =
   | { template: string; replacements: Record<string, string> };  // Template with variable references
 
 /**
- * How to place the new entity on its semantic plane.
+ * Placement Specification
  *
- * =============================================================================
- * CRITICAL: SEMANTIC PLANES ARE PER-ENTITY-KIND
- * =============================================================================
+ * Controls where entities are placed on their semantic plane.
+ * Each entity kind has its own independent coordinate space (0-100 scale).
  *
- * Coordinates represent semantic similarity within a kind, NOT physical location.
- * Each entity kind has its own independent coordinate space.
- *
- * RULES FOR near_entity PLACEMENT:
- * - The referenced entity MUST be the SAME KIND as the entity being created
- * - Placing an NPC near a location is MEANINGLESS (different planes)
- * - Placing an ability near an NPC is MEANINGLESS (different planes)
- *
- * If you need to associate entities across kinds, use:
- * - Relationships (e.g., npc "resident_of" location)
- * - in_culture_region placement (places within culture's semantic region)
- *
- * Distance values are on 0-100 scale (Euclidean distance on semantic plane).
+ * IMPORTANT: References in 'entity' anchors must be the SAME KIND as the
+ * entity being created. Cross-kind associations use relationships instead.
  */
-export type LegacyPlacementSpec =
-  | { type: 'near_entity'; entity: string; maxDistance?: number; minDistance?: number }  // entity MUST be same kind!
-  | { type: 'in_culture_region'; culture: string }
-  | { type: 'derived_from_references'; references: string[]; culture?: string }  // references MUST be same kind!
-  | { type: 'random_in_bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } }
-  | {
-      type: 'in_sparse_area';
-      minDistanceFromEntities?: number;  // Min distance from existing same-kind entities (default: 15)
-      preferPeriphery?: boolean;         // Bias toward plane edges (default: false)
-      createRegion?: boolean;            // Create emergent region with Name Forge naming (requires culture)
-    };
 
+/** Anchor determines the primary placement strategy */
 export type PlacementAnchor =
   | { type: 'entity'; ref: string; stickToRegion?: boolean }
   | { type: 'culture'; id: string }
@@ -358,25 +336,27 @@ export type PlacementAnchor =
   | { type: 'sparse'; preferPeriphery?: boolean }
   | { type: 'bounds'; bounds?: { x: [number, number]; y: [number, number]; z?: [number, number] } };
 
+/** Spacing constraints for placement */
 export interface PlacementSpacing {
   minDistance?: number;
   avoidRefs?: string[];
 }
 
+/** Region creation policy */
 export interface PlacementRegionPolicy {
   allowEmergent?: boolean;
 }
 
+/** Fallback strategies when primary placement fails */
 export type PlacementFallback = 'anchor_region' | 'ref_region' | 'seed_region' | 'sparse' | 'bounds' | 'random';
 
-export interface PlacementV2Spec {
+/** Placement specification */
+export interface PlacementSpec {
   anchor: PlacementAnchor;
   spacing?: PlacementSpacing;
   regionPolicy?: PlacementRegionPolicy;
   fallback?: PlacementFallback[];
 }
-
-export type PlacementSpec = LegacyPlacementSpec | PlacementV2Spec;
 
 export interface CountRange {
   min: number;

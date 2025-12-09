@@ -15,6 +15,7 @@ import {
   EpochStartPayload,
   EpochStatsPayload,
   GrowthPhasePayload,
+  TemplateApplicationPayload,
   PressureUpdatePayload,
   PopulationPayload,
   TemplateUsagePayload,
@@ -82,6 +83,10 @@ export class SimulationEmitter implements ISimulationEmitter {
 
   growthPhase(payload: GrowthPhasePayload): void {
     this.emit({ type: 'growth_phase', payload });
+  }
+
+  templateApplication(payload: TemplateApplicationPayload): void {
+    this.emit({ type: 'template_application', payload });
   }
 
   pressureUpdate(payload: PressureUpdatePayload): void {

@@ -99,6 +99,61 @@ export interface TemplateUsagePayload {
   }>;
 }
 
+/** Detailed placement debug info for an entity */
+export interface PlacementDebugInfo {
+  /** The anchor type requested (e.g., 'entity', 'culture', 'sparse') */
+  anchorType: string;
+  /** For entity anchors: the resolved anchor entity */
+  anchorEntity?: { id: string; name: string; kind: string };
+  /** For culture anchors: the culture ID used */
+  anchorCulture?: string;
+  /** Which method actually succeeded: 'anchor', 'anchor_region', 'seed_region', 'sparse', 'bounds', 'random' */
+  resolvedVia: string;
+  /** Seed regions that were available for this culture/kind */
+  seedRegionsAvailable?: string[];
+  /** Regions that were tried before finding a spot */
+  regionsTried?: string[];
+  /** If an emergent region was created */
+  emergentRegionCreated?: { id: string; label: string };
+  /** If placement failed, why */
+  failureReason?: string;
+}
+
+export interface TemplateApplicationPayload {
+  tick: number;
+  epoch: number;
+  templateId: string;
+  targetEntityId: string;
+  targetEntityName: string;
+  targetEntityKind: string;
+  description: string;
+  entitiesCreated: Array<{
+    id: string;
+    name: string;
+    kind: string;
+    subtype: string;
+    culture: string;
+    prominence: string;
+    tags: Record<string, string | boolean>;
+    placementStrategy: string;
+    coordinates: { x: number; y: number; z: number };
+    // Placement info
+    regionId?: string | null;
+    allRegionIds?: string[];
+    /** Tags derived from placement (e.g., from region) before merging with entity tags */
+    derivedTags?: Record<string, string | boolean>;
+    /** Detailed placement debug info */
+    placement?: PlacementDebugInfo;
+  }>;
+  relationshipsCreated: Array<{
+    kind: string;
+    srcId: string;
+    dstId: string;
+    strength?: number;
+  }>;
+  pressureChanges: Record<string, number>;
+}
+
 export interface CoordinateStatsPayload {
   totalPlacements: number;
   byKind: Record<string, number>;
@@ -319,6 +374,7 @@ export type SimulationEvent =
   | { type: 'epoch_start'; payload: EpochStartPayload }
   | { type: 'epoch_stats'; payload: EpochStatsPayload }
   | { type: 'growth_phase'; payload: GrowthPhasePayload }
+  | { type: 'template_application'; payload: TemplateApplicationPayload }
   | { type: 'pressure_update'; payload: PressureUpdatePayload }
   | { type: 'population_report'; payload: PopulationPayload }
   | { type: 'template_usage'; payload: TemplateUsagePayload }
@@ -355,6 +411,7 @@ export interface ISimulationEmitter {
   epochStart(payload: EpochStartPayload): void;
   epochStats(payload: EpochStatsPayload): void;
   growthPhase(payload: GrowthPhasePayload): void;
+  templateApplication(payload: TemplateApplicationPayload): void;
   pressureUpdate(payload: PressureUpdatePayload): void;
   populationReport(payload: PopulationPayload): void;
   templateUsage(payload: TemplateUsagePayload): void;
