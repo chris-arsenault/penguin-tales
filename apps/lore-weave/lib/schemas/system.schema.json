@@ -13,7 +13,8 @@
     { "$ref": "#/$defs/EraSpawnerSystem" },
     { "$ref": "#/$defs/EraTransitionSystem" },
     { "$ref": "#/$defs/UniversalCatalystSystem" },
-    { "$ref": "#/$defs/RelationshipMaintenanceSystem" }
+    { "$ref": "#/$defs/RelationshipMaintenanceSystem" },
+    { "$ref": "#/$defs/GrowthSystem" }
   ],
   "$defs": {
     "BaseConfig": {
@@ -461,6 +462,28 @@
                   "items": { "type": "string" },
                   "description": "Relationship kinds that indicate entities are in proximity for reinforcement"
                 }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "GrowthSystem": {
+      "type": "object",
+      "required": ["systemType", "config"],
+      "properties": {
+        "systemType": { "const": "growth" },
+        "config": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseConfig" },
+            {
+              "type": "object",
+              "properties": {
+                "maxTemplatesPerTick": { "type": "number", "minimum": 0, "description": "Hard cap on template executions per tick" },
+                "minTemplatesPerTick": { "type": "number", "minimum": 0, "description": "Minimum template executions per tick while growth is needed" },
+                "yieldAveragingWindow": { "type": "number", "minimum": 1, "description": "Rolling window size for average entities per template" },
+                "maxAttemptsPerTick": { "type": "number", "minimum": 1, "description": "Safety limit on template selection attempts per tick" }
               }
             }
           ]

@@ -233,12 +233,10 @@ export class WorldEngine {
     this.targetSelector = new TargetSelector();
   }
 
-  // Make available to templates via expand() context
-  private runGrowthPhase() {
-    // ...
-    const result = template.expand(this.graph, target, {
-      targetSelector: this.targetSelector // Pass to templates
-    });
+  // Make available to templates via TemplateGraphView inside the growth system
+  private runSimulationTick() {
+    const graphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+    const result = template.expand(graphView, target);
   }
 }
 ```

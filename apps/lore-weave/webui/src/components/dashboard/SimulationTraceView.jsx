@@ -2,7 +2,7 @@
  * SimulationTraceView - Full-screen trace visualization with detail panel
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ComposedChart,
   Line,
@@ -720,6 +720,9 @@ export default function SimulationTraceView({
   // Template selection state (separate from tick selection)
   const [hoveredTemplateId, setHoveredTemplateId] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  // Fixed visible window (45 ticks = 3 epochs at a time)
+  const VISIBLE_TICKS = 45;
+  const [scrollOffset, setScrollOffset] = useState(null); // null = show end of data
 
   // Transform data
   const { data: pressureData, pressureIds, breakdownsByTick } = useMemo(
@@ -838,6 +841,44 @@ export default function SimulationTraceView({
     setHoveredTemplateId(null);
   }, []);
 
+  // Compute the visible data slice based on scroll offset
+  const { visiblePressureData, visibleTemplateData, maxScrollOffset, currentOffset } = useMemo(() => {
+    if (pressureData.length <= VISIBLE_TICKS) {
+      // All data fits, no scrolling needed
+      return {
+        visiblePressureData: pressureData,
+        visibleTemplateData: templateScatterData,
+        maxScrollOffset: 0,
+        currentOffset: 0
+      };
+    }
+
+    const maxOffset = pressureData.length - VISIBLE_TICKS;
+    // Default to end of data (null means show latest)
+    const offset = scrollOffset === null ? maxOffset : Math.min(scrollOffset, maxOffset);
+
+    const slicedPressure = pressureData.slice(offset, offset + VISIBLE_TICKS);
+
+    // Filter template data to visible tick range
+    const startTick = slicedPressure[0]?.tick ?? 0;
+    const endTick = slicedPressure[slicedPressure.length - 1]?.tick ?? 0;
+    const slicedTemplates = templateScatterData.filter(
+      t => t.tick >= startTick && t.tick <= endTick
+    );
+
+    return {
+      visiblePressureData: slicedPressure,
+      visibleTemplateData: slicedTemplates,
+      maxScrollOffset: maxOffset,
+      currentOffset: offset
+    };
+  }, [pressureData, templateScatterData, scrollOffset]);
+
+  // Handle scroll slider change
+  const handleScrollChange = useCallback((e) => {
+    setScrollOffset(parseInt(e.target.value, 10));
+  }, []);
+
   const visiblePressures = pressureIds.filter(id => !hiddenPressures.has(id));
   const visibleEntities = entityKinds.filter(kind => !hiddenEntities.has(kind));
 
@@ -920,10 +961,11 @@ export default function SimulationTraceView({
             {/* Chart area */}
             <div className={`lw-trace-view-chart-area ${lockedTick !== null ? 'locked' : ''}`}>
               {activeChart === 'pressure' ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <>
+                <ResponsiveContainer width="100%" height={maxScrollOffset > 0 ? 'calc(100% - 40px)' : '100%'}>
                   <ComposedChart
-                    data={pressureData}
-                    margin={{ top: 20, right: 30, left: 40, bottom: 0 }}
+                    data={visiblePressureData}
+                    margin={{ top: 20, right: 30, left: 40, bottom: 40 }}
                     onMouseMove={handleChartMouseMove}
                     onMouseLeave={handleChartMouseLeave}
                     onClick={handleChartClick}
@@ -988,9 +1030,9 @@ export default function SimulationTraceView({
 
 
                     {/* Template icons - rendered as ReferenceDots for exact positioning */}
-                    {templateScatterData.map((point) => (
+                    {visibleTemplateData.map((point) => (
                       <ReferenceDot
-                        key={`${point.uniqueId}-${templateScatterData.length}`}
+                        key={`${point.uniqueId}-${visibleTemplateData.length}`}
                         x={point.tick}
                         y={point.y}
                         r={0}
@@ -1025,14 +1067,28 @@ export default function SimulationTraceView({
                       />
                     ))}
 
-                    <Brush
-                      dataKey="tick"
-                      height={30}
-                      stroke="#f59e0b"
-                      fill="#0c1f2e"
-                    />
                   </ComposedChart>
                 </ResponsiveContainer>
+                {/* Scroll slider for navigating through data */}
+                {maxScrollOffset > 0 && (
+                  <div className="lw-trace-view-scroll">
+                    <span className="lw-trace-view-scroll-label">
+                      Ticks {visiblePressureData[0]?.tick ?? 0}-{visiblePressureData[visiblePressureData.length - 1]?.tick ?? 0}
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxScrollOffset}
+                      value={currentOffset}
+                      onChange={handleScrollChange}
+                      className="lw-trace-view-scroll-slider"
+                    />
+                    <span className="lw-trace-view-scroll-label">
+                      of {pressureData.length} total
+                    </span>
+                  </div>
+                )}
+              </>
               ) : activeChart === 'population' ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart

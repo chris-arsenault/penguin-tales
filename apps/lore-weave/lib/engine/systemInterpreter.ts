@@ -25,6 +25,7 @@ import { createEraSpawnerSystem } from '../systems/eraSpawner';
 import { createEraTransitionSystem } from '../systems/eraTransition';
 import { createUniversalCatalystSystem } from '../systems/universalCatalyst';
 import { createRelationshipMaintenanceSystem } from '../systems/relationshipMaintenance';
+import { createGrowthSystem, GrowthSystemConfig, GrowthSystemDependencies } from '../systems/growthSystem';
 
 // =============================================================================
 // DECLARATIVE SYSTEM TYPES
@@ -44,7 +45,8 @@ export type DeclarativeSystem =
   | DeclarativeEraSpawnerSystem
   | DeclarativeEraTransitionSystem
   | DeclarativeUniversalCatalystSystem
-  | DeclarativeRelationshipMaintenanceSystem;
+  | DeclarativeRelationshipMaintenanceSystem
+  | DeclarativeGrowthSystem;
 
 export interface DeclarativeConnectionEvolutionSystem {
   systemType: 'connectionEvolution';
@@ -175,6 +177,11 @@ export interface DeclarativeRelationshipMaintenanceSystem {
   config: RelationshipMaintenanceConfig;
 }
 
+export interface DeclarativeGrowthSystem {
+  systemType: 'growth';
+  config: GrowthSystemConfig;
+}
+
 // =============================================================================
 // SYSTEM CREATION
 // =============================================================================
@@ -185,7 +192,10 @@ export interface DeclarativeRelationshipMaintenanceSystem {
  * @param declarative - The declarative system configuration
  * @returns A SimulationSystem that can be used by WorldEngine
  */
-export function createSystemFromDeclarative(declarative: DeclarativeSystem): SimulationSystem {
+export function createSystemFromDeclarative(
+  declarative: DeclarativeSystem,
+  options?: { growthDependencies?: GrowthSystemDependencies }
+): SimulationSystem {
   switch (declarative.systemType) {
     case 'connectionEvolution':
       return createConnectionEvolutionSystem(declarative.config);
@@ -218,6 +228,12 @@ export function createSystemFromDeclarative(declarative: DeclarativeSystem): Sim
     case 'relationshipMaintenance':
       return createRelationshipMaintenanceSystem(declarative.config);
 
+    case 'growth':
+      if (!options?.growthDependencies) {
+        throw new Error('Growth system requires engine-level dependencies; pass growthDependencies to createSystemFromDeclarative');
+      }
+      return createGrowthSystem(declarative.config, options.growthDependencies);
+
     default:
       // TypeScript should catch this, but just in case
       throw new Error(`Unknown system type: ${(declarative as any).systemType}`);
@@ -231,7 +247,10 @@ export function createSystemFromDeclarative(declarative: DeclarativeSystem): Sim
  * @param declaratives - Array of declarative system configurations
  * @returns Array of SimulationSystem objects
  */
-export function loadSystems(declaratives: DeclarativeSystem[]): SimulationSystem[] {
+export function loadSystems(
+  declaratives: DeclarativeSystem[],
+  options?: { growthDependencies?: GrowthSystemDependencies }
+): SimulationSystem[] {
   if (!Array.isArray(declaratives)) {
     console.warn('loadSystems: expected array, got', typeof declaratives);
     return [];
@@ -251,7 +270,7 @@ export function loadSystems(declaratives: DeclarativeSystem[]): SimulationSystem
     })
     .map(d => {
       try {
-        return createSystemFromDeclarative(d);
+        return createSystemFromDeclarative(d, options);
       } catch (error) {
         console.error(`Failed to create system from config:`, d, error);
         throw error;
@@ -275,6 +294,7 @@ export function isDeclarativeSystem(value: unknown): value is DeclarativeSystem 
     sys.systemType === 'eraSpawner' ||
     sys.systemType === 'eraTransition' ||
     sys.systemType === 'universalCatalyst' ||
-    sys.systemType === 'relationshipMaintenance'
+    sys.systemType === 'relationshipMaintenance' ||
+    sys.systemType === 'growth'
   ) && sys.config !== undefined;
 }

@@ -254,6 +254,8 @@ export type {
   DiffusionOutputTag,
   FalloffType
 } from './systems/planeDiffusion';
+export { createGrowthSystem } from './systems/growthSystem';
+export type { GrowthSystemConfig } from './systems/growthSystem';
 
 // =============================================================================
 // DECLARATIVE ACTIONS - Agent action definitions for universalCatalyst
@@ -455,9 +457,11 @@ export type {
   DeclarativePlaneDiffusionSystem,
   // Framework system declarative shells
   FrameworkSystemConfig,
+  DeclarativeGrowthSystem,
   DeclarativeEraSpawnerSystem,
   DeclarativeEraTransitionSystem,
   DeclarativeUniversalCatalystSystem,
+  GrowthSystemConfig,
   // Era system config types
   EraTransitionConfig,
   EraSpawnerConfig

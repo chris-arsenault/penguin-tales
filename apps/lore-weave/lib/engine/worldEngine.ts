@@ -3,7 +3,7 @@ import { createPressureFromDeclarative, evaluatePressureGrowthWithBreakdown } fr
 import { DeclarativePressure } from './declarativePressureTypes';
 import { TemplateInterpreter, createTemplateFromDeclarative } from './templateInterpreter';
 import { DeclarativeTemplate } from './declarativeTypes';
-import { createSystemFromDeclarative, DeclarativeSystem } from './systemInterpreter';
+import { createSystemFromDeclarative, DeclarativeSystem, DeclarativeGrowthSystem, isDeclarativeSystem } from './systemInterpreter';
 import { loadActions } from './actionInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
@@ -37,6 +37,7 @@ import { createEraEntity } from '../systems/eraSpawner';
 import type { ISimulationEmitter, PressureChangeDetail, DiscretePressureModification, PressureModificationSource } from '../observer/types';
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
+import { createGrowthSystem, GrowthSystem, GrowthEpochSummary } from '../systems/growthSystem';
 
 // Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
 // EntitySnapshot interface and detect*Changes functions available there
@@ -49,6 +50,7 @@ export class WorldEngine {
   private runtimeTemplates: GrowthTemplate[];  // Converted from declarative templates
   private declarativeTemplates: Map<string, DeclarativeTemplate>;  // Original declarative templates for diagnostics
   private runtimeSystems: SimulationSystem[];  // Converted from declarative systems
+  private growthSystem?: GrowthSystem;  // Distributed growth system (framework-managed)
   private templateInterpreter: TemplateInterpreter;  // Interprets declarative templates
   private graph: Graph;
   private currentEpoch: number;
@@ -80,6 +82,8 @@ export class WorldEngine {
   private maxRunsPerTemplate: number;
   // Growth target bounds (min, max) - scaled by config.scaleFactor
   private growthBounds: { min: number; max: number };
+  // Track growth output per epoch for diagnostics/emissions
+  private lastGrowthSummary: GrowthEpochSummary | null = null;
 
   // Target selection service (prevents super-hub formation)
   private targetSelector: TargetSelector;
@@ -161,18 +165,6 @@ export class WorldEngine {
       // Store declarative template for diagnostics
       this.declarativeTemplates.set(t.id, t);
       return createTemplateFromDeclarative(t, this.templateInterpreter);
-    });
-
-    // Convert declarative systems to runtime systems
-    // If system already has apply function, it's already a SimulationSystem - use as-is
-    // Framework systems (eraSpawner, eraTransition, universalCatalyst) are now included
-    // via declarative shells in systems.json, making them visible and toggleable in the UI.
-    this.runtimeSystems = config.systems.map(s => {
-      if (typeof (s as any).apply === 'function') {
-        // Already a SimulationSystem (e.g., from tests or domain code)
-        return s as SimulationSystem;
-      }
-      return createSystemFromDeclarative(s as DeclarativeSystem);
     });
 
     // Convert declarative actions to runtime executable actions
@@ -304,6 +296,71 @@ export class WorldEngine {
       entityKinds: this.coordinateContext.getConfiguredKinds().length,
       graphDensity: config.graphDensity ?? 5
     });
+
+    // Build runtime systems (including new distributed growth system)
+    const runtimeSystems: SimulationSystem[] = [];
+    const growthDependencies = {
+      engineConfig: this.config,
+      runtimeTemplates: this.runtimeTemplates,
+      declarativeTemplates: this.declarativeTemplates,
+      templateInterpreter: this.templateInterpreter,
+      populationTracker: this.populationTracker,
+      contractEnforcer: this.contractEnforcer,
+      templateRunCounts: this.templateRunCounts,
+      maxRunsPerTemplate: this.maxRunsPerTemplate,
+      statisticsCollector: this.statisticsCollector,
+      emitter: this.emitter,
+      getPendingPressureModifications: () => this.pendingPressureModifications,
+      trackPressureModification: this.trackPressureModification.bind(this),
+      calculateGrowthTarget: () => this.calculateGrowthTarget(),
+      sampleTemplate: (era: Era, templates: GrowthTemplate[], metrics: PopulationMetrics) => this.sampleSingleTemplate(era, templates, metrics),
+      getCurrentEpoch: () => this.currentEpoch
+    };
+
+    for (const sys of config.systems) {
+      if (typeof (sys as any).apply === 'function') {
+        const runtime = sys as SimulationSystem;
+        if (!this.growthSystem && (runtime.id === 'growth' || runtime.id === 'framework-growth')) {
+          this.growthSystem = runtime as GrowthSystem;
+          continue;
+        }
+        runtimeSystems.push(runtime);
+        continue;
+      }
+
+      if (isDeclarativeSystem(sys) && (sys as DeclarativeGrowthSystem).systemType === 'growth') {
+        if (this.growthSystem) {
+          throw new Error('Multiple growth systems configured. Only one growth system is supported.');
+        }
+        this.growthSystem = createGrowthSystem((sys as DeclarativeGrowthSystem).config, growthDependencies);
+        continue;
+      }
+
+      runtimeSystems.push(createSystemFromDeclarative(sys as DeclarativeSystem));
+    }
+
+    if (!this.growthSystem) {
+      this.growthSystem = createGrowthSystem(
+        {
+          id: 'framework-growth',
+          name: 'Framework Growth',
+          description: 'Distributes template growth across simulation ticks'
+        },
+        growthDependencies
+      );
+      this.config.systems.push({
+        systemType: 'growth',
+        config: {
+          id: 'framework-growth',
+          name: 'Framework Growth',
+          description: 'Distributes template growth across simulation ticks'
+        }
+      } as DeclarativeGrowthSystem);
+    }
+
+    this.runtimeSystems = this.growthSystem
+      ? [this.growthSystem, ...runtimeSystems]
+      : runtimeSystems;
 
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
@@ -596,6 +653,8 @@ export class WorldEngine {
     this.systemMetrics.clear();
     this.metaEntitiesFormed = [];
     this.lastRelationshipCount = 0;
+    this.lastGrowthSummary = null;
+    this.growthSystem?.reset();
 
     // Reset coordinate statistics
     coordinateStats.reset();
@@ -797,9 +856,12 @@ export class WorldEngine {
     const initialEntityCount = this.graph.getEntityCount();
     const initialRelationshipCount = this.graph.getRelationshipCount();
 
-    // Growth phase
-    const growthTargets = this.calculateGrowthTarget();
-    await this.runGrowthPhase(era, growthTargets);
+    // Initialize distributed growth for this epoch
+    if (!this.growthSystem) {
+      throw new Error('Growth system was not initialized');
+    }
+    this.growthSystem.startEpoch(era);
+    this.lastGrowthSummary = null;
 
     // Simulation phase
     for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
@@ -831,6 +893,15 @@ export class WorldEngine {
       }
     }
 
+    // Capture growth summary for this epoch
+    this.lastGrowthSummary = this.growthSystem.completeEpoch();
+    this.emitter.growthPhase({
+      epoch: this.currentEpoch,
+      entitiesCreated: this.lastGrowthSummary.entitiesCreated,
+      target: this.lastGrowthSummary.target,
+      templatesApplied: this.lastGrowthSummary.templatesUsed
+    });
+
     // Apply era special rules if any
     if (era.specialRules) {
       era.specialRules(this.graph);
@@ -849,11 +920,11 @@ export class WorldEngine {
       this.currentEpoch,
       entitiesCreated,
       relationshipsCreated,
-      growthTargets
+      this.lastGrowthSummary?.target ?? 0
     );
 
     // Emit epoch stats
-    this.emitEpochStats(era, entitiesCreated, relationshipsCreated, growthTargets);
+    this.emitEpochStats(era, entitiesCreated, relationshipsCreated, this.lastGrowthSummary?.target ?? 0);
 
     // Emit diagnostics (updated each epoch for visibility during stepping)
     this.emitDiagnostics();
@@ -1253,319 +1324,6 @@ export class WorldEngine {
       coordinateState: this.coordinateContext.export()
     });
   }
-
-  private async runGrowthPhase(era: Era, growthTargets?: number): Promise<void> {
-    // Use provided growth targets or calculate new ones
-    const targets = growthTargets ?? this.calculateGrowthTarget();
-    let entitiesCreated = 0;
-    const createdEntities: HardState[] = [];
-
-    // HOMEOSTATIC CONTROL: Update population metrics and calculate dynamic weights
-    this.populationTracker.update(this.graph);
-    const metrics = this.populationTracker.getMetrics();
-
-    // Sample templates ONE AT A TIME until target reached
-    let attempts = 0;
-    const scale = this.config.scaleFactor || 1.0;
-    const maxAttempts = Math.ceil(targets * 10 * scale);  // Safety limit (scaled)
-
-    while (entitiesCreated < targets && attempts < maxAttempts) {
-      attempts++;
-
-      // Create restricted graph view for template (enforces targetSelector usage)
-      const graphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
-
-      // Re-filter applicable templates each iteration (graph state changes)
-      // Note: Input conditions (enabledBy) are now handled via applicability rules in canApply()
-      const rejectionReasons: Map<string, string> = new Map();
-      const applicableTemplates = this.runtimeTemplates.filter(t => {
-        // DIVERSITY PRESSURE: Hard cap on template runs
-        const runCount = this.templateRunCounts.get(t.id) || 0;
-        if (runCount >= this.maxRunsPerTemplate) {
-          rejectionReasons.set(t.id, `run_cap: ${runCount}/${this.maxRunsPerTemplate}`);
-          return false;
-        }
-
-        // canApply includes all applicability rule evaluation
-        if (!t.canApply(graphView)) {
-          // Get detailed diagnosis for why it failed
-          const declTemplate = this.declarativeTemplates.get(t.id);
-          if (declTemplate) {
-            const diag = this.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
-            if (!diag.applicabilityPassed) {
-              rejectionReasons.set(t.id, `applicability: ${diag.failedRules.join('; ')}`);
-            } else if (diag.selectionCount === 0) {
-              rejectionReasons.set(t.id, `selection(${diag.selectionStrategy}): no targets found`);
-            }
-          } else {
-            rejectionReasons.set(t.id, 'canApply: false');
-          }
-          return false;
-        }
-
-        return true;
-      });
-
-      if (applicableTemplates.length === 0) {
-        this.emitter.log('warn', `No applicable templates remaining (${entitiesCreated}/${targets} entities created)`);
-        // Emit detailed template rejection diagnostics
-        graphView.debug('templates', `[Filter] All ${this.runtimeTemplates.length} templates rejected:`);
-        for (const [templateId, reason] of rejectionReasons) {
-          graphView.debug('templates', `  ${templateId}: ${reason}`);
-        }
-        break;
-      }
-
-      // Sample ONE template with weighted probability
-      const template = this.sampleSingleTemplate(era, applicableTemplates, metrics);
-      if (!template) {
-        if (attempts < 5 || attempts % 50 === 0) {
-          graphView.debug('templates', `[Attempt ${attempts}] Failed to sample template from ${applicableTemplates.length} options`);
-        }
-        continue;
-      }
-
-      // Check if template can apply
-      if (!template.canApply(graphView)) {
-        if (attempts < 5 || attempts % 50 === 0) {
-          // Get detailed diagnosis
-          const declTemplate = this.declarativeTemplates.get(template.id);
-          if (declTemplate) {
-            const diag = this.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
-            if (!diag.applicabilityPassed) {
-              graphView.debug('templates', `[Attempt ${attempts}] ${template.id} rejected: ${diag.failedRules.join('; ')}`);
-            } else {
-              graphView.debug('templates', `[Attempt ${attempts}] ${template.id} rejected: selection(${diag.selectionStrategy}) returned 0 targets`);
-            }
-          } else {
-            graphView.debug('templates', `[Attempt ${attempts}] ${template.id} canApply returned false`);
-          }
-        }
-        continue;
-      }
-
-      // Find targets
-      const templateTargets = template.findTargets(graphView);
-      if (templateTargets.length === 0) {
-        if (attempts < 5 || attempts % 50 === 0) {
-          graphView.debug('selection', `[Attempt ${attempts}] ${template.id} found no targets via findTargets()`);
-        }
-        continue;
-      }
-
-      // Apply template to random target
-      const target = pickRandom(templateTargets);
-      try {
-        // Track pressure modifications count before template execution
-        const pressureModsBeforeCount = this.pendingPressureModifications.length;
-
-        // Set up pressure modification tracking for this template
-        graphView.setPressureModificationCallback((pressureId, delta, source) => {
-          this.trackPressureModification(pressureId, delta, source);
-        });
-        graphView.setCurrentSource({ type: 'template', templateId: template.id });
-
-        // Execute template with restricted graph view
-        const result = await template.expand(graphView, target);
-
-        // Clear source after template execution
-        graphView.clearCurrentSource();
-
-        // ENFORCEMENT: Check tag saturation before creating entities
-        // Collect unique tags that would be added (convert EntityTags to deduplicated array)
-        const allTagsSet = new Set<string>();
-        for (const entity of result.entities) {
-          for (const tag of Object.keys(entity.tags || {})) {
-            allTagsSet.add(tag);
-          }
-        }
-        const allTagsToAdd = Array.from(allTagsSet);
-        const tagSaturationCheck = this.contractEnforcer.checkTagSaturation(this.graph, allTagsToAdd);
-
-        if (tagSaturationCheck.saturated) {
-          this.emitter.log('warn', `Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
-          // Don't skip template, but log the warning for analysis
-        }
-
-        // ENFORCEMENT: Check for orphan tags (warn only)
-        const orphanCheck = this.contractEnforcer.checkTagOrphans(allTagsToAdd);
-        if (orphanCheck.hasOrphans && orphanCheck.orphanTags.length > 0) {
-          // Only warn if there are multiple orphan tags (single legendary tags are expected)
-          if (orphanCheck.orphanTags.length >= 3) {
-            this.emitter.log('debug', `Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
-          }
-        }
-
-        // Record template application
-        this.statisticsCollector.recordTemplateApplication(template.id);
-
-        // Add entities to graph
-        const newIds: string[] = [];
-        const clusterEntities: HardState[] = [];
-        for (let i = 0; i < result.entities.length; i++) {
-          const entity = result.entities[i];
-          const placementStrategy = result.placementStrategies?.[i] || 'unknown';
-          const id = await addEntity(this.graph, entity, `template:${template.id}`, placementStrategy);
-          newIds.push(id);
-          const ref = this.graph.getEntity(id);
-          if (ref) {
-            createdEntities.push(ref);
-            clusterEntities.push(ref);
-          }
-        }
-
-        // Auto-initialize catalysts for newly created entities
-        // This ensures consistent catalyst initialization for all entities,
-        // whether from initial state or templates
-        for (const entity of clusterEntities) {
-          initializeCatalystSmart(entity, this.graph);
-        }
-
-        // Add relationships (resolve placeholder IDs and preserve distance/strength)
-        result.relationships.forEach(rel => {
-          const srcId = rel.src.startsWith('will-be-assigned-')
-            ? newIds[parseInt(rel.src.split('-')[3])]
-            : rel.src;
-          const dstId = rel.dst.startsWith('will-be-assigned-')
-            ? newIds[parseInt(rel.dst.split('-')[3])]
-            : rel.dst;
-
-          if (srcId && dstId) {
-            // Distance is computed from coordinates
-            addRelationship(this.graph, rel.kind, srcId, dstId, rel.strength);
-          }
-        });
-
-        // NOTE: Lineage enforcement removed - lineage is now handled via:
-        // 1. near_ancestor placement type in templates (creates relationship during placement)
-        // 2. Explicit relationships in template's relationships array
-
-        // ENFORCEMENT: Tag coverage validation
-        // Check that entities have appropriate tag count (3-5 tags)
-        for (const entity of clusterEntities) {
-          const coverageCheck = this.contractEnforcer.enforceTagCoverage(entity, this.graph);
-          if (coverageCheck.needsAdjustment) {
-            // Log for debugging but don't fail - templates should handle this
-            // console.warn(`  ℹ️  ${coverageCheck.suggestion}`);
-          }
-        }
-
-        // ENFORCEMENT: Tag taxonomy validation
-        // Check for conflicting tags on newly created entities
-        for (const entity of clusterEntities) {
-          const taxonomyCheck = this.contractEnforcer.validateTagTaxonomy(entity);
-          if (!taxonomyCheck.valid) {
-            this.emitter.log('warn', `Entity ${entity.name} has conflicting tags`, {
-              conflicts: taxonomyCheck.conflicts
-            });
-          }
-        }
-
-        // NOTE: Contract affects validation removed - declarative templates already
-        // define what they create, making separate validation redundant
-
-        // Record history
-        this.graph.history.push({
-          tick: this.graph.tick,
-          era: era.id,
-          type: 'growth',
-          description: result.description,
-          entitiesCreated: newIds,
-          relationshipsCreated: result.relationships as Relationship[],
-          entitiesModified: []
-        });
-
-        // Emit detailed template application event
-        // Collect pressure changes from this template (since pressureModsBeforeCount)
-        const templatePressureMods = this.pendingPressureModifications.slice(pressureModsBeforeCount);
-        const pressureChanges: Record<string, number> = {};
-        for (const mod of templatePressureMods) {
-          pressureChanges[mod.pressureId] = (pressureChanges[mod.pressureId] || 0) + mod.delta;
-        }
-
-        // Build resolved relationships with actual IDs
-        const resolvedRelationships = result.relationships.map(rel => ({
-          kind: rel.kind,
-          srcId: rel.src.startsWith('will-be-assigned-')
-            ? newIds[parseInt(rel.src.split('-')[3])]
-            : rel.src,
-          dstId: rel.dst.startsWith('will-be-assigned-')
-            ? newIds[parseInt(rel.dst.split('-')[3])]
-            : rel.dst,
-          strength: rel.strength
-        }));
-
-        this.emitter.templateApplication({
-          tick: this.graph.tick,
-          epoch: this.currentEpoch,
-          templateId: template.id,
-          targetEntityId: target.id,
-          targetEntityName: target.name,
-          targetEntityKind: target.kind,
-          description: result.description,
-          entitiesCreated: clusterEntities.map((e, i) => {
-            const strategy = result.placementStrategies?.[i] || 'unknown';
-            const placementDebug = result.placementDebugList?.[i];
-            return {
-              id: e.id,
-              name: e.name,
-              kind: e.kind,
-              subtype: e.subtype,
-              culture: e.culture,
-              prominence: e.prominence,
-              tags: e.tags,
-              placementStrategy: strategy,
-              coordinates: e.coordinates,
-              regionId: placementDebug?.regionId ?? e.regionId,
-              allRegionIds: placementDebug?.allRegionIds ?? e.allRegionIds,
-              derivedTags: result.derivedTagsList?.[i],
-              placement: placementDebug ? {
-                anchorType: placementDebug.anchorType,
-                anchorEntity: placementDebug.anchorEntity,
-                anchorCulture: placementDebug.anchorCulture,
-                resolvedVia: placementDebug.resolvedVia,
-                seedRegionsAvailable: placementDebug.seedRegionsAvailable,
-                emergentRegionCreated: placementDebug.emergentRegionCreated
-              } : undefined
-            };
-          }),
-          relationshipsCreated: resolvedRelationships,
-          pressureChanges
-        });
-
-        entitiesCreated += result.entities.length;
-
-        // DIVERSITY TRACKING: Only count successful template runs (where entities were created)
-        if (result.entities.length > 0) {
-          const currentCount = this.templateRunCounts.get(template.id) || 0;
-          this.templateRunCounts.set(template.id, currentCount + 1);
-        }
-
-        // Enrichment moved to @illuminator
-        // this.queueEntityEnrichment(enrichableEntities);
-        // this.queueDiscoveryEnrichment(enrichableEntities);
-
-      } catch (error) {
-        this.emitter.log('error', `Template ${template.id} failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-
-    // Emit growth phase completion
-    this.emitter.growthPhase({
-      epoch: this.currentEpoch,
-      entitiesCreated,
-      target: targets,
-      templatesApplied: Array.from(new Set(
-        Array.from(this.templateRunCounts.entries())
-          .filter(([_, count]) => count > 0)
-          .map(([id]) => id)
-      ))
-    });
-
-    // Enrichment moved to @illuminator
-    // this.flushEntityEnrichmentQueue(true);
-  }
-
   // Meta-entity formation is now handled by SimulationSystems:
   // - magicSchoolFormation
   // - legalCodeFormation
@@ -1680,106 +1438,6 @@ export class WorldEngine {
     return Math.max(this.growthBounds.min, Math.min(this.growthBounds.max, target));
   }
 
-  /**
-   * Calculate entity kind deficits (how underrepresented each kind is)
-   */
-  private calculateEntityDeficits(): Map<string, number> {
-    // Get entity kinds from domain schema (not hardcoded)
-    const entityKinds = this.config.domain.entityKinds.map(ek => ek.kind);
-    const deficits = new Map<string, number>();
-
-    // Count current entities by kind
-    const currentCounts = new Map<string, number>();
-    this.graph.forEachEntity((entity) => {
-      currentCounts.set(entity.kind, (currentCounts.get(entity.kind) || 0) + 1);
-    });
-
-    // Calculate deficit for each kind
-    for (const kind of entityKinds) {
-      const current = currentCounts.get(kind) || 0;
-      const target = this.config.targetEntitiesPerKind;
-      const deficit = Math.max(0, target - current);
-      deficits.set(kind, deficit);
-    }
-
-    return deficits;
-  }
-
-  /**
-   * Select templates using weighted randomization based on entity deficits
-   */
-  private selectWeightedTemplates(era: Era, deficits: Map<string, number>, growthTarget: number): GrowthTemplate[] {
-    // Build template weights based on era and deficits
-    const templateWeights: Array<{ template: GrowthTemplate; weight: number }> = [];
-
-    for (const template of this.runtimeTemplates) {
-      // Get era weight
-      const eraWeight = getTemplateWeight(era, template.id);
-      if (eraWeight === 0) continue; // Template disabled in this era
-
-      // Determine what entity kind(s) this template creates by introspecting the creation array
-      let deficitWeight = 1.0;
-
-      // Get the original declarative template to introspect its creation rules
-      const declTemplate = this.declarativeTemplates.get(template.id);
-      if (declTemplate?.creation && declTemplate.creation.length > 0) {
-        // Calculate average deficit across all kinds this template creates
-        let totalDeficit = 0;
-        let kindCount = 0;
-
-        for (const creationRule of declTemplate.creation) {
-          const deficit = deficits.get(creationRule.kind) || 0;
-          totalDeficit += deficit;
-          kindCount++;
-        }
-
-        if (kindCount > 0) {
-          deficitWeight = (totalDeficit / kindCount) + 1;
-        }
-      }
-      // If no creation rules, use default weight (templates that only modify existing entities)
-
-      // Normalize deficit weight to be a multiplier (0.5x to 3x)
-      // This ensures templates for underrepresented kinds are 2-6x more likely
-      const normalizedDeficitWeight = 0.5 + (deficitWeight / this.config.targetEntitiesPerKind) * 2.5;
-
-      // Combined weight = era weight × deficit weight
-      const combinedWeight = eraWeight * normalizedDeficitWeight;
-
-      templateWeights.push({ template, weight: combinedWeight });
-    }
-
-    // Select templates using weighted randomization
-    // We select more templates than growth target to account for failures
-    const selectCount = Math.min(templateWeights.length, growthTarget * 3);
-    const selected: GrowthTemplate[] = [];
-
-    for (let i = 0; i < selectCount; i++) {
-      if (templateWeights.length === 0) break;
-
-      // Weighted random selection
-      const totalWeight = templateWeights.reduce((sum, tw) => sum + tw.weight, 0);
-      if (totalWeight === 0) break;
-
-      let roll = Math.random() * totalWeight;
-      let selectedIndex = 0;
-
-      for (let j = 0; j < templateWeights.length; j++) {
-        roll -= templateWeights[j].weight;
-        if (roll <= 0) {
-          selectedIndex = j;
-          break;
-        }
-      }
-
-      // Add selected template and remove from pool (sample without replacement)
-      selected.push(templateWeights[selectedIndex].template);
-      templateWeights.splice(selectedIndex, 1);
-    }
-
-    return selected;
-  }
-  
   private async runSimulationTick(era: Era): Promise<void> {
     let totalRelationships = 0;
     let totalModifications = 0;
@@ -1795,9 +1453,6 @@ export class WorldEngine {
       ? this.calculateDistributionSystemModifiers(era)
       : {};
 
-    // Create a TemplateGraphView for systems to use
-    const systemGraphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
-
     for (const system of this.runtimeSystems) {
       const baseModifier = getSystemModifier(era, system.id);
       if (baseModifier === 0) continue; // System disabled by era
@@ -1806,6 +1461,8 @@ export class WorldEngine {
       const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
+        const systemGraphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+        const relationshipsBefore = this.graph.getRelationshipCount();
         const result = await system.apply(systemGraphView, modifier);
 
         // Record system execution
@@ -1814,7 +1471,19 @@ export class WorldEngine {
         // Track system metrics
         const metric = this.systemMetrics.get(system.id) || { relationshipsCreated: 0, lastThrottleCheck: 0 };
 
+        // Account for relationships added directly by the system (e.g., growth)
+        const directAdded = this.graph.getRelationshipCount() - relationshipsBefore;
+        if (directAdded > 0) {
+          relationshipsAddedThisTick += directAdded;
+          metric.relationshipsCreated += directAdded;
+          totalRelationships += directAdded;
+          if (relationshipsAddedThisTick > budget) {
+            this.logWarning(`⚠️  RELATIONSHIP BUDGET EXCEEDED BY SYSTEM ${system.id}: ${relationshipsAddedThisTick}/${budget}`);
+          }
+        }
+
         // Apply relationships with budget check
+        let addedFromResult = 0;
         for (const rel of result.relationshipsAdded) {
           // Check budget
           if (relationshipsAddedThisTick >= budget) {
@@ -1831,8 +1500,10 @@ export class WorldEngine {
             relationshipsThisTick.push(rel);
             relationshipsAddedThisTick++;
             metric.relationshipsCreated++;
+            addedFromResult++;
           }
         }
+        totalRelationships += addedFromResult;
 
         // Update system metrics and check for aggressive systems
         if (metric.relationshipsCreated > 500 && this.graph.tick - metric.lastThrottleCheck > 20) {
@@ -1855,7 +1526,6 @@ export class WorldEngine {
           this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
         }
 
-        totalRelationships += result.relationshipsAdded.length;
         totalModifications += result.entitiesModified.length;
 
       } catch (error) {

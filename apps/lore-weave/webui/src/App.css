@@ -1928,6 +1928,51 @@
   cursor: pointer;
 }
 
+/* Scroll slider for navigating chart data */
+.lw-trace-view-scroll {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 40px 8px 50px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--lw-border-color);
+}
+
+.lw-trace-view-scroll-label {
+  font-size: 11px;
+  color: var(--lw-text-muted);
+  white-space: nowrap;
+}
+
+.lw-trace-view-scroll-slider {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.lw-trace-view-scroll-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--lw-accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.lw-trace-view-scroll-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--lw-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
 .lw-trace-view-detail-pressure {
   margin-bottom: 16px;
   padding: 12px;

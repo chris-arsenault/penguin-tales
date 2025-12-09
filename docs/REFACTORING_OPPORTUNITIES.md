@@ -511,7 +511,7 @@ export const excessiveGrowthCondition: StopCondition = { ... };
 **Priority: LOW** | **Risk: MEDIUM** | **LOC Reduction: ~100**
 
 **Current State:**
-- Template filtering logic in `worldEngine.ts` `runGrowthPhase()` - lines 968-985
+- Template filtering logic in growth system application (`worldEngine.ts` + `systems/growthSystem.ts`)
 - Multiple contract checks inline:
   - `contractEnforcer.checkContractEnabledBy()`
   - `contractEnforcer.checkSaturation()`
@@ -560,7 +560,7 @@ interface ApplicableTemplate {
 - Extensible: easy to add new filtering criteria
 
 **Files Affected:**
-- `src/engine/worldEngine.ts` (remove ~100 lines from runGrowthPhase)
+- `src/engine/worldEngine.ts` (distributed growth system already extracted)
 - `src/services/templateFilter.ts` (new, ~200 lines)
 
 **Risk Factors:**

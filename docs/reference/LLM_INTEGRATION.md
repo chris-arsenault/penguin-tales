@@ -297,16 +297,8 @@ class WorldEngine {
   private enrichmentService: EnrichmentService;
   
   async runEpoch() {
-    // Structural generation (fast, deterministic)
-    const newEntities = this.runGrowthPhase();
-    this.runSimulationPhase();
-    
-    // Queue enrichment (async, non-blocking)
-    this.enrichmentService.enqueue({
-      type: 'naming',
-      entities: newEntities,
-      context: this.getCurrentContext()
-    });
+    // Structural generation (fast, deterministic) now happens inside the growth system each tick
+    this.runSimulationPhase(); // growth + systems execute together
     
     // Check for era transition
     if (this.shouldTransitionEra()) {
