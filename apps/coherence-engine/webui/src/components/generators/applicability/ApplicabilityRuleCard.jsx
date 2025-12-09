@@ -62,6 +62,8 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
         return `${rule.rules?.length || 0} sub-rules`;
       case 'pressure_any_above':
         return `Any of [${rule.pressureIds?.join(', ') || '?'}] > ${rule.threshold ?? '?'}`;
+      case 'pressure_compare':
+        return `${rule.pressureA || '?'} > ${rule.pressureB || '?'}`;
       default:
         return rule.type;
     }
@@ -244,6 +246,26 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                     placeholder="50"
                   />
                 </div>
+              </>
+            )}
+
+            {rule.type === 'pressure_compare' && (
+              <>
+                <ReferenceDropdown
+                  label="Pressure A"
+                  value={rule.pressureA}
+                  onChange={(v) => updateField('pressureA', v)}
+                  options={pressureOptions}
+                />
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}>&gt;</span>
+                </div>
+                <ReferenceDropdown
+                  label="Pressure B"
+                  value={rule.pressureB}
+                  onChange={(v) => updateField('pressureB', v)}
+                  options={pressureOptions}
+                />
               </>
             )}
           </div>

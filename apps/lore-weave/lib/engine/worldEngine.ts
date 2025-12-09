@@ -1594,16 +1594,12 @@ export class WorldEngine {
       // currentValue = value AFTER systems ran (includes discrete modifications)
       const currentValueAfterSystems = this.graph.pressures.get(pressure.id) ?? pressure.value;
 
-      // Get detailed breakdown if declarative definition is available
+      // Get detailed breakdown from declarative definition
       const declarativeDef = this.declarativePressures.get(pressure.id);
-      const breakdown = declarativeDef
-        ? evaluatePressureGrowthWithBreakdown(declarativeDef, this.graph)
-        : {
-            baseGrowth: 0,
-            positiveFeedback: [],
-            negativeFeedback: [],
-            totalGrowth: pressure.growth(this.graph)
-          };
+      if (!declarativeDef) {
+        throw new Error(`No declarative definition found for pressure: ${pressure.id}`);
+      }
+      const breakdown = evaluatePressureGrowthWithBreakdown(declarativeDef, this.graph);
 
       // Apply diminishing returns for high pressure values to prevent maxing out
       // Growth is scaled down as pressure approaches 100

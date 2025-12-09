@@ -14,7 +14,7 @@ export function AddRuleButton({ onAdd, depth = 0 }) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="dropdown">
       <button
         className="btn-add"
         onClick={() => setShowPicker(!showPicker)}
@@ -23,20 +23,31 @@ export function AddRuleButton({ onAdd, depth = 0 }) {
       </button>
 
       {showPicker && (
-        <div className="type-picker">
-          {Object.entries(APPLICABILITY_TYPES)
-            .filter(([type]) => depth < 2 || (type !== 'or' && type !== 'and'))
-            .map(([type, config]) => (
-              <div
-                key={type}
-                className="type-option"
-                onClick={() => { onAdd(type); setShowPicker(false); }}
-              >
-                <div className="type-option-icon">{config.icon}</div>
-                <div className="type-option-label">{config.label}</div>
-                <div className="type-option-desc">{config.desc}</div>
-              </div>
-            ))}
+        <div className="dropdown-menu" style={{ minWidth: '280px' }}>
+          <div className="dropdown-options">
+            {Object.entries(APPLICABILITY_TYPES)
+              .filter(([type]) => depth < 2 || (type !== 'or' && type !== 'and'))
+              .map(([type, config]) => (
+                <div
+                  key={type}
+                  className="dropdown-menu-item"
+                  onClick={() => { onAdd(type); setShowPicker(false); }}
+                >
+                  <div
+                    className="dropdown-menu-icon"
+                    style={{ backgroundColor: `${config.color}20` }}
+                  >
+                    {config.icon}
+                  </div>
+                  <div>
+                    <div className="dropdown-menu-label">{config.label}</div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+                      {config.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       )}
     </div>

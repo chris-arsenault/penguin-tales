@@ -59,6 +59,7 @@ export interface DeclarativeTemplate {
 export type ApplicabilityRule =
   | PressureThresholdRule
   | PressureAnyAboveRule
+  | PressureCompareRule
   | EntityCountMinRule
   | EntityCountMaxRule
   | EraMatchRule
@@ -79,6 +80,13 @@ export interface PressureAnyAboveRule {
   type: 'pressure_any_above';
   pressureIds: string[];
   threshold: number;
+}
+
+export interface PressureCompareRule {
+  type: 'pressure_compare';
+  pressureA: string;
+  pressureB: string;
+  // Only > supported: pressureA > pressureB
 }
 
 export interface EntityCountMinRule {

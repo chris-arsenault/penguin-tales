@@ -284,10 +284,7 @@ export function evaluatePressureGrowthWithBreakdown(
     total -= details.contribution;
   }
 
-  // Apply floor of 0
-  total = Math.max(0, total);
-
-  // Apply cap if specified
+  // Apply cap if specified (no floor - negative growth is valid)
   if (config.maxGrowth !== undefined) {
     total = Math.min(total, config.maxGrowth);
   }
@@ -331,10 +328,7 @@ export function createPressureFromDeclarative(definition: DeclarativePressure): 
         total -= evaluateFactor(factor, graph);
       }
 
-      // Apply floor of 0
-      total = Math.max(0, total);
-
-      // Apply cap if specified
+      // Apply cap if specified (no floor - negative growth is valid)
       if (config.maxGrowth !== undefined) {
         total = Math.min(total, config.maxGrowth);
       }

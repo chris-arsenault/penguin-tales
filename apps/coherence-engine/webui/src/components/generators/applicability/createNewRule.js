@@ -33,6 +33,9 @@ export function createNewRule(type, pressures) {
   } else if (type === 'pressure_any_above') {
     newRule.pressureIds = [];
     newRule.threshold = 0;
+  } else if (type === 'pressure_compare') {
+    newRule.pressureA = '';
+    newRule.pressureB = '';
   }
   return newRule;
 }

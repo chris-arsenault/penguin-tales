@@ -11,6 +11,7 @@
 
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { ParentSize } from '@visx/responsive';
+import './SimulationTraceVisx.css';
 import {
   createXScale,
   createPressureYScale,

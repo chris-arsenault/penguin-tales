@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ValidationPopover from './ValidationPopover';
+import TracePopover from './TracePopover';
 
 export default function ProjectManager({
   projects,
@@ -18,6 +19,7 @@ export default function ProjectManager({
   validationResult,
   onNavigateToValidation,
   onRemoveProperty,
+  simulationState,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -189,6 +191,9 @@ export default function ProjectManager({
       </div>
 
       <div className="app-header-right">
+        {currentProject && (
+          <TracePopover simulationState={simulationState} />
+        )}
         {currentProject && (
           <ValidationPopover
             validationResult={validationResult}

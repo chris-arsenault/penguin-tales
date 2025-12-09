@@ -20,6 +20,7 @@ export default defineConfig({
       manifest: true,
       exposes: {
         './LoreWeaveRemote': './src/LoreWeaveRemote.jsx',
+        './SimulationTraceVisx': './src/components/dashboard/trace/SimulationTraceVisx.jsx',
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },

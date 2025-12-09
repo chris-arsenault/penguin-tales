@@ -215,6 +215,12 @@ export class TemplateInterpreter {
         return `pressure_any_above: [${pressures.join(', ')}] (need >${rule.threshold})`;
       }
 
+      case 'pressure_compare': {
+        const pA = graphView.getPressure(rule.pressureA) || 0;
+        const pB = graphView.getPressure(rule.pressureB) || 0;
+        return `pressure_compare: ${rule.pressureA}=${pA.toFixed(1)} > ${rule.pressureB}=${pB.toFixed(1)}`;
+      }
+
       case 'entity_count_min': {
         let entities = graphView.findEntities({ kind: rule.kind });
         if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
@@ -346,6 +352,12 @@ export class TemplateInterpreter {
         return rule.pressureIds.some(id =>
           (graphView.getPressure(id) || 0) > rule.threshold
         );
+      }
+
+      case 'pressure_compare': {
+        const pressureA = graphView.getPressure(rule.pressureA) || 0;
+        const pressureB = graphView.getPressure(rule.pressureB) || 0;
+        return pressureA > pressureB;
       }
 
       case 'entity_count_min': {

@@ -312,7 +312,7 @@ export interface PressureChangeDetail {
     baseGrowth: number;
     positiveFeedback: FeedbackContribution[];
     negativeFeedback: FeedbackContribution[];
-    totalGrowth: number;
+    totalGrowth: number;    // Sum of base + positive - negative (can be negative)
     growthScaling: number;  // Diminishing returns factor
     scaledGrowth: number;
     decay: number;

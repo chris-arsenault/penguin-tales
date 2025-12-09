@@ -33,6 +33,7 @@
       "oneOf": [
         { "$ref": "#/$defs/PressureThresholdRule" },
         { "$ref": "#/$defs/PressureAnyAboveRule" },
+        { "$ref": "#/$defs/PressureCompareRule" },
         { "$ref": "#/$defs/EntityCountMinRule" },
         { "$ref": "#/$defs/EntityCountMaxRule" },
         { "$ref": "#/$defs/EraMatchRule" },
@@ -64,6 +65,17 @@
         "type": { "const": "pressure_any_above" },
         "pressureIds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "threshold": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+
+    "PressureCompareRule": {
+      "type": "object",
+      "required": ["type", "pressureA", "pressureB"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "pressure_compare" },
+        "pressureA": { "$ref": "#/$defs/NonEmptyString" },
+        "pressureB": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
 

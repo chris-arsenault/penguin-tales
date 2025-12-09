@@ -689,6 +689,7 @@ export default function App() {
         validationResult={validationResult}
         onNavigateToValidation={handleNavigateToValidation}
         onRemoveProperty={handleRemoveProperty}
+        simulationState={simulationState}
       />
       {currentProject && !showHome && (
         <Navigation
