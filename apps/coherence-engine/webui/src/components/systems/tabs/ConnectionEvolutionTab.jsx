@@ -414,23 +414,23 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
         {subtypeBonuses.map((bonus, index) => (
           <div key={index} className="item-card">
             <div style={{ padding: '12px 16px' }}>
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Subtype"
-                  value={bonus.subtype}
-                  onChange={(v) => updateSubtypeBonus(index, { ...bonus, subtype: v })}
-                  options={getSubtypeOptions(config.entityKind)}
-                />
-                <div className="form-group">
-                  <label className="label">Bonus</label>
-                  <NumberInput
-                    value={bonus.bonus}
-                    onChange={(v) => updateSubtypeBonus(index, { ...bonus, bonus: v ?? 0 })}
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Subtype"
+                    value={bonus.subtype}
+                    onChange={(v) => updateSubtypeBonus(index, { ...bonus, subtype: v })}
+                    options={getSubtypeOptions(config.entityKind)}
                   />
+                  <div className="form-group">
+                    <label className="label">Bonus</label>
+                    <NumberInput
+                      value={bonus.bonus}
+                      onChange={(v) => updateSubtypeBonus(index, { ...bonus, bonus: v ?? 0 })}
+                    />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeSubtypeBonus(index)}>x</button>
-                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeSubtypeBonus(index)}>×</button>
               </div>
             </div>
           </div>

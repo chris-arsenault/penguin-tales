@@ -259,18 +259,16 @@ export function evaluatePressureGrowthWithBreakdown(
   definition: DeclarativePressure,
   graph: Graph
 ): {
-  baseGrowth: number;
   positiveFeedback: FeedbackContribution[];
   negativeFeedback: FeedbackContribution[];
-  totalGrowth: number;
+  feedbackTotal: number;
 } {
   const config = definition.growth;
-  const baseGrowth = config.baseGrowth ?? 0;
 
   const positiveFeedback: FeedbackContribution[] = [];
   const negativeFeedback: FeedbackContribution[] = [];
 
-  let total = baseGrowth;
+  let total = 0;
 
   for (const factor of config.positiveFeedback) {
     const details = evaluateFactorWithDetails(factor, graph);
@@ -284,16 +282,10 @@ export function evaluatePressureGrowthWithBreakdown(
     total -= details.contribution;
   }
 
-  // Apply cap if specified (no floor - negative growth is valid)
-  if (config.maxGrowth !== undefined) {
-    total = Math.min(total, config.maxGrowth);
-  }
-
   return {
-    baseGrowth,
     positiveFeedback,
     negativeFeedback,
-    totalGrowth: total
+    feedbackTotal: total
   };
 }
 
@@ -309,14 +301,13 @@ export function createPressureFromDeclarative(definition: DeclarativePressure): 
     id: definition.id,
     name: definition.name,
     value: definition.initialValue,
-    decay: definition.decay,
+    homeostasis: definition.homeostasis,
     contract: definition.contract,
 
     growth: (graph: Graph): number => {
       const config = definition.growth;
 
-      // Start with base growth
-      let total = config.baseGrowth ?? 0;
+      let total = 0;
 
       // Add positive feedback
       for (const factor of config.positiveFeedback) {
@@ -326,11 +317,6 @@ export function createPressureFromDeclarative(definition: DeclarativePressure): 
       // Subtract negative feedback
       for (const factor of config.negativeFeedback) {
         total -= evaluateFactor(factor, graph);
-      }
-
-      // Apply cap if specified (no floor - negative growth is valid)
-      if (config.maxGrowth !== undefined) {
-        total = Math.min(total, config.maxGrowth);
       }
 
       return total;

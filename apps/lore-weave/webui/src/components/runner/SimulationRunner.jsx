@@ -59,9 +59,10 @@ export default function SimulationRunner({
   // Simulation parameters
   const [params, setParams] = useState({
     scaleFactor: 1.0,
-    graphDensity: 5,
-    epochLength: 20,
-    simulationTicksPerGrowth: 15,
+    defaultMinDistance: 5,
+    pressureDeltaSmoothing: 10,
+    ticksPerEpoch: 15,
+    maxEpochs: 10,
     targetEntitiesPerKind: 30,
     maxTicks: 500,
   });
@@ -169,13 +170,14 @@ export default function SimulationRunner({
       systems: (systems || []).filter(s => s.enabled !== false),
       actions: (actions || []).filter(a => a.enabled !== false),
       tagRegistry: schema.tagRegistry || [],
-      epochLength: params.epochLength,
-      simulationTicksPerGrowth: params.simulationTicksPerGrowth,
+      ticksPerEpoch: params.ticksPerEpoch,
+      maxEpochs: params.maxEpochs,
       targetEntitiesPerKind: params.targetEntitiesPerKind,
       maxTicks: params.maxTicks,
       maxRelationshipsPerType: 10,
       scaleFactor: params.scaleFactor,
-      graphDensity: params.graphDensity,
+      defaultMinDistance: params.defaultMinDistance,
+      pressureDeltaSmoothing: params.pressureDeltaSmoothing,
       coordinateContextConfig,
       seedRelationships: seedRelationships || [],
       debugConfig,
@@ -227,6 +229,7 @@ export default function SimulationRunner({
         relationships: simState.stateExport.relationships,
         history: simState.stateExport.history,
         pressures: simState.stateExport.pressures,
+        coordinateState: simState.stateExport.coordinateState,
       };
       onViewInArchivist(results);
     }

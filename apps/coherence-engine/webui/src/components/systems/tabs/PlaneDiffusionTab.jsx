@@ -145,40 +145,40 @@ export function PlaneDiffusionTab({ system, onChange, schema }) {
         {outputTags.map((tag, index) => (
           <div key={index} className="item-card">
             <div style={{ padding: '12px 16px' }}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="label">Tag</label>
-                  <TagSelector
-                    value={tag.tag ? [tag.tag] : []}
-                    onChange={(tags) => updateOutputTag(index, { ...tag, tag: tags[0] || '' })}
-                    tagRegistry={tagRegistry}
-                    placeholder="Select tag..."
-                    singleSelect
-                  />
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <div className="form-group">
+                    <label className="label">Tag</label>
+                    <TagSelector
+                      value={tag.tag ? [tag.tag] : []}
+                      onChange={(tags) => updateOutputTag(index, { ...tag, tag: tags[0] || '' })}
+                      tagRegistry={tagRegistry}
+                      placeholder="Select tag..."
+                      singleSelect
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Min Value</label>
+                    <NumberInput
+                      value={tag.minValue}
+                      onChange={(v) => updateOutputTag(index, { ...tag, minValue: v })}
+                      min={0}
+                      max={1}
+                      allowEmpty
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label">Max Value</label>
+                    <NumberInput
+                      value={tag.maxValue}
+                      onChange={(v) => updateOutputTag(index, { ...tag, maxValue: v })}
+                      min={0}
+                      max={1}
+                      allowEmpty
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="label">Min Value</label>
-                  <NumberInput
-                    value={tag.minValue}
-                    onChange={(v) => updateOutputTag(index, { ...tag, minValue: v })}
-                    min={0}
-                    max={1}
-                    allowEmpty
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Max Value</label>
-                  <NumberInput
-                    value={tag.maxValue}
-                    onChange={(v) => updateOutputTag(index, { ...tag, maxValue: v })}
-                    min={0}
-                    max={1}
-                    allowEmpty
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeOutputTag(index)}>x</button>
-                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeOutputTag(index)}>×</button>
               </div>
             </div>
           </div>

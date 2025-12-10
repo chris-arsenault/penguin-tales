@@ -47,8 +47,7 @@ function createMockGraph(overrides: Partial<Graph> = {}): Graph {
         metaEntityConfigs: []
       },
       targetEntitiesPerKind: 30,
-      epochLength: 20,
-      simulationTicksPerGrowth: 10,
+      ticksPerEpoch: 10,
       maxTicks: 500,
       llmEnrichment: {
         enabled: false,

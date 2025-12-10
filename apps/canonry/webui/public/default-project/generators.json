@@ -2231,14 +2231,12 @@
             "pressureId": "conflict",
             "min": 10,
             "max": 100,
-            "extremeChance": 0.5
           },
           {
             "type": "pressure_threshold",
             "pressureId": "resource_scarcity",
             "min": 10,
             "max": 100,
-            "extremeChance": 0.5
           }
         ]
       },
@@ -2906,7 +2904,6 @@
         "pressureId": "magical_instability",
         "min": 10,
         "max": 70,
-        "extremeChance": 0.4
       },
       {
         "type": "entity_count_max",
@@ -3039,14 +3036,12 @@
             "pressureId": "cultural_tension",
             "min": 30,
             "max": 100,
-            "extremeChance": 0.5
           },
           {
             "type": "pressure_threshold",
             "pressureId": "stability",
             "min": 0,
             "max": 40,
-            "extremeChance": 0.3
           }
         ]
       },
@@ -3209,7 +3204,6 @@
         "pressureId": "conflict",
         "min": 15,
         "max": 90,
-        "extremeChance": 0.3
       }
     ],
     "selection": {
@@ -3618,7 +3612,6 @@
         "pressureId": "magical_instability",
         "min": 50,
         "max": 90,
-        "extremeChance": 0.4
       },
       {
         "type": "entity_count_max",

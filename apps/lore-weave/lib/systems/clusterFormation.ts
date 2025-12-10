@@ -395,8 +395,8 @@ export function createClusterFormationSystem(
     apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
       // Check epoch end if required
       if (config.runAtEpochEnd) {
-        const epochLength = graphView.config.epochLength || 20;
-        if (graphView.tick % epochLength !== 0) {
+        const ticksPerEpoch = graphView.config.ticksPerEpoch || 15;
+        if (graphView.tick % ticksPerEpoch !== 0) {
           return {
             relationshipsAdded: [],
             entitiesModified: [],

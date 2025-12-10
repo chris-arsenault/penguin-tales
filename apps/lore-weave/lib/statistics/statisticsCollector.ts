@@ -397,7 +397,7 @@ export class StatisticsCollector {
     const temporalStats: TemporalStats = {
       totalTicks: graph.tick,
       totalEpochs: this.epochStats.length,
-      ticksPerEpoch: config.epochLength,
+      ticksPerEpoch: config.ticksPerEpoch,
       erasVisited: Array.from(this.erasVisited),
       ticksPerEra: Object.fromEntries(this.ticksPerEra),
       entitiesPerTick: graph.getEntityCount() / graph.tick,
@@ -422,8 +422,7 @@ export class StatisticsCollector {
       temporalStats,
       fitnessMetrics,
       configSnapshot: {
-        epochLength: config.epochLength,
-        simulationTicksPerGrowth: config.simulationTicksPerGrowth,
+        ticksPerEpoch: config.ticksPerEpoch,
         targetEntitiesPerKind: config.targetEntitiesPerKind,
         maxTicks: config.maxTicks,
         relationshipBudget: config.relationshipBudget,

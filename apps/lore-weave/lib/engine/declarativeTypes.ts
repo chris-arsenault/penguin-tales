@@ -76,7 +76,6 @@ export interface PressureThresholdRule {
   pressureId: string;
   min: number;
   max: number;
-  extremeChance?: number;  // Chance to apply when above max (default 0.3)
 }
 
 export interface PressureAnyAboveRule {

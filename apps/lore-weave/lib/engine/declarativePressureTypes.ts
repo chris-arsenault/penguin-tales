@@ -108,26 +108,25 @@ export type FeedbackFactor =
 export interface DeclarativePressure {
   id: string;
   name: string;
+  /** Optional human-friendly description of the pressure and what ± values mean */
+  description?: string;
 
-  /** Initial value (0-100) */
+  /** Initial value (-100 to 100) */
   initialValue: number;
 
-  /** Natural decay per tick */
-  decay: number;
+  /**
+   * Homeostatic factor pulling pressure toward equilibrium (0)
+   * Applied each tick as: delta = (0 - currentValue) * homeostasis
+   */
+  homeostasis: number;
 
-  /** Growth calculation */
+  /** Feedback drivers */
   growth: {
-    /** Base growth added each tick (default: 0) */
-    baseGrowth?: number;
-
     /** Factors that increase pressure */
     positiveFeedback: FeedbackFactor[];
 
     /** Factors that decrease pressure */
     negativeFeedback: FeedbackFactor[];
-
-    /** Cap the final growth value (default: no cap) */
-    maxGrowth?: number;
   };
 
   /** Documentation contract (optional, for UI display) */

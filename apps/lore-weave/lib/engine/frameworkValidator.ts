@@ -140,38 +140,17 @@ export class FrameworkValidator {
         continue; // Skip pressures without contracts
       }
 
-      // Calculate maximum inflow from fixed sources
-      const maxInflow = pressure.contract.sources
-        .filter(s => s.delta !== undefined)
-        .reduce((sum, s) => sum + (s.delta || 0), 0);
-
-      // Calculate fixed outflow from sinks
-      const fixedOutflow = pressure.contract.sinks
-        .filter(s => s.delta !== undefined)
-        .reduce((sum, s) => sum + Math.abs(s.delta || 0), 0);
-
-      // Predicted equilibrium where: maxInflow = decay * value + fixedOutflow
-      // Solving for value: value = (maxInflow - fixedOutflow) / decay
-      if (pressure.decay > 0) {
-        const predictedEquilibrium = (maxInflow - fixedOutflow) / pressure.decay;
-
-        const [expectedMin, expectedMax] = pressure.contract.equilibrium.expectedRange;
-
-        // Check if predicted equilibrium is within expected range
-        if (predictedEquilibrium < expectedMin * 0.8 || predictedEquilibrium > expectedMax * 1.2) {
-          warnings.push(
-            `Pressure '${pressure.name}' equilibrium mismatch: ` +
-            `predicted=${predictedEquilibrium.toFixed(1)}, ` +
-            `expected=[${expectedMin}, ${expectedMax}]. ` +
-            `Consider adjusting sources, sinks, or decay rate.`
-          );
-        }
+      // Enforce equilibrium centered at 0
+      if (pressure.contract.equilibrium.restingPoint !== 0) {
+        errors.push(
+          `Pressure '${pressure.name}' restingPoint must be 0 for the new homeostatic model (found ${pressure.contract.equilibrium.restingPoint}).`
+        );
       }
 
       // Check if equilibrium range is valid
       const [min, max] = pressure.contract.equilibrium.expectedRange;
-      if (min < 0 || max > 100) {
-        errors.push(`Pressure '${pressure.name}' has invalid equilibrium range: [${min}, ${max}]. Must be within [0, 100].`);
+      if (min < -100 || max > 100) {
+        errors.push(`Pressure '${pressure.name}' has invalid equilibrium range: [${min}, ${max}]. Must be within [-100, 100].`);
       }
 
       if (min >= max) {

@@ -95,7 +95,17 @@ export interface TemplateUsagePayload {
   }>;
   unusedTemplates: Array<{
     templateId: string;
-    diagnostic: string;
+    failedRules: string[];
+    selectionCount: number;
+    summary: string;
+    selectionDiagnosis?: {
+      strategy: string;
+      targetKind: string;
+      filterSteps: Array<{
+        description: string;
+        remaining: number;
+      }>;
+    };
   }>;
 }
 
@@ -309,13 +319,13 @@ export interface PressureChangeDetail {
   newValue: number;
   delta: number;
   breakdown: {
-    baseGrowth: number;
     positiveFeedback: FeedbackContribution[];
     negativeFeedback: FeedbackContribution[];
-    totalGrowth: number;    // Sum of base + positive - negative (can be negative)
+    feedbackTotal: number;  // Sum of positive - negative (can be negative)
     growthScaling: number;  // Diminishing returns factor
-    scaledGrowth: number;
-    decay: number;
+    scaledFeedback: number;
+    homeostasis: number;    // Homeostatic factor for this pressure
+    homeostaticDelta: number; // Per-tick pull toward equilibrium (0)
     eraModifier: number;
     distributionFeedback: number;
     rawDelta: number;       // Before smoothing

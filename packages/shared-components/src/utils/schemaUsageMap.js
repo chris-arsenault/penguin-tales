@@ -791,11 +791,11 @@ function detectOrphans(usageMap, schema, pressures, generators, systems) {
   Object.entries(usageMap.pressures).forEach(([pressureId, usage]) => {
     if (usage.feedbackSources.length === 0 && usage.feedbackSinks.length === 0) {
       const pressure = pressures.find(p => p.id === pressureId);
-      if (pressure && !pressure.growth?.baseGrowth) {
+      if (pressure && (pressure.homeostasis ?? 0) === 0) {
         usageMap.validation.orphans.push({
           type: 'pressure',
           id: pressureId,
-          reason: 'No feedback factors defined - pressure will only decay',
+          reason: 'No feedback or homeostasis defined - pressure will remain static',
         });
       }
     }

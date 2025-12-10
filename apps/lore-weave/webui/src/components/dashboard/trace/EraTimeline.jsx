@@ -52,8 +52,15 @@ function EraSegment({ era, index, xScale, y, height, isFirst, isLast }) {
   const colors = ERA_COLORS[index % ERA_COLORS.length];
   const x1 = xScale(era.startTick);
   const x2 = xScale(era.endTick);
-  const width = x2 - x1;
+  const rawWidth = x2 - x1;
   const tickCount = era.endTick - era.startTick;
+
+  // Skip rendering if width is not positive (can happen when zoomed out of range)
+  if (rawWidth <= 0) {
+    return null;
+  }
+
+  const width = rawWidth;
 
   // Truncate era name if segment is too narrow
   const minWidthForFullName = 80;

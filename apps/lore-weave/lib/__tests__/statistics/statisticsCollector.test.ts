@@ -173,8 +173,7 @@ describe('StatisticsCollector', () => {
     } as Graph;
 
     mockConfig = {
-      epochLength: 20,
-      simulationTicksPerGrowth: 10,
+      ticksPerEpoch: 10,
       targetEntitiesPerKind: 30,
       maxTicks: 500,
       relationshipBudget: 5000,
@@ -1006,8 +1005,7 @@ describe('StatisticsCollector', () => {
         {} as ValidationStats
       );
 
-      expect(stats.configSnapshot.epochLength).toBe(20);
-      expect(stats.configSnapshot.simulationTicksPerGrowth).toBe(10);
+      expect(stats.configSnapshot.ticksPerEpoch).toBe(10);
       expect(stats.configSnapshot.targetEntitiesPerKind).toBe(30);
       expect(stats.configSnapshot.maxTicks).toBe(500);
       expect(stats.configSnapshot.relationshipBudget).toBe(5000);

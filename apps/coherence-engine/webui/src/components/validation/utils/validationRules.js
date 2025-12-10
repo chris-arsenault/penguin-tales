@@ -210,9 +210,9 @@ export const validationRules = {
       }
     }
 
-    // Also check if pressure has baseGrowth or positiveFeedback
+    // Also check if pressure has positiveFeedback (homeostasis alone doesn't raise it)
     for (const p of pressures) {
-      if (p.growth?.baseGrowth > 0 || (p.growth?.positiveFeedback?.length > 0)) {
+      if (p.growth?.positiveFeedback?.length > 0) {
         pressuresWithSources.add(p.id);
       }
     }
@@ -224,12 +224,12 @@ export const validationRules = {
     return {
       id: 'pressure-without-sources',
       title: 'Pressures without sources',
-      message: 'These pressures have no positive drivers (no generators/systems increase them, no baseGrowth, no positiveFeedback). They will decay to 0 and stay there.',
+      message: 'These pressures have no positive drivers (no generators/systems increase them, no positiveFeedback). They will be pulled toward equilibrium unless something else raises them.',
       severity: 'warning',
       affectedItems: withoutSources.map(p => ({
         id: p.id,
         label: p.name || p.id,
-        detail: `Decay: ${p.decay}, no sources found`,
+        detail: `Homeostasis: ${p.homeostasis ?? 0}, no sources found`,
       })),
     };
   },
@@ -262,9 +262,9 @@ export const validationRules = {
       }
     }
 
-    // Check if pressure has decay or negativeFeedback
+    // Homeostasis and negative feedback both act as sinks
     for (const p of pressures) {
-      if (p.decay > 0 || (p.growth?.negativeFeedback?.length > 0)) {
+      if ((p.homeostasis ?? 0) > 0 || (p.growth?.negativeFeedback?.length > 0)) {
         pressuresWithSinks.add(p.id);
       }
     }
@@ -276,12 +276,12 @@ export const validationRules = {
     return {
       id: 'pressure-without-sinks',
       title: 'Pressures without sinks',
-      message: 'These pressures have no negative drivers (no decay, no negativeFeedback, nothing decreases them). They will grow to 100 and saturate.',
+      message: 'These pressures have no negative drivers (no homeostasis, no negativeFeedback, nothing decreases them). They can drift to extremes.',
       severity: 'warning',
       affectedItems: withoutSinks.map(p => ({
         id: p.id,
         label: p.name || p.id,
-        detail: `Decay: ${p.decay || 0}`,
+        detail: `Homeostasis: ${p.homeostasis ?? 0}`,
       })),
     };
   },
@@ -639,11 +639,11 @@ export const validationRules = {
 
     // Check pressures
     for (const p of pressures) {
-      if (p.initialValue !== undefined && (p.initialValue < 0 || p.initialValue > 100)) {
-        issues.push({ source: `pressure "${p.id}"`, field: 'initialValue', value: p.initialValue, expected: '0-100' });
+      if (p.initialValue !== undefined && (p.initialValue < -100 || p.initialValue > 100)) {
+        issues.push({ source: `pressure "${p.id}"`, field: 'initialValue', value: p.initialValue, expected: '-100 to 100' });
       }
-      if (p.decay !== undefined && p.decay < 0) {
-        issues.push({ source: `pressure "${p.id}"`, field: 'decay', value: p.decay, expected: '>= 0' });
+      if (p.homeostasis !== undefined && p.homeostasis < 0) {
+        issues.push({ source: `pressure "${p.id}"`, field: 'homeostasis', value: p.homeostasis, expected: '>= 0' });
       }
     }
 

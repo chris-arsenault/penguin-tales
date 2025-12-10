@@ -311,9 +311,13 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
               label="Kind"
               value={item.kind}
               onChange={(v) => {
-                updateField('kind', v);
-                if (typeof item.subtype !== 'object') updateField('subtype', undefined);
-                updateField('status', undefined);
+                // Batch all updates into one call to avoid stale state issues
+                const updates = { kind: v, status: undefined };
+                // Clear subtype unless it's an object (inherit/fromPressure)
+                if (typeof item.subtype !== 'object') {
+                  updates.subtype = undefined;
+                }
+                onChange({ ...item, ...updates });
               }}
               options={entityKindOptions}
             />
@@ -903,7 +907,7 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
   );
 }
 
-function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOptions = [], tagRegistry = [] }) {
+function VariantEffectsEditor({ effects, onChange, creationRefs = [], creationRules = [], pressureOptions = [], tagRegistry = [], schema }) {
   const currentEffects = effects || {};
   const [selectedEntity, setSelectedEntity] = useState(creationRefs[0] || '');
 
@@ -915,6 +919,32 @@ function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOp
       newEffects[key] = value;
     }
     onChange(newEffects);
+  };
+
+  // Get subtypes for an entity kind
+  const getSubtypeOptions = (kind) => {
+    const ek = (schema?.entityKinds || []).find(e => e.kind === kind);
+    if (!ek?.subtypes) return [];
+    return ek.subtypes.map(st => ({ value: st.id, label: st.name || st.id }));
+  };
+
+  // Get the entity kind for a creation ref
+  const getKindForRef = (ref) => {
+    const rule = creationRules.find(r => r.entityRef === ref);
+    return rule?.kind;
+  };
+
+  // Subtype overrides
+  const subtypeOverrides = currentEffects.subtype || {};
+
+  const setSubtypeOverride = (ref, subtype) => {
+    const newSubtype = { ...subtypeOverrides };
+    if (subtype) {
+      newSubtype[ref] = subtype;
+    } else {
+      delete newSubtype[ref];
+    }
+    updateEffects('subtype', newSubtype);
   };
 
   // Get all tags from all entity refs combined
@@ -952,8 +982,44 @@ function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOp
 
   return (
     <div>
-      {/* Tags section */}
+      {/* Subtype Override section */}
       <div className="nested-section">
+        <div className="nested-title">Subtype Overrides</div>
+        <div className="form-help-text" style={{ marginBottom: '8px' }}>
+          Override the subtype of created entities when this variant applies.
+        </div>
+
+        {creationRefs.length > 0 ? (
+          creationRefs.map(ref => {
+            const kind = getKindForRef(ref);
+            const subtypeOptions = kind ? getSubtypeOptions(kind) : [];
+            const currentOverride = subtypeOverrides[ref];
+
+            return (
+              <div key={ref} className="form-grid" style={{ marginBottom: '8px' }}>
+                <div className="form-group">
+                  <label className="label">{ref}</label>
+                  <div className="form-help-text">{kind || 'Unknown kind'}</div>
+                </div>
+                <ReferenceDropdown
+                  label="Override Subtype"
+                  value={currentOverride || ''}
+                  onChange={(v) => setSubtypeOverride(ref, v || undefined)}
+                  options={[{ value: '', label: 'No override' }, ...subtypeOptions]}
+                  placeholder="No override"
+                />
+              </div>
+            );
+          })
+        ) : (
+          <div className="form-help-text" style={{ fontStyle: 'italic' }}>
+            Define entity creation rules first to override subtypes.
+          </div>
+        )}
+      </div>
+
+      {/* Tags section */}
+      <div className="nested-section" style={{ marginTop: '16px' }}>
         <div className="nested-title">Additional Tags</div>
         <div className="form-help-text" style={{ marginBottom: '8px' }}>
           Add tags to created entities when this variant applies.
@@ -1015,39 +1081,39 @@ function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOp
         {(currentEffects.stateUpdates || []).map((update, idx) => (
           <div key={idx} className="item-card" style={{ marginBottom: '8px' }}>
             <div style={{ padding: '12px' }}>
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Pressure"
-                  value={update.pressureId || ''}
-                  onChange={(v) => {
-                    const newUpdates = [...currentEffects.stateUpdates];
-                    newUpdates[idx] = { ...update, pressureId: v };
-                    updateEffects('stateUpdates', newUpdates);
-                  }}
-                  options={pressureOptions}
-                  placeholder="Select pressure..."
-                />
-                <div className="form-group">
-                  <label className="label">Delta</label>
-                  <NumberInput
-                    value={update.delta}
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Pressure"
+                    value={update.pressureId || ''}
                     onChange={(v) => {
                       const newUpdates = [...currentEffects.stateUpdates];
-                      newUpdates[idx] = { ...update, delta: v ?? 0 };
+                      newUpdates[idx] = { ...update, pressureId: v };
                       updateEffects('stateUpdates', newUpdates);
                     }}
-                    placeholder="0"
+                    options={pressureOptions}
+                    placeholder="Select pressure..."
                   />
+                  <div className="form-group">
+                    <label className="label">Delta</label>
+                    <NumberInput
+                      value={update.delta}
+                      onChange={(v) => {
+                        const newUpdates = [...currentEffects.stateUpdates];
+                        newUpdates[idx] = { ...update, delta: v ?? 0 };
+                        updateEffects('stateUpdates', newUpdates);
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button
-                    className="btn-icon btn-icon-danger"
-                    onClick={() => {
-                      const newUpdates = currentEffects.stateUpdates.filter((_, i) => i !== idx);
-                      updateEffects('stateUpdates', newUpdates);
-                    }}
-                  >×</button>
-                </div>
+                <button
+                  className="btn-icon btn-icon-danger"
+                  onClick={() => {
+                    const newUpdates = currentEffects.stateUpdates.filter((_, i) => i !== idx);
+                    updateEffects('stateUpdates', newUpdates);
+                  }}
+                >×</button>
               </div>
             </div>
           </div>
@@ -1071,7 +1137,7 @@ function VariantEffectsEditor({ effects, onChange, creationRefs = [], pressureOp
   );
 }
 
-function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entityKindOptions = [], creationRefs = [], tagRegistry = [] }) {
+function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entityKindOptions = [], creationRefs = [], creationRules = [], tagRegistry = [], schema }) {
   const [expanded, setExpanded] = useState(false);
 
   // Build condition summary
@@ -1144,8 +1210,10 @@ function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entity
               effects={variant.apply}
               onChange={(apply) => onChange({ ...variant, apply })}
               creationRefs={creationRefs}
+              creationRules={creationRules}
               pressureOptions={pressureOptions}
               tagRegistry={tagRegistry}
+              schema={schema}
             />
           </div>
         </div>
@@ -1169,14 +1237,11 @@ function VariantsSection({ generator, onChange, pressures = [], schema, tagRegis
     [schema]
   );
 
-  // Collect entity refs from creation rules (for tag targeting)
+  // Collect entity refs and rules from creation (for tag targeting and subtype override)
+  const creationRules = generator.creation || [];
   const creationRefs = useMemo(() => {
-    const refs = [];
-    (generator.creation || []).forEach(c => {
-      if (c.entityRef) refs.push(c.entityRef);
-    });
-    return refs;
-  }, [generator.creation]);
+    return creationRules.map(c => c.entityRef).filter(Boolean);
+  }, [creationRules]);
 
   const updateVariants = (newVariants) => {
     if (newVariants.options.length === 0) {
@@ -1245,7 +1310,9 @@ function VariantsSection({ generator, onChange, pressures = [], schema, tagRegis
             pressureOptions={pressureOptions}
             entityKindOptions={entityKindOptions}
             creationRefs={creationRefs}
+            creationRules={creationRules}
             tagRegistry={tagRegistry}
+            schema={schema}
           />
         ))
       )}

@@ -19,6 +19,20 @@ import { CONDITION_TYPES, OPERATORS } from '../constants';
  */
 export function TransitionConditionEditor({ condition, index, onChange, onRemove, pressures, schema }) {
   const handleFieldChange = (field, value) => {
+    // When changing type, reset to a clean object with only the new type's properties
+    if (field === 'type') {
+      switch (value) {
+        case 'time':
+          onChange({ type: 'time', minTicks: 50 });
+          return;
+        case 'pressure':
+          onChange({ type: 'pressure', pressureId: '', operator: 'above', threshold: 50 });
+          return;
+        case 'entity_count':
+          onChange({ type: 'entity_count', entityKind: '', operator: 'above', threshold: 10 });
+          return;
+      }
+    }
     onChange({ ...condition, [field]: value });
   };
 

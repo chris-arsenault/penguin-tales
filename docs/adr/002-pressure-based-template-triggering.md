@@ -48,9 +48,9 @@ Without state-based triggering:
 
 We will use a **pressure system** where:
 
-1. **Pressures** are numeric values (0-100) representing world conditions
-2. **Growth formulas** calculate pressure changes based on graph state
-3. **Decay** naturally reduces pressures each tick
+1. **Pressures** are numeric values (-100 to 100) representing world conditions
+2. **Feedback formulas** calculate pressure changes based on graph state
+3. **Homeostasis** pulls pressures toward equilibrium (0) each tick
 4. **Templates reference pressures** in their contracts
 
 ### Pressure Types
@@ -68,9 +68,9 @@ We will use a **pressure system** where:
 // Pressure definition
 interface Pressure {
   id: string;
-  value: number;  // 0-100
-  growth: (graph: Graph) => number;  // Calculate delta
-  decay: number;  // Natural decay per tick
+  value: number;  // -100 to 100
+  growth: (graph: Graph) => number;  // Calculate feedback delta
+  homeostasis: number;  // Pull toward equilibrium (0)
 }
 
 // Template contract
@@ -84,8 +84,8 @@ contract: {
 
 // Each tick
 pressures.forEach(pressure => {
-  const delta = pressure.growth(graph) - pressure.decay;
-  pressure.value = clamp(pressure.value + delta, 0, 100);
+  const delta = pressure.growth(graph) + (0 - pressure.value) * pressure.homeostasis;
+  pressure.value = clamp(pressure.value + delta, -100, 100);
 });
 ```
 
@@ -102,7 +102,7 @@ resource_scarcity: {
     if (ratio > 3) return 5;   // Moderate scarcity
     return -5;                  // Abundant resources
   },
-  decay: 2  // Natural improvement
+  homeostasis: 0.05  // Natural pull toward equilibrium
 }
 ```
 

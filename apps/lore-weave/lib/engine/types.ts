@@ -447,8 +447,8 @@ export interface PressureContract {
 
   // Expected equilibrium behavior
   equilibrium: {
-    expectedRange: [number, number];  // [min, max] under normal operation
-    restingPoint: number;             // Where pressure settles with no stimuli
+    expectedRange: [number, number];  // [min, max] under normal operation (now [-100, 100])
+    restingPoint: number;             // Where pressure settles with no stimuli (required: 0)
     oscillationPeriod?: number;       // Ticks for one cycle (if oscillating)
   };
 }
@@ -492,9 +492,9 @@ export interface EntityOperatorRegistry {
 export interface Pressure {
   id: string;
   name: string;
-  value: number;  // 0-100
-  growth: (graph: Graph) => number;  // delta per tick
-  decay: number;  // natural decay per tick
+  value: number;  // -100 to 100
+  growth: (graph: Graph) => number;  // feedback delta per tick
+  homeostasis: number;  // pull toward equilibrium (0)
   contract?: PressureContract;
 }
 
@@ -528,8 +528,8 @@ export interface EngineConfig {
   entityRegistries?: EntityOperatorRegistry[];
 
   // Configuration
-  epochLength: number;  // ticks per epoch
-  simulationTicksPerGrowth: number;
+  ticksPerEpoch: number;  // simulation ticks per epoch
+  maxEpochs?: number;     // maximum epochs to run (default: eras.length * 2)
   targetEntitiesPerKind: number;
   maxTicks: number;
   maxRelationshipsPerType: number;  // max relationships of same type per entity
@@ -541,11 +541,15 @@ export interface EngineConfig {
   // Scaling configuration
   scaleFactor?: number;  // Master scale multiplier for world size (default: 1.0)
 
-  // Graph density controls minimum distance between entities on semantic planes
-  // Lower values = denser placement (more entities fit in regions)
-  // Higher values = sparser placement (entities spread out more)
+  // Default minimum distance between entities on semantic planes
+  // Lower values = denser placement, higher values = sparser placement
   // Default: 5 (units on 0-100 normalized coordinate space)
-  graphDensity?: number;
+  defaultMinDistance?: number;
+
+  // Pressure delta smoothing limits max pressure change per tick
+  // Higher values = faster pressure swings, lower values = smoother transitions
+  // Default: 10 (max ±10 pressure change per tick from feedback)
+  pressureDeltaSmoothing?: number;
   // LLM configuration moved to @illuminator
   // llmConfig?: LLMConfig;
   // enrichmentConfig?: EnrichmentConfig;
@@ -1049,7 +1053,11 @@ export class GraphStore implements Graph {
 
     // Initialize pressures from config (declarative format uses initialValue)
     for (const pressure of config.pressures) {
-      store.pressures.set(pressure.id, pressure.initialValue);
+      if (typeof (pressure as any).initialValue !== 'number') {
+        throw new Error(`Pressure '${(pressure as any).id}' is missing initialValue.`);
+      }
+      const clamped = Math.max(-100, Math.min(100, (pressure as any).initialValue));
+      store.pressures.set(pressure.id, clamped);
     }
 
     return store;

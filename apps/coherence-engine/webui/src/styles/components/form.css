@@ -21,6 +21,26 @@
   gap: var(--spacing-xl);
 }
 
+/* Form row with delete button - use instead of form-grid when row has a delete button */
+.form-row-with-delete {
+  display: flex;
+  gap: var(--spacing-xl);
+  align-items: flex-end;
+}
+
+.form-row-with-delete > .form-row-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-xl);
+  flex: 1;
+  min-width: 0;
+}
+
+.form-row-with-delete > .btn-icon {
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
 /* Labels */
 .label {
   display: block;

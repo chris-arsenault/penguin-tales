@@ -357,12 +357,12 @@ describe('CoordinateContext', () => {
       const point = context.sampleNearPoint(referencePoint, []);
 
       expect(point).toBeDefined();
-      // Should be within maxSearchRadius (graphDensity * 4 = 20) of reference
+      // Should be within maxSearchRadius (defaultMinDistance * 4 = 20) of reference
       const dx = point!.x - referencePoint.x;
       const dy = point!.y - referencePoint.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       expect(distance).toBeLessThanOrEqual(20);
-      expect(distance).toBeGreaterThanOrEqual(5); // minDistance = graphDensity
+      expect(distance).toBeGreaterThanOrEqual(5); // minDistance = defaultMinDistance
     });
 
     it('should respect minimum distance from existing points in sampleNearPoint', () => {
@@ -377,7 +377,7 @@ describe('CoordinateContext', () => {
       const point = context.sampleNearPoint(referencePoint, existingPoints);
 
       if (point) {
-        // Should be at least graphDensity (5) units from all existing points
+        // Should be at least defaultMinDistance (5) units from all existing points
         for (const existing of existingPoints) {
           const dx = point.x - existing.x;
           const dy = point.y - existing.y;

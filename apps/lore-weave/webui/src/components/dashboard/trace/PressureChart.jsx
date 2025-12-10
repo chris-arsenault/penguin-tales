@@ -31,6 +31,7 @@ export default function PressureChart({
   const visiblePressures = pressureIds.filter(id => !hiddenPressures.has(id));
   // Chart area height is from margin.top to chartBottom (height param)
   const chartAreaHeight = height - margin.top;
+  const zeroY = yScale(0);
 
   return (
     <g>
@@ -49,6 +50,18 @@ export default function PressureChart({
         stroke="rgba(255,255,255,0.1)"
         strokeDasharray="3 3"
       />
+      {/* Equilibrium line */}
+      {Number.isFinite(zeroY) && (
+        <line
+          x1={margin.left}
+          x2={width - margin.right}
+          y1={zeroY}
+          y2={zeroY}
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth={1}
+          strokeDasharray="4 2"
+        />
+      )}
 
       {/* Pressure lines */}
       {visiblePressures.map((pressureId, i) => {

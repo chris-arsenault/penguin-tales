@@ -101,34 +101,34 @@ export function GraphContagionTab({ system, onChange, schema }) {
         {vectors.map((vector, index) => (
           <div key={index} className="item-card">
             <div style={{ padding: '16px' }}>
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Relationship Kind"
-                  value={vector.relationshipKind}
-                  onChange={(v) => updateVector(index, 'relationshipKind', v)}
-                  options={relationshipKindOptions}
-                />
-                <ReferenceDropdown
-                  label="Direction"
-                  value={vector.direction || 'both'}
-                  onChange={(v) => updateVector(index, 'direction', v)}
-                  options={DIRECTIONS}
-                />
-                <div className="form-group">
-                  <label className="label">Min Strength</label>
-                  <NumberInput
-                    value={vector.minStrength}
-                    onChange={(v) => updateVector(index, 'minStrength', v)}
-                    className="input"
-                    step={0.1}
-                    min={0}
-                    max={1}
-                    allowEmpty
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Relationship Kind"
+                    value={vector.relationshipKind}
+                    onChange={(v) => updateVector(index, 'relationshipKind', v)}
+                    options={relationshipKindOptions}
                   />
+                  <ReferenceDropdown
+                    label="Direction"
+                    value={vector.direction || 'both'}
+                    onChange={(v) => updateVector(index, 'direction', v)}
+                    options={DIRECTIONS}
+                  />
+                  <div className="form-group">
+                    <label className="label">Min Strength</label>
+                    <NumberInput
+                      value={vector.minStrength}
+                      onChange={(v) => updateVector(index, 'minStrength', v)}
+                      className="input"
+                      step={0.1}
+                      min={0}
+                      max={1}
+                      allowEmpty
+                    />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeVector(index)}>x</button>
-                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeVector(index)}>×</button>
               </div>
             </div>
           </div>

@@ -27,6 +27,10 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
     pressure.name,
     (value) => handleFieldChange('name', value)
   );
+  const [localDescription, setLocalDescription, handleDescriptionBlur] = useLocalInputState(
+    pressure.description || '',
+    (value) => handleFieldChange('description', value)
+  );
 
   // Get validation and usage info
   const validation = useMemo(() =>
@@ -87,23 +91,23 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
   const feedbackStatus = useMemo(() => {
     const hasPositive = positiveFeedback.length > 0;
     const hasNegative = negativeFeedback.length > 0;
-    const hasDecay = (pressure.decay || 0) > 0;
+    const hasHomeostasis = (pressure.homeostasis || 0) !== 0;
 
-    if (!hasPositive && !hasNegative && !hasDecay) {
-      return { icon: '⚪', color: '#9ca3af', label: 'Static', description: 'No feedback - pressure stays constant' };
+    if (!hasPositive && !hasNegative && !hasHomeostasis) {
+      return { icon: '⚪', color: '#9ca3af', label: 'Static', description: 'No feedback or homeostasis' };
     }
-    if (!hasPositive && !hasNegative && hasDecay) {
-      return { icon: '📉', color: '#ef4444', label: 'Decay Only', description: 'Will decrease over time' };
+    if (!hasPositive && !hasNegative && hasHomeostasis) {
+      return { icon: '🧭', color: '#22c55e', label: 'Centering', description: 'Homeostasis will pull toward equilibrium' };
     }
     if (hasPositive && !hasNegative) {
       return { icon: '📈', color: '#f59e0b', label: 'Runaway', description: 'May grow unbounded - consider adding negative feedback' };
     }
-    if (!hasPositive && hasNegative) {
-      return { icon: '📉', color: '#3b82f6', label: 'Diminishing', description: 'Will trend toward zero' };
+    if (!hasPositive && hasNegative && !hasHomeostasis) {
+      return { icon: '📉', color: '#3b82f6', label: 'Diminishing', description: 'Will trend downward from feedback alone' };
     }
-    // Both present - balanced
-    return { icon: '⚖️', color: '#22c55e', label: 'Balanced', description: 'Has both growth and decay factors' };
-  }, [positiveFeedback.length, negativeFeedback.length, pressure.decay]);
+    // Both present - self-correcting
+    return { icon: '⚖️', color: '#22c55e', label: 'Balanced', description: 'Feedback plus homeostasis provide stabilization' };
+  }, [positiveFeedback.length, negativeFeedback.length, pressure.homeostasis]);
 
   return (
     <div className="expandable-card">
@@ -113,23 +117,30 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
-        <div className="expandable-card-title">
-          <span className="expandable-card-name">{pressure.name}</span>
-          <span className="expandable-card-id">{pressure.id}</span>
-          {hasErrors && (
-            <span className="card-error-badge">
-              {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
-            </span>
-          )}
-          {usedByCount > 0 && (
-            <span className="card-usage-badge">
-              Used by {usedByCount}
-            </span>
-          )}
-          {isOrphan && !hasErrors && (
-            <span className="card-orphan-badge">
-              Not used
-            </span>
+        <div className="expandable-card-title" style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="expandable-card-name">{pressure.name}</span>
+            <span className="expandable-card-id">{pressure.id}</span>
+            {hasErrors && (
+              <span className="card-error-badge">
+                {validation.invalidRefs.length} error{validation.invalidRefs.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {usedByCount > 0 && (
+              <span className="card-usage-badge">
+                Used by {usedByCount}
+              </span>
+            )}
+            {isOrphan && !hasErrors && (
+              <span className="card-orphan-badge">
+                Not used
+              </span>
+            )}
+          </div>
+          {pressure.description && (
+            <div className="expandable-card-subtitle">
+              {pressure.description}
+            </div>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -140,13 +151,16 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
               <div className="stat-bar">
                 <div
                   className="stat-bar-fill"
-                  style={{ width: `${pressure.initialValue}%`, backgroundColor: '#3b82f6' }}
+                  style={{
+                    width: `${Math.min(100, Math.max(0, ((pressure.initialValue || 0) + 100) / 2))}%`,
+                    backgroundColor: '#3b82f6'
+                  }}
                 />
               </div>
             </div>
             <div className="stat">
-              <span className="stat-label">Decay</span>
-              <span className="stat-value">{pressure.decay}</span>
+              <span className="stat-label">Homeostasis</span>
+              <span className="stat-value">{pressure.homeostasis}</span>
             </div>
             <div className="stat">
               <span className="stat-label">Factors</span>
@@ -202,36 +216,33 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
                 />
               </div>
               <div className="input-group">
-                <label className="label">Initial Value (0-100)</label>
+                <label className="label">Initial Value (-100 to 100)</label>
                 <NumberInput
                   value={pressure.initialValue}
                   onChange={(v) => handleFieldChange('initialValue', v ?? 0)}
-                  min={0}
+                  min={-100}
                   max={100}
                 />
               </div>
               <div className="input-group">
-                <label className="label">Decay (per tick)</label>
+                <label className="label">Homeostasis (toward 0)</label>
                 <NumberInput
-                  value={pressure.decay}
-                  onChange={(v) => handleFieldChange('decay', v ?? 0)}
+                  value={pressure.homeostasis}
+                  onChange={(v) => handleFieldChange('homeostasis', v ?? 0)}
                   min={0}
                 />
               </div>
-              <div className="input-group">
-                <label className="label">Base Growth</label>
-                <NumberInput
-                  value={pressure.growth?.baseGrowth || 0}
-                  onChange={(v) => handleGrowthChange('baseGrowth', v ?? 0)}
-                />
-              </div>
-              <div className="input-group">
-                <label className="label">Max Growth (optional)</label>
-                <NumberInput
-                  value={pressure.growth?.maxGrowth}
-                  onChange={(v) => handleGrowthChange('maxGrowth', v)}
-                  allowEmpty
-                  placeholder="No limit"
+            </div>
+            <div className="input-grid">
+              <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Description</label>
+                <textarea
+                  value={localDescription}
+                  onChange={(e) => setLocalDescription(e.target.value)}
+                  onBlur={handleDescriptionBlur}
+                  className="input"
+                  placeholder="Briefly describe this pressure and what positive/negative values represent"
+                  rows={3}
                 />
               </div>
             </div>

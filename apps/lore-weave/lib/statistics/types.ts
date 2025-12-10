@@ -182,8 +182,7 @@ export interface SimulationStatistics {
 
   // Configuration snapshot (for reproducibility)
   configSnapshot: {
-    epochLength: number;
-    simulationTicksPerGrowth: number;
+    ticksPerEpoch: number;
     targetEntitiesPerKind: number;
     maxTicks: number;
     relationshipBudget?: {

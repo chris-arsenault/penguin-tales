@@ -62,8 +62,7 @@ describe('WorldEngine', () => {
       eras: [mockEra],
       pressures: [],
       entityRegistries: [],
-      epochLength: 10,
-      simulationTicksPerGrowth: 5,
+      ticksPerEpoch: 5,
       targetEntitiesPerKind: 20,
       maxTicks: 100,
       coordinateContextConfig: {
@@ -173,7 +172,7 @@ describe('WorldEngine', () => {
       const multiEraConfig = {
         ...mockConfig,
         eras: [mockEra, { ...mockEra, id: 'era2' }],
-        epochLength: 5,
+        ticksPerEpoch: 5,
         maxTicks: 200
       };
       const engine = new WorldEngine(multiEraConfig, initialState);
@@ -272,7 +271,7 @@ describe('WorldEngine', () => {
     });
 
     it('should respect epoch length', async () => {
-      const shortEpochConfig = { ...mockConfig, epochLength: 5 };
+      const shortEpochConfig = { ...mockConfig, ticksPerEpoch: 5 };
       const engine = new WorldEngine(shortEpochConfig, initialState);
       const graph = await engine.run();
 
@@ -442,7 +441,7 @@ describe('WorldEngine', () => {
       const multiEraConfig = {
         ...mockConfig,
         eras: [era1, era2],
-        epochLength: 5,
+        ticksPerEpoch: 5,
         maxTicks: 50
       };
 
@@ -524,10 +523,13 @@ describe('WorldEngine', () => {
       const testPressure = {
         id: 'test-pressure',
         name: 'Test Pressure',
-        value: 0,
-        growth: vi.fn(() => 5),
-        decay: 2,
-        description: 'Test pressure'
+        initialValue: 0,
+        homeostasis: 0.05,
+        growth: {
+          positiveFeedback: [],
+          negativeFeedback: []
+        },
+        description: 'Test pressure' as any
       };
 
       const pressureConfig = {
@@ -545,12 +547,19 @@ describe('WorldEngine', () => {
       const dynamicPressure = {
         id: 'dynamic-pressure',
         name: 'Dynamic Pressure',
-        value: 10,
-        growth: vi.fn((graph) => {
-          return graph.getEntityCount() > 5 ? 10 : -5;
-        }),
-        decay: 1,
-        description: 'Dynamic pressure'
+        initialValue: 10,
+        homeostasis: 0.05,
+        growth: {
+          positiveFeedback: [
+            {
+              type: 'entity_count',
+              kind: 'location',
+              coefficient: 1
+            }
+          ],
+          negativeFeedback: []
+        },
+        description: 'Dynamic pressure' as any
       };
 
       const pressureConfig = {
@@ -559,10 +568,11 @@ describe('WorldEngine', () => {
       };
 
       const engine = new WorldEngine(pressureConfig, initialState);
-      await engine.run();
+      const graph = await engine.run();
+      const finalValue = graph.pressures.get('dynamic-pressure');
 
-      // Growth function should have been called
-      expect(dynamicPressure.growth).toHaveBeenCalled();
+      expect(finalValue).toBeDefined();
+      expect(finalValue).not.toBe(dynamicPressure.initialValue);
     });
   });
 
@@ -604,8 +614,7 @@ describe('WorldEngine', () => {
       const minimalConfig = {
         ...mockConfig,
         eras: [mockEra],
-        epochLength: 1,
-        simulationTicksPerGrowth: 1,
+        ticksPerEpoch: 1,
         maxTicks: 10
       };
 

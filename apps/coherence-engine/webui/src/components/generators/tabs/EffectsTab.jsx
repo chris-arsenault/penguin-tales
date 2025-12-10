@@ -10,7 +10,7 @@
  * - update_rate_limit: Track template execution for rate limiting
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ReferenceDropdown, AddItemButton, NumberInput } from '../../shared';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
 
@@ -48,6 +48,16 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
     if (!ek?.statusValues?.length) return [];
     return ek.statusValues.map(status => ({ value: status, label: status }));
   };
+
+  // Build available entity references from target + variables + created entities
+  const availableRefs = useMemo(() => {
+    const refs = ['$target'];
+    Object.keys(generator.variables || {}).forEach((v) => refs.push(v));
+    (generator.creation || []).forEach((c) => { if (c.entityRef) refs.push(c.entityRef); });
+    return refs;
+  }, [generator.variables, generator.creation]);
+
+  const entityRefOptions = availableRefs.map((r) => ({ value: r, label: r }));
 
   const handleAdd = (type) => {
     let newUpdate;
@@ -166,23 +176,23 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
-                <div className="form-grid">
-                  <ReferenceDropdown
-                    label="Pressure"
-                    value={update.pressureId}
-                    onChange={(v) => handleUpdate(globalIdx, { ...update, pressureId: v })}
-                    options={pressureOptions}
-                  />
-                  <div className="form-group">
-                    <label className="label">Delta</label>
-                    <NumberInput
-                      value={update.delta}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, delta: v })}
+                <div className="form-row-with-delete">
+                  <div className="form-row-fields">
+                    <ReferenceDropdown
+                      label="Pressure"
+                      value={update.pressureId}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, pressureId: v })}
+                      options={pressureOptions}
                     />
+                    <div className="form-group">
+                      <label className="label">Delta</label>
+                      <NumberInput
+                        value={update.delta}
+                        onChange={(v) => handleUpdate(globalIdx, { ...update, delta: v })}
+                      />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                  </div>
+                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
               </div>
             </div>
@@ -202,36 +212,29 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="label">Entity</label>
-                    <input
-                      type="text"
-                      value={update.entity || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, entity: e.target.value })}
-                      className="input"
-                      placeholder="$target"
+                <div className="form-row-with-delete">
+                  <div className="form-row-fields">
+                    <ReferenceDropdown
+                      label="Entity"
+                      value={update.entity || '$target'}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
+                      options={entityRefOptions}
                     />
-                  </div>
-                  <ReferenceDropdown
-                    label="Relationship Kind"
-                    value={update.relationshipKind}
-                    onChange={(v) => handleUpdate(globalIdx, { ...update, relationshipKind: v })}
-                    options={relationshipKindOptions}
-                  />
-                  <div className="form-group">
-                    <label className="label">With Entity</label>
-                    <input
-                      type="text"
+                    <ReferenceDropdown
+                      label="Relationship Kind"
+                      value={update.relationshipKind}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, relationshipKind: v })}
+                      options={relationshipKindOptions}
+                    />
+                    <ReferenceDropdown
+                      label="With Entity"
                       value={update.with || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, with: e.target.value || undefined })}
-                      className="input"
-                      placeholder="$colony"
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, with: v || undefined })}
+                      options={entityRefOptions}
+                      placeholder="(optional)"
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                  </div>
+                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
               </div>
             </div>
@@ -252,43 +255,39 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="label">Entity Reference</label>
-                    <input
-                      type="text"
-                      value={update.entity || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, entity: e.target.value })}
-                      className="input"
-                      placeholder="$target"
-                    />
-                  </div>
-                  <ReferenceDropdown
-                    label="Entity Kind"
-                    value={update.entityKind || ''}
-                    onChange={(v) => handleUpdate(globalIdx, { ...update, entityKind: v, newStatus: '' })}
-                    options={entityKindOptions}
-                    placeholder="Select entity kind..."
-                  />
-                  {statusOptionsForKind.length > 0 ? (
+                <div className="form-row-with-delete">
+                  <div className="form-row-fields">
                     <ReferenceDropdown
-                      label="New Status"
-                      value={update.newStatus || ''}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, newStatus: v })}
-                      options={statusOptionsForKind}
-                      placeholder="Select status..."
+                      label="Entity Reference"
+                      value={update.entity || '$target'}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
+                      options={entityRefOptions}
                     />
-                  ) : (
-                    <div className="form-group">
-                      <label className="label">New Status</label>
-                      <div className="input" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        {update.entityKind ? 'No statuses defined for this kind' : 'Select entity kind first'}
+                    <ReferenceDropdown
+                      label="Entity Kind"
+                      value={update.entityKind || ''}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, entityKind: v, newStatus: '' })}
+                      options={entityKindOptions}
+                      placeholder="Select entity kind..."
+                    />
+                    {statusOptionsForKind.length > 0 ? (
+                      <ReferenceDropdown
+                        label="New Status"
+                        value={update.newStatus || ''}
+                        onChange={(v) => handleUpdate(globalIdx, { ...update, newStatus: v })}
+                        options={statusOptionsForKind}
+                        placeholder="Select status..."
+                      />
+                    ) : (
+                      <div className="form-group">
+                        <label className="label">New Status</label>
+                        <div className="input" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          {update.entityKind ? 'No statuses defined for this kind' : 'Select entity kind first'}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
+                    )}
                   </div>
+                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
               </div>
             </div>
@@ -308,46 +307,42 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="label">Entity</label>
-                    <input
-                      type="text"
-                      value={update.entity || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, entity: e.target.value })}
-                      className="input"
-                      placeholder="$target"
+                <div className="form-row-with-delete">
+                  <div className="form-row-fields">
+                    <ReferenceDropdown
+                      label="Entity"
+                      value={update.entity || '$target'}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
+                      options={entityRefOptions}
                     />
+                    <div className="form-group">
+                      <label className="label">Tag</label>
+                      <TagSelector
+                        value={update.tag ? [update.tag] : []}
+                        onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
+                        tagRegistry={tagRegistry}
+                        placeholder="Select tag..."
+                        singleSelect
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="label">Value</label>
+                      <input
+                        type="text"
+                        value={update.value === true ? 'true' : update.value === false ? 'false' : (update.value || '')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          let parsed = val;
+                          if (val === 'true') parsed = true;
+                          else if (val === 'false') parsed = false;
+                          handleUpdate(globalIdx, { ...update, value: parsed });
+                        }}
+                        className="input"
+                        placeholder="true"
+                      />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="label">Tag</label>
-                    <TagSelector
-                      value={update.tag ? [update.tag] : []}
-                      onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
-                      tagRegistry={tagRegistry}
-                      placeholder="Select tag..."
-                      singleSelect
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="label">Value</label>
-                    <input
-                      type="text"
-                      value={update.value === true ? 'true' : update.value === false ? 'false' : (update.value || '')}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        let parsed = val;
-                        if (val === 'true') parsed = true;
-                        else if (val === 'false') parsed = false;
-                        handleUpdate(globalIdx, { ...update, value: parsed });
-                      }}
-                      className="input"
-                      placeholder="true"
-                    />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                  </div>
+                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
               </div>
             </div>
@@ -367,30 +362,26 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="label">Entity</label>
-                    <input
-                      type="text"
-                      value={update.entity || ''}
-                      onChange={(e) => handleUpdate(globalIdx, { ...update, entity: e.target.value })}
-                      className="input"
-                      placeholder="$target"
+                <div className="form-row-with-delete">
+                  <div className="form-row-fields">
+                    <ReferenceDropdown
+                      label="Entity"
+                      value={update.entity || '$target'}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
+                      options={entityRefOptions}
                     />
+                    <div className="form-group">
+                      <label className="label">Tag</label>
+                      <TagSelector
+                        value={update.tag ? [update.tag] : []}
+                        onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
+                        tagRegistry={tagRegistry}
+                        placeholder="Select tag..."
+                        singleSelect
+                      />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="label">Tag</label>
-                    <TagSelector
-                      value={update.tag ? [update.tag] : []}
-                      onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
-                      tagRegistry={tagRegistry}
-                      placeholder="Select tag..."
-                      singleSelect
-                    />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                  </div>
+                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
               </div>
             </div>

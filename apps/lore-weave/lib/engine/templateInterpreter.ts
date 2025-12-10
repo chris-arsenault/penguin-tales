@@ -41,6 +41,22 @@ import type {
 } from './declarativeTypes';
 
 // =============================================================================
+// SELECTION DIAGNOSIS TYPE
+// =============================================================================
+
+/**
+ * Diagnostic information about why selection returned no targets.
+ */
+export interface SelectionDiagnosis {
+  strategy: string;
+  targetKind: string;
+  filterSteps: Array<{
+    description: string;
+    remaining: number;
+  }>;
+}
+
+// =============================================================================
 // EXECUTION CONTEXT
 // =============================================================================
 
@@ -170,6 +186,7 @@ export class TemplateInterpreter {
     failedRules: string[];
     selectionCount: number;
     selectionStrategy: string;
+    selectionDiagnosis?: SelectionDiagnosis;
   } {
     const context = new ExecutionContext(graphView);
     const failedRules: string[] = [];
@@ -187,10 +204,16 @@ export class TemplateInterpreter {
     // Check selection if applicability passed
     let selectionCount = 0;
     let selectionStrategy = 'none';
-    if (applicabilityPassed) {
+    let selectionDiagnosis: SelectionDiagnosis | undefined;
+    if (applicabilityPassed && template.selection) {
       const targets = this.executeSelection(template.selection, context);
       selectionCount = targets.length;
-      selectionStrategy = template.selection?.strategy || 'random';
+      selectionStrategy = template.selection.strategy || 'random';
+
+      // If no targets found, get detailed diagnosis
+      if (selectionCount === 0) {
+        selectionDiagnosis = this.diagnoseSelection(template.selection, context);
+      }
     }
 
     return {
@@ -198,8 +221,156 @@ export class TemplateInterpreter {
       applicabilityPassed,
       failedRules,
       selectionCount,
-      selectionStrategy
+      selectionStrategy,
+      selectionDiagnosis
     };
+  }
+
+  /**
+   * Diagnose why selection returned no targets.
+   * Tracks entity counts through each filtering step.
+   */
+  private diagnoseSelection(rule: SelectionRule, context: ExecutionContext): SelectionDiagnosis {
+    const { graphView } = context;
+    const filterSteps: Array<{ description: string; remaining: number }> = [];
+    let entities: HardState[];
+
+    // Primary selection strategy
+    switch (rule.strategy) {
+      case 'by_kind': {
+        entities = graphView.findEntities({ kind: rule.kind });
+        filterSteps.push({ description: `${rule.kind} entities`, remaining: entities.length });
+
+        if (rule.subtypes && rule.subtypes.length > 0) {
+          entities = entities.filter(e => rule.subtypes!.includes(e.subtype));
+          filterSteps.push({ description: `subtype in [${rule.subtypes.join(', ')}]`, remaining: entities.length });
+        }
+        break;
+      }
+
+      case 'by_preference_order': {
+        const allEntities = graphView.findEntities({ kind: rule.kind });
+        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
+
+        entities = [];
+        for (const subtype of rule.subtypePreferences || []) {
+          const matches = allEntities.filter(e => e.subtype === subtype);
+          if (matches.length > 0) {
+            entities = matches;
+            filterSteps.push({ description: `preferred subtype '${subtype}'`, remaining: entities.length });
+            break;
+          }
+        }
+        if (entities.length === 0) {
+          entities = allEntities;
+          filterSteps.push({ description: 'no preferred subtypes found, using all', remaining: entities.length });
+        }
+        break;
+      }
+
+      case 'by_relationship': {
+        const allEntities = graphView.findEntities({ kind: rule.kind });
+        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
+
+        entities = allEntities.filter(entity => {
+          const hasRel = entity.links.some(link => {
+            if (link.kind !== rule.relationshipKind) return false;
+            if (rule.direction === 'src') return link.src === entity.id;
+            if (rule.direction === 'dst') return link.dst === entity.id;
+            return true;
+          });
+          return rule.mustHave ? hasRel : !hasRel;
+        });
+        const relDesc = rule.mustHave ? `has ${rule.relationshipKind}` : `lacks ${rule.relationshipKind}`;
+        filterSteps.push({ description: relDesc, remaining: entities.length });
+        break;
+      }
+
+      case 'by_proximity': {
+        const refEntity = context.resolveEntity(rule.referenceEntity || '$target');
+        const allEntities = graphView.findEntities({ kind: rule.kind });
+        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
+
+        if (!refEntity?.coordinates) {
+          entities = [];
+          filterSteps.push({ description: 'reference entity has no coordinates', remaining: 0 });
+        } else {
+          const maxDist = rule.maxDistance || 50;
+          entities = allEntities.filter(e => {
+            if (!e.coordinates) return false;
+            const dx = e.coordinates.x - refEntity.coordinates!.x;
+            const dy = e.coordinates.y - refEntity.coordinates!.y;
+            const dz = e.coordinates.z - refEntity.coordinates!.z;
+            return Math.sqrt(dx * dx + dy * dy + dz * dz) <= maxDist;
+          });
+          filterSteps.push({ description: `within distance ${maxDist}`, remaining: entities.length });
+        }
+        break;
+      }
+
+      case 'by_prominence': {
+        const prominenceOrder = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+        const minIndex = prominenceOrder.indexOf(rule.minProminence || 'marginal');
+        const allEntities = graphView.findEntities({ kind: rule.kind });
+        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
+
+        entities = allEntities.filter(e => {
+          const entityIndex = prominenceOrder.indexOf(e.prominence);
+          return entityIndex >= minIndex;
+        });
+        filterSteps.push({ description: `prominence >= ${rule.minProminence || 'marginal'}`, remaining: entities.length });
+        break;
+      }
+
+      default:
+        entities = [];
+        filterSteps.push({ description: 'unknown strategy', remaining: 0 });
+    }
+
+    // Apply status filter
+    if (rule.statusFilter) {
+      entities = entities.filter(e => e.status === rule.statusFilter);
+      filterSteps.push({ description: `status = '${rule.statusFilter}'`, remaining: entities.length });
+    }
+
+    // Apply post-filters
+    if (rule.filters) {
+      for (const filter of rule.filters) {
+        const beforeCount = entities.length;
+        entities = this.applySelectionFilter(entities, filter, context);
+        filterSteps.push({ description: this.describeSelectionFilter(filter), remaining: entities.length });
+      }
+    }
+
+    return {
+      strategy: rule.strategy,
+      targetKind: rule.kind,
+      filterSteps
+    };
+  }
+
+  /**
+   * Describe a selection filter for diagnostic output.
+   */
+  private describeSelectionFilter(filter: SelectionFilter): string {
+    switch (filter.type) {
+      case 'exclude':
+        return `exclude [${filter.entities.join(', ')}]`;
+      case 'has_relationship':
+        return `has_relationship '${filter.kind}'${filter.with ? ` with ${filter.with}` : ''}`;
+      case 'lacks_relationship':
+        return `lacks_relationship '${filter.kind}'${filter.with ? ` with ${filter.with}` : ''}`;
+      case 'has_tag':
+        return `has_tag '${filter.tag}'${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
+      case 'has_any_tag':
+        return `has_any_tag [${filter.tags.join(', ')}]`;
+      case 'shares_related':
+        return `shares '${filter.relationshipKind}' with ${filter.with}`;
+      case 'graph_path':
+        return 'graph_path assertion';
+      default:
+        return 'unknown filter';
+    }
   }
 
   /**
@@ -352,9 +523,7 @@ export class TemplateInterpreter {
       case 'pressure_threshold': {
         const pressure = graphView.getPressure(rule.pressureId) || 0;
         if (pressure < rule.min) return false;
-        if (pressure > rule.max) {
-          return Math.random() < (rule.extremeChance ?? 0.3);
-        }
+        if (pressure > rule.max) return false;
         return true;
       }
 

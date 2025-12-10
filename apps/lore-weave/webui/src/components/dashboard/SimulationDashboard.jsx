@@ -39,14 +39,15 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
       epochStartValue: p.previousValue,
       epochEndValue: p.newValue,
       // Aggregate breakdowns
-      totalBaseGrowth: 0,
+      totalFeedback: 0,
       positiveFeedbackSum: new Map(), // label -> cumulative contribution
       negativeFeedbackSum: new Map(), // label -> cumulative contribution
-      totalGrowthSum: 0,
-      totalDecay: 0,
+      totalScaledFeedback: 0,
+      totalHomeostaticDelta: 0,
       totalDistributionFeedback: 0,
       totalRawDelta: 0,
       totalSmoothedDelta: 0,
+      homeostasis: p.breakdown.homeostasis,
       tickCount: 0
     });
   }
@@ -62,12 +63,13 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
       agg.tickCount++;
 
       // Sum breakdown values
-      agg.totalBaseGrowth += p.breakdown.baseGrowth;
-      agg.totalGrowthSum += p.breakdown.totalGrowth;
-      agg.totalDecay += p.breakdown.decay;
+      agg.totalFeedback += p.breakdown.feedbackTotal;
+      agg.totalScaledFeedback += p.breakdown.scaledFeedback;
+      agg.totalHomeostaticDelta += p.breakdown.homeostaticDelta;
       agg.totalDistributionFeedback += p.breakdown.distributionFeedback;
       agg.totalRawDelta += p.breakdown.rawDelta;
       agg.totalSmoothedDelta += p.breakdown.smoothedDelta;
+      agg.homeostasis = p.breakdown.homeostasis;
 
       // Aggregate positive feedback by label
       for (const f of p.breakdown.positiveFeedback) {
@@ -113,7 +115,6 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
       delta: agg.epochEndValue - agg.epochStartValue,
       tickCount: agg.tickCount,
       breakdown: {
-        baseGrowth: agg.totalBaseGrowth,
         positiveFeedback: Array.from(agg.positiveFeedbackSum.values()).map(f => ({
           label: f.label,
           type: f.type,
@@ -128,10 +129,11 @@ function aggregatePressureUpdates(pressureUpdates, currentEpochNumber) {
           coefficient: f.coefficient,
           contribution: f.totalContribution // Total contribution across epoch
         })),
-        totalGrowth: agg.totalGrowthSum,
+        feedbackTotal: agg.totalFeedback,
         growthScaling: lastUpdate.pressures.find(p => p.id === id)?.breakdown.growthScaling ?? 1,
-        scaledGrowth: agg.totalGrowthSum * (lastUpdate.pressures.find(p => p.id === id)?.breakdown.growthScaling ?? 1),
-        decay: agg.totalDecay,
+        scaledFeedback: agg.totalScaledFeedback,
+        homeostasis: agg.homeostasis,
+        homeostaticDelta: agg.totalHomeostaticDelta,
         eraModifier: lastUpdate.pressures.find(p => p.id === id)?.breakdown.eraModifier ?? 1,
         distributionFeedback: agg.totalDistributionFeedback,
         rawDelta: agg.totalRawDelta,

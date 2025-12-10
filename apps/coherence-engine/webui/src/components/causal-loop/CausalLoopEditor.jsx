@@ -10,11 +10,11 @@ import ForceGraph2D from 'react-force-graph-2d';
 
 // Node type configurations
 const NODE_TYPES = {
-  pressure: { color: '#f59e0b', label: 'Pressure', val: 8 },
-  generator: { color: '#22c55e', label: 'Generator', val: 6 },
-  system: { color: '#8b5cf6', label: 'System', val: 6 },
-  action: { color: '#06b6d4', label: 'Action', val: 5 },
-  entityKind: { color: '#60a5fa', label: 'Entity Kind', val: 4 },
+  pressure: { color: '#f59e0b', label: 'Pressure', abbrev: 'P', val: 5 },
+  generator: { color: '#22c55e', label: 'Generator', abbrev: 'G', val: 4 },
+  system: { color: '#8b5cf6', label: 'System', abbrev: 'S', val: 4 },
+  action: { color: '#06b6d4', label: 'Action', abbrev: 'A', val: 3 },
+  entityKind: { color: '#60a5fa', label: 'Entity Kind', abbrev: 'E', val: 3 },
 };
 
 const EDGE_COLORS = {
@@ -25,14 +25,16 @@ const EDGE_COLORS = {
 
 /**
  * Extract all causal nodes and edges from config data
+ * Returns { nodes, links, warnings } where warnings contains any referential integrity issues
  */
-function extractCausalGraph(pressures, generators, systems, actions, schema) {
+function extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled = true) {
   const nodes = [];
-  const edges = [];
+  const pendingEdges = [];
   const nodeMap = new Map();
+  const warnings = [];
 
   // Helper to add node if not exists
-  const addNode = (id, type, label, data = {}) => {
+  const addNode = (id, type, label, data = {}, isDisabled = false) => {
     if (!nodeMap.has(id)) {
       const config = NODE_TYPES[type] || NODE_TYPES.entityKind;
       const node = {
@@ -42,6 +44,8 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
         data,
         color: config.color,
         val: config.val,
+        abbrev: config.abbrev,
+        isDisabled,
       };
       nodes.push(node);
       nodeMap.set(id, node);
@@ -58,14 +62,15 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
   generators.forEach(g => {
     const gId = g.id || g.config?.id;
     const gName = g.name || g.config?.name || gId;
-    addNode(`generator:${gId}`, 'generator', gName, { generator: g });
+    const isDisabled = g.enabled === false;
+    addNode(`generator:${gId}`, 'generator', gName, { generator: g }, isDisabled);
 
     // Direct pressure modifications via stateUpdates
     const stateUpdates = g.stateUpdates || [];
     stateUpdates.forEach(update => {
       if (update.type === 'modify_pressure' && update.pressureId) {
         const polarity = (update.delta || 0) >= 0 ? 'positive' : 'negative';
-        edges.push({
+        pendingEdges.push({
           source: `generator:${gId}`,
           target: `pressure:${update.pressureId}`,
           polarity,
@@ -75,32 +80,43 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
       }
     });
 
-    // Indirect: generator creates entities that affect pressure factors
-    const createsKind = g.entityKind || g.config?.entityKind;
-    if (createsKind) {
-      addNode(`entityKind:${createsKind}`, 'entityKind', createsKind);
-      edges.push({
+    // Generator creates entities - extract from creation array
+    const creation = g.creation || [];
+    const createdKinds = new Set();
+    creation.forEach(c => {
+      // kind can be a string or an object with inherit
+      const kind = typeof c.kind === 'string' ? c.kind : null;
+      if (kind) {
+        createdKinds.add(kind);
+      }
+    });
+
+    // Create edges for each entity kind this generator produces
+    createdKinds.forEach(kind => {
+      addNode(`entityKind:${kind}`, 'entityKind', kind);
+      pendingEdges.push({
         source: `generator:${gId}`,
-        target: `entityKind:${createsKind}`,
+        target: `entityKind:${kind}`,
         polarity: 'positive',
         label: 'creates',
         edgeType: 'creates',
       });
-    }
+    });
   });
 
   // 3. Add system nodes and their edges
   systems.forEach(s => {
     const sId = s.config?.id || s.id;
     const sName = s.config?.name || s.name || sId;
-    addNode(`system:${sId}`, 'system', sName, { system: s });
+    const isSystemDisabled = s.enabled === false || s.config?.enabled === false;
+    addNode(`system:${sId}`, 'system', sName, { system: s }, isSystemDisabled);
 
     // Pressure changes from systems
     const pressureChanges = s.pressureChanges || s.config?.pressureChanges || {};
     Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
       if (typeof delta === 'number') {
         const polarity = delta >= 0 ? 'positive' : 'negative';
-        edges.push({
+        pendingEdges.push({
           source: `system:${sId}`,
           target: `pressure:${pressureId}`,
           polarity,
@@ -115,14 +131,15 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
   actions.forEach(a => {
     const aId = a.id || a.config?.id;
     const aName = a.name || a.config?.name || aId;
-    addNode(`action:${aId}`, 'action', aName, { action: a });
+    const isActionDisabled = a.enabled === false || a.config?.enabled === false;
+    addNode(`action:${aId}`, 'action', aName, { action: a }, isActionDisabled);
 
     // Action outcome pressure changes
     const pressureChanges = a.outcome?.pressureChanges || {};
     Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
       if (typeof delta === 'number') {
         const polarity = delta >= 0 ? 'positive' : 'negative';
-        edges.push({
+        pendingEdges.push({
           source: `action:${aId}`,
           target: `pressure:${pressureId}`,
           polarity,
@@ -145,7 +162,7 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
       if (factor.type === 'entity_count' && factor.kind) {
         const entityId = `entityKind:${factor.kind}`;
         addNode(entityId, 'entityKind', factor.kind);
-        edges.push({
+        pendingEdges.push({
           source: entityId,
           target: `pressure:${p.id}`,
           polarity: factor.polarity,
@@ -164,20 +181,42 @@ function extractCausalGraph(pressures, generators, systems, actions, schema) {
         const targetId = trigger.activates.startsWith('generator:')
           ? trigger.activates
           : `generator:${trigger.activates}`;
-        if (nodeMap.has(targetId)) {
-          edges.push({
-            source: `pressure:${p.id}`,
-            target: targetId,
-            polarity: 'positive',
-            label: `>${trigger.threshold}`,
-            edgeType: 'trigger',
-          });
-        }
+        pendingEdges.push({
+          source: `pressure:${p.id}`,
+          target: targetId,
+          polarity: 'positive',
+          label: `>${trigger.threshold}`,
+          edgeType: 'trigger',
+        });
       }
     });
   });
 
-  return { nodes, links: edges };
+  // 7. Validate edges - filter out invalid references and generate warnings
+  const validEdges = [];
+  for (const edge of pendingEdges) {
+    const sourceExists = nodeMap.has(edge.source);
+    const targetExists = nodeMap.has(edge.target);
+
+    if (!sourceExists || !targetExists) {
+      const missingNode = !sourceExists ? edge.source : edge.target;
+      const referrer = !sourceExists ? edge.target : edge.source;
+      warnings.push({
+        type: 'missing_reference',
+        message: `Edge from "${referrer}" references missing node "${missingNode}"`,
+        edge,
+      });
+    } else {
+      validEdges.push(edge);
+    }
+  }
+
+  // 8. Filter disabled nodes if requested
+  const filteredNodes = showDisabled ? nodes : nodes.filter(n => !n.isDisabled);
+  const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+  const filteredEdges = validEdges.filter(e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target));
+
+  return { nodes: filteredNodes, links: filteredEdges, warnings };
 }
 
 /**
@@ -253,6 +292,7 @@ export default function CausalLoopEditor({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState(null);
   const [showLegend, setShowLegend] = useState(true);
+  const [showDisabled, setShowDisabled] = useState(true);
   const [hoverNode, setHoverNode] = useState(null);
 
   // Resize observer
@@ -279,10 +319,17 @@ export default function CausalLoopEditor({
   }, []);
 
   // Extract graph data
-  const graphData = useMemo(
-    () => extractCausalGraph(pressures, generators, systems, actions, schema),
-    [pressures, generators, systems, actions, schema]
+  const { nodes: graphNodes, links: graphLinks, warnings } = useMemo(
+    () => extractCausalGraph(pressures, generators, systems, actions, schema, showDisabled),
+    [pressures, generators, systems, actions, schema, showDisabled]
   );
+  const graphData = useMemo(() => ({ nodes: graphNodes, links: graphLinks }), [graphNodes, graphLinks]);
+
+  // Count disabled nodes for UI
+  const disabledCount = useMemo(() => {
+    const allNodes = extractCausalGraph(pressures, generators, systems, actions, schema, true).nodes;
+    return allNodes.filter(n => n.isDisabled).length;
+  }, [pressures, generators, systems, actions, schema]);
 
   // Detect loops
   const loops = useMemo(() => detectLoops(graphData.nodes, graphData.links), [graphData]);
@@ -293,14 +340,25 @@ export default function CausalLoopEditor({
   // Node styling
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     const label = node.label;
-    const fontSize = Math.max(12 / globalScale, 4);
-    const nodeRadius = Math.sqrt(node.val) * 4;
+    const fontSize = Math.max(10 / globalScale, 3);
+    const abbrevFontSize = Math.max(8 / globalScale, 3);
+    const nodeRadius = Math.sqrt(node.val) * 3;
+    const isDisabled = node.isDisabled;
 
-    // Draw node circle
+    // Draw node circle with opacity for disabled
     ctx.beginPath();
     ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = node.color;
+    ctx.fillStyle = isDisabled ? `${node.color}60` : node.color;
     ctx.fill();
+
+    // Strikethrough pattern for disabled nodes
+    if (isDisabled) {
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1 / globalScale;
+      ctx.setLineDash([2 / globalScale, 2 / globalScale]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // Highlight selected/hovered
     if (selectedNode === node.id || hoverNode === node.id) {
@@ -309,13 +367,19 @@ export default function CausalLoopEditor({
       ctx.stroke();
     }
 
+    // Draw abbreviation inside node
+    ctx.font = `bold ${abbrevFontSize}px Sans-Serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isDisabled ? '#64748b' : '#0a1929';
+    ctx.fillText(node.abbrev || '?', node.x, node.y);
+
     // Draw label below node
     ctx.font = `${fontSize}px Sans-Serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#e2e8f0';
-    const maxWidth = 100 / globalScale;
-    const displayLabel = label.length > 20 ? label.slice(0, 18) + '...' : label;
+    ctx.fillStyle = isDisabled ? '#64748b' : '#e2e8f0';
+    const displayLabel = label.length > 15 ? label.slice(0, 13) + '...' : label;
     ctx.fillText(displayLabel, node.x, node.y + nodeRadius + 2);
   }, [selectedNode, hoverNode]);
 
@@ -382,13 +446,22 @@ export default function CausalLoopEditor({
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <button
           className="button-secondary"
           onClick={() => setShowLegend(!showLegend)}
         >
           {showLegend ? 'Hide' : 'Show'} Legend
         </button>
+        {disabledCount > 0 && (
+          <button
+            className="button-secondary"
+            onClick={() => setShowDisabled(!showDisabled)}
+            style={{ opacity: showDisabled ? 1 : 0.7 }}
+          >
+            {showDisabled ? 'Hide' : 'Show'} Disabled ({disabledCount})
+          </button>
+        )}
         <button
           className="button-secondary"
           onClick={() => graphRef.current?.zoomToFit(400, 60)}
@@ -398,9 +471,38 @@ export default function CausalLoopEditor({
         <div style={{ color: '#93c5fd', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           <span>{graphData.nodes.length} nodes</span>
           <span>{graphData.links.length} edges</span>
+          {warnings.length > 0 && (
+            <span style={{ color: '#f59e0b' }}>{warnings.length} warnings</span>
+          )}
           <span style={{ color: '#6b7280' }}>Scroll to zoom, drag to pan</span>
         </div>
       </div>
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div style={{
+          padding: '8px 12px',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid #f59e0b',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          fontSize: '12px',
+        }}>
+          <div style={{ color: '#f59e0b', fontWeight: 600, marginBottom: '4px' }}>
+            Referential Integrity Warnings
+          </div>
+          <div style={{ color: '#fcd34d', maxHeight: '80px', overflowY: 'auto' }}>
+            {warnings.slice(0, 5).map((w, i) => (
+              <div key={i}>{w.message}</div>
+            ))}
+            {warnings.length > 5 && (
+              <div style={{ color: '#f59e0b', marginTop: '4px' }}>
+                ...and {warnings.length - 5} more warnings
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Legend */}
       {showLegend && (
@@ -418,11 +520,19 @@ export default function CausalLoopEditor({
             {Object.entries(NODE_TYPES).map(([type, config]) => (
               <span key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
                 <span style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '16px',
+                  height: '16px',
                   backgroundColor: config.color,
                   borderRadius: '50%',
-                }} />
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  color: '#0a1929',
+                }}>
+                  {config.abbrev}
+                </span>
                 <span style={{ color: '#e2e8f0' }}>{config.label}</span>
               </span>
             ))}
@@ -477,7 +587,7 @@ export default function CausalLoopEditor({
             backgroundColor="#0f172a"
             nodeCanvasObject={nodeCanvasObject}
             nodePointerAreaPaint={(node, color, ctx) => {
-              const nodeRadius = Math.sqrt(node.val) * 4;
+              const nodeRadius = Math.sqrt(node.val) * 3;
               ctx.beginPath();
               ctx.arc(node.x, node.y, nodeRadius + 5, 0, 2 * Math.PI);
               ctx.fillStyle = color;

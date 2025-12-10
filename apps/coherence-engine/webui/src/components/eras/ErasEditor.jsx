@@ -4,9 +4,9 @@
  * Eras define historical periods that structure world generation.
  * Each era has:
  * - Basic config (id, name, description)
- * - Template weights (which generators are active and how strongly)
- * - System modifiers (how systems behave during this era)
  * - Entry/Exit conditions and effects for era transitions
+ *
+ * Note: Generator/system weights are managed in the Weight Matrix editor
  */
 
 import React, { useState, useCallback } from 'react';
@@ -16,20 +16,14 @@ import { EraCard } from './EraCard';
  * @param {Object} props
  * @param {Array} props.eras - Array of era objects
  * @param {Function} props.onChange - Called when eras change
- * @param {Array} props.generators - Available generators
- * @param {Array} props.systems - Available systems
  * @param {Array} props.pressures - Available pressures
  * @param {Object} props.schema - Domain schema
- * @param {Object} props.usageMap - Usage tracking map
  */
 export default function ErasEditor({
   eras = [],
   onChange,
-  generators = [],
-  systems = [],
   pressures = [],
   schema,
-  usageMap,
 }) {
   const [expandedEra, setExpandedEra] = useState(null);
 
@@ -114,21 +108,13 @@ export default function ErasEditor({
             onToggle={() => setExpandedEra(expandedEra === index ? null : index)}
             onChange={(updatedEra) => handleEraChange(index, updatedEra)}
             onDelete={() => handleDeleteEra(index)}
-            generators={generators}
-            systems={systems}
             pressures={pressures}
             schema={schema}
-            usageMap={usageMap}
             allEras={eras}
           />
         ))}
 
-        <button
-          className="btn btn-add"
-          onClick={handleAddEra}
-          onMouseEnter={() => setAddHovering(true)}
-          onMouseLeave={() => setAddHovering(false)}
-        >
+        <button className="btn btn-add" onClick={handleAddEra}>
           + Add Era
         </button>
       </div>

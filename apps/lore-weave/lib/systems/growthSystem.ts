@@ -353,8 +353,8 @@ export function createGrowthSystem(
       deps.populationTracker.update(graphView.getInternalGraph());
       const metrics = deps.populationTracker.getMetrics();
 
-      const tickInEpoch = graphView.tick % deps.engineConfig.simulationTicksPerGrowth;
-      const ticksRemaining = Math.max(1, deps.engineConfig.simulationTicksPerGrowth - tickInEpoch);
+      const tickInEpoch = graphView.tick % deps.engineConfig.ticksPerEpoch;
+      const ticksRemaining = Math.max(1, deps.engineConfig.ticksPerEpoch - tickInEpoch);
       const expectedYield = getExpectedYield();
 
       let templateBudget = Math.ceil((remainingEntities / ticksRemaining) / expectedYield);

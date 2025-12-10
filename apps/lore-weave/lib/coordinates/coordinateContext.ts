@@ -158,7 +158,7 @@ export interface CoordinateContextConfig {
    * Higher values = sparser placement (entities spread out more)
    * Default: 5 (units on 0-100 normalized coordinate space)
    */
-  graphDensity?: number;
+  defaultMinDistance?: number;
 
   /** Name generation service for emergent region names */
   nameForgeService: NameGenerationService;
@@ -198,8 +198,8 @@ export class CoordinateContext {
   /** Counter for generating unique emergent region IDs */
   private emergentRegionCounter = 0;
 
-  /** Graph density - minimum distance between entities on semantic planes */
-  private readonly graphDensity: number;
+  /** Default minimum distance between entities on semantic planes */
+  private readonly defaultMinDistance: number;
 
   /** Name generation service for emergent region names */
   private readonly nameForgeService: NameGenerationService;
@@ -209,7 +209,7 @@ export class CoordinateContext {
   constructor(config: CoordinateContextConfig) {
     this.entityKinds = config.entityKinds || [];
     this.cultures = config.cultures || [];
-    this.graphDensity = config.graphDensity ?? 5;
+    this.defaultMinDistance = config.defaultMinDistance ?? 5;
     this.nameForgeService = config.nameForgeService;
 
     // Initialize mutable region storage from entity kinds' semantic planes
@@ -410,7 +410,7 @@ export class CoordinateContext {
 
   /**
    * Sample a point within a specific region.
-   * Uses graphDensity as the minimum distance between points.
+   * Uses defaultMinDistance as the minimum distance between points.
    *
    * @param entityKind - Entity kind whose regions to use
    * @param regionId - Region to sample within
@@ -429,11 +429,11 @@ export class CoordinateContext {
 
   /**
    * Sample a point near a reference point.
-   * Uses graphDensity as the minimum distance between points.
+   * Uses defaultMinDistance as the minimum distance between points.
    *
    * @param referencePoint - Point to place near
    * @param existingPoints - Points to avoid
-   * @param maxSearchRadius - Maximum distance from reference (defaults to 4x graphDensity)
+   * @param maxSearchRadius - Maximum distance from reference (defaults to 4x defaultMinDistance)
    * @returns Point or null if no valid point found
    */
   sampleNearPoint(
@@ -442,7 +442,7 @@ export class CoordinateContext {
     maxSearchRadius?: number
   ): Point | null {
     const maxAttempts = 50;
-    const minDist = this.graphDensity;
+    const minDist = this.defaultMinDistance;
     const maxRadius = maxSearchRadius ?? minDist * 4;
 
     for (let i = 0; i < maxAttempts; i++) {
@@ -591,7 +591,7 @@ export class CoordinateContext {
 
   /**
    * Sample a point within a region (circle bounds).
-   * Uses graphDensity as the minimum distance between points.
+   * Uses defaultMinDistance as the minimum distance between points.
    */
   private sampleCircleRegion(
     region: import('./types').Region,
@@ -612,7 +612,7 @@ export class CoordinateContext {
         z: 50 // default z
       };
 
-      if (this.isValidPlacement(point, existingPoints, this.graphDensity)) {
+      if (this.isValidPlacement(point, existingPoints, this.defaultMinDistance)) {
         return point;
       }
     }
@@ -621,7 +621,7 @@ export class CoordinateContext {
 
   /**
    * Sample a point biased toward culture's seed regions or near a reference entity.
-   * Uses graphDensity as the minimum distance between points.
+   * Uses defaultMinDistance as the minimum distance between points.
    *
    * When seed regions are exhausted, attempts to create an emergent region
    * with the culture. If that fails, returns null (skips placement).
@@ -768,7 +768,7 @@ export class CoordinateContext {
     // Find a sparse area to place the new region
     const sparseResult = this.findSparseArea({
       existingPositions: existingPoints,
-      minDistanceFromEntities: this.graphDensity * 2,
+      minDistanceFromEntities: this.defaultMinDistance * 2,
       preferPeriphery: true,
       maxAttempts: 30
     });
@@ -888,7 +888,7 @@ export class CoordinateContext {
 
   /**
    * Place an entity with culture context.
-   * Uses graphDensity as the minimum distance between points.
+   * Uses defaultMinDistance as the minimum distance between points.
    */
   async placeWithCulture(
     entityKind: string,

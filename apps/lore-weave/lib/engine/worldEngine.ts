@@ -127,6 +127,7 @@ export class WorldEngine {
       );
     }
     this.emitter = config.emitter;
+    this.config = config;
 
     // Emit initializing progress
     this.emitter.progress({
@@ -134,7 +135,7 @@ export class WorldEngine {
       tick: 0,
       maxTicks: config.maxTicks,
       epoch: 0,
-      totalEpochs: config.eras.length * 2,
+      totalEpochs: this.getTotalEpochs(),
       entityCount: initialState.length,
       relationshipCount: 0
     });
@@ -144,9 +145,12 @@ export class WorldEngine {
     // Also store declarative definitions for detailed breakdown in pressure_update events
     this.declarativePressures = new Map();
     this.runtimePressures = config.pressures.map(p => {
-      if (typeof (p as any).growth === 'function') {
-        // Already a runtime Pressure (e.g., from tests)
-        return p as unknown as Pressure;
+      const runtimePressure = p as any;
+      if (runtimePressure.homeostasis === undefined) {
+        throw new Error(`Pressure '${runtimePressure.id}' is missing required homeostasis parameter.`);
+      }
+      if (typeof runtimePressure.growth === 'function') {
+        throw new Error(`Pressure '${runtimePressure.id}' must be declarative. Runtime pressure objects are no longer supported.`);
       }
       // Store declarative pressure for breakdown
       this.declarativePressures.set(p.id, p);
@@ -173,7 +177,6 @@ export class WorldEngine {
       config.executableActions = loadActions(config.actions);
     }
 
-    this.config = config;
     this.statisticsCollector = new StatisticsCollector();
     this.currentEpoch = 0;
 
@@ -194,7 +197,7 @@ export class WorldEngine {
       tick: 0,
       maxTicks: config.maxTicks,
       epoch: 0,
-      totalEpochs: config.eras.length * 2,
+      totalEpochs: this.getTotalEpochs(),
       entityCount: initialState.length,
       relationshipCount: 0
     });
@@ -284,17 +287,17 @@ export class WorldEngine {
         'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
       );
     }
-    // Pass graphDensity and nameForgeService to CoordinateContext
+    // Pass defaultMinDistance and nameForgeService to CoordinateContext
     const coordinateConfig = {
       ...config.coordinateContextConfig,
-      graphDensity: config.graphDensity ?? config.coordinateContextConfig.graphDensity,
+      defaultMinDistance: config.defaultMinDistance ?? config.coordinateContextConfig.defaultMinDistance,
       nameForgeService: this.nameForgeService
     };
     this.coordinateContext = new CoordinateContext(coordinateConfig);
     this.emitter.log('info', 'Coordinate context initialized', {
       cultures: this.coordinateContext.getCultureIds().length,
       entityKinds: this.coordinateContext.getConfiguredKinds().length,
-      graphDensity: config.graphDensity ?? 5
+      defaultMinDistance: config.defaultMinDistance ?? 5
     });
 
     // Build runtime systems (including new distributed growth system)
@@ -548,7 +551,7 @@ export class WorldEngine {
       tick: this.graph.tick,
       maxTicks: this.config.maxTicks,
       epoch: this.currentEpoch,
-      totalEpochs: this.config.eras.length * 2,
+      totalEpochs: this.getTotalEpochs(),
       entityCount: this.graph.getEntityCount(),
       relationshipCount: this.graph.getRelationshipCount()
     });
@@ -634,7 +637,8 @@ export class WorldEngine {
    * Get total expected epochs
    */
   public getTotalEpochs(): number {
-    return this.config.eras.length * 2;
+    // maxEpochs is the hard limit; default to eras.length * 2 for backwards compatibility
+    return this.config.maxEpochs ?? (this.config.eras.length * 2);
   }
 
   /**
@@ -739,7 +743,7 @@ export class WorldEngine {
       tick: 0,
       maxTicks: this.config.maxTicks,
       epoch: 0,
-      totalEpochs: this.config.eras.length * 2,
+      totalEpochs: this.getTotalEpochs(),
       entityCount: this.graph.getEntityCount(),
       relationshipCount: this.graph.getRelationshipCount()
     });
@@ -759,7 +763,7 @@ export class WorldEngine {
   
   private shouldContinue(): boolean {
     // PRIORITY 1: Complete all eras (each era should run ~2 epochs)
-    const allErasCompleted = this.currentEpoch >= this.config.eras.length * 2;
+    const allErasCompleted = this.currentEpoch >= this.getTotalEpochs();
 
     // PRIORITY 2: Respect maximum tick limit (safety valve)
     const hitTickLimit = this.graph.tick >= this.config.maxTicks;
@@ -864,7 +868,7 @@ export class WorldEngine {
     this.lastGrowthSummary = null;
 
     // Simulation phase
-    for (let i = 0; i < this.config.simulationTicksPerGrowth; i++) {
+    for (let i = 0; i < this.config.ticksPerEpoch; i++) {
       // Capture pressure values BEFORE any modifications this tick
       // This ensures previousValue in pressure_update reflects true start-of-tick values
       this.tickStartPressures.clear();
@@ -886,7 +890,7 @@ export class WorldEngine {
           tick: this.graph.tick,
           maxTicks: this.config.maxTicks,
           epoch: this.currentEpoch,
-          totalEpochs: this.config.eras.length * 2,
+          totalEpochs: this.getTotalEpochs(),
           entityCount: this.graph.getEntityCount(),
           relationshipCount: this.graph.getRelationshipCount()
         });
@@ -1040,10 +1044,30 @@ export class WorldEngine {
         status: count >= this.maxRunsPerTemplate ? 'saturated' as const :
                 count >= this.maxRunsPerTemplate * 0.7 ? 'warning' as const : 'healthy' as const
       })),
-      unusedTemplates: unusedTemplates.map(t => ({
-        templateId: t.id,
-        diagnostic: this.contractEnforcer.getDiagnostic(t, diagnosticView)
-      }))
+      unusedTemplates: unusedTemplates.map(t => {
+        const declarativeTemplate = this.declarativeTemplates.get(t.id);
+        if (declarativeTemplate) {
+          const diagnosis = this.templateInterpreter.diagnoseCanApply(declarativeTemplate, diagnosticView);
+          const summary = diagnosis.failedRules.length > 0
+            ? `Failed: ${diagnosis.failedRules[0].split(':')[0]}`
+            : diagnosis.selectionCount === 0
+              ? 'No valid targets'
+              : 'Unknown';
+          return {
+            templateId: t.id,
+            failedRules: diagnosis.failedRules,
+            selectionCount: diagnosis.selectionCount,
+            summary,
+            selectionDiagnosis: diagnosis.selectionDiagnosis
+          };
+        }
+        return {
+          templateId: t.id,
+          failedRules: [],
+          selectionCount: 0,
+          summary: 'Non-declarative template'
+        };
+      })
     });
 
     // Emit tag health report
@@ -1256,10 +1280,30 @@ export class WorldEngine {
         status: count >= this.maxRunsPerTemplate ? 'saturated' as const :
                 count >= this.maxRunsPerTemplate * 0.7 ? 'warning' as const : 'healthy' as const
       })),
-      unusedTemplates: unusedTemplates.map(t => ({
-        templateId: t.id,
-        diagnostic: this.contractEnforcer.getDiagnostic(t, diagnosticView)
-      }))
+      unusedTemplates: unusedTemplates.map(t => {
+        const declarativeTemplate = this.declarativeTemplates.get(t.id);
+        if (declarativeTemplate) {
+          const diagnosis = this.templateInterpreter.diagnoseCanApply(declarativeTemplate, diagnosticView);
+          const summary = diagnosis.failedRules.length > 0
+            ? `Failed: ${diagnosis.failedRules[0].split(':')[0]}`
+            : diagnosis.selectionCount === 0
+              ? 'No valid targets'
+              : 'Unknown';
+          return {
+            templateId: t.id,
+            failedRules: diagnosis.failedRules,
+            selectionCount: diagnosis.selectionCount,
+            summary,
+            selectionDiagnosis: diagnosis.selectionDiagnosis
+          };
+        }
+        return {
+          templateId: t.id,
+          failedRules: [],
+          selectionCount: 0,
+          summary: 'Non-declarative template'
+        };
+      })
     });
 
     // Emit system health
@@ -1425,7 +1469,7 @@ export class WorldEngine {
     const totalTarget = this.config.targetEntitiesPerKind * entityKinds.length;
     const currentTotal = this.graph.getEntityCount();
     const progressRatio = currentTotal / totalTarget;
-    const epochsRemaining = Math.max(1, this.config.eras.length * 2 - this.currentEpoch);
+    const epochsRemaining = Math.max(1, this.getTotalEpochs() - this.currentEpoch);
 
     // Dynamic target: spread remaining entities over remaining epochs
     const baseTarget = Math.ceil(totalRemaining / epochsRemaining);
@@ -1522,7 +1566,7 @@ export class WorldEngine {
         // Apply pressure changes and track for emitting
         for (const [pressure, delta] of Object.entries(result.pressureChanges)) {
           const current = this.graph.pressures.get(pressure) || 0;
-          this.graph.pressures.set(pressure, Math.max(0, Math.min(100, current + delta)));
+          this.graph.pressures.set(pressure, Math.max(-100, Math.min(100, current + delta)));
           this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
         }
 
@@ -1602,13 +1646,13 @@ export class WorldEngine {
       const breakdown = evaluatePressureGrowthWithBreakdown(declarativeDef, this.graph);
 
       // Apply diminishing returns for high pressure values to prevent maxing out
-      // Growth is scaled down as pressure approaches 100
-      // Use exponential decay to prevent maxing out
-      const growthScaling = Math.max(0.1, 1 - Math.pow(currentValueAfterSystems / 100, 2)); // At 80, ~36%; at 100, ~10%
-      const scaledGrowth = breakdown.totalGrowth * growthScaling;
+      // Growth is scaled down as pressure magnitude approaches limits
+      const normalizedMagnitude = Math.abs(currentValueAfterSystems) / 100;
+      const growthScaling = Math.max(0.1, 1 - Math.pow(normalizedMagnitude, 2)); // Symmetric damping near ±100
+      const scaledFeedback = breakdown.feedbackTotal * growthScaling;
 
-      // Decay always subtracts (no conditional flip)
-      const decay = -pressure.decay;
+      // Homeostatic pull toward equilibrium (0)
+      const homeostaticDelta = (0 - currentValueAfterSystems) * pressure.homeostasis;
 
       // Apply era modifier if present
       const eraModifier = era.pressureModifiers?.[pressure.id] || 1.0;
@@ -1616,13 +1660,14 @@ export class WorldEngine {
       // Apply distribution feedback adjustment
       const distributionFeedback = distributionAdjustments[pressure.id] || 0;
 
-      const rawDelta = (scaledGrowth + decay) * eraModifier + distributionFeedback;
+      const rawDelta = (scaledFeedback + homeostaticDelta) * eraModifier + distributionFeedback;
 
-      // Smooth large changes to prevent spikes (max change per tick: ±2)
-      const smoothedDelta = Math.max(-2, Math.min(2, rawDelta));
+      // Smooth large changes to prevent spikes (default max change per tick: ±10)
+      const smoothingLimit = this.config.pressureDeltaSmoothing ?? 10;
+      const smoothedDelta = Math.max(-smoothingLimit, Math.min(smoothingLimit, rawDelta));
 
       // Apply feedback delta ON TOP OF system modifications
-      const newValue = Math.max(0, Math.min(100, currentValueAfterSystems + smoothedDelta));
+      const newValue = Math.max(-100, Math.min(100, currentValueAfterSystems + smoothedDelta));
       this.graph.pressures.set(pressure.id, newValue);
 
       // Build detailed change record
@@ -1633,13 +1678,13 @@ export class WorldEngine {
         newValue,
         delta: newValue - previousValue,
         breakdown: {
-          baseGrowth: breakdown.baseGrowth,
           positiveFeedback: breakdown.positiveFeedback,
           negativeFeedback: breakdown.negativeFeedback,
-          totalGrowth: breakdown.totalGrowth,
+          feedbackTotal: breakdown.feedbackTotal,
           growthScaling,
-          scaledGrowth,
-          decay,
+          scaledFeedback,
+          homeostasis: pressure.homeostasis,
+          homeostaticDelta,
           eraModifier,
           distributionFeedback,
           rawDelta,

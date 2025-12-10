@@ -64,11 +64,13 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
               <h4 className="stats-section-title">World Pressures</h4>
               <div className="pressures-grid">
                 {pressureEntries.map(([name, value]) => {
-                  const percentage = Math.min(100, Math.max(0, value));
+                  const clamped = Math.max(-100, Math.min(100, value));
+                  const percentage = ((clamped + 100) / 2); // -100..100 → 0..100
+                  const magnitude = Math.abs(clamped);
                   const intensity =
-                    percentage >= 75 ? 'high' :
-                    percentage >= 50 ? 'medium' :
-                    percentage >= 25 ? 'low' : 'minimal';
+                    magnitude >= 75 ? 'high' :
+                    magnitude >= 50 ? 'medium' :
+                    magnitude >= 25 ? 'low' : 'minimal';
                   return (
                     <div key={name} className="pressure-item">
                       <div className="pressure-header">

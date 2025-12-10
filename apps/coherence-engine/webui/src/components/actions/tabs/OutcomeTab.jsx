@@ -73,50 +73,50 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
         {relationships.map((rel, index) => (
           <div key={index} className="item-card">
             <div className="item-card-body">
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Kind"
-                  value={rel.kind}
-                  onChange={(v) => updateRelationship(index, { ...rel, kind: v })}
-                  options={relationshipKindOptions}
-                />
-                <ReferenceDropdown
-                  label="Source"
-                  value={rel.src}
-                  onChange={(v) => updateRelationship(index, { ...rel, src: v })}
-                  options={RELATIONSHIP_REFS}
-                />
-                <ReferenceDropdown
-                  label="Destination"
-                  value={rel.dst}
-                  onChange={(v) => updateRelationship(index, { ...rel, dst: v })}
-                  options={RELATIONSHIP_REFS}
-                />
-                <div className="form-group">
-                  <label className="label">Strength</label>
-                  <NumberInput
-                    value={rel.strength}
-                    onChange={(v) => updateRelationship(index, { ...rel, strength: v ?? 0 })}
-                    min={0}
-                    max={1}
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Kind"
+                    value={rel.kind}
+                    onChange={(v) => updateRelationship(index, { ...rel, kind: v })}
+                    options={relationshipKindOptions}
                   />
-                </div>
-                <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={rel.bidirectional || false}
-                      onChange={(e) => updateRelationship(index, { ...rel, bidirectional: e.target.checked || undefined })}
-                      className="checkbox"
+                  <ReferenceDropdown
+                    label="Source"
+                    value={rel.src}
+                    onChange={(v) => updateRelationship(index, { ...rel, src: v })}
+                    options={RELATIONSHIP_REFS}
+                  />
+                  <ReferenceDropdown
+                    label="Destination"
+                    value={rel.dst}
+                    onChange={(v) => updateRelationship(index, { ...rel, dst: v })}
+                    options={RELATIONSHIP_REFS}
+                  />
+                  <div className="form-group">
+                    <label className="label">Strength</label>
+                    <NumberInput
+                      value={rel.strength}
+                      onChange={(v) => updateRelationship(index, { ...rel, strength: v ?? 0 })}
+                      min={0}
+                      max={1}
                     />
-                    Bidirectional
-                  </label>
+                  </div>
+                  <div className="form-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={rel.bidirectional || false}
+                        onChange={(e) => updateRelationship(index, { ...rel, bidirectional: e.target.checked || undefined })}
+                        className="checkbox"
+                      />
+                      Bidirectional
+                    </label>
+                  </div>
                 </div>
-                <div className="flex items-end">
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeRelationship(index)}>
-                    ×
-                  </button>
-                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeRelationship(index)}>
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -134,25 +134,25 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
         {strengthenRelationships.map((item, index) => (
           <div key={index} className="item-card">
             <div className="item-card-body">
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Kind"
-                  value={item.kind}
-                  onChange={(v) => updateStrengthen(index, { ...item, kind: v })}
-                  options={relationshipKindOptions}
-                />
-                <div className="form-group">
-                  <label className="label">Amount</label>
-                  <NumberInput
-                    value={item.amount}
-                    onChange={(v) => updateStrengthen(index, { ...item, amount: v ?? 0 })}
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Kind"
+                    value={item.kind}
+                    onChange={(v) => updateStrengthen(index, { ...item, kind: v })}
+                    options={relationshipKindOptions}
                   />
+                  <div className="form-group">
+                    <label className="label">Amount</label>
+                    <NumberInput
+                      value={item.amount}
+                      onChange={(v) => updateStrengthen(index, { ...item, amount: v ?? 0 })}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-end">
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeStrengthen(index)}>
-                    ×
-                  </button>
-                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeStrengthen(index)}>
+                  ×
+                </button>
               </div>
             </div>
           </div>

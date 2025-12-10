@@ -29,8 +29,8 @@ const mockEras = [
 ];
 
 const mockPressures = [
-  { id: 'conflict', name: 'Conflict', initialValue: 30, decay: 0.05 },
-  { id: 'prosperity', name: 'Prosperity', initialValue: 60, decay: 0.1 },
+  { id: 'conflict', name: 'Conflict', initialValue: 30, homeostasis: 0.05, description: 'Positive = strife; negative = peace.' },
+  { id: 'prosperity', name: 'Prosperity', initialValue: 60, homeostasis: 0.1, description: 'Positive = thriving; negative = recession.' },
 ];
 
 const mockGenerators = [

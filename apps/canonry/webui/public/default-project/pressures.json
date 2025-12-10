@@ -2,8 +2,9 @@
   {
     "id": "resource_scarcity",
     "name": "Resource Scarcity",
+    "description": "Positive = scarcity and strain; negative = surplus and abundance.",
     "initialValue": 60,
-    "decay": 0,
+    "homeostasis": 0.05,
     "growth": {
       "positiveFeedback": [
         {
@@ -35,15 +36,15 @@
           "subtype": "geographic_feature",
           "coefficient": 0.6
         }
-      ],
-      "baseGrowth": 1
+      ]
     }
   },
   {
     "id": "conflict",
     "name": "Conflict Tension",
+    "description": "Positive = rising wars/rivalries; negative = peace and cooperation.",
     "initialValue": 0,
-    "decay": 2,
+    "homeostasis": 0.05,
     "growth": {
       "positiveFeedback": [
         {
@@ -92,10 +93,10 @@
   {
     "id": "magical_instability",
     "name": "Magical Instability",
+    "description": "Positive = volatile magic/anomalies; negative = stable, regulated magic.",
     "initialValue": 30,
-    "decay": 6,
+    "homeostasis": 0.06,
     "growth": {
-      "baseGrowth": 2,
       "positiveFeedback": [
         {
           "type": "ratio",
@@ -152,8 +153,9 @@
   {
     "id": "stability",
     "name": "Political Stability",
-    "initialValue": 0,
-    "decay": 3,
+    "description": "Positive = strong governance/order; negative = instability and coups.",
+    "initialValue": 50,
+    "homeostasis": 0.05,
     "growth": {
       "positiveFeedback": [
         {
@@ -197,8 +199,9 @@
   {
     "id": "external_threat",
     "name": "External Threat",
+    "description": "Positive = imminent outside danger; negative = secure borders and calm seas.",
     "initialValue": 0,
-    "decay": 6,
+    "homeostasis": 0.06,
     "growth": {
       "positiveFeedback": [
         {
@@ -225,8 +228,9 @@
   {
     "id": "cultural_tension",
     "name": "Cultural Divergence",
+    "description": "Positive = widening cultural rifts; negative = shared values and harmony.",
     "initialValue": 0,
-    "decay": 15,
+    "homeostasis": 0.15,
     "growth": {
       "positiveFeedback": [
         {
@@ -256,15 +260,15 @@
           "coefficient": 5
         }
       ],
-      "negativeFeedback": [],
-      "maxGrowth": 10
+      "negativeFeedback": []
     }
   },
   {
     "id": "diplomacy",
     "name": "Diplomatic Relations",
+    "description": "Positive = strong alliances/trade; negative = distrust and sanctions.",
     "initialValue": 0,
-    "decay": 5,
+    "homeostasis": 0.05,
     "growth": {
       "positiveFeedback": [
         {

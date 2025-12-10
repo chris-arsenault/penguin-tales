@@ -57,6 +57,65 @@ export default function WeightMatrixEditor({
     }));
   }, [viewMode, generators, systems]);
 
+  // Detect orphaned references - IDs in eras that don't exist in generators/systems
+  const orphanedReferences = useMemo(() => {
+    const generatorIds = new Set(generators.map(g => g.id));
+    const systemIds = new Set(systems.map(s => s.config?.id || s.id));
+
+    const orphanedGenerators = [];
+    const orphanedSystems = [];
+
+    eras.forEach(era => {
+      // Check template weights
+      Object.keys(era.templateWeights || {}).forEach(id => {
+        if (!generatorIds.has(id)) {
+          orphanedGenerators.push({ id, eraId: era.id, eraName: era.name });
+        }
+      });
+
+      // Check system modifiers
+      Object.keys(era.systemModifiers || {}).forEach(id => {
+        if (!systemIds.has(id)) {
+          orphanedSystems.push({ id, eraId: era.id, eraName: era.name });
+        }
+      });
+    });
+
+    return { generators: orphanedGenerators, systems: orphanedSystems };
+  }, [eras, generators, systems]);
+
+  // Count total orphans
+  const totalOrphans = orphanedReferences.generators.length + orphanedReferences.systems.length;
+
+  // Clean up all orphaned references
+  const cleanupOrphanedReferences = useCallback(() => {
+    const generatorIds = new Set(generators.map(g => g.id));
+    const systemIds = new Set(systems.map(s => s.config?.id || s.id));
+
+    const newEras = eras.map(era => {
+      const newTemplateWeights = { ...era.templateWeights };
+      const newSystemModifiers = { ...era.systemModifiers };
+
+      // Remove orphaned generator references
+      Object.keys(newTemplateWeights).forEach(id => {
+        if (!generatorIds.has(id)) {
+          delete newTemplateWeights[id];
+        }
+      });
+
+      // Remove orphaned system references
+      Object.keys(newSystemModifiers).forEach(id => {
+        if (!systemIds.has(id)) {
+          delete newSystemModifiers[id];
+        }
+      });
+
+      return { ...era, templateWeights: newTemplateWeights, systemModifiers: newSystemModifiers };
+    });
+
+    onErasChange(newEras);
+  }, [eras, generators, systems, onErasChange]);
+
   // Filter items by search
   const filteredItems = useMemo(() => {
     if (!searchQuery) return items;
@@ -244,6 +303,31 @@ export default function WeightMatrixEditor({
         </p>
       </div>
 
+      {/* Orphaned References Warning */}
+      {totalOrphans > 0 && (
+        <div className="orphan-warning">
+          <div className="orphan-warning-content">
+            <span className="orphan-warning-icon">⚠️</span>
+            <div className="orphan-warning-text">
+              <strong>{totalOrphans} orphaned reference{totalOrphans !== 1 ? 's' : ''} detected</strong>
+              <span className="orphan-warning-details">
+                {orphanedReferences.generators.length > 0 && (
+                  <span>{orphanedReferences.generators.length} deleted generator{orphanedReferences.generators.length !== 1 ? 's' : ''}</span>
+                )}
+                {orphanedReferences.generators.length > 0 && orphanedReferences.systems.length > 0 && ', '}
+                {orphanedReferences.systems.length > 0 && (
+                  <span>{orphanedReferences.systems.length} deleted system{orphanedReferences.systems.length !== 1 ? 's' : ''}</span>
+                )}
+                {' still referenced in eras'}
+              </span>
+            </div>
+          </div>
+          <button className="btn btn-warning" onClick={cleanupOrphanedReferences}>
+            Clean Up All
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="matrix-toolbar">
         <div className="toolbar-left">
@@ -254,12 +338,18 @@ export default function WeightMatrixEditor({
               onClick={() => setViewMode('generators')}
             >
               Generators ({generators.length})
+              {orphanedReferences.generators.length > 0 && viewMode !== 'generators' && (
+                <span className="orphan-badge">{orphanedReferences.generators.length}</span>
+              )}
             </button>
             <button
               className={`toggle-btn ${viewMode === 'systems' ? 'active' : ''}`}
               onClick={() => setViewMode('systems')}
             >
               Systems ({systems.length})
+              {orphanedReferences.systems.length > 0 && viewMode !== 'systems' && (
+                <span className="orphan-badge">{orphanedReferences.systems.length}</span>
+              )}
             </button>
           </div>
 

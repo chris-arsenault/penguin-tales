@@ -219,7 +219,7 @@ export default function ValidationEditor({
           </li>
           <li className="validation-rule-item">
             <span className="validation-rule-bullet text-warning">●</span>
-            <strong>Balance Validation:</strong> Pressure sources/sinks (baseGrowth, decay, feedback, generators, systems), orphan generators/systems (not in any era)
+            <strong>Balance Validation:</strong> Pressure sources/sinks (feedback, homeostasis, generators, systems), orphan generators/systems (not in any era)
           </li>
           <li className="validation-rule-item">
             <span className="validation-rule-bullet text-warning">●</span>

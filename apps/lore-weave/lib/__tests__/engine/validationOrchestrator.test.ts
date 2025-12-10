@@ -25,8 +25,7 @@ describe('ValidationOrchestrator', () => {
       systems: [],
       pressures: [],
       entityRegistries: [],
-      epochLength: 20,
-      simulationTicksPerGrowth: 10,
+      ticksPerEpoch: 10,
       targetEntitiesPerKind: 30,
       maxTicks: 500
     };

@@ -125,9 +125,9 @@ Pressures are **background forces** that accumulate and enable certain templates
 ```typescript
 Pressure {
   id: string
-  value: number  // 0-100
-  growth: (graph) => number  // Calculate delta from world state
-  decay: number              // Natural decay per tick
+  value: number  // -100 to 100
+  growth: (graph) => number  // Calculate feedback delta from world state
+  homeostasis: number        // Pull toward equilibrium (0) each tick
 }
 ```
 

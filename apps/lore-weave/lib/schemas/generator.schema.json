@@ -52,9 +52,8 @@
       "properties": {
         "type": { "const": "pressure_threshold" },
         "pressureId": { "$ref": "#/$defs/NonEmptyString" },
-        "min": { "type": "number", "minimum": 0, "maximum": 100 },
-        "max": { "type": "number", "minimum": 0, "maximum": 100 },
-        "extremeChance": { "type": "number", "minimum": 0, "maximum": 1 }
+        "min": { "type": "number", "minimum": -100, "maximum": 100 },
+        "max": { "type": "number", "minimum": -100, "maximum": 100 }
       }
     },
 
@@ -65,7 +64,7 @@
       "properties": {
         "type": { "const": "pressure_any_above" },
         "pressureIds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
-        "threshold": { "type": "number", "minimum": 0, "maximum": 100 }
+        "threshold": { "type": "number", "minimum": -100, "maximum": 100 }
       }
     },
 

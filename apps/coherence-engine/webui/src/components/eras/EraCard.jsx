@@ -5,8 +5,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   BasicInfoSection,
-  GeneratorsSection,
-  SystemsSection,
   TransitionsGrid,
 } from './sections';
 
@@ -17,11 +15,8 @@ import {
  * @param {Function} props.onToggle - Called to toggle expansion
  * @param {Function} props.onChange - Called when era changes
  * @param {Function} props.onDelete - Called to delete the era
- * @param {Array} props.generators - Available generators
- * @param {Array} props.systems - Available systems
  * @param {Array} props.pressures - Available pressures
  * @param {Object} props.schema - Domain schema
- * @param {Object} props.usageMap - Usage tracking map
  * @param {Array} props.allEras - All eras for nextEra selection
  */
 export function EraCard({
@@ -30,76 +25,15 @@ export function EraCard({
   onToggle,
   onChange,
   onDelete,
-  generators,
-  systems,
   pressures,
   schema,
-  usageMap,
   allEras,
 }) {
   const [hovering, setHovering] = useState(false);
-  const [weightsExpanded, setWeightsExpanded] = useState(false);
-
-  // Compute validation status for this era
-  const validation = useMemo(() => {
-    const generatorIds = new Set(generators.map(g => g.id));
-    const systemIds = new Set(systems.map(s => s.config?.id));
-
-    const invalidGenerators = Object.keys(era.templateWeights || {}).filter(id => !generatorIds.has(id));
-    const invalidSystems = Object.keys(era.systemModifiers || {}).filter(id => !systemIds.has(id));
-
-    return {
-      invalidGenerators,
-      invalidSystems,
-      totalInvalid: invalidGenerators.length + invalidSystems.length,
-    };
-  }, [era, generators, systems]);
 
   // Field change handler
   const handleFieldChange = useCallback((field, value) => {
     onChange({ ...era, [field]: value });
-  }, [era, onChange]);
-
-  // Template weight handlers
-  const handleWeightChange = useCallback((key, value) => {
-    onChange({
-      ...era,
-      templateWeights: { ...era.templateWeights, [key]: value },
-    });
-  }, [era, onChange]);
-
-  const handleRemoveWeight = useCallback((key) => {
-    const newWeights = { ...era.templateWeights };
-    delete newWeights[key];
-    onChange({ ...era, templateWeights: newWeights });
-  }, [era, onChange]);
-
-  const handleAddWeight = useCallback((genId) => {
-    onChange({
-      ...era,
-      templateWeights: { ...era.templateWeights, [genId]: 2 },
-    });
-  }, [era, onChange]);
-
-  // System modifier handlers
-  const handleModifierChange = useCallback((key, value) => {
-    onChange({
-      ...era,
-      systemModifiers: { ...era.systemModifiers, [key]: value },
-    });
-  }, [era, onChange]);
-
-  const handleRemoveModifier = useCallback((key) => {
-    const newModifiers = { ...era.systemModifiers };
-    delete newModifiers[key];
-    onChange({ ...era, systemModifiers: newModifiers });
-  }, [era, onChange]);
-
-  const handleAddModifier = useCallback((sysId) => {
-    onChange({
-      ...era,
-      systemModifiers: { ...era.systemModifiers, [sysId]: 2 },
-    });
   }, [era, onChange]);
 
   // Entry condition handlers
@@ -204,36 +138,6 @@ export function EraCard({
     });
   }, [era, onChange]);
 
-  // Name lookup helpers
-  const getGeneratorName = (id) => {
-    const gen = generators.find(g => g.id === id);
-    return gen?.name || id.replace(/_/g, ' ');
-  };
-
-  const getSystemName = (id) => {
-    const sys = systems.find(s => s.config?.id === id);
-    return sys?.config?.name || id.replace(/_/g, ' ');
-  };
-
-  // Sorted entries for stable display
-  const templateWeights = Object.entries(era.templateWeights || {}).sort((a, b) => a[0].localeCompare(b[0]));
-  const systemModifiers = Object.entries(era.systemModifiers || {}).sort((a, b) => a[0].localeCompare(b[0]));
-
-  // Available items to add
-  const availableGenerators = useMemo(() => {
-    const currentIds = new Set(Object.keys(era.templateWeights || {}));
-    return generators
-      .filter(g => !currentIds.has(g.id) && g.enabled !== false)
-      .map(g => ({ id: g.id, name: g.name || g.id }));
-  }, [generators, era.templateWeights]);
-
-  const availableSystems = useMemo(() => {
-    const currentIds = new Set(Object.keys(era.systemModifiers || {}));
-    return systems
-      .filter(s => s.config?.id && !currentIds.has(s.config.id))
-      .map(s => ({ id: s.config.id, name: s.config.name || s.config.id }));
-  }, [systems, era.systemModifiers]);
-
   const availablePressuresForEntry = useMemo(() => {
     const currentIds = new Set(Object.keys(era.entryEffects?.pressureChanges || {}));
     return (pressures || []).filter(p => !currentIds.has(p.id)).map(p => ({ id: p.id, name: p.name || p.id }));
@@ -245,8 +149,6 @@ export function EraCard({
   }, [pressures, era.exitEffects]);
 
   // Counts
-  const activeGenerators = templateWeights.filter(([, v]) => v > 0).length;
-  const activeSystems = systemModifiers.filter(([, v]) => v > 0).length;
   const entryConditions = era.entryConditions || [];
   const exitConditions = era.exitConditions || [];
   const entryPressureChanges = Object.entries(era.entryEffects?.pressureChanges || {});
@@ -265,26 +167,17 @@ export function EraCard({
           <div className="expandable-card-title">
             <span className="expandable-card-name">{era.name}</span>
             <span className="expandable-card-id">{era.id}</span>
-            {validation.totalInvalid > 0 && (
-              <span className="badge-error">
-                {validation.totalInvalid} invalid ref{validation.totalInvalid !== 1 ? 's' : ''}
-              </span>
-            )}
           </div>
           <div className="expandable-card-desc">{era.description}</div>
         </div>
         <div className="expandable-card-stats">
           <div className="stat">
-            <span className="stat-label">Generators</span>
-            <span className="stat-value">
-              {activeGenerators}<span className="stat-total">/{templateWeights.length}</span>
-            </span>
+            <span className="stat-label">Entry</span>
+            <span className="stat-value">{entryConditions.length}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Systems</span>
-            <span className="stat-value">
-              {activeSystems}<span className="stat-total">/{systemModifiers.length}</span>
-            </span>
+            <span className="stat-label">Exit</span>
+            <span className="stat-value">{exitConditions.length}</span>
           </div>
           <span className={`expand-icon ${expanded ? 'open' : ''}`}>▼</span>
         </div>
@@ -318,43 +211,6 @@ export function EraCard({
             pressures={pressures}
             schema={schema}
           />
-
-          {/* Weights Accordion - Generators & Systems */}
-          <div className="weights-accordion">
-            <div
-              className={`weights-accordion-header ${weightsExpanded ? 'expanded' : ''}`}
-              onClick={() => setWeightsExpanded(!weightsExpanded)}
-            >
-              <span className="weights-accordion-icon">{weightsExpanded ? '▼' : '▶'}</span>
-              <span className="weights-accordion-title">Generator & System Weights</span>
-              <span className="weights-accordion-summary">
-                {activeGenerators} generator{activeGenerators !== 1 ? 's' : ''}, {activeSystems} system{activeSystems !== 1 ? 's' : ''}
-              </span>
-            </div>
-            {weightsExpanded && (
-              <div className="weights-accordion-content">
-                <GeneratorsSection
-                  templateWeights={templateWeights}
-                  activeCount={activeGenerators}
-                  getGeneratorName={getGeneratorName}
-                  onWeightChange={handleWeightChange}
-                  onRemove={handleRemoveWeight}
-                  availableGenerators={availableGenerators}
-                  onAdd={handleAddWeight}
-                />
-
-                <SystemsSection
-                  systemModifiers={systemModifiers}
-                  activeCount={activeSystems}
-                  getSystemName={getSystemName}
-                  onModifierChange={handleModifierChange}
-                  onRemove={handleRemoveModifier}
-                  availableSystems={availableSystems}
-                  onAdd={handleAddModifier}
-                />
-              </div>
-            )}
-          </div>
 
           {/* Delete button */}
           <div className="card-footer">

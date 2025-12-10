@@ -139,7 +139,7 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                   <NumberInput
                     value={rule.min}
                     onChange={(v) => updateField('min', v)}
-                    min={0}
+                    min={-100}
                     max={100}
                     integer
                     allowEmpty
@@ -151,7 +151,7 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                   <NumberInput
                     value={rule.max}
                     onChange={(v) => updateField('max', v)}
-                    min={0}
+                    min={-100}
                     max={100}
                     integer
                     allowEmpty

@@ -46,13 +46,7 @@ function PressureTooltip({ detail, discreteModifications, tickCount }) {
       )}
 
       <div className="lw-tooltip-section">
-        <div className="lw-tooltip-subtitle">Feedback Growth (cumulative)</div>
-        {breakdown.baseGrowth !== 0 && (
-          <div className="lw-tooltip-row">
-            <span>Base growth</span>
-            <span className={breakdown.baseGrowth >= 0 ? 'positive' : 'negative'}>{fmt(breakdown.baseGrowth)}</span>
-          </div>
-        )}
+        <div className="lw-tooltip-subtitle">Feedback (cumulative)</div>
         {breakdown.positiveFeedback.length === 0 && breakdown.negativeFeedback.length === 0 && (
           <div className="lw-tooltip-row lw-tooltip-empty">
             <span>No feedback factors defined</span>
@@ -71,9 +65,15 @@ function PressureTooltip({ detail, discreteModifications, tickCount }) {
           </div>
         ))}
         <div className="lw-tooltip-row lw-tooltip-subtotal">
-          <span>Total growth (before scaling)</span>
-          <span>{fmt(breakdown.totalGrowth)}</span>
+          <span>Net feedback (before scaling)</span>
+          <span>{fmt(breakdown.feedbackTotal)}</span>
         </div>
+        {breakdown.homeostasis !== undefined && breakdown.homeostasis !== 0 && (
+          <div className="lw-tooltip-row">
+            <span>Homeostatic pull</span>
+            <span className={breakdown.homeostaticDelta >= 0 ? 'positive' : 'negative'}>{fmt(breakdown.homeostaticDelta)}</span>
+          </div>
+        )}
       </div>
 
       <div className="lw-tooltip-section">
@@ -81,10 +81,6 @@ function PressureTooltip({ detail, discreteModifications, tickCount }) {
         <div className="lw-tooltip-row">
           <span>Growth scaling (diminishing returns)</span>
           <span>×{breakdown.growthScaling.toFixed(2)}</span>
-        </div>
-        <div className="lw-tooltip-row">
-          <span>Total decay</span>
-          <span className="negative">{breakdown.decay.toFixed(2)}</span>
         </div>
         {breakdown.eraModifier !== 1.0 && (
           <div className="lw-tooltip-row">
@@ -127,7 +123,7 @@ function PressureTooltip({ detail, discreteModifications, tickCount }) {
 
       <div className="lw-tooltip-section lw-tooltip-final">
         <div className="lw-tooltip-row">
-          <span>Total raw delta (feedback)</span>
+          <span>Total raw delta (feedback + homeostasis)</span>
           <span>{fmt(breakdown.rawDelta)}</span>
         </div>
         <div className="lw-tooltip-row">

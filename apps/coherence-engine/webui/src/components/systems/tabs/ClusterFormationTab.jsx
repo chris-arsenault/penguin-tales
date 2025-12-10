@@ -113,32 +113,32 @@ export function ClusterFormationTab({ system, onChange, schema }) {
         {criteria.map((crit, index) => (
           <div key={index} className="item-card">
             <div style={{ padding: '12px 16px' }}>
-              <div className="form-grid">
-                <ReferenceDropdown
-                  label="Type"
-                  value={crit.type}
-                  onChange={(v) => updateCriterion(index, { ...crit, type: v })}
-                  options={CLUSTERING_CRITERIA_TYPES}
-                />
-                <div className="form-group">
-                  <label className="label">Weight</label>
-                  <NumberInput
-                    value={crit.weight}
-                    onChange={(v) => updateCriterion(index, { ...crit, weight: v ?? 0 })}
-                    min={0}
-                  />
-                </div>
-                {crit.type === 'shared_relationship' && (
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
                   <ReferenceDropdown
-                    label="Relationship Kind"
-                    value={crit.relationshipKind}
-                    onChange={(v) => updateCriterion(index, { ...crit, relationshipKind: v })}
-                    options={relationshipKindOptions}
+                    label="Type"
+                    value={crit.type}
+                    onChange={(v) => updateCriterion(index, { ...crit, type: v })}
+                    options={CLUSTERING_CRITERIA_TYPES}
                   />
-                )}
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button className="btn-icon btn-icon-danger" onClick={() => removeCriterion(index)}>x</button>
+                  <div className="form-group">
+                    <label className="label">Weight</label>
+                    <NumberInput
+                      value={crit.weight}
+                      onChange={(v) => updateCriterion(index, { ...crit, weight: v ?? 0 })}
+                      min={0}
+                    />
+                  </div>
+                  {crit.type === 'shared_relationship' && (
+                    <ReferenceDropdown
+                      label="Relationship Kind"
+                      value={crit.relationshipKind}
+                      onChange={(v) => updateCriterion(index, { ...crit, relationshipKind: v })}
+                      options={relationshipKindOptions}
+                    />
+                  )}
                 </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeCriterion(index)}>×</button>
               </div>
             </div>
           </div>

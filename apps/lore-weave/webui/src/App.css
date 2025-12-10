@@ -435,6 +435,180 @@
 }
 
 /* ========================================
+   Unused Templates Section
+   ======================================== */
+
+.lw-unused-section {
+  margin-top: var(--lw-space-lg);
+  border-top: 1px solid var(--lw-border-color);
+  padding-top: var(--lw-space-md);
+}
+
+.lw-unused-header {
+  display: flex;
+  align-items: center;
+  gap: var(--lw-space-sm);
+  cursor: pointer;
+  padding: var(--lw-space-sm) 0;
+  color: var(--lw-warning);
+  font-size: var(--lw-text-sm);
+  font-weight: 500;
+}
+
+.lw-unused-header:hover {
+  color: var(--lw-text-primary);
+}
+
+.lw-unused-toggle {
+  font-size: 10px;
+  width: 12px;
+}
+
+.lw-unused-title {
+  flex: 1;
+}
+
+.lw-unused-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--lw-space-sm);
+}
+
+.lw-unused-template {
+  background-color: var(--lw-bg-secondary);
+  border-radius: var(--lw-radius-md);
+  border: 1px solid var(--lw-border-color);
+  overflow: hidden;
+}
+
+.lw-unused-template-header {
+  display: flex;
+  align-items: center;
+  gap: var(--lw-space-sm);
+  padding: var(--lw-space-sm) var(--lw-space-md);
+  cursor: pointer;
+  font-size: var(--lw-text-sm);
+}
+
+.lw-unused-template-header:hover {
+  background-color: var(--lw-bg-tertiary);
+}
+
+.lw-unused-icon {
+  font-size: 12px;
+}
+
+.lw-unused-name {
+  color: var(--lw-text-primary);
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lw-unused-summary {
+  color: var(--lw-text-muted);
+  font-size: 11px;
+}
+
+.lw-unused-expand {
+  color: var(--lw-text-muted);
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+}
+
+.lw-unused-details {
+  padding: var(--lw-space-sm) var(--lw-space-md);
+  padding-top: 0;
+  background-color: var(--lw-bg-primary);
+  border-top: 1px solid var(--lw-border-color);
+}
+
+.lw-failed-rules {
+  margin: 0;
+  padding: var(--lw-space-sm) 0;
+  padding-left: var(--lw-space-lg);
+  list-style: none;
+}
+
+.lw-failed-rules li {
+  font-size: 11px;
+  color: var(--lw-text-secondary);
+  padding: 2px 0;
+  font-family: var(--lw-font-mono);
+}
+
+.lw-failed-rules li::before {
+  content: "•";
+  color: var(--lw-danger);
+  margin-right: var(--lw-space-sm);
+}
+
+.lw-no-targets {
+  font-size: 11px;
+  color: var(--lw-text-muted);
+  padding: var(--lw-space-sm) 0;
+}
+
+/* Selection Breakdown (inside unused templates) */
+.lw-selection-breakdown {
+  padding: var(--lw-space-sm) 0;
+}
+
+.lw-selection-header {
+  font-size: 11px;
+  color: var(--lw-text-muted);
+  font-family: var(--lw-font-mono);
+  margin-bottom: var(--lw-space-xs);
+}
+
+.lw-filter-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lw-filter-steps li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px var(--lw-space-sm);
+  border-left: 2px solid var(--lw-border-color);
+  margin-left: var(--lw-space-sm);
+}
+
+.lw-filter-steps li.lw-blocked-step {
+  border-left-color: var(--lw-danger);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.lw-step-desc {
+  color: var(--lw-text-secondary);
+  font-family: var(--lw-font-mono);
+}
+
+.lw-step-count {
+  color: var(--lw-text-muted);
+  font-family: var(--lw-font-mono);
+  white-space: nowrap;
+}
+
+.lw-eliminated {
+  color: var(--lw-warning);
+  font-size: 10px;
+}
+
+.lw-blocked-marker {
+  color: var(--lw-danger);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ========================================
    Log Panel
    ======================================== */
 

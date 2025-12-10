@@ -29,31 +29,8 @@ export function createXScale(data, width, margin) {
  * This is NOT height - margin.bottom; the caller passes the actual bottom coordinate.
  */
 export function createPressureYScale(data, pressureIds, chartBottom, margin) {
-  if (!data?.length || !pressureIds?.length) {
-    return scaleLinear({
-      domain: [0, 100],
-      range: [chartBottom, margin.top],
-    });
-  }
-
-  let min = Infinity;
-  let max = -Infinity;
-
-  for (const point of data) {
-    for (const id of pressureIds) {
-      const val = point[id];
-      if (typeof val === 'number') {
-        if (val < min) min = val;
-        if (val > max) max = val;
-      }
-    }
-  }
-
-  // Add some padding
-  const padding = (max - min) * 0.1 || 10;
-
   return scaleLinear({
-    domain: [Math.max(0, min - padding), max + padding],
+    domain: [-100, 100],
     range: [chartBottom, margin.top],
     nice: true,
   });

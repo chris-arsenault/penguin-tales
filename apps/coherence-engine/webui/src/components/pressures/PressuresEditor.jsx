@@ -28,8 +28,9 @@ export default function PressuresEditor({ pressures = [], onChange, schema, usag
     const newPressure = {
       id: `pressure_${Date.now()}`,
       name: 'New Pressure',
-      initialValue: 50,
-      decay: 5,
+      initialValue: 0,
+      homeostasis: 0.05,
+      description: '',
       growth: {
         positiveFeedback: [],
         negativeFeedback: [],
@@ -54,7 +55,7 @@ export default function PressuresEditor({ pressures = [], onChange, schema, usag
             No pressures defined
           </div>
           <div style={{ marginBottom: '24px' }}>
-            Pressures are forces that grow and decay based on world state,
+            Pressures respond to world state with feedback and a pull toward equilibrium,
             driving the narrative forward.
           </div>
           <button
@@ -75,7 +76,7 @@ export default function PressuresEditor({ pressures = [], onChange, schema, usag
         <h1 className="title">Pressures</h1>
         <p className="subtitle">
           Configure environmental and social pressures that drive world evolution.
-          Each pressure has feedback factors that make it grow or shrink based on world state.
+          Each pressure has feedback factors that make it grow or shrink based on world state plus a homeostatic pull toward equilibrium.
         </p>
       </div>
 

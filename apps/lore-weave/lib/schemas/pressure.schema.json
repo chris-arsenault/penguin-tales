@@ -4,7 +4,7 @@
   "title": "DeclarativePressure",
   "description": "A declarative pressure definition for world simulation",
   "type": "object",
-  "required": ["id", "name", "initialValue", "decay", "growth"],
+  "required": ["id", "name", "initialValue", "homeostasis", "growth"],
   "properties": {
     "id": {
       "type": "string",
@@ -14,15 +14,19 @@
       "type": "string",
       "description": "Human-readable name"
     },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the pressure, including what positive/negative values represent"
+    },
     "initialValue": {
       "type": "number",
-      "minimum": 0,
+      "minimum": -100,
       "maximum": 100,
-      "description": "Initial value (0-100)"
+      "description": "Initial value (-100 to 100)"
     },
-    "decay": {
+    "homeostasis": {
       "type": "number",
-      "description": "Natural decay per tick"
+      "description": "Homeostatic factor pulling value toward equilibrium (0). Applied each tick as delta = (0 - currentValue) * homeostasis"
     },
     "growth": {
       "$ref": "#/$defs/PressureGrowth",
@@ -38,10 +42,6 @@
       "type": "object",
       "required": ["positiveFeedback", "negativeFeedback"],
       "properties": {
-        "baseGrowth": {
-          "type": "number",
-          "description": "Base growth added each tick (default: 0)"
-        },
         "positiveFeedback": {
           "type": "array",
           "description": "Factors that increase pressure",
@@ -51,10 +51,6 @@
           "type": "array",
           "description": "Factors that decrease pressure",
           "items": { "$ref": "#/$defs/FeedbackFactor" }
-        },
-        "maxGrowth": {
-          "type": "number",
-          "description": "Cap the final growth value"
         }
       }
     },
@@ -258,11 +254,11 @@
           "properties": {
             "expectedRange": {
               "type": "array",
-              "items": { "type": "number" },
+              "items": { "type": "number", "minimum": -100, "maximum": 100 },
               "minItems": 2,
               "maxItems": 2
             },
-            "restingPoint": { "type": "number" },
+            "restingPoint": { "type": "number", "const": 0 },
             "oscillationPeriod": { "type": "number" }
           }
         }

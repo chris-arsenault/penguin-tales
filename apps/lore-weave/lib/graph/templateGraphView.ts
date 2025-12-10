@@ -575,7 +575,7 @@ export class TemplateGraphView {
    */
   modifyPressure(pressureId: string, delta: number): void {
     const current = this.graph.pressures.get(pressureId) || 0;
-    this.graph.pressures.set(pressureId, Math.max(0, Math.min(100, current + delta)));
+    this.graph.pressures.set(pressureId, Math.max(-100, Math.min(100, current + delta)));
 
     // Track modification if callback and source are set
     if (delta !== 0 && this.onPressureModify && this.currentSource) {
@@ -1224,7 +1224,7 @@ export class TemplateGraphView {
       ? placement.fallback
       : ['anchor_region', 'seed_region', 'sparse', 'random'];
 
-    const spacingMin = spacing.minDistance ?? ((this.coordinateContext as unknown as { graphDensity?: number }).graphDensity ?? 5);
+    const spacingMin = spacing.minDistance ?? ((this.coordinateContext as unknown as { defaultMinDistance?: number }).defaultMinDistance ?? 5);
     const avoidPoints = avoidEntities.map(e => e.coordinates).filter(Boolean) as Point[];
     const existingPoints = [...this.getAllRegionPoints(), ...avoidPoints];
 

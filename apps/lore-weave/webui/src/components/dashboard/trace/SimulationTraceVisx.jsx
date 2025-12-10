@@ -394,16 +394,6 @@ function DetailPanel({ selectedTick, lockedTick, breakdownsByTick, pressureIds, 
                 <div className="lw-trace-view-detail-breakdown">
                   <div className="lw-trace-view-detail-section-header">Feedback</div>
 
-                  {/* Base growth */}
-                  {breakdown.baseGrowth !== 0 && (
-                    <div className="lw-trace-view-detail-row">
-                      <span className="lw-trace-view-detail-label">Base growth</span>
-                      <span className={breakdown.baseGrowth >= 0 ? 'positive' : 'negative'}>
-                        {breakdown.baseGrowth >= 0 ? '+' : ''}{breakdown.baseGrowth.toFixed(3)}
-                      </span>
-                    </div>
-                  )}
-
                   {/* Positive feedback */}
                   {breakdown.positiveFeedback?.filter(fb => fb.contribution !== 0).map((fb, k) => (
                     <div key={`pos-${k}`} className="lw-trace-view-detail-row">
@@ -426,11 +416,13 @@ function DetailPanel({ selectedTick, lockedTick, breakdownsByTick, pressureIds, 
                     </div>
                   ))}
 
-                  {/* Decay */}
-                  {breakdown.decay !== 0 && (
+                  {/* Homeostasis */}
+                  {breakdown.homeostasis !== 0 && (
                     <div className="lw-trace-view-detail-row">
-                      <span className="lw-trace-view-detail-label">Decay</span>
-                      <span className="negative">{breakdown.decay.toFixed(3)}</span>
+                      <span className="lw-trace-view-detail-label">Homeostasis</span>
+                      <span className={breakdown.homeostaticDelta >= 0 ? 'positive' : 'negative'}>
+                        {breakdown.homeostaticDelta >= 0 ? '+' : ''}{breakdown.homeostaticDelta.toFixed(3)}
+                      </span>
                     </div>
                   )}
 
@@ -462,7 +454,7 @@ function DetailPanel({ selectedTick, lockedTick, breakdownsByTick, pressureIds, 
 
                   {/* Feedback subtotal */}
                   <div className="lw-trace-view-detail-row lw-trace-view-detail-subtotal">
-                    <span className="lw-trace-view-detail-label">Feedback Δ</span>
+                    <span className="lw-trace-view-detail-label">Net Δ (smoothed)</span>
                     <span className={breakdown.smoothedDelta >= 0 ? 'positive' : 'negative'}>
                       {breakdown.smoothedDelta >= 0 ? '+' : ''}{breakdown.smoothedDelta.toFixed(3)}
                     </span>
@@ -1085,16 +1077,20 @@ function TraceVisualization({
           />
 
           {/* Era backgrounds in chart area */}
-          {visibleEraBoundaries.map((era, i) => (
-            <rect
-              key={`era-bg-${i}`}
-              x={xScale(era.startTick)}
-              y={margin.top}
-              width={xScale(era.endTick) - xScale(era.startTick)}
-              height={pressureChartHeight}
-              fill={ERA_COLORS[i % ERA_COLORS.length]}
-            />
-          ))}
+          {pressureChartHeight > 0 && visibleEraBoundaries.map((era, i) => {
+            const eraWidth = xScale(era.endTick) - xScale(era.startTick);
+            if (eraWidth <= 0) return null;
+            return (
+              <rect
+                key={`era-bg-${i}`}
+                x={xScale(era.startTick)}
+                y={margin.top}
+                width={eraWidth}
+                height={pressureChartHeight}
+                fill={ERA_COLORS[i % ERA_COLORS.length]}
+              />
+            );
+          })}
 
           {/* Pressure chart */}
           <PressureChart
@@ -1135,8 +1131,8 @@ function TraceVisualization({
           <rect
             x={margin.left}
             y={margin.top}
-            width={width - margin.left - margin.right}
-            height={pressureChartHeight}
+            width={Math.max(0, width - margin.left - margin.right)}
+            height={Math.max(0, pressureChartHeight)}
             fill="transparent"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
