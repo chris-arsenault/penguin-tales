@@ -20,6 +20,7 @@ import {
 } from './scales';
 import PressureChart from './PressureChart';
 import EraTimeline from './EraTimeline';
+import { SystemActivityPanel, PlaneDiffusionVis, GraphContagionVis } from '../systems';
 
 // Color palettes (same as original)
 export const PRESSURE_COLORS = [
@@ -1350,6 +1351,41 @@ export default function SimulationTraceVisx({
   const [hoveredEventId, setHoveredEventId] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [scrollOffset, setScrollOffset] = useState(null);
+  const [systemPanel, setSystemPanel] = useState(null); // null | 'activity' | 'plane-diffusion' | 'graph-contagion'
+  const [selectedDiffusionId, setSelectedDiffusionId] = useState(null);
+  const [selectedContagionId, setSelectedContagionId] = useState(null);
+  const [autoScaleColors, setAutoScaleColors] = useState(false);
+
+  // Derive available diffusion/contagion systems from what actually ran (has snapshot data in systemActions)
+  const diffusionSystemsWithData = useMemo(() => {
+    const systemsMap = new Map();
+    for (const action of systemActions) {
+      if (action.details?.diffusionSnapshot && !systemsMap.has(action.systemId)) {
+        systemsMap.set(action.systemId, {
+          id: action.systemId,
+          name: action.systemName,
+        });
+      }
+    }
+    return Array.from(systemsMap.values());
+  }, [systemActions]);
+
+  const contagionSystemsWithData = useMemo(() => {
+    const systemsMap = new Map();
+    for (const action of systemActions) {
+      if (action.details?.contagionSnapshot && !systemsMap.has(action.systemId)) {
+        systemsMap.set(action.systemId, {
+          id: action.systemId,
+          name: action.systemName,
+        });
+      }
+    }
+    return Array.from(systemsMap.values());
+  }, [systemActions]);
+
+  // Auto-select first available system if none selected
+  const activeDiffusionId = selectedDiffusionId ?? diffusionSystemsWithData[0]?.id ?? null;
+  const activeContagionId = selectedContagionId ?? contagionSystemsWithData[0]?.id ?? null;
 
   // Transform data
   const { data: pressureData, pressureIds, breakdownsByTick } = useMemo(
@@ -1392,6 +1428,40 @@ export default function SimulationTraceVisx({
     () => eventData.system.filter(e => e.isEraTransition).length,
     [eventData]
   );
+
+  // Get max tick for slider (from pressure data or system actions)
+  const maxTick = useMemo(() => {
+    const pressureMax = pressureData.length > 0 ? Math.max(...pressureData.map(d => d.tick)) : 0;
+    const systemMax = systemActions.length > 0 ? Math.max(...systemActions.map(a => a.tick)) : 0;
+    return Math.max(pressureMax, systemMax, 1);
+  }, [pressureData, systemActions]);
+
+  // Get available ticks with visualization data for the active system
+  const availableVisTicks = useMemo(() => {
+    if (systemPanel === 'plane-diffusion' && activeDiffusionId) {
+      return [...new Set(
+        systemActions
+          .filter(a => a.systemId === activeDiffusionId && a.details?.diffusionSnapshot)
+          .map(a => a.tick)
+      )].sort((a, b) => a - b);
+    }
+    if (systemPanel === 'graph-contagion' && activeContagionId) {
+      return [...new Set(
+        systemActions
+          .filter(a => a.systemId === activeContagionId && a.details?.contagionSnapshot)
+          .map(a => a.tick)
+      )].sort((a, b) => a - b);
+    }
+    return [];
+  }, [systemPanel, activeDiffusionId, activeContagionId, systemActions]);
+
+  // Initialize lockedTick to maxTick when opening a visualization panel
+  // This ensures slider position matches displayed data
+  React.useEffect(() => {
+    if ((systemPanel === 'plane-diffusion' || systemPanel === 'graph-contagion') && lockedTick === null) {
+      setLockedTick(maxTick);
+    }
+  }, [systemPanel, maxTick, lockedTick]);
 
   // Handlers
   const handleTickHover = useCallback((tick) => {
@@ -1450,9 +1520,35 @@ export default function SimulationTraceVisx({
               {pressureData.length} ticks / {pressureIds.length} pressures / {eventData.template.length} templates / {eraTransitionCount} era transitions
             </span>
           </div>
-          <button className="lw-trace-view-close" onClick={onClose}>
-            x
-          </button>
+          <div className="lw-trace-view-header-actions">
+            <button
+              className={`lw-trace-view-panel-toggle ${systemPanel === 'activity' ? 'active' : ''}`}
+              onClick={() => setSystemPanel(systemPanel === 'activity' ? null : 'activity')}
+            >
+              Activity
+            </button>
+            <button
+              className={`lw-trace-view-panel-toggle ${systemPanel === 'plane-diffusion' ? 'active' : ''} ${diffusionSystemsWithData.length > 0 ? 'has-data' : ''}`}
+              onClick={() => setSystemPanel(systemPanel === 'plane-diffusion' ? null : 'plane-diffusion')}
+              title={diffusionSystemsWithData.length > 0
+                ? `${diffusionSystemsWithData.length} system(s): ${diffusionSystemsWithData.map(s => s.name).join(', ')}`
+                : 'No diffusion systems ran'}
+            >
+              Diffusion{diffusionSystemsWithData.length > 0 && ` (${diffusionSystemsWithData.length})`}
+            </button>
+            <button
+              className={`lw-trace-view-panel-toggle ${systemPanel === 'graph-contagion' ? 'active' : ''} ${contagionSystemsWithData.length > 0 ? 'has-data' : ''}`}
+              onClick={() => setSystemPanel(systemPanel === 'graph-contagion' ? null : 'graph-contagion')}
+              title={contagionSystemsWithData.length > 0
+                ? `${contagionSystemsWithData.length} system(s): ${contagionSystemsWithData.map(s => s.name).join(', ')}`
+                : 'No contagion systems ran'}
+            >
+              Contagion{contagionSystemsWithData.length > 0 && ` (${contagionSystemsWithData.length})`}
+            </button>
+            <button className="lw-trace-view-close" onClick={onClose}>
+              x
+            </button>
+          </div>
         </div>
 
         {/* Main content */}
@@ -1506,6 +1602,128 @@ export default function SimulationTraceVisx({
                 )}
               </ParentSize>
             </div>
+
+            {/* System Visualization Panels */}
+            {systemPanel === 'activity' && (
+              <div className="lw-trace-view-system-activity">
+                <SystemActivityPanel systemActions={systemActions} />
+              </div>
+            )}
+            {systemPanel === 'plane-diffusion' && (
+              <div className="lw-trace-view-system-vis">
+                {diffusionSystemsWithData.length === 0 ? (
+                  <div className="vis-empty">
+                    <div className="vis-empty-icon">&#9783;</div>
+                    <div>No diffusion data</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      Enable a planeDiffusion system and run simulation
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="lw-trace-view-system-controls">
+                      {diffusionSystemsWithData.length > 1 && (
+                        <select
+                          className="lw-trace-view-system-select"
+                          value={activeDiffusionId || ''}
+                          onChange={(e) => setSelectedDiffusionId(e.target.value)}
+                        >
+                          {diffusionSystemsWithData.map((sys) => (
+                            <option key={sys.id} value={sys.id}>
+                              {sys.name || sys.id}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <div className="lw-trace-view-tick-slider">
+                        <span className="lw-trace-view-tick-label">Tick {lockedTick ?? 0}</span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={maxTick}
+                          value={lockedTick ?? 0}
+                          onChange={(e) => setLockedTick(parseInt(e.target.value, 10))}
+                          className="lw-trace-view-slider"
+                        />
+                        <span className="lw-trace-view-tick-label">/ {maxTick}</span>
+                        {availableVisTicks.length > 0 && (
+                          <span className="lw-trace-view-tick-count">
+                            ({availableVisTicks.length} snapshots)
+                          </span>
+                        )}
+                      </div>
+                      <label className="lw-trace-view-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={autoScaleColors}
+                          onChange={(e) => setAutoScaleColors(e.target.checked)}
+                        />
+                        Log scale
+                      </label>
+                    </div>
+                    <PlaneDiffusionVis
+                      config={{ name: diffusionSystemsWithData.find(s => s.id === activeDiffusionId)?.name }}
+                      systemActions={systemActions.filter(a => a.systemId === activeDiffusionId)}
+                      selectedTick={lockedTick ?? selectedTick}
+                      autoScaleColors={autoScaleColors}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+            {systemPanel === 'graph-contagion' && (
+              <div className="lw-trace-view-system-vis">
+                {contagionSystemsWithData.length === 0 ? (
+                  <div className="vis-empty">
+                    <div className="vis-empty-icon">&#9673;</div>
+                    <div>No contagion data</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                      Enable a graphContagion system and run simulation
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="lw-trace-view-system-controls">
+                      {contagionSystemsWithData.length > 1 && (
+                        <select
+                          className="lw-trace-view-system-select"
+                          value={activeContagionId || ''}
+                          onChange={(e) => setSelectedContagionId(e.target.value)}
+                        >
+                          {contagionSystemsWithData.map((sys) => (
+                            <option key={sys.id} value={sys.id}>
+                              {sys.name || sys.id}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <div className="lw-trace-view-tick-slider">
+                        <span className="lw-trace-view-tick-label">Tick {lockedTick ?? 0}</span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={maxTick}
+                          value={lockedTick ?? 0}
+                          onChange={(e) => setLockedTick(parseInt(e.target.value, 10))}
+                          className="lw-trace-view-slider"
+                        />
+                        <span className="lw-trace-view-tick-label">/ {maxTick}</span>
+                        {availableVisTicks.length > 0 && (
+                          <span className="lw-trace-view-tick-count">
+                            ({availableVisTicks.length} snapshots)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <GraphContagionVis
+                      config={{ name: contagionSystemsWithData.find(s => s.id === activeContagionId)?.name }}
+                      systemActions={systemActions.filter(a => a.systemId === activeContagionId)}
+                      selectedTick={lockedTick ?? selectedTick}
+                    />
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right: Detail panel */}

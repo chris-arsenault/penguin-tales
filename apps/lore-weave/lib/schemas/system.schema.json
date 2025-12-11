@@ -321,6 +321,7 @@
     "PlaneDiffusionSystem": {
       "type": "object",
       "required": ["systemType", "config"],
+      "description": "True time-evolving 2D diffusion field simulation. Uses a 100x100 grid matching the semantic coordinate space. Sources SET values at their positions (Dirichlet boundary), then values diffuse via heat equation. Simulation runs uncapped internally; values are clamped to -100 to 100 only at output (tags).",
       "properties": {
         "systemType": { "const": "planeDiffusion" },
         "config": {
@@ -335,44 +336,84 @@
                 "sources": {
                   "type": "object",
                   "required": ["tagFilter", "defaultStrength"],
+                  "description": "Entities that emit values into the diffusion field. Sources SET their value each tick (Dirichlet boundary condition).",
                   "properties": {
                     "tagFilter": { "type": "string", "description": "Tag that marks an entity as a source" },
-                    "strengthTag": { "type": "string", "description": "Optional tag containing numeric strength value" },
-                    "defaultStrength": { "type": "number", "description": "Default strength if strengthTag not present" }
+                    "strengthTag": { "type": "string", "description": "Optional tag containing numeric strength value (e.g., 'strength:50')" },
+                    "defaultStrength": {
+                      "type": "number",
+                      "description": "Source strength value. Can be any number - simulation is uncapped. Values are clamped to -100 to 100 only when applied to entity tags."
+                    }
                   }
                 },
                 "sinks": {
                   "type": "object",
                   "required": ["tagFilter", "defaultStrength"],
+                  "description": "Entities that absorb values from the diffusion field. Sinks SET negative values at their positions.",
                   "properties": {
                     "tagFilter": { "type": "string", "description": "Tag that marks an entity as a sink" },
                     "strengthTag": { "type": "string", "description": "Optional tag containing numeric strength value" },
-                    "defaultStrength": { "type": "number", "description": "Default strength if strengthTag not present" }
+                    "defaultStrength": {
+                      "type": "number",
+                      "description": "Sink strength (will be negated). Can be any number - simulation is uncapped."
+                    }
                   }
                 },
                 "diffusion": {
                   "type": "object",
-                  "required": ["rate", "falloff"],
+                  "required": ["rate"],
+                  "description": "Parameters controlling the heat equation discretization",
                   "properties": {
-                    "rate": { "type": "number", "description": "Diffusivity rate (affects exponential falloff)" },
-                    "falloff": { "enum": ["linear", "inverse_square", "exponential"], "description": "How value decreases with distance" },
-                    "maxRadius": { "type": "number", "description": "Maximum radius of effect" }
+                    "rate": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Diffusion coefficient (0-1). Controls how fast values spread to neighbors each tick. Recommended: 0.1-0.25. Values above 0.25 may cause numerical instability."
+                    },
+                    "sourceRadius": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 50,
+                      "default": 1,
+                      "description": "Radius in grid cells around source/sink where values are directly SET. Default: 1. Larger values create broader fixed-value zones."
+                    },
+                    "decayRate": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0,
+                      "description": "How fast values decay toward zero each tick (0-1). Default: 0 (no decay). Use sparingly - decay fights against diffusion spreading."
+                    },
+                    "falloffType": {
+                      "type": "string",
+                      "enum": ["absolute", "none", "linear", "inverse_square", "sqrt", "exponential"],
+                      "default": "absolute",
+                      "description": "How source strength decreases within sourceRadius. absolute: strength-distance (100→99→98), none: full strength everywhere, linear/sqrt/etc: percentage-based falloff"
+                    },
+                    "iterationsPerTick": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 200,
+                      "default": 20,
+                      "description": "Number of diffusion iterations per tick. Higher values = faster spreading. Default: 20 (achieves ~50 cell spread in 15 ticks)."
+                    }
                   }
                 },
                 "outputTags": {
                   "type": "array",
+                  "description": "Tags applied to entities based on their sampled field value (clamped to -100 to 100)",
                   "items": {
                     "type": "object",
                     "required": ["tag"],
                     "properties": {
-                      "tag": { "type": "string", "description": "Tag to set on entity" },
-                      "minValue": { "type": "number", "description": "Minimum field value to set this tag (inclusive)" },
-                      "maxValue": { "type": "number", "description": "Maximum field value to set this tag (exclusive)" }
+                      "tag": { "type": "string", "description": "Tag to set on entity when field value is in range" },
+                      "minValue": { "type": "number", "minimum": -100, "maximum": 100, "description": "Minimum field value to set this tag (inclusive). Range: -100 to 100." },
+                      "maxValue": { "type": "number", "minimum": -100, "maximum": 100, "description": "Maximum field value to set this tag (exclusive). Range: -100 to 100." }
                     }
                   }
                 },
-                "valueTag": { "type": "string", "description": "Optional: store raw field value as a tag" },
-                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1 },
+                "valueTag": { "type": "string", "description": "Optional: store clamped field value as a tag (e.g., 'field_value' → 'field_value:25.5')" },
+                "throttleChance": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of running this system each tick (0-1). Default: 1.0 (every tick)." },
                 "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
               }
             }

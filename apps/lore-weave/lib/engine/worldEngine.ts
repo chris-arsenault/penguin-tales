@@ -365,6 +365,13 @@ export class WorldEngine {
       ? [this.growthSystem, ...runtimeSystems]
       : runtimeSystems;
 
+    // Initialize any systems that have an initialize() method
+    for (const system of this.runtimeSystems) {
+      if (system.initialize) {
+        system.initialize();
+      }
+    }
+
     // Meta-entity formation is now handled by SimulationSystems (magicSchoolFormation, etc.)
     // These systems run at epoch end and use the clustering/archival utilities
 

@@ -20,6 +20,7 @@ export default function ProjectManager({
   onNavigateToValidation,
   onRemoveProperty,
   simulationState,
+  systems = [],
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -192,7 +193,7 @@ export default function ProjectManager({
 
       <div className="app-header-right">
         {currentProject && (
-          <TracePopover simulationState={simulationState} />
+          <TracePopover simulationState={simulationState} systems={systems} />
         )}
         {currentProject && (
           <ValidationPopover

@@ -1,35 +1,48 @@
 /**
  * Plane Diffusion System Factory
  *
- * Creates configurable systems that compute diffusion fields on semantic planes.
- * Sources emit values, sinks absorb values, and all entities receive tags based
- * on the computed field value at their position.
+ * Creates configurable systems that simulate true time-evolving diffusion fields.
+ * Uses a 100x100 grid matching the semantic coordinate space.
  *
- * This enables physics-like simulations (heat, resources, influence) to be
- * expressed declaratively, with effects handled by downstream generators/systems.
+ * Each tick:
+ * 1. Sources SET their values at grid positions (Dirichlet boundary conditions)
+ * 2. Sinks SET negative values at grid positions
+ * 3. Apply diffusion step (heat equation: each cell exchanges with neighbors)
+ * 4. Apply optional decay (values drift toward zero)
+ * 5. Sample grid at entity positions to set tags (clamped to -100 to 100)
+ *
+ * The simulation runs uncapped internally - values can exceed -100 to 100.
+ * Values are only clamped when output to game space (tags, visualization).
  *
  * Mathematical Foundation:
- * For each entity position p:
- *   field(p) = Σ_sources(strength_s / falloff(distance(p, s)))
- *            - Σ_sinks(strength_k / falloff(distance(p, k)))
- *
- * Falloff functions:
- * - linear: max(0, 1 - distance/maxRadius)
- * - inverse_square: 1 / (1 + distance²)
- * - exponential: e^(-rate * distance)
+ * Diffusion step: cell[x,y] += rate * (neighbor_avg - cell[x,y])
+ * This is a discrete approximation of the heat equation.
+ * For numerical stability, rate should be <= 0.25.
  */
 
-import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
+import { SimulationSystem, SystemResult } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import { Point } from '../coordinates/types';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { hasTag, getTagValue } from '../utils';
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Grid size - matches semantic coordinate space (0-100) */
+const GRID_SIZE = 100;
+
+/** Output value range for game space (tags, visualization) */
+const OUTPUT_MIN = -100;
+const OUTPUT_MAX = 100;
+
+// =============================================================================
 // CONFIGURATION TYPES
 // =============================================================================
 
-export type FalloffType = 'linear' | 'inverse_square' | 'exponential';
+/** Falloff type for how source influence decreases with distance */
+export type FalloffType = 'linear' | 'inverse_square' | 'sqrt' | 'exponential' | 'absolute' | 'none';
 
 /**
  * Source configuration: entities that emit into the diffusion field
@@ -59,16 +72,21 @@ export interface DiffusionSinkConfig {
  * Diffusion parameters
  */
 export interface DiffusionParams {
-  /** Diffusivity rate (affects exponential falloff) */
+  /** Diffusion rate: how fast values spread (0-1, default 0.2) */
   rate: number;
-  /** How value decreases with distance */
-  falloff: FalloffType;
-  /** Maximum radius of effect (for linear falloff, also used as normalization) */
-  maxRadius?: number;
+  /** Source radius: cells around source that are directly set (default 1) */
+  sourceRadius?: number;
+  /** Decay rate: how fast values decay toward zero each tick (0-1, default 0) */
+  decayRate?: number;
+  /** Falloff type for source influence within sourceRadius (default 'linear') */
+  falloffType?: FalloffType;
+  /** Iterations per tick: run diffusion this many times per tick for faster spreading (default 20) */
+  iterationsPerTick?: number;
 }
 
 /**
  * Output tag configuration: tags set based on field value thresholds
+ * Note: thresholds are in clamped -100 to 100 range
  */
 export interface DiffusionOutputTag {
   /** Tag to set on entity */
@@ -107,7 +125,7 @@ export interface PlaneDiffusionConfig {
   /** Output tags based on field value thresholds */
   outputTags: DiffusionOutputTag[];
 
-  /** Optional: store raw field value as a tag (e.g., "field_value" → "field_value:0.73") */
+  /** Optional: store raw field value as a tag (e.g., "field_value" → "field_value:25.5") */
   valueTag?: string;
 
   /** Throttle: only run on some ticks (0-1, default: 1.0 = every tick) */
@@ -118,44 +136,76 @@ export interface PlaneDiffusionConfig {
 }
 
 // =============================================================================
+// INTERNAL STATE TYPE
+// =============================================================================
+
+/**
+ * Internal state for the diffusion system - persists across ticks
+ */
+interface DiffusionState {
+  /** 100x100 grid of field values (unbounded during simulation) */
+  grid: Float32Array;
+  /** Temporary buffer for diffusion step */
+  tempGrid: Float32Array;
+  /** Whether the grid has been initialized */
+  initialized: boolean;
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
 /**
- * Calculate Euclidean distance between two points
+ * Convert coordinate (0-100) to grid index (0-99)
  */
-function distance(p1: Point, p2: Point): number {
-  const dx = p1.x - p2.x;
-  const dy = p1.y - p2.y;
-  const dz = (p1.z ?? 50) - (p2.z ?? 50);
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+function coordToGrid(coord: number): number {
+  return Math.max(0, Math.min(GRID_SIZE - 1, Math.floor(coord)));
 }
 
 /**
- * Apply falloff function to distance
+ * Get grid value at (x, y) - returns 0 for out of bounds
  */
-function applyFalloff(
-  dist: number,
-  falloff: FalloffType,
-  rate: number,
-  maxRadius: number
-): number {
-  switch (falloff) {
+function getGridValue(grid: Float32Array, x: number, y: number): number {
+  if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return 0;
+  return grid[y * GRID_SIZE + x];
+}
+
+/**
+ * Set grid value at (x, y) - NO CLAMPING (simulation runs uncapped)
+ */
+function setGridValue(grid: Float32Array, x: number, y: number, value: number): void {
+  if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return;
+  grid[y * GRID_SIZE + x] = value;
+}
+
+/**
+ * Calculate falloff multiplier based on distance and falloff type
+ * Returns a value between 0 and 1
+ */
+function calculateFalloff(distance: number, maxDistance: number, falloffType: FalloffType): number {
+  if (distance <= 0) return 1;
+  if (distance >= maxDistance) return 0;
+
+  const normalizedDist = distance / maxDistance;
+
+  switch (falloffType) {
     case 'linear':
-      // Linear falloff from 1 at distance=0 to 0 at distance=maxRadius
-      return Math.max(0, 1 - dist / maxRadius);
+      return 1 - normalizedDist;
 
     case 'inverse_square':
-      // Inverse square falloff: 1 / (1 + d²/r²) where r normalizes the scale
-      const normalizedDist = dist / (maxRadius || 50);
-      return 1 / (1 + normalizedDist * normalizedDist);
+      // 1 / (1 + d²) normalized so it's 1 at d=0 and approaches 0 at maxDistance
+      return 1 / (1 + (distance * distance) / (maxDistance * 0.5));
+
+    case 'sqrt':
+      // sqrt falloff - slower initial decay
+      return 1 - Math.sqrt(normalizedDist);
 
     case 'exponential':
-      // Exponential decay: e^(-rate * distance)
-      return Math.exp(-rate * dist / (maxRadius || 50));
+      // Exponential decay
+      return Math.exp(-3 * normalizedDist);
 
     default:
-      return 0;
+      return 1 - normalizedDist;
   }
 }
 
@@ -183,6 +233,41 @@ function hasCoordinates(entity: HardState): entity is HardState & { coordinates:
   );
 }
 
+/**
+ * Sample grid value at a coordinate using bilinear interpolation
+ */
+function sampleGrid(grid: Float32Array, x: number, y: number): number {
+  // Clamp to valid range
+  x = Math.max(0, Math.min(GRID_SIZE - 1, x));
+  y = Math.max(0, Math.min(GRID_SIZE - 1, y));
+
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const x1 = Math.min(x0 + 1, GRID_SIZE - 1);
+  const y1 = Math.min(y0 + 1, GRID_SIZE - 1);
+
+  const xFrac = x - x0;
+  const yFrac = y - y0;
+
+  // Bilinear interpolation
+  const v00 = getGridValue(grid, x0, y0);
+  const v10 = getGridValue(grid, x1, y0);
+  const v01 = getGridValue(grid, x0, y1);
+  const v11 = getGridValue(grid, x1, y1);
+
+  const v0 = v00 * (1 - xFrac) + v10 * xFrac;
+  const v1 = v01 * (1 - xFrac) + v11 * xFrac;
+
+  return v0 * (1 - yFrac) + v1 * yFrac;
+}
+
+/**
+ * Clamp value to output range for game space
+ */
+function clampToOutput(value: number): number {
+  return Math.max(OUTPUT_MIN, Math.min(OUTPUT_MAX, value));
+}
+
 // =============================================================================
 // SYSTEM FACTORY
 // =============================================================================
@@ -192,14 +277,48 @@ function hasCoordinates(entity: HardState): entity is HardState & { coordinates:
  */
 export function createPlaneDiffusionSystem(
   config: PlaneDiffusionConfig
-): SimulationSystem {
-  const maxRadius = config.diffusion.maxRadius ?? 50;
+): SimulationSystem<DiffusionState> {
+  const diffusionRate = config.diffusion.rate ?? 0.2;
+  const sourceRadius = config.diffusion.sourceRadius ?? 1;
+  const decayRate = config.diffusion.decayRate ?? 0; // Default to 0
+  const falloffType = config.diffusion.falloffType ?? 'absolute';
+  const iterationsPerTick = config.diffusion.iterationsPerTick ?? 20; // Default 20 for fast spreading
 
-  return {
+  // Validate ranges
+  if (diffusionRate < 0 || diffusionRate > 1) {
+    throw new Error(`[${config.id}] Diffusion rate must be between 0 and 1, got ${diffusionRate}`);
+  }
+  if (decayRate < 0 || decayRate > 1) {
+    throw new Error(`[${config.id}] Decay rate must be between 0 and 1, got ${decayRate}`);
+  }
+  if (sourceRadius < 0 || sourceRadius > 50) {
+    throw new Error(`[${config.id}] Source radius must be between 0 and 50, got ${sourceRadius}`);
+  }
+
+  // Create the system with internal state
+  const system: SimulationSystem<DiffusionState> = {
     id: config.id,
     name: config.name,
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    // Internal state - will be initialized by initialize()
+    state: undefined,
+
+    // Initialize the grid on first use
+    initialize: function() {
+      this.state = {
+        grid: new Float32Array(GRID_SIZE * GRID_SIZE),
+        tempGrid: new Float32Array(GRID_SIZE * GRID_SIZE),
+        initialized: true,
+      };
+    },
+
+    apply: function(graphView: TemplateGraphView, modifier: number = 1.0): SystemResult {
+      // Ensure state is initialized (safety check)
+      if (!this.state?.initialized) {
+        this.initialize!();
+      }
+      const state = this.state!;
+
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {
         if (Math.random() > config.throttleChance) {
@@ -207,7 +326,16 @@ export function createPlaneDiffusionSystem(
             relationshipsAdded: [],
             entitiesModified: [],
             pressureChanges: {},
-            description: `${config.name}: dormant`
+            description: `${config.name}: dormant`,
+            details: {
+              diffusionSnapshot: {
+                grid: Array.from(state.grid),
+                gridSize: GRID_SIZE,
+                sources: [],
+                sinks: [],
+                entities: [],
+              },
+            },
           };
         }
       }
@@ -223,67 +351,181 @@ export function createPlaneDiffusionSystem(
       // Filter to entities with valid coordinates
       const entitiesWithCoords = entities.filter(hasCoordinates);
 
-      if (entitiesWithCoords.length === 0) {
-        return {
-          relationshipsAdded: [],
-          entitiesModified: [],
-          pressureChanges: {},
-          description: `${config.name}: no entities with coordinates`
-        };
-      }
-
       // Identify sources and sinks
       const sources = entitiesWithCoords.filter(e => hasTag(e.tags, config.sources.tagFilter));
       const sinks = config.sinks
         ? entitiesWithCoords.filter(e => hasTag(e.tags, config.sinks!.tagFilter))
         : [];
 
-      if (sources.length === 0) {
-        return {
-          relationshipsAdded: [],
-          entitiesModified: [],
-          pressureChanges: {},
-          description: `${config.name}: no sources`
-        };
-      }
+      // =======================================================================
+      // STEP 1: Build a mask of fixed boundary cells (only when decay=0)
+      // - decay=0: Sources SET values, need Dirichlet boundary (fixed during diffusion)
+      // - decay>0: Sources ADD values, no fixed boundary (diffusion happens normally)
+      // - Sinks never create fixed cells - they subtract and let diffusion happen
+      // =======================================================================
+      const fixedCells = new Set<number>();
 
-      // Compute field value at each entity position
-      const fieldValues = new Map<string, number>();
-
-      for (const entity of entitiesWithCoords) {
-        let fieldValue = 0;
-
-        // Sum contributions from sources
+      // Only create fixed boundaries when decay=0 (SET mode)
+      if (decayRate === 0) {
         for (const source of sources) {
-          const dist = distance(entity.coordinates, source.coordinates);
-          const strength = getStrength(source, config.sources.strengthTag, config.sources.defaultStrength);
-          const contribution = strength * applyFalloff(dist, config.diffusion.falloff, config.diffusion.rate, maxRadius);
-          fieldValue += contribution;
+          const gx = coordToGrid(source.coordinates.x);
+          const gy = coordToGrid(source.coordinates.y);
+          for (let dy = -sourceRadius; dy <= sourceRadius; dy++) {
+            for (let dx = -sourceRadius; dx <= sourceRadius; dx++) {
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist <= sourceRadius) {
+                const nx = gx + dx;
+                const ny = gy + dy;
+                if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                  fixedCells.add(ny * GRID_SIZE + nx);
+                }
+              }
+            }
+          }
         }
-
-        // Subtract contributions from sinks
-        for (const sink of sinks) {
-          const dist = distance(entity.coordinates, sink.coordinates);
-          const strength = getStrength(sink, config.sinks!.strengthTag, config.sinks!.defaultStrength);
-          const contribution = strength * applyFalloff(dist, config.diffusion.falloff, config.diffusion.rate, maxRadius);
-          fieldValue -= contribution;
-        }
-
-        // Apply modifier and clamp to reasonable range
-        fieldValue = Math.max(0, Math.min(2, fieldValue * modifier));
-        fieldValues.set(entity.id, fieldValue);
       }
 
-      // Normalize field values to 0-1 range for consistent thresholding
-      const maxFieldValue = Math.max(...Array.from(fieldValues.values()), 0.001);
-      const normalizedValues = new Map<string, number>();
-      for (const [id, value] of fieldValues) {
-        normalizedValues.set(id, value / maxFieldValue);
+      // =======================================================================
+      // STEP 2a: Sources SET (decay=0) or ADD (decay>0) their values
+      // - decay=0: Dirichlet boundary - stable fixed values
+      // - decay>0: Injection model - add per tick, decay prevents unbounded growth
+      // =======================================================================
+      const sourceMode = decayRate > 0 ? 'add' : 'set';
+
+      for (const source of sources) {
+        const gx = coordToGrid(source.coordinates.x);
+        const gy = coordToGrid(source.coordinates.y);
+        // Note: source strength is NOT scaled by era modifier - it's a domain constant
+        const strength = getStrength(source, config.sources.strengthTag, config.sources.defaultStrength);
+
+        // Set/Add values within source radius
+        for (let dy = -sourceRadius; dy <= sourceRadius; dy++) {
+          for (let dx = -sourceRadius; dx <= sourceRadius; dx++) {
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= sourceRadius) {
+              let injectionValue: number;
+              if (falloffType === 'absolute') {
+                // Absolute: lose 1 unit per cell distance (100→99→98...)
+                injectionValue = Math.max(0, strength - dist);
+              } else if (falloffType === 'none') {
+                // No falloff: full strength everywhere in radius
+                injectionValue = strength;
+              } else {
+                // Percentage-based falloff
+                const falloff = calculateFalloff(dist, sourceRadius + 1, falloffType);
+                injectionValue = strength * falloff;
+              }
+
+              const nx = gx + dx;
+              const ny = gy + dy;
+              if (sourceMode === 'add') {
+                // ADD mode: inject on top of existing value
+                const currentValue = getGridValue(state.grid, nx, ny);
+                setGridValue(state.grid, nx, ny, currentValue + injectionValue);
+              } else {
+                // SET mode: fixed boundary value
+                setGridValue(state.grid, nx, ny, injectionValue);
+              }
+            }
+          }
+        }
       }
 
-      // Set output tags based on field values
+      // =======================================================================
+      // STEP 2b: Sinks SUBTRACT from existing values (not SET)
+      // This allows sinks in source regions to reduce the field, not overwrite it
+      // =======================================================================
+      for (const sink of sinks) {
+        const gx = coordToGrid(sink.coordinates.x);
+        const gy = coordToGrid(sink.coordinates.y);
+        // Note: sink strength is NOT scaled by era modifier - it's a domain constant
+        const strength = getStrength(sink, config.sinks!.strengthTag, config.sinks!.defaultStrength);
+
+        // Subtract values within sink radius
+        for (let dy = -sourceRadius; dy <= sourceRadius; dy++) {
+          for (let dx = -sourceRadius; dx <= sourceRadius; dx++) {
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= sourceRadius) {
+              let subtractAmount: number;
+              if (falloffType === 'absolute') {
+                // Absolute: lose 1 unit per cell distance
+                subtractAmount = Math.max(0, strength - dist);
+              } else if (falloffType === 'none') {
+                // No falloff: full strength everywhere in radius
+                subtractAmount = strength;
+              } else {
+                // Percentage-based falloff
+                const falloff = calculateFalloff(dist, sourceRadius + 1, falloffType);
+                subtractAmount = strength * falloff;
+              }
+              const nx = gx + dx;
+              const ny = gy + dy;
+              const currentValue = getGridValue(state.grid, nx, ny);
+              setGridValue(state.grid, nx, ny, currentValue - subtractAmount);
+            }
+          }
+        }
+      }
+
+      // =======================================================================
+      // STEP 3: Apply diffusion (heat equation) - SKIP fixed boundary cells
+      // Run multiple iterations per tick for faster spreading
+      // =======================================================================
+      for (let iter = 0; iter < iterationsPerTick; iter++) {
+        state.tempGrid.set(state.grid);
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+          for (let x = 0; x < GRID_SIZE; x++) {
+            const idx = y * GRID_SIZE + x;
+
+            // Skip fixed boundary cells - they maintain their set values
+            if (fixedCells.has(idx)) {
+              continue;
+            }
+
+            const current = getGridValue(state.tempGrid, x, y);
+
+            // Get 4-connected neighbors
+            const north = getGridValue(state.tempGrid, x, y - 1);
+            const south = getGridValue(state.tempGrid, x, y + 1);
+            const east = getGridValue(state.tempGrid, x + 1, y);
+            const west = getGridValue(state.tempGrid, x - 1, y);
+
+            // Average of neighbors
+            const neighborAvg = (north + south + east + west) / 4;
+
+            // Diffusion: move toward neighbor average
+            const diffused = current + diffusionRate * (neighborAvg - current);
+
+            setGridValue(state.grid, x, y, diffused);
+          }
+        }
+      }
+
+      // =======================================================================
+      // STEP 3b: Apply decay ONCE per tick (not per iteration)
+      // =======================================================================
+      if (decayRate > 0) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+          for (let x = 0; x < GRID_SIZE; x++) {
+            const idx = y * GRID_SIZE + x;
+            // Don't decay fixed boundary cells
+            if (!fixedCells.has(idx)) {
+              const current = getGridValue(state.grid, x, y);
+              setGridValue(state.grid, x, y, current * (1 - decayRate));
+            }
+          }
+        }
+      }
+
+      // =======================================================================
+      // STEP 4: Sample grid at entity positions and set tags (CLAMPED OUTPUT)
+      // =======================================================================
       for (const entity of entitiesWithCoords) {
-        const normalizedValue = normalizedValues.get(entity.id) ?? 0;
+        const rawFieldValue = sampleGrid(state.grid, entity.coordinates.x, entity.coordinates.y);
+        // Clamp to output range for game space
+        const fieldValue = clampToOutput(rawFieldValue);
+
         const newTags: Record<string, boolean | string> = { ...entity.tags };
         let tagsChanged = false;
 
@@ -295,7 +537,6 @@ export function createPlaneDiffusionSystem(
           }
         }
         if (config.valueTag) {
-          // Remove old value tag (any key starting with valueTag:)
           for (const key of Object.keys(newTags)) {
             if (key.startsWith(`${config.valueTag}:`)) {
               delete newTags[key];
@@ -304,10 +545,10 @@ export function createPlaneDiffusionSystem(
           }
         }
 
-        // Add appropriate output tag based on thresholds
+        // Add appropriate output tag based on thresholds (using clamped value)
         for (const outputTag of config.outputTags) {
-          const minOk = outputTag.minValue === undefined || normalizedValue >= outputTag.minValue;
-          const maxOk = outputTag.maxValue === undefined || normalizedValue < outputTag.maxValue;
+          const minOk = outputTag.minValue === undefined || fieldValue >= outputTag.minValue;
+          const maxOk = outputTag.maxValue === undefined || fieldValue < outputTag.maxValue;
 
           if (minOk && maxOk) {
             newTags[outputTag.tag] = true;
@@ -315,9 +556,9 @@ export function createPlaneDiffusionSystem(
           }
         }
 
-        // Optionally add raw value tag
+        // Optionally add raw value tag (clamped)
         if (config.valueTag) {
-          newTags[`${config.valueTag}:${normalizedValue.toFixed(3)}`] = true;
+          newTags[`${config.valueTag}:${fieldValue.toFixed(1)}`] = true;
           tagsChanged = true;
         }
 
@@ -339,16 +580,85 @@ export function createPlaneDiffusionSystem(
       }
 
       // Calculate pressure changes
-      const pressureChanges = modifications.length > 0
+      const pressureChanges = (sources.length > 0 || sinks.length > 0)
         ? (config.pressureChanges ?? {})
         : {};
+
+      // =======================================================================
+      // Build visualization snapshot with raw grid data
+      // =======================================================================
+      let gridMin = Infinity;
+      let gridMax = -Infinity;
+      let gridSum = 0;
+      let nonZeroCount = 0;
+      for (let i = 0; i < state.grid.length; i++) {
+        const v = state.grid[i];
+        if (v < gridMin) gridMin = v;
+        if (v > gridMax) gridMax = v;
+        gridSum += v;
+        if (Math.abs(v) > 0.001) nonZeroCount++;
+      }
+      const gridAvg = gridSum / state.grid.length;
+
+      const visualizationSnapshot = {
+        // Raw grid data - copy to avoid mutation issues
+        grid: Array.from(state.grid),
+        gridSize: GRID_SIZE,
+        // For visualization, provide both raw and clamped ranges
+        valueRange: { min: OUTPUT_MIN, max: OUTPUT_MAX },
+        rawRange: { min: gridMin, max: gridMax },
+        // Debug statistics
+        gridStats: {
+          min: gridMin,
+          max: gridMax,
+          avg: gridAvg,
+          nonZeroCount,
+        },
+        // Source positions
+        sources: sources.map(s => ({
+          id: s.id,
+          name: s.name,
+          x: s.coordinates.x,
+          y: s.coordinates.y,
+          strength: getStrength(s, config.sources.strengthTag, config.sources.defaultStrength),
+        })),
+        // Sink positions
+        sinks: sinks.map(k => ({
+          id: k.id,
+          name: k.name,
+          x: k.coordinates.x,
+          y: k.coordinates.y,
+          strength: getStrength(k, config.sinks!.strengthTag, config.sinks!.defaultStrength),
+        })),
+        // Entity field values for reference (clamped)
+        entities: entitiesWithCoords.map(e => ({
+          id: e.id,
+          name: e.name,
+          x: e.coordinates.x,
+          y: e.coordinates.y,
+          fieldValue: clampToOutput(sampleGrid(state.grid, e.coordinates.x, e.coordinates.y)),
+        })),
+        // Diffusion parameters
+        diffusionParams: {
+          rate: diffusionRate,
+          sourceRadius,
+          decayRate,
+          falloffType,
+          iterationsPerTick,
+        },
+      };
 
       return {
         relationshipsAdded: [],
         entitiesModified: modifications,
         pressureChanges,
-        description: `${config.name}: ${sources.length} sources, ${sinks.length} sinks, ${modifications.length} entities updated`
+        description: `${config.name}: ${sources.length} sources, ${sinks.length} sinks, ${modifications.length} entities updated`,
+        details: {
+          diffusionSnapshot: visualizationSnapshot,
+        },
       };
     }
   };
+
+  return system;
 }

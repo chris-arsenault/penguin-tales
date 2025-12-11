@@ -837,3 +837,194 @@
   color: #f59e0b;
   font-weight: 600;
 }
+
+/* Header actions area */
+.lw-trace-view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Panel toggle button */
+.lw-trace-view-panel-toggle {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--lw-border-color);
+  border-radius: 6px;
+  color: var(--lw-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lw-trace-view-panel-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--lw-text-secondary);
+}
+
+.lw-trace-view-panel-toggle.active {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+}
+
+/* System activity section */
+.lw-trace-view-system-activity {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid var(--lw-border-light);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* System visualization panels */
+.lw-trace-view-system-vis {
+  margin-top: 16px;
+  flex: 1;
+  min-height: 400px;
+  border-radius: 8px;
+  border: 1px solid var(--lw-border-light);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* System selector dropdown */
+.lw-trace-view-system-selector {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--lw-border-light);
+  flex-shrink: 0;
+}
+
+.lw-trace-view-system-selector select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lw-text-primary);
+  background: var(--lw-bg-secondary);
+  border: 1px solid var(--lw-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.lw-trace-view-system-selector select:focus {
+  border-color: var(--lw-accent);
+}
+
+.lw-trace-view-system-selector select option {
+  padding: 8px;
+  background: var(--lw-bg-primary);
+}
+
+/* System controls bar with selector and tick slider */
+.lw-trace-view-system-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--lw-border-light);
+  flex-shrink: 0;
+}
+
+.lw-trace-view-system-select {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lw-text-primary);
+  background: var(--lw-bg-secondary);
+  border: 1px solid var(--lw-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  min-width: 140px;
+}
+
+.lw-trace-view-system-select:focus {
+  border-color: var(--lw-accent);
+}
+
+.lw-trace-view-tick-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.lw-trace-view-tick-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lw-text-muted);
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+.lw-trace-view-tick-count {
+  font-size: 10px;
+  color: var(--lw-text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.lw-trace-view-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--lw-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lw-trace-view-checkbox-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--lw-accent);
+  cursor: pointer;
+}
+
+.lw-trace-view-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--lw-border-color);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.lw-trace-view-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--lw-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--lw-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.lw-trace-view-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--lw-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--lw-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.lw-trace-view-slider:hover::-webkit-slider-thumb {
+  background: var(--lw-accent-hover);
+}
+
+.lw-trace-view-slider:hover::-moz-range-thumb {
+  background: var(--lw-accent-hover);
+}

@@ -360,9 +360,22 @@ export interface TemplateResult {
 }
 
 // Simulation system interface
-export interface SimulationSystem {
+export interface SimulationSystem<TState = unknown> {
   id: string;
   name: string;
+
+  /**
+   * Optional internal state for systems that need to track data across ticks.
+   * Examples: diffusion grids, accumulated statistics, cached computations.
+   * This state persists for the lifetime of the simulation run.
+   */
+  state?: TState;
+
+  /**
+   * Optional initialization function called once before the first tick.
+   * Use this to set up initial state (e.g., allocate grid arrays).
+   */
+  initialize?: () => void;
 
   // Run one tick of this system
   // graphView provides access to graph queries AND coordinate context
@@ -847,6 +860,12 @@ export class GraphStore implements Graph {
       );
     }
 
+    // Validate culture - must not be a variable reference
+    const culture = settings.culture || 'world';
+    if (culture.startsWith('$')) {
+      console.error(`[createEntity] BUG: culture value is an unresolved variable reference: ${culture}. Entity: ${settings.kind}/${settings.subtype}. Using 'world' fallback.`);
+    }
+
     // Build the full entity
     const entity: HardState = {
       id,
@@ -856,7 +875,7 @@ export class GraphStore implements Graph {
       description: settings.description || '',
       status: settings.status || 'active',
       prominence: settings.prominence || 'marginal',
-      culture: settings.culture || 'world',
+      culture: culture.startsWith('$') ? 'world' : culture,
       tags,
       links: [],
       coordinates: settings.coordinates,

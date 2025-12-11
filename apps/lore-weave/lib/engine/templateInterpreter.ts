@@ -1114,7 +1114,12 @@ export class TemplateInterpreter {
 
     if ('inherit' in spec) {
       const refEntity = context.resolveEntity(spec.inherit);
-      return refEntity?.culture || 'world';
+      const resolvedCulture = refEntity?.culture || 'world';
+      // Debug: ensure we're not returning the raw variable reference
+      if (resolvedCulture.startsWith('$')) {
+        console.warn(`[resolveCulture] BUG: Resolved culture is a variable reference: ${resolvedCulture}. RefEntity: ${refEntity?.id}, spec.inherit: ${spec.inherit}`);
+      }
+      return resolvedCulture;
     }
 
     if ('fixed' in spec) {

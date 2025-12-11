@@ -310,6 +310,7 @@ function applySingleSourceContagion(
 ): SystemResult {
   const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
   const relationships: Relationship[] = [];
+  const newInfections: string[] = []; // Track newly infected entities for visualization
 
   // Find entities to evaluate
   let entities = graphView.findEntities({ kind: config.entityKind });
@@ -320,12 +321,13 @@ function applySingleSourceContagion(
   // Categorize entities: infected, susceptible, immune
   const infected: HardState[] = [];
   const susceptible: HardState[] = [];
+  const immune: HardState[] = [];
 
   for (const entity of entities) {
     if (isInfected(entity, config.contagion, graphView)) {
       infected.push(entity);
     } else if (config.recovery?.immunityTag && isImmune(entity, config.recovery.immunityTag)) {
-      // immune - skip
+      immune.push(entity);
     } else {
       susceptible.push(entity);
     }
@@ -377,6 +379,7 @@ function applySingleSourceContagion(
           strength: config.infectionAction.strength ?? 0.5,
           catalyzedBy: source.id
         });
+        newInfections.push(entity.id);
 
         if (config.infectionAction.relationshipKind) {
           graphView.recordRelationshipFormation(entity.id, config.infectionAction.relationshipKind);
@@ -388,6 +391,7 @@ function applySingleSourceContagion(
           id: entity.id,
           changes: { tags: newTags }
         });
+        newInfections.push(entity.id);
       }
     }
   }
@@ -456,11 +460,64 @@ function applySingleSourceContagion(
     ? (config.pressureChanges ?? {})
     : {};
 
+  // Collect vector edges for visualization (relationships that enable transmission)
+  const entityIds = new Set(entities.map(e => e.id));
+  const allRelationships = graphView.getAllRelationships();
+  const vectorEdges: Array<{ source: string; target: string; kind: string; strength: number }> = [];
+
+  for (const vector of config.vectors) {
+    for (const rel of allRelationships) {
+      if (rel.kind !== vector.relationshipKind) continue;
+      const minStrength = vector.minStrength ?? 0;
+      if (rel.strength < minStrength) continue;
+
+      // Only include edges between entities in our population
+      if (entityIds.has(rel.src) && entityIds.has(rel.dst)) {
+        vectorEdges.push({
+          source: rel.src,
+          target: rel.dst,
+          kind: rel.kind,
+          strength: rel.strength,
+        });
+      }
+    }
+  }
+
+  // Build visualization snapshot for trace viewer
+  const visualizationSnapshot = {
+    // Nodes with SIR state and coordinates
+    nodes: entities.map(e => ({
+      id: e.id,
+      name: e.name,
+      x: e.coordinates?.x ?? Math.random() * 100,
+      y: e.coordinates?.y ?? Math.random() * 100,
+      state: infected.some(i => i.id === e.id) ? 'infected' :
+             immune.some(i => i.id === e.id) ? 'recovered' : 'susceptible',
+      prominence: e.prominence,
+    })),
+    // Edges (transmission vectors)
+    edges: vectorEdges,
+    // New infections this tick
+    newInfections,
+    // Summary counts
+    counts: {
+      susceptible: susceptible.length,
+      infected: infected.length,
+      recovered: immune.length,
+      total: entities.length,
+    },
+    // Adoption rate
+    adoptionRate: entities.length > 0 ? infected.length / entities.length : 0,
+  };
+
   return {
     relationshipsAdded: relationships,
     entitiesModified: modifications,
     pressureChanges,
-    description: `${config.name}: ${relationships.length} new infections, ${modifications.length} modifications`
+    description: `${config.name}: ${relationships.length} new infections, ${modifications.length} modifications`,
+    details: {
+      contagionSnapshot: visualizationSnapshot,
+    },
   };
 }
 
@@ -477,6 +534,10 @@ function applyMultiSourceContagion(
   const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
   const relationships: Relationship[] = [];
   const modifiedTags = new Map<string, Record<string, boolean | string>>();
+
+  // Tracking for visualization
+  const newInfections: string[] = [];
+  const infectedBySource = new Map<string, Set<string>>(); // sourceId -> Set of infected entityIds
 
   // Find all contagion sources (e.g., proposed rules)
   let sources = graphView.findEntities({ kind: multiSource.sourceKind });
@@ -514,6 +575,11 @@ function applyMultiSourceContagion(
 
       if (isInfectedWithSource) {
         infected.push(entity);
+        // Track for visualization
+        if (!infectedBySource.has(source.id)) {
+          infectedBySource.set(source.id, new Set());
+        }
+        infectedBySource.get(source.id)!.add(entity.id);
       } else if (!isImmuneToSource) {
         susceptible.push(entity);
       }
@@ -554,6 +620,12 @@ function applyMultiSourceContagion(
           currentTags[tagKey] = config.infectionAction.tagValue ?? true;
           modifiedTags.set(entity.id, currentTags);
         }
+        // Track new infection for visualization
+        newInfections.push(entity.id);
+        if (!infectedBySource.has(source.id)) {
+          infectedBySource.set(source.id, new Set());
+        }
+        infectedBySource.get(source.id)!.add(entity.id);
       }
     }
 
@@ -636,10 +708,76 @@ function applyMultiSourceContagion(
     ? (config.pressureChanges ?? {})
     : {};
 
+  // Collect vector edges for visualization
+  const entityIds = new Set(entities.map(e => e.id));
+  const allRelationships = graphView.getAllRelationships();
+  const vectorEdges: Array<{ source: string; target: string; kind: string; strength: number }> = [];
+
+  for (const vector of config.vectors) {
+    for (const rel of allRelationships) {
+      if (rel.kind !== vector.relationshipKind) continue;
+      const minStrength = vector.minStrength ?? 0;
+      if (rel.strength < minStrength) continue;
+
+      if (entityIds.has(rel.src) && entityIds.has(rel.dst)) {
+        vectorEdges.push({
+          source: rel.src,
+          target: rel.dst,
+          kind: rel.kind,
+          strength: rel.strength,
+        });
+      }
+    }
+  }
+
+  // Compute aggregate SIR state for each entity
+  const allInfected = new Set<string>();
+  for (const [, infected] of infectedBySource) {
+    infected.forEach(id => allInfected.add(id));
+  }
+
+  // Build visualization snapshot for trace viewer
+  const visualizationSnapshot = {
+    // Nodes with aggregate SIR state and coordinates
+    nodes: entities.map(e => ({
+      id: e.id,
+      name: e.name,
+      x: e.coordinates?.x ?? Math.random() * 100,
+      y: e.coordinates?.y ?? Math.random() * 100,
+      state: allInfected.has(e.id) ? 'infected' : 'susceptible',
+      prominence: e.prominence,
+      // Which sources this entity is infected with
+      infectedWith: Array.from(infectedBySource.entries())
+        .filter(([, ids]) => ids.has(e.id))
+        .map(([sourceId]) => sourceId),
+    })),
+    // Edges (transmission vectors)
+    edges: vectorEdges,
+    // New infections this tick
+    newInfections,
+    // Per-source infection counts
+    sourceStats: sources.map(s => ({
+      id: s.id,
+      name: s.name,
+      infectedCount: infectedBySource.get(s.id)?.size ?? 0,
+      adoptionRate: entities.length > 0 ? (infectedBySource.get(s.id)?.size ?? 0) / entities.length : 0,
+    })),
+    // Summary counts
+    counts: {
+      susceptible: entities.length - allInfected.size,
+      infected: allInfected.size,
+      total: entities.length,
+      sources: sources.length,
+    },
+  };
+
   return {
     relationshipsAdded: relationships,
     entitiesModified: modifications,
     pressureChanges,
-    description: `${config.name}: ${relationships.length} new believers, ${modifications.length} modifications across ${sources.length} sources`
+    description: `${config.name}: ${relationships.length} new believers, ${modifications.length} modifications across ${sources.length} sources`,
+    details: {
+      contagionSnapshot: visualizationSnapshot,
+    },
   };
 }
