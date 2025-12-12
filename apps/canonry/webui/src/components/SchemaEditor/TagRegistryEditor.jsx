@@ -258,6 +258,11 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <span className="badge" style={{ backgroundColor: rarColor.bg, color: rarColor.color }}>
                       {tag.rarity}
                     </span>
+                    {tag.isAxis && (
+                      <span className="badge" style={{ backgroundColor: 'rgba(34, 211, 238, 0.2)', color: '#22d3ee' }}>
+                        ↔ axis
+                      </span>
+                    )}
                     {tagUsage[tag.tag] && <UsageBadges usage={tagUsage[tag.tag]} compact />}
                     <span className="text-muted text-small">
                       {tag.minUsage || 0}-{tag.maxUsage || '∞'} | {(tag.entityKinds || []).length} kinds
@@ -319,6 +324,19 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     />
                   </FormGroup>
                 </FormRow>
+
+                {/* Axis Label */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={tag.isAxis || false}
+                      onChange={(e) => updateTag(tag.tag, { isAxis: e.target.checked })}
+                    />
+                    <span style={{ fontWeight: 500 }}>Semantic Plane Axis Label</span>
+                    <span className="text-muted text-small">— Tag is used as a low/high endpoint on a semantic plane axis</span>
+                  </label>
+                </div>
 
                 {/* Usage Limits */}
                 <FormRow>

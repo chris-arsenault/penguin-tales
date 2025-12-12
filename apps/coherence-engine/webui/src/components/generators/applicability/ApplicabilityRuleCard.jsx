@@ -22,10 +22,18 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
   const [expanded, setExpanded] = useState(false);
   const typeConfig = APPLICABILITY_TYPES[rule.type] || {};
 
-  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+  const entityKinds = schema?.entityKinds || [];
+  const entityKindOptions = entityKinds.map((ek) => ({
     value: ek.kind,
     label: ek.description || ek.kind,
   }));
+
+  // Get subtypes for selected entity kind
+  const getSubtypesForKind = (kind) => {
+    const ek = entityKinds.find((e) => e.kind === kind);
+    if (!ek?.subtypes) return [];
+    return ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id }));
+  };
 
   const pressureOptions = (pressures || []).map((p) => ({
     value: p.id,
@@ -101,19 +109,20 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                 <ReferenceDropdown
                   label="Entity Kind"
                   value={rule.kind}
-                  onChange={(v) => updateField('kind', v)}
+                  onChange={(v) => {
+                    updateField('kind', v);
+                    // Clear subtype when kind changes
+                    if (rule.subtype) updateField('subtype', undefined);
+                  }}
                   options={entityKindOptions}
                 />
-                <div className="form-group">
-                  <label className="label">Subtype (optional)</label>
-                  <input
-                    type="text"
-                    value={rule.subtype || ''}
-                    onChange={(e) => updateField('subtype', e.target.value || undefined)}
-                    className="input"
-                    placeholder="Any"
-                  />
-                </div>
+                <ReferenceDropdown
+                  label="Subtype (optional)"
+                  value={rule.subtype || ''}
+                  onChange={(v) => updateField('subtype', v || undefined)}
+                  options={[{ value: '', label: 'Any' }, ...getSubtypesForKind(rule.kind)]}
+                  placeholder="Any"
+                />
                 <div className="form-group">
                   <label className="label">{rule.type === 'entity_count_min' ? 'Minimum' : 'Maximum'}</label>
                   <NumberInput

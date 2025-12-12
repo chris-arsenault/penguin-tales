@@ -332,6 +332,9 @@ export default function TagSelector({
             >
               {isInvalid && <span style={{ color: '#fca5a5' }}>⚠</span>}
               {tag}
+              {tagMeta?.isAxis && (
+                <span style={{ color: '#22d3ee', fontSize: '0.7rem' }} title="Semantic plane axis label">↔</span>
+              )}
               {tagMeta && renderRarityDots(tagMeta.rarity)}
               <button
                 type="button"
@@ -528,8 +531,14 @@ export default function TagSelector({
                           fontFamily: 'monospace',
                           fontSize: '0.8rem',
                           color: 'var(--text-color)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}>
                           {tag.tag}
+                          {tag.isAxis && (
+                            <span style={{ color: '#22d3ee', fontSize: '0.7rem' }} title="Semantic plane axis label">↔</span>
+                          )}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{

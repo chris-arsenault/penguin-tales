@@ -21,8 +21,10 @@ import SemanticPlaneEditor from './components/SemanticPlane/index.jsx';
 import CultureEditor from './components/CultureEditor/index.jsx';
 import EntityEditor from './components/EntityEditor/index.jsx';
 import RelationshipEditor from './components/RelationshipEditor/index.jsx';
+import AxisRegistryEditor from './components/AxisRegistry/index.jsx';
 
 const TABS = [
+  { id: 'axes', label: 'Axis Registry' },
   { id: 'planes', label: 'Semantic Planes' },
   { id: 'cultures', label: 'Culture Biases' },
   { id: 'entities', label: 'Entities' },
@@ -111,6 +113,7 @@ function buildInternalProject(
   semanticData,
   cultureVisuals,
   namingData,
+  axisDefinitions,
   seedEntities,
   seedRelationships
 ) {
@@ -142,6 +145,7 @@ function buildInternalProject(
     entityKinds,
     relationshipKinds: schema?.relationshipKinds || [],
     cultures,
+    axisDefinitions: axisDefinitions || [],
     seedEntities: seedEntities || [],
     seedRelationships: seedRelationships || [],
     tagRegistry: schema?.tagRegistry || [],
@@ -153,10 +157,13 @@ export default function CosmographerRemote({
   semanticData,
   cultureVisuals,
   namingData,
+  axisDefinitions,
   seedEntities,
   seedRelationships,
   onSemanticDataChange,
   onCultureVisualsChange,
+  onAxisDefinitionsChange,
+  onTagRegistryChange,
   onSeedEntitiesChange,
   onSeedRelationshipsChange,
   onAddTag,
@@ -164,8 +171,8 @@ export default function CosmographerRemote({
   onSectionChange,
   schemaUsage,
 }) {
-  // Use passed-in section or default to 'planes'
-  const activeTab = activeSection || 'planes';
+  // Use passed-in section or default to 'axes'
+  const activeTab = activeSection || 'axes';
   const setActiveTab = onSectionChange || (() => {});
 
   // Build internal project representation
@@ -176,10 +183,11 @@ export default function CosmographerRemote({
         semanticData,
         cultureVisuals,
         namingData,
+        axisDefinitions,
         seedEntities,
         seedRelationships
       ),
-    [schema, semanticData, cultureVisuals, namingData, seedEntities, seedRelationships]
+    [schema, semanticData, cultureVisuals, namingData, axisDefinitions, seedEntities, seedRelationships]
   );
 
   // Handle save - route updates to appropriate callbacks
@@ -256,8 +264,24 @@ export default function CosmographerRemote({
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'axes':
+        return (
+          <AxisRegistryEditor
+            axisDefinitions={project.axisDefinitions}
+            entityKinds={project.entityKinds}
+            tagRegistry={project.tagRegistry}
+            onAxisDefinitionsChange={onAxisDefinitionsChange}
+            onTagRegistryChange={onTagRegistryChange}
+          />
+        );
       case 'planes':
-        return <SemanticPlaneEditor project={project} onSave={handleSave} />;
+        return (
+          <SemanticPlaneEditor
+            project={project}
+            onSave={handleSave}
+            axisDefinitions={project.axisDefinitions}
+          />
+        );
       case 'cultures':
         return <CultureEditor project={project} onSave={handleSave} />;
       case 'entities':

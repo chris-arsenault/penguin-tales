@@ -620,14 +620,17 @@ export class CoordinateContext {
   }
 
   /**
-   * Sample a point biased toward culture's seed regions or near a reference entity.
+   * Sample a point using culture-aware placement strategy.
    * Uses defaultMinDistance as the minimum distance between points.
    *
-   * When seed regions are exhausted, attempts to create an emergent region
-   * with the culture. If that fails, returns null (skips placement).
+   * Priority order:
+   * 1. Near reference entity (if provided in context)
+   * 2. Within seed regions (regions belonging to this culture)
+   * 3. Near culture's axis biases point (if defined)
+   * 4. Create emergent region near bias point (if allowed)
    *
    * @param entityKind - Entity kind for placement
-   * @param context - Placement context with culture info
+   * @param context - Placement context with culture info and axisBiases
    * @param existingPoints - Existing points to avoid
    * @param tick - Current simulation tick (for emergent region creation)
    * @returns Point and optional emergent region info, or null if placement impossible
@@ -664,37 +667,29 @@ export class CoordinateContext {
           return { point };
         }
       }
-
-      // Seed regions exhausted - try to create emergent region for this culture (if allowed)
-      if (context.allowEmergent !== false && context.cultureId) {
-        const emergentResult = await this.createEmergentRegionForCulture(
-          entityKind,
-          context.cultureId,
-          existingPoints,
-          tick
-        );
-        if (emergentResult) {
-          return {
-            point: emergentResult.point,
-            emergentRegion: {
-              id: emergentResult.region.id,
-              label: emergentResult.region.label
-            }
-          };
-        }
-      }
-
-      // Cannot place - return null instead of falling through to other cultures
-      return null;
     }
 
-    // No seed regions for this culture - try emergent region creation (if allowed)
+    // Seed regions exhausted or not defined - try sampling near culture's axis biases
+    if (context.axisBiases) {
+      const biasCenter: Point = {
+        x: context.axisBiases.x,
+        y: context.axisBiases.y,
+        z: context.axisBiases.z ?? 50
+      };
+      const point = this.sampleNearPoint(biasCenter, existingPoints);
+      if (point) {
+        return { point };
+      }
+    }
+
+    // Bias sampling failed - try emergent region creation near bias point (if allowed)
     if (context.allowEmergent !== false && context.cultureId) {
       const emergentResult = await this.createEmergentRegionForCulture(
         entityKind,
         context.cultureId,
         existingPoints,
-        tick
+        tick,
+        context.axisBiases
       );
       if (emergentResult) {
         return {
@@ -756,31 +751,49 @@ export class CoordinateContext {
 
   /**
    * Attempt to create an emergent region for a culture.
-   * Finds a sparse area on the plane and creates a new region there.
+   * If axisBiases is provided, places the region near the bias point.
+   * Otherwise finds a sparse area on the plane.
    * Uses name-forge to generate culturally-appropriate region names.
    */
   private async createEmergentRegionForCulture(
     entityKind: string,
     cultureId: string,
     existingPoints: Point[],
-    tick: number
+    tick: number,
+    axisBiases?: KindAxisBiases
   ): Promise<{ point: Point; region: import('./types').Region } | null> {
-    // Find a sparse area to place the new region
-    const sparseResult = this.findSparseArea({
-      existingPositions: existingPoints,
-      minDistanceFromEntities: this.defaultMinDistance * 2,
-      preferPeriphery: true,
-      maxAttempts: 30
-    });
+    let regionCenter: Point | null = null;
 
-    if (!sparseResult.success || !sparseResult.coordinates) {
-      return null;
+    // If culture has axis biases, place emergent region near that point
+    if (axisBiases) {
+      const biasCenter: Point = {
+        x: axisBiases.x,
+        y: axisBiases.y,
+        z: axisBiases.z ?? 50
+      };
+      // Sample near bias with larger radius for region placement
+      regionCenter = this.sampleNearPoint(biasCenter, existingPoints, this.defaultMinDistance * 3);
     }
 
-    // Create the region with naming at the sparse location
+    // If no bias or bias sampling failed, find sparse area
+    if (!regionCenter) {
+      const sparseResult = this.findSparseArea({
+        existingPositions: existingPoints,
+        minDistanceFromEntities: this.defaultMinDistance * 2,
+        preferPeriphery: true,
+        maxAttempts: 30
+      });
+
+      if (!sparseResult.success || !sparseResult.coordinates) {
+        return null;
+      }
+      regionCenter = sparseResult.coordinates;
+    }
+
+    // Create the region with naming at the determined location
     const regionResult = await this.createNamedEmergentRegion(
       entityKind,
-      sparseResult.coordinates,
+      regionCenter,
       cultureId,
       tick
     );
@@ -790,7 +803,7 @@ export class CoordinateContext {
     }
 
     return {
-      point: sparseResult.coordinates,
+      point: regionCenter,
       region: regionResult.region
     };
   }

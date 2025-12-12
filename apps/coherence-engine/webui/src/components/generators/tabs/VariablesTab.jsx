@@ -23,7 +23,7 @@ function safeDisplay(value, fallback = '?', label = 'value') {
 // VariableCard - Individual variable editor card
 // ============================================================================
 
-function VariableCard({ name, config, onChange, onRemove, schema }) {
+function VariableCard({ name, config, onChange, onRemove, schema, availableRefs = [] }) {
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
 
@@ -134,16 +134,13 @@ function VariableCard({ name, config, onChange, onRemove, schema }) {
 
             {isRelatedMode && (
               <>
-                <div className="form-group">
-                  <label className="label">Related To</label>
-                  <input
-                    type="text"
-                    value={fromSpec?.relatedTo || '$target'}
-                    onChange={(e) => updateFrom('relatedTo', e.target.value)}
-                    className="input"
-                    placeholder="$target"
-                  />
-                </div>
+                <ReferenceDropdown
+                  label="Related To"
+                  value={fromSpec?.relatedTo || '$target'}
+                  onChange={(v) => updateFrom('relatedTo', v)}
+                  options={availableRefs.map((r) => ({ value: r, label: r }))}
+                  placeholder="Select entity..."
+                />
                 <ReferenceDropdown
                   label="Relationship Kind"
                   value={fromSpec?.relationship || ''}
@@ -219,6 +216,18 @@ export function VariablesTab({ generator, onChange, schema }) {
   const [newVarName, setNewVarName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Build available refs for relationship queries (target + other vars + creation refs)
+  const buildAvailableRefs = (excludeVar) => {
+    const refs = ['$target'];
+    Object.keys(variables).forEach((v) => {
+      if (v !== excludeVar) refs.push(v);
+    });
+    (generator.creation || []).forEach((c) => {
+      if (c.entityRef && !refs.includes(c.entityRef)) refs.push(c.entityRef);
+    });
+    return refs;
+  };
+
   const handleAddVariable = () => {
     if (!newVarName.trim()) return;
     // Ensure the name starts with $
@@ -273,6 +282,7 @@ export function VariablesTab({ generator, onChange, schema }) {
                 onChange({ ...generator, variables: newVars });
               }}
               schema={schema}
+              availableRefs={buildAvailableRefs(name)}
             />
           ))
         )}

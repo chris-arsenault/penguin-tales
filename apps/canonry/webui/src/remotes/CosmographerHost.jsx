@@ -41,10 +41,13 @@ export default function CosmographerHost({
   semanticData,
   cultureVisuals,
   namingData,
+  axisDefinitions,
   seedEntities,
   seedRelationships,
   onSemanticDataChange,
   onCultureVisualsChange,
+  onAxisDefinitionsChange,
+  onTagRegistryChange,
   onSeedEntitiesChange,
   onSeedRelationshipsChange,
   onAddTag,
@@ -60,10 +63,13 @@ export default function CosmographerHost({
           semanticData={semanticData}
           cultureVisuals={cultureVisuals}
           namingData={namingData}
+          axisDefinitions={axisDefinitions}
           seedEntities={seedEntities}
           seedRelationships={seedRelationships}
           onSemanticDataChange={onSemanticDataChange}
           onCultureVisualsChange={onCultureVisualsChange}
+          onAxisDefinitionsChange={onAxisDefinitionsChange}
+          onTagRegistryChange={onTagRegistryChange}
           onSeedEntitiesChange={onSeedEntitiesChange}
           onSeedRelationshipsChange={onSeedRelationshipsChange}
           onAddTag={onAddTag}

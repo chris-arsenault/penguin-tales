@@ -245,7 +245,7 @@ const styles = {
   }
 };
 
-export default function SemanticPlaneEditor({ project, onSave }) {
+export default function SemanticPlaneEditor({ project, onSave, axisDefinitions = [] }) {
   const [selectedKindId, setSelectedKindId] = useState(null);
   const [showNewRegionModal, setShowNewRegionModal] = useState(false);
   const [showAxisModal, setShowAxisModal] = useState(false);
@@ -262,13 +262,23 @@ export default function SemanticPlaneEditor({ project, onSave }) {
   const tagRegistry = project?.tagRegistry || [];
   const seedEntities = project?.seedEntities || [];
 
+  // Helper to resolve axis config - looks up from registry by axisId
+  const resolveAxis = (axisConfig) => {
+    if (!axisConfig?.axisId) return null;
+    const registeredAxis = axisDefinitions.find(a => a.id === axisConfig.axisId);
+    if (!registeredAxis) return null;
+    return {
+      axisId: registeredAxis.id,
+      name: registeredAxis.name,
+      lowTag: registeredAxis.lowTag,
+      highTag: registeredAxis.highTag
+    };
+  };
+
   // Select first kind by default
   const selectedKind = entityKinds.find(k => k.kind === selectedKindId) || entityKinds[0];
   const semanticPlane = selectedKind?.semanticPlane || {
-    axes: {
-      x: { name: 'X Axis', lowTag: 'low', highTag: 'high' },
-      y: { name: 'Y Axis', lowTag: 'low', highTag: 'high' }
-    },
+    axes: {},
     regions: []
   };
   const planeEntities = seedEntities.filter(e => e.kind === selectedKind?.kind);
@@ -415,21 +425,37 @@ export default function SemanticPlaneEditor({ project, onSave }) {
   };
 
   const openAxisEditor = (axisKey) => {
-    const axisConfig = semanticPlane.axes?.[axisKey] || { name: '', lowTag: '', highTag: '' };
-    setEditingAxis({ key: axisKey, ...axisConfig });
+    const rawAxisConfig = semanticPlane.axes?.[axisKey];
+    const resolved = resolveAxis(rawAxisConfig);
+    setEditingAxis({
+      key: axisKey,
+      axisId: rawAxisConfig?.axisId || '',
+      name: resolved?.name || '',
+      lowTag: resolved?.lowTag || '',
+      highTag: resolved?.highTag || ''
+    });
     setShowAxisModal(true);
   };
 
+  const handleAxisSelect = (axisId) => {
+    const axis = axisDefinitions.find(a => a.id === axisId);
+    if (axis) {
+      setEditingAxis({
+        ...editingAxis,
+        axisId: axis.id,
+        name: axis.name,
+        lowTag: axis.lowTag,
+        highTag: axis.highTag
+      });
+    }
+  };
+
   const saveAxisConfig = () => {
-    if (!selectedKind || !editingAxis) return;
+    if (!selectedKind || !editingAxis?.axisId) return;
 
     const updatedAxes = {
       ...semanticPlane.axes,
-      [editingAxis.key]: {
-        name: editingAxis.name,
-        lowTag: editingAxis.lowTag,
-        highTag: editingAxis.highTag
-      }
+      [editingAxis.key]: { axisId: editingAxis.axisId }
     };
 
     const updatedPlane = {
@@ -509,7 +535,8 @@ export default function SemanticPlaneEditor({ project, onSave }) {
           <div style={styles.sidebarSection}>
             <div style={styles.sidebarTitle}>Axes (click to edit)</div>
             {['x', 'y', 'z'].map(axis => {
-              const config = semanticPlane.axes?.[axis] || { name: `${axis.toUpperCase()} Axis`, lowTag: 'low', highTag: 'high' };
+              const rawConfig = semanticPlane.axes?.[axis];
+              const config = resolveAxis(rawConfig);
               return (
                 <div
                   key={axis}
@@ -517,10 +544,16 @@ export default function SemanticPlaneEditor({ project, onSave }) {
                   onClick={() => openAxisEditor(axis)}
                 >
                   <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
-                  <span style={{ flex: 1 }}>{config.name}</span>
-                  <span style={styles.axisRange}>
-                    {config.lowTag} → {config.highTag}
-                  </span>
+                  {config ? (
+                    <>
+                      <span style={{ flex: 1 }}>{config.name}</span>
+                      <span style={styles.axisRange}>
+                        {config.lowTag} → {config.highTag}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ flex: 1, color: '#666', fontStyle: 'italic' }}>(not set)</span>
+                  )}
                 </div>
               );
             })}
@@ -738,54 +771,64 @@ export default function SemanticPlaneEditor({ project, onSave }) {
       {/* Edit Axis Modal */}
       {showAxisModal && editingAxis && (
         <div style={styles.modal} onClick={() => setShowAxisModal(false)}>
-          <div style={{ ...styles.modalContent, width: '500px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ ...styles.modalContent, width: '420px' }} onClick={e => e.stopPropagation()}>
             <div style={styles.modalTitle}>
-              Edit {editingAxis.key.toUpperCase()} Axis for {selectedKind?.description || selectedKind?.kind}
+              Select {editingAxis.key.toUpperCase()} Axis for {selectedKind?.description || selectedKind?.kind}
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Axis Name</label>
-              <input
-                style={styles.input}
-                placeholder="e.g., Power, Alignment, Size"
-                value={editingAxis.name}
-                onChange={e => setEditingAxis({ ...editingAxis, name: e.target.value })}
-                autoFocus
-              />
+              <label style={styles.label}>Axis from Registry</label>
+              <select
+                style={styles.select}
+                value={editingAxis.axisId || ''}
+                onChange={e => handleAxisSelect(e.target.value)}
+              >
+                <option value="" disabled>Select an axis...</option>
+                {axisDefinitions.map(axis => (
+                  <option key={axis.id} value={axis.id}>
+                    {axis.name} ({axis.lowTag} → {axis.highTag})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div style={styles.inputRow}>
-              <div style={styles.inputHalf}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Low Tag (0)</label>
-                  <TagSelector
-                    tagRegistry={tagRegistry}
-                    value={editingAxis.lowTag ? [editingAxis.lowTag] : []}
-                    onChange={(tags) => setEditingAxis({ ...editingAxis, lowTag: tags[0] || '' })}
-                    placeholder="Select tag..."
-                    singleSelect
-                  />
+            {editingAxis.axisId && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#1a1a2e',
+                borderRadius: '6px',
+                marginBottom: '12px'
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '8px' }}>
+                  {editingAxis.name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#888' }}>
+                  <span style={{ padding: '2px 6px', backgroundColor: '#0f3460', borderRadius: '3px', color: '#93c5fd' }}>
+                    {editingAxis.lowTag}
+                  </span>
+                  <span>→</span>
+                  <span style={{ padding: '2px 6px', backgroundColor: '#0f3460', borderRadius: '3px', color: '#93c5fd' }}>
+                    {editingAxis.highTag}
+                  </span>
                 </div>
               </div>
-              <div style={styles.inputHalf}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>High Tag (100)</label>
-                  <TagSelector
-                    tagRegistry={tagRegistry}
-                    value={editingAxis.highTag ? [editingAxis.highTag] : []}
-                    onChange={(tags) => setEditingAxis({ ...editingAxis, highTag: tags[0] || '' })}
-                    placeholder="Select tag..."
-                    singleSelect
-                  />
-                </div>
+            )}
+
+            {axisDefinitions.length === 0 && (
+              <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '12px' }}>
+                No axes defined. Create axes in the Axis Registry first.
               </div>
-            </div>
+            )}
 
             <div style={styles.modalActions}>
               <button style={styles.button} onClick={() => setShowAxisModal(false)}>
                 Cancel
               </button>
-              <button style={styles.addButton} onClick={saveAxisConfig}>
+              <button
+                style={{ ...styles.addButton, opacity: editingAxis.axisId ? 1 : 0.5 }}
+                onClick={saveAxisConfig}
+                disabled={!editingAxis.axisId}
+              >
                 Save
               </button>
             </div>

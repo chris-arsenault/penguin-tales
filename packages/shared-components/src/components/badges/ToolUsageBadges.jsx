@@ -24,6 +24,30 @@ const BADGE_CONFIG = {
     className: 'tool-badge-seed',
     tooltip: 'Used in seed entities',
   },
+  generators: {
+    label: 'Gen',
+    icon: '\u2728', // sparkles
+    className: 'tool-badge-generators',
+    tooltip: 'Used in generators (creation, applicability, effects)',
+  },
+  systems: {
+    label: 'Sys',
+    icon: '\u2699', // gear
+    className: 'tool-badge-systems',
+    tooltip: 'Used in systems (tag diffusion, triggers)',
+  },
+  pressures: {
+    label: 'Pres',
+    icon: '\u2191', // up arrow
+    className: 'tool-badge-pressures',
+    tooltip: 'Used in pressure feedback factors',
+  },
+  axis: {
+    label: 'Axis',
+    icon: '\u2194', // left-right arrow
+    className: 'tool-badge-axis',
+    tooltip: 'Semantic plane axis label',
+  },
   coherence: {
     label: 'Coherence',
     icon: '\u2699',

@@ -468,8 +468,9 @@ export function createPlaneDiffusionSystem(
       }
 
       // =======================================================================
-      // STEP 3: Apply diffusion (heat equation) - SKIP fixed boundary cells
-      // Run multiple iterations per tick for faster spreading
+      // STEP 3: Apply diffusion (heat equation)
+      // Skip source cells (Dirichlet source), edges diffuse normally (Neumann-like)
+      // Out-of-bounds neighbors return 0, so edges naturally trend toward 0
       // =======================================================================
       for (let iter = 0; iter < iterationsPerTick; iter++) {
         state.tempGrid.set(state.grid);
@@ -478,14 +479,14 @@ export function createPlaneDiffusionSystem(
           for (let x = 0; x < GRID_SIZE; x++) {
             const idx = y * GRID_SIZE + x;
 
-            // Skip fixed boundary cells - they maintain their set values
+            // Skip source cells - they maintain their set values
             if (fixedCells.has(idx)) {
               continue;
             }
 
             const current = getGridValue(state.tempGrid, x, y);
 
-            // Get 4-connected neighbors
+            // Get 4-connected neighbors (out-of-bounds returns 0)
             const north = getGridValue(state.tempGrid, x, y - 1);
             const south = getGridValue(state.tempGrid, x, y + 1);
             const east = getGridValue(state.tempGrid, x + 1, y);

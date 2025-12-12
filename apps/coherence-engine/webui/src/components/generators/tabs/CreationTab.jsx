@@ -420,16 +420,13 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
                 />
               )}
               {item.culture?.fixed !== undefined && (
-                <div className="form-group">
-                  <label className="label-micro">Culture ID</label>
-                  <input
-                    type="text"
-                    value={item.culture.fixed}
-                    onChange={(e) => updateField('culture', { fixed: e.target.value })}
-                    className="input"
-                    placeholder="e.g. northern_realm"
-                  />
-                </div>
+                <ReferenceDropdown
+                  label="Culture ID"
+                  value={item.culture.fixed}
+                  onChange={(v) => updateField('culture', { fixed: v })}
+                  options={cultureIds.map((c) => ({ value: c, label: c }))}
+                  placeholder="Select culture..."
+                />
               )}
             </div>
           </div>
@@ -751,7 +748,7 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
 // Variant Components - Conditional template modifications
 // ============================================================================
 
-function VariantConditionEditor({ condition, onChange, pressureOptions = [], entityKindOptions = [] }) {
+function VariantConditionEditor({ condition, onChange, pressureOptions = [], entityKindOptions = [], availableRefs = [], tagRegistry = [] }) {
   const conditionType = condition?.type || 'always';
 
   const setCondition = (newCondition) => {
@@ -869,24 +866,21 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
 
       {conditionType === 'has_tag' && (
         <>
-          <div className="form-group">
-            <label className="label">Entity Reference</label>
-            <input
-              type="text"
-              value={condition.entity || ''}
-              onChange={(e) => setCondition({ ...condition, entity: e.target.value })}
-              className="input"
-              placeholder="$target"
-            />
-          </div>
+          <ReferenceDropdown
+            label="Entity Reference"
+            value={condition.entity || ''}
+            onChange={(v) => setCondition({ ...condition, entity: v })}
+            options={availableRefs.map((r) => ({ value: r, label: r }))}
+            placeholder="Select entity..."
+          />
           <div className="form-group">
             <label className="label">Tag Name</label>
-            <input
-              type="text"
-              value={condition.tag || ''}
-              onChange={(e) => setCondition({ ...condition, tag: e.target.value })}
-              className="input"
-              placeholder="explorer"
+            <TagSelector
+              value={condition.tag ? [condition.tag] : []}
+              onChange={(tags) => setCondition({ ...condition, tag: tags[0] || '' })}
+              tagRegistry={tagRegistry}
+              placeholder="Select tag..."
+              singleSelect
             />
           </div>
         </>
@@ -1200,6 +1194,8 @@ function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entity
               onChange={(when) => onChange({ ...variant, when })}
               pressureOptions={pressureOptions}
               entityKindOptions={entityKindOptions}
+              availableRefs={['$target', ...creationRefs]}
+              tagRegistry={tagRegistry}
             />
           </div>
 

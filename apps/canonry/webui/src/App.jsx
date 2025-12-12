@@ -59,7 +59,7 @@ const styles = {
 const VALID_SUBNAV = {
   enumerist: ['entityKinds', 'relationshipKinds', 'cultures', 'tags'],
   names: ['workshop', 'optimizer', 'generate'],
-  cosmography: ['planes', 'cultures', 'entities', 'relationships'],
+  cosmography: ['axes', 'planes', 'cultures', 'entities', 'relationships'],
   coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
   simulation: ['configure', 'targets', 'validate', 'run', 'results'],
   archivist: ['explorer'],
@@ -303,6 +303,11 @@ export default function App() {
     [save]
   );
 
+  const updateAxisDefinitions = useCallback(
+    (axisDefinitions) => save({ axisDefinitions }),
+    [save]
+  );
+
   const updateDistributionTargets = useCallback(
     (distributionTargets) => save({ distributionTargets }),
     [save]
@@ -414,8 +419,15 @@ export default function App() {
   // Compute tag usage across all tools
   const tagUsage = useMemo(() => {
     if (!currentProject) return {};
-    return computeTagUsage(currentProject.cultures, currentProject.seedEntities);
-  }, [currentProject?.cultures, currentProject?.seedEntities]);
+    return computeTagUsage({
+      cultures: currentProject.cultures,
+      seedEntities: currentProject.seedEntities,
+      generators: currentProject.generators,
+      systems: currentProject.systems,
+      pressures: currentProject.pressures,
+      entityKinds: currentProject.entityKinds,
+    });
+  }, [currentProject?.cultures, currentProject?.seedEntities, currentProject?.generators, currentProject?.systems, currentProject?.pressures, currentProject?.entityKinds]);
 
   // Compute schema element usage across Coherence Engine
   const schemaUsage = useMemo(() => {
@@ -587,10 +599,13 @@ export default function App() {
             semanticData={semanticData}
             cultureVisuals={cultureVisuals}
             namingData={namingData}
+            axisDefinitions={currentProject.axisDefinitions || []}
             seedEntities={currentProject.seedEntities}
             seedRelationships={currentProject.seedRelationships}
             onSemanticDataChange={updateEntityKindSemanticPlane}
             onCultureVisualsChange={updateCultureVisuals}
+            onAxisDefinitionsChange={updateAxisDefinitions}
+            onTagRegistryChange={updateTagRegistry}
             onSeedEntitiesChange={updateSeedEntities}
             onSeedRelationshipsChange={updateSeedRelationships}
             onAddTag={addTag}

@@ -2,7 +2,7 @@
  * React hook for managing Canonry projects in IndexedDB.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   openDatabase,
   saveProject,
@@ -21,6 +21,7 @@ const PROJECT_FILES = [
   'relationshipKinds',
   'cultures',
   'tagRegistry',
+  'axisDefinitions',
   'eras',
   'pressures',
   'generators',
@@ -110,6 +111,9 @@ async function createProjectZip(project) {
   if (project.tagRegistry) {
     zip.file('tagRegistry.json', JSON.stringify(project.tagRegistry, null, 2));
   }
+  if (project.axisDefinitions) {
+    zip.file('axisDefinitions.json', JSON.stringify(project.axisDefinitions, null, 2));
+  }
   if (project.eras) {
     zip.file('eras.json', JSON.stringify(project.eras, null, 2));
   }
@@ -161,6 +165,7 @@ async function extractProjectZip(zipBlob) {
     'relationshipKinds',
     'cultures',
     'tagRegistry',
+    'axisDefinitions',
     'eras',
     'pressures',
     'generators',
@@ -267,14 +272,24 @@ export function useProjectStorage() {
   }, []);
 
   // Save current project (auto-save on changes)
+  // Uses ref to track pending updates and avoid stale closure issues
+  const pendingUpdatesRef = useRef({});
+
   const save = useCallback(
     async (updates = {}) => {
       if (!currentProject) return;
 
       try {
-        const updated = { ...currentProject, ...updates };
+        // Merge with any pending updates to handle rapid sequential saves
+        pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
+        const allUpdates = pendingUpdatesRef.current;
+
+        const updated = { ...currentProject, ...allUpdates };
         await saveProject(updated);
         setCurrentProject(updated);
+
+        // Clear pending updates after successful save
+        pendingUpdatesRef.current = {};
         await refreshList();
       } catch (err) {
         setError(err.message);

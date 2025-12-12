@@ -916,12 +916,23 @@ export function getUsageSummary(usage) {
 /**
  * Utility function to compute tag usage across tools
  *
- * @param {Array} cultures - Array of culture objects with naming.profiles
- * @param {Array} seedEntities - Array of seed entities with tags
- * @returns {Object} - Map of tag -> { nameforge: count, seed: count }
+ * @param {Object} params - All sources that reference tags
+ * @param {Array} params.cultures - Array of culture objects with naming.profiles
+ * @param {Array} params.seedEntities - Array of seed entities with tags
+ * @param {Array} params.generators - Array of generator configs
+ * @param {Array} params.systems - Array of system configs
+ * @param {Array} params.pressures - Array of pressure configs
+ * @param {Array} params.entityKinds - Array of entity kind definitions (with semantic planes)
+ * @returns {Object} - Map of tag -> { nameforge, seed, generators, systems, pressures, axis }
  */
-export function computeTagUsage(cultures, seedEntities) {
+export function computeTagUsage({ cultures, seedEntities, generators, systems, pressures, entityKinds } = {}) {
   const usage = {};
+
+  const ensureTag = (tag) => {
+    if (!usage[tag]) {
+      usage[tag] = {};
+    }
+  };
 
   // Count tags used in Name Forge profiles
   (cultures || []).forEach(culture => {
@@ -931,9 +942,7 @@ export function computeTagUsage(cultures, seedEntities) {
       groups.forEach(group => {
         const tags = group.conditions?.tags || [];
         tags.forEach(tag => {
-          if (!usage[tag]) {
-            usage[tag] = {};
-          }
+          ensureTag(tag);
           usage[tag].nameforge = (usage[tag].nameforge || 0) + 1;
         });
       });
@@ -944,10 +953,173 @@ export function computeTagUsage(cultures, seedEntities) {
   (seedEntities || []).forEach(entity => {
     const tags = entity.tags || {};
     Object.keys(tags).forEach(tag => {
-      if (!usage[tag]) {
-        usage[tag] = {};
-      }
+      ensureTag(tag);
       usage[tag].seed = (usage[tag].seed || 0) + 1;
+    });
+  });
+
+  // Count tags used in generators
+  (generators || []).forEach(gen => {
+    // Tags in creation entries
+    (gen.creation || []).forEach(creation => {
+      if (creation.tags && typeof creation.tags === 'object') {
+        Object.keys(creation.tags).forEach(tag => {
+          ensureTag(tag);
+          usage[tag].generators = (usage[tag].generators || 0) + 1;
+        });
+      }
+    });
+
+    // Tags in applicability rules
+    const scanApplicabilityTags = (rules) => {
+      (rules || []).forEach(rule => {
+        if (rule.tags && Array.isArray(rule.tags)) {
+          rule.tags.forEach(tag => {
+            ensureTag(tag);
+            usage[tag].generators = (usage[tag].generators || 0) + 1;
+          });
+        }
+        // Recurse for nested rules (or/and)
+        if (rule.rules) {
+          scanApplicabilityTags(rule.rules);
+        }
+      });
+    };
+    scanApplicabilityTags(gen.applicability);
+
+    // Tags in selection filters
+    (gen.selection?.filters || []).forEach(filter => {
+      if (filter.tag) {
+        ensureTag(filter.tag);
+        usage[filter.tag].generators = (usage[filter.tag].generators || 0) + 1;
+      }
+      if (filter.tags && Array.isArray(filter.tags)) {
+        filter.tags.forEach(tag => {
+          ensureTag(tag);
+          usage[tag].generators = (usage[tag].generators || 0) + 1;
+        });
+      }
+    });
+
+    // Tags in stateUpdates (set_tag, remove_tag)
+    (gen.stateUpdates || []).forEach(update => {
+      if ((update.type === 'set_tag' || update.type === 'remove_tag') && update.tag) {
+        ensureTag(update.tag);
+        usage[update.tag].generators = (usage[update.tag].generators || 0) + 1;
+      }
+    });
+
+    // Tags in variants
+    (gen.variants?.options || []).forEach(variant => {
+      // Tags in variant conditions
+      if (variant.when?.tag) {
+        ensureTag(variant.when.tag);
+        usage[variant.when.tag].generators = (usage[variant.when.tag].generators || 0) + 1;
+      }
+      // Tags in variant effects
+      if (variant.apply?.tags && typeof variant.apply.tags === 'object') {
+        Object.entries(variant.apply.tags).forEach(([ref, tagMap]) => {
+          Object.keys(tagMap).forEach(tag => {
+            ensureTag(tag);
+            usage[tag].generators = (usage[tag].generators || 0) + 1;
+          });
+        });
+      }
+    });
+  });
+
+  // Count tags used in systems
+  (systems || []).forEach(sys => {
+    const config = sys.config || {};
+
+    // Tag diffusion systems
+    if (sys.systemType === 'tagDiffusion') {
+      (config.convergence?.tags || []).forEach(tag => {
+        ensureTag(tag);
+        usage[tag].systems = (usage[tag].systems || 0) + 1;
+      });
+      (config.divergence?.tags || []).forEach(tag => {
+        ensureTag(tag);
+        usage[tag].systems = (usage[tag].systems || 0) + 1;
+      });
+    }
+
+    // Threshold trigger conditions
+    if (sys.systemType === 'thresholdTrigger') {
+      (config.conditions || []).forEach(cond => {
+        if (cond.tag) {
+          ensureTag(cond.tag);
+          usage[cond.tag].systems = (usage[cond.tag].systems || 0) + 1;
+        }
+        if (cond.type === 'has_any_tag' && Array.isArray(cond.tags)) {
+          cond.tags.forEach(tag => {
+            ensureTag(tag);
+            usage[tag].systems = (usage[tag].systems || 0) + 1;
+          });
+        }
+      });
+      // Threshold trigger actions
+      (config.actions || []).forEach(action => {
+        if (action.tag) {
+          ensureTag(action.tag);
+          usage[action.tag].systems = (usage[action.tag].systems || 0) + 1;
+        }
+      });
+    }
+
+    // Cluster formation criteria
+    if (sys.systemType === 'clusterFormation') {
+      (config.criteria || []).forEach(crit => {
+        if ((crit.type === 'shared_tags' || crit.type === 'has_tags') && Array.isArray(crit.tags)) {
+          crit.tags.forEach(tag => {
+            ensureTag(tag);
+            usage[tag].systems = (usage[tag].systems || 0) + 1;
+          });
+        }
+      });
+    }
+
+    // Plane diffusion systems
+    if (sys.systemType === 'planeDiffusion') {
+      (config.tagFilters || []).forEach(tag => {
+        ensureTag(tag);
+        usage[tag].systems = (usage[tag].systems || 0) + 1;
+      });
+    }
+  });
+
+  // Count tags used in pressures (feedback factors)
+  (pressures || []).forEach(pressure => {
+    const scanFeedbackFactors = (factors) => {
+      (factors || []).forEach(factor => {
+        if (factor.tag) {
+          ensureTag(factor.tag);
+          usage[factor.tag].pressures = (usage[factor.tag].pressures || 0) + 1;
+        }
+        if (factor.tags && Array.isArray(factor.tags)) {
+          factor.tags.forEach(tag => {
+            ensureTag(tag);
+            usage[tag].pressures = (usage[tag].pressures || 0) + 1;
+          });
+        }
+      });
+    };
+    scanFeedbackFactors(pressure.growth?.positiveFeedback);
+    scanFeedbackFactors(pressure.growth?.negativeFeedback);
+  });
+
+  // Count tags used as semantic plane axis labels
+  (entityKinds || []).forEach(ek => {
+    const axes = ek.semanticPlane?.axes || {};
+    Object.values(axes).forEach(axis => {
+      if (axis.lowTag) {
+        ensureTag(axis.lowTag);
+        usage[axis.lowTag].axis = (usage[axis.lowTag].axis || 0) + 1;
+      }
+      if (axis.highTag) {
+        ensureTag(axis.highTag);
+        usage[axis.highTag].axis = (usage[axis.highTag].axis || 0) + 1;
+      }
     });
   });
 

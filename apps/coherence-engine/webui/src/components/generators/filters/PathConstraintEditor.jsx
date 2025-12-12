@@ -20,10 +20,19 @@ export function PathConstraintEditor({ constraint, onChange, onRemove, schema, a
     label: rk.description || rk.kind,
   }));
 
-  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+  const entityKinds = schema?.entityKinds || [];
+  const entityKindOptions = entityKinds.map((ek) => ({
     value: ek.kind,
     label: ek.description || ek.kind,
   }));
+
+  // Gather all subtypes from all entity kinds for subtype_equals constraint
+  const allSubtypeOptions = entityKinds.flatMap((ek) =>
+    (ek.subtypes || []).map((st) => ({
+      value: st.id,
+      label: `${st.name || st.id} (${ek.kind})`,
+    }))
+  );
 
   const refOptions = (availableRefs || []).map((ref) => ({
     value: ref,
@@ -69,12 +78,11 @@ export function PathConstraintEditor({ constraint, onChange, onRemove, schema, a
         return (
           <div>
             <label className="label label-micro">Subtype</label>
-            <input
-              type="text"
+            <ReferenceDropdown
               value={constraint.subtype || ''}
-              onChange={(e) => updateConstraint('subtype', e.target.value)}
-              className="input input-micro"
-              placeholder="subtype"
+              onChange={(v) => updateConstraint('subtype', v)}
+              options={allSubtypeOptions}
+              placeholder="Select subtype..."
             />
           </div>
         );
