@@ -19,6 +19,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
     pos: 'noun',
     style: '',
     targetCount: 30,
+    maxWords: 1,
     qualityFilter: { minLength: 3, maxLength: 15 }
   });
 
@@ -49,6 +50,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
       pos: 'noun',
       style: '',
       targetCount: 30,
+      maxWords: 1,
       qualityFilter: { minLength: 3, maxLength: 15 }
     });
   };
@@ -59,6 +61,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
       pos: spec.pos || 'noun',
       style: spec.style || '',
       targetCount: spec.targetCount || 30,
+      maxWords: spec.maxWords || 1,
       qualityFilter: spec.qualityFilter || { minLength: 3, maxLength: 15 }
     });
     setEditingSpecId(spec.id);
@@ -220,7 +223,8 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
                         </span>
                       )}
                       <div className="spec-card-meta">
-                        {category?.label || spec.pos} • {spec.targetCount} words
+                        {category?.label || spec.pos} • {spec.targetCount} entries
+                        {spec.maxWords > 1 && ` • up to ${spec.maxWords} words each`}
                         {spec.style && ` • ${spec.style.substring(0, 40)}${spec.style.length > 40 ? '...' : ''}`}
                       </div>
                     </div>
@@ -411,6 +415,19 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
               onChange={(v) => setSpecForm({ ...specForm, targetCount: v ?? 30 })}
               integer
             />
+          </div>
+
+          <div className="form-group">
+            <label>Max Words per Entry</label>
+            <NumberInput
+              value={specForm.maxWords}
+              onChange={(v) => setSpecForm({ ...specForm, maxWords: v ?? 1 })}
+              integer
+              min={1}
+            />
+            <small className="text-muted">
+              Allow short phrases (e.g., "hunting grounds"). Entries stay capped at this word count.
+            </small>
           </div>
         </div>
 
