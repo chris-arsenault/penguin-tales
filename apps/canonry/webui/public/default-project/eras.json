@@ -5,8 +5,6 @@
     "description": "A period of exploration and colony founding as the ice recedes",
     "templateWeights": {
       "colony_founding": 2,
-      "resource_location_discovery": 2.5,
-      "geographic_exploration": 2.5,
       "krill_bloom_migration": 2,
       "hero_emergence": 1,
       "guild_establishment": 1,
@@ -17,18 +15,12 @@
       "magic_discovery": 2,
       "territorial_expansion": 2.5,
       "trade_route_establishment": 1.5,
-      "magical_site_discovery": 1,
       "tech_breakthrough": 1.2,
-      "strategic_location_discovery": 1,
-      "anomaly_manifestation": 0.5,
       "wild_magic_discover": 1,
-      "emergent_location_discovery": 1,
-      "thermal_colony_decline": 0,
-      "thermal_colony_recovery": 0,
-      "thermal_migration": 0,
       "ice_memory_thaw": 0,
       "economic_colony_decline": 0,
-      "economic_colony_recovery": 0
+      "economic_colony_recovery": 0,
+      "location_discovery": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -56,8 +48,8 @@
     },
     "entryEffects": {
       "pressureChanges": {
-        "stability": 5,
-        "magical_instability": 10
+        "resource_availibility": 10,
+        "magical_stability": 10
       }
     },
     "exitConditions": [
@@ -70,18 +62,12 @@
         "entityKind": "location",
         "operator": "above",
         "threshold": 8
-      },
-      {
-        "type": "pressure",
-        "pressureId": "resource_scarcity",
-        "operator": "below",
-        "threshold": 40
       }
     ],
     "exitEffects": {
       "pressureChanges": {
-        "conflict": 20,
-        "resource_scarcity": 15
+        "resource_availibility": -15,
+        "harmony": -15
       }
     }
   },
@@ -91,7 +77,6 @@
     "description": "Resource scarcity leads to inter-colony conflicts",
     "templateWeights": {
       "colony_founding": 0,
-      "strategic_location_discovery": 1.5,
       "krill_bloom_migration": 0.3,
       "hero_emergence": 1.5,
       "orca_raider_arrival": 0,
@@ -99,10 +84,8 @@
       "crisis_legislation": 2,
       "great_festival": 2,
       "ideology_emergence": 2.5,
-      "orca_combat_technique": 0,
       "territorial_expansion": 3,
       "trade_route_establishment": 0.3,
-      "magical_site_discovery": 0.5,
       "tech_breakthrough": 0.8,
       "war_outbreak": 1.5,
       "succession_crisis": 1,
@@ -113,7 +96,8 @@
       "thermal_migration": 0,
       "ice_memory_thaw": 0,
       "economic_colony_decline": 0,
-      "economic_colony_recovery": 0
+      "economic_colony_recovery": 0,
+      "location_discovery": 1
     },
     "systemModifiers": {
       "conflict_contagion": 2,
@@ -143,7 +127,8 @@
     "entryConditions": [],
     "entryEffects": {
       "pressureChanges": {
-        "conflict": 15
+        "harmony": -25,
+        "security": -10
       }
     },
     "exitConditions": [
@@ -153,22 +138,21 @@
       },
       {
         "type": "pressure",
-        "pressureId": "conflict",
-        "operator": "below",
-        "threshold": 30
+        "pressureId": "harmony",
+        "operator": "above",
+        "threshold": 0
       },
       {
         "type": "pressure",
-        "pressureId": "stability",
+        "pressureId": "resource_availibility",
         "operator": "above",
         "threshold": 35
       }
     ],
     "exitEffects": {
       "pressureChanges": {
-        "stability": 15,
-        "conflict": -10,
-        "magical_instability": 10
+        "security": -20,
+        "harmony": 20
       }
     }
   },
@@ -177,8 +161,6 @@
     "name": "The Clever Ice Age",
     "description": "Technology and magic flourish as penguins seek solutions",
     "templateWeights": {
-      "anomaly_manifestation": 1.5,
-      "resource_location_discovery": 0.8,
       "krill_bloom_migration": 1,
       "orca_raider_arrival": 0,
       "guild_establishment": 2,
@@ -186,12 +168,9 @@
       "great_festival": 1,
       "ideology_emergence": 3,
       "magic_discovery": 0.6,
-      "orca_combat_technique": 0,
       "territorial_expansion": 0.8,
       "trade_route_establishment": 2.5,
-      "magical_site_discovery": 3,
       "tech_breakthrough": 3.5,
-      "strategic_location_discovery": 1,
       "legend_crystallization": 1,
       "wild_magic_discover": 1,
       "thermal_colony_decline": 1,
@@ -199,7 +178,8 @@
       "thermal_migration": 1,
       "ice_memory_thaw": 1,
       "economic_colony_decline": 1,
-      "economic_colony_recovery": 1
+      "economic_colony_recovery": 1,
+      "location_discovery": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
@@ -227,16 +207,11 @@
       "thermal_recovery_detector": 1,
       "thermal_stress_detector": 1
     },
-    "entryConditions": [
-      {
-        "type": "pressure",
-        "pressureId": "stability",
-        "operator": "above",
-        "threshold": 25
-      }
-    ],
+    "entryConditions": [],
     "entryEffects": {
-      "pressureChanges": {}
+      "pressureChanges": {
+        "magical_stability": 10
+      }
     },
     "exitConditions": [
       {
@@ -247,19 +222,14 @@
         "type": "entity_count",
         "entityKind": "abilities",
         "operator": "above",
-        "threshold": 5
-      },
-      {
-        "type": "pressure",
-        "pressureId": "magical_instability",
-        "operator": "above",
-        "threshold": 23
+        "threshold": 5,
+        "subtype": "technology"
       }
     ],
     "exitEffects": {
       "pressureChanges": {
-        "external_threat": 30,
-        "magical_instability": -15
+        "magical_stability": 10,
+        "security": -15
       }
     }
   },
@@ -268,16 +238,13 @@
     "name": "The Orca Incursion",
     "description": "External threats unite the colonies against common enemies",
     "templateWeights": {
-      "strategic_location_discovery": 1,
       "krill_bloom_migration": 0.2,
       "hero_emergence": 2,
       "orca_raider_arrival": 2,
       "great_festival": 0.5,
       "ideology_emergence": 1,
-      "orca_combat_technique": 3,
       "territorial_expansion": 1.5,
       "trade_route_establishment": 0.2,
-      "magical_site_discovery": 1,
       "tech_breakthrough": 1.5,
       "war_outbreak": 2,
       "legend_crystallization": 2,
@@ -288,7 +255,9 @@
       "thermal_migration": 1,
       "ice_memory_thaw": 1,
       "economic_colony_decline": 0,
-      "economic_colony_recovery": 0
+      "economic_colony_recovery": 0,
+      "orca_combat_technique": 2,
+      "location_discovery": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -318,8 +287,9 @@
     "entryConditions": [],
     "entryEffects": {
       "pressureChanges": {
-        "conflict": -10,
-        "external_threat": 40
+        "security": -10,
+        "resource_availibility": -10,
+        "harmony": 10
       }
     },
     "exitConditions": [
@@ -329,16 +299,17 @@
       },
       {
         "type": "pressure",
-        "pressureId": "external_threat",
-        "operator": "below",
-        "threshold": 20
+        "pressureId": "security",
+        "operator": "above",
+        "threshold": 0
       }
     ],
     "exitEffects": {
       "pressureChanges": {
-        "stability": 25,
-        "external_threat": -20,
-        "diplomacy": 20
+        "security": 10,
+        "harmony": 10,
+        "resource_availibility": 10,
+        "magical_stability": 10
       }
     }
   },
@@ -347,16 +318,13 @@
     "name": "The Frozen Peace",
     "description": "Rebuilding and consolidation after the wars",
     "templateWeights": {
-      "geographic_exploration": 1.3,
       "krill_bloom_migration": 1.5,
       "succession": 1,
       "orca_raider_arrival": 0,
       "great_festival": 0,
       "ideology_emergence": 2,
-      "orca_combat_technique": 0,
       "territorial_expansion": 1,
       "trade_route_establishment": 3,
-      "magical_site_discovery": 1.2,
       "tech_breakthrough": 1.8,
       "legend_crystallization": 2.5,
       "guild_establishment": 2,
@@ -366,7 +334,8 @@
       "thermal_migration": 1,
       "ice_memory_thaw": 1,
       "economic_colony_decline": 1,
-      "economic_colony_recovery": 1
+      "economic_colony_recovery": 1,
+      "location_discovery": 1
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
@@ -393,19 +362,9 @@
       "thermal_recovery_detector": 1,
       "thermal_stress_detector": 1
     },
-    "entryConditions": [
-      {
-        "type": "pressure",
-        "pressureId": "external_threat",
-        "operator": "below",
-        "threshold": 25
-      }
-    ],
+    "entryConditions": [],
     "entryEffects": {
-      "pressureChanges": {
-        "stability": 20,
-        "resource_scarcity": -25
-      }
+      "pressureChanges": {}
     }
   }
 ]

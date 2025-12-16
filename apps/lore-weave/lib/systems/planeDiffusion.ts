@@ -521,7 +521,11 @@ export function createPlaneDiffusionSystem(
 
       // =======================================================================
       // STEP 4: Sample grid at entity positions and set tags (CLAMPED OUTPUT)
+      // Track significant modifications (new output tags) separately from
+      // value tag updates to avoid false positives in the trace.
       // =======================================================================
+      let significantModificationCount = 0;
+
       for (const entity of entitiesWithCoords) {
         const rawFieldValue = sampleGrid(state.grid, entity.coordinates.x, entity.coordinates.y);
         // Clamp to output range for game space
@@ -529,6 +533,14 @@ export function createPlaneDiffusionSystem(
 
         const newTags: Record<string, boolean | string> = { ...entity.tags };
         let tagsChanged = false;
+
+        // Track which output tags the entity currently has
+        const previousOutputTags = new Set<string>();
+        for (const outputTag of config.outputTags) {
+          if (hasTag(entity.tags, outputTag.tag)) {
+            previousOutputTags.add(outputTag.tag);
+          }
+        }
 
         // Remove old output tags and value tag
         for (const outputTag of config.outputTags) {
@@ -547,6 +559,8 @@ export function createPlaneDiffusionSystem(
         }
 
         // Add appropriate output tag based on thresholds (using clamped value)
+        // Track if any NEW output tag was added (not previously present)
+        let newOutputTagAdded = false;
         for (const outputTag of config.outputTags) {
           const minOk = outputTag.minValue === undefined || fieldValue >= outputTag.minValue;
           const maxOk = outputTag.maxValue === undefined || fieldValue < outputTag.maxValue;
@@ -554,6 +568,10 @@ export function createPlaneDiffusionSystem(
           if (minOk && maxOk) {
             newTags[outputTag.tag] = true;
             tagsChanged = true;
+            // This is a significant change if entity didn't have this tag before
+            if (!previousOutputTags.has(outputTag.tag)) {
+              newOutputTagAdded = true;
+            }
           }
         }
 
@@ -577,6 +595,11 @@ export function createPlaneDiffusionSystem(
             id: entity.id,
             changes: { tags: newTags as Record<string, boolean> }
           });
+
+          // Only count as significant if a new output tag was added
+          if (newOutputTagAdded) {
+            significantModificationCount++;
+          }
         }
       }
 
@@ -653,9 +676,12 @@ export function createPlaneDiffusionSystem(
         relationshipsAdded: [],
         entitiesModified: modifications,
         pressureChanges,
-        description: `${config.name}: ${sources.length} sources, ${sinks.length} sinks, ${modifications.length} entities updated`,
+        description: `${config.name}: ${sources.length} sources, ${sinks.length} sinks, ${significantModificationCount} entities gained output tags`,
         details: {
           diffusionSnapshot: visualizationSnapshot,
+          // Significant modifications = entities that gained a NEW output tag
+          // This filters out false positives from value tag updates
+          significantModificationCount,
         },
       };
     }

@@ -29,7 +29,7 @@
       "influenceLoss": 0.05,
       "pressureMultiplier": 1.5
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "relationshipMaintenance",
@@ -717,26 +717,37 @@
       "entityKind": "location",
       "sources": {
         "tagFilter": "resource",
-        "defaultStrength": 1
+        "defaultStrength": 100
       },
       "diffusion": {
-        "rate": 0.15,
+        "rate": 0.3,
         "falloff": "inverse_square",
-        "maxRadius": 40
+        "maxRadius": 40,
+        "injectionRadius": 10,
+        "decayRate": 0,
+        "sourceRadius": 3,
+        "falloffType": "none",
+        "iterationsPerTick": 30
       },
       "outputTags": [
         {
           "tag": "thriving",
-          "minValue": 0.6
+          "minValue": 60,
+          "maxValue": 100
         },
         {
           "tag": "stressed",
-          "maxValue": 0.2
+          "maxValue": -60,
+          "minValue": -100
         }
       ],
-      "valueTag": "resource_level"
+      "valueTag": "sys_resource_value",
+      "sinks": {
+        "tagFilter": "colony",
+        "defaultStrength": 1
+      }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",

@@ -329,5 +329,20 @@
     ],
     "cullable": false,
     "decayRate": "none"
+  },
+  {
+    "kind": "taught_by",
+    "description": "Taught By",
+    "srcKinds": [
+      "npc",
+      "faction"
+    ],
+    "dstKinds": [
+      "npc",
+      "faction"
+    ],
+    "cullable": true,
+    "decayRate": "medium",
+    "_key": "rel_1765395010690"
   }
 ]

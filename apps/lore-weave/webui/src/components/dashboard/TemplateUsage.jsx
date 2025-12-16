@@ -4,6 +4,28 @@
 
 import React, { useState } from 'react';
 
+function FilterStepsList({ filterSteps }) {
+  return (
+    <ul className="lw-filter-steps">
+      {filterSteps.map((step, idx) => {
+        const isBlocked = step.remaining === 0 && idx > 0;
+        const prevRemaining = idx > 0 ? filterSteps[idx - 1].remaining : step.remaining;
+        const eliminated = prevRemaining - step.remaining;
+        return (
+          <li key={idx} className={isBlocked ? 'lw-blocked-step' : ''}>
+            <span className="lw-step-desc">{step.description}</span>
+            <span className="lw-step-count">
+              {step.remaining}
+              {eliminated > 0 && <span className="lw-eliminated"> (-{eliminated})</span>}
+              {isBlocked && <span className="lw-blocked-marker"> ← blocked</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function SelectionBreakdown({ diagnosis }) {
   if (!diagnosis || !diagnosis.filterSteps) return null;
 
@@ -12,23 +34,34 @@ function SelectionBreakdown({ diagnosis }) {
       <div className="lw-selection-header">
         selection: {diagnosis.strategy} '{diagnosis.targetKind}'
       </div>
-      <ul className="lw-filter-steps">
-        {diagnosis.filterSteps.map((step, idx) => {
-          const isBlocked = step.remaining === 0 && idx > 0;
-          const prevRemaining = idx > 0 ? diagnosis.filterSteps[idx - 1].remaining : step.remaining;
-          const eliminated = prevRemaining - step.remaining;
-          return (
-            <li key={idx} className={isBlocked ? 'lw-blocked-step' : ''}>
-              <span className="lw-step-desc">{step.description}</span>
-              <span className="lw-step-count">
-                {step.remaining}
-                {eliminated > 0 && <span className="lw-eliminated"> (-{eliminated})</span>}
-                {isBlocked && <span className="lw-blocked-marker"> ← blocked</span>}
+      <FilterStepsList filterSteps={diagnosis.filterSteps} />
+    </div>
+  );
+}
+
+function VariableBreakdown({ diagnoses }) {
+  if (!diagnoses || diagnoses.length === 0) return null;
+
+  return (
+    <div className="lw-variable-breakdown">
+      {diagnoses.map((diag, idx) => (
+        <div key={idx} className="lw-variable-diagnosis">
+          <div className="lw-variable-header">
+            <span className="lw-variable-icon">📊</span>
+            <span className="lw-variable-name">${diag.name}</span>
+            {diag.fromType === 'related' ? (
+              <span className="lw-variable-source">
+                via {diag.relationshipKind} from {diag.relatedTo}
               </span>
-            </li>
-          );
-        })}
-      </ul>
+            ) : diag.kind ? (
+              <span className="lw-variable-source">
+                from {diag.kind}
+              </span>
+            ) : null}
+          </div>
+          <FilterStepsList filterSteps={diag.filterSteps} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -37,6 +70,7 @@ function UnusedTemplateItem({ template }) {
   const [expanded, setExpanded] = useState(false);
   const hasFailedRules = template.failedRules && template.failedRules.length > 0;
   const hasSelectionDiagnosis = template.selectionDiagnosis && template.selectionDiagnosis.filterSteps?.length > 0;
+  const hasVariableDiagnoses = template.variableDiagnoses && template.variableDiagnoses.length > 0;
   const icon = hasFailedRules ? '🚫' : '🎯';
 
   return (
@@ -60,6 +94,13 @@ function UnusedTemplateItem({ template }) {
             </ul>
           ) : hasSelectionDiagnosis ? (
             <SelectionBreakdown diagnosis={template.selectionDiagnosis} />
+          ) : hasVariableDiagnoses ? (
+            <>
+              <div className="lw-targets-found">
+                Found {template.selectionCount} valid target{template.selectionCount !== 1 ? 's' : ''}
+              </div>
+              <VariableBreakdown diagnoses={template.variableDiagnoses} />
+            </>
           ) : (
             <div className="lw-no-targets">
               Found {template.selectionCount} valid targets

@@ -56,6 +56,21 @@ export interface SelectionDiagnosis {
   }>;
 }
 
+/**
+ * Diagnostic information about why a required variable failed to resolve.
+ */
+export interface VariableDiagnosis {
+  name: string;
+  fromType: 'graph' | 'related';
+  kind?: string;
+  relationshipKind?: string;
+  relatedTo?: string;
+  filterSteps: Array<{
+    description: string;
+    remaining: number;
+  }>;
+}
+
 // =============================================================================
 // EXECUTION CONTEXT
 // =============================================================================
@@ -159,6 +174,7 @@ export class TemplateInterpreter {
    * A template can apply when:
    *   1. All explicit applicability rules pass
    *   2. AND the selection returns at least one valid target
+   *   3. AND all required variables can be resolved
    *
    * This means graph_path rules only need to be in selection, not duplicated
    * in applicability.
@@ -173,7 +189,28 @@ export class TemplateInterpreter {
 
     // Then check if selection returns at least one target
     const targets = this.executeSelection(template.selection, context);
-    return targets.length > 0;
+    if (targets.length === 0) {
+      return false;
+    }
+
+    // Check required variables can be resolved (using first target as context)
+    if (template.variables) {
+      context.target = targets[0];
+      context.set('$target', targets[0]);
+
+      for (const [name, def] of Object.entries(template.variables)) {
+        if (def.required) {
+          const resolved = this.resolveVariable(def, context);
+          if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
+            return false;
+          }
+          // Store resolved variable so subsequent required variables can reference it
+          context.set(name, resolved);
+        }
+      }
+    }
+
+    return true;
   }
 
   /**
@@ -187,6 +224,9 @@ export class TemplateInterpreter {
     selectionCount: number;
     selectionStrategy: string;
     selectionDiagnosis?: SelectionDiagnosis;
+    requiredVariablesPassed: boolean;
+    failedVariables: string[];
+    failedVariableDiagnoses: VariableDiagnosis[];
   } {
     const context = new ExecutionContext(graphView);
     const failedRules: string[] = [];
@@ -205,8 +245,9 @@ export class TemplateInterpreter {
     let selectionCount = 0;
     let selectionStrategy = 'none';
     let selectionDiagnosis: SelectionDiagnosis | undefined;
+    let targets: HardState[] = [];
     if (applicabilityPassed && template.selection) {
-      const targets = this.executeSelection(template.selection, context);
+      targets = this.executeSelection(template.selection, context);
       selectionCount = targets.length;
       selectionStrategy = template.selection.strategy || 'random';
 
@@ -216,13 +257,39 @@ export class TemplateInterpreter {
       }
     }
 
+    // Check required variables if selection passed
+    const failedVariables: string[] = [];
+    const failedVariableDiagnoses: VariableDiagnosis[] = [];
+    let requiredVariablesPassed = true;
+    if (applicabilityPassed && selectionCount > 0 && template.variables) {
+      context.target = targets[0];
+      context.set('$target', targets[0]);
+
+      for (const [name, def] of Object.entries(template.variables)) {
+        if (def.required) {
+          const resolved = this.resolveVariable(def, context);
+          if (!resolved || (Array.isArray(resolved) && resolved.length === 0)) {
+            failedVariables.push(name);
+            failedVariableDiagnoses.push(this.diagnoseVariable(name, def, context));
+            requiredVariablesPassed = false;
+          } else {
+            // Store for subsequent variable resolution
+            context.set(name, resolved);
+          }
+        }
+      }
+    }
+
     return {
-      canApply: applicabilityPassed && selectionCount > 0,
+      canApply: applicabilityPassed && selectionCount > 0 && requiredVariablesPassed,
       applicabilityPassed,
       failedRules,
       selectionCount,
       selectionStrategy,
-      selectionDiagnosis
+      selectionDiagnosis,
+      requiredVariablesPassed,
+      failedVariables,
+      failedVariableDiagnoses
     };
   }
 
@@ -350,6 +417,117 @@ export class TemplateInterpreter {
   }
 
   /**
+   * Diagnose why a variable failed to resolve.
+   * Tracks entity counts through each filtering step.
+   */
+  private diagnoseVariable(
+    name: string,
+    def: VariableDefinition,
+    context: ExecutionContext
+  ): VariableDiagnosis {
+    const { select } = def;
+    const { graphView } = context;
+    const filterSteps: Array<{ description: string; remaining: number }> = [];
+    let entities: HardState[];
+
+    // Determine source type
+    const fromSpec = select.from;
+    const isFromRelated = fromSpec && fromSpec !== 'graph';
+    const fromType: 'graph' | 'related' = isFromRelated ? 'related' : 'graph';
+
+    // Step 1: Get source entities
+    if (isFromRelated) {
+      const relatedTo = context.resolveEntity(fromSpec.relatedTo);
+      if (!relatedTo) {
+        filterSteps.push({
+          description: `related to ${fromSpec.relatedTo} (not found)`,
+          remaining: 0
+        });
+        return {
+          name,
+          fromType,
+          relationshipKind: fromSpec.relationship,
+          relatedTo: fromSpec.relatedTo,
+          filterSteps
+        };
+      }
+      entities = graphView.getRelatedEntities(
+        relatedTo.id,
+        fromSpec.relationship,
+        fromSpec.direction
+      );
+      filterSteps.push({
+        description: `via ${fromSpec.relationship} from ${relatedTo.name || relatedTo.id}`,
+        remaining: entities.length
+      });
+    } else {
+      // From graph
+      entities = graphView.findEntities({ kind: select.kind });
+      filterSteps.push({
+        description: `${select.kind} entities`,
+        remaining: entities.length
+      });
+    }
+
+    // Step 2: Apply subtype filter
+    if (select.subtypes && select.subtypes.length > 0) {
+      entities = entities.filter(e => select.subtypes!.includes(e.subtype));
+      filterSteps.push({
+        description: `subtype in [${select.subtypes.join(', ')}]`,
+        remaining: entities.length
+      });
+    }
+
+    // Step 3: Apply status filter
+    if (select.statusFilter) {
+      entities = entities.filter(e => e.status === select.statusFilter);
+      filterSteps.push({
+        description: `status = '${select.statusFilter}'`,
+        remaining: entities.length
+      });
+    }
+
+    // Step 4: Apply post-filters
+    if (select.filters) {
+      for (const filter of select.filters) {
+        entities = this.applySelectionFilter(entities, filter, context);
+        filterSteps.push({
+          description: this.describeSelectionFilter(filter),
+          remaining: entities.length
+        });
+      }
+    }
+
+    // Step 5: Apply prefer filters (if we still have entities)
+    if (select.preferFilters && select.preferFilters.length > 0 && entities.length > 0) {
+      let preferred = entities;
+      for (const filter of select.preferFilters) {
+        preferred = this.applySelectionFilter(preferred, filter, context);
+      }
+      if (preferred.length > 0) {
+        filterSteps.push({
+          description: `prefer filters matched`,
+          remaining: preferred.length
+        });
+      } else {
+        filterSteps.push({
+          description: `prefer filters (no match, using all)`,
+          remaining: entities.length
+        });
+      }
+    }
+
+    return {
+      name,
+      fromType,
+      kind: select.kind,
+      relationshipKind: isFromRelated ? fromSpec.relationship : undefined,
+      relatedTo: isFromRelated ? fromSpec.relatedTo : undefined,
+      filterSteps
+    };
+  }
+
+  /**
    * Describe a selection filter for diagnostic output.
    */
   private describeSelectionFilter(filter: SelectionFilter): string {
@@ -362,8 +540,22 @@ export class TemplateInterpreter {
         return `lacks_relationship '${filter.kind}'${filter.with ? ` with ${filter.with}` : ''}`;
       case 'has_tag':
         return `has_tag '${filter.tag}'${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
+      case 'has_tags':
+        return `has_tags [${filter.tags.join(', ')}]`;
       case 'has_any_tag':
         return `has_any_tag [${filter.tags.join(', ')}]`;
+      case 'lacks_tag':
+        return `lacks_tag '${filter.tag}'${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
+      case 'lacks_any_tag':
+        return `lacks_any_tag [${filter.tags.join(', ')}]`;
+      case 'has_culture':
+        return `has_culture '${filter.culture}'`;
+      case 'matches_culture':
+        return `matches_culture with ${filter.with}`;
+      case 'has_status':
+        return `has_status '${filter.status}'`;
+      case 'has_prominence':
+        return `has_prominence >= '${filter.minProminence}'`;
       case 'shares_related':
         return `shares '${filter.relationshipKind}' with ${filter.with}`;
       case 'graph_path':
@@ -942,10 +1134,55 @@ export class TemplateInterpreter {
         });
       }
 
+      case 'has_tags': {
+        const tagList = filter.tags || [];
+        if (tagList.length === 0) return entities;
+        return entities.filter(entity => tagList.every(tag => hasTag(entity.tags, tag)));
+      }
+
       case 'has_any_tag': {
         const tagList = filter.tags || [];
         if (tagList.length === 0) return entities;
         return entities.filter(entity => tagList.some(tag => hasTag(entity.tags, tag)));
+      }
+
+      case 'lacks_tag': {
+        return entities.filter(entity => {
+          if (!hasTag(entity.tags, filter.tag)) return true;  // Doesn't have tag, include
+          if (filter.value === undefined) return false;  // Has tag, exclude
+          // Has tag, only exclude if value matches
+          return getTagValue(entity.tags, filter.tag) !== filter.value;
+        });
+      }
+
+      case 'lacks_any_tag': {
+        const tagList = filter.tags || [];
+        if (tagList.length === 0) return entities;
+        return entities.filter(entity => !tagList.some(tag => hasTag(entity.tags, tag)));
+      }
+
+      case 'has_culture': {
+        return entities.filter(e => e.culture === filter.culture);
+      }
+
+      case 'matches_culture': {
+        const refEntity = context.resolveEntity(filter.with);
+        if (!refEntity) return entities;
+        return entities.filter(e => e.culture === refEntity.culture);
+      }
+
+      case 'has_status': {
+        return entities.filter(e => e.status === filter.status);
+      }
+
+      case 'has_prominence': {
+        const prominenceLevels = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+        const minIndex = prominenceLevels.indexOf(filter.minProminence);
+        if (minIndex === -1) return entities;
+        return entities.filter(e => {
+          const entityIndex = prominenceLevels.indexOf(e.prominence);
+          return entityIndex >= minIndex;
+        });
       }
 
       case 'shares_related': {
@@ -1191,9 +1428,25 @@ export class TemplateInterpreter {
     const anchorEntities: HardState[] = [];
     const avoidEntities: HardState[] = [];
 
+    // Clone spec to allow modification of anchor.id for culture type
+    let resolvedSpec = spec;
+
     if (spec.anchor.type === 'entity') {
       const ref = context.resolveEntity(spec.anchor.ref);
       if (ref) anchorEntities.push(ref);
+    } else if (spec.anchor.type === 'culture') {
+      // Resolve culture anchor id: if it's a variable reference like "$target",
+      // resolve to the entity's culture
+      const anchorWithId = spec.anchor as { type: 'culture'; id?: string };
+      if (anchorWithId.id?.startsWith('$')) {
+        const refEntity = context.resolveEntity(anchorWithId.id);
+        const resolvedCultureId = refEntity?.culture || culture;
+        // Clone the spec with resolved culture id
+        resolvedSpec = {
+          ...spec,
+          anchor: { ...spec.anchor, id: resolvedCultureId }
+        };
+      }
     } else if (spec.anchor.type === 'refs_centroid') {
       for (const refId of spec.anchor.refs) {
         const ref = context.resolveEntity(refId);
@@ -1209,7 +1462,7 @@ export class TemplateInterpreter {
     const placementResult = await graphView.placeWithPlacementOptions(
       entityKind,
       culture,
-      spec,
+      resolvedSpec,
       anchorEntities,
       avoidEntities
     );
@@ -1361,9 +1614,18 @@ export class TemplateInterpreter {
 
       case 'archive_relationship': {
         const entity = context.resolveEntity(rule.entity);
-        const withEntity = context.resolveEntity(rule.with);
-        if (entity && withEntity) {
-          graphView.archiveRelationship(entity.id, withEntity.id, rule.relationshipKind);
+        if (!entity) break;
+
+        if (rule.with === 'any') {
+          // Archive all relationships of this kind involving the entity
+          const direction = rule.direction || 'any';
+          graphView.archiveRelationshipsByKind(entity.id, rule.relationshipKind, direction);
+        } else {
+          // Archive specific relationship with a known entity
+          const withEntity = context.resolveEntity(rule.with);
+          if (withEntity) {
+            graphView.archiveRelationship(entity.id, withEntity.id, rule.relationshipKind);
+          }
         }
         break;
       }

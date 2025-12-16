@@ -675,13 +675,46 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
                       className="checkbox"
                       checked={placement.regionPolicy?.allowEmergent || false}
                       onChange={(e) => {
+                        const current = placement.regionPolicy || {};
                         const allowEmergent = e.target.checked;
-                        setRegionPolicy(allowEmergent ? { allowEmergent } : {});
+                        setRegionPolicy({ ...current, allowEmergent: allowEmergent || undefined });
                       }}
                     />
                     Allow Emergent Regions
                   </label>
                   <div className="hint">When enabled, creates new regions when existing regions are at capacity</div>
+                </div>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={placement.regionPolicy?.createRegion || false}
+                      onChange={(e) => {
+                        const current = placement.regionPolicy || {};
+                        const createRegion = e.target.checked;
+                        setRegionPolicy({ ...current, createRegion: createRegion || undefined });
+                      }}
+                    />
+                    Create Region at Location
+                  </label>
+                  <div className="hint">Creates a new region centered on the placed entity (useful for establishing new territories)</div>
+                </div>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={placement.regionPolicy?.preferSparse || false}
+                      onChange={(e) => {
+                        const current = placement.regionPolicy || {};
+                        const preferSparse = e.target.checked;
+                        setRegionPolicy({ ...current, preferSparse: preferSparse || undefined });
+                      }}
+                    />
+                    Prefer Sparse Regions
+                  </label>
+                  <div className="hint">Bias region selection toward regions with fewer entities (weighted random selection)</div>
                 </div>
               </div>
 

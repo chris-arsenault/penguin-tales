@@ -1,3 +1,2764 @@
-remove old vis componenets
-make trace into a popup like errors so you can pop back and forth to it easy
-combine multipel generators into non deterministic choice (all location discovery ones)
+[
+  {
+    "id": "aurora-stack",
+    "name": "Aurora Stack",
+    "description": "The orderly, sunlit colony on the bright face of Aurora Berg",
+    "color": "#FFD700",
+    "axisBiases": {
+      "npc": {
+        "x": 70,
+        "y": 55,
+        "z": 35
+      },
+      "location": {
+        "x": 70,
+        "y": 25,
+        "z": 70
+      },
+      "faction": {
+        "x": 80,
+        "y": 75,
+        "z": 60
+      },
+      "abilities": {
+        "x": 60,
+        "y": 69,
+        "z": 69
+      }
+    },
+    "homeRegions": {
+      "npc": [
+        "aurora_stack"
+      ],
+      "location": [
+        "aurora_stack_loc"
+      ],
+      "faction": [
+        "aurora_factions"
+      ]
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "aurora_domain",
+          "phonology": {
+            "consonants": [
+              "s",
+              "l",
+              "r",
+              "k",
+              "n",
+              "m",
+              "p",
+              "t",
+              "w",
+              "v"
+            ],
+            "vowels": [
+              "a",
+              "e",
+              "i",
+              "o",
+              "u",
+              "ae",
+              "ei"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VCV",
+              "V"
+            ],
+            "lengthRange": [
+              2,
+              3
+            ],
+            "favoredClusters": [
+              "sk",
+              "kr",
+              "st",
+              "tr"
+            ],
+            "forbiddenClusters": [
+              "gg",
+              "kk"
+            ],
+            "favoredClusterBoost": 1.3,
+            "consonantWeights": [
+              1,
+              1.2,
+              1.2,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "vowelWeights": [
+              1.2,
+              1,
+              1,
+              1,
+              1,
+              0.8,
+              0.8
+            ],
+            "templateWeights": [
+              1,
+              1.2,
+              0.8,
+              0.6
+            ]
+          },
+          "morphology": {
+            "prefixes": [
+              "Ska",
+              "Kri",
+              "Nal",
+              "Pel",
+              "Vor"
+            ],
+            "suffixes": [
+              "ik",
+              "ak",
+              "en",
+              "ar",
+              "ok",
+              "um"
+            ],
+            "structure": [
+              "root",
+              "root-suffix",
+              "prefix-root"
+            ],
+            "structureWeights": [
+              0.3,
+              0.4,
+              0.3
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.02,
+            "preferredEndings": [
+              "ik",
+              "ak",
+              "en",
+              "ar"
+            ],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "neutral"
+          }
+        },
+        {
+          "id": "aurora_domain_short",
+          "phonology": {
+            "consonants": [
+              "s",
+              "l",
+              "r",
+              "k",
+              "n",
+              "m",
+              "p",
+              "t",
+              "w",
+              "v"
+            ],
+            "vowels": [
+              "a",
+              "e",
+              "i",
+              "o",
+              "u",
+              "ae",
+              "ei"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VCV",
+              "V"
+            ],
+            "lengthRange": [
+              1,
+              1
+            ],
+            "favoredClusters": [
+              "sk",
+              "kr",
+              "st",
+              "tr"
+            ],
+            "forbiddenClusters": [
+              "gg",
+              "kk"
+            ],
+            "favoredClusterBoost": 1.3,
+            "consonantWeights": [
+              1,
+              1.2,
+              1.2,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "vowelWeights": [
+              1.2,
+              1,
+              1,
+              1,
+              1,
+              0.8,
+              0.8
+            ],
+            "templateWeights": [
+              1,
+              1.2,
+              0.8,
+              0.6
+            ]
+          },
+          "morphology": {
+            "prefixes": [
+              "Ska",
+              "Kri",
+              "Nal",
+              "Pel",
+              "Vor"
+            ],
+            "suffixes": [
+              "ik",
+              "ak",
+              "en",
+              "ar",
+              "ok",
+              "um"
+            ],
+            "structure": [
+              "root",
+              "root-suffix",
+              "prefix-root"
+            ],
+            "structureWeights": [
+              0.3,
+              0.4,
+              0.3
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.05,
+            "hyphenRate": 0.02,
+            "preferredEndings": [
+              "ik",
+              "ak",
+              "en",
+              "ar"
+            ],
+            "preferredEndingBoost": 1.3,
+            "rhythmBias": "neutral"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "aurora_nature": {
+          "id": "aurora_nature",
+          "description": "Light and trade words",
+          "entries": [
+            "sun",
+            "light",
+            "gold",
+            "ice",
+            "trade",
+            "stack",
+            "tier",
+            "banner"
+          ],
+          "source": "manual"
+        },
+        "aurora_titles": {
+          "id": "aurora_titles",
+          "description": "Aurora honorifics",
+          "entries": [
+            "High-Beak",
+            "Auditor",
+            "Tide-Splitter",
+            "Stack-Master"
+          ],
+          "source": "manual"
+        },
+        "aurora_gen_titles": {
+          "id": "aurora_gen_titles",
+          "description": "Generated title list: Magic penguin titles similar to :\nHigh-Beak\nAuditor\nTide-Splitter\nStack-Master",
+          "entries": [
+            "Frost-ward",
+            "Floe-Master",
+            "Keeper",
+            "Waddler",
+            "Ice-Crowned",
+            "Plunge-Caller",
+            "Depth-Seer",
+            "Blizzard",
+            "Flipper",
+            "Chill-Breaker",
+            "Glacial",
+            "Iceholm",
+            "Glaciarch"
+          ],
+          "source": "llm"
+        },
+        "aurora_gen_nouns": {
+          "id": "aurora_gen_nouns",
+          "description": "Generated noun list: things magic penguins of good revere in there icy southern home similar to:\nsun\nlight\ngold\nice\ntrade\nstack\ntier\nbanner",
+          "entries": [
+            "frost",
+            "gleam",
+            "beacon",
+            "crest",
+            "shard",
+            "depths",
+            "peak",
+            "shrine",
+            "veil",
+            "seal",
+            "crystal",
+            "tide",
+            "covenant",
+            "radiance",
+            "spire",
+            "compass",
+            "haven",
+            "aurora",
+            "virtue",
+            "ward",
+            "glow",
+            "summit",
+            "realm",
+            "bond",
+            "mirror",
+            "arch",
+            "grace",
+            "eternal",
+            "pathway",
+            "oath"
+          ],
+          "source": "llm"
+        },
+        "aurora_faction_groups": {
+          "id": "aurora_faction_groups",
+          "description": "Generated collective list: groups of people, organizations, plurals. ethereal in nature, trade focused, ice and gold.",
+          "entries": [
+            "Frostlings",
+            "Covenant",
+            "Spire",
+            "Auryn",
+            "Threshold",
+            "Syndicate",
+            "Nexus",
+            "Glacialite",
+            "Vault",
+            "Order",
+            "Luminarch",
+            "Frosthold",
+            "Meridian",
+            "Bastion",
+            "Silvarch",
+            "Tribunal",
+            "Aether-Conclave",
+            "Citadel",
+            "Aureate",
+            "Compact",
+            "Pinnacle",
+            "Cryarch-wright",
+            "Collective",
+            "Crescent",
+            "Glaciery"
+          ],
+          "source": "llm"
+        },
+        "aurora_gen_trade": {
+          "id": "aurora_gen_trade",
+          "description": "Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos.",
+          "entries": [
+            "aether",
+            "starlight",
+            "moonsilver",
+            "frostglass",
+            "echo",
+            "voidstone",
+            "shimmer",
+            "pearlescent",
+            "ethermist",
+            "shadowice",
+            "luminite",
+            "driftwood",
+            "spectralsilk",
+            "frostbone",
+            "stardustcore",
+            "veilmetal",
+            "phantom",
+            "opalum",
+            "whisperstone",
+            "glacierflux",
+            "moonwhisper",
+            "voidresin",
+            "luminous",
+            "frostwhisper",
+            "starshatter",
+            "ethereumglass",
+            "silverthorn",
+            "iceflux",
+            "echovein",
+            "mist-wrought",
+            "spectralum",
+            "frostveil",
+            "stellarite",
+            "whisperglass",
+            "voidpearl",
+            "lightbane",
+            "frostecho",
+            "etherealwood",
+            "shimmerstone",
+            "starfall"
+          ],
+          "source": "llm"
+        },
+        "aurora_family_types": {
+          "id": "aurora_family_types",
+          "description": "Generated collective list: types of family units appropriate for a penguin (e.g. clan, herd)",
+          "entries": [
+            "rookery",
+            "waddle",
+            "floe",
+            "huddle",
+            "ice-pack"
+          ],
+          "source": "llm"
+        },
+        "aurora_magic_part_a": {
+          "id": "aurora_magic_part_a",
+          "description": "Generated element list: ethereal ice magic",
+          "entries": [
+            "frost",
+            "chill",
+            "ice",
+            "crystal",
+            "glacial",
+            "winter",
+            "snow",
+            "blizzard",
+            "frozen",
+            "sleet",
+            "rime",
+            "shatter",
+            "frigid",
+            "azure",
+            "permafrost",
+            "snowdrift",
+            "breath",
+            "shard",
+            "floe",
+            "frostbite",
+            "glaciere",
+            "pale",
+            "silent",
+            "stillness",
+            "drift",
+            "shimmer",
+            "ethereal",
+            "whisper",
+            "freeze",
+            "crystalline"
+          ],
+          "source": "llm"
+        },
+        "aurora_magic_partb": {
+          "id": "aurora_magic_partb",
+          "description": "Generated verb list: etherial ice magic actions",
+          "entries": [
+            "freeze",
+            "crystallize",
+            "drift",
+            "glimmer",
+            "pierce",
+            "enchant",
+            "shatter",
+            "gleam",
+            "numb",
+            "ascend",
+            "dissolve",
+            "chill",
+            "rime",
+            "descend",
+            "whisper",
+            "veil",
+            "frost-",
+            "sear",
+            "shimmer",
+            "enthrall",
+            "spiral",
+            "eclipse",
+            "coalesce",
+            "frost",
+            "slumber",
+            "dwelt",
+            "breath",
+            "glide",
+            "wither",
+            "eternal"
+          ],
+          "source": "llm"
+        },
+        "aurora_magic_part_c": {
+          "id": "aurora_magic_part_c",
+          "description": "Generated celestial list: ethereial ice magic outcomes",
+          "entries": [
+            "star",
+            "moon",
+            "sun",
+            "dawn",
+            "dusk",
+            "comet",
+            "eclipse",
+            "aurora",
+            "zenith",
+            "constellation",
+            "frost",
+            "crystalus",
+            "shimmer",
+            "glacial",
+            "void",
+            "luminous",
+            "stellar",
+            "veil",
+            "prism",
+            "rime",
+            "astral",
+            "glimmer",
+            "frozen-",
+            "-light",
+            "ethereal",
+            "twilight",
+            "apex",
+            "celestis",
+            "icy-",
+            "-glow"
+          ],
+          "source": "llm"
+        },
+        "aurora_law_terms": {
+          "id": "aurora_law_terms",
+          "description": "Generated abstract list: rigid penguin abstract constructs",
+          "entries": [
+            "frost",
+            "steel",
+            "shadow",
+            "void",
+            "blight",
+            "chill",
+            "stillness",
+            "hunger",
+            "order",
+            "fracture",
+            "ache",
+            "silence",
+            "iron",
+            "abyss",
+            "march",
+            "scar",
+            "winter",
+            "stone",
+            "dusk",
+            "weight",
+            "depth",
+            "rime",
+            "ruin",
+            "sorrow",
+            "stark",
+            "crypt",
+            "vigil",
+            "drift",
+            "shatter",
+            "grim"
+          ],
+          "source": "llm"
+        },
+        "aurora_tech": {
+          "id": "aurora_tech",
+          "description": "Generated noun list: technology used by good penguins",
+          "entries": [
+            "beacon",
+            "shell",
+            "crystal",
+            "compass",
+            "floe",
+            "gear",
+            "lantern",
+            "frost",
+            "clockwork",
+            "glacier",
+            "mirror",
+            "propeller",
+            "helm",
+            "prism",
+            "vault",
+            "engine",
+            "aurora",
+            "anvil",
+            "mechanism",
+            "fortress",
+            "orb",
+            "shield",
+            "spire",
+            "circuit",
+            "throne",
+            "turbine",
+            "beacon-ward",
+            "nexus"
+          ],
+          "source": "llm"
+        },
+        "aurora_progress_verbs": {
+          "id": "aurora_progress_verbs",
+          "description": "Generated verb list: penguin progress verbs, new technology, developmental penguin goods",
+          "entries": [
+            "waddle",
+            "slide",
+            "breach",
+            "glide",
+            "freeze",
+            "evolve",
+            "chirp",
+            "nest",
+            "huddle",
+            "dive",
+            "craft",
+            "refine",
+            "polish",
+            "build",
+            "surge",
+            "descend",
+            "ascend",
+            "innovate",
+            "frostsmith",
+            "encode",
+            "compress",
+            "flow",
+            "hatch",
+            "ignite",
+            "navigate",
+            "transmute",
+            "sculpt",
+            "calibrate",
+            "soar",
+            "magnetize"
+          ],
+          "source": "llm"
+        }
+      },
+      "lexemeSpecs": [
+        {
+          "id": "aurora_gen_titles",
+          "pos": "title",
+          "style": "Magic penguin titles similar to :\nHigh-Beak\nAuditor\nTide-Splitter\nStack-Master",
+          "targetCount": 15,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_gen_nouns",
+          "pos": "noun",
+          "style": "things magic penguins of good revere in there icy southern home similar to:\nsun\nlight\ngold\nice\ntrade\nstack\ntier\nbanner",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_faction_groups",
+          "pos": "collective",
+          "style": "groups of people, organizations, plurals. ethereal in nature, trade focused, ice and gold.",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 5,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_gen_trade",
+          "pos": "material",
+          "style": "things super magic penguin would trade with or for. etheral constructs. tangible echos.",
+          "targetCount": 45,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_family_types",
+          "pos": "collective",
+          "style": "types of family units appropriate for a penguin (e.g. clan, herd)",
+          "targetCount": 5,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_magic_part_a",
+          "pos": "element",
+          "style": "ethereal ice magic",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_magic_partb",
+          "pos": "verb",
+          "style": "etherial ice magic actions",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_magic_part_c",
+          "pos": "celestial",
+          "style": "ethereial ice magic outcomes",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_law_terms",
+          "pos": "abstract",
+          "style": "rigid penguin abstract constructs",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_tech",
+          "pos": "noun",
+          "style": "technology used by good penguins",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        },
+        {
+          "id": "aurora_progress_verbs",
+          "pos": "verb",
+          "style": "penguin progress verbs, new technology, developmental penguin goods",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "aurora-stack"
+        }
+      ],
+      "grammars": [
+        {
+          "id": "aurora_elite_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_gen_titles",
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_nature~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_faction",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "domain:aurora_domain_short",
+                "slot:aurora_faction_groups"
+              ],
+              [
+                "domain:aurora_domain",
+                "slot:aurora_faction_groups"
+              ],
+              [
+                "slot:aurora_faction_groups",
+                "of",
+                "slot:aurora_gen_trade"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:aurora_nature",
+                "Reaches"
+              ],
+              [
+                "The",
+                "domain:aurora_domain",
+                "Expanse"
+              ],
+              [
+                "slot:aurora_nature",
+                "Territories"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "aurora_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_gen_nouns~cap"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_location",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_nature",
+                "domain:aurora_domain"
+              ],
+              [
+                "The",
+                "slot:aurora_nature",
+                "slot:aurora_nature"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "aurora_law",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:aurora_gen_trade",
+                "slot:aurora_law_terms"
+              ],
+              [
+                "slot:aurora_law_terms",
+                "of",
+                "slot:aurora_gen_trade"
+              ],
+              [
+                "slot:aurora_nature^-^slot:aurora_gen_trade",
+                "slot:aurora_law_terms"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_family_names",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "domain:aurora_domain",
+                "slot:aurora_family_types"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_technology",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:aurora_tech",
+                "slot:aurora_progress_verbs"
+              ],
+              [
+                "slot:aurora_progress_verbs",
+                "slot:aurora_tech"
+              ],
+              [
+                "domain:aurora_domain_short^'s",
+                "slot:aurora_tech"
+              ],
+              [
+                "domain:aurora_domain_short^'s",
+                "slot:aurora_tech",
+                "slot:aurora_progress_verbs"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_magic",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_magic_part_a^-^slot:aurora_magic_partb",
+                "(^slot:aurora_magic_part_c^)"
+              ]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "aurora_default",
+          "name": "Aurora Default",
+          "strategyGroups": [
+            {
+              "name": "Magic Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_region"
+                }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "aurora_domain_short"
+                }
+              ]
+            }
+          ],
+          "isDefault": true,
+          "entityKinds": []
+        },
+        {
+          "id": "aurora_npcs",
+          "name": "Aurora Default",
+          "strategyGroups": [
+            {
+              "name": "Elite NPCs",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [
+                  "mythic",
+                  "renowned"
+                ],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_elite_npc"
+                }
+              ]
+            },
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 0.8,
+                  "grammarId": "aurora_npc"
+                },
+                {
+                  "type": "grammar",
+                  "weight": 0.2,
+                  "grammarId": "aurora_elite_npc"
+                }
+              ]
+            },
+            {
+              "name": "NPC Regions (Families)",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_family_names"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "npc"
+          ]
+        },
+        {
+          "id": "aurora_factions",
+          "name": "Aurora Default",
+          "strategyGroups": [
+            {
+              "name": "Faction Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "faction"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_faction"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "faction"
+          ]
+        },
+        {
+          "id": "aurora_locations",
+          "name": "Aurora Default",
+          "strategyGroups": [
+            {
+              "name": "Location Names",
+              "priority": 40,
+              "conditions": {
+                "entityKinds": [
+                  "location"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_location"
+                }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "location"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_region"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "location"
+          ]
+        },
+        {
+          "id": "aurora_rules",
+          "strategyGroups": [
+            {
+              "name": "Conditional",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "rules"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "laws"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_law"
+                }
+              ]
+            }
+          ],
+          "entityKinds": [
+            "rules"
+          ]
+        },
+        {
+          "id": "aurora_abilities",
+          "strategyGroups": [
+            {
+              "name": "Magic",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "magic"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_magic"
+                }
+              ]
+            },
+            {
+              "name": "Technology",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "technology"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_technology"
+                }
+              ]
+            }
+          ],
+          "entityKinds": [
+            "abilities"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "nightshelf",
+    "name": "Nightfall Shelf",
+    "description": "The shadowed colony on the dark side of Aurora Berg",
+    "color": "#9370DB",
+    "axisBiases": {
+      "npc": {
+        "x": 45,
+        "y": 50,
+        "z": 65
+      },
+      "location": {
+        "x": 35,
+        "y": 55,
+        "z": 40
+      },
+      "faction": {
+        "x": 40,
+        "y": 45,
+        "z": 50
+      }
+    },
+    "homeRegions": {
+      "npc": [
+        "nightfall_shelf"
+      ],
+      "location": [
+        "nightfall_shelf_loc",
+        "glow_fissure"
+      ],
+      "faction": [
+        "nightfall_factions"
+      ]
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "nightshelf_domain",
+          "phonology": {
+            "consonants": [
+              "b",
+              "c",
+              "d",
+              "f",
+              "g",
+              "l",
+              "m",
+              "n",
+              "p",
+              "r",
+              "s",
+              "t",
+              "v",
+              "ph",
+              "th"
+            ],
+            "vowels": [
+              "a",
+              "e",
+              "i",
+              "o",
+              "u",
+              "ae",
+              "au",
+              "oe",
+              "ia",
+              "io"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "VCV"
+            ],
+            "lengthRange": [
+              2,
+              3
+            ],
+            "favoredClusters": [
+              "br",
+              "cr",
+              "dr",
+              "gr",
+              "pr",
+              "tr",
+              "pl",
+              "cl",
+              "li",
+              "ri"
+            ],
+            "forbiddenClusters": [
+              "aa",
+              "ee",
+              "ii",
+              "oo",
+              "uu",
+              "aeae",
+              "ioio",
+              "vv",
+              "kk",
+              "zz",
+              "phph",
+              "thth"
+            ],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1.5,
+              1.2,
+              1.2,
+              1,
+              1.6,
+              1.4,
+              1.3,
+              1.1,
+              0.7,
+              0.7
+            ],
+            "vowelWeights": [
+              1.3,
+              1.1,
+              1.1,
+              1.3,
+              1,
+              0.9,
+              0.9,
+              0.8,
+              0.8,
+              0.8
+            ],
+            "templateWeights": [
+              1.4,
+              1.2,
+              0.6
+            ]
+          },
+          "morphology": {
+            "prefixes": [
+              "Theo",
+              "Auro",
+              "Neo",
+              "Proto",
+              "Meta",
+              "Pseudo",
+              "Ultra"
+            ],
+            "suffixes": [
+              "ius",
+              "ianus",
+              "ium",
+              "ensis",
+              "alis",
+              "orius",
+              "aria",
+              "oia",
+              "ae"
+            ],
+            "structure": [
+              "root-suffix",
+              "prefix-root-suffix",
+              "root"
+            ],
+            "structureWeights": [
+              0.45,
+              0.25,
+              0.3
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [
+              "ius",
+              "ianus",
+              "alis",
+              "oia"
+            ],
+            "preferredEndingBoost": 16,
+            "rhythmBias": "flowing"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "nightshelf_titles": {
+          "id": "nightshelf_titles",
+          "description": "Nightshelf honorifics",
+          "entries": [
+            "Shadow-Broker",
+            "Fissure-Walker",
+            "Night-Warden",
+            "Veil-Keeper"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_gen_titles": {
+          "id": "nightshelf_gen_titles",
+          "description": "Generated title list: Magic penguin titles similar to :\nHigh-Beak\nAuditor\nTide-Splitter\nStack-Master (copied from aurora-stack)",
+          "entries": [
+            "Frost-ward",
+            "Floe-Master",
+            "Keeper",
+            "Waddler",
+            "Ice-Crowned",
+            "Plunge-Caller",
+            "Depth-Seer",
+            "Blizzard",
+            "Flipper",
+            "Chill-Breaker",
+            "Glacial",
+            "Iceholm",
+            "Glaciarch"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_nature": {
+          "id": "nightshelf_nature",
+          "description": "Light and trade words (copied from aurora-stack)",
+          "entries": [
+            "sun",
+            "light",
+            "gold",
+            "ice",
+            "trade",
+            "stack",
+            "tier",
+            "banner"
+          ],
+          "source": "manual"
+        },
+        "nightshelf_magic_part_a": {
+          "id": "nightshelf_magic_part_a",
+          "description": "Generated element list: ethereal ice magic (copied from aurora-stack)",
+          "entries": [
+            "frost",
+            "chill",
+            "ice",
+            "crystal",
+            "glacial",
+            "winter",
+            "snow",
+            "blizzard",
+            "frozen",
+            "sleet",
+            "rime",
+            "shatter",
+            "frigid",
+            "azure",
+            "permafrost",
+            "snowdrift",
+            "breath",
+            "shard",
+            "floe",
+            "frostbite",
+            "glaciere",
+            "pale",
+            "silent",
+            "stillness",
+            "drift",
+            "shimmer",
+            "ethereal",
+            "whisper",
+            "freeze",
+            "crystalline"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_magic_partb": {
+          "id": "nightshelf_magic_partb",
+          "description": "Generated verb list: etherial ice magic actions (copied from aurora-stack)",
+          "entries": [
+            "freeze",
+            "crystallize",
+            "drift",
+            "glimmer",
+            "pierce",
+            "enchant",
+            "shatter",
+            "gleam",
+            "numb",
+            "ascend",
+            "dissolve",
+            "chill",
+            "rime",
+            "descend",
+            "whisper",
+            "veil",
+            "frost-",
+            "sear",
+            "shimmer",
+            "enthrall",
+            "spiral",
+            "eclipse",
+            "coalesce",
+            "frost",
+            "slumber",
+            "dwelt",
+            "breath",
+            "glide",
+            "wither",
+            "eternal"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_magic_part_c": {
+          "id": "nightshelf_magic_part_c",
+          "description": "Generated celestial list: ethereial ice magic outcomes (copied from aurora-stack)",
+          "entries": [
+            "star",
+            "moon",
+            "sun",
+            "dawn",
+            "dusk",
+            "comet",
+            "eclipse",
+            "aurora",
+            "zenith",
+            "constellation",
+            "frost",
+            "crystalus",
+            "shimmer",
+            "glacial",
+            "void",
+            "stellar",
+            "veil",
+            "prism",
+            "rime",
+            "glimmer",
+            "freeze",
+            "light",
+            "twilight",
+            "apex",
+            "icy",
+            "glow"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_shadow_gen": {
+          "id": "nightshelf_shadow_gen",
+          "description": "Generated core list: Shadow and mystery words",
+          "entries": [
+            "shade",
+            "shroud",
+            "dwell",
+            "veil",
+            "moth",
+            "hush",
+            "wane",
+            "scar",
+            "shawl",
+            "mist",
+            "flay",
+            "slew",
+            "fawn",
+            "weft",
+            "seam",
+            "shale",
+            "smelt",
+            "swale",
+            "swath",
+            "fens",
+            "loam",
+            "thaw",
+            "scathe",
+            "shend",
+            "smite",
+            "shrift",
+            "swathe",
+            "thrum",
+            "weal",
+            "flense",
+            "whelm",
+            "shale",
+            "swine",
+            "weal",
+            "sleek",
+            "flay",
+            "sheen",
+            "thrall",
+            "swoon",
+            "shale",
+            "flail",
+            "shale",
+            "scowl",
+            "shale",
+            "firth",
+            "whelm",
+            "shade",
+            "swale",
+            "fell",
+            "thews",
+            "smalt",
+            "fane",
+            "shadow",
+            "night",
+            "veil",
+            "whisper",
+            "glow",
+            "fissure",
+            "secret",
+            "deal"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_gen_trade": {
+          "id": "nightshelf_gen_trade",
+          "description": "Generated material list: things super magic penguin would trade with or for. etheral constructs. tangible echos. (copied from aurora-stack)",
+          "entries": [
+            "aether",
+            "starlight",
+            "moonsilver",
+            "frostglass",
+            "echo",
+            "voidstone",
+            "shimmer",
+            "pearlescent",
+            "ethermist",
+            "shadowice",
+            "luminite",
+            "driftwood",
+            "spectralsilk",
+            "frostbone",
+            "stardustcore",
+            "veilmetal",
+            "phantom",
+            "opalum",
+            "whisperstone",
+            "glacierflux",
+            "moonwhisper",
+            "voidresin",
+            "luminous",
+            "frostwhisper",
+            "starshatter",
+            "ethereumglass",
+            "silverthorn",
+            "iceflux",
+            "echovein",
+            "mist-wrought",
+            "spectralum",
+            "frostveil",
+            "stellarite",
+            "whisperglass",
+            "voidpearl",
+            "lightbane",
+            "frostecho",
+            "etherealwood",
+            "shimmerstone",
+            "starfall"
+          ],
+          "source": "llm"
+        },
+        "nightshelf_faction_groups": {
+          "id": "nightshelf_faction_groups",
+          "description": "Generated collective list: secrative and cryptic slightly evil ice ccold organizations",
+          "entries": [
+            "Cabal",
+            "Coven",
+            "Conclave",
+            "Congregation",
+            "Circle",
+            "Order",
+            "Covenant",
+            "Sect",
+            "Syndicate",
+            "Fellowship",
+            "Brotherhood",
+            "Sisterhood",
+            "Pact",
+            "Lodge",
+            "Assembly",
+            "Council",
+            "Convocation",
+            "Collective",
+            "Communion",
+            "Alliance",
+            "Compact",
+            "Guild",
+            "Society",
+            "Confederacy",
+            "Faction",
+            "Knot",
+            "Band",
+            "Crew",
+            "Troop",
+            "Cohort",
+            "Cartel",
+            "Ring",
+            "Cell",
+            "Bloc",
+            "Clique",
+            "Company",
+            "Garrison",
+            "Quorum",
+            "Tribunal",
+            "Vault"
+          ],
+          "source": "llm"
+        }
+      },
+      "lexemeSpecs": [
+        {
+          "id": "nightshelf_shadow_gen",
+          "pos": "core",
+          "style": "Shadow and mystery words",
+          "wordStyle": {
+            "etymology": "germanic",
+            "syllables": {
+              "min": 1,
+              "max": 2
+            },
+            "phonetics": {
+              "consonants": "soft"
+            },
+            "register": "neutral"
+          },
+          "targetCount": 50,
+          "maxWords": 1,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "nightshelf"
+        },
+        {
+          "id": "nightshelf_faction_groups",
+          "pos": "collective",
+          "style": "secrative and cryptic slightly evil ice ccold organizations",
+          "wordStyle": {
+            "etymology": "mixed",
+            "syllables": {
+              "min": 1,
+              "max": 2
+            },
+            "register": "visceral"
+          },
+          "targetCount": 40,
+          "maxWords": 2,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "nightshelf"
+        }
+      ],
+      "grammars": [
+        {
+          "id": "nightshelf_elite_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_gen_titles",
+                "domain:nightshelf_domain~cap^'^slot:nightshelf_nature~cap"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "nightshelf_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_titles",
+                "domain:nightshelf_domain"
+              ],
+              [
+                "domain:nightshelf_domain"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_magic",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_magic_part_c",
+                "slot:nightshelf_magic_part_a",
+                "slot:nightshelf_magic_partb"
+              ],
+              [
+                "domain:nightshelf_domain^'s",
+                "slot:nightshelf_magic_part_c"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nightshelf_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:nightshelf_shadow_gen",
+                "Depths"
+              ],
+              [
+                "The",
+                "domain:nightshelf_domain",
+                "Reaches"
+              ],
+              [
+                "slot:nightshelf_shadow_gen",
+                "Territories"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "nightshelf_location",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:nightshelf_shadow_gen~ed",
+                "slot:nightshelf_shadow_gen"
+              ],
+              [
+                "slot:nightshelf_shadow_gen",
+                "domain:nightshelf_domain"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "nightshelf_faction",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_shadow_gen~poss",
+                "slot:nightshelf_faction_groups"
+              ],
+              [
+                "domain:nightshelf_domain~poss",
+                "slot:nightshelf_faction_groups"
+              ]
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        {
+          "id": "nightshelf_default",
+          "name": "Nightshelf Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 2,
+                  "grammarId": "nightshelf_npc"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "nightshelf_domain"
+                }
+              ]
+            },
+            {
+              "name": "Location Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "location"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 2,
+                  "grammarId": "nightshelf_location"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "nightshelf_domain"
+                }
+              ]
+            },
+            {
+              "name": "Region Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "npc",
+                  "location",
+                  "faction"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 3,
+                  "grammarId": "nightshelf_region"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "nightshelf_domain"
+                }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "nightshelf_domain"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "orca",
+    "name": "Orca Raiders",
+    "description": "The fearsome orca predators of the deep waters",
+    "color": "#2F4F4F",
+    "axisBiases": {
+      "npc": {
+        "x": 15,
+        "y": 60,
+        "z": 25
+      },
+      "location": {
+        "x": 20,
+        "y": 30,
+        "z": 20
+      },
+      "faction": {
+        "x": 55,
+        "y": 20,
+        "z": 40
+      }
+    },
+    "homeRegions": {
+      "npc": [
+        "orca_waters"
+      ],
+      "location": [],
+      "faction": []
+    },
+    "naming": {
+      "domains": [
+        {
+          "id": "orca_domain",
+          "phonology": {
+            "consonants": [
+              "k",
+              "r",
+              "g",
+              "n",
+              "m",
+              "b",
+              "d",
+              "th",
+              "z"
+            ],
+            "vowels": [
+              "i",
+              "u",
+              "ui",
+              "ai"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "CVCC"
+            ],
+            "lengthRange": [
+              1,
+              2
+            ],
+            "favoredClusters": [
+              "kr",
+              "gr",
+              "kn"
+            ],
+            "forbiddenClusters": [
+              "ii",
+              "ee"
+            ],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [
+              1.5,
+              1.4,
+              1.3,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "vowelWeights": [
+              1.3,
+              1.3,
+              1.2,
+              1,
+              1
+            ],
+            "templateWeights": [
+              1,
+              1.4,
+              0.8
+            ]
+          },
+          "morphology": {
+            "prefixes": [
+              "Kra",
+              "Gor",
+              "Brak",
+              "Thun",
+              "Rok"
+            ],
+            "suffixes": [
+              "ak",
+              "or",
+              "ung",
+              "rath"
+            ],
+            "structure": [
+              "root",
+              "root-suffix"
+            ],
+            "structureWeights": [
+              0.4,
+              0.6
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.02,
+            "hyphenRate": 0.01,
+            "preferredEndings": [
+              "ak",
+              "or",
+              "ung"
+            ],
+            "preferredEndingBoost": 1.4,
+            "rhythmBias": "harsh"
+          }
+        },
+        {
+          "id": "orca_domain_short",
+          "phonology": {
+            "consonants": [
+              "k",
+              "r",
+              "g",
+              "n",
+              "m",
+              "b",
+              "d",
+              "th",
+              "z"
+            ],
+            "vowels": [
+              "i",
+              "u",
+              "ui",
+              "ai"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "CVC",
+              "CVCC"
+            ],
+            "lengthRange": [
+              1,
+              1
+            ],
+            "favoredClusters": [
+              "kr",
+              "gr",
+              "kn"
+            ],
+            "forbiddenClusters": [
+              "ii",
+              "ee"
+            ],
+            "favoredClusterBoost": 1.5,
+            "consonantWeights": [
+              1.5,
+              1.4,
+              1.3,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "vowelWeights": [
+              1.3,
+              1.3,
+              1.2,
+              1,
+              1
+            ],
+            "templateWeights": [
+              1,
+              1.4,
+              0.8
+            ]
+          },
+          "morphology": {
+            "prefixes": [
+              "Kra",
+              "Gor",
+              "Brak",
+              "Thun",
+              "Rok"
+            ],
+            "suffixes": [
+              "ak",
+              "or",
+              "ung",
+              "rath"
+            ],
+            "structure": [
+              "root",
+              "root-suffix"
+            ],
+            "structureWeights": [
+              0.4,
+              0.6
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0.02,
+            "hyphenRate": 0.01,
+            "preferredEndings": [
+              "ak",
+              "or",
+              "ung"
+            ],
+            "preferredEndingBoost": 1.4,
+            "rhythmBias": "harsh"
+          }
+        }
+      ],
+      "lexemeLists": {
+        "orca_power": {
+          "id": "orca_power",
+          "description": "Strength and hunting words",
+          "entries": [
+            "hunt",
+            "blood",
+            "deep",
+            "tide",
+            "fang",
+            "storm",
+            "crush",
+            "dark"
+          ],
+          "source": "manual"
+        },
+        "orca_combat_actions": {
+          "id": "orca_combat_actions",
+          "description": "Generated verb list: primative combat actions, things orcas do that are violent",
+          "entries": [
+            "breach",
+            "cleave",
+            "thrash",
+            "gore",
+            "maul",
+            "surge",
+            "ram",
+            "splinter",
+            "lunge",
+            "snap",
+            "drag",
+            "pierce",
+            "topple",
+            "crush",
+            "wrench",
+            "sever",
+            "batter",
+            "plunge",
+            "flay",
+            "tusk",
+            "capsize",
+            "impale",
+            "ravage",
+            "shred",
+            "harrow",
+            "strike",
+            "crunch",
+            "slash",
+            "devour",
+            "rupture"
+          ],
+          "source": "llm"
+        },
+        "orca_superlatives": {
+          "id": "orca_superlatives",
+          "description": "Generated epithet list: superlatives that an marital artists would like (e.g. extreme, awesome, divine)",
+          "entries": [
+            "Unbroken",
+            "Fearless",
+            "Swift",
+            "Eternal",
+            "Relentless",
+            "Ascendant",
+            "Indomitable",
+            "Radiant",
+            "Tempest",
+            "Valiant",
+            "Shadowless",
+            "Immortal",
+            "Wrathful",
+            "Unstoppable",
+            "Sublime",
+            "Dauntless",
+            "Sovereign",
+            "Apex",
+            "Unflinching",
+            "Boundless",
+            "Celestial",
+            "Invincible",
+            "Unstained",
+            "Supremo",
+            "Awakened",
+            "Exalted",
+            "Titanborn",
+            "Eternal-Storm"
+          ],
+          "source": "llm"
+        },
+        "orca_region_names": {
+          "id": "orca_region_names",
+          "description": "Generated place list: places where orcas do things such as hunting grounds, waters, terretories. make them violent, preditorial, evil",
+          "entries": [
+            "blight",
+            "maw",
+            "fang",
+            "slaughter",
+            "deep",
+            "trench",
+            "gorge",
+            "scar",
+            "gulf",
+            "lair",
+            "warren",
+            "pit",
+            "grave",
+            "haunt",
+            "void",
+            "abyss",
+            "rend",
+            "tusk",
+            "shoal",
+            "sepulcher"
+          ],
+          "source": "llm"
+        },
+        "orca_power_words": {
+          "id": "orca_power_words",
+          "description": "Generated core list: Strength and hunting words that deal with oceans / naval predators.",
+          "entries": [
+            "hunt",
+            "blood",
+            "deep",
+            "tide",
+            "fang",
+            "storm",
+            "crush",
+            "dark",
+            "prey",
+            "stone",
+            "forge",
+            "break",
+            "bind",
+            "rend",
+            "grip",
+            "burn",
+            "wake",
+            "drift",
+            "fall",
+            "stand",
+            "claw",
+            "bight",
+            "crest",
+            "drown",
+            "foe",
+            "gale",
+            "gnaw",
+            "grim",
+            "gust",
+            "hack",
+            "hark",
+            "haul",
+            "helm",
+            "hew",
+            "hoard",
+            "howl",
+            "keen",
+            "knot",
+            "lurch",
+            "maul",
+            "mire",
+            "mist",
+            "pang",
+            "plunge",
+            "rage",
+            "reap",
+            "roar",
+            "scar",
+            "shred",
+            "shriek",
+            "slay",
+            "snarl",
+            "soak",
+            "splint",
+            "stark",
+            "stab",
+            "stench",
+            "strike",
+            "surge",
+            "swamp",
+            "tarn",
+            "thrall",
+            "thrash",
+            "threat",
+            "thrice",
+            "throb",
+            "thrust",
+            "torment",
+            "trek",
+            "trough",
+            "wade",
+            "wail",
+            "ward",
+            "warp",
+            "wave",
+            "welt",
+            "wend",
+            "wrack",
+            "wrath",
+            "wreck",
+            "wrest",
+            "wretch",
+            "wring",
+            "writhe",
+            "yoke"
+          ],
+          "source": "llm"
+        }
+      },
+      "lexemeSpecs": [
+        {
+          "id": "orca_combat_actions",
+          "pos": "verb",
+          "style": "primative combat actions, things orcas do that are violent",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "orca"
+        },
+        {
+          "id": "orca_superlatives",
+          "pos": "epithet",
+          "style": "superlatives that an marital artists would like (e.g. extreme, awesome, divine)",
+          "targetCount": 30,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "orca"
+        },
+        {
+          "id": "orca_region_names",
+          "pos": "place",
+          "style": "places where orcas do things such as hunting grounds, waters, terretories. make them violent, preditorial, evil",
+          "targetCount": 20,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "orca"
+        },
+        {
+          "id": "orca_power_words",
+          "pos": "core",
+          "style": "Strength and hunting words that deal with oceans / naval predators.",
+          "wordStyle": {
+            "etymology": "germanic",
+            "syllables": {
+              "min": 1,
+              "max": 1
+            },
+            "phonetics": {
+              "consonants": "hard"
+            },
+            "dualUse": true,
+            "register": "visceral"
+          },
+          "targetCount": 50,
+          "maxWords": 1,
+          "qualityFilter": {
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "cultureId": "orca"
+        }
+      ],
+      "grammars": [
+        {
+          "id": "orca_region",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "The",
+                "slot:orca_power_words",
+                "slot:orca_region_names"
+              ],
+              [
+                "The",
+                "domain:orca_domain",
+                "slot:orca_region_names"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        },
+        {
+          "id": "orca_combat_tech",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:orca_power_words",
+                "slot:orca_combat_actions"
+              ],
+              [
+                "slot:orca_superlatives",
+                "slot:orca_power_words",
+                "slot:orca_combat_actions"
+              ],
+              [
+                "slot:orca_superlatives",
+                "slot:orca_power_words",
+                "slot:orca_combat_actions"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "orca_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "domain:orca_domain"
+              ],
+              [
+                "slot:orca_power_words~er",
+                "domain:orca_domain_short"
+              ],
+              [
+                "domain:orca_domain_short",
+                "the",
+                "slot:orca_power_words~er"
+              ]
+            ]
+          },
+          "capitalization": "titleWords"
+        }
+      ],
+      "profiles": [
+        {
+          "id": "orca_default",
+          "name": "Orca Default",
+          "strategyGroups": [
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "orca_domain"
+                }
+              ]
+            }
+          ],
+          "isDefault": true
+        },
+        {
+          "id": "orca_npc_names",
+          "name": "Orca Default",
+          "strategyGroups": [
+            {
+              "name": "NPC Names",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "npc"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region",
+                  "orca"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_npc"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "npc"
+          ]
+        },
+        {
+          "id": "orca_combat_techs",
+          "name": "Orca Default",
+          "strategyGroups": [
+            {
+              "name": "Combat Tech",
+              "priority": 0,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "region"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "orca_combat_tech"
+                }
+              ]
+            },
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 0.6666666666666666,
+                  "grammarId": "orca_npc"
+                },
+                {
+                  "type": "phonotactic",
+                  "weight": 0.3333333333333333,
+                  "domainId": "orca_domain"
+                }
+              ]
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "abilities"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "world",
+    "name": "World",
+    "description": "General World Entities",
+    "color": "#ff6b81",
+    "_key": "culture_1764955015643",
+    "naming": {
+      "domains": [
+        {
+          "id": "world_domain",
+          "cultureId": "world",
+          "phonology": {
+            "consonants": [
+              "p",
+              "l",
+              "m",
+              "n",
+              "k"
+            ],
+            "vowels": [
+              "o",
+              "oo",
+              "ooo"
+            ],
+            "syllableTemplates": [
+              "CV",
+              "VCV"
+            ],
+            "lengthRange": [
+              1,
+              4
+            ],
+            "favoredClusters": [],
+            "forbiddenClusters": [],
+            "favoredClusterBoost": 1
+          },
+          "morphology": {
+            "prefixes": [],
+            "suffixes": [],
+            "structure": [
+              "root",
+              "root-suffix"
+            ],
+            "structureWeights": [
+              0.5,
+              0.5
+            ]
+          },
+          "style": {
+            "capitalization": "title",
+            "apostropheRate": 0,
+            "hyphenRate": 0,
+            "preferredEndings": [],
+            "preferredEndingBoost": 1,
+            "rhythmBias": "neutral"
+          }
+        }
+      ],
+      "lexemeLists": {},
+      "lexemeSpecs": [],
+      "grammars": [],
+      "profiles": [
+        {
+          "id": "world_profile_default",
+          "strategyGroups": [
+            {
+              "name": "Default",
+              "priority": 0,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "world_domain"
+                }
+              ]
+            }
+          ],
+          "isDefault": true
+        }
+      ]
+    }
+  }
+]

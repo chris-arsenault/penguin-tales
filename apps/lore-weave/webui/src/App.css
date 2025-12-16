@@ -608,6 +608,50 @@
   font-weight: 600;
 }
 
+/* Variable Breakdown (inside unused templates) */
+.lw-variable-breakdown {
+  padding: var(--lw-space-sm) 0;
+}
+
+.lw-variable-diagnosis {
+  margin-bottom: var(--lw-space-sm);
+}
+
+.lw-variable-diagnosis:last-child {
+  margin-bottom: 0;
+}
+
+.lw-variable-header {
+  display: flex;
+  align-items: center;
+  gap: var(--lw-space-xs);
+  font-size: 11px;
+  margin-bottom: var(--lw-space-xs);
+}
+
+.lw-variable-icon {
+  font-size: 12px;
+}
+
+.lw-variable-name {
+  color: var(--lw-accent);
+  font-family: var(--lw-font-mono);
+  font-weight: 600;
+}
+
+.lw-variable-source {
+  color: var(--lw-text-muted);
+  font-family: var(--lw-font-mono);
+  font-size: 10px;
+}
+
+.lw-targets-found {
+  font-size: 11px;
+  color: var(--lw-text-muted);
+  margin-bottom: var(--lw-space-sm);
+  padding-left: var(--lw-space-sm);
+}
+
 /* ========================================
    Log Panel
    ======================================== */

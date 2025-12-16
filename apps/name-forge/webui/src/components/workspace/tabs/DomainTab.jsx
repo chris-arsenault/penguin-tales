@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NumberInput } from '@penguin-tales/shared-components';
 import { getAllDomains } from '../../utils';
+import PhonemeWeightGrid from './PhonemeWeightGrid';
 
 function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
   const [editing, setEditing] = useState(false);
@@ -8,7 +9,8 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
   const [expandedSections, setExpandedSections] = useState({
     phonology: true,
     morphology: false,
-    style: false
+    style: false,
+    weights: false
   });
 
   const cultureDomains = cultureConfig?.domains || [];
@@ -459,6 +461,69 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
                   })}
                 />
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Weights Section */}
+      <div className="collapsible-section">
+        <div className="collapsible-header" onClick={() => toggleSection('weights')}>
+          <h4>Weights (Advanced Tuning)</h4>
+          <span>{expandedSections.weights ? '▼' : '▶'}</span>
+        </div>
+        {expandedSections.weights && (
+          <div className="collapsible-content">
+            <p className="text-muted mb-md">
+              Fine-tune phoneme selection probabilities. Higher weights = more likely to appear.
+              Default is 1.0 for all.
+            </p>
+
+            <PhonemeWeightGrid
+              label="Consonant Weights"
+              items={formData.phonology?.consonants || []}
+              weights={formData.phonology?.consonantWeights || []}
+              onChange={(newWeights) => setFormData({
+                ...formData,
+                phonology: { ...formData.phonology, consonantWeights: newWeights }
+              })}
+            />
+
+            <PhonemeWeightGrid
+              label="Vowel Weights"
+              items={formData.phonology?.vowels || []}
+              weights={formData.phonology?.vowelWeights || []}
+              onChange={(newWeights) => setFormData({
+                ...formData,
+                phonology: { ...formData.phonology, vowelWeights: newWeights }
+              })}
+            />
+
+            <PhonemeWeightGrid
+              label="Template Weights"
+              items={formData.phonology?.syllableTemplates || []}
+              weights={formData.phonology?.templateWeights || []}
+              onChange={(newWeights) => setFormData({
+                ...formData,
+                phonology: { ...formData.phonology, templateWeights: newWeights }
+              })}
+            />
+
+            <div className="form-group mt-md">
+              <label>Favored Cluster Boost</label>
+              <NumberInput
+                step={0.1}
+                min={1.0}
+                max={5.0}
+                value={formData.phonology?.favoredClusterBoost || 1.0}
+                onChange={(v) => setFormData({
+                  ...formData,
+                  phonology: { ...formData.phonology, favoredClusterBoost: v ?? 1.0 }
+                })}
+              />
+              <small className="text-muted">
+                Multiplier applied to favored clusters (defined in Phonology section). Default: 1.0
+              </small>
             </div>
           </div>
         )}

@@ -106,6 +106,17 @@ export interface TemplateUsagePayload {
         remaining: number;
       }>;
     };
+    variableDiagnoses?: Array<{
+      name: string;
+      fromType: 'graph' | 'related';
+      kind?: string;
+      relationshipKind?: string;
+      relatedTo?: string;
+      filterSteps: Array<{
+        description: string;
+        remaining: number;
+      }>;
+    }>;
   }>;
 }
 

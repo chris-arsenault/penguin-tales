@@ -2554,6 +2554,11 @@ button.sm {
   border-color: rgba(34, 197, 94, 0.3);
 }
 
+.insert-panel.cyan {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
 .insert-panel-title {
   font-size: var(--text-xs);
   color: var(--gold-accent);
@@ -2589,6 +2594,11 @@ button.sm {
 .insert-chip.green {
   color: rgb(134, 239, 172);
   border-color: rgba(34, 197, 94, 0.4);
+}
+
+.insert-chip.cyan {
+  color: rgb(103, 232, 249);
+  border-color: rgba(6, 182, 212, 0.5);
 }
 
 .insert-chip.domain-chip {
@@ -2635,6 +2645,22 @@ button.sm {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
+}
+
+.rule-card.editing {
+  border-color: rgba(6, 182, 212, 0.6);
+  background: rgba(6, 182, 212, 0.1);
+}
+
+.rule-actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.text-cyan {
+  color: rgb(103, 232, 249);
 }
 
 /* Help modal */
@@ -4150,4 +4176,127 @@ button.sm {
 
 .text-right {
   text-align: right;
+}
+
+/* ============================================
+   PHONEME WEIGHT GRID
+   ============================================ */
+
+.weight-grid-section {
+  margin-bottom: var(--space-lg);
+}
+
+.weight-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.weight-grid-label {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--arctic-light);
+}
+
+.weight-grid-reset {
+  font-size: var(--text-xs);
+  padding: 0.2rem 0.5rem;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  color: var(--arctic-ice);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.weight-grid-reset:hover {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+.weight-grid-empty {
+  font-size: var(--text-sm);
+  color: var(--arctic-frost);
+  font-style: italic;
+  padding: var(--space-sm);
+  background: rgba(30, 58, 95, 0.2);
+  border-radius: 4px;
+}
+
+.weight-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.weight-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(30, 58, 95, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 48px;
+}
+
+.weight-cell:hover {
+  background: rgba(30, 58, 95, 0.6);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.weight-cell.editing {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--arctic-ice);
+}
+
+.weight-cell-item {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--arctic-light);
+  margin-bottom: 2px;
+  max-width: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weight-cell-value {
+  font-size: 0.75rem;
+  color: var(--arctic-frost);
+  font-family: var(--font-mono);
+}
+
+.weight-cell-input {
+  width: 44px;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--arctic-ice);
+  border-radius: 3px;
+  color: var(--arctic-light);
+  font-family: var(--font-mono);
+}
+
+.weight-cell-input:focus {
+  outline: none;
+  border-color: var(--gold-accent);
+}
+
+.weight-cell-bar-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.weight-cell-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: height 0.2s, background-color 0.2s;
 }

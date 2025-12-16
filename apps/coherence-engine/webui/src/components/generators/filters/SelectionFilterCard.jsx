@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { FILTER_TYPES } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
 import { GraphPathEditor } from './GraphPathEditor';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
 
@@ -61,15 +61,123 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
           </div>
         );
 
-      case 'has_any_tag':
+      case 'has_tags':
         return (
           <div>
-            <label className="label label-small">Tags</label>
+            <label className="label label-small">Tags (must have ALL)</label>
             <TagSelector
               value={filter.tags || []}
               onChange={(v) => updateFilter('tags', v)}
               tagRegistry={schema?.tagRegistry || []}
               placeholder="Select tags..."
+            />
+          </div>
+        );
+
+      case 'has_any_tag':
+        return (
+          <div>
+            <label className="label label-small">Tags (must have at least ONE)</label>
+            <TagSelector
+              value={filter.tags || []}
+              onChange={(v) => updateFilter('tags', v)}
+              tagRegistry={schema?.tagRegistry || []}
+              placeholder="Select tags..."
+            />
+          </div>
+        );
+
+      case 'lacks_tag':
+        return (
+          <div className="filter-fields">
+            <div style={{ flex: '1 1 150px' }}>
+              <label className="label label-small">Tag</label>
+              <TagSelector
+                value={filter.tag ? [filter.tag] : []}
+                onChange={(v) => updateFilter('tag', v[0] || '')}
+                tagRegistry={schema?.tagRegistry || []}
+                placeholder="Select tag..."
+                singleSelect
+              />
+            </div>
+            <div style={{ flex: '1 1 150px' }}>
+              <label className="label label-small">Value (optional)</label>
+              <input
+                type="text"
+                value={filter.value ?? ''}
+                onChange={(e) => updateFilter('value', e.target.value || undefined)}
+                className="input input-compact"
+                placeholder="Any value"
+              />
+            </div>
+          </div>
+        );
+
+      case 'lacks_any_tag':
+        return (
+          <div>
+            <label className="label label-small">Tags (exclude if has ANY)</label>
+            <TagSelector
+              value={filter.tags || []}
+              onChange={(v) => updateFilter('tags', v)}
+              tagRegistry={schema?.tagRegistry || []}
+              placeholder="Select tags..."
+            />
+          </div>
+        );
+
+      case 'has_culture':
+        return (
+          <div>
+            <label className="label label-small">Culture</label>
+            <ReferenceDropdown
+              value={filter.culture || ''}
+              onChange={(v) => updateFilter('culture', v)}
+              options={(schema?.cultures || []).map((c) => ({
+                value: c.id,
+                label: c.name || c.id,
+              }))}
+              placeholder="Select culture..."
+            />
+          </div>
+        );
+
+      case 'matches_culture':
+        return (
+          <div>
+            <label className="label label-small">Same Culture As</label>
+            <ReferenceDropdown
+              value={filter.with || ''}
+              onChange={(v) => updateFilter('with', v)}
+              options={refOptions}
+              placeholder="Select variable..."
+            />
+          </div>
+        );
+
+      case 'has_status':
+        return (
+          <div>
+            <label className="label label-small">Status</label>
+            <input
+              type="text"
+              value={filter.status || ''}
+              onChange={(e) => updateFilter('status', e.target.value)}
+              className="input input-compact"
+              placeholder="e.g., active, historical"
+            />
+          </div>
+        );
+
+      case 'has_prominence':
+        return (
+          <div>
+            <label className="label label-small">Minimum Prominence</label>
+            <ReferenceDropdown
+              value={filter.minProminence || ''}
+              onChange={(v) => updateFilter('minProminence', v)}
+              options={PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label }))}
+              placeholder="Select prominence..."
             />
           </div>
         );

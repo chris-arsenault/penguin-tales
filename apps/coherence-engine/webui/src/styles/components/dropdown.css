@@ -139,3 +139,11 @@
   font-size: var(--font-size-md);
   color: var(--color-text);
 }
+
+/* Upward dropdown variant - opens above the trigger */
+.dropdown-menu-up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: var(--spacing-xs);
+}

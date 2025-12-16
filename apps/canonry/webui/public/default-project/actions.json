@@ -51,7 +51,8 @@
         "conflict",
         "stability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "form_alliance",
@@ -106,7 +107,8 @@
         "conflict",
         "stability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "declare_war",
@@ -156,7 +158,8 @@
         "conflict",
         "stability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "raid",
@@ -204,7 +207,8 @@
         "conflict",
         "external_threat"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "establish_trade",
@@ -251,7 +255,8 @@
         "resource_scarcity",
         "stability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "corrupt_location",
@@ -304,7 +309,8 @@
       "pressureModifiers": [
         "magical_instability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "manifest_magic",
@@ -347,7 +353,8 @@
       "pressureModifiers": [
         "magical_instability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "spread_innovation",
@@ -397,7 +404,8 @@
         "resource_scarcity",
         "magical_instability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "convert_faction",
@@ -445,7 +453,8 @@
         "cultural_tension",
         "stability"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "draw_in_faction",
@@ -492,7 +501,8 @@
         "conflict",
         "external_threat"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "escalate_war",
@@ -538,7 +548,8 @@
         "conflict",
         "external_threat"
       ]
-    }
+    },
+    "enabled": false
   },
   {
     "id": "spread_corruption",
@@ -592,6 +603,7 @@
       "pressureModifiers": [
         "magical_instability"
       ]
-    }
+    },
+    "enabled": false
   }
 ]

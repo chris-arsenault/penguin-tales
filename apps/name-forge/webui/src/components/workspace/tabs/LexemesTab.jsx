@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { NumberInput } from '@penguin-tales/shared-components';
-import { LEXEME_CATEGORIES } from '../../constants';
+import { LEXEME_CATEGORIES, WORD_STYLE_PRESETS } from '../../constants';
 import { generateLexemesWithAnthropic } from '../../../lib/anthropicClient';
 import { CopyLexemeModal } from './CopyLexemeModal';
 
@@ -18,6 +18,8 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
     id: `${cultureId}_nouns`,
     pos: 'noun',
     style: '',
+    wordStylePreset: 'none',
+    wordStyle: null,
     targetCount: 30,
     maxWords: 1,
     qualityFilter: { minLength: 3, maxLength: 15 }
@@ -40,6 +42,8 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
       ...specForm,
       cultureId
     };
+    // Don't save preset key to spec, just the wordStyle object
+    delete newSpec.wordStylePreset;
 
     const updatedSpecs = [...lexemeSpecs.filter(s => s.id !== newSpec.id), newSpec];
     onLexemesChange(undefined, updatedSpecs);
@@ -49,6 +53,8 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
       id: `${cultureId}_nouns`,
       pos: 'noun',
       style: '',
+      wordStylePreset: 'none',
+      wordStyle: null,
       targetCount: 30,
       maxWords: 1,
       qualityFilter: { minLength: 3, maxLength: 15 }
@@ -56,10 +62,26 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
   };
 
   const handleEditSpec = (spec) => {
+    // Try to match wordStyle to a preset
+    let matchedPreset = 'none';
+    if (spec.wordStyle) {
+      for (const [key, preset] of Object.entries(WORD_STYLE_PRESETS)) {
+        if (preset.wordStyle && JSON.stringify(preset.wordStyle) === JSON.stringify(spec.wordStyle)) {
+          matchedPreset = key;
+          break;
+        }
+      }
+      if (matchedPreset === 'none') {
+        matchedPreset = 'custom'; // Has wordStyle but doesn't match any preset
+      }
+    }
+
     setSpecForm({
       id: spec.id,
       pos: spec.pos || 'noun',
       style: spec.style || '',
+      wordStylePreset: matchedPreset,
+      wordStyle: spec.wordStyle || null,
       targetCount: spec.targetCount || 30,
       maxWords: spec.maxWords || 1,
       qualityFilter: spec.qualityFilter || { minLength: 3, maxLength: 15 }
@@ -220,6 +242,12 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
                       {hasGenerated && (
                         <span className="badge generated">
                           Generated ({lexemeLists[spec.id]?.entries?.length || 0})
+                        </span>
+                      )}
+                      {spec.wordStyle && (
+                        <span className="badge word-style">
+                          {spec.wordStyle.etymology || 'mixed'}
+                          {spec.wordStyle.syllables?.max === 1 && ' • mono'}
                         </span>
                       )}
                       <div className="spec-card-meta">
@@ -385,7 +413,7 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
               onChange={(e) => setSpecForm({ ...specForm, pos: e.target.value })}
             >
               <optgroup label="Grammatical">
-                {['noun', 'verb', 'adjective', 'abstract'].map(key => (
+                {['noun', 'verb', 'adjective', 'abstract', 'core'].map(key => (
                   <option key={key} value={key}>{LEXEME_CATEGORIES[key].label}</option>
                 ))}
               </optgroup>
@@ -406,6 +434,32 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
               </optgroup>
             </select>
             <small className="text-muted">{LEXEME_CATEGORIES[specForm.pos]?.desc}</small>
+          </div>
+
+          <div className="form-group">
+            <label>Word Style Preset</label>
+            <select
+              value={specForm.wordStylePreset}
+              onChange={(e) => {
+                const presetKey = e.target.value;
+                const preset = WORD_STYLE_PRESETS[presetKey];
+                setSpecForm({
+                  ...specForm,
+                  wordStylePreset: presetKey,
+                  wordStyle: preset?.wordStyle || null
+                });
+              }}
+            >
+              {Object.entries(WORD_STYLE_PRESETS).map(([key, preset]) => (
+                <option key={key} value={key}>{preset.label}</option>
+              ))}
+              {specForm.wordStylePreset === 'custom' && (
+                <option value="custom">Custom (edited)</option>
+              )}
+            </select>
+            <small className="text-muted">
+              {WORD_STYLE_PRESETS[specForm.wordStylePreset]?.description || 'Structural constraints for word generation'}
+            </small>
           </div>
 
           <div className="form-group">

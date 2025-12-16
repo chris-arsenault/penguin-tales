@@ -65,13 +65,24 @@ export const VARIABLE_PICK_STRATEGIES = [
 // ============================================================================
 
 export const FILTER_TYPES = {
-  has_tag: { label: 'Has Tag', icon: '🏷️', color: '#10b981' },
-  has_any_tag: { label: 'Has Any Tag', icon: '🏷️', color: '#10b981' },
-  has_relationship: { label: 'Has Relationship', icon: '🔗', color: '#8b5cf6' },
-  lacks_relationship: { label: 'Lacks Relationship', icon: '🚫', color: '#ef4444' },
+  // Tag filters
+  has_tag: { label: 'Has Tag', icon: '🏷️', color: '#10b981', desc: 'Entity has a specific tag' },
+  has_tags: { label: 'Has Tags (All)', icon: '🏷️', color: '#059669', desc: 'Entity has ALL specified tags (AND)' },
+  has_any_tag: { label: 'Has Any Tag', icon: '🏷️', color: '#10b981', desc: 'Entity has at least ONE of the tags (OR)' },
+  lacks_tag: { label: 'Lacks Tag', icon: '🚫', color: '#dc2626', desc: 'Entity does NOT have a specific tag' },
+  lacks_any_tag: { label: 'Lacks Any Tag', icon: '🚫', color: '#b91c1c', desc: 'Entity does NOT have ANY of these tags' },
+  // Attribute filters
+  has_culture: { label: 'Has Culture', icon: '🌍', color: '#6366f1', desc: 'Entity belongs to a specific culture' },
+  matches_culture: { label: 'Matches Culture', icon: '🤝', color: '#7c3aed', desc: 'Entity has same culture as another entity' },
+  has_status: { label: 'Has Status', icon: '📊', color: '#0891b2', desc: 'Entity has a specific status' },
+  has_prominence: { label: 'Min Prominence', icon: '⭐', color: '#eab308', desc: 'Entity has at least this prominence level' },
+  // Relationship filters
+  has_relationship: { label: 'Has Relationship', icon: '🔗', color: '#8b5cf6', desc: 'Entity has a relationship of this kind' },
+  lacks_relationship: { label: 'Lacks Relationship', icon: '🚫', color: '#ef4444', desc: 'Entity lacks a relationship of this kind' },
   shares_related: { label: 'Shares Related Entity', icon: '📍', color: '#3b82f6', desc: 'Both entities have same related entity via relationship' },
-  exclude: { label: 'Exclude Entities', icon: '⛔', color: '#f59e0b' },
-  graph_path: { label: 'Graph Path', icon: '🔀', color: '#ec4899' },
+  // Other
+  exclude: { label: 'Exclude Entities', icon: '⛔', color: '#f59e0b', desc: 'Exclude specific entity references' },
+  graph_path: { label: 'Graph Path', icon: '🔀', color: '#ec4899', desc: 'Complex multi-hop graph traversal' },
 };
 
 // ============================================================================

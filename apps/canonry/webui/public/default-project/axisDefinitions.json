@@ -2,71 +2,71 @@
   {
     "id": "element",
     "name": "Element",
-    "description": "Elemental affinity spectrum from fire to ice",
-    "lowTag": "fire",
-    "highTag": "ice"
-  },
-  {
-    "id": "affinity",
-    "name": "Affinity",
-    "description": "Mundane to mystical spectrum",
-    "lowTag": "mundane",
-    "highTag": "mystical"
-  },
-  {
-    "id": "power",
-    "name": "Power",
-    "description": "Entity's power level from newly emerged to legendary",
-    "lowTag": "emergent",
-    "highTag": "legendary"
-  },
-  {
-    "id": "alignment",
-    "name": "Alignment",
-    "description": "Hostile to friendly disposition",
-    "lowTag": "hostile",
-    "highTag": "friendly"
-  },
-  {
-    "id": "leadership",
-    "name": "Leadership",
-    "description": "Role in social hierarchy from follower to leader",
-    "lowTag": "follower",
-    "highTag": "leader"
-  },
-  {
-    "id": "accessibility",
-    "name": "Accessibility",
-    "description": "How accessible a location is, from hidden to central",
-    "lowTag": "hidden",
-    "highTag": "central"
-  },
-  {
-    "id": "safety",
-    "name": "Safety",
-    "description": "Danger level from dangerous to safe",
-    "lowTag": "dangerous",
-    "highTag": "safe"
-  },
-  {
-    "id": "structure",
-    "name": "Structure",
-    "description": "Organizational structure from chaotic to organized",
-    "lowTag": "chaotic",
-    "highTag": "organized"
-  },
-  {
-    "id": "reach",
-    "name": "Reach",
-    "description": "Visibility and influence from secretive to influential",
-    "lowTag": "secretive",
-    "highTag": "influential"
+    "description": "",
+    "lowTag": "ice",
+    "highTag": "fire"
   },
   {
     "id": "autonomy",
     "name": "Autonomy",
-    "description": "Political spectrum from authoritarian to libertarian",
+    "description": "",
     "lowTag": "authoritarian",
     "highTag": "libertarian"
+  },
+  {
+    "id": "power",
+    "name": "Power",
+    "description": "",
+    "lowTag": "emergent",
+    "highTag": "legendary"
+  },
+  {
+    "id": "pragmatism",
+    "name": "Pragmatism",
+    "description": "",
+    "lowTag": "mundane",
+    "highTag": "mystical"
+  },
+  {
+    "id": "authority",
+    "name": "Authority",
+    "description": "",
+    "lowTag": "follower",
+    "highTag": "leader"
+  },
+  {
+    "id": "structure",
+    "name": "Structure",
+    "description": "",
+    "lowTag": "chaotic",
+    "highTag": "organized"
+  },
+  {
+    "id": "alignment",
+    "name": "Alignment",
+    "description": "",
+    "lowTag": "hostile",
+    "highTag": "friendly"
+  },
+  {
+    "id": "visibility",
+    "name": "Visibility",
+    "description": "",
+    "lowTag": "hidden",
+    "highTag": "central"
+  },
+  {
+    "id": "latitude",
+    "name": "Latitude",
+    "description": "",
+    "lowTag": "south",
+    "highTag": "north"
+  },
+  {
+    "id": "longitude",
+    "name": "Longitude",
+    "description": "",
+    "lowTag": "west",
+    "highTag": "east"
   }
 ]

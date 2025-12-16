@@ -62,6 +62,12 @@ export interface PlacementContext {
 
   /** Whether to allow emergent region creation when seed regions are at capacity (default: true) */
   allowEmergent?: boolean;
+
+  /** When true, placement must stay within seed regions (skip unconstrained near-reference sampling) */
+  stickToRegion?: boolean;
+
+  /** When true, bias region selection toward sparser regions (weighted by inverse entity count) */
+  preferSparse?: boolean;
 }
 
 /**
@@ -85,6 +91,9 @@ export interface PlacementResult {
 
   /** Culture ID used for placement */
   cultureId?: string;
+
+  /** How the placement was resolved (which strategy succeeded) */
+  resolvedVia?: string;
 
   /** Whether an emergent region was created */
   emergentRegionCreated?: {
@@ -620,6 +629,110 @@ export class CoordinateContext {
   }
 
   /**
+   * Sample a point within a circular region, biased toward a reference point.
+   * If the reference point is outside the region, samples randomly within the region.
+   */
+  private sampleCircleRegionNear(
+    region: import('./types').Region,
+    referencePoint: Point | undefined,
+    existingPoints: Point[]
+  ): Point | null {
+    if (region.bounds.shape !== 'circle') return null;
+
+    const { center, radius } = region.bounds;
+    const maxAttempts = 50;
+
+    // Check if reference point is within or near the region
+    const refIsNearby = referencePoint && (() => {
+      const dx = referencePoint.x - center.x;
+      const dy = referencePoint.y - center.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return dist <= radius * 1.5; // Within 1.5x radius
+    })();
+
+    for (let i = 0; i < maxAttempts; i++) {
+      let point: Point;
+
+      if (refIsNearby && referencePoint && i < maxAttempts * 0.7) {
+        // First 70% of attempts: sample near reference point but constrain to region
+        const searchRadius = Math.min(this.defaultMinDistance * 4, radius * 0.8);
+        const r = this.defaultMinDistance + Math.random() * (searchRadius - this.defaultMinDistance);
+        const theta = Math.random() * 2 * Math.PI;
+        point = {
+          x: referencePoint.x + r * Math.cos(theta),
+          y: referencePoint.y + r * Math.sin(theta),
+          z: referencePoint.z ?? 50
+        };
+
+        // Check if within region bounds
+        const dx = point.x - center.x;
+        const dy = point.y - center.y;
+        if (Math.sqrt(dx * dx + dy * dy) > radius) {
+          // Outside region, try again
+          continue;
+        }
+      } else {
+        // Last 30% or no reference: random within region
+        const r = radius * Math.sqrt(Math.random()) * 1.1;
+        const theta = Math.random() * 2 * Math.PI;
+        point = {
+          x: center.x + r * Math.cos(theta),
+          y: center.y + r * Math.sin(theta),
+          z: 50
+        };
+      }
+
+      if (this.isValidPlacement(point, existingPoints, this.defaultMinDistance)) {
+        return point;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Order regions by weighted random selection, biased toward sparser regions.
+   * Weight = 1 / (entityCount + 1), so regions with fewer entities are more likely to be selected first.
+   */
+  private weightedSparseSelection(
+    regions: import('./types').Region[],
+    existingPoints: Point[]
+  ): import('./types').Region[] {
+    // Count entities per region
+    const regionCounts = new Map<string, number>();
+    for (const region of regions) {
+      const count = existingPoints.filter(p => this.pointInRegion(p, region)).length;
+      regionCounts.set(region.id, count);
+    }
+
+    // Weighted shuffle - select all regions in weighted order
+    const result: import('./types').Region[] = [];
+    const remaining = [...regions];
+
+    while (remaining.length > 0) {
+      // Calculate weights for remaining regions (inverse of count + 1)
+      const weights = remaining.map(r => 1 / (regionCounts.get(r.id)! + 1));
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+      // Weighted random selection
+      let random = Math.random() * totalWeight;
+      let selectedIndex = 0;
+
+      for (let i = 0; i < weights.length; i++) {
+        random -= weights[i];
+        if (random <= 0) {
+          selectedIndex = i;
+          break;
+        }
+      }
+
+      result.push(remaining[selectedIndex]);
+      remaining.splice(selectedIndex, 1);
+    }
+
+    return result;
+  }
+
+  /**
    * Sample a point using culture-aware placement strategy.
    * Uses defaultMinDistance as the minimum distance between points.
    *
@@ -640,31 +753,43 @@ export class CoordinateContext {
     context: PlacementContext,
     existingPoints: Point[] = [],
     tick: number = 0
-  ): Promise<{ point: Point; emergentRegion?: { id: string; label: string } } | null> {
-    // If reference entity provided, sample near it
-    if (context.referenceEntity?.coordinates) {
+  ): Promise<{ point: Point; resolvedVia: string; placedInRegion?: import('./types').Region; emergentRegion?: { id: string; label: string } } | null> {
+    // If reference entity provided AND we're not constrained to regions, sample near it
+    // When stickToRegion is true, skip this to ensure placement stays within region bounds
+    if (context.referenceEntity?.coordinates && !context.stickToRegion) {
       const point = this.sampleNearPoint(
         context.referenceEntity.coordinates,
         existingPoints
       );
       if (point) {
-        return { point };
+        return { point, resolvedVia: 'near_reference' };
       }
     }
 
     const regions = this.getRegions(entityKind);
 
     // Try seed regions first (regions belonging to this culture)
+    // If we have a reference entity, bias placement toward it within the region
     if (context.seedRegionIds && context.seedRegionIds.length > 0) {
-      const shuffledSeeds = [...context.seedRegionIds].sort(() => Math.random() - 0.5);
+      const referenceCoords = context.referenceEntity?.coordinates;
 
-      for (const regionId of shuffledSeeds) {
-        const region = regions.find(r => r.id === regionId);
-        if (!region) continue;
+      // Get valid regions from seed IDs
+      const validRegions = context.seedRegionIds
+        .map(id => regions.find(r => r.id === id))
+        .filter((r): r is import('./types').Region => r !== undefined);
 
-        const point = this.sampleCircleRegion(region, existingPoints);
+      // Order regions - weighted by sparseness or random shuffle
+      const orderedRegions = context.preferSparse && validRegions.length > 1
+        ? this.weightedSparseSelection(validRegions, existingPoints)
+        : [...validRegions].sort(() => Math.random() - 0.5);
+
+      for (const region of orderedRegions) {
+        // Use biased sampling if we have a reference point, otherwise random
+        const point = this.sampleCircleRegionNear(region, referenceCoords, existingPoints);
         if (point) {
-          return { point };
+          const via = referenceCoords ? 'seed_region_near_ref' : 'seed_region';
+          // Return the region we actually placed in to avoid confusion with overlapping regions
+          return { point, resolvedVia: via, placedInRegion: region };
         }
       }
     }
@@ -678,7 +803,7 @@ export class CoordinateContext {
       };
       const point = this.sampleNearPoint(biasCenter, existingPoints);
       if (point) {
-        return { point };
+        return { point, resolvedVia: 'axis_biases' };
       }
     }
 
@@ -694,6 +819,7 @@ export class CoordinateContext {
       if (emergentResult) {
         return {
           point: emergentResult.point,
+          resolvedVia: 'emergent_region',
           emergentRegion: {
             id: emergentResult.region.id,
             label: emergentResult.region.label
@@ -918,15 +1044,24 @@ export class CoordinateContext {
       };
     }
 
-    const { point, emergentRegion } = result;
+    const { point, resolvedVia, placedInRegion, emergentRegion } = result;
 
     // Find which regions contain this point
     const regions = this.getRegions(entityKind);
     const containingRegions = regions.filter(r => this.pointInRegion(point, r));
-    const containingRegion = containingRegions[0];
+
+    // If we know which region we placed in (seed region case), use that as primary
+    // This prevents confusion when regions overlap
+    const containingRegion = placedInRegion ?? containingRegions[0];
+
+    // Ensure placedInRegion is included in allRegions for tag derivation
+    const allContainingRegions = placedInRegion && !containingRegions.some(r => r.id === placedInRegion.id)
+      ? [placedInRegion, ...containingRegions]
+      : containingRegions;
 
     // Derive tags from placement (region tags + axis-based tags)
-    const derivedTagList = this.deriveTagsFromPlacement(entityKind, point, containingRegions);
+    // Use the placed region first for proper tag attribution
+    const derivedTagList = this.deriveTagsFromPlacement(entityKind, point, allContainingRegions);
 
     // Build derivedTags object
     const derivedTags: EntityTags = {};
@@ -942,9 +1077,10 @@ export class CoordinateContext {
       success: true,
       coordinates: point,
       regionId: containingRegion?.id ?? null,
-      allRegionIds: containingRegions.map(r => r.id),
+      allRegionIds: allContainingRegions.map(r => r.id),
       derivedTags,
       cultureId: context.cultureId,
+      resolvedVia,
       emergentRegionCreated: emergentRegion
     };
   }

@@ -66,7 +66,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         newUpdate = { type: 'modify_pressure', pressureId: pressures?.[0]?.id || '', delta: 0 };
         break;
       case 'archive_relationship':
-        newUpdate = { type: 'archive_relationship', entity: '$target', relationshipKind: '', with: '' };
+        newUpdate = { type: 'archive_relationship', entity: '$target', relationshipKind: '', with: 'any', direction: 'any' };
         break;
       case 'update_entity_status':
         newUpdate = { type: 'update_entity_status', entity: '$target', entityKind: entityKinds[0]?.kind || '', newStatus: '' };
@@ -209,6 +209,16 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
 
         {archiveUpdates.map((update) => {
           const globalIdx = stateUpdates.indexOf(update);
+          const isAnyWith = update.with === 'any';
+          const withOptions = [
+            { value: 'any', label: '(Any - archive all of this kind)' },
+            ...entityRefOptions
+          ];
+          const directionOptions = [
+            { value: 'any', label: 'Any direction' },
+            { value: 'src', label: 'Entity is source (outgoing)' },
+            { value: 'dst', label: 'Entity is destination (incoming)' },
+          ];
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
@@ -228,11 +238,27 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                     />
                     <ReferenceDropdown
                       label="With Entity"
-                      value={update.with || ''}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, with: v || undefined })}
-                      options={entityRefOptions}
-                      placeholder="(optional)"
+                      value={update.with || 'any'}
+                      onChange={(v) => {
+                        const newUpdate = { ...update, with: v };
+                        // Add direction when switching to "any", remove when switching to specific
+                        if (v === 'any') {
+                          newUpdate.direction = update.direction || 'any';
+                        } else {
+                          delete newUpdate.direction;
+                        }
+                        handleUpdate(globalIdx, newUpdate);
+                      }}
+                      options={withOptions}
                     />
+                    {isAnyWith && (
+                      <ReferenceDropdown
+                        label="Direction"
+                        value={update.direction || 'any'}
+                        onChange={(v) => handleUpdate(globalIdx, { ...update, direction: v })}
+                        options={directionOptions}
+                      />
+                    )}
                   </div>
                   <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>

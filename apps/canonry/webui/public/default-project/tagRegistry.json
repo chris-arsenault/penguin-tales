@@ -1,5 +1,35 @@
 [
   {
+    "tag": "colony",
+    "category": "location",
+    "rarity": "common",
+    "description": "New tag description",
+    "usageCount": 0,
+    "templates": [],
+    "entityKinds": [],
+    "minUsage": 1,
+    "maxUsage": 50,
+    "relatedTags": [],
+    "conflictingTags": [],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "ice"
+    ]
+  },
+  {
+    "tag": "sys_resource_value",
+    "category": "status",
+    "rarity": "common",
+    "description": "sys tag for tracking diffusin",
+    "usageCount": 0,
+    "templates": [],
+    "entityKinds": [],
+    "minUsage": 1,
+    "maxUsage": 50,
+    "relatedTags": [],
+    "conflictingTags": []
+  },
+  {
     "tag": "wild",
     "category": "trait",
     "rarity": "rare",
@@ -27,6 +57,10 @@
     "relatedTags": [],
     "conflictingTags": [
       "authoritarian"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "authoritarian"
     ]
   },
   {
@@ -43,6 +77,10 @@
     "maxUsage": 50,
     "relatedTags": [],
     "conflictingTags": [
+      "libertarian"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
       "libertarian"
     ]
   },
@@ -63,6 +101,10 @@
     "relatedTags": [
       "anomaly",
       "cult"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "mundane"
     ]
   },
   {
@@ -81,6 +123,10 @@
     ],
     "relatedTags": [
       "technology"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "mystical"
     ]
   },
   {
@@ -98,6 +144,10 @@
     "relatedTags": [
       "external",
       "raider"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "friendly"
     ]
   },
   {
@@ -115,6 +165,10 @@
     "relatedTags": [
       "trade",
       "diplomatic"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "hostile"
     ]
   },
   {
@@ -131,6 +185,10 @@
     "relatedTags": [
       "influential",
       "political"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "follower"
     ]
   },
   {
@@ -144,7 +202,11 @@
     "conflictingTags": [
       "leader"
     ],
-    "relatedTags": []
+    "relatedTags": [],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "leader"
+    ]
   },
   {
     "tag": "external",
@@ -216,36 +278,6 @@
     ]
   },
   {
-    "tag": "guild",
-    "category": "affiliation",
-    "rarity": "uncommon",
-    "description": "Part of an organized trade or craft guild",
-    "entityKinds": [
-      "npc",
-      "faction"
-    ],
-    "conflictingTags": [],
-    "relatedTags": [
-      "trade",
-      "organized"
-    ]
-  },
-  {
-    "tag": "cult",
-    "category": "affiliation",
-    "rarity": "uncommon",
-    "description": "Part of a mystical or secretive religious group",
-    "entityKinds": [
-      "npc",
-      "faction"
-    ],
-    "conflictingTags": [],
-    "relatedTags": [
-      "mystical",
-      "secretive"
-    ]
-  },
-  {
     "tag": "political",
     "category": "affiliation",
     "rarity": "common",
@@ -263,7 +295,7 @@
   },
   {
     "tag": "emergent",
-    "category": "status",
+    "category": "location",
     "rarity": "uncommon",
     "description": "Recently risen, discovered, or newly prominent",
     "entityKinds": [
@@ -277,11 +309,15 @@
     ],
     "relatedTags": [
       "discovered"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "legendary"
     ]
   },
   {
     "tag": "legendary",
-    "category": "status",
+    "category": "trait",
     "rarity": "rare",
     "description": "Subject of legends, myths, or historical significance",
     "entityKinds": [
@@ -297,6 +333,10 @@
     "relatedTags": [
       "influential",
       "cultural"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "emergent"
     ]
   },
   {
@@ -316,7 +356,7 @@
   },
   {
     "tag": "anomaly",
-    "category": "theme",
+    "category": "location",
     "rarity": "rare",
     "description": "Strange, supernatural, or reality-bending phenomenon",
     "entityKinds": [
@@ -329,7 +369,8 @@
     ],
     "relatedTags": [
       "mystical"
-    ]
+    ],
+    "isAxis": true
   },
   {
     "tag": "resource",
@@ -443,7 +484,8 @@
       "cult",
       "mystical",
       "hidden"
-    ]
+    ],
+    "isAxis": true
   },
   {
     "tag": "organized",
@@ -460,6 +502,10 @@
     "relatedTags": [
       "guild",
       "political"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "chaotic"
     ]
   },
   {
@@ -476,6 +522,10 @@
     ],
     "relatedTags": [
       "criminal"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "organized"
     ]
   },
   {
@@ -492,11 +542,15 @@
     "relatedTags": [
       "trade",
       "safe"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "hidden"
     ]
   },
   {
     "tag": "hidden",
-    "category": "location",
+    "category": "trait",
     "rarity": "uncommon",
     "description": "Remote, hard to find, or off the beaten path",
     "entityKinds": [
@@ -508,11 +562,15 @@
     "relatedTags": [
       "secretive",
       "anomaly"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "central"
     ]
   },
   {
     "tag": "safe",
-    "category": "location",
+    "category": "trait",
     "rarity": "common",
     "description": "Protected, secure, low danger",
     "entityKinds": [
@@ -524,11 +582,12 @@
     "relatedTags": [
       "central",
       "trade"
-    ]
+    ],
+    "isAxis": true
   },
   {
     "tag": "dangerous",
-    "category": "location",
+    "category": "trait",
     "rarity": "uncommon",
     "description": "Hazardous, risky, or threatening environment",
     "entityKinds": [
@@ -540,11 +599,12 @@
     "relatedTags": [
       "anomaly",
       "external"
-    ]
+    ],
+    "isAxis": true
   },
   {
     "tag": "influential",
-    "category": "trait",
+    "category": "behavior",
     "rarity": "uncommon",
     "description": "Has significant power or sway over others",
     "entityKinds": [
@@ -556,7 +616,8 @@
       "leader",
       "political",
       "legendary"
-    ]
+    ],
+    "isAxis": true
   },
   {
     "tag": "splinter",
@@ -634,6 +695,11 @@
     "relatedTags": [],
     "conflictingTags": [
       "fire"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "fire",
+      "colony"
     ]
   },
   {
@@ -649,6 +715,50 @@
     "relatedTags": [],
     "conflictingTags": [
       "ice"
+    ],
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "ice"
+    ]
+  },
+  {
+    "tag": "south",
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "north"
+    ]
+  },
+  {
+    "tag": "north",
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "south"
+    ]
+  },
+  {
+    "tag": "west",
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "east"
+    ]
+  },
+  {
+    "tag": "east",
+    "category": "trait",
+    "rarity": "common",
+    "description": "",
+    "isAxis": true,
+    "mutuallyExclusiveWith": [
+      "west"
     ]
   }
 ]

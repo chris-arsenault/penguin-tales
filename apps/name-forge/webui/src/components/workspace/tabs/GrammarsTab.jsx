@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MARKOV_MODELS, CONTEXT_KEYS, COMMON_LITERALS } from '../../constants';
+import { MARKOV_MODELS, CONTEXT_KEYS, COMMON_LITERALS, GRAMMAR_MODIFIERS } from '../../constants';
 import { previewGrammarNames } from '../../../lib/browser-generator';
 import { CopyGrammarModal } from './CopyGrammarModal';
 
@@ -16,6 +16,7 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChan
   });
   const [newRuleKey, setNewRuleKey] = useState('');
   const [newRuleValue, setNewRuleValue] = useState('');
+  const [editingRuleKey, setEditingRuleKey] = useState(null); // Track which rule is being edited
 
   // Autosave refs
   const autosaveTimeoutRef = useRef(null);
@@ -78,18 +79,45 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChan
       p.trim().split(/\s+/).filter(s => s)
     ).filter(p => p.length > 0);
 
-    const existingProductions = formData.rules[newRuleKey] || [];
-    const mergedProductions = [...existingProductions, ...newProductions];
-
-    setFormData({
-      ...formData,
-      rules: {
-        ...formData.rules,
-        [newRuleKey]: mergedProductions
+    if (editingRuleKey) {
+      // Update mode: replace the rule entirely
+      const newRules = { ...formData.rules };
+      // If key changed, delete the old one
+      if (editingRuleKey !== newRuleKey) {
+        delete newRules[editingRuleKey];
       }
-    });
+      newRules[newRuleKey] = newProductions;
+      setFormData({ ...formData, rules: newRules });
+      setEditingRuleKey(null);
+    } else {
+      // Add mode: merge with existing productions
+      const existingProductions = formData.rules[newRuleKey] || [];
+      const mergedProductions = [...existingProductions, ...newProductions];
+      setFormData({
+        ...formData,
+        rules: {
+          ...formData.rules,
+          [newRuleKey]: mergedProductions
+        }
+      });
+    }
     setNewRuleKey('');
     setNewRuleValue('');
+  };
+
+  const handleEditRule = (key) => {
+    const productions = formData.rules[key] || [];
+    // Convert productions back to string format: "prod1 | prod2 | prod3"
+    const valueStr = productions.map(p => p.join(' ')).join(' | ');
+    setNewRuleKey(key);
+    setNewRuleValue(valueStr);
+    setEditingRuleKey(key);
+  };
+
+  const handleCancelEdit = () => {
+    setNewRuleKey('');
+    setNewRuleValue('');
+    setEditingRuleKey(null);
   };
 
   const handleDeleteRule = (key) => {
@@ -285,8 +313,79 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChan
 
       <h4 className="mt-lg mb-md">Production Rules</h4>
 
+      {/* Current rules - shown first so users see what exists */}
+      {Object.keys(formData.rules).length > 0 && (
+        <div className="mb-md">
+          {Object.entries(formData.rules).map(([key, productions]) => (
+            <div key={key} className={`rule-card ${editingRuleKey === key ? 'editing' : ''}`}>
+              <div className="font-mono text-small flex-1">
+                <strong className="text-gold">{key}</strong>
+                <span className="text-muted"> → </span>
+                {productions.map((prod, i) => (
+                  <span key={i}>
+                    <span className="text-light">{prod.join(' ')}</span>
+                    {i < productions.length - 1 && <span className="text-muted"> | </span>}
+                  </span>
+                ))}
+              </div>
+              <div className="rule-actions">
+                <button
+                  className="secondary btn-xs"
+                  onClick={() => handleEditRule(key)}
+                  title="Edit rule"
+                >
+                  Edit
+                </button>
+                <button
+                  className="danger btn-xs"
+                  onClick={() => handleDeleteRule(key)}
+                  title="Delete rule"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Rule editor form */}
+      <div className="rule-form">
+        {editingRuleKey && (
+          <div className="text-small text-cyan mb-sm">
+            Editing rule: <strong>{editingRuleKey}</strong>
+          </div>
+        )}
+        <div className="flex gap-sm mb-sm">
+          <input
+            className="rule-key-input"
+            value={newRuleKey}
+            onChange={(e) => setNewRuleKey(e.target.value)}
+            placeholder="Non-terminal"
+          />
+          <span className="rule-arrow">→</span>
+          <input
+            className="flex-1"
+            value={newRuleValue}
+            onChange={(e) => setNewRuleValue(e.target.value)}
+            placeholder="slot:lexeme_id | literal | other_nonterminal"
+          />
+          <button className="primary" onClick={handleAddRule}>
+            {editingRuleKey ? 'Update' : 'Add'}
+          </button>
+          {editingRuleKey && (
+            <button className="secondary" onClick={handleCancelEdit}>
+              Cancel
+            </button>
+          )}
+        </div>
+        <small className="text-muted">
+          Use <code>|</code> for alternatives, <code>space</code> for sequence
+        </small>
+      </div>
+
       {/* Collapsible Click-to-Insert Panel */}
-      <CollapsiblePanel title="Click to Insert" defaultExpanded={true}>
+      <CollapsiblePanel title="Click to Insert" defaultExpanded={false}>
         {/* Click-to-insert: Lexeme Lists */}
         {availableLexemeLists.length > 0 && (
           <ClickToInsertSection
@@ -331,57 +430,10 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChan
           onInsert={insertIntoRule}
           variant="muted"
         />
+
+        {/* Modifiers */}
+        <ModifiersSection onInsert={insertIntoRule} />
       </CollapsiblePanel>
-
-      {/* Add rule form */}
-      <div className="rule-form">
-        <div className="flex gap-sm mb-sm">
-          <input
-            className="rule-key-input"
-            value={newRuleKey}
-            onChange={(e) => setNewRuleKey(e.target.value)}
-            placeholder="Non-terminal"
-          />
-          <span className="rule-arrow">→</span>
-          <input
-            className="flex-1"
-            value={newRuleValue}
-            onChange={(e) => setNewRuleValue(e.target.value)}
-            placeholder="slot:lexeme_id | literal | other_nonterminal"
-          />
-          <button className="primary" onClick={handleAddRule}>Add</button>
-        </div>
-        <small className="text-muted">
-          Use <code>|</code> for alternatives, <code>space</code> for sequence
-        </small>
-      </div>
-
-      {/* Current rules */}
-      {Object.keys(formData.rules).length > 0 && (
-        <div className="mb-lg">
-          <h4 className="mb-sm">Current Rules</h4>
-          {Object.entries(formData.rules).map(([key, productions]) => (
-            <div key={key} className="rule-card">
-              <div className="font-mono text-small">
-                <strong className="text-gold">{key}</strong>
-                <span className="text-muted"> → </span>
-                {productions.map((prod, i) => (
-                  <span key={i}>
-                    <span className="text-light">{prod.join(' ')}</span>
-                    {i < productions.length - 1 && <span className="text-muted"> | </span>}
-                  </span>
-                ))}
-              </div>
-              <button
-                className="danger btn-xs"
-                onClick={() => handleDeleteRule(key)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
     </div>
   );
@@ -519,6 +571,61 @@ function EntityLinkageSection({ onInsert }) {
   );
 }
 
+function ModifiersSection({ onInsert }) {
+  return (
+    <div className="insert-panel cyan">
+      <div className="insert-panel-title">
+        <strong>Modifiers</strong> <span className="text-muted">(append to tokens)</span>
+      </div>
+      <div className="mb-sm">
+        <span className="text-xs text-muted">Morphology (irregulars handled): </span>
+        <div className="flex flex-wrap gap-sm mt-xs">
+          {GRAMMAR_MODIFIERS.derivation.map(({ code, desc }) => (
+            <code
+              key={code}
+              className="insert-chip cyan"
+              onClick={() => onInsert(code)}
+              title={desc}
+            >
+              {code}
+            </code>
+          ))}
+        </div>
+      </div>
+      <div className="mb-sm">
+        <span className="text-xs text-muted">Capitalization: </span>
+        <div className="flex flex-wrap gap-sm mt-xs">
+          {GRAMMAR_MODIFIERS.capitalization.map(({ code, desc }) => (
+            <code
+              key={code}
+              className="insert-chip cyan"
+              onClick={() => onInsert(code)}
+              title={desc}
+            >
+              {code}
+            </code>
+          ))}
+        </div>
+      </div>
+      <div>
+        <span className="text-xs text-muted">Operators: </span>
+        <div className="flex flex-wrap gap-sm mt-xs">
+          {GRAMMAR_MODIFIERS.operators.map(({ code, desc }) => (
+            <code
+              key={code}
+              className="insert-chip cyan"
+              onClick={() => onInsert(code)}
+              title={desc}
+            >
+              {code}
+            </code>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GrammarHelpModal({ onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -561,6 +668,19 @@ function GrammarHelpModal({ onClose }) {
               </ul>
               <div className="mt-xs">Example: <code>domain:x~cap domain:y~lower^'^slot:z~cap</code></div>
               <div>→ "Capital lower'Capital"</div>
+            </li>
+            <li><code>~</code> - Morphological derivations (transform words):
+              <ul>
+                <li><code>~er</code> - Agentive: hunt → hunter, forge → forger</li>
+                <li><code>~est</code> - Superlative: deep → deepest, grim → grimmest</li>
+                <li><code>~comp</code> - Comparative: dark → darker, swift → swifter</li>
+                <li><code>~ing</code> - Gerund: burn → burning, forge → forging</li>
+                <li><code>~ed</code> - Past: curse → cursed, slay → slain</li>
+                <li><code>~poss</code> - Possessive: storm → storm's, darkness → darkness'</li>
+              </ul>
+              <div className="mt-xs">Example: <code>slot:verbs~er</code> → "Hunter"</div>
+              <div>Combine: <code>slot:adj~est~cap</code> → "Deepest"</div>
+              <div className="text-muted mt-xs">Handles irregulars: break→broken, good→best, lie→liar</div>
             </li>
             <li><code>|</code> - Alternatives</li>
           </ul>

@@ -1059,13 +1059,18 @@ export class WorldEngine {
             ? `Failed: ${diagnosis.failedRules[0].split(':')[0]}`
             : diagnosis.selectionCount === 0
               ? 'No valid targets'
-              : 'Unknown';
+              : !diagnosis.requiredVariablesPassed
+                ? `Required variables failed: ${diagnosis.failedVariables.join(', ')}`
+                : 'Unknown';
           return {
             templateId: t.id,
             failedRules: diagnosis.failedRules,
             selectionCount: diagnosis.selectionCount,
             summary,
-            selectionDiagnosis: diagnosis.selectionDiagnosis
+            selectionDiagnosis: diagnosis.selectionDiagnosis,
+            variableDiagnoses: diagnosis.failedVariableDiagnoses.length > 0
+              ? diagnosis.failedVariableDiagnoses
+              : undefined
           };
         }
         return {
@@ -1295,13 +1300,18 @@ export class WorldEngine {
             ? `Failed: ${diagnosis.failedRules[0].split(':')[0]}`
             : diagnosis.selectionCount === 0
               ? 'No valid targets'
-              : 'Unknown';
+              : !diagnosis.requiredVariablesPassed
+                ? `Required variables failed: ${diagnosis.failedVariables.join(', ')}`
+                : 'Unknown';
           return {
             templateId: t.id,
             failedRules: diagnosis.failedRules,
             selectionCount: diagnosis.selectionCount,
             summary,
-            selectionDiagnosis: diagnosis.selectionDiagnosis
+            selectionDiagnosis: diagnosis.selectionDiagnosis,
+            variableDiagnoses: diagnosis.failedVariableDiagnoses.length > 0
+              ? diagnosis.failedVariableDiagnoses
+              : undefined
           };
         }
         return {
@@ -1578,10 +1588,16 @@ export class WorldEngine {
         }
 
         // Emit systemAction event if meaningful work was done
+        // Use significantModificationCount from details if present (for systems like
+        // diffusion that want to squelch false positives from value tag updates)
+        const reportedModifications = typeof result.details?.significantModificationCount === 'number'
+          ? result.details.significantModificationCount
+          : result.entitiesModified.length;
+
         const didMeaningfulWork =
           directAdded > 0 ||
           addedFromResult > 0 ||
-          result.entitiesModified.length > 0 ||
+          reportedModifications > 0 ||
           Object.keys(result.pressureChanges).length > 0;
 
         if (didMeaningfulWork) {
@@ -1591,7 +1607,7 @@ export class WorldEngine {
             systemId: system.id,
             systemName: system.name,
             relationshipsAdded: directAdded + addedFromResult,
-            entitiesModified: result.entitiesModified.length,
+            entitiesModified: reportedModifications,
             pressureChanges: result.pressureChanges,
             description: result.description,
             details: result.details,

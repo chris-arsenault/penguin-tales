@@ -224,7 +224,14 @@ export type SelectionFilter =
   | HasRelationshipFilter
   | LacksRelationshipFilter
   | HasTagSelectionFilter
+  | HasTagsSelectionFilter
   | HasAnyTagSelectionFilter
+  | LacksTagSelectionFilter
+  | LacksAnyTagSelectionFilter
+  | HasCultureFilter
+  | MatchesCultureFilter
+  | HasStatusFilter
+  | HasProminenceFilter
   | SharesRelatedFilter
   | GraphPathSelectionFilter;
 
@@ -260,9 +267,49 @@ export interface HasTagSelectionFilter {
   value?: string | boolean;
 }
 
+/**
+ * Filter entities that have ALL specified tags (AND semantics).
+ * Use has_any_tag for OR semantics.
+ */
+export interface HasTagsSelectionFilter {
+  type: 'has_tags';
+  tags: string[];
+}
+
 export interface HasAnyTagSelectionFilter {
   type: 'has_any_tag';
   tags: string[];
+}
+
+export interface LacksTagSelectionFilter {
+  type: 'lacks_tag';
+  tag: string;
+  value?: string | boolean;  // If specified, only excludes if tag has this value
+}
+
+export interface LacksAnyTagSelectionFilter {
+  type: 'lacks_any_tag';
+  tags: string[];  // Excludes entities that have ANY of these tags
+}
+
+export interface HasCultureFilter {
+  type: 'has_culture';
+  culture: string;
+}
+
+export interface MatchesCultureFilter {
+  type: 'matches_culture';
+  with: string;  // Variable reference like "$target"
+}
+
+export interface HasStatusFilter {
+  type: 'has_status';
+  status: string;
+}
+
+export interface HasProminenceFilter {
+  type: 'has_prominence';
+  minProminence: Prominence;
 }
 
 /**
@@ -354,7 +401,12 @@ export interface PlacementSpacing {
 
 /** Region creation policy */
 export interface PlacementRegionPolicy {
+  /** Allow emergent region creation when seed regions are at capacity */
   allowEmergent?: boolean;
+  /** Create a new region centered on the placed entity (useful for sparse placement establishing new territories) */
+  createRegion?: boolean;
+  /** Bias region selection toward sparser regions (weighted by inverse entity count) */
+  preferSparse?: boolean;
 }
 
 /** Fallback strategies when primary placement fails */
@@ -414,7 +466,7 @@ export type RelationshipCondition =
  */
 export type StateUpdateRule =
   | { type: 'update_rate_limit' }
-  | { type: 'archive_relationship'; entity: string; relationshipKind: string; with: string }
+  | { type: 'archive_relationship'; entity: string; relationshipKind: string; with: string; direction?: 'src' | 'dst' | 'any' }
   | { type: 'modify_pressure'; pressureId: string; delta: number }
   | { type: 'update_entity_status'; entity: string; newStatus: string }
   | { type: 'set_tag'; entity: string; tag: string; value?: string | boolean }
@@ -430,6 +482,11 @@ export type StateUpdateRule =
  */
 export interface VariableDefinition {
   select: VariableSelectionRule;
+  /**
+   * If true, the template will not run unless this variable resolves to at least one entity.
+   * Use this when the template logic depends on the variable existing.
+   */
+  required?: boolean;
 }
 
 export interface VariableSelectionRule {

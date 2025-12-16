@@ -46,19 +46,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "Element",
-          "lowTag": "fire",
-          "highTag": "ice"
+          "axisId": "element"
         },
         "y": {
-          "name": "Affinity",
-          "lowTag": "mundane",
-          "highTag": "mystical"
+          "axisId": "pragmatism"
         },
         "z": {
-          "name": "Power",
-          "lowTag": "emergent",
-          "highTag": "legendary"
+          "axisId": "power"
         }
       },
       "regions": [
@@ -102,7 +96,7 @@
             "shape": "circle",
             "center": {
               "x": 16,
-              "y": 18
+              "y": 17
             },
             "radius": 15
           }
@@ -157,14 +151,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "X Axis",
-          "lowTag": "low",
-          "highTag": "high"
+          "axisId": "element"
         },
         "y": {
-          "name": "Y Axis",
-          "lowTag": "low",
-          "highTag": "high"
+          "axisId": "pragmatism"
+        },
+        "z": {
+          "axisId": "visibility"
         }
       },
       "regions": []
@@ -190,14 +183,6 @@
       {
         "id": "ideology",
         "name": "Ideology"
-      },
-      {
-        "id": "edict",
-        "name": "Edict"
-      },
-      {
-        "id": "taboo",
-        "name": "Taboo"
       }
     ],
     "statuses": [
@@ -230,14 +215,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "Autonomy",
-          "lowTag": "authoritarian",
-          "highTag": "libertarian"
+          "axisId": "autonomy"
         },
         "y": {
-          "name": "Element",
-          "lowTag": "ice",
-          "highTag": "fire"
+          "axisId": "pragmatism"
+        },
+        "z": {
+          "axisId": "structure"
         }
       },
       "regions": [
@@ -250,10 +234,10 @@
           "bounds": {
             "shape": "circle",
             "center": {
-              "x": 80,
-              "y": 51
+              "x": 90,
+              "y": 50
             },
-            "radius": 20
+            "radius": 9
           }
         },
         {
@@ -340,19 +324,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "Alignment",
-          "lowTag": "hostile",
-          "highTag": "friendly"
+          "axisId": "authority"
         },
         "y": {
-          "name": "Role",
-          "lowTag": "follower",
-          "highTag": "leader"
+          "axisId": "pragmatism"
         },
         "z": {
-          "name": "Approach",
-          "lowTag": "mundane",
-          "highTag": "mystical"
+          "axisId": "power"
         }
       },
       "regions": [
@@ -369,8 +347,8 @@
           "bounds": {
             "shape": "circle",
             "center": {
-              "x": 70,
-              "y": 60
+              "x": 84,
+              "y": 50
             },
             "radius": 15
           }
@@ -387,8 +365,8 @@
           "bounds": {
             "shape": "circle",
             "center": {
-              "x": 35,
-              "y": 45
+              "x": 50,
+              "y": 70
             },
             "radius": 15
           }
@@ -406,8 +384,8 @@
           "bounds": {
             "shape": "circle",
             "center": {
-              "x": 13,
-              "y": 87
+              "x": 14,
+              "y": 14
             },
             "radius": 12
           }
@@ -421,24 +399,20 @@
     "description": "Locations",
     "subtypes": [
       {
-        "id": "iceberg",
-        "name": "Iceberg"
-      },
-      {
         "id": "colony",
         "name": "Colony"
       },
       {
-        "id": "igloo",
-        "name": "Igloo"
-      },
-      {
-        "id": "geographic_feature",
-        "name": "Geographic Feature"
-      },
-      {
         "id": "anomaly",
         "name": "Anomaly"
+      },
+      {
+        "id": "resource_node",
+        "name": "Resource Node"
+      },
+      {
+        "id": "point_of_interest",
+        "name": "Point of Interest"
       }
     ],
     "statuses": [
@@ -466,19 +440,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "Accessibility",
-          "lowTag": "hidden",
-          "highTag": "central"
+          "axisId": "longitude"
         },
         "y": {
-          "name": "Nature",
-          "lowTag": "mundane",
-          "highTag": "anomaly"
+          "axisId": "latitude"
         },
         "z": {
-          "name": "Safety",
-          "lowTag": "dangerous",
-          "highTag": "safe"
+          "axisId": "visibility"
         }
       },
       "regions": [
@@ -611,19 +579,13 @@
     "semanticPlane": {
       "axes": {
         "x": {
-          "name": "Structure",
-          "lowTag": "chaotic",
-          "highTag": "organized"
+          "axisId": "structure"
         },
         "y": {
-          "name": "Purpose",
-          "lowTag": "hostile",
-          "highTag": "friendly"
+          "axisId": "alignment"
         },
         "z": {
-          "name": "Reach",
-          "lowTag": "secretive",
-          "highTag": "influential"
+          "axisId": "visibility"
         }
       },
       "regions": [

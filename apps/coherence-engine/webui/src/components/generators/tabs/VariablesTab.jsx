@@ -4,7 +4,8 @@
 
 import React, { useState } from 'react';
 import { VARIABLE_PICK_STRATEGIES } from '../constants';
-import { ReferenceDropdown, ChipSelect } from '../../shared';
+import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
+import { SelectionFiltersEditor } from '../filters';
 
 /**
  * Safely display a value that should be a string.
@@ -27,8 +28,9 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
 
-  // Handle the nested select structure: { select: { from, kind, pickStrategy, ... } }
+  // Handle the nested select structure: { select: { from, kind, pickStrategy, ... }, required }
   const selectConfig = config.select || config;
+  const isRequired = config.required || false;
 
   const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
     value: ek.kind,
@@ -48,12 +50,16 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
 
   const updateSelect = (field, value) => {
     const newSelect = { ...selectConfig, [field]: value };
-    onChange({ select: newSelect });
+    onChange({ ...config, select: newSelect });
   };
 
   const updateSelectMultiple = (updates) => {
     const newSelect = { ...selectConfig, ...updates };
-    onChange({ select: newSelect });
+    onChange({ ...config, select: newSelect });
+  };
+
+  const updateRequired = (value) => {
+    onChange({ ...config, required: value });
   };
 
   // Determine mode: 'graph' (select by kind) or 'related' (select related entities)
@@ -65,10 +71,11 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
     if (mode === 'graph') {
       // Clear related entity config, keep kind-based selection
       const { from, ...rest } = selectConfig;
-      onChange({ select: { ...rest, from: 'graph' } });
+      onChange({ ...config, select: { ...rest, from: 'graph' } });
     } else {
       // Switch to related entity mode
       onChange({
+        ...config,
         select: {
           ...selectConfig,
           from: { relatedTo: '$target', relationship: '', direction: 'both' },
@@ -85,6 +92,7 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
   // Display info
   const displayMode = isRelatedMode ? 'Related entities' : (selectConfig.kind || 'Not configured');
   const displayStrategy = safeDisplay(selectConfig.pickStrategy, 'Not set', 'pickStrategy');
+  const filterCount = (selectConfig.filters || []).length;
 
   return (
     <div className="item-card">
@@ -98,9 +106,11 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
         <div className="item-card-info">
           <div className="item-card-title">
             <span className="variable-ref">{name}</span>
+            {isRequired && <span className="badge badge-warning" style={{ marginLeft: '8px', fontSize: '10px' }}>Required</span>}
           </div>
           <div className="item-card-subtitle">
             {displayMode} • {displayStrategy}
+            {filterCount > 0 && <span style={{ marginLeft: '4px' }}>• {filterCount} filter{filterCount > 1 ? 's' : ''}</span>}
           </div>
         </div>
         <div className="item-card-actions">
@@ -111,6 +121,21 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
 
       {expanded && (
         <div className="item-card-body">
+          {/* Required checkbox */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={isRequired}
+                onChange={(e) => updateRequired(e.target.checked)}
+              />
+              <span className="label" style={{ margin: 0 }}>Required</span>
+              <span className="text-muted" style={{ fontSize: '11px' }}>
+                (Template won't run unless this variable resolves)
+              </span>
+            </label>
+          </div>
+
           <div className="form-grid">
             <ReferenceDropdown
               label="Select From"
@@ -195,6 +220,32 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
               />
             </div>
           )}
+
+          {/* Status filter */}
+          <div style={{ marginTop: '16px' }}>
+            <label className="label">Status Filter (optional)</label>
+            <input
+              type="text"
+              value={selectConfig.statusFilter || ''}
+              onChange={(e) => updateSelect('statusFilter', e.target.value || undefined)}
+              className="input"
+              placeholder="e.g., active, historical"
+            />
+          </div>
+
+          {/* Selection Filters - same as target selection */}
+          <div style={{ marginTop: '24px' }}>
+            <label className="label">Selection Filters</label>
+            <div className="info-box-text" style={{ marginBottom: '12px', fontSize: '12px' }}>
+              Optional filters to narrow down which entities can be selected. All filters must pass.
+            </div>
+            <SelectionFiltersEditor
+              filters={selectConfig.filters}
+              onChange={(filters) => updateSelect('filters', filters.length > 0 ? filters : undefined)}
+              schema={schema}
+              availableRefs={availableRefs}
+            />
+          </div>
         </div>
       )}
     </div>

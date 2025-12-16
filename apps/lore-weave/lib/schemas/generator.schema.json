@@ -307,8 +307,72 @@
           "required": ["type", "tags"],
           "additionalProperties": false,
           "properties": {
+            "type": { "const": "has_tags" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
             "type": { "const": "has_any_tag" },
             "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_tag" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" },
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_any_tag" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "culture"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_culture" },
+            "culture": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "matches_culture" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_status" },
+            "status": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "minProminence"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_prominence" },
+            "minProminence": { "$ref": "#/$defs/Prominence" }
           }
         },
         {
@@ -552,7 +616,9 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "allowEmergent": { "type": "boolean" }
+                "allowEmergent": { "type": "boolean", "description": "Allow emergent region creation when seed regions are at capacity" },
+                "createRegion": { "type": "boolean", "description": "Create a new region centered on the placed entity (useful for sparse placement establishing new territories)" },
+                "preferSparse": { "type": "boolean", "description": "Bias region selection toward sparser regions (weighted by inverse entity count)" }
               }
             },
             "fallback": {
@@ -654,7 +720,8 @@
             "type": { "const": "archive_relationship" },
             "entity": { "$ref": "#/$defs/NonEmptyString" },
             "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
-            "with": { "$ref": "#/$defs/NonEmptyString" }
+            "with": { "$ref": "#/$defs/NonEmptyString", "description": "Entity reference or 'any' to archive all relationships of this kind" },
+            "direction": { "enum": ["src", "dst", "any"], "default": "any", "description": "Only used when with='any': which end of the relationship the entity should be on" }
           }
         },
         {
@@ -706,7 +773,8 @@
       "required": ["select"],
       "additionalProperties": false,
       "properties": {
-        "select": { "$ref": "#/$defs/VariableSelectionRule" }
+        "select": { "$ref": "#/$defs/VariableSelectionRule" },
+        "required": { "type": "boolean", "description": "If true, template won't run unless this variable resolves" }
       }
     },
 

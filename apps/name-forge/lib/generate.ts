@@ -10,6 +10,7 @@ import { createRNG, pickRandom } from "./utils/rng.js";
 import { applyCapitalization } from "./utils/helpers.js";
 import { generatePhonotacticName } from "./phonotactic-pipeline.js";
 import { preloadModels } from "./markov-loader.js";
+import { applyDerivation, isDerivationType, type DerivationType } from "./derivation.js";
 import type { NamingDomain } from "./types/domain.js";
 import type {
   Culture,
@@ -630,6 +631,19 @@ const CAPITALIZATION_MODIFIERS: Record<string, TokenCapitalization> = {
 };
 
 /**
+ * Derivation modifiers: ~er, ~est, ~ing, ~ed, ~poss, ~comp
+ *
+ * These apply morphological transformations:
+ * - ~er: agentive (hunt → hunter, rend → render)
+ * - ~est: superlative (deep → deepest, dark → darkest)
+ * - ~comp: comparative (dark → darker, swift → swifter)
+ * - ~ing: gerund/present participle (burn → burning, forge → forging)
+ * - ~ed: past/passive (curse → cursed, hunt → hunted)
+ * - ~poss: possessive (storm → storm's, blood → blood's)
+ */
+const DERIVATION_MODIFIERS = new Set(["er", "est", "ing", "ed", "poss", "comp"]);
+
+/**
  * Marker format for deferred token capitalization.
  * Using Unicode private use area characters to avoid conflicts.
  */
@@ -681,24 +695,59 @@ function applyTokenCapitalization(str: string, modifier: TokenCapitalization): s
 }
 
 /**
- * Parse and remove capitalization modifier from a pattern.
+ * Parsed modifiers from a token pattern.
+ * Supports chaining: "slot:foo~er~cap" → derivation: "er", capitalization: "cap"
+ */
+interface ParsedModifiers {
+  pattern: string;
+  derivation: DerivationType | null;
+  capitalization: TokenCapitalization | null;
+}
+
+/**
+ * Parse and remove all modifiers from a pattern.
+ * Modifiers are processed right-to-left, supporting chains like "slot:foo~er~cap".
+ *
+ * E.g., "slot:foo~cap" → { pattern: "slot:foo", derivation: null, capitalization: "cap" }
+ * E.g., "slot:foo~er~cap" → { pattern: "slot:foo", derivation: "er", capitalization: "cap" }
+ */
+function parseModifiers(pattern: string): ParsedModifiers {
+  let derivation: DerivationType | null = null;
+  let capitalization: TokenCapitalization | null = null;
+  let remaining = pattern;
+
+  // Parse modifiers from right to left
+  while (true) {
+    const tildeIndex = remaining.lastIndexOf("~");
+    if (tildeIndex === -1) break;
+
+    const modifierStr = remaining.substring(tildeIndex + 1);
+    const capMod = CAPITALIZATION_MODIFIERS[modifierStr];
+    const isDerivMod = DERIVATION_MODIFIERS.has(modifierStr);
+
+    if (capMod && !capitalization) {
+      capitalization = capMod;
+      remaining = remaining.substring(0, tildeIndex);
+    } else if (isDerivMod && isDerivationType(modifierStr) && !derivation) {
+      derivation = modifierStr;
+      remaining = remaining.substring(0, tildeIndex);
+    } else {
+      // Unknown modifier or already have one of this type - stop parsing
+      break;
+    }
+  }
+
+  return { pattern: remaining, derivation, capitalization };
+}
+
+/**
+ * Parse and remove capitalization modifier from a pattern (legacy wrapper).
  * E.g., "slot:foo~cap" → { pattern: "slot:foo", modifier: "cap" }
+ * @deprecated Use parseModifiers instead
  */
 function parseCapitalizationModifier(pattern: string): { pattern: string; modifier: TokenCapitalization | null } {
-  const tildeIndex = pattern.lastIndexOf("~");
-  if (tildeIndex === -1) {
-    return { pattern, modifier: null };
-  }
-
-  const modifierStr = pattern.substring(tildeIndex + 1);
-  const modifier = CAPITALIZATION_MODIFIERS[modifierStr];
-
-  if (modifier) {
-    return { pattern: pattern.substring(0, tildeIndex), modifier };
-  }
-
-  // Unknown modifier, treat as literal
-  return { pattern, modifier: null };
+  const { pattern: p, capitalization } = parseModifiers(pattern);
+  return { pattern: p, modifier: capitalization };
 }
 
 /**
@@ -733,15 +782,19 @@ function resolveSegmentWithPrefix(
 }
 
 /**
- * Resolve a simple token (no ^ handling, but handles ~ modifier).
+ * Resolve a simple token (no ^ handling, but handles ~ modifiers).
+ *
+ * Supports derivation and capitalization modifiers:
+ * - "slot:core~er" → apply agentive (hunt → hunter)
+ * - "slot:core~er~cap" → apply agentive then capitalize (hunt → Hunter)
  */
 function resolveSimpleToken(
   token: string,
   ctx: GenerationContext,
   expansionCtx: GrammarExpansionContext
 ): string {
-  // Parse capitalization modifier
-  const { pattern, modifier } = parseCapitalizationModifier(token);
+  // Parse all modifiers (derivation + capitalization)
+  const { pattern, derivation, capitalization } = parseModifiers(token);
 
   let result: string;
 
@@ -791,9 +844,14 @@ function resolveSimpleToken(
     result = token; // Use original token for literals (preserves ~ if not a modifier)
   }
 
-  // Wrap in capitalization marker if modifier specified (applied later, after grammar-level)
-  if (modifier) {
-    result = wrapCapitalizationMarker(result, modifier);
+  // Apply derivation first (e.g., hunt → hunter)
+  if (derivation) {
+    result = applyDerivation(result, derivation);
+  }
+
+  // Wrap in capitalization marker if specified (applied later, after grammar-level)
+  if (capitalization) {
+    result = wrapCapitalizationMarker(result, capitalization);
   }
 
   return result;

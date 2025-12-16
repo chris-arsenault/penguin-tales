@@ -1,301 +1,132 @@
 [
   {
-    "id": "resource_scarcity",
-    "name": "Resource Scarcity",
-    "description": "Positive = scarcity and strain; negative = surplus and abundance.",
-    "initialValue": 60,
+    "id": "resource_availibility",
+    "name": "Resource Availibility",
+    "initialValue": -40,
     "homeostasis": 0.05,
     "growth": {
       "positiveFeedback": [
         {
-          "type": "ratio",
-          "numerator": {
-            "type": "entity_count",
-            "kind": "npc"
-          },
-          "denominator": {
-            "type": "entity_count",
-            "kind": "location",
-            "subtype": "colony"
-          },
-          "fallbackValue": 0,
-          "coefficient": 0.5,
-          "cap": 10
-        },
-        {
           "type": "entity_count",
+          "coefficient": 0.6,
           "kind": "location",
-          "subtype": "colony",
-          "coefficient": 0.5
-        }
-      ],
-      "negativeFeedback": [
-        {
-          "type": "entity_count",
-          "kind": "location",
-          "subtype": "geographic_feature",
-          "coefficient": 0.6
-        }
-      ]
-    }
-  },
-  {
-    "id": "conflict",
-    "name": "Conflict Tension",
-    "description": "Positive = rising wars/rivalries; negative = peace and cooperation.",
-    "initialValue": 0,
-    "homeostasis": 0.05,
-    "growth": {
-      "positiveFeedback": [
-        {
-          "type": "ratio",
-          "numerator": {
-            "type": "relationship_count",
-            "relationshipKinds": [
-              "enemy_of",
-              "enemy_of",
-              "at_war_with"
-            ]
-          },
-          "denominator": {
-            "type": "relationship_count",
-            "relationshipKinds": [
-              "enemy_of",
-              "enemy_of",
-              "at_war_with",
-              "allied_with",
-              "trades_with",
-              "member_of"
-            ]
-          },
-          "fallbackValue": 0,
-          "coefficient": 10
-        },
-        {
-          "type": "relationship_count",
-          "relationshipKinds": [
-            "at_war_with"
-          ],
-          "coefficient": 2,
-          "cap": 5
-        }
-      ],
-      "negativeFeedback": [
-        {
-          "type": "entity_count",
-          "kind": "npc",
-          "subtype": "hero",
-          "coefficient": 0.2
-        }
-      ]
-    }
-  },
-  {
-    "id": "magical_instability",
-    "name": "Magical Instability",
-    "description": "Positive = volatile magic/anomalies; negative = stable, regulated magic.",
-    "initialValue": 30,
-    "homeostasis": 0.06,
-    "growth": {
-      "positiveFeedback": [
-        {
-          "type": "ratio",
-          "numerator": {
-            "type": "entity_count",
-            "kind": "location",
-            "subtype": "anomaly"
-          },
-          "denominator": {
-            "type": "total_entities"
-          },
-          "fallbackValue": 0,
-          "coefficient": 50,
-          "cap": 5
-        },
-        {
-          "type": "entity_count",
-          "kind": "abilities",
-          "subtype": "magic",
-          "coefficient": 0.8,
-          "cap": 10
-        },
-        {
-          "type": "entity_count",
-          "kind": "faction",
-          "subtype": "cult",
-          "coefficient": 0.3
-        },
-        {
-          "type": "ratio",
-          "numerator": {
-            "type": "entity_count",
-            "kind": "abilities",
-            "subtype": "magic"
-          },
-          "denominator": {
-            "type": "entity_count",
-            "kind": "abilities"
-          },
-          "fallbackValue": 0,
-          "coefficient": 5
-        }
-      ],
-      "negativeFeedback": [
-        {
-          "type": "entity_count",
-          "kind": "abilities",
-          "subtype": "technology",
-          "coefficient": 0.3
-        }
-      ]
-    }
-  },
-  {
-    "id": "stability",
-    "name": "Political Stability",
-    "description": "Positive = strong governance/order; negative = instability and coups.",
-    "initialValue": 50,
-    "homeostasis": 0.05,
-    "growth": {
-      "positiveFeedback": [
-        {
-          "type": "ratio",
-          "numerator": {
-            "type": "relationship_count",
-            "relationshipKinds": [
-              "allied_with"
-            ]
-          },
-          "denominator": {
-            "type": "relationship_count",
-            "relationshipKinds": [
-              "allied_with",
-              "enemy_of",
-              "enemy_of",
-              "at_war_with"
-            ]
-          },
-          "fallbackValue": 0.5,
-          "coefficient": 7
-        },
-        {
-          "type": "status_ratio",
-          "kind": "npc",
-          "subtype": "mayor",
-          "aliveStatus": "alive",
-          "coefficient": 3
-        },
-        {
-          "type": "relationship_count",
-          "relationshipKinds": [
-            "leader_of"
-          ],
-          "coefficient": 0.3
-        }
-      ],
-      "negativeFeedback": []
-    }
-  },
-  {
-    "id": "external_threat",
-    "name": "External Threat",
-    "description": "Positive = imminent outside danger; negative = secure borders and calm seas.",
-    "initialValue": 0,
-    "homeostasis": 0.06,
-    "growth": {
-      "positiveFeedback": [
-        {
-          "type": "tag_count",
-          "tags": [
-            "external",
-            "hostile",
-            "raider"
-          ],
-          "coefficient": 1
+          "subtype": "geographic_feature"
         }
       ],
       "negativeFeedback": [
         {
           "type": "entity_count",
           "coefficient": 1,
-          "kind": "npc",
-          "subtype": "hero",
-          "status": "alive"
+          "kind": "location",
+          "subtype": "colony"
+        },
+        {
+          "type": "ratio",
+          "coefficient": 0.2,
+          "numerator": {
+            "type": "entity_count",
+            "kind": "location"
+          },
+          "denominator": {
+            "type": "total_entities"
+          },
+          "fallbackValue": 0
         }
       ]
-    }
+    },
+    "description": "How many unused resources there are. Positive = plenty of resources, negative = resource crisis."
   },
   {
-    "id": "cultural_tension",
-    "name": "Cultural Divergence",
-    "description": "Positive = widening cultural rifts; negative = shared values and harmony.",
+    "id": "magical_stability",
+    "name": "Magical Stability",
+    "initialValue": 40,
+    "homeostasis": 0.06,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "entity_count",
+          "coefficient": 2,
+          "kind": "abilities",
+          "subtype": "magic"
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "entity_count",
+          "coefficient": 1,
+          "kind": "faction",
+          "subtype": "cult"
+        },
+        {
+          "type": "tag_count",
+          "coefficient": 0.4,
+          "tags": [
+            "wild",
+            "mystical",
+            "anomaly"
+          ]
+        }
+      ]
+    },
+    "description": "How stable the 'bergs native magic is. Positive values mean less wild magic is appearing, negative values mean anomalies happen frequently.  Penguins can harness the wild magic to stabilize it. Cults exploit it to their own devices"
+  },
+  {
+    "id": "security",
+    "name": "Iceberg Security",
+    "initialValue": 0,
+    "homeostasis": 0.06,
+    "growth": {
+      "positiveFeedback": [
+        {
+          "type": "entity_count",
+          "coefficient": 1,
+          "kind": "npc",
+          "subtype": "hero"
+        }
+      ],
+      "negativeFeedback": [
+        {
+          "type": "tag_count",
+          "coefficient": 1,
+          "tags": [
+            "hostile",
+            "raider",
+            "orca"
+          ]
+        }
+      ]
+    },
+    "description": "How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)"
+  },
+  {
+    "id": "harmony",
+    "name": "Cultural Harmony",
     "initialValue": 0,
     "homeostasis": 0.15,
     "growth": {
       "positiveFeedback": [
         {
-          "type": "cross_culture_ratio",
-          "relationshipKinds": [
-            "believer_of",
-            "enemy_of",
-            "allied_with",
-            "enemy_of",
-            "allied_with"
-          ],
-          "coefficient": 10
-        },
-        {
-          "type": "ratio",
-          "numerator": {
-            "type": "relationship_count",
-            "relationshipKinds": [
-              "splinter_of"
-            ]
-          },
-          "denominator": {
-            "type": "entity_count",
-            "kind": "faction"
-          },
-          "fallbackValue": 0,
-          "coefficient": 5
-        }
-      ],
-      "negativeFeedback": []
-    }
-  },
-  {
-    "id": "diplomacy",
-    "name": "Diplomatic Relations",
-    "description": "Positive = strong alliances/trade; negative = distrust and sanctions.",
-    "initialValue": 0,
-    "homeostasis": 0.05,
-    "growth": {
-      "positiveFeedback": [
-        {
-          "type": "relationship_count",
-          "relationshipKinds": [
-            "allied_with",
-            "trades_with"
-          ],
-          "coefficient": 0.5
-        },
-        {
-          "type": "entity_count",
-          "kind": "npc",
-          "subtype": "merchant",
-          "coefficient": 0.3
+          "type": "tag_count",
+          "coefficient": 1,
+          "tags": [
+            "libertarian",
+            "follower",
+            "organized"
+          ]
         }
       ],
       "negativeFeedback": [
         {
-          "type": "relationship_count",
-          "relationshipKinds": [
-            "at_war_with",
-            "enemy_of"
-          ],
-          "coefficient": 0.4
+          "type": "tag_count",
+          "coefficient": 1,
+          "tags": [
+            "splinter",
+            "leader",
+            "authoritarian"
+          ]
         }
       ]
-    }
+    },
+    "description": "Are the clans getting along? Positive values mean little inter-culture strife, negative values mean war could break out at any point."
   }
 ]

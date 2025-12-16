@@ -99,6 +99,20 @@ export {
   mixedCase,
 } from "./utils/helpers.js";
 
+// Morphological derivations (for grammar ~er, ~est, ~ing, ~ed, ~poss modifiers)
+export {
+  agentive,
+  superlative,
+  comparative,
+  gerund,
+  past,
+  possessive,
+  applyDerivation,
+  isDerivationType,
+  DERIVATION_TYPES,
+  type DerivationType,
+} from "./derivation.js";
+
 // Validation schemas
 export {
   NamingDomainSchema,

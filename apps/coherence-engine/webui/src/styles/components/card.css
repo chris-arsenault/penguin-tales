@@ -160,6 +160,8 @@
 
 .item-card-body {
   padding: var(--spacing-xl);
+  /* Allow dropdowns to extend outside card bounds */
+  overflow: visible;
 }
 
 /* Variable/entity references */

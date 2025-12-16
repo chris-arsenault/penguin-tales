@@ -570,6 +570,36 @@ export class TemplateGraphView {
   }
 
   /**
+   * Archive all relationships of a given kind involving an entity.
+   * Used when you want to clear all relationships of a type without knowing the other end.
+   * @param entityId - The entity whose relationships should be archived
+   * @param kind - The relationship kind to archive
+   * @param direction - 'src' (entity is source), 'dst' (entity is destination), or 'any' (either)
+   * @returns Number of relationships archived
+   */
+  archiveRelationshipsByKind(entityId: string, kind: string, direction: 'src' | 'dst' | 'any' = 'any'): number {
+    const relationships = this.graph.getRelationships();
+    let archived = 0;
+
+    for (const rel of relationships) {
+      if (rel.kind !== kind || rel.status === 'historical') continue;
+
+      const matches = direction === 'any'
+        ? (rel.src === entityId || rel.dst === entityId)
+        : direction === 'src'
+          ? rel.src === entityId
+          : rel.dst === entityId;
+
+      if (matches) {
+        archiveRel(this.graph, rel.src, rel.dst, rel.kind);
+        archived++;
+      }
+    }
+
+    return archived;
+  }
+
+  /**
    * Modify a pressure value by delta.
    * Used by templates and systems to affect world state.
    */
@@ -1251,11 +1281,15 @@ export class TemplateGraphView {
 
     const tryPlaceWithContext = async (
       ctx: PlacementContext,
-      resolvedVia: string
+      fallbackLabel: string
     ): Promise<PlacementResultWithDebug | null> => {
       ctx.allowEmergent = regionPolicy.allowEmergent;
+      ctx.preferSparse = regionPolicy.preferSparse;
       const result = await this.coordinateContext.placeWithCulture(entityKind, 'placement', tick, ctx, existingPoints);
       if (result.success && result.coordinates) {
+        // Use the actual resolvedVia from coordinateContext (which strategy succeeded)
+        // Prefix with fallbackLabel if we're in a fallback path
+        const via = result.resolvedVia ?? fallbackLabel;
         return {
           coordinates: result.coordinates,
           regionId: result.regionId ?? null,
@@ -1263,7 +1297,7 @@ export class TemplateGraphView {
           derivedTags: result.derivedTags,
           debug: {
             ...baseDebug,
-            resolvedVia,
+            resolvedVia: via,
             seedRegionsAvailable: ctx.seedRegionIds,
             emergentRegionCreated: result.emergentRegionCreated
           }
@@ -1322,6 +1356,7 @@ export class TemplateGraphView {
           const ctx = this.coordinateContext.buildPlacementContext(refEntity.culture || cultureId, entityKind);
           ctx.referenceEntity = { id: refEntity.id, coordinates: refEntity.coordinates };
           if (anchor.stickToRegion) {
+            ctx.stickToRegion = true;
             const regions = this.getRegionsAtPoint(entityKind, refEntity.coordinates);
             if (regions.length > 0) {
               ctx.seedRegionIds = regions.map(r => r.id);
@@ -1407,6 +1442,28 @@ export class TemplateGraphView {
           };
           break;
         }
+      }
+    }
+
+    // If placement succeeded and createRegion is requested, create an emergent region at the location
+    if (result && regionPolicy.createRegion) {
+      const regionResult = await this.coordinateContext.createNamedEmergentRegion(
+        entityKind,
+        result.coordinates,
+        cultureId,
+        tick
+      );
+      if (regionResult.success && regionResult.region) {
+        result.debug.emergentRegionCreated = {
+          id: regionResult.region.id,
+          label: regionResult.region.label
+        };
+        // Update region info to include the newly created region
+        result.regionId = regionResult.region.id;
+        if (!result.allRegionIds) {
+          result.allRegionIds = [];
+        }
+        result.allRegionIds.push(regionResult.region.id);
       }
     }
 
