@@ -13,7 +13,11 @@
 
 import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
-import { getEntitiesByRelationship } from '../graph/graphQueries';
+import { SelectionFilter } from './declarativeTypes';
+import {
+  ActionEntityResolver,
+  applySelectionFilters as sharedApplySelectionFilters,
+} from '../selection';
 
 // =============================================================================
 // DECLARATIVE ACTION TYPES
@@ -27,12 +31,12 @@ export interface ActionActorConfig {
   kinds: string[];
   /** Optional subtype filter */
   subtypes?: string[];
-  /** Minimum prominence required */
-  minProminence?: string;
-  /** Must have these relationship kinds (from actor) */
-  requiredRelationships?: string[];
+  /** Optional status filter */
+  statuses?: string[];
   /** Pressures must exceed these thresholds */
   requiredPressures?: Record<string, number>;
+  /** Selection filters (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 /**
@@ -50,32 +54,6 @@ export interface ActionActorResolution {
 }
 
 /**
- * Relationship filter configuration
- */
-export interface RelationshipFilter {
-  /** Relationship kind */
-  kind: string;
-  /** Direction from the entity being filtered */
-  direction: 'src' | 'dst' | 'both';
-  /** Relationship must be from/to the resolved actor */
-  fromResolvedActor?: boolean;
-  toResolvedActor?: boolean;
-  toActor?: boolean;
-}
-
-/**
- * Adjacency requirement
- */
-export interface AdjacencyRequirement {
-  /** Relationship kind for adjacency (e.g., 'adjacent_to') */
-  relationshipKind: string;
-  /** Actor controls the adjacent entity via this relationship */
-  actorControlsVia?: string;
-  /** Must be adjacent to the resolved actor */
-  toResolvedActor?: boolean;
-}
-
-/**
  * Target configuration - how to find valid targets
  */
 export interface ActionTargetConfig {
@@ -89,20 +67,8 @@ export interface ActionTargetConfig {
   selectTwo?: boolean;
   /** Exclude self (for faction-to-faction actions) */
   excludeSelf?: boolean;
-
-  /** Exclusion rules */
-  exclude?: {
-    existingRelationship?: RelationshipFilter;
-  };
-  excludeMultiple?: Array<{
-    existingRelationship?: RelationshipFilter;
-  }>;
-
-  /** Requirements */
-  require?: {
-    adjacentTo?: AdjacencyRequirement;
-    hasRelationship?: RelationshipFilter;
-  };
+  /** Selection filters (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 /**
@@ -192,8 +158,6 @@ export interface ExecutableAction {
   /** Pressure IDs that affect this action's weight */
   pressureModifiers: string[];
   requirements?: {
-    minProminence?: string;
-    requiredRelationships?: string[];
     requiredPressures?: Record<string, number>;
   };
   handler: (graph: TemplateGraphView, actor: HardState, target?: HardState) => ActionResult;
@@ -214,8 +178,6 @@ export interface ActionResult {
 // =============================================================================
 // ACTION INTERPRETATION
 // =============================================================================
-
-const PROMINENCE_ORDER = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
 /**
  * Resolve the acting entity based on actor resolution config.
@@ -261,165 +223,6 @@ function resolveActor(
 }
 
 /**
- * Check if an entity passes exclusion filters.
- * Returns true if entity should be EXCLUDED.
- */
-function shouldExclude(
-  entity: HardState,
-  actor: HardState,
-  resolvedActor: HardState | null,
-  exclude: ActionTargetConfig['exclude'],
-  excludeMultiple: ActionTargetConfig['excludeMultiple'],
-  excludeSelf: boolean | undefined,
-  graph: TemplateGraphView
-): boolean {
-  // Self exclusion
-  if (excludeSelf) {
-    if (entity.id === actor.id) return true;
-    if (resolvedActor && entity.id === resolvedActor.id) return true;
-  }
-
-  // Check single exclusion
-  if (exclude?.existingRelationship) {
-    if (hasMatchingRelationship(entity, actor, resolvedActor, exclude.existingRelationship, graph)) {
-      return true;
-    }
-  }
-
-  // Check multiple exclusions
-  if (excludeMultiple) {
-    for (const excl of excludeMultiple) {
-      if (excl.existingRelationship) {
-        if (hasMatchingRelationship(entity, actor, resolvedActor, excl.existingRelationship, graph)) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Check if entity has a matching relationship.
- */
-function hasMatchingRelationship(
-  entity: HardState,
-  actor: HardState,
-  resolvedActor: HardState | null,
-  filter: RelationshipFilter,
-  graph: TemplateGraphView
-): boolean {
-  const relationships = graph.getAllRelationships();
-
-  return relationships.some(rel => {
-    if (rel.kind !== filter.kind) return false;
-
-    const entityIsSource = rel.src === entity.id;
-    const entityIsDest = rel.dst === entity.id;
-
-    if (filter.direction === 'src' && !entityIsSource) return false;
-    if (filter.direction === 'dst' && !entityIsDest) return false;
-    if (filter.direction === 'both' && !entityIsSource && !entityIsDest) return false;
-
-    // Check relationship is from/to actor or resolved actor
-    if (filter.fromResolvedActor && resolvedActor) {
-      return rel.src === resolvedActor.id;
-    }
-    if (filter.toResolvedActor && resolvedActor) {
-      return rel.dst === resolvedActor.id;
-    }
-    if (filter.toActor) {
-      return rel.dst === actor.id;
-    }
-
-    return true;
-  });
-}
-
-/**
- * Check if entity meets inclusion requirements.
- */
-function meetsRequirements(
-  entity: HardState,
-  actor: HardState,
-  resolvedActor: HardState | null,
-  require: ActionTargetConfig['require'],
-  graph: TemplateGraphView
-): boolean {
-  if (!require) return true;
-
-  // Adjacency requirement
-  if (require.adjacentTo) {
-    const adj = require.adjacentTo;
-
-    if (adj.actorControlsVia && resolvedActor) {
-      // Entity must be adjacent to something the actor controls
-      const controlledIds = new Set(
-        graph.getAllRelationships()
-          .filter(r => r.kind === adj.actorControlsVia && r.src === resolvedActor.id)
-          .map(r => r.dst)
-      );
-
-      // If actor controls nothing, allow any target (initial seizure)
-      if (controlledIds.size === 0) return true;
-
-      // Check if entity is adjacent to any controlled location
-      const isAdjacent = graph.getAllRelationships().some(r => {
-        if (r.kind !== adj.relationshipKind) return false;
-        return (
-          (r.src === entity.id && controlledIds.has(r.dst)) ||
-          (r.dst === entity.id && controlledIds.has(r.src))
-        );
-      });
-
-      if (!isAdjacent) return false;
-    }
-
-    if (adj.toResolvedActor && resolvedActor) {
-      // Entity must be adjacent to resolved actor (epicenter)
-      const isAdjacent = graph.getAllRelationships().some(r => {
-        if (r.kind !== adj.relationshipKind) return false;
-        return (
-          (r.src === entity.id && r.dst === resolvedActor.id) ||
-          (r.dst === entity.id && r.src === resolvedActor.id)
-        );
-      });
-
-      if (!isAdjacent) return false;
-    }
-  }
-
-  // Relationship requirement
-  if (require.hasRelationship) {
-    const hasReq = require.hasRelationship;
-
-    const matchingRels = graph.getAllRelationships().filter(r => {
-      if (r.kind !== hasReq.kind) return false;
-
-      const entityIsSource = r.src === entity.id;
-      const entityIsDest = r.dst === entity.id;
-
-      if (hasReq.direction === 'src' && !entityIsSource) return false;
-      if (hasReq.direction === 'dst' && !entityIsDest) return false;
-
-      if (hasReq.fromResolvedActor && resolvedActor) {
-        return r.src === resolvedActor.id;
-      }
-      if (hasReq.toActor) {
-        return r.dst === actor.id;
-      }
-
-      return true;
-    });
-
-    if (matchingRels.length === 0) return false;
-  }
-
-  return true;
-}
-
-/**
  * Find valid targets for an action.
  */
 function findTargets(
@@ -441,23 +244,20 @@ function findTargets(
     return true;
   });
 
-  // Apply exclusion filters
-  candidates = candidates.filter(e =>
-    !shouldExclude(
-      e,
-      actor,
-      resolvedActor,
-      targeting.exclude,
-      targeting.excludeMultiple,
-      targeting.excludeSelf,
-      graph
-    )
-  );
+  // Self exclusion
+  if (targeting.excludeSelf) {
+    candidates = candidates.filter(e => {
+      if (e.id === actor.id) return false;
+      if (resolvedActor && e.id === resolvedActor.id) return false;
+      return true;
+    });
+  }
 
-  // Apply inclusion requirements
-  candidates = candidates.filter(e =>
-    meetsRequirements(e, actor, resolvedActor, targeting.require, graph)
-  );
+  // Apply selection filters using shared module
+  if (targeting.filters && targeting.filters.length > 0) {
+    const resolver = new ActionEntityResolver(graph, actor, resolvedActor);
+    candidates = sharedApplySelectionFilters(candidates, targeting.filters, resolver);
+  }
 
   return candidates;
 }
@@ -642,8 +442,6 @@ export function createExecutableAction(action: DeclarativeAction): ExecutableAct
     baseWeight: action.probability.baseWeight,
     pressureModifiers: action.probability.pressureModifiers || [],
     requirements: {
-      minProminence: action.actor.minProminence,
-      requiredRelationships: action.actor.requiredRelationships,
       requiredPressures: action.actor.requiredPressures
     },
     handler: createActionHandler(action)

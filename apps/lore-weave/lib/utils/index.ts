@@ -51,12 +51,10 @@ export {
 // Relationship mutation (from graph/)
 export {
   addRelationship,
-  addRelationshipWithDistance,
   archiveRelationship,
   modifyRelationshipStrength,
   canFormRelationship,
-  recordRelationshipFormation,
-  areRelationshipsCompatible
+  recordRelationshipFormation
 } from '../graph/relationshipMutation';
 
 // Array/JSON utilities

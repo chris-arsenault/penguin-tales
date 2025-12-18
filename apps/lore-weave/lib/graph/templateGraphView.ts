@@ -3,7 +3,7 @@ import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
 import { CoordinateContext, PlacementContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
-import { addEntity, mergeTags, hasTag, addRelationship, updateEntity as updateEntityUtil, getRelated as getRelatedUtil, areRelationshipsCompatible as areRelationshipsCompatibleUtil, recordRelationshipFormation as recordRelationshipFormationUtil } from '../utils';
+import { addEntity, mergeTags, hasTag, addRelationship, updateEntity as updateEntityUtil, getRelated as getRelatedUtil, recordRelationshipFormation as recordRelationshipFormationUtil } from '../utils';
 import { archiveRelationship as archiveRel } from './relationshipMutation';
 import { archiveEntities as archiveEnts, transferRelationships as transferRels, createPartOfRelationships as createPartOf } from './entityArchival';
 import type {
@@ -549,9 +549,10 @@ export class TemplateGraphView {
 
   /**
    * Check if a relationship would be compatible (no contradictions).
+   * Always returns true - conflict checking was removed.
    */
-  areRelationshipsCompatible(srcId: string, dstId: string, kind: string): boolean {
-    return areRelationshipsCompatibleUtil(this.graph, srcId, dstId, kind);
+  areRelationshipsCompatible(_srcId: string, _dstId: string, _kind: string): boolean {
+    return true;
   }
 
   /**

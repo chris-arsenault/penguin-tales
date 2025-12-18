@@ -212,28 +212,14 @@ function selectAction(
 }
 
 /**
- * Check if agent meets action requirements
+ * Check if agent meets action requirements (pressure thresholds).
+ * Note: Entity-level requirements (prominence, relationships, tags) are now
+ * handled by SelectionFilters in the action config.
  */
 function meetsRequirements(agent: HardState, action: ExecutableAction, graphView: TemplateGraphView): boolean {
   if (!action.requirements) return true;
 
   const reqs = action.requirements;
-
-  // Check prominence requirement
-  if (reqs.minProminence) {
-    const prominenceOrder = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-    const agentLevel = prominenceOrder.indexOf(agent.prominence);
-    const requiredLevel = prominenceOrder.indexOf(reqs.minProminence);
-    if (agentLevel < requiredLevel) return false;
-  }
-
-  // Check required relationships
-  if (reqs.requiredRelationships) {
-    const hasAll = reqs.requiredRelationships.every((relKind: string) =>
-      agent.links.some(link => link.kind === relKind)
-    );
-    if (!hasAll) return false;
-  }
 
   // Check required pressures
   if (reqs.requiredPressures) {

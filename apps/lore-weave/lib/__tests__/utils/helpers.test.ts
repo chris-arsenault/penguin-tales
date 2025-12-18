@@ -20,14 +20,12 @@ import {
   addEntity,
   addRelationship,
   updateEntity,
-  addRelationshipWithDistance,
   archiveRelationship,
   modifyRelationshipStrength,
   weightedRandom,
   rollProbability,
   canFormRelationship,
   recordRelationshipFormation,
-  areRelationshipsCompatible,
   getConnectionWeight,
   getFactionRelationship
 } from '../../utils';
@@ -974,41 +972,6 @@ describe('Graph Modification', () => {
     });
   });
 
-  describe('addRelationshipWithDistance', () => {
-    it('should add relationship - distance is computed from coordinates', () => {
-      const graph = createMockGraph();
-      // Create entities with coordinates so distance can be computed
-      const e1 = createMockEntity({ id: 'e1', links: [], coordinates: { x: 0, y: 0, z: 0 } });
-      const e2 = createMockEntity({ id: 'e2', links: [], coordinates: { x: 30, y: 40, z: 0 } });
-
-      graph._loadEntity(e1.id, e1);
-      graph._loadEntity(e2.id, e2);
-
-      // distanceRange is now ignored - distance computed from coordinates
-      addRelationshipWithDistance(graph, 'derived_from', 'e1', 'e2', { min: 30, max: 50 });
-
-      const rel = graph.getRelationships()[0];
-      // Distance should be Euclidean: sqrt(30^2 + 40^2) = 50
-      expect(rel.distance).toBeCloseTo(50, 1);
-    });
-
-    it('should compute distance from coordinates ignoring invalid range', () => {
-      const graph = createMockGraph();
-      // Create entities with coordinates
-      const e1 = createMockEntity({ id: 'e1', links: [], coordinates: { x: 10, y: 10, z: 0 } });
-      const e2 = createMockEntity({ id: 'e2', links: [], coordinates: { x: 20, y: 20, z: 0 } });
-
-      graph._loadEntity(e1.id, e1);
-      graph._loadEntity(e2.id, e2);
-
-      // distanceRange is ignored - distance computed from coordinates
-      addRelationshipWithDistance(graph, 'test', 'e1', 'e2', { min: -1, max: 200 });
-
-      // Distance should be Euclidean: sqrt(10^2 + 10^2) ≈ 14.14
-      expect(graph.getRelationships()[0].distance).toBeCloseTo(14.14, 1);
-    });
-  });
-
   describe('archiveRelationship', () => {
     it('should mark relationship as historical', () => {
       const graph = createMockGraph();
@@ -1141,26 +1104,6 @@ describe('Relationship Cooldowns', () => {
 
       const cooldowns = graph.relationshipCooldowns.get('e1');
       expect(cooldowns?.get('friend_of')).toBe(150);
-    });
-  });
-});
-
-describe('Relationship Compatibility', () => {
-  describe('areRelationshipsCompatible', () => {
-    it('should always return true (conflict checking removed)', () => {
-      const graph = createMockGraph();
-      const e1 = createMockEntity({ id: 'e1', links: [] });
-      const e2 = createMockEntity({ id: 'e2', links: [] });
-
-      graph._loadEntity(e1.id, e1);
-      graph._loadEntity(e2.id, e2);
-
-      addRelationship(graph, 'lover_of', 'e1', 'e2');
-
-      // All relationships are compatible (conflict checking removed)
-      expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'enemy_of')).toBe(true);
-      expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'mentor_of')).toBe(true);
-      expect(areRelationshipsCompatible(graph, 'e1', 'e2', 'friend_of')).toBe(true);
     });
   });
 });

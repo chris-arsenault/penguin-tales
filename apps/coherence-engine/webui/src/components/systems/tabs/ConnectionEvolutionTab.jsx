@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { METRIC_TYPES, DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
+import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
 /**
  * RuleCard - Expandable card for rule configuration
@@ -311,6 +312,19 @@ export function ConnectionEvolutionTab({ system, onChange, schema }) {
             onChange={(v) => updateConfig('entityStatus', v)}
             options={getStatusOptions(config.entityKind)}
             placeholder="Any"
+          />
+        </div>
+
+        <div className="mt-xl">
+          <div className="section-subtitle">Advanced Selection Filters</div>
+          <div className="section-desc">
+            Filter entities by tags, relationships, prominence, culture, and more.
+          </div>
+          <SelectionFiltersEditor
+            filters={config.filters || []}
+            onChange={(v) => updateConfig('filters', v.length > 0 ? v : undefined)}
+            schema={schema}
+            availableRefs={[]}
           />
         </div>
       </div>

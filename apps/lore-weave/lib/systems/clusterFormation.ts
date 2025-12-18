@@ -23,6 +23,8 @@ import {
 } from '../graph/clusteringUtils';
 import { FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
 import { pickRandom } from '../utils';
+import { SelectionFilter } from '../engine/declarativeTypes';
+import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 
 // =============================================================================
 // CONFIGURATION TYPES
@@ -40,6 +42,8 @@ export interface EntityFilter {
   excludeSubtypes?: string[];
   /** Optional: only include entities with this status */
   status?: string;
+  /** Advanced selection filters (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 /**
@@ -422,6 +426,12 @@ export function createClusterFormationSystem(
 
       // Filter out historical and meta-entities
       entities = filterClusterableEntities(entities);
+
+      // Apply advanced selection filters
+      if (config.entityFilter.filters && config.entityFilter.filters.length > 0) {
+        const resolver = new SimpleEntityResolver(graphView);
+        entities = applySelectionFilters(entities, config.entityFilter.filters, resolver);
+      }
 
       if (entities.length < clusterConfig.minSize) {
         return {

@@ -3,8 +3,8 @@
  */
 
 import React from 'react';
-import { PROMINENCE_LEVELS } from '../constants';
-import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
+import { ChipSelect, NumberInput } from '../../shared';
+import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
 function PressureRequirementsEditor({ value = {}, onChange }) {
   const entries = Object.entries(value);
@@ -74,17 +74,18 @@ export function ActorTab({ action, onChange, schema }) {
     label: ek.kind,
   }));
 
-  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
-    value: rk.kind,
-    label: rk.description || rk.kind,
-  }));
-
   const subtypeOptions = (schema?.subtypes || []).map((st) => ({
     value: st,
     label: st,
   }));
 
-  const requiredRelationships = actor.requiredRelationships || [];
+  const statusOptions = (schema?.statuses || []).map((s) => ({
+    value: s,
+    label: s,
+  }));
+
+  // Available refs for selection filters (actor context)
+  const availableRefs = ['$actor', '$resolved_actor'];
 
   return (
     <div>
@@ -114,30 +115,16 @@ export function ActorTab({ action, onChange, schema }) {
             placeholder="Add subtype..."
           />
         </div>
-      </div>
 
-      <div className="section">
-        <div className="section-title">⭐ Prominence</div>
-        <ReferenceDropdown
-          label="Minimum Prominence"
-          value={actor.minProminence}
-          onChange={(v) => updateActor('minProminence', v)}
-          options={PROMINENCE_LEVELS}
-          placeholder="Any prominence"
-        />
-      </div>
-
-      <div className="section">
-        <div className="section-title">🔗 Required Relationships</div>
-        <div className="section-desc">
-          Actor must have at least one of these relationship types to perform this action.
+        <div className="mt-xl">
+          <ChipSelect
+            label="Statuses (optional)"
+            value={actor.statuses || []}
+            options={statusOptions}
+            onChange={(v) => updateActor('statuses', v.length > 0 ? v : undefined)}
+            placeholder="Add status..."
+          />
         </div>
-        <ChipSelect
-          value={requiredRelationships}
-          options={relationshipKindOptions}
-          onChange={(v) => updateActor('requiredRelationships', v.length > 0 ? v : undefined)}
-          placeholder="Add relationship..."
-        />
       </div>
 
       <div className="section">
@@ -148,6 +135,19 @@ export function ActorTab({ action, onChange, schema }) {
         <PressureRequirementsEditor
           value={actor.requiredPressures || {}}
           onChange={(v) => updateActor('requiredPressures', Object.keys(v).length > 0 ? v : undefined)}
+        />
+      </div>
+
+      <div className="section">
+        <div className="section-title">🔍 Selection Filters</div>
+        <div className="section-desc">
+          Filter actors by tags, relationships, prominence, culture, and more.
+        </div>
+        <SelectionFiltersEditor
+          filters={actor.filters || []}
+          onChange={(v) => updateActor('filters', v.length > 0 ? v : undefined)}
+          schema={schema}
+          availableRefs={availableRefs}
         />
       </div>
     </div>

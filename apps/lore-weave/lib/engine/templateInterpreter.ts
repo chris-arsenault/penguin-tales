@@ -8,8 +8,13 @@
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { TemplateGraphView } from '../graph/templateGraphView';
 import type { TemplateResult, PlacementDebug } from './types';
-import { pickRandom, hasTag, getTagValue } from '../utils';
+import { pickRandom, hasTag } from '../utils';
 import type { Point } from '../coordinates/types';
+import {
+  EntityResolver,
+  applySelectionFilter as sharedApplySelectionFilter,
+  evaluateGraphPath as sharedEvaluateGraphPath,
+} from '../selection';
 
 import type {
   DeclarativeTemplate,
@@ -31,8 +36,6 @@ import type {
   CountRange,
   RelationshipCondition,
   GraphPathAssertion,
-  PathStep,
-  PathConstraint,
   ExecutionContext as IExecutionContext,
   TemplateVariants,
   TemplateVariant,
@@ -78,8 +81,9 @@ export interface VariableDiagnosis {
 /**
  * Context maintained during template execution.
  * Holds resolved variables and provides utility methods.
+ * Implements EntityResolver for use with shared selection filters.
  */
-class ExecutionContext implements IExecutionContext {
+class ExecutionContext implements IExecutionContext, EntityResolver {
   graphView: TemplateGraphView;
   variables: Map<string, HardState | HardState[] | undefined> = new Map();
   target?: HardState;
@@ -105,6 +109,11 @@ class ExecutionContext implements IExecutionContext {
     return this.pathSets.get(name);
   }
 
+  /** EntityResolver interface */
+  getGraphView(): TemplateGraphView {
+    return this.graphView;
+  }
+
   /**
    * Resolve an entity reference to an actual entity.
    * Supports:
@@ -123,6 +132,11 @@ class ExecutionContext implements IExecutionContext {
 
     if (varName === 'target') {
       return this.target;
+    }
+
+    if (varName === 'self') {
+      // $self is handled specially in filter evaluation
+      return undefined;
     }
 
     const value = this.variables.get('$' + varName);
@@ -782,187 +796,6 @@ export class TemplateInterpreter {
     }
   }
 
-  // ===========================================================================
-  // GRAPH PATH EVALUATION
-  // ===========================================================================
-
-  /**
-   * Evaluate a graph path assertion starting from an entity.
-   * Supports up to 2 hops of traversal.
-   */
-  private evaluateGraphPath(
-    startEntity: HardState,
-    assertion: GraphPathAssertion,
-    context: ExecutionContext
-  ): boolean {
-    const { graphView } = context;
-
-    // Traverse the path, collecting entities at each step
-    let currentEntities: HardState[] = [startEntity];
-
-    for (const step of assertion.path) {
-      const nextEntities: HardState[] = [];
-
-      for (const entity of currentEntities) {
-        const related = this.traverseStep(entity, step, graphView);
-        nextEntities.push(...related);
-      }
-
-      // Store intermediate results if requested
-      if (step.as) {
-        context.setPathSet(step.as, new Set(nextEntities.map(e => e.id)));
-      }
-
-      currentEntities = nextEntities;
-    }
-
-    // Apply constraints to filter final entities
-    if (assertion.where) {
-      currentEntities = currentEntities.filter(entity =>
-        this.evaluatePathConstraints(entity, startEntity, assertion.where!, context)
-      );
-    }
-
-    // Evaluate the assertion
-    switch (assertion.check) {
-      case 'exists':
-        return currentEntities.length > 0;
-
-      case 'not_exists':
-        return currentEntities.length === 0;
-
-      case 'count_min':
-        return currentEntities.length >= (assertion.count ?? 1);
-
-      case 'count_max':
-        return currentEntities.length <= (assertion.count ?? 0);
-
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Traverse one step in a graph path.
-   */
-  private traverseStep(
-    entity: HardState,
-    step: PathStep,
-    graphView: TemplateGraphView
-  ): HardState[] {
-    // Get related entities via the relationship
-    const direction = step.direction === 'out' ? 'src' :
-                     step.direction === 'in' ? 'dst' : 'both';
-
-    let related = graphView.getRelatedEntities(entity.id, step.via, direction);
-
-    // Filter by target kind/subtype/status ("any" means no filtering)
-    if (step.targetKind && step.targetKind !== 'any') {
-      related = related.filter(e => e.kind === step.targetKind);
-    }
-    if (step.targetSubtype && step.targetSubtype !== 'any') {
-      related = related.filter(e => e.subtype === step.targetSubtype);
-    }
-    if (step.targetStatus && step.targetStatus !== 'any') {
-      related = related.filter(e => e.status === step.targetStatus);
-    }
-
-    return related;
-  }
-
-  /**
-   * Evaluate constraints on a path target entity.
-   */
-  private evaluatePathConstraints(
-    entity: HardState,
-    startEntity: HardState,
-    constraints: PathConstraint[],
-    context: ExecutionContext
-  ): boolean {
-    const { graphView } = context;
-
-    for (const constraint of constraints) {
-      switch (constraint.type) {
-        case 'not_in': {
-          const set = context.getPathSet(constraint.set);
-          if (set && set.has(entity.id)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'in': {
-          const set = context.getPathSet(constraint.set);
-          if (!set || !set.has(entity.id)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'not_self': {
-          if (entity.id === startEntity.id) {
-            return false;
-          }
-          break;
-        }
-
-        case 'lacks_relationship': {
-          const direction = constraint.direction === 'out' ? 'src' :
-                           constraint.direction === 'in' ? 'dst' : 'both';
-          const withEntity = constraint.with === '$self' ? startEntity :
-                            context.resolveEntity(constraint.with);
-
-          if (withEntity) {
-            const hasRel = graphView.hasRelationship(entity.id, withEntity.id, constraint.kind) ||
-                          (direction === 'both' && graphView.hasRelationship(withEntity.id, entity.id, constraint.kind));
-            if (hasRel) {
-              return false;
-            }
-          }
-          break;
-        }
-
-        case 'has_relationship': {
-          const direction = constraint.direction === 'out' ? 'src' :
-                           constraint.direction === 'in' ? 'dst' : 'both';
-          const withEntity = constraint.with === '$self' ? startEntity :
-                            context.resolveEntity(constraint.with);
-
-          if (withEntity) {
-            const hasRel = graphView.hasRelationship(entity.id, withEntity.id, constraint.kind) ||
-                          (direction === 'both' && graphView.hasRelationship(withEntity.id, entity.id, constraint.kind));
-            if (!hasRel) {
-              return false;
-            }
-          } else {
-            // No withEntity specified - just check if any such relationship exists
-            const related = graphView.getRelatedEntities(entity.id, constraint.kind, 'both');
-            if (related.length === 0) {
-              return false;
-            }
-          }
-          break;
-        }
-
-        case 'kind_equals': {
-          if (entity.kind !== constraint.kind) {
-            return false;
-          }
-          break;
-        }
-
-        case 'subtype_equals': {
-          if (entity.subtype !== constraint.subtype) {
-            return false;
-          }
-          break;
-        }
-      }
-    }
-
-    return true;
-  }
-
   /**
    * Evaluate a graph path filter for entity selection.
    */
@@ -971,11 +804,12 @@ export class TemplateInterpreter {
     assertion: GraphPathAssertion,
     context: ExecutionContext
   ): boolean {
-    // Create a fresh path context with this entity as the start
+    // Create a fresh resolver for path evaluation to avoid polluting the main context's path sets
     const pathContext = new ExecutionContext(context.graphView);
     pathContext.target = context.target;
     pathContext.variables = context.variables;
-    return this.evaluateGraphPath(entity, assertion, pathContext);
+    // Delegate to shared graph path implementation
+    return sharedEvaluateGraphPath(entity, assertion, pathContext);
   }
 
   // ===========================================================================
@@ -1090,133 +924,8 @@ export class TemplateInterpreter {
     filter: SelectionFilter,
     context: ExecutionContext
   ): HardState[] {
-    switch (filter.type) {
-      case 'exclude': {
-        const excludeIds = new Set(
-          filter.entities.map(ref => context.resolveEntity(ref)?.id).filter(Boolean)
-        );
-        return entities.filter(e => !excludeIds.has(e.id));
-      }
-
-      case 'has_relationship': {
-        const withEntity = filter.with ? context.resolveEntity(filter.with) : undefined;
-        return entities.filter(entity =>
-          entity.links.some(link => {
-            if (link.kind !== filter.kind) return false;
-            if (withEntity) {
-              if (filter.direction === 'src') return link.dst === withEntity.id;
-              if (filter.direction === 'dst') return link.src === withEntity.id;
-              return link.src === withEntity.id || link.dst === withEntity.id;
-            }
-            return true;
-          })
-        );
-      }
-
-      case 'lacks_relationship': {
-        const withEntity = filter.with ? context.resolveEntity(filter.with) : undefined;
-        return entities.filter(entity =>
-          !entity.links.some(link => {
-            if (link.kind !== filter.kind) return false;
-            if (withEntity) {
-              return link.src === withEntity.id || link.dst === withEntity.id;
-            }
-            return true;
-          })
-        );
-      }
-
-      case 'has_tag': {
-        return entities.filter(entity => {
-          if (!hasTag(entity.tags, filter.tag)) return false;
-          if (filter.value === undefined) return true;
-          return getTagValue(entity.tags, filter.tag) === filter.value;
-        });
-      }
-
-      case 'has_tags': {
-        const tagList = filter.tags || [];
-        if (tagList.length === 0) return entities;
-        return entities.filter(entity => tagList.every(tag => hasTag(entity.tags, tag)));
-      }
-
-      case 'has_any_tag': {
-        const tagList = filter.tags || [];
-        if (tagList.length === 0) return entities;
-        return entities.filter(entity => tagList.some(tag => hasTag(entity.tags, tag)));
-      }
-
-      case 'lacks_tag': {
-        return entities.filter(entity => {
-          if (!hasTag(entity.tags, filter.tag)) return true;  // Doesn't have tag, include
-          if (filter.value === undefined) return false;  // Has tag, exclude
-          // Has tag, only exclude if value matches
-          return getTagValue(entity.tags, filter.tag) !== filter.value;
-        });
-      }
-
-      case 'lacks_any_tag': {
-        const tagList = filter.tags || [];
-        if (tagList.length === 0) return entities;
-        return entities.filter(entity => !tagList.some(tag => hasTag(entity.tags, tag)));
-      }
-
-      case 'has_culture': {
-        return entities.filter(e => e.culture === filter.culture);
-      }
-
-      case 'matches_culture': {
-        const refEntity = context.resolveEntity(filter.with);
-        if (!refEntity) return entities;
-        return entities.filter(e => e.culture === refEntity.culture);
-      }
-
-      case 'has_status': {
-        return entities.filter(e => e.status === filter.status);
-      }
-
-      case 'has_prominence': {
-        const prominenceLevels = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-        const minIndex = prominenceLevels.indexOf(filter.minProminence);
-        if (minIndex === -1) return entities;
-        return entities.filter(e => {
-          const entityIndex = prominenceLevels.indexOf(e.prominence);
-          return entityIndex >= minIndex;
-        });
-      }
-
-      case 'shares_related': {
-        // Find entities that share a common related entity with the reference
-        const refEntity = context.resolveEntity(filter.with);
-        if (!refEntity) return entities;
-
-        // Get the related entities for the reference via the specified relationship kind
-        const refRelated = refEntity.links
-          .filter(link => link.kind === filter.relationshipKind)
-          .map(link => link.dst);
-
-        if (refRelated.length === 0) return [];
-
-        const refRelatedSet = new Set(refRelated);
-
-        // Filter entities that have at least one common related entity
-        return entities.filter(entity => {
-          const entityRelated = entity.links
-            .filter(link => link.kind === filter.relationshipKind)
-            .map(link => link.dst);
-          return entityRelated.some(id => refRelatedSet.has(id));
-        });
-      }
-
-      case 'graph_path': {
-        return entities.filter(entity =>
-          this.evaluateGraphPathForEntity(entity, filter.assert, context)
-        );
-      }
-
-      default:
-        return entities;
-    }
+    // Delegate to shared selection filter implementation
+    return sharedApplySelectionFilter(entities, filter, context);
   }
 
   // ===========================================================================

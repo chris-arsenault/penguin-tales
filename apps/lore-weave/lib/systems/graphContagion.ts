@@ -2,6 +2,8 @@ import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/type
 import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { rollProbability, hasTag } from '../utils';
+import { SelectionFilter } from '../engine/declarativeTypes';
+import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 
 /**
  * Graph Contagion System Factory
@@ -164,6 +166,9 @@ export interface GraphContagionConfig {
    * but not others.
    */
   multiSource?: MultiSourceConfig;
+
+  /** Advanced selection filters for the population (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 // =============================================================================
@@ -316,6 +321,12 @@ function applySingleSourceContagion(
   let entities = graphView.findEntities({ kind: config.entityKind });
   if (config.entityStatus) {
     entities = entities.filter(e => e.status === config.entityStatus);
+  }
+
+  // Apply advanced selection filters
+  if (config.filters && config.filters.length > 0) {
+    const resolver = new SimpleEntityResolver(graphView);
+    entities = applySelectionFilters(entities, config.filters, resolver);
   }
 
   // Categorize entities: infected, susceptible, immune
@@ -559,6 +570,12 @@ function applyMultiSourceContagion(
   let entities = graphView.findEntities({ kind: config.entityKind });
   if (config.entityStatus) {
     entities = entities.filter(e => e.status === config.entityStatus);
+  }
+
+  // Apply advanced selection filters
+  if (config.filters && config.filters.length > 0) {
+    const resolver = new SimpleEntityResolver(graphView);
+    entities = applySelectionFilters(entities, config.filters, resolver);
   }
 
   // Process each source independently

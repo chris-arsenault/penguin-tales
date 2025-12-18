@@ -51,20 +51,20 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "Optional subtype filter"
         },
-        "minProminence": {
-          "type": "string",
-          "enum": ["forgotten", "marginal", "recognized", "renowned", "mythic"],
-          "description": "Minimum prominence required"
-        },
-        "requiredRelationships": {
+        "statuses": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
-          "description": "Must have these relationship kinds (from actor)"
+          "description": "Filter by status"
         },
         "requiredPressures": {
           "type": "object",
           "additionalProperties": { "type": "number" },
           "description": "Pressures must exceed these thresholds"
+        },
+        "filters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectionFilter" },
+          "description": "Selection filters (same as generator targeting)"
         }
       }
     },
@@ -97,58 +97,6 @@
       }
     },
 
-    "RelationshipFilter": {
-      "type": "object",
-      "required": ["kind", "direction"],
-      "additionalProperties": false,
-      "properties": {
-        "kind": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Relationship kind"
-        },
-        "direction": {
-          "type": "string",
-          "enum": ["src", "dst", "both"],
-          "description": "Direction from the entity being filtered"
-        },
-        "fromResolvedActor": {
-          "type": "boolean",
-          "description": "Relationship must be from the resolved actor"
-        },
-        "toResolvedActor": {
-          "type": "boolean",
-          "description": "Relationship must be to the resolved actor"
-        },
-        "toActor": {
-          "type": "boolean",
-          "description": "Relationship must be to the actor"
-        }
-      }
-    },
-
-    "AdjacencyRequirement": {
-      "type": "object",
-      "required": ["relationshipKind"],
-      "additionalProperties": false,
-      "properties": {
-        "relationshipKind": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Relationship kind for adjacency"
-        },
-        "actorControlsVia": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Actor controls the adjacent entity via this relationship"
-        },
-        "toResolvedActor": {
-          "type": "boolean",
-          "description": "Must be adjacent to the resolved actor"
-        }
-      }
-    },
-
     "ActionTargetConfig": {
       "type": "object",
       "required": ["kind"],
@@ -177,30 +125,10 @@
           "type": "boolean",
           "description": "Exclude self (for faction-to-faction actions)"
         },
-        "exclude": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "existingRelationship": { "$ref": "#/$defs/RelationshipFilter" }
-          }
-        },
-        "excludeMultiple": {
+        "filters": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "existingRelationship": { "$ref": "#/$defs/RelationshipFilter" }
-            }
-          }
-        },
-        "require": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "adjacentTo": { "$ref": "#/$defs/AdjacencyRequirement" },
-            "hasRelationship": { "$ref": "#/$defs/RelationshipFilter" }
-          }
+          "items": { "$ref": "#/$defs/SelectionFilter" },
+          "description": "Selection filters (same as generator targeting)"
         }
       }
     },
@@ -305,6 +233,249 @@
           "description": "Pressure IDs that affect this action's weight"
         }
       }
+    },
+
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "Prominence": {
+      "enum": ["forgotten", "marginal", "recognized", "renowned", "mythic"]
+    },
+
+    "SelectionFilter": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "entities"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "exclude" },
+            "entities": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" },
+            "direction": { "enum": ["src", "dst", "both"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_tag" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" },
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_tags" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_any_tag" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tag"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_tag" },
+            "tag": { "$ref": "#/$defs/NonEmptyString" },
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "tags"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_any_tag" },
+            "tags": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "culture"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_culture" },
+            "culture": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "matches_culture" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_status" },
+            "status": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "minProminence"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_prominence" },
+            "minProminence": { "$ref": "#/$defs/Prominence" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "relationshipKind", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "shares_related" },
+            "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "assert"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "graph_path" },
+            "assert": { "$ref": "#/$defs/GraphPathAssertion" }
+          }
+        }
+      ]
+    },
+
+    "GraphPathAssertion": {
+      "type": "object",
+      "required": ["check", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "check": { "enum": ["exists", "not_exists", "count_min", "count_max"] },
+        "path": { "type": "array", "items": { "$ref": "#/$defs/PathStep" }, "minItems": 1 },
+        "count": { "type": "integer", "minimum": 0 },
+        "where": { "type": "array", "items": { "$ref": "#/$defs/PathConstraint" } }
+      }
+    },
+
+    "PathStep": {
+      "type": "object",
+      "required": ["via", "direction"],
+      "additionalProperties": false,
+      "properties": {
+        "via": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["out", "in", "any"] },
+        "targetKind": { "$ref": "#/$defs/NonEmptyString" },
+        "targetSubtype": { "$ref": "#/$defs/NonEmptyString" },
+        "targetStatus": { "$ref": "#/$defs/NonEmptyString" },
+        "as": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+
+    "PathConstraint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "set"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_in" },
+            "set": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "set"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "in" },
+            "set": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "has_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" },
+            "direction": { "enum": ["out", "in", "any"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind", "with"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "lacks_relationship" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "with": { "$ref": "#/$defs/NonEmptyString" },
+            "direction": { "enum": ["out", "in", "any"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "not_self" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "kind_equals" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "subtype"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "subtype_equals" },
+            "subtype": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        }
+      ]
     }
   }
 }

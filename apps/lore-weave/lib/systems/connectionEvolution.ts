@@ -2,6 +2,8 @@ import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/type
 import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { adjustProminence, getProminenceValue, rollProbability } from '../utils';
+import { SelectionFilter } from '../engine/declarativeTypes';
+import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 
 /**
  * Connection Evolution System Factory
@@ -106,6 +108,9 @@ export interface ConnectionEvolutionConfig {
 
   /** Throttle: only run on some ticks (0-1, default: 1.0 = every tick) */
   throttleChance?: number;
+
+  /** Advanced selection filters (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 // =============================================================================
@@ -278,6 +283,12 @@ export function createConnectionEvolutionSystem(
 
       if (config.entityStatus) {
         entities = entities.filter(e => e.status === config.entityStatus);
+      }
+
+      // Apply advanced selection filters
+      if (config.filters && config.filters.length > 0) {
+        const resolver = new SimpleEntityResolver(graphView);
+        entities = applySelectionFilters(entities, config.filters, resolver);
       }
 
       // For create_relationship with betweenMatching, track matching entities per rule

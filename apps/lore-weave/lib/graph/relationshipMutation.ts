@@ -26,22 +26,6 @@ export function addRelationship(
 }
 
 /**
- * @deprecated Distance is now always computed from coordinates.
- * Use addRelationship() instead - distance cannot be set manually.
- */
-export function addRelationshipWithDistance(
-  graph: Graph,
-  kind: string,
-  srcId: string,
-  dstId: string,
-  _distanceRangeIgnored: { min: number; max: number },
-  strength: number = 0.5
-): void {
-  // Distance is computed from coordinates, not from the range
-  addRelationship(graph, kind, srcId, dstId, strength);
-}
-
-/**
  * Archive a relationship by marking it as historical.
  */
 export function archiveRelationship(
@@ -160,15 +144,3 @@ export function recordRelationshipFormation(
   entityCooldowns.set(relationshipType, graph.tick);
 }
 
-/**
- * Check if a new relationship is compatible with existing relationships.
- * Returns true - all relationships are compatible (conflict checking removed).
- */
-export function areRelationshipsCompatible(
-  graph: Graph,
-  srcId: string,
-  dstId: string,
-  newKind: string
-): boolean {
-  return true;
-}

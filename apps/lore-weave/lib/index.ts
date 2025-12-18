@@ -102,9 +102,7 @@ export {
   normalizeInitialState,
   slugifyName,
   archiveRelationship,
-  addRelationshipWithDistance,
   modifyRelationshipStrength,
-  areRelationshipsCompatible,
   // Tag utilities
   mergeTags,
   hasTag,

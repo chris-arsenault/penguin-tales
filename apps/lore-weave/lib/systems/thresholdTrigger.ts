@@ -2,6 +2,8 @@ import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/type
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { rollProbability, hasTag, generateId } from '../utils';
+import { SelectionFilter } from '../engine/declarativeTypes';
+import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 
 /**
  * Threshold Trigger System Factory
@@ -100,8 +102,8 @@ export interface EntityFilter {
   subtypes?: string[];
   status?: string;
   notStatus?: string;
-  hasTag?: string;
-  notHasTag?: string;
+  /** Advanced selection filters (same as generator targeting) */
+  filters?: SelectionFilter[];
 }
 
 export interface ThresholdTriggerConfig {
@@ -491,17 +493,15 @@ export function createThresholdTriggerSystem(
         entities = entities.filter(e => e.status !== config.entityFilter.notStatus);
       }
 
-      if (config.entityFilter.hasTag) {
-        entities = entities.filter(e => hasTag(e.tags, config.entityFilter.hasTag!));
-      }
-
-      if (config.entityFilter.notHasTag) {
-        entities = entities.filter(e => !hasTag(e.tags, config.entityFilter.notHasTag!));
-      }
-
       // Apply cooldown filter
       if (config.cooldownTag) {
         entities = entities.filter(e => !hasTag(e.tags, config.cooldownTag!));
+      }
+
+      // Apply advanced selection filters
+      if (config.entityFilter.filters && config.entityFilter.filters.length > 0) {
+        const resolver = new SimpleEntityResolver(graphView);
+        entities = applySelectionFilters(entities, config.entityFilter.filters, resolver);
       }
 
       // Evaluate conditions on each entity

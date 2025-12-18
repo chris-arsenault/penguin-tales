@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { CLUSTER_MODES, CONDITION_TYPES, ACTION_TYPES, DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
+import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
 /**
  * ConditionCard - Expandable card for condition configuration
@@ -403,7 +404,6 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
     value: rk.kind,
     label: rk.description || rk.kind,
   }));
-  const tagRegistry = schema?.tagRegistry || [];
 
   const getStatusOptions = (kind) => {
     const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
@@ -473,26 +473,19 @@ export function ThresholdTriggerTab({ system, onChange, schema }) {
               placeholder="Any"
             />
           )}
-          <div className="form-group">
-            <label className="label">Has Tag</label>
-            <TagSelector
-              value={config.entityFilter?.hasTag ? [config.entityFilter.hasTag] : []}
-              onChange={(tags) => updateEntityFilter('hasTag', tags[0] || undefined)}
-              tagRegistry={tagRegistry}
-              placeholder="Select tag..."
-              singleSelect
-            />
+        </div>
+
+        <div className="mt-xl">
+          <div className="section-subtitle">Advanced Selection Filters</div>
+          <div className="section-desc">
+            Filter entities by tags, relationships, prominence, culture, and more.
           </div>
-          <div className="form-group">
-            <label className="label">Not Has Tag</label>
-            <TagSelector
-              value={config.entityFilter?.notHasTag ? [config.entityFilter.notHasTag] : []}
-              onChange={(tags) => updateEntityFilter('notHasTag', tags[0] || undefined)}
-              tagRegistry={tagRegistry}
-              placeholder="Select tag..."
-              singleSelect
-            />
-          </div>
+          <SelectionFiltersEditor
+            filters={config.entityFilter?.filters || []}
+            onChange={(v) => updateEntityFilter('filters', v.length > 0 ? v : undefined)}
+            schema={schema}
+            availableRefs={[]}
+          />
         </div>
       </div>
 
