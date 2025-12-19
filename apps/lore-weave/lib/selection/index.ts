@@ -5,11 +5,8 @@
  * used across templates, actions, and systems.
  */
 
-export {
-  EntityResolver,
-  ActionEntityResolver,
-  SimpleEntityResolver,
-} from './entityResolver';
+export type { EntityResolver } from './entityResolver';
+export { ActionEntityResolver, SimpleEntityResolver } from './entityResolver';
 
 export {
   evaluateGraphPath,
@@ -21,3 +18,7 @@ export {
   entityPassesFilter,
   entityPassesAllFilters,
 } from './selectionFilters';
+
+export {
+  matchesActorConfig,
+} from './actorMatcher';

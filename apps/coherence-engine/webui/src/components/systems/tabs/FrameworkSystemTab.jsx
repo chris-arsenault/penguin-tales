@@ -69,28 +69,6 @@ export function FrameworkSystemTab({ system, onChange }) {
               />
             </div>
             <div className="form-group">
-              <label className="label">Influence Gain</label>
-              <NumberInput
-                value={config.influenceGain}
-                onChange={(v) => updateConfig('influenceGain', v)}
-                className="input"
-                step={0.05}
-                min={0}
-                allowEmpty
-              />
-            </div>
-            <div className="form-group">
-              <label className="label">Influence Loss</label>
-              <NumberInput
-                value={config.influenceLoss}
-                onChange={(v) => updateConfig('influenceLoss', v)}
-                className="input"
-                step={0.05}
-                min={0}
-                allowEmpty
-              />
-            </div>
-            <div className="form-group">
               <label className="label">Pressure Multiplier</label>
               <NumberInput
                 value={config.pressureMultiplier}
@@ -98,6 +76,30 @@ export function FrameworkSystemTab({ system, onChange }) {
                 className="input"
                 step={0.1}
                 min={0}
+                allowEmpty
+              />
+            </div>
+            <div className="form-group">
+              <label className="label">Prominence Up % on Success</label>
+              <NumberInput
+                value={config.prominenceUpChanceOnSuccess}
+                onChange={(v) => updateConfig('prominenceUpChanceOnSuccess', v)}
+                className="input"
+                step={0.05}
+                min={0}
+                max={1}
+                allowEmpty
+              />
+            </div>
+            <div className="form-group">
+              <label className="label">Prominence Down % on Failure</label>
+              <NumberInput
+                value={config.prominenceDownChanceOnFailure}
+                onChange={(v) => updateConfig('prominenceDownChanceOnFailure', v)}
+                className="input"
+                step={0.05}
+                min={0}
+                max={1}
                 allowEmpty
               />
             </div>

@@ -10,7 +10,7 @@
           "type": "entity_count",
           "coefficient": 0.6,
           "kind": "location",
-          "subtype": "geographic_feature"
+          "subtype": "resource_node"
         }
       ],
       "negativeFeedback": [
@@ -79,7 +79,7 @@
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 1,
+          "coefficient": 0.5,
           "kind": "npc",
           "subtype": "hero"
         }
@@ -87,7 +87,7 @@
       "negativeFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 1,
+          "coefficient": 0.5,
           "tags": [
             "hostile",
             "raider",

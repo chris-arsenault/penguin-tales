@@ -6,54 +6,210 @@ import React from 'react';
 import { ChipSelect, NumberInput } from '../../shared';
 import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
-function PressureRequirementsEditor({ value = {}, onChange }) {
-  const entries = Object.entries(value);
+/**
+ * Editor for pressure band requirements (min/max ranges).
+ * Value is an array of { pressure: string, min?: number, max?: number }
+ */
+function PressureBandsEditor({ value = [], onChange, pressures = [] }) {
+  const bands = Array.isArray(value) ? value : [];
 
-  const updatePressure = (pressureId, min) => {
-    onChange({ ...value, [pressureId]: min });
+  const updateBand = (index, field, fieldValue) => {
+    const newBands = [...bands];
+    newBands[index] = { ...newBands[index], [field]: fieldValue };
+    // Remove undefined values
+    if (fieldValue === undefined || fieldValue === '') {
+      delete newBands[index][field];
+    }
+    onChange(newBands);
   };
 
-  const removePressure = (pressureId) => {
-    const newValue = { ...value };
-    delete newValue[pressureId];
-    onChange(newValue);
+  const removeBand = (index) => {
+    const newBands = bands.filter((_, i) => i !== index);
+    onChange(newBands);
   };
 
-  const addPressure = () => {
-    const id = `pressure_${Date.now()}`;
-    onChange({ ...value, [id]: 0 });
+  const addBand = () => {
+    onChange([...bands, { pressure: '' }]);
   };
 
   return (
     <div>
-      {entries.map(([pressureId, minValue]) => (
-        <div key={pressureId} className="flex items-center gap-md mb-md">
-          <input
-            type="text"
-            value={pressureId}
-            onChange={(e) => {
-              const newValue = { ...value };
-              delete newValue[pressureId];
-              newValue[e.target.value] = minValue;
-              onChange(newValue);
-            }}
+      {bands.map((band, index) => (
+        <div key={index} className="flex items-center gap-md mb-md">
+          <select
+            value={band.pressure || ''}
+            onChange={(e) => updateBand(index, 'pressure', e.target.value)}
             className="input flex-1"
-            placeholder="Pressure ID"
-          />
-          <span className="text-muted text-xs">≥</span>
+          >
+            <option value="">Select pressure...</option>
+            {pressures.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <span className="text-muted text-xs">min</span>
           <NumberInput
-            value={minValue}
-            onChange={(v) => updatePressure(pressureId, v ?? 0)}
+            value={band.min}
+            onChange={(v) => updateBand(index, 'min', v)}
             className="input input-xs"
             integer
+            placeholder="-100"
           />
-          <button className="btn-icon btn-icon-danger" onClick={() => removePressure(pressureId)}>
+          <span className="text-muted text-xs">max</span>
+          <NumberInput
+            value={band.max}
+            onChange={(v) => updateBand(index, 'max', v)}
+            className="input input-xs"
+            integer
+            placeholder="100"
+          />
+          <button className="btn-icon btn-icon-danger" onClick={() => removeBand(index)}>
             ×
           </button>
         </div>
       ))}
-      <button className="btn btn-add" onClick={addPressure}>
-        + Add Pressure Requirement
+      <button className="btn btn-add" onClick={addBand}>
+        + Add Pressure Band
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Editor for instigator configuration.
+ * Instigator is an optional entity that triggers the action on behalf of the actor.
+ */
+function InstigatorEditor({ value, onChange, schema }) {
+  const instigator = value || {};
+  const hasInstigator = !!value;
+
+  const updateInstigator = (field, fieldValue) => {
+    const updated = { ...instigator, [field]: fieldValue };
+    // Remove undefined values
+    if (fieldValue === undefined || fieldValue === '' || (Array.isArray(fieldValue) && fieldValue.length === 0)) {
+      delete updated[field];
+    }
+    onChange(updated);
+  };
+
+  const enableInstigator = () => {
+    onChange({ relationshipKind: '', direction: 'in' });
+  };
+
+  const disableInstigator = () => {
+    onChange(undefined);
+  };
+
+  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
+    value: ek.kind,
+    label: ek.kind,
+  }));
+
+  const subtypeOptions = (schema?.subtypes || []).map((st) => ({
+    value: st,
+    label: st,
+  }));
+
+  const statusOptions = (schema?.statuses || []).map((s) => ({
+    value: s,
+    label: s,
+  }));
+
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  if (!hasInstigator) {
+    return (
+      <div>
+        <div className="text-muted text-small mb-md">
+          No instigator configured. The actor performs the action directly.
+        </div>
+        <button className="btn btn-add" onClick={enableInstigator}>
+          + Add Instigator
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-lg mb-lg">
+        <div className="flex-1">
+          <label className="label">Relationship Kind</label>
+          <select
+            value={instigator.relationshipKind || ''}
+            onChange={(e) => updateInstigator('relationshipKind', e.target.value)}
+            className="input"
+          >
+            <option value="">Select relationship...</option>
+            {relationshipKindOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Direction</label>
+          <select
+            value={instigator.direction || 'in'}
+            onChange={(e) => updateInstigator('direction', e.target.value)}
+            className="input"
+          >
+            <option value="in">Instigator → Actor</option>
+            <option value="out">Actor → Instigator</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="text-muted text-xs mb-lg">
+        {instigator.direction === 'in'
+          ? 'Instigator has relationship pointing TO the actor (e.g., NPC --leader_of--> Faction)'
+          : 'Actor has relationship pointing TO the instigator (e.g., Faction --has_leader--> NPC)'}
+      </div>
+
+      <div className="mb-lg">
+        <ChipSelect
+          label="Instigator Kinds (optional)"
+          value={instigator.kinds || []}
+          options={entityKindOptions}
+          onChange={(v) => updateInstigator('kinds', v)}
+          placeholder="Any kind..."
+        />
+      </div>
+
+      <div className="mb-lg">
+        <ChipSelect
+          label="Instigator Subtypes (optional)"
+          value={instigator.subtypes || []}
+          options={subtypeOptions}
+          onChange={(v) => updateInstigator('subtypes', v)}
+          placeholder="Any subtype..."
+        />
+      </div>
+
+      <div className="mb-lg">
+        <ChipSelect
+          label="Instigator Statuses (optional)"
+          value={instigator.statuses || []}
+          options={statusOptions}
+          onChange={(v) => updateInstigator('statuses', v)}
+          placeholder="Any status..."
+        />
+      </div>
+
+      <div className="flex items-center gap-md mb-lg">
+        <label className="flex items-center gap-sm">
+          <input
+            type="checkbox"
+            checked={instigator.required || false}
+            onChange={(e) => updateInstigator('required', e.target.checked || undefined)}
+          />
+          <span className="text-small">Instigator required (actor cannot act without one)</span>
+        </label>
+      </div>
+
+      <button className="btn btn-danger-outline" onClick={disableInstigator}>
+        Remove Instigator
       </button>
     </div>
   );
@@ -85,19 +241,23 @@ export function ActorTab({ action, onChange, schema }) {
   }));
 
   // Available refs for selection filters (actor context)
-  const availableRefs = ['$actor', '$resolved_actor'];
+  const availableRefs = ['$actor', '$instigator'];
 
   return (
     <div>
       <div className="info-box">
-        <div className="info-box-title">Actor Requirements</div>
+        <div className="info-box-title">Actor Configuration</div>
         <div className="info-box-text">
-          Define which entities can perform this action. Actors must match all specified criteria.
+          The actor is the primary entity that performs the action on the target.
+          An optional instigator can trigger the action on behalf of the actor.
         </div>
       </div>
 
       <div className="section">
-        <div className="section-title">🎭 Entity Requirements</div>
+        <div className="section-title">🎭 Actor Requirements</div>
+        <div className="section-desc">
+          The actor is the entity that interacts with the target (e.g., faction that controls a location).
+        </div>
         <ChipSelect
           label="Actor Kinds"
           value={actor.kinds || []}
@@ -128,18 +288,7 @@ export function ActorTab({ action, onChange, schema }) {
       </div>
 
       <div className="section">
-        <div className="section-title">📊 Required Pressures</div>
-        <div className="section-desc">
-          Minimum pressure levels required for this action to be available.
-        </div>
-        <PressureRequirementsEditor
-          value={actor.requiredPressures || {}}
-          onChange={(v) => updateActor('requiredPressures', Object.keys(v).length > 0 ? v : undefined)}
-        />
-      </div>
-
-      <div className="section">
-        <div className="section-title">🔍 Selection Filters</div>
+        <div className="section-title">🔍 Actor Selection Filters</div>
         <div className="section-desc">
           Filter actors by tags, relationships, prominence, culture, and more.
         </div>
@@ -148,6 +297,30 @@ export function ActorTab({ action, onChange, schema }) {
           onChange={(v) => updateActor('filters', v.length > 0 ? v : undefined)}
           schema={schema}
           availableRefs={availableRefs}
+        />
+      </div>
+
+      <div className="section">
+        <div className="section-title">👤 Instigator (Optional)</div>
+        <div className="section-desc">
+          An instigator triggers the action on behalf of the actor (e.g., NPC leader acts for their faction).
+        </div>
+        <InstigatorEditor
+          value={actor.instigator}
+          onChange={(v) => updateActor('instigator', v)}
+          schema={schema}
+        />
+      </div>
+
+      <div className="section">
+        <div className="section-title">📊 Required Pressure Bands</div>
+        <div className="section-desc">
+          Pressure ranges required for this action to be available. Leave min/max empty for no bound.
+        </div>
+        <PressureBandsEditor
+          value={actor.requiredPressures || []}
+          onChange={(v) => updateActor('requiredPressures', v.length > 0 ? v : undefined)}
+          pressures={schema?.pressures || []}
         />
       </div>
     </div>

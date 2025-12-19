@@ -44,9 +44,14 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
   const addStrengthen = () => {
     updateOutcome('strengthenRelationships', [
       ...strengthenRelationships,
-      { kind: '', amount: 0.1 },
+      { kind: '', channel: 'actor_target', amount: 0.1 },
     ]);
   };
+
+  const CHANNEL_OPTIONS = [
+    { value: 'instigator_actor', label: 'Instigator ↔ Actor' },
+    { value: 'actor_target', label: 'Actor ↔ Target' },
+  ];
 
   const updateStrengthen = (index, item) => {
     const newItems = [...strengthenRelationships];
@@ -129,7 +134,7 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       <div className="section">
         <div className="section-title">💪 Strengthen Relationships ({strengthenRelationships.length})</div>
         <div className="section-desc">
-          Increase strength of existing relationships.
+          Modify strength of existing relationships between entities. Use negative amounts to weaken.
         </div>
         {strengthenRelationships.map((item, index) => (
           <div key={index} className="item-card">
@@ -142,11 +147,18 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
                     onChange={(v) => updateStrengthen(index, { ...item, kind: v })}
                     options={relationshipKindOptions}
                   />
+                  <ReferenceDropdown
+                    label="Channel"
+                    value={item.channel || 'actor_target'}
+                    onChange={(v) => updateStrengthen(index, { ...item, channel: v })}
+                    options={CHANNEL_OPTIONS}
+                  />
                   <div className="form-group">
                     <label className="label">Amount</label>
                     <NumberInput
                       value={item.amount}
                       onChange={(v) => updateStrengthen(index, { ...item, amount: v ?? 0 })}
+                      step={0.1}
                     />
                   </div>
                 </div>
@@ -163,6 +175,33 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       </div>
 
       <div className="section">
+        <div className="section-title">⭐ Prominence Changes</div>
+        <div className="section-desc">
+          Apply system-level prominence changes on success/failure. Chances are configured at the system level.
+        </div>
+        <div className="form-row">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={outcome.applyProminenceToActor || false}
+              onChange={(e) => updateOutcome('applyProminenceToActor', e.target.checked || undefined)}
+              className="checkbox"
+            />
+            Apply prominence changes to Actor
+          </label>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={outcome.applyProminenceToInstigator || false}
+              onChange={(e) => updateOutcome('applyProminenceToInstigator', e.target.checked || undefined)}
+              className="checkbox"
+            />
+            Apply prominence changes to Instigator
+          </label>
+        </div>
+      </div>
+
+      <div className="section">
         <div className="section-title">📊 Pressure Changes</div>
         <PressureChangesEditor
           value={outcome.pressureChanges || {}}
@@ -174,7 +213,7 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       <div className="section">
         <div className="section-title">📝 Description Template</div>
         <div className="section-desc">
-          Template for generating occurrence descriptions. Use {'{target.name}'}, {'{resolved_actor.name}'}, etc.
+          Template for generating occurrence descriptions. Use {'{actor.name}'}, {'{instigator.name}'}, {'{target.name}'}, etc.
         </div>
         <textarea
           value={outcome.descriptionTemplate || ''}

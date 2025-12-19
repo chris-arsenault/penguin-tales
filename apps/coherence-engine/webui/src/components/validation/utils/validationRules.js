@@ -14,31 +14,26 @@
  *
  * Structure errors are caught before simulation run as a hard gate.
  * Coherence issues are displayed in the Coherence Engine tab as editorial guidance.
+ *
+ * NOTE: This module uses the usageMap from @penguin-tales/shared-components computeUsageMap
+ * for reference validation. This ensures a single source of truth for all validation logic.
  */
-
-import {
-  collectEntityKindRefs,
-  collectRelationshipKindRefs,
-  collectTagRefs,
-  collectPressureIdRefs,
-} from './collectors';
 
 export const validationRules = {
   /**
    * 1. Invalid Entity Kind References (ERROR)
+   * Uses usageMap.validation.invalidRefs where refType === 'entityKind'
    */
-  invalidEntityKind: (schema, generators, pressures, systems) => {
-    const validKinds = new Set((schema.entityKinds || []).map(e => e.kind));
-    const refs = collectEntityKindRefs(generators, pressures, systems);
-    const invalid = refs.filter(r => !validKinds.has(r.kind));
+  invalidEntityKind: (usageMap) => {
+    const invalid = (usageMap?.validation?.invalidRefs || [])
+      .filter(r => r.refType === 'entityKind');
 
     if (invalid.length === 0) return null;
 
     // Group by invalid kind
     const byKind = {};
     for (const r of invalid) {
-      // Ensure kind is a string for proper grouping and display
-      const kindStr = typeof r.kind === 'object' ? JSON.stringify(r.kind) : String(r.kind);
+      const kindStr = typeof r.refId === 'object' ? JSON.stringify(r.refId) : String(r.refId);
       if (!byKind[kindStr]) byKind[kindStr] = [];
       byKind[kindStr].push(r);
     }
@@ -51,25 +46,24 @@ export const validationRules = {
       affectedItems: Object.entries(byKind).map(([kind, sources]) => ({
         id: kind,
         label: kind,
-        detail: `Referenced by: ${sources.map(s => s.source).join(', ')}`,
+        detail: `Referenced by: ${sources.map(s => s.location).join(', ')}`,
       })),
     };
   },
 
   /**
    * 2. Invalid Relationship Kind References (ERROR)
+   * Uses usageMap.validation.invalidRefs where refType === 'relationshipKind'
    */
-  invalidRelationshipKind: (schema, generators, pressures, systems) => {
-    const validKinds = new Set((schema.relationshipKinds || []).map(r => r.kind));
-    const refs = collectRelationshipKindRefs(generators, pressures, systems);
-    const invalid = refs.filter(r => !validKinds.has(r.kind));
+  invalidRelationshipKind: (usageMap) => {
+    const invalid = (usageMap?.validation?.invalidRefs || [])
+      .filter(r => r.refType === 'relationshipKind');
 
     if (invalid.length === 0) return null;
 
     const byKind = {};
     for (const r of invalid) {
-      // Ensure kind is a string for proper grouping and display
-      const kindStr = typeof r.kind === 'object' ? JSON.stringify(r.kind) : String(r.kind);
+      const kindStr = typeof r.refId === 'object' ? JSON.stringify(r.refId) : String(r.refId);
       if (!byKind[kindStr]) byKind[kindStr] = [];
       byKind[kindStr].push(r);
     }
@@ -82,25 +76,24 @@ export const validationRules = {
       affectedItems: Object.entries(byKind).map(([kind, sources]) => ({
         id: kind,
         label: kind,
-        detail: `Referenced by: ${sources.map(s => s.source).join(', ')}`,
+        detail: `Referenced by: ${sources.map(s => s.location).join(', ')}`,
       })),
     };
   },
 
   /**
    * 3. Invalid Pressure ID References (ERROR)
+   * Uses usageMap.validation.invalidRefs where refType === 'pressure'
    */
-  invalidPressureId: (pressures, generators, systems, eras, actions) => {
-    const validIds = new Set(pressures.map(p => p.id));
-    const refs = collectPressureIdRefs(generators, systems, eras, actions);
-    const invalid = refs.filter(r => !validIds.has(r.id));
+  invalidPressureId: (usageMap) => {
+    const invalid = (usageMap?.validation?.invalidRefs || [])
+      .filter(r => r.refType === 'pressure');
 
     if (invalid.length === 0) return null;
 
     const byId = {};
     for (const r of invalid) {
-      // Ensure ID is a string for proper grouping and display
-      const idStr = typeof r.id === 'object' ? JSON.stringify(r.id) : String(r.id);
+      const idStr = typeof r.refId === 'object' ? JSON.stringify(r.refId) : String(r.refId);
       if (!byId[idStr]) byId[idStr] = [];
       byId[idStr].push(r);
     }
@@ -113,27 +106,18 @@ export const validationRules = {
       affectedItems: Object.entries(byId).map(([id, sources]) => ({
         id,
         label: id,
-        detail: `Referenced by: ${sources.map(s => s.source).join(', ')}`,
+        detail: `Referenced by: ${sources.map(s => s.location).join(', ')}`,
       })),
     };
   },
 
   /**
    * 4. Invalid Era Template References (ERROR)
+   * Uses usageMap.validation.invalidRefs where refType === 'generator'
    */
-  invalidEraTemplateRef: (eras, generators) => {
-    const validIds = new Set(generators.map(g => g.id));
-    const invalid = [];
-
-    for (const era of eras) {
-      if (era.templateWeights) {
-        for (const genId of Object.keys(era.templateWeights)) {
-          if (!validIds.has(genId)) {
-            invalid.push({ genId, eraId: era.id, eraName: era.name });
-          }
-        }
-      }
-    }
+  invalidEraTemplateRef: (usageMap) => {
+    const invalid = (usageMap?.validation?.invalidRefs || [])
+      .filter(r => r.refType === 'generator' && r.type === 'era');
 
     if (invalid.length === 0) return null;
 
@@ -143,29 +127,20 @@ export const validationRules = {
       message: 'These eras reference generators that do not exist. The weights will have no effect.',
       severity: 'error',
       affectedItems: invalid.map(i => ({
-        id: `${i.eraId}:${i.genId}`,
-        label: i.genId,
-        detail: `In era "${i.eraName}"`,
+        id: `${i.id}:${i.refId}`,
+        label: i.refId,
+        detail: i.location,
       })),
     };
   },
 
   /**
    * 5. Invalid Era System References (ERROR)
+   * Uses usageMap.validation.invalidRefs where refType === 'system'
    */
-  invalidEraSystemRef: (eras, systems) => {
-    const validIds = new Set(systems.map(s => s.config?.id).filter(Boolean));
-    const invalid = [];
-
-    for (const era of eras) {
-      if (era.systemModifiers) {
-        for (const sysId of Object.keys(era.systemModifiers)) {
-          if (!validIds.has(sysId)) {
-            invalid.push({ sysId, eraId: era.id, eraName: era.name });
-          }
-        }
-      }
-    }
+  invalidEraSystemRef: (usageMap) => {
+    const invalid = (usageMap?.validation?.invalidRefs || [])
+      .filter(r => r.refType === 'system' && r.type === 'era');
 
     if (invalid.length === 0) return null;
 
@@ -175,9 +150,9 @@ export const validationRules = {
       message: 'These eras reference systems that do not exist. The modifiers will have no effect.',
       severity: 'error',
       affectedItems: invalid.map(i => ({
-        id: `${i.eraId}:${i.sysId}`,
-        label: i.sysId,
-        detail: `In era "${i.eraName}"`,
+        id: `${i.id}:${i.refId}`,
+        label: i.refId,
+        detail: i.location,
       })),
     };
   },
@@ -185,7 +160,7 @@ export const validationRules = {
   /**
    * 6. Pressure Without Sources (WARNING)
    */
-  pressureWithoutSources: (pressures, generators, systems) => {
+  pressureWithoutSources: (usageMap, pressures, generators, systems) => {
     const pressuresWithSources = new Set();
 
     // Check generators for positive pressure changes
@@ -237,7 +212,7 @@ export const validationRules = {
   /**
    * 7. Pressure Without Sinks (WARNING)
    */
-  pressureWithoutSinks: (pressures, generators, systems) => {
+  pressureWithoutSinks: (usageMap, pressures, generators, systems) => {
     const pressuresWithSinks = new Set();
 
     // Check generators for negative pressure changes
@@ -288,18 +263,11 @@ export const validationRules = {
 
   /**
    * 8. Orphan Generators (WARNING)
+   * Uses usageMap.validation.orphans where type === 'generator'
    */
-  orphanGenerators: (eras, generators) => {
-    const referencedIds = new Set();
-    for (const era of eras) {
-      if (era.templateWeights) {
-        for (const genId of Object.keys(era.templateWeights)) {
-          referencedIds.add(genId);
-        }
-      }
-    }
-
-    const orphans = generators.filter(g => g.enabled !== false && !referencedIds.has(g.id));
+  orphanGenerators: (usageMap) => {
+    const orphans = (usageMap?.validation?.orphans || [])
+      .filter(o => o.type === 'generator');
 
     if (orphans.length === 0) return null;
 
@@ -308,34 +276,21 @@ export const validationRules = {
       title: 'Generators not referenced in any era',
       message: 'These generators are not referenced in any era\'s templateWeights. They will never execute during simulation.',
       severity: 'warning',
-      affectedItems: orphans.map(g => ({
-        id: g.id,
-        label: g.name || g.id,
-        detail: 'Not in any era templateWeights',
+      affectedItems: orphans.map(o => ({
+        id: o.id,
+        label: o.id,
+        detail: o.reason,
       })),
     };
   },
 
   /**
    * 9. Orphan Systems (WARNING)
+   * Uses usageMap.validation.orphans where type === 'system'
    */
-  orphanSystems: (eras, systems) => {
-    const referencedIds = new Set();
-    for (const era of eras) {
-      if (era.systemModifiers) {
-        for (const sysId of Object.keys(era.systemModifiers)) {
-          referencedIds.add(sysId);
-        }
-      }
-    }
-
-    // Framework systems that always run
-    const frameworkSystems = new Set(['era_spawner', 'era_transition', 'universal_catalyst']);
-
-    const orphans = systems.filter(s => {
-      const id = s.config?.id;
-      return id && !frameworkSystems.has(id) && !referencedIds.has(id);
-    });
+  orphanSystems: (usageMap) => {
+    const orphans = (usageMap?.validation?.orphans || [])
+      .filter(o => o.type === 'system');
 
     if (orphans.length === 0) return null;
 
@@ -344,10 +299,10 @@ export const validationRules = {
       title: 'Systems not referenced in any era',
       message: 'These systems are not referenced in any era\'s systemModifiers. They may not run with intended weights.',
       severity: 'warning',
-      affectedItems: orphans.map(s => ({
-        id: s.config?.id,
-        label: s.config?.name || s.config?.id,
-        detail: 'Not in any era systemModifiers',
+      affectedItems: orphans.map(o => ({
+        id: o.id,
+        label: o.id,
+        detail: o.reason,
       })),
     };
   },
@@ -355,7 +310,7 @@ export const validationRules = {
   /**
    * 10. Zero-Weight Generators in All Eras (WARNING)
    */
-  zeroWeightGenerators: (eras, generators) => {
+  zeroWeightGenerators: (usageMap, eras, generators) => {
     const zeroInAll = [];
 
     for (const gen of generators) {
@@ -396,7 +351,7 @@ export const validationRules = {
   /**
    * 11. Invalid Subtype References (WARNING)
    */
-  invalidSubtypeRef: (schema, generators, pressures) => {
+  invalidSubtypeRef: (usageMap, schema, generators, pressures) => {
     // Build map of valid subtypes per kind
     const subtypesByKind = {};
     for (const ek of (schema.entityKinds || [])) {
@@ -473,7 +428,7 @@ export const validationRules = {
   /**
    * 12. Invalid Status References (WARNING)
    */
-  invalidStatusRef: (schema, generators) => {
+  invalidStatusRef: (usageMap, schema, generators) => {
     // Build map of valid statuses per kind
     const statusesByKind = {};
     for (const ek of (schema.entityKinds || [])) {
@@ -513,7 +468,7 @@ export const validationRules = {
   /**
    * 13. Invalid Culture References (WARNING)
    */
-  invalidCultureRef: (schema, _entityKinds) => {
+  invalidCultureRef: (usageMap, schema) => {
     const validCultures = new Set((schema.cultures || []).map(c => c.id));
     const invalid = [];
 
@@ -546,39 +501,42 @@ export const validationRules = {
   /**
    * 14. Undefined Tag References (WARNING)
    */
-  undefinedTagRefs: (schema, generators, systems, pressures) => {
+  undefinedTagRefs: (usageMap, schema) => {
     const definedTags = new Set((schema.tagRegistry || []).map(t => t.tag));
-    const refs = collectTagRefs(generators, systems, pressures);
+
+    // Get all tags from usageMap
+    const referencedTags = new Set(Object.keys(usageMap?.tags || {}));
 
     // Find tags that are referenced but not in registry
-    const undefinedRefs = refs.filter(r => !definedTags.has(r.tag));
+    const undefinedTags = [...referencedTags].filter(tag => !definedTags.has(tag));
 
-    if (undefinedRefs.length === 0) return null;
-
-    // Group by tag for cleaner display
-    const byTag = {};
-    for (const r of undefinedRefs) {
-      if (!byTag[r.tag]) byTag[r.tag] = [];
-      byTag[r.tag].push(r);
-    }
+    if (undefinedTags.length === 0) return null;
 
     return {
       id: 'undefined-tag-refs',
       title: 'Tags used but not in registry',
       message: 'These tags are referenced in generators, systems, or pressures but are not defined in the tag registry. They will still work at runtime but lack metadata like conflictingTags.',
       severity: 'warning',
-      affectedItems: Object.entries(byTag).map(([tag, sources]) => ({
-        id: tag,
-        label: tag,
-        detail: `Used by: ${sources.map(s => s.source).join(', ')}`,
-      })),
+      affectedItems: undefinedTags.map(tag => {
+        const usage = usageMap.tags[tag];
+        const sources = [];
+        if (usage.generators?.length) sources.push(`${usage.generators.length} generators`);
+        if (usage.systems?.length) sources.push(`${usage.systems.length} systems`);
+        if (usage.pressures?.length) sources.push(`${usage.pressures.length} pressures`);
+        if (usage.actions?.length) sources.push(`${usage.actions.length} actions`);
+        return {
+          id: tag,
+          label: tag,
+          detail: `Used by: ${sources.join(', ') || 'unknown'}`,
+        };
+      }),
     };
   },
 
   /**
    * 15. Conflicting Tags (WARNING) - Tags assigned together that are marked as conflicting
    */
-  conflictingTagsInUse: (schema, generators) => {
+  conflictingTagsInUse: (usageMap, schema, generators) => {
     const tagRegistry = schema.tagRegistry || [];
     const conflictMap = {};
     for (const t of tagRegistry) {
@@ -634,7 +592,7 @@ export const validationRules = {
   /**
    * 16. Numeric Range Validation (WARNING)
    */
-  numericRangeIssues: (pressures, eras) => {
+  numericRangeIssues: (usageMap, pressures, eras) => {
     const issues = [];
 
     // Check pressures
@@ -679,41 +637,74 @@ export const validationRules = {
       })),
     };
   },
+
+  /**
+   * 17. Relationship Compatibility Issues (WARNING)
+   * Uses usageMap.validation.compatibility
+   */
+  relationshipCompatibility: (usageMap) => {
+    const issues = usageMap?.validation?.compatibility || [];
+
+    if (issues.length === 0) return null;
+
+    return {
+      id: 'relationship-compatibility',
+      title: 'Relationship compatibility issues',
+      message: 'These relationships may have src/dst entity kinds that don\'t match the relationship kind constraints.',
+      severity: 'warning',
+      affectedItems: issues.map((i, idx) => ({
+        id: `${i.type}:${i.id}:${i.field}:${idx}`,
+        label: `${i.type} "${i.id}"`,
+        detail: i.issue,
+      })),
+    };
+  },
 };
 
 /**
  * Run all validations
+ * @param {Object} usageMap - Pre-computed usage map from computeUsageMap
+ * @param {Object} schema - Domain schema
+ * @param {Array} eras - Era configurations
+ * @param {Array} pressures - Pressure configurations
+ * @param {Array} generators - Generator configurations
+ * @param {Array} systems - System configurations
  */
-export function runValidations(schema, eras, pressures, generators, systems, actions = []) {
+export function runValidations(usageMap, schema, eras, pressures, generators, systems) {
   const results = {
     errors: [],
     warnings: [],
   };
 
   // Run each validation rule
-  // Note: Structure validation (generator format, required fields, types) is handled
-  // by configSchemaValidator.ts as a hard gate before simulation run.
-  // These rules focus on semantic coherence and reference integrity.
-  const rules = [
-    () => validationRules.invalidEntityKind(schema, generators, pressures, systems),
-    () => validationRules.invalidRelationshipKind(schema, generators, pressures, systems),
-    () => validationRules.invalidPressureId(pressures, generators, systems, eras, actions),
-    () => validationRules.invalidEraTemplateRef(eras, generators),
-    () => validationRules.invalidEraSystemRef(eras, systems),
-    () => validationRules.pressureWithoutSources(pressures, generators, systems),
-    () => validationRules.pressureWithoutSinks(pressures, generators, systems),
-    () => validationRules.orphanGenerators(eras, generators),
-    () => validationRules.orphanSystems(eras, systems),
-    () => validationRules.zeroWeightGenerators(eras, generators),
-    () => validationRules.invalidSubtypeRef(schema, generators, pressures),
-    () => validationRules.invalidStatusRef(schema, generators),
-    () => validationRules.invalidCultureRef(schema),
-    () => validationRules.undefinedTagRefs(schema, generators, systems, pressures),
-    () => validationRules.conflictingTagsInUse(schema, generators),
-    () => validationRules.numericRangeIssues(pressures, eras),
+  // Rules that use usageMap only
+  const usageMapRules = [
+    () => validationRules.invalidEntityKind(usageMap),
+    () => validationRules.invalidRelationshipKind(usageMap),
+    () => validationRules.invalidPressureId(usageMap),
+    () => validationRules.invalidEraTemplateRef(usageMap),
+    () => validationRules.invalidEraSystemRef(usageMap),
+    () => validationRules.orphanGenerators(usageMap),
+    () => validationRules.orphanSystems(usageMap),
+    () => validationRules.relationshipCompatibility(usageMap),
   ];
 
-  for (const rule of rules) {
+  // Rules that need additional data
+  const dataRules = [
+    () => validationRules.pressureWithoutSources(usageMap, pressures, generators, systems),
+    () => validationRules.pressureWithoutSinks(usageMap, pressures, generators, systems),
+    () => validationRules.zeroWeightGenerators(usageMap, eras, generators),
+    () => validationRules.invalidSubtypeRef(usageMap, schema, generators, pressures),
+    () => validationRules.invalidStatusRef(usageMap, schema, generators),
+    () => validationRules.invalidCultureRef(usageMap, schema),
+    () => validationRules.undefinedTagRefs(usageMap, schema),
+    () => validationRules.conflictingTagsInUse(usageMap, schema, generators),
+    () => validationRules.numericRangeIssues(usageMap, pressures, eras),
+  ];
+
+  const allRules = [...usageMapRules, ...dataRules];
+
+  for (const rule of allRules) {
     const result = rule();
     if (result) {
       if (result.severity === 'error') {

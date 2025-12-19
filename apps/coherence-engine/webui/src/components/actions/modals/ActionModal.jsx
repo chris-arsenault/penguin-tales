@@ -8,7 +8,6 @@ import { ModalShell } from '../../shared';
 import {
   OverviewTab,
   ActorTab,
-  ResolutionTab,
   TargetingTab,
   OutcomeTab,
   ProbabilityTab,
@@ -23,8 +22,6 @@ export function ActionModal({ action, onChange, onClose, onDelete, schema, press
         return <OverviewTab action={action} onChange={onChange} onDelete={onDelete} />;
       case 'actor':
         return <ActorTab action={action} onChange={onChange} schema={schema} />;
-      case 'resolution':
-        return <ResolutionTab action={action} onChange={onChange} schema={schema} />;
       case 'targeting':
         return <TargetingTab action={action} onChange={onChange} schema={schema} />;
       case 'outcome':

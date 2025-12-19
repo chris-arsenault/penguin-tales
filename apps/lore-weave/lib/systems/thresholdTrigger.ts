@@ -102,6 +102,10 @@ export interface EntityFilter {
   subtypes?: string[];
   status?: string;
   notStatus?: string;
+  /** Filter for entities that have this tag */
+  hasTag?: string;
+  /** Filter for entities that do NOT have this tag */
+  notHasTag?: string;
   /** Advanced selection filters (same as generator targeting) */
   filters?: SelectionFilter[];
 }
@@ -491,6 +495,15 @@ export function createThresholdTriggerSystem(
 
       if (config.entityFilter.notStatus) {
         entities = entities.filter(e => e.status !== config.entityFilter.notStatus);
+      }
+
+      // Apply tag filters
+      if (config.entityFilter.hasTag) {
+        entities = entities.filter(e => hasTag(e.tags, config.entityFilter.hasTag!));
+      }
+
+      if (config.entityFilter.notHasTag) {
+        entities = entities.filter(e => !hasTag(e.tags, config.entityFilter.notHasTag!));
       }
 
       // Apply cooldown filter

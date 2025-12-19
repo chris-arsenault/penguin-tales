@@ -59,6 +59,7 @@ export default function TracePopover({ simulationState }) {
   const hasData = simulationState?.pressureUpdates?.length > 0;
   const tickCount = simulationState?.pressureUpdates?.length || 0;
   const templateCount = simulationState?.templateApplications?.length || 0;
+  const actionCount = simulationState?.actionApplications?.length || 0;
   const eraTransitions = (simulationState?.systemActions || []).filter(
     a => a.details?.eraTransition
   ).length;
@@ -90,7 +91,7 @@ export default function TracePopover({ simulationState }) {
         onClick={handleOpen}
         disabled={!hasData}
         title={hasData
-          ? `View simulation trace: ${tickCount} ticks, ${templateCount} templates, ${eraTransitions} era transitions`
+          ? `View simulation trace: ${tickCount} ticks, ${templateCount} templates, ${actionCount} actions, ${eraTransitions} era transitions`
           : 'Run a simulation to see trace data'
         }
       >
@@ -108,6 +109,7 @@ export default function TracePopover({ simulationState }) {
             pressureUpdates={simulationState.pressureUpdates}
             epochStats={simulationState.epochStats}
             templateApplications={simulationState.templateApplications}
+            actionApplications={simulationState.actionApplications}
             systemActions={simulationState.systemActions}
             onClose={() => setIsOpen(false)}
           />

@@ -954,7 +954,7 @@ describe('StatisticsCollector', () => {
 
       expect(stats.temporalStats.totalTicks).toBe(100);
       expect(stats.temporalStats.totalEpochs).toBe(2);
-      expect(stats.temporalStats.ticksPerEpoch).toBe(20);
+      expect(stats.temporalStats.ticksPerEpoch).toBe(10); // From config.ticksPerEpoch
       expect(stats.temporalStats.entitiesPerTick).toBe(0.01); // 1/100
       expect(stats.temporalStats.relationshipsPerTick).toBe(0.01); // 1/100
       expect(stats.temporalStats.entitiesPerEpoch).toBe(0.5); // 1/2

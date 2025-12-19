@@ -19,8 +19,8 @@ describe('universalCatalyst', () => {
       id: 'universal_catalyst',
       name: 'Agent Actions',
       actionAttemptRate: 0.3,
-      influenceGain: 0.1,
-      influenceLoss: 0.05,
+      prominenceUpChanceOnSuccess: 0.1,
+      prominenceDownChanceOnFailure: 0.05,
       pressureMultiplier: 1.5
     });
     const _entities = new Map<string, HardState>();
@@ -240,7 +240,7 @@ describe('universalCatalyst', () => {
       const npc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
-        catalyst: { canAct: true, influence: 0.5, catalyzedEvents: [] }
+        catalyst: { canAct: true, catalyzedEvents: [] }
       };
 
       mockGraph.setEntity('npc-1', npc);
@@ -254,7 +254,7 @@ describe('universalCatalyst', () => {
       const npc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
-        catalyst: { canAct: true, influence: 0.5, catalyzedEvents: [] }
+        catalyst: { canAct: true, catalyzedEvents: [] }
       };
 
       mockGraph.setEntity('npc-1', npc);
@@ -272,7 +272,7 @@ describe('universalCatalyst', () => {
       const renownedNpc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
-        catalyst: { canAct: true, influence: 0.5, catalyzedEvents: [] }
+        catalyst: { canAct: true, catalyzedEvents: [] }
       };
 
       mockGraph.entities.set('npc-1', renownedNpc);
@@ -299,7 +299,7 @@ describe('universalCatalyst', () => {
         mockGraph.setEntity(`npc-${i}`, {
           id: `npc-${i}`, kind: 'npc', subtype: 'hero', name: `Hero ${i}`, description: '',
           status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
-          catalyst: { canAct: true, influence: 0.3, catalyzedEvents: [] }
+          catalyst: { canAct: true, catalyzedEvents: [] }
         });
       }
 
@@ -309,12 +309,12 @@ describe('universalCatalyst', () => {
     });
   });
 
-  describe('influence system', () => {
-    it('should track agent influence', () => {
+  describe('catalyst system', () => {
+    it('should track agent actions', () => {
       const npc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
-        catalyst: { canAct: true, influence: 0.5, catalyzedEvents: [] }
+        catalyst: { canAct: true, catalyzedEvents: [] }
       };
 
       mockGraph.setEntity('npc-1', npc);
@@ -330,7 +330,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [
             { action: 'test_action', tick: 5, success: true }
           ]
@@ -345,7 +344,7 @@ describe('universalCatalyst', () => {
     });
   });
 
-  describe('pressure influence', () => {
+  describe('pressure effects', () => {
     it('should consider pressure values', () => {
       mockGraph.pressures.set('conflict', 75);
       mockGraph.pressures.set('stability', 25);
@@ -353,7 +352,7 @@ describe('universalCatalyst', () => {
       const npc: HardState = {
         id: 'npc-1', kind: 'npc', subtype: 'hero', name: 'Hero', description: '',
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
-        catalyst: { canAct: true, influence: 0.5, catalyzedEvents: [] }
+        catalyst: { canAct: true, catalyzedEvents: [] }
       };
 
       mockGraph.setEntity('npc-1', npc);
@@ -375,7 +374,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['military']
         }
@@ -427,7 +425,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['diplomatic']
         }
@@ -468,7 +465,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['military']
         }
@@ -509,7 +505,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['magic']
         }
@@ -555,7 +550,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'marginal', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['heroic']
         }
@@ -567,7 +561,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['heroic']
         }
@@ -610,7 +603,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['command']
         }
@@ -624,7 +616,6 @@ describe('universalCatalyst', () => {
         createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['command']
         }
@@ -669,7 +660,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['war']
         }
@@ -726,7 +716,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['diplomatic', 'military']
         }
@@ -772,7 +761,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['military']
         }
@@ -785,8 +773,8 @@ describe('universalCatalyst', () => {
     });
   });
 
-  describe('influence tracking', () => {
-    it('should update influence on successful actions', () => {
+  describe('action tracking', () => {
+    it('should track successful actions', () => {
       let handlerCalled = false;
       const mockHandler = (graph: Graph, agent: HardState) => {
         handlerCalled = true;
@@ -819,7 +807,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['test']
         }
@@ -863,7 +850,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['craft']
         }
@@ -908,7 +894,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: ['founding']
         }
@@ -957,7 +942,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'mythic', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.9,
           catalyzedEvents: [],
           actionDomains: ['legendary']
         }
@@ -985,7 +969,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: [],
           category: 'first-order'
@@ -1006,7 +989,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'renowned', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.7,
           catalyzedEvents: [],
           actionDomains: [],
           category: 'second-order'
@@ -1027,7 +1009,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.5,
           catalyzedEvents: [],
           actionDomains: [],
           category: 'first-order'
@@ -1039,7 +1020,6 @@ describe('universalCatalyst', () => {
         status: 'active', prominence: 'recognized', tags: [], links: [], createdAt: 0, updatedAt: 0,
         catalyst: {
           canAct: true,
-          influence: 0.6,
           catalyzedEvents: [],
           actionDomains: [],
           category: 'second-order'

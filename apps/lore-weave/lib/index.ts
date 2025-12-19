@@ -173,13 +173,11 @@ export {
   initializeCatalystSmart,
   getAgentsByCategory,
   canPerformAction,
-  getInfluence,
   recordCatalyst,
   getCatalyzedEvents,
   getCatalyzedEventCount,
   addCatalyzedEvent,
-  calculateAttemptChance,
-  updateInfluence
+  calculateAttemptChance
 } from './systems/catalystHelpers';
 
 // =============================================================================
@@ -263,13 +261,21 @@ export { loadActions, createExecutableAction } from './engine/actionInterpreter'
 export type {
   DeclarativeAction,
   ActionActorConfig,
-  ActionActorResolution,
+  InstigatorConfig,
   ActionTargetConfig,
   ActionOutcomeConfig,
   ActionProbabilityConfig,
+  PressureBand,
+  PressureModifier,
+  OutcomeEntityRef,
+  RelationshipStrengthening,
+  StrengtheningChannel,
   ExecutableAction,
   ActionResult
 } from './engine/actionInterpreter';
+
+// Actor matching (for filtering eligible actors for actions)
+export { matchesActorConfig } from './selection';
 
 // =============================================================================
 // FRAMEWORK PRIMITIVES - Minimal constants needed by domain

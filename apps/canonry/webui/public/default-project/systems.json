@@ -126,7 +126,7 @@
       "id": "prominence_evolution",
       "name": "Prominence Evolution",
       "description": "NPCs with many connections gain prominence over time",
-      "entityKind": "npc",
+      "entityKind": "any",
       "entityStatus": "alive",
       "metric": {
         "type": "connection_count",
@@ -148,7 +148,7 @@
       ],
       "throttleChance": 0.2
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -329,7 +329,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -392,7 +392,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -440,7 +440,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "graphContagion",

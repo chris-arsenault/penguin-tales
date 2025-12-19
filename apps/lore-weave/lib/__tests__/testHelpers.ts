@@ -19,11 +19,15 @@ export function createMockEmitter(): ISimulationEmitter {
     epochStart: () => {},
     epochStats: () => {},
     growthPhase: () => {},
+    templateApplication: () => {},
+    actionApplication: () => {},
     populationReport: () => {},
     templateUsage: () => {},
     coordinateStats: () => {},
     tagHealth: () => {},
     systemHealth: () => {},
+    systemAction: () => {},
+    pressureUpdate: () => {},
     // Final diagnostics
     entityBreakdown: () => {},
     catalystStats: () => {},
@@ -31,6 +35,7 @@ export function createMockEmitter(): ISimulationEmitter {
     notableEntities: () => {},
     sampleHistory: () => {},
     complete: () => {},
+    stateExport: () => {},
     error: () => {},
   };
 }

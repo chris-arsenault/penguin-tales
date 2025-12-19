@@ -609,16 +609,16 @@ function scanActionReferences(usageMap, actions, schema, pressures) {
       }
     });
 
-    // Actor resolution relationship
-    if (action.actorResolution?.relationshipKind) {
-      const rk = action.actorResolution.relationshipKind;
+    // Actor instigator relationship kind
+    if (action.actor?.instigator?.relationshipKind) {
+      const rk = action.actor.instigator.relationshipKind;
       if (usageMap.relationshipKinds[rk]) {
         usageMap.relationshipKinds[rk].actions.push(actionRef);
       } else {
         usageMap.validation.invalidRefs.push({
           type: 'action',
           id: action.id,
-          field: 'actorResolution.relationshipKind',
+          field: 'actor.instigator.relationshipKind',
           refType: 'relationshipKind',
           refId: rk,
           location: `Action "${action.name || action.id}"`,
@@ -626,12 +626,21 @@ function scanActionReferences(usageMap, actions, schema, pressures) {
       }
     }
 
-    // Actor resolution target kind
-    if (action.actorResolution?.targetKind) {
-      if (usageMap.entityKinds[action.actorResolution.targetKind]) {
-        usageMap.entityKinds[action.actorResolution.targetKind].actions.push(actionRef);
+    // Actor instigator entity kinds
+    (action.actor?.instigator?.kinds || []).forEach(kind => {
+      if (usageMap.entityKinds[kind]) {
+        usageMap.entityKinds[kind].actions.push(actionRef);
+      } else {
+        usageMap.validation.invalidRefs.push({
+          type: 'action',
+          id: action.id,
+          field: 'actor.instigator.kinds',
+          refType: 'entityKind',
+          refId: kind,
+          location: `Action "${action.name || action.id}"`,
+        });
       }
-    }
+    });
 
     // Targeting kind
     if (action.targeting?.kind) {
@@ -692,6 +701,24 @@ function scanActionReferences(usageMap, actions, schema, pressures) {
       }
     });
 
+    // Outcome strengthen relationships
+    (action.outcome?.strengthenRelationships || []).forEach((sr, idx) => {
+      if (sr.kind) {
+        if (usageMap.relationshipKinds[sr.kind]) {
+          usageMap.relationshipKinds[sr.kind].actions.push(actionRef);
+        } else {
+          usageMap.validation.invalidRefs.push({
+            type: 'action',
+            id: action.id,
+            field: `outcome.strengthenRelationships[${idx}].kind`,
+            refType: 'relationshipKind',
+            refId: sr.kind,
+            location: `Action "${action.name || action.id}"`,
+          });
+        }
+      }
+    });
+
     // Outcome pressure changes
     Object.keys(action.outcome?.pressureChanges || {}).forEach(pressureId => {
       if (usageMap.pressures[pressureId]) {
@@ -709,22 +736,49 @@ function scanActionReferences(usageMap, actions, schema, pressures) {
       }
     });
 
-    // Probability pressure modifiers
-    (action.probability?.pressureModifiers || []).forEach(pressureId => {
-      if (usageMap.pressures[pressureId]) {
-        usageMap.pressures[pressureId].actions.push(actionRef);
-      }
-      if (!pressureIds.has(pressureId)) {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'probability.pressureModifiers',
-          refType: 'pressure',
-          refId: pressureId,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    });
+    // Actor required pressures - now array of { pressure, min?, max? }
+    const requiredPressures = action.actor?.requiredPressures;
+    if (Array.isArray(requiredPressures)) {
+      requiredPressures.forEach(band => {
+        const pressureId = band?.pressure;
+        if (!pressureId) return;
+        if (usageMap.pressures[pressureId]) {
+          usageMap.pressures[pressureId].actions.push(actionRef);
+        }
+        if (!pressureIds.has(pressureId)) {
+          usageMap.validation.invalidRefs.push({
+            type: 'action',
+            id: action.id,
+            field: 'actor.requiredPressures',
+            refType: 'pressure',
+            refId: pressureId,
+            location: `Action "${action.name || action.id}"`,
+          });
+        }
+      });
+    }
+
+    // Probability pressure modifiers - now array of { pressure, multiplier }
+    const pressureModifiers = action.probability?.pressureModifiers;
+    if (Array.isArray(pressureModifiers)) {
+      pressureModifiers.forEach(mod => {
+        const pressureId = mod?.pressure;
+        if (!pressureId) return;
+        if (usageMap.pressures[pressureId]) {
+          usageMap.pressures[pressureId].actions.push(actionRef);
+        }
+        if (!pressureIds.has(pressureId)) {
+          usageMap.validation.invalidRefs.push({
+            type: 'action',
+            id: action.id,
+            field: 'probability.pressureModifiers',
+            refType: 'pressure',
+            refId: pressureId,
+            location: `Action "${action.name || action.id}"`,
+          });
+        }
+      });
+    }
   });
 }
 

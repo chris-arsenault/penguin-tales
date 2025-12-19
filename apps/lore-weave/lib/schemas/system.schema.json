@@ -472,9 +472,9 @@
               "type": "object",
               "properties": {
                 "actionAttemptRate": { "type": "number", "minimum": 0, "maximum": 1 },
-                "influenceGain": { "type": "number" },
-                "influenceLoss": { "type": "number" },
-                "pressureMultiplier": { "type": "number" }
+                "pressureMultiplier": { "type": "number" },
+                "prominenceUpChanceOnSuccess": { "type": "number", "minimum": 0, "maximum": 1 },
+                "prominenceDownChanceOnFailure": { "type": "number", "minimum": 0, "maximum": 1 }
               }
             }
           ]

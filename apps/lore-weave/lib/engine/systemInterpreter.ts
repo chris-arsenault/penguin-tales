@@ -121,16 +121,17 @@ export interface EraTransitionConfig extends FrameworkSystemConfig {
 /**
  * Universal Catalyst system config.
  * Enables agents to perform domain-defined actions.
+ * Success chance is based on entity prominence (no separate influence tracking).
  */
 export interface UniversalCatalystConfig extends FrameworkSystemConfig {
   /** Base chance per tick that agents attempt actions. Default: 0.3 */
   actionAttemptRate?: number;
-  /** Influence gain on successful action. Default: 0.1 */
-  influenceGain?: number;
-  /** Influence loss on failed action. Default: 0.05 */
-  influenceLoss?: number;
   /** How much pressures amplify action attempt rates. Default: 1.5 */
   pressureMultiplier?: number;
+  /** Chance of prominence increase on successful action (0-1). Default: 0.1 */
+  prominenceUpChanceOnSuccess?: number;
+  /** Chance of prominence decrease on failed action (0-1). Default: 0.05 */
+  prominenceDownChanceOnFailure?: number;
 }
 
 /**

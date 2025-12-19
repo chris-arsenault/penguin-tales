@@ -1,14 +1,65 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
-import { HardState, Relationship } from '../core/worldTypes';
+import { HardState, Relationship, Prominence } from '../core/worldTypes';
 import {
   calculateAttemptChance,
-  addCatalyzedEvent,
-  updateInfluence,
-  getInfluence
+  addCatalyzedEvent
 } from '../systems/catalystHelpers';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
+import { matchesActorConfig } from '../selection';
+import { adjustProminence } from '../utils';
+import type { ActionApplicationPayload } from '../observer/types';
+
+// =============================================================================
+// INSTRUMENTATION TYPES
+// =============================================================================
+
+interface PressureInfluence {
+  pressureId: string;
+  value: number;
+  multiplier: number;
+  contribution: number;
+}
+
+interface ActionWeightBreakdown {
+  weight: number;
+  pressureInfluences: PressureInfluence[];
+}
+
+interface SelectionContext {
+  availableActionCount: number;
+  selectedWeight: number;
+  totalWeight: number;
+  pressureInfluences: PressureInfluence[];
+  attemptChance: number;
+  prominenceBonus: number;
+}
+
+interface ActionSelectionResult {
+  action: ExecutableAction | null;
+  context: SelectionContext;
+}
+
+type ActionOutcomeStatus = 'success' | 'failed_roll' | 'failed_no_target' | 'failed_no_instigator';
+
+interface ExtendedActionOutcome {
+  status: ActionOutcomeStatus;
+  success: boolean;
+  relationships: Relationship[];
+  description: string;
+  entitiesCreated?: string[];
+  entitiesModified?: string[];
+  instigatorId?: string;
+  instigatorName?: string;
+  targetId?: string;
+  targetName?: string;
+  targetKind?: string;
+  target2Id?: string;
+  target2Name?: string;
+  successChance: number;
+  prominenceMultiplier: number;
+}
 
 /**
  * Universal Catalyst System
@@ -18,10 +69,10 @@ import type { ExecutableAction } from '../engine/actionInterpreter';
  *
  * Flow:
  * 1. Find all entities that can act (catalyst.canAct = true)
- * 2. For each agent, roll for action attempt based on influence/prominence
+ * 2. For each agent, roll for action attempt based on prominence
  * 3. Select action from available actions, weighted by pressures
- * 4. Execute action via declarative handler
- * 5. Record catalyzedBy attribution and update influence
+ * 4. Execute action via declarative handler (success chance based on prominence)
+ * 5. Record catalyzedBy attribution
  */
 
 /**
@@ -30,9 +81,9 @@ import type { ExecutableAction } from '../engine/actionInterpreter';
 export function createUniversalCatalystSystem(config: UniversalCatalystConfig): SimulationSystem {
   // Extract config with defaults
   const actionAttemptRate = config.actionAttemptRate ?? 0.3;
-  const influenceGain = config.influenceGain ?? 0.1;
-  const influenceLoss = config.influenceLoss ?? 0.05;
   const pressureMultiplier = config.pressureMultiplier ?? 1.5;
+  const prominenceUpChance = config.prominenceUpChanceOnSuccess ?? 0.1;
+  const prominenceDownChance = config.prominenceDownChanceOnFailure ?? 0.05;
 
   return {
     id: config.id || 'universal_catalyst',
@@ -59,28 +110,40 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
       let actionsAttempted = 0;
       let actionsSucceeded = 0;
 
+      // Get emitter from graphView config if available
+      const emitter = graphView.config.emitter;
+
       allAgents.forEach(agent => {
         if (!agent.catalyst?.canAct) return;
 
         // Calculate action attempt chance
-        const attemptChance = calculateAttemptChance(agent, actionAttemptRate);
+        const baseAttemptChance = calculateAttemptChance(agent, actionAttemptRate);
 
         // Apply pressure multiplier based on available actions for this agent
         const availableActions = getAvailableActions(agent, actions, graphView);
         const relevantPressures = getRelevantPressuresFromActions(graphView, availableActions);
-        const pressureBonus = relevantPressures * (pressureMultiplier - 1.0);
-        const finalAttemptChance = Math.min(1.0, (attemptChance + pressureBonus) * modifier);
+        const prominenceBonus = relevantPressures * (pressureMultiplier - 1.0);
+        const finalAttemptChance = Math.min(1.0, (baseAttemptChance + prominenceBonus) * modifier);
 
         if (Math.random() > finalAttemptChance) return;
 
         actionsAttempted++;
 
-        // Select action from available actions
-        const selectedAction = selectAction(agent, availableActions, graphView);
+        // Select action from available actions with context
+        const { action: selectedAction, context: selectionContext } = selectActionWithContext(
+          agent,
+          availableActions,
+          graphView,
+          finalAttemptChance,
+          prominenceBonus
+        );
         if (!selectedAction) return;
 
-        // Attempt to execute action
-        const outcome = executeAction(agent, selectedAction, graphView);
+        // Attempt to execute action with extended outcome
+        const outcome = executeActionWithContext(agent, selectedAction, graphView);
+
+        // Track prominence changes for instrumentation
+        const prominenceChanges: Array<{ entityId: string; entityName: string; direction: 'up' | 'down' }> = [];
 
         if (outcome.success) {
           actionsSucceeded++;
@@ -91,9 +154,6 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             rel.createdAt = graphView.tick;
             relationshipsAdded.push(rel);
           });
-
-          // Update agent influence (success)
-          updateInfluence(agent, true, influenceGain);
 
           // Record catalyzed event
           addCatalyzedEvent(agent, {
@@ -110,6 +170,27 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             }
           });
 
+          // Apply prominence increase on success (if action opts in)
+          if (selectedAction.applyProminenceToActor && Math.random() < prominenceUpChance) {
+            agent.prominence = adjustProminence(agent.prominence, 1);
+            entitiesModified.push({
+              id: agent.id,
+              changes: { prominence: agent.prominence }
+            });
+            prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'up' });
+          }
+          if (selectedAction.applyProminenceToInstigator && outcome.instigatorId && Math.random() < prominenceUpChance) {
+            const instigator = graphView.getEntity(outcome.instigatorId);
+            if (instigator) {
+              instigator.prominence = adjustProminence(instigator.prominence, 1);
+              entitiesModified.push({
+                id: instigator.id,
+                changes: { prominence: instigator.prominence }
+              });
+              prominenceChanges.push({ entityId: instigator.id, entityName: instigator.name, direction: 'up' });
+            }
+          }
+
           // Create history event
           graphView.addHistoryEvent({
             tick: graphView.tick,
@@ -121,16 +202,65 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             entitiesModified: outcome.entitiesModified || [agent.id]
           });
         } else {
-          // Failed action - influence decreases
-          updateInfluence(agent, false, influenceLoss);
+          // Apply prominence decrease on failure (if action opts in)
+          if (selectedAction.applyProminenceToActor && Math.random() < prominenceDownChance) {
+            agent.prominence = adjustProminence(agent.prominence, -1);
+            entitiesModified.push({
+              id: agent.id,
+              changes: { prominence: agent.prominence }
+            });
+            prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'down' });
+          }
+        }
 
-          entitiesModified.push({
-            id: agent.id,
-            changes: {
-              catalyst: agent.catalyst,
-              updatedAt: graphView.tick
+        // Emit action application event for instrumentation
+        if (emitter) {
+          // Calculate epoch from tick (approximate)
+          const ticksPerEpoch = graphView.config.ticksPerEpoch || 20;
+          const epoch = Math.floor(graphView.tick / ticksPerEpoch);
+
+          const payload: ActionApplicationPayload = {
+            tick: graphView.tick,
+            epoch,
+            actionId: selectedAction.type,
+            actionName: selectedAction.name,
+            actorId: agent.id,
+            actorName: agent.name,
+            actorKind: agent.kind,
+            actorProminence: agent.prominence,
+            instigatorId: outcome.instigatorId,
+            instigatorName: outcome.instigatorName,
+            targetId: outcome.targetId,
+            targetName: outcome.targetName,
+            targetKind: outcome.targetKind,
+            target2Id: outcome.target2Id,
+            target2Name: outcome.target2Name,
+            selectionContext: {
+              availableActionCount: selectionContext.availableActionCount,
+              selectedWeight: selectionContext.selectedWeight,
+              totalWeight: selectionContext.totalWeight,
+              pressureInfluences: selectionContext.pressureInfluences,
+              attemptChance: selectionContext.attemptChance,
+              prominenceBonus: selectionContext.prominenceBonus
+            },
+            outcome: {
+              status: outcome.status,
+              successChance: outcome.successChance,
+              prominenceMultiplier: outcome.prominenceMultiplier,
+              description: outcome.description,
+              relationshipsCreated: outcome.relationships.map(rel => ({
+                kind: rel.kind,
+                srcId: rel.src,
+                dstId: rel.dst,
+                srcName: graphView.getEntity(rel.src)?.name || rel.src,
+                dstName: graphView.getEntity(rel.dst)?.name || rel.dst,
+                strength: rel.strength
+              })),
+              relationshipsStrengthened: [], // TODO: Track if needed
+              prominenceChanges
             }
-          });
+          };
+          emitter.actionApplication(payload);
         }
       });
 
@@ -160,144 +290,280 @@ function getAvailableActions(
 }
 
 /**
- * Get average pressure from actions' pressureModifiers
+ * Calculate pressure contribution for attempt chance from available actions.
+ * Uses the same multiplier-based approach as weight calculation.
+ * Returns a value that can be added to the base attempt chance.
  */
 function getRelevantPressuresFromActions(graphView: TemplateGraphView, actions: ExecutableAction[]): number {
-  const allPressureIds = new Set<string>();
+  if (actions.length === 0) return 0;
 
-  actions.forEach(action => {
-    action.pressureModifiers.forEach(p => allPressureIds.add(p));
-  });
+  // Collect all unique pressure modifiers across actions
+  const pressureContributions: Map<string, number[]> = new Map();
 
-  if (allPressureIds.size === 0) return 0;
+  for (const action of actions) {
+    if (!action.pressureModifiers) continue;
+    for (const mod of action.pressureModifiers) {
+      if (!pressureContributions.has(mod.pressure)) {
+        pressureContributions.set(mod.pressure, []);
+      }
+      pressureContributions.get(mod.pressure)!.push(mod.multiplier);
+    }
+  }
 
-  let totalPressure = 0;
-  allPressureIds.forEach(pressureId => {
+  if (pressureContributions.size === 0) return 0;
+
+  // Calculate weighted contribution: average multiplier * pressure for each unique pressure
+  let totalContribution = 0;
+  for (const [pressureId, multipliers] of pressureContributions) {
+    const avgMultiplier = multipliers.reduce((a, b) => a + b, 0) / multipliers.length;
     const pressure = graphView.getPressure(pressureId);
-    totalPressure += pressure / 100; // Normalize to 0-1
-  });
+    totalContribution += (pressure / 100) * avgMultiplier;
+  }
 
-  return totalPressure / allPressureIds.size;
+  // Normalize by number of unique pressures to keep contribution reasonable
+  return totalContribution / pressureContributions.size;
 }
 
 /**
- * Select an action for the agent to attempt
+ * Select an action for the agent to attempt with full context for instrumentation
  * Weighted by pressure levels
  */
-function selectAction(
+function selectActionWithContext(
   agent: HardState,
   availableActions: ExecutableAction[],
-  graphView: TemplateGraphView
-): ExecutableAction | null {
-  if (!agent.catalyst || availableActions.length === 0) return null;
+  graphView: TemplateGraphView,
+  attemptChance: number,
+  prominenceBonus: number
+): ActionSelectionResult {
+  const emptyContext: SelectionContext = {
+    availableActionCount: availableActions.length,
+    selectedWeight: 0,
+    totalWeight: 0,
+    pressureInfluences: [],
+    attemptChance,
+    prominenceBonus
+  };
 
-  // Calculate weights for each action
-  const weightedActions = availableActions.map(action => ({
-    action,
-    weight: calculateActionWeight(action, graphView)
-  }));
+  if (!agent.catalyst || availableActions.length === 0) {
+    return { action: null, context: emptyContext };
+  }
+
+  // Calculate weights for each action with breakdown
+  const weightedActions = availableActions.map(action => {
+    const breakdown = calculateActionWeightWithBreakdown(action, graphView);
+    return {
+      action,
+      weight: breakdown.weight,
+      pressureInfluences: breakdown.pressureInfluences
+    };
+  });
 
   // Weighted random selection
   const totalWeight = weightedActions.reduce((sum, a) => sum + a.weight, 0);
   let random = Math.random() * totalWeight;
 
-  for (const { action, weight } of weightedActions) {
-    random -= weight;
+  for (const wa of weightedActions) {
+    random -= wa.weight;
     if (random <= 0) {
-      return action;
+      return {
+        action: wa.action,
+        context: {
+          availableActionCount: availableActions.length,
+          selectedWeight: wa.weight,
+          totalWeight,
+          pressureInfluences: wa.pressureInfluences,
+          attemptChance,
+          prominenceBonus
+        }
+      };
     }
   }
 
-  return weightedActions[0]?.action || null; // Fallback
+  // Fallback to first action
+  const fallback = weightedActions[0];
+  return {
+    action: fallback?.action || null,
+    context: {
+      availableActionCount: availableActions.length,
+      selectedWeight: fallback?.weight || 0,
+      totalWeight,
+      pressureInfluences: fallback?.pressureInfluences || [],
+      attemptChance,
+      prominenceBonus
+    }
+  };
 }
 
 /**
- * Check if agent meets action requirements (pressure thresholds).
- * Note: Entity-level requirements (prominence, relationships, tags) are now
- * handled by SelectionFilters in the action config.
+ * Check if agent meets action requirements.
+ * Delegates to matchesActorConfig for consistent actor filtering.
  */
 function meetsRequirements(agent: HardState, action: ExecutableAction, graphView: TemplateGraphView): boolean {
-  if (!action.requirements) return true;
+  return matchesActorConfig(agent, action.actorConfig, graphView);
+}
 
-  const reqs = action.requirements;
+/**
+ * Calculate action weight based on pressures with full breakdown for instrumentation.
+ * Uses multiplier-based calculation supporting both positive and negative (inverse) relationships.
+ *
+ * Formula: weight = baseWeight * (1 + sum of (pressure/100 * multiplier))
+ *
+ * Examples with pressure at 80:
+ *   multiplier 1.0  → contribution = 0.8, weight *= 1.8
+ *   multiplier -1.0 → contribution = -0.8, weight *= 0.2 (inverse)
+ *   multiplier 0.5  → contribution = 0.4, weight *= 1.4
+ */
+function calculateActionWeightWithBreakdown(action: ExecutableAction, graphView: TemplateGraphView): ActionWeightBreakdown {
+  const baseWeight = action.baseWeight || 1.0;
+  const pressureInfluences: PressureInfluence[] = [];
 
-  // Check required pressures
-  if (reqs.requiredPressures) {
-    const meetsAll = Object.entries(reqs.requiredPressures).every(([pressureId, threshold]) => {
-      const pressure = graphView.getPressure(pressureId);
-      return pressure >= (threshold as number);
-    });
-    if (!meetsAll) return false;
+  if (!action.pressureModifiers || action.pressureModifiers.length === 0) {
+    return { weight: baseWeight, pressureInfluences };
   }
 
-  return true;
+  // Calculate total pressure contribution with breakdown
+  let pressureContribution = 0;
+  for (const mod of action.pressureModifiers) {
+    const pressure = graphView.getPressure(mod.pressure);
+    const contribution = (pressure / 100) * mod.multiplier;
+    pressureContribution += contribution;
+
+    pressureInfluences.push({
+      pressureId: mod.pressure,
+      value: pressure,
+      multiplier: mod.multiplier,
+      contribution
+    });
+  }
+
+  // Apply contribution to base weight
+  const weight = Math.max(0.1, baseWeight * (1 + pressureContribution));
+
+  return { weight, pressureInfluences };
 }
 
 /**
- * Calculate action weight based on pressures
+ * Get prominence multiplier for success chance calculation.
+ * More prominent entities have higher success rates.
  */
-function calculateActionWeight(action: ExecutableAction, graphView: TemplateGraphView): number {
-  let weight = action.baseWeight || 1.0;
-
-  // Apply pressure boost from action's direct pressureModifiers
-  action.pressureModifiers.forEach((pressureId: string) => {
-    const pressure = graphView.getPressure(pressureId);
-    if (pressure > 50) {
-      weight *= (1 + (pressure - 50) / 100); // Up to 2x at 100 pressure
-    }
-  });
-
-  return Math.max(0.1, weight);
+function getProminenceMultiplier(prominence: Prominence): number {
+  const multipliers: Record<Prominence, number> = {
+    'forgotten': 0.6,
+    'marginal': 0.8,
+    'recognized': 1.0,
+    'renowned': 1.2,
+    'mythic': 1.5
+  };
+  return multipliers[prominence] || 1.0;
 }
 
 /**
- * Execute an action via declarative handler
+ * Execute an action via declarative handler with extended outcome for instrumentation
  */
-function executeAction(
+function executeActionWithContext(
   agent: HardState,
   action: ExecutableAction,
   graphView: TemplateGraphView
-): ActionOutcome {
+): ExtendedActionOutcome {
+  // Calculate success chance based on prominence
+  const baseChance = action.baseSuccessChance || 0.5;
+  const prominenceMultiplier = getProminenceMultiplier(agent.prominence);
+  const successChance = Math.min(0.95, baseChance * prominenceMultiplier);
+
   // Action handler is created from declarative config
   if (!action.handler) {
     return {
+      status: 'failed_roll',
       success: false,
       relationships: [],
       description: 'Action has no handler',
       entitiesCreated: [],
-      entitiesModified: []
+      entitiesModified: [],
+      successChance,
+      prominenceMultiplier
     };
   }
-
-  // Calculate success chance
-  const baseChance = action.baseSuccessChance || 0.5;
-  const influence = getInfluence(agent);
-  const successChance = Math.min(0.95, baseChance * (1 + influence));
 
   const success = Math.random() < successChance;
 
   if (success) {
     // Execute declarative handler
-    return action.handler(graphView, agent);
+    const handlerResult = action.handler(graphView, agent);
+
+    // Determine status based on handler result
+    let status: ActionOutcomeStatus = 'success';
+    if (!handlerResult.success) {
+      // Handler returned failure - check description for reason
+      if (handlerResult.description.includes('no valid') || handlerResult.description.includes('found no')) {
+        status = 'failed_no_target';
+      } else if (handlerResult.description.includes('no instigator')) {
+        status = 'failed_no_instigator';
+      } else {
+        status = 'failed_roll';
+      }
+    }
+
+    // Look up instigator name if present
+    let instigatorName: string | undefined;
+    if (handlerResult.instigatorId) {
+      const instigator = graphView.getEntity(handlerResult.instigatorId);
+      instigatorName = instigator?.name;
+    }
+
+    // Extract target info from entitiesModified (first non-actor entity is the target)
+    let targetId: string | undefined;
+    let targetName: string | undefined;
+    let targetKind: string | undefined;
+    let target2Id: string | undefined;
+    let target2Name: string | undefined;
+
+    if (handlerResult.entitiesModified) {
+      const targets = handlerResult.entitiesModified.filter(id => id !== agent.id);
+      if (targets.length > 0) {
+        const target = graphView.getEntity(targets[0]);
+        if (target) {
+          targetId = target.id;
+          targetName = target.name;
+          targetKind = target.kind;
+        }
+      }
+      if (targets.length > 1) {
+        const target2 = graphView.getEntity(targets[1]);
+        if (target2) {
+          target2Id = target2.id;
+          target2Name = target2.name;
+        }
+      }
+    }
+
+    return {
+      status,
+      success: handlerResult.success,
+      relationships: handlerResult.relationships,
+      description: handlerResult.description,
+      entitiesCreated: handlerResult.entitiesCreated,
+      entitiesModified: handlerResult.entitiesModified,
+      instigatorId: handlerResult.instigatorId,
+      instigatorName,
+      targetId,
+      targetName,
+      targetKind,
+      target2Id,
+      target2Name,
+      successChance,
+      prominenceMultiplier
+    };
   } else {
     return {
+      status: 'failed_roll',
       success: false,
       relationships: [],
       description: `failed to ${action.type}`,
       entitiesCreated: [],
-      entitiesModified: []
+      entitiesModified: [],
+      successChance,
+      prominenceMultiplier
     };
   }
-}
-
-/**
- * Action outcome interface
- */
-interface ActionOutcome {
-  success: boolean;
-  relationships: Relationship[];
-  description: string;
-  entitiesCreated?: string[];
-  entitiesModified?: string[];
 }
 

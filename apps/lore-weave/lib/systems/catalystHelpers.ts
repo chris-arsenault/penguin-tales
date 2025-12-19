@@ -45,33 +45,6 @@ export function canPerformAction(entity: HardState): boolean {
 }
 
 /**
- * Get entity's influence score
- * @param entity - The entity
- * @returns Influence score (0-1)
- */
-export function getInfluence(entity: HardState): number {
-  if (!entity.catalyst) {
-    return 0;
-  }
-
-  // Base influence from catalyst properties
-  let influence = entity.catalyst.influence;
-
-  // Prominence bonus: renowned/mythic entities have more influence
-  const prominenceBonus: Record<string, number> = {
-    'forgotten': -0.2,
-    'marginal': -0.1,
-    'recognized': 0,
-    'renowned': 0.15,
-    'mythic': 0.3
-  };
-  influence += prominenceBonus[entity.prominence] || 0;
-
-  // Clamp to [0, 1]
-  return Math.max(0, Math.min(1, influence));
-}
-
-/**
  * Record catalyst attribution on a relationship
  * @param relationship - The relationship to attribute
  * @param catalystId - ID of the agent that caused this
@@ -121,7 +94,7 @@ export function getCatalyzedEvents(
 
 /**
  * Get count of events catalyzed by entity
- * Used for prominence evolution and influence calculations
+ * Used for prominence evolution calculations
  * @param graph - The world graph
  * @param entityId - ID of the catalyst entity
  * @returns Number of events catalyzed
@@ -183,7 +156,7 @@ export function hasRelationship(
 }
 
 /**
- * Calculate action attempt chance based on entity properties
+ * Calculate action attempt chance based on entity prominence
  * @param entity - The entity attempting action
  * @param baseRate - Base action attempt rate (from system parameters)
  * @returns Probability of action attempt this tick
@@ -197,7 +170,7 @@ export function calculateAttemptChance(
   }
 
   // More prominent entities act more frequently
-  const prominenceMultipliers = {
+  const prominenceMultipliers: Record<string, number> = {
     'forgotten': 0.3,
     'marginal': 0.6,
     'recognized': 1.0,
@@ -206,7 +179,7 @@ export function calculateAttemptChance(
   };
 
   const multiplier = prominenceMultipliers[entity.prominence] || 1.0;
-  const chance = baseRate * multiplier * entity.catalyst.influence;
+  const chance = baseRate * multiplier;
 
   // Clamp to [0, 1]
   return Math.max(0, Math.min(1, chance));
@@ -217,23 +190,20 @@ export function calculateAttemptChance(
  * This is a helper for domain code to set up catalyst properties
  * @param entity - The entity to initialize
  * @param canAct - Can this entity perform actions?
- * @param initialInfluence - Starting influence (default 0.5)
  */
 export function initializeCatalyst(
   entity: HardState,
-  canAct: boolean,
-  initialInfluence: number = 0.5
+  canAct: boolean
 ): void {
   entity.catalyst = {
     canAct,
-    influence: initialInfluence,
     catalyzedEvents: []
   };
 }
 
 /**
  * Smart catalyst initialization based on entity type and prominence.
- * Automatically determines influence based on entity properties.
+ * Only recognized, renowned, and mythic entities of actor kinds can act.
  *
  * @param entity - The entity to initialize
  * @param graph - Graph (used for context)
@@ -252,45 +222,6 @@ export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
 
   entity.catalyst = {
     canAct: true,
-    influence: prominenceToInfluence(entity.prominence),
     catalyzedEvents: []
   };
-}
-
-/**
- * Convert prominence level to influence score
- * @param prominence - Prominence level
- * @returns Influence score (0-1)
- */
-function prominenceToInfluence(prominence: string): number {
-  switch (prominence) {
-    case 'mythic': return 0.9;
-    case 'renowned': return 0.7;
-    case 'recognized': return 0.5;
-    default: return 0.3;
-  }
-}
-
-/**
- * Update entity influence based on action outcome
- * @param entity - The entity whose influence to update
- * @param success - Whether the action succeeded
- * @param magnitude - How impactful was the action (0-1)
- */
-export function updateInfluence(
-  entity: HardState,
-  success: boolean,
-  magnitude: number = 0.1
-): void {
-  if (!entity.catalyst) {
-    return;
-  }
-
-  if (success) {
-    // Success increases influence
-    entity.catalyst.influence = Math.min(1.0, entity.catalyst.influence + magnitude);
-  } else {
-    // Failure decreases influence slightly
-    entity.catalyst.influence = Math.max(0, entity.catalyst.influence - (magnitude * 0.5));
-  }
 }

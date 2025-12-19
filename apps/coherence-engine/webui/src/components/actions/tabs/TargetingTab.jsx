@@ -32,7 +32,7 @@ export function TargetingTab({ action, onChange, schema }) {
   }));
 
   // Available refs for selection filters (action context)
-  const availableRefs = ['$actor', '$resolved_actor'];
+  const availableRefs = ['$actor', '$instigator'];
 
   return (
     <div>

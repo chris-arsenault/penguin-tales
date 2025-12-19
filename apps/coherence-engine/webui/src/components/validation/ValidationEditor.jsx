@@ -33,8 +33,8 @@ export default function ValidationEditor({
   onNavigateToGenerator,
 }) {
   const validationResults = useMemo(() =>
-    runValidations(schema, eras, pressures, generators, systems, actions),
-    [schema, eras, pressures, generators, systems, actions]
+    runValidations(usageMap, schema, eras, pressures, generators, systems),
+    [usageMap, schema, eras, pressures, generators, systems]
   );
 
   // Count orphans from usageMap for summary
@@ -234,14 +234,14 @@ export default function ValidationEditor({
 /**
  * Export validation status calculation for use by parent
  */
-export function getValidationStatus(schema, eras, pressures, generators, systems, actions = []) {
+export function getValidationStatus(usageMap, schema, eras, pressures, generators, systems) {
   const results = runValidations(
+    usageMap,
     schema || { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] },
     eras || [],
     pressures || [],
     generators || [],
-    systems || [],
-    actions || []
+    systems || []
   );
   return {
     status: getOverallStatus(results),

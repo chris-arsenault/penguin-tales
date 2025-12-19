@@ -8,15 +8,18 @@ import { colors, typography } from '../theme';
 
 // Lazy load the remote module
 const LoreWeaveRemote = lazy(() =>
-  import('loreWeave/LoreWeaveRemote').catch(() => ({
-    default: () => (
-      <RemotePlaceholder
-        name="Lore Weave"
-        port={5004}
-        instructions="cd apps/lore-weave/webui && npm install && npm run dev"
-      />
-    ),
-  }))
+  import('loreWeave/LoreWeaveRemote').catch((err) => {
+    console.error('[LoreWeaveHost] Failed to load remote:', err);
+    return {
+      default: () => (
+        <RemotePlaceholder
+          name="Lore Weave"
+          port={5004}
+          instructions="cd apps/lore-weave/webui && npm install && npm run dev"
+        />
+      ),
+    };
+  })
 );
 
 const styles = {

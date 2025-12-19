@@ -451,24 +451,6 @@
       },
       "regions": [
         {
-          "id": "aurora_berg",
-          "label": "Aurora Berg",
-          "color": "#4A90D9",
-          "tags": [
-            "central",
-            "safe",
-            "trade"
-          ],
-          "bounds": {
-            "shape": "circle",
-            "center": {
-              "x": 50,
-              "y": 45
-            },
-            "radius": 30
-          }
-        },
-        {
           "id": "aurora_stack_loc",
           "label": "Aurora Stack",
           "color": "#FFD700",
@@ -522,7 +504,8 @@
               "y": 65
             },
             "radius": 8
-          }
+          },
+          "culture": "nightshelf"
         }
       ]
     },

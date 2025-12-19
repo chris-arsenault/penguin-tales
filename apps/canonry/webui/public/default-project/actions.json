@@ -5,54 +5,81 @@
     "description": "Take control of a location adjacent to territory already controlled",
     "actor": {
       "kinds": [
-        "npc",
         "faction"
       ],
-      "minProminence": "recognized",
-      "requiredRelationships": [
-        "leader_of"
-      ]
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "leader_of",
-      "targetKind": "faction"
+      "filters": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "count_max",
+            "path": [
+              {
+                "via": "controls",
+                "direction": "any",
+                "targetKind": "location",
+                "targetSubtype": "any"
+              }
+            ],
+            "count": 2
+          }
+        }
+      ],
+      "instigator": {
+        "direction": "in",
+        "kinds": [
+          "npc"
+        ],
+        "relationshipKind": "leader_of"
+      }
     },
     "targeting": {
       "kind": "location",
-      "exclude": {
-        "existingRelationship": {
+      "filters": [
+        {
+          "type": "lacks_relationship",
           "kind": "controls",
-          "direction": "dst"
+          "with": "$actor"
         }
-      },
-      "require": {
-        "adjacentTo": {
-          "relationshipKind": "adjacent_to",
-          "actorControlsVia": "controls"
-        }
-      }
+      ]
     },
     "outcome": {
       "relationships": [
         {
           "kind": "controls",
-          "src": "resolved_actor",
+          "src": "actor",
           "dst": "target",
           "strength": 0.8
         }
       ],
-      "descriptionTemplate": "seized control of {target.name}"
+      "descriptionTemplate": " {actor.name} seized control of {target.name}",
+      "strengthenRelationships": [
+        {
+          "kind": "leader_of",
+          "amount": 0.1,
+          "channel": "instigator_actor"
+        }
+      ],
+      "applyProminenceToActor": true,
+      "applyProminenceToInstigator": true,
+      "pressureChanges": {
+        "security": -2
+      }
     },
     "probability": {
       "baseSuccessChance": 0.3,
       "baseWeight": 1,
       "pressureModifiers": [
-        "conflict",
-        "stability"
+        {
+          "pressure": "resource_availibility",
+          "multiplier": -1
+        },
+        {
+          "pressure": "security",
+          "multiplier": -1
+        }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "form_alliance",

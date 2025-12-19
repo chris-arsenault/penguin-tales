@@ -554,7 +554,6 @@ describe('connectionEvolution', () => {
         prominence: 'marginal',
         catalyst: {
           agentCategory: 'individual',
-          influence: 50,
           catalyzedEvents: ['event1', 'event2', 'event3']
         }
       });

@@ -28,13 +28,54 @@
       "description": "Whether this action is active (default: true)"
     },
     "actor": { "$ref": "#/$defs/ActionActorConfig" },
-    "actorResolution": { "$ref": "#/$defs/ActionActorResolution" },
     "targeting": { "$ref": "#/$defs/ActionTargetConfig" },
     "outcome": { "$ref": "#/$defs/ActionOutcomeConfig" },
     "probability": { "$ref": "#/$defs/ActionProbabilityConfig" }
   },
 
   "$defs": {
+    "PressureBand": {
+      "type": "object",
+      "required": ["pressure"],
+      "additionalProperties": false,
+      "properties": {
+        "pressure": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pressure ID"
+        },
+        "min": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100,
+          "description": "Minimum value (-100 to 100)"
+        },
+        "max": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100,
+          "description": "Maximum value (-100 to 100)"
+        }
+      }
+    },
+
+    "PressureModifier": {
+      "type": "object",
+      "required": ["pressure", "multiplier"],
+      "additionalProperties": false,
+      "properties": {
+        "pressure": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pressure ID"
+        },
+        "multiplier": {
+          "type": "number",
+          "description": "Multiplier for how pressure affects weight/attempt chance. Positive: high pressure increases likelihood. Negative: inverse relationship."
+        }
+      }
+    },
+
     "ActionActorConfig": {
       "type": "object",
       "required": ["kinds"],
@@ -44,7 +85,7 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "minItems": 1,
-          "description": "Entity kinds that can be actors"
+          "description": "Entity kinds that can be actors (the entity that interacts with the target)"
         },
         "subtypes": {
           "type": "array",
@@ -57,42 +98,60 @@
           "description": "Filter by status"
         },
         "requiredPressures": {
-          "type": "object",
-          "additionalProperties": { "type": "number" },
-          "description": "Pressures must exceed these thresholds"
+          "type": "array",
+          "items": { "$ref": "#/$defs/PressureBand" },
+          "description": "Pressure bands - action available only when pressures are within ranges"
         },
         "filters": {
           "type": "array",
           "items": { "$ref": "#/$defs/SelectionFilter" },
           "description": "Selection filters (same as generator targeting)"
+        },
+        "instigator": {
+          "$ref": "#/$defs/InstigatorConfig",
+          "description": "Optional instigator - entity that triggers the action on behalf of actor"
         }
       }
     },
 
-    "ActionActorResolution": {
+    "InstigatorConfig": {
       "type": "object",
-      "required": ["type"],
+      "required": ["relationshipKind", "direction"],
       "additionalProperties": false,
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["self", "via_relationship"],
-          "description": "Resolution type"
-        },
         "relationshipKind": {
           "type": "string",
           "minLength": 1,
-          "description": "Relationship kind to follow (for via_relationship)"
+          "description": "Relationship kind connecting instigator to actor"
         },
-        "targetKind": {
+        "direction": {
           "type": "string",
-          "minLength": 1,
-          "description": "Expected kind of resolved entity"
+          "enum": ["in", "out"],
+          "description": "Direction: 'in' = instigator has relationship TO actor, 'out' = actor has relationship TO instigator"
         },
-        "requireSubtype": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Require specific subtype on resolved entity"
+        "kinds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Entity kinds that can be instigators"
+        },
+        "subtypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional subtype filter"
+        },
+        "statuses": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional status filter"
+        },
+        "filters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SelectionFilter" },
+          "description": "Selection filters on instigator"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Is an instigator required? Default false - actor can act alone"
         }
       }
     },
@@ -145,12 +204,12 @@
         },
         "src": {
           "type": "string",
-          "enum": ["actor", "target", "target2", "resolved_actor", "corruption_source"],
+          "enum": ["actor", "instigator", "target", "target2"],
           "description": "Source entity"
         },
         "dst": {
           "type": "string",
-          "enum": ["actor", "target", "target2", "resolved_actor", "corruption_source"],
+          "enum": ["actor", "instigator", "target", "target2"],
           "description": "Destination entity"
         },
         "strength": {
@@ -168,7 +227,7 @@
 
     "RelationshipStrengthening": {
       "type": "object",
-      "required": ["kind", "amount"],
+      "required": ["kind", "channel", "amount"],
       "additionalProperties": false,
       "properties": {
         "kind": {
@@ -176,9 +235,14 @@
           "minLength": 1,
           "description": "Relationship kind to strengthen"
         },
+        "channel": {
+          "type": "string",
+          "enum": ["instigator_actor", "actor_target"],
+          "description": "Which entities to strengthen relationship between"
+        },
         "amount": {
           "type": "number",
-          "description": "Amount to increase strength"
+          "description": "Amount to change strength (can be negative to weaken)"
         }
       }
     },
@@ -202,6 +266,14 @@
           "type": "object",
           "additionalProperties": { "type": "number" },
           "description": "Pressure changes"
+        },
+        "applyProminenceToActor": {
+          "type": "boolean",
+          "description": "Apply system-level prominence changes to actor on success/failure"
+        },
+        "applyProminenceToInstigator": {
+          "type": "boolean",
+          "description": "Apply system-level prominence changes to instigator on success/failure"
         },
         "descriptionTemplate": {
           "type": "string",
@@ -229,8 +301,8 @@
         },
         "pressureModifiers": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "description": "Pressure IDs that affect this action's weight"
+          "items": { "$ref": "#/$defs/PressureModifier" },
+          "description": "Pressure modifiers that affect this action's weight and attempt chance"
         }
       }
     },

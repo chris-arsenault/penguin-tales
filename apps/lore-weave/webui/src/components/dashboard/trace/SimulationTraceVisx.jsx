@@ -134,10 +134,10 @@ function transformPressureData(pressureUpdates) {
 }
 
 /**
- * Transform template applications and system actions for event markers
+ * Transform template applications, action applications, and system actions for event markers
  * Each marker is colored by the kind of the first entity created or system type
  */
-function transformEventData(templateApplications, systemActions, pressureData) {
+function transformEventData(templateApplications, actionApplications, systemActions, pressureData) {
   const events = {
     template: [],
     system: [],
@@ -207,6 +207,38 @@ function transformEventData(templateApplications, systemActions, pressureData) {
           totalAtTick: actions.length,
           isEraTransition,
           color: isEraTransition ? '#f59e0b' : EVENT_COLORS.system,
+        });
+      });
+    }
+  }
+
+  // Process action applications (agent actions from universalCatalyst)
+  if (actionApplications?.length) {
+    // Group actions by tick for horizontal stacking
+    const byTick = new Map();
+    for (const app of actionApplications) {
+      if (!byTick.has(app.tick)) {
+        byTick.set(app.tick, []);
+      }
+      byTick.get(app.tick).push(app);
+    }
+
+    // Create event markers with outcome-based coloring
+    for (const [tick, apps] of byTick) {
+      apps.forEach((app, stackIndex) => {
+        // Color by outcome status: green for success, red for failure
+        const color = app.outcome.status === 'success' ? '#22c55e' : '#ef4444';
+        const uniqueId = `action-${tick}-${app.actionId}-${app.actorId}`;
+
+        events.action.push({
+          tick,
+          uniqueId,
+          actionId: app.actionId,
+          actionName: app.actionName,
+          data: app,
+          stackIndex,
+          totalAtTick: apps.length,
+          color,
         });
       });
     }
@@ -876,6 +908,249 @@ function SystemActionDetailPanel({ systemAction, isEraTransition, isLocked, onCl
 }
 
 /**
+ * Action detail panel - shows agent action breakdown
+ */
+function ActionDetailPanel({ actionApplication, isLocked, onClear }) {
+  if (!actionApplication) {
+    return (
+      <div className="lw-trace-view-detail">
+        <div className="lw-trace-view-detail-empty">
+          <div className="lw-trace-view-detail-empty-icon">●</div>
+          <div>Hover over an action marker to see details</div>
+          <div className="lw-trace-view-detail-hint">Click to lock selection</div>
+        </div>
+      </div>
+    );
+  }
+
+  const app = actionApplication;
+  const outcomeColors = {
+    success: '#22c55e',
+    failed_roll: '#ef4444',
+    failed_no_target: '#f59e0b',
+    failed_no_instigator: '#f59e0b',
+  };
+  const outcomeLabels = {
+    success: 'Success',
+    failed_roll: 'Failed Roll',
+    failed_no_target: 'No Target',
+    failed_no_instigator: 'No Instigator',
+  };
+
+  return (
+    <div className="lw-trace-view-detail">
+      <div className="lw-trace-view-detail-header">
+        <span>
+          <span style={{ color: outcomeColors[app.outcome.status] || '#888', marginRight: 6 }}>●</span>
+          Tick {app.tick} / Epoch {app.epoch}
+        </span>
+        {isLocked && (
+          <button className="lw-trace-view-detail-unlock" onClick={onClear}>
+            Clear
+          </button>
+        )}
+      </div>
+
+      <div className="lw-trace-view-detail-content">
+        <div className="lw-trace-view-template-app">
+          {/* Action header with outcome badge */}
+          <div className="lw-trace-view-template-header">
+            <span className="lw-trace-view-template-id">{app.actionName}</span>
+            <span
+              className="lw-trace-view-outcome-badge"
+              style={{
+                backgroundColor: outcomeColors[app.outcome.status] || '#888',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: 4,
+                fontSize: 11,
+                fontWeight: 500,
+              }}
+            >
+              {outcomeLabels[app.outcome.status] || app.outcome.status}
+            </span>
+          </div>
+
+          {app.outcome.description && (
+            <div className="lw-trace-view-template-desc">{app.outcome.description}</div>
+          )}
+
+          {/* Participants section */}
+          <div className="lw-trace-view-template-section">
+            <div className="lw-trace-view-detail-section-header">Participants</div>
+            <div className="lw-trace-view-entity-placement-grid">
+              {/* Actor (always present) */}
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Actor</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  <span className="lw-trace-view-anchor-entity">{app.actorName}</span>
+                  <span className="lw-trace-view-anchor-entity-kind">
+                    ({app.actorKind})
+                  </span>
+                </span>
+              </div>
+
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Prominence</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {app.actorProminence}
+                </span>
+              </div>
+
+              {/* Instigator (optional) */}
+              {app.instigatorId && (
+                <div className="lw-trace-view-entity-placement-row">
+                  <span className="lw-trace-view-entity-placement-label">Instigator</span>
+                  <span className="lw-trace-view-entity-placement-value">
+                    <span className="lw-trace-view-anchor-entity">{app.instigatorName || app.instigatorId}</span>
+                  </span>
+                </div>
+              )}
+
+              {/* Target (optional) */}
+              {app.targetId && (
+                <div className="lw-trace-view-entity-placement-row">
+                  <span className="lw-trace-view-entity-placement-label">Target</span>
+                  <span className="lw-trace-view-entity-placement-value">
+                    <span className="lw-trace-view-anchor-entity">{app.targetName}</span>
+                    {app.targetKind && (
+                      <span className="lw-trace-view-anchor-entity-kind">({app.targetKind})</span>
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Second target (optional) */}
+              {app.target2Id && (
+                <div className="lw-trace-view-entity-placement-row">
+                  <span className="lw-trace-view-entity-placement-label">Target 2</span>
+                  <span className="lw-trace-view-entity-placement-value">
+                    <span className="lw-trace-view-anchor-entity">{app.target2Name || app.target2Id}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Selection context - why this action was chosen */}
+          <div className="lw-trace-view-template-section">
+            <div className="lw-trace-view-detail-section-header">Selection Context</div>
+            <div className="lw-trace-view-entity-placement-grid">
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Available Actions</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {app.selectionContext.availableActionCount}
+                </span>
+              </div>
+
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Selected Weight</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {app.selectionContext.selectedWeight.toFixed(2)} / {app.selectionContext.totalWeight.toFixed(2)}
+                  <span style={{ color: '#64748b', marginLeft: 4 }}>
+                    ({((app.selectionContext.selectedWeight / app.selectionContext.totalWeight) * 100).toFixed(0)}%)
+                  </span>
+                </span>
+              </div>
+
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Attempt Chance</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {(app.selectionContext.attemptChance * 100).toFixed(0)}%
+                  {app.selectionContext.prominenceBonus > 0 && (
+                    <span className="positive" style={{ marginLeft: 4 }}>
+                      (+{(app.selectionContext.prominenceBonus * 100).toFixed(0)}% pressure bonus)
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Pressure influences breakdown - affects selection weight only, NOT success chance */}
+            {app.selectionContext.pressureInfluences?.length > 0 && (
+              <div className="lw-trace-view-detail-discrete" style={{ marginTop: 8 }}>
+                <div className="lw-trace-view-detail-section-header">Pressure Influences (on selection weight)</div>
+                {app.selectionContext.pressureInfluences.map((influence, i) => (
+                  <div key={i} className="lw-trace-view-detail-row">
+                    <span className="lw-trace-view-detail-label">
+                      {influence.pressureId}
+                      <span style={{ color: '#64748b', marginLeft: 4 }}>
+                        ({influence.value.toFixed(0)} × {influence.multiplier.toFixed(1)})
+                      </span>
+                    </span>
+                    <span className={influence.contribution >= 0 ? 'positive' : 'negative'}>
+                      {influence.contribution >= 0 ? '+' : ''}{influence.contribution.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Outcome details */}
+          <div className="lw-trace-view-template-section">
+            <div className="lw-trace-view-detail-section-header">Outcome (roll-based)</div>
+            <div className="lw-trace-view-entity-placement-grid">
+              <div className="lw-trace-view-entity-placement-row">
+                <span className="lw-trace-view-entity-placement-label">Success Chance</span>
+                <span className="lw-trace-view-entity-placement-value">
+                  {(app.outcome.successChance * 100).toFixed(0)}%
+                  <span style={{ color: '#64748b', marginLeft: 4 }}>
+                    (base × {app.outcome.prominenceMultiplier.toFixed(1)} prominence)
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            {/* Relationships created */}
+            {app.outcome.relationshipsCreated?.length > 0 && (
+              <div className="lw-trace-view-detail-discrete" style={{ marginTop: 8 }}>
+                <div className="lw-trace-view-detail-section-header">
+                  Relationships Created ({app.outcome.relationshipsCreated.length})
+                </div>
+                {app.outcome.relationshipsCreated.slice(0, 5).map((rel, i) => (
+                  <div key={i} className="lw-trace-view-detail-row">
+                    <span className="lw-trace-view-rel-kind">{rel.kind}</span>
+                    <span className="lw-trace-view-rel-ids">
+                      {rel.srcName} → {rel.dstName}
+                      {rel.strength !== undefined && (
+                        <span style={{ color: '#64748b', marginLeft: 4 }}>
+                          (str: {rel.strength.toFixed(2)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+                {app.outcome.relationshipsCreated.length > 5 && (
+                  <div className="lw-trace-view-detail-row lw-trace-view-detail-row-muted">
+                    +{app.outcome.relationshipsCreated.length - 5} more
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Prominence changes */}
+            {app.outcome.prominenceChanges?.length > 0 && (
+              <div className="lw-trace-view-detail-discrete" style={{ marginTop: 8 }}>
+                <div className="lw-trace-view-detail-section-header">Prominence Changes</div>
+                {app.outcome.prominenceChanges.map((change, i) => (
+                  <div key={i} className="lw-trace-view-detail-row">
+                    <span className="lw-trace-view-detail-label">{change.entityName}</span>
+                    <span className={change.direction === 'up' ? 'positive' : 'negative'}>
+                      {change.direction === 'up' ? '↑' : '↓'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main trace visualization component
  */
 function TraceVisualization({
@@ -1282,6 +1557,66 @@ function TraceVisualization({
               );
             }
           })}
+
+          {/* Action markers at y=-60 on pressure scale (circles) */}
+          {visibleEvents.action.map((event) => {
+            // Position at tick + 0.5 to differentiate from pressure hover
+            const cx = xScale(event.tick + 0.5);
+            // Position at y=-60 on pressure scale, stack horizontally if multiple at same tick
+            const baseY = yScale(-60);
+            const cy = baseY - (event.stackIndex * MARKER_STACK_OFFSET);
+            const isHovered = event.uniqueId === hoveredEventId;
+            const isSelected = event.uniqueId === selectedEventId;
+            const radius = isSelected ? 6 : isHovered ? 5 : 4;
+            const opacity = isSelected ? 1 : isHovered ? 0.9 : 0.7;
+
+            return (
+              <g
+                key={event.uniqueId}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => onEventHover(event.uniqueId)}
+                onMouseLeave={() => onEventHover(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventClick(event.uniqueId);
+                }}
+              >
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={radius}
+                  fill={event.color}
+                  fillOpacity={opacity}
+                  stroke={isSelected ? '#fff' : isHovered ? event.color : 'rgba(0,0,0,0.3)'}
+                  strokeWidth={isSelected ? 2 : 1}
+                />
+                {/* Show count badge if many at same tick and this is the top one */}
+                {event.stackIndex === event.totalAtTick - 1 && event.totalAtTick > 3 && (
+                  <g>
+                    <circle
+                      cx={cx + 8}
+                      cy={cy - 6}
+                      r={7}
+                      fill="rgba(0,0,0,0.8)"
+                      stroke={event.color}
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={cx + 8}
+                      y={cy - 6}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#fff"
+                      fontSize={9}
+                      fontWeight={600}
+                    >
+                      {event.totalAtTick}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
         </svg>
       </div>
 
@@ -1341,6 +1676,7 @@ export default function SimulationTraceVisx({
   pressureUpdates = [],
   epochStats = [],
   templateApplications = [],
+  actionApplications = [],
   systemActions = [],
   onClose,
 }) {
@@ -1394,8 +1730,8 @@ export default function SimulationTraceVisx({
   );
 
   const eventData = useMemo(
-    () => transformEventData(templateApplications, systemActions, pressureData),
-    [templateApplications, systemActions, pressureData]
+    () => transformEventData(templateApplications, actionApplications, systemActions, pressureData),
+    [templateApplications, actionApplications, systemActions, pressureData]
   );
 
   const eraBoundaries = useMemo(
@@ -1403,7 +1739,7 @@ export default function SimulationTraceVisx({
     [pressureUpdates, epochStats, systemActions]
   );
 
-  // Get selected event for detail panel (template or system action)
+  // Get selected event for detail panel (template, action, or system action)
   const selectedEvent = useMemo(() => {
     const eventId = selectedEventId || hoveredEventId;
     if (!eventId) return null;
@@ -1412,6 +1748,12 @@ export default function SimulationTraceVisx({
     const templateEvent = eventData.template.find(e => e.uniqueId === eventId);
     if (templateEvent) {
       return { type: 'template', data: templateEvent.data };
+    }
+
+    // Check action applications
+    const actionEvent = eventData.action.find(e => e.uniqueId === eventId);
+    if (actionEvent) {
+      return { type: 'action', data: actionEvent.data };
     }
 
     // Check system actions
@@ -1517,7 +1859,7 @@ export default function SimulationTraceVisx({
           <div className="lw-trace-view-title">
             Simulation Trace
             <span className="lw-trace-view-subtitle">
-              {pressureData.length} ticks / {pressureIds.length} pressures / {eventData.template.length} templates / {eraTransitionCount} era transitions
+              {pressureData.length} ticks / {pressureIds.length} pressures / {eventData.template.length} templates / {eventData.action.length} actions / {eraTransitionCount} era transitions
             </span>
           </div>
           <div className="lw-trace-view-header-actions">
@@ -1730,6 +2072,12 @@ export default function SimulationTraceVisx({
           {selectedEvent?.type === 'template' ? (
             <TemplateDetailPanel
               template={selectedEvent.data}
+              isLocked={!!selectedEventId}
+              onClear={handleClearEvent}
+            />
+          ) : selectedEvent?.type === 'action' ? (
+            <ActionDetailPanel
+              actionApplication={selectedEvent.data}
               isLocked={!!selectedEventId}
               onClear={handleClearEvent}
             />

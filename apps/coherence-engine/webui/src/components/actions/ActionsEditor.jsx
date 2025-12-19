@@ -11,10 +11,9 @@ const createAction = () => ({
   id: `action_${Date.now()}`,
   name: 'New Action',
   description: '',
-  actor: { kinds: ['npc'] },
-  actorResolution: { type: 'self' },
-  targeting: { kind: 'npc' },
-  outcome: {},
+  actor: { kinds: [] },
+  targeting: { kind: '' },
+  outcome: { descriptionTemplate: '' },
   probability: {
     baseSuccessChance: 0.5,
     baseWeight: 1.0,
@@ -37,7 +36,9 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
   // Collect unique pressures across all actions
   const uniquePressures = new Set();
   actions.forEach(action => {
-    (action.probability?.pressureModifiers || []).forEach(p => uniquePressures.add(p));
+    (action.probability?.pressureModifiers || []).forEach(mod => {
+      if (mod.pressure) uniquePressures.add(mod.pressure);
+    });
   });
 
   return (

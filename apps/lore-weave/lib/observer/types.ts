@@ -182,6 +182,75 @@ export interface CoordinateStatsPayload {
   cultureDistribution: Record<string, number>;
 }
 
+/**
+ * Action application payload - emitted when an action is selected and executed by an agent
+ * Only emitted for actions that were actually selected to run (not all available actions)
+ */
+export interface ActionApplicationPayload {
+  tick: number;
+  epoch: number;
+
+  // Action identification
+  actionId: string;
+  actionName: string;
+
+  // Participants
+  actorId: string;
+  actorName: string;
+  actorKind: string;
+  actorProminence: string;
+  instigatorId?: string;
+  instigatorName?: string;
+
+  // Target(s) - populated if action handler was called
+  targetId?: string;
+  targetName?: string;
+  targetKind?: string;
+  target2Id?: string;
+  target2Name?: string;
+
+  // Why this action was selected
+  selectionContext: {
+    availableActionCount: number;
+    selectedWeight: number;
+    totalWeight: number;
+    pressureInfluences: Array<{
+      pressureId: string;
+      value: number;
+      multiplier: number;
+      contribution: number;
+    }>;
+    attemptChance: number;
+    prominenceBonus: number;
+  };
+
+  // What happened
+  outcome: {
+    status: 'success' | 'failed_roll' | 'failed_no_target' | 'failed_no_instigator';
+    successChance: number;
+    prominenceMultiplier: number;
+    description: string;
+    relationshipsCreated: Array<{
+      kind: string;
+      srcId: string;
+      dstId: string;
+      srcName: string;
+      dstName: string;
+      strength?: number;
+    }>;
+    relationshipsStrengthened: Array<{
+      kind: string;
+      channel: string;
+      amount: number;
+    }>;
+    prominenceChanges: Array<{
+      entityId: string;
+      entityName: string;
+      direction: 'up' | 'down';
+    }>;
+  };
+}
+
 export interface SimulationResultPayload {
   metadata: {
     tick: number;
@@ -416,6 +485,7 @@ export type SimulationEvent =
   | { type: 'epoch_stats'; payload: EpochStatsPayload }
   | { type: 'growth_phase'; payload: GrowthPhasePayload }
   | { type: 'template_application'; payload: TemplateApplicationPayload }
+  | { type: 'action_application'; payload: ActionApplicationPayload }
   | { type: 'pressure_update'; payload: PressureUpdatePayload }
   | { type: 'population_report'; payload: PopulationPayload }
   | { type: 'template_usage'; payload: TemplateUsagePayload }
@@ -454,6 +524,7 @@ export interface ISimulationEmitter {
   epochStats(payload: EpochStatsPayload): void;
   growthPhase(payload: GrowthPhasePayload): void;
   templateApplication(payload: TemplateApplicationPayload): void;
+  actionApplication(payload: ActionApplicationPayload): void;
   pressureUpdate(payload: PressureUpdatePayload): void;
   populationReport(payload: PopulationPayload): void;
   templateUsage(payload: TemplateUsagePayload): void;

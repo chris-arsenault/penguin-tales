@@ -6,13 +6,6 @@ import {
   findEntities,
   getRelated,
   hasRelationship,
-  getResidents,
-  getLocation,
-  getFactionMembers,
-  getFactionLeader,
-  getCoreFactionMembers,
-  getStrongAllies,
-  getWeakRelationships,
   getProminenceValue,
   adjustProminence,
   slugifyName,
@@ -26,8 +19,7 @@ import {
   rollProbability,
   canFormRelationship,
   recordRelationshipFormation,
-  getConnectionWeight,
-  getFactionRelationship
+  getConnectionWeight
 } from '../../utils';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship } from '../../core/worldTypes';
@@ -613,118 +605,9 @@ describe('Relationship Queries', () => {
     });
   });
 
-  describe('getResidents', () => {
-    it('should find all residents of a location', () => {
-      const graph = createMockGraph();
-      const location = createMockEntity({ id: 'loc1', kind: 'location' });
-      const npc1 = createMockEntity({ id: 'npc1' });
-      const npc2 = createMockEntity({ id: 'npc2' });
-
-      graph._loadEntity(location.id, location);
-      graph._loadEntity(npc1.id, npc1);
-      graph._loadEntity(npc2.id, npc2);
-
-      graph._loadRelationship({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
-      graph._loadRelationship({ kind: 'resident_of', src: 'npc2', dst: 'loc1', strength: 0.3 });
-
-      const residents = getResidents(graph, 'loc1');
-      expect(residents).toHaveLength(2);
-    });
-  });
-
-  describe('getLocation', () => {
-    it('should return location of NPC', () => {
-      const graph = createMockGraph();
-      const location = createMockEntity({ id: 'loc1', kind: 'location', name: 'Test Colony' });
-      const npc = createMockEntity({ id: 'npc1' });
-
-      graph._loadEntity(location.id, location);
-      graph._loadEntity(npc.id, npc);
-
-      graph._loadRelationship({ kind: 'resident_of', src: 'npc1', dst: 'loc1', strength: 0.3 });
-
-      const loc = getLocation(graph, 'npc1');
-      expect(loc?.id).toBe('loc1');
-      expect(loc?.name).toBe('Test Colony');
-    });
-
-    it('should return undefined if no location', () => {
-      const graph = createMockGraph();
-      const loc = getLocation(graph, 'npc1');
-      expect(loc).toBeUndefined();
-    });
-  });
-
-  describe('getFactionMembers', () => {
-    it('should find all faction members', () => {
-      const graph = createMockGraph();
-      const faction = createMockEntity({ id: 'fac1', kind: 'faction' });
-      const member1 = createMockEntity({ id: 'npc1' });
-      const member2 = createMockEntity({ id: 'npc2' });
-
-      graph._loadEntity(faction.id, faction);
-      graph._loadEntity(member1.id, member1);
-      graph._loadEntity(member2.id, member2);
-
-      graph._loadRelationship({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
-      graph._loadRelationship({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 1.0 });
-
-      const members = getFactionMembers(graph, 'fac1');
-      expect(members).toHaveLength(2);
-    });
-  });
-
-  describe('getFactionLeader', () => {
-    it('should return faction leader', () => {
-      const graph = createMockGraph();
-      const faction = createMockEntity({ id: 'fac1', kind: 'faction' });
-      const leader = createMockEntity({ id: 'npc1', name: 'Leader' });
-
-      graph._loadEntity(faction.id, faction);
-      graph._loadEntity(leader.id, leader);
-
-      graph._loadRelationship({ kind: 'leader_of', src: 'npc1', dst: 'fac1', strength: 1.0 });
-
-      const result = getFactionLeader(graph, 'fac1');
-      expect(result?.id).toBe('npc1');
-    });
-  });
-
-  describe('getCoreFactionMembers', () => {
-    it('should return only strong members', () => {
-      const graph = createMockGraph();
-      const faction = createMockEntity({ id: 'fac1', kind: 'faction' });
-      const core = createMockEntity({ id: 'npc1' });
-      const weak = createMockEntity({ id: 'npc2' });
-
-      graph._loadEntity(faction.id, faction);
-      graph._loadEntity(core.id, core);
-      graph._loadEntity(weak.id, weak);
-
-      graph._loadRelationship({ kind: 'member_of', src: 'npc1', dst: 'fac1', strength: 0.9 });
-      graph._loadRelationship({ kind: 'member_of', src: 'npc2', dst: 'fac1', strength: 0.5 });
-
-      const coreMembers = getCoreFactionMembers(graph, 'fac1');
-      expect(coreMembers).toHaveLength(1);
-      expect(coreMembers[0].id).toBe('npc1');
-    });
-  });
-
-  describe('getWeakRelationships', () => {
-    it('should return only weak relationships', () => {
-      const graph = createMockGraph();
-      const entity = createMockEntity({ id: 'e1' });
-
-      graph._loadEntity(entity.id, entity);
-
-      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e2', strength: 0.2 });
-      graph._loadRelationship({ kind: 'friend_of', src: 'e1', dst: 'e3', strength: 0.8 });
-
-      const weak = getWeakRelationships(graph, 'e1');
-      expect(weak).toHaveLength(1);
-      expect(weak[0].dst).toBe('e2');
-    });
-  });
+  // Note: getResidents, getLocation, getFactionMembers, getFactionLeader,
+  // getCoreFactionMembers, and getWeakRelationships were removed from the codebase.
+  // Use getRelated() with appropriate relationship kinds instead.
 });
 
 describe('Prominence Helpers', () => {
@@ -1147,44 +1030,6 @@ describe('Connection Weight', () => {
   });
 });
 
-describe('Faction Relationships', () => {
-  describe('getFactionRelationship', () => {
-    it('should detect warfare', () => {
-      const graph = createMockGraph();
-      const faction1 = createMockEntity({ id: 'f1', kind: 'faction' });
-      const faction2 = createMockEntity({ id: 'f2', kind: 'faction' });
-
-      graph._loadEntity(faction1.id, faction1);
-      graph._loadEntity(faction2.id, faction2);
-
-      graph._loadRelationship({ kind: 'at_war_with', src: 'f1', dst: 'f2', strength: 0.7 });
-
-      const rel = getFactionRelationship([faction1], [faction2], graph);
-      expect(rel).toBe('enemy');
-    });
-
-    it('should detect alliances', () => {
-      const graph = createMockGraph();
-      const faction1 = createMockEntity({ id: 'f1', kind: 'faction' });
-      const faction2 = createMockEntity({ id: 'f2', kind: 'faction' });
-
-      graph._loadEntity(faction1.id, faction1);
-      graph._loadEntity(faction2.id, faction2);
-
-      graph._loadRelationship({ kind: 'allied_with', src: 'f1', dst: 'f2', strength: 0.7 });
-
-      const rel = getFactionRelationship([faction1], [faction2], graph);
-      expect(rel).toBe('allied');
-    });
-
-    it('should return neutral by default', () => {
-      const graph = createMockGraph();
-      const faction1 = createMockEntity({ id: 'f1', kind: 'faction' });
-      const faction2 = createMockEntity({ id: 'f2', kind: 'faction' });
-
-      const rel = getFactionRelationship([faction1], [faction2], graph);
-      expect(rel).toBe('neutral');
-    });
-  });
-});
+// Note: getFactionRelationship was removed from the codebase.
+// Use hasRelationship() with appropriate relationship kinds to check faction relationships.
 

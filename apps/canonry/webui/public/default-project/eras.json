@@ -13,8 +13,6 @@
       "great_festival": 0.5,
       "ideology_emergence": 0.5,
       "magic_discovery": 2,
-      "territorial_expansion": 2.5,
-      "trade_route_establishment": 1.5,
       "tech_breakthrough": 1.2,
       "wild_magic_discover": 1,
       "ice_memory_thaw": 0,
@@ -84,8 +82,6 @@
       "crisis_legislation": 2,
       "great_festival": 2,
       "ideology_emergence": 2.5,
-      "territorial_expansion": 3,
-      "trade_route_establishment": 0.3,
       "tech_breakthrough": 0.8,
       "war_outbreak": 1.5,
       "succession_crisis": 1,
@@ -97,7 +93,9 @@
       "ice_memory_thaw": 0,
       "economic_colony_decline": 0,
       "economic_colony_recovery": 0,
-      "location_discovery": 1
+      "location_discovery": 1,
+      "cult_formation": 1,
+      "succession": 1
     },
     "systemModifiers": {
       "conflict_contagion": 2,
@@ -146,7 +144,7 @@
         "type": "pressure",
         "pressureId": "resource_availibility",
         "operator": "above",
-        "threshold": 35
+        "threshold": 10
       }
     ],
     "exitEffects": {
@@ -164,12 +162,10 @@
       "krill_bloom_migration": 1,
       "orca_raider_arrival": 0,
       "guild_establishment": 2,
-      "cult_formation": 0.1,
+      "cult_formation": 1,
       "great_festival": 1,
-      "ideology_emergence": 3,
+      "ideology_emergence": 1,
       "magic_discovery": 0.6,
-      "territorial_expansion": 0.8,
-      "trade_route_establishment": 2.5,
       "tech_breakthrough": 3.5,
       "legend_crystallization": 1,
       "wild_magic_discover": 1,
@@ -179,7 +175,8 @@
       "ice_memory_thaw": 1,
       "economic_colony_decline": 1,
       "economic_colony_recovery": 1,
-      "location_discovery": 1
+      "location_discovery": 1,
+      "colony_founding": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
@@ -243,8 +240,6 @@
       "orca_raider_arrival": 2,
       "great_festival": 0.5,
       "ideology_emergence": 1,
-      "territorial_expansion": 1.5,
-      "trade_route_establishment": 0.2,
       "tech_breakthrough": 1.5,
       "war_outbreak": 2,
       "legend_crystallization": 2,
@@ -257,7 +252,9 @@
       "economic_colony_decline": 0,
       "economic_colony_recovery": 0,
       "orca_combat_technique": 2,
-      "location_discovery": 1
+      "location_discovery": 1,
+      "cult_formation": 1,
+      "succession": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -323,8 +320,6 @@
       "orca_raider_arrival": 0,
       "great_festival": 0,
       "ideology_emergence": 2,
-      "territorial_expansion": 1,
-      "trade_route_establishment": 3,
       "tech_breakthrough": 1.8,
       "legend_crystallization": 2.5,
       "guild_establishment": 2,
@@ -335,7 +330,8 @@
       "ice_memory_thaw": 1,
       "economic_colony_decline": 1,
       "economic_colony_recovery": 1,
-      "location_discovery": 1
+      "location_discovery": 1,
+      "colony_founding": 1
     },
     "systemModifiers": {
       "cultural_drift": 1.5,

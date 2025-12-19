@@ -195,16 +195,16 @@ export default function CoherenceEngineRemote({
 
   const currentSection = SECTION_INFO[activeTab] || SECTION_INFO.validation;
 
-  // Calculate validation status for the nav indicator
-  const validationStatus = useMemo(() =>
-    getValidationStatus(schema, eras, pressures, generators, systems),
-    [schema, eras, pressures, generators, systems]
-  );
-
-  // Compute usage map for cross-reference tracking and validation
+  // Compute usage map for cross-reference tracking and validation (must be before validationStatus)
   const usageMap = useMemo(() =>
     computeUsageMap(schema, pressures, eras, generators, systems, actions),
     [schema, pressures, eras, generators, systems, actions]
+  );
+
+  // Calculate validation status for the nav indicator (uses usageMap)
+  const validationStatus = useMemo(() =>
+    getValidationStatus(usageMap, schema, eras, pressures, generators, systems),
+    [usageMap, schema, eras, pressures, generators, systems]
   );
 
   // Navigate to generators tab and optionally select a specific generator

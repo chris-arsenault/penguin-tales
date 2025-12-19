@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getAgentsByCategory,
   canPerformAction,
-  getInfluence,
   recordCatalyst,
   getCatalyzedEvents,
   getCatalyzedEventCount,
@@ -14,8 +13,7 @@ import {
   hasRelationship,
   calculateAttemptChance,
   initializeCatalyst,
-  initializeCatalystSmart,
-  updateInfluence
+  initializeCatalystSmart
 } from '../../systems/catalystHelpers';
 import { Graph } from '../../engine/types';
 import { HardState, Relationship, Prominence, CatalyzedEvent } from '../../core/worldTypes';
@@ -45,7 +43,6 @@ function createEntity(
   if (catalyst) {
     entity.catalyst = {
       canAct: catalyst.canAct ?? false,
-      influence: catalyst.influence ?? 0.5,
       catalyzedEvents: catalyst.catalyzedEvents ?? []
     };
   }
@@ -234,69 +231,6 @@ describe('canPerformAction', () => {
   });
 });
 
-describe('getInfluence', () => {
-  it('should return base influence for recognized entities', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'recognized', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    const influence = getInfluence(entity);
-    expect(influence).toBe(0.5); // 0.5 base + 0 prominence bonus
-  });
-
-  it('should add prominence bonus for renowned entities', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    const influence = getInfluence(entity);
-    expect(influence).toBe(0.65); // 0.5 base + 0.15 prominence bonus
-  });
-
-  it('should add prominence bonus for mythic entities', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    const influence = getInfluence(entity);
-    expect(influence).toBe(0.8); // 0.5 base + 0.3 prominence bonus
-  });
-
-  it('should subtract prominence penalty for forgotten entities', () => {
-    const entity = createEntity('npc1', 'npc', 'citizen', 'forgotten', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    const influence = getInfluence(entity);
-    expect(influence).toBe(0.3); // 0.5 base - 0.2 prominence penalty
-  });
-
-  it('should clamp influence to [0, 1]', () => {
-    const highEntity = createEntity('npc1', 'npc', 'hero', 'mythic', {
-      canAct: true,
-      influence: 0.9
-    });
-
-    const lowEntity = createEntity('npc2', 'npc', 'citizen', 'forgotten', {
-      canAct: true,
-      influence: 0.1
-    });
-
-    expect(getInfluence(highEntity)).toBe(1.0); // Clamped to max
-    expect(getInfluence(lowEntity)).toBe(0); // Clamped to min
-  });
-
-  it('should return 0 when entity has no catalyst', () => {
-    const entity = createEntity('npc1', 'npc', 'citizen', 'marginal');
-
-    expect(getInfluence(entity)).toBe(0);
-  });
-});
-
 describe('recordCatalyst', () => {
   it('should add catalyzedBy property to relationship', () => {
     const rel: Relationship = {
@@ -457,27 +391,24 @@ describe('hasRelationship', () => {
 describe('calculateAttemptChance', () => {
   it('should calculate chance with base rate and prominence', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'recognized', {
-      canAct: true,
-      influence: 0.5
+      canAct: true
     });
 
     const chance = calculateAttemptChance(entity, 0.1);
-    expect(chance).toBe(0.05); // 0.1 * 1.0 (recognized) * 0.5 (influence)
+    expect(chance).toBe(0.1); // 0.1 * 1.0 (recognized)
   });
 
   it('should apply prominence multipliers', () => {
     const mythic = createEntity('npc1', 'npc', 'hero', 'mythic', {
-      canAct: true,
-      influence: 1.0
+      canAct: true
     });
 
     const forgotten = createEntity('npc2', 'npc', 'citizen', 'forgotten', {
-      canAct: true,
-      influence: 1.0
+      canAct: true
     });
 
-    expect(calculateAttemptChance(mythic, 0.1)).toBe(0.2); // 0.1 * 2.0 * 1.0
-    expect(calculateAttemptChance(forgotten, 0.1)).toBe(0.03); // 0.1 * 0.3 * 1.0
+    expect(calculateAttemptChance(mythic, 0.1)).toBe(0.2); // 0.1 * 2.0
+    expect(calculateAttemptChance(forgotten, 0.1)).toBeCloseTo(0.03); // 0.1 * 0.3
   });
 
   it('should return 0 when entity cannot act', () => {
@@ -490,8 +421,7 @@ describe('calculateAttemptChance', () => {
 
   it('should clamp result to [0, 1]', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
-      canAct: true,
-      influence: 1.0
+      canAct: true
     });
 
     const chance = calculateAttemptChance(entity, 1.0);
@@ -503,20 +433,11 @@ describe('initializeCatalyst', () => {
   it('should initialize catalyst with given parameters', () => {
     const entity = createEntity('npc1', 'npc', 'hero', 'renowned');
 
-    initializeCatalyst(entity, true, 0.7);
+    initializeCatalyst(entity, true);
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.influence).toBe(0.7);
     expect(entity.catalyst?.catalyzedEvents).toEqual([]);
-  });
-
-  it('should use default influence when not provided', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'renowned');
-
-    initializeCatalyst(entity, true);
-
-    expect(entity.catalyst?.influence).toBe(0.5);
   });
 
   it('should handle canAct false', () => {
@@ -537,7 +458,6 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.influence).toBe(0.5); // Recognized prominence
   });
 
   it('should initialize catalyst for renowned mayor', () => {
@@ -548,7 +468,6 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.influence).toBe(0.7); // Renowned prominence
   });
 
   it('should not initialize catalyst for marginal entities', () => {
@@ -577,7 +496,6 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-    expect(entity.catalyst?.influence).toBe(0.9); // Mythic prominence
   });
 
   it('should initialize catalyst for magic abilities', () => {
@@ -608,68 +526,5 @@ describe('initializeCatalystSmart', () => {
 
     expect(entity.catalyst).toBeDefined();
     expect(entity.catalyst?.canAct).toBe(true);
-  });
-});
-
-describe('updateInfluence', () => {
-  it('should increase influence on success', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    updateInfluence(entity, true, 0.1);
-
-    expect(entity.catalyst?.influence).toBe(0.6);
-  });
-
-  it('should decrease influence on failure', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    updateInfluence(entity, false, 0.1);
-
-    expect(entity.catalyst?.influence).toBe(0.45); // 0.5 - (0.1 * 0.5)
-  });
-
-  it('should clamp influence to maximum 1.0', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'mythic', {
-      canAct: true,
-      influence: 0.95
-    });
-
-    updateInfluence(entity, true, 0.1);
-
-    expect(entity.catalyst?.influence).toBe(1.0);
-  });
-
-  it('should clamp influence to minimum 0', () => {
-    const entity = createEntity('npc1', 'npc', 'citizen', 'forgotten', {
-      canAct: true,
-      influence: 0.02
-    });
-
-    updateInfluence(entity, false, 0.1);
-
-    expect(entity.catalyst?.influence).toBe(0);
-  });
-
-  it('should do nothing when entity has no catalyst', () => {
-    const entity = createEntity('npc1', 'npc', 'citizen', 'marginal');
-
-    expect(() => updateInfluence(entity, true, 0.1)).not.toThrow();
-  });
-
-  it('should use default magnitude when not provided', () => {
-    const entity = createEntity('npc1', 'npc', 'hero', 'renowned', {
-      canAct: true,
-      influence: 0.5
-    });
-
-    updateInfluence(entity, true);
-
-    expect(entity.catalyst?.influence).toBe(0.6); // Default magnitude 0.1
   });
 });

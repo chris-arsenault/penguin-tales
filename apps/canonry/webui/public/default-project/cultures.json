@@ -662,6 +662,40 @@
             "magnetize"
           ],
           "source": "llm"
+        },
+        "aurora_holiday_types": {
+          "id": "aurora_holiday_types",
+          "description": "Generated title list: types of events, celebrations, occurrences that happen in the cold ice",
+          "entries": [
+            "Remembrance",
+            "Celebration",
+            "Convocation",
+            "Accord",
+            "Concord",
+            "Festival",
+            "Jubilee",
+            "Observance",
+            "Revel",
+            "Offering",
+            "Thanksgiving",
+            "Tribute",
+            "Dedication",
+            "Investiture",
+            "Consecration",
+            "Benediction",
+            "Radiance",
+            "Illumination",
+            "Gilding",
+            "Ascension",
+            "Prosperity",
+            "Harvest",
+            "Exchange",
+            "Covenant",
+            "Charter",
+            "Confluence",
+            "Meridian"
+          ],
+          "source": "llm"
         }
       },
       "lexemeSpecs": [
@@ -788,19 +822,6 @@
         }
       ],
       "grammars": [
-        {
-          "id": "aurora_elite_npc",
-          "start": "name",
-          "rules": {
-            "name": [
-              [
-                "slot:aurora_gen_titles",
-                "domain:aurora_domain~cap",
-                "domain:aurora_domain_short~lower^'^slot:aurora_nature~cap"
-              ]
-            ]
-          }
-        },
         {
           "id": "aurora_faction",
           "start": "name",
@@ -949,6 +970,44 @@
               [
                 "slot:aurora_magic_part_a^-^slot:aurora_magic_partb",
                 "(^slot:aurora_magic_part_c^)"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora_holidays",
+          "start": "name",
+          "capitalization": "allcaps",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_holiday_types",
+                "of",
+                "slot:aurora_progress_verbs~ing"
+              ],
+              [
+                "slot:aurora_holiday_types",
+                "for",
+                "domain:aurora_domain"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "aurora-stack_grammar",
+          "start": "name",
+          "capitalization": "",
+          "rules": {}
+        },
+        {
+          "id": "aurora_elite_npc",
+          "start": "name",
+          "rules": {
+            "name": [
+              [
+                "slot:aurora_gen_titles",
+                "domain:aurora_domain~cap",
+                "domain:aurora_domain_short~lower^'^slot:aurora_nature~cap"
               ]
             ]
           }
@@ -1168,7 +1227,30 @@
           "id": "aurora_rules",
           "strategyGroups": [
             {
-              "name": "Conditional",
+              "name": "Holidays",
+              "priority": 60,
+              "conditions": {
+                "entityKinds": [
+                  "rules"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "social"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "aurora_holidays"
+                }
+              ]
+            },
+            {
+              "name": "Laws",
               "priority": 50,
               "conditions": {
                 "entityKinds": [
@@ -1752,6 +1834,37 @@
             "Vault"
           ],
           "source": "llm"
+        },
+        "nightshelf_holiday_types": {
+          "id": "nightshelf_holiday_types",
+          "description": "Generated title list: types of events, celebrations, occurrences that happen in the cold ice (copied from aurora-stack)",
+          "entries": [
+            "Observance",
+            "Convocation",
+            "Vigil",
+            "Commoration",
+            "Reckoning",
+            "Anamnesis",
+            "Office",
+            "Canticle",
+            "Obsequy",
+            "Liturgy",
+            "Sacrament",
+            "Conclave",
+            "Offering",
+            "Exequy",
+            "Dirge",
+            "Invocation",
+            "Ordinance",
+            "Consecration",
+            "Communion",
+            "Judgment",
+            "Witness",
+            "Binding",
+            "Accord",
+            "Atonement"
+          ],
+          "source": "llm"
         }
       },
       "lexemeSpecs": [
@@ -1903,11 +2016,49 @@
               ]
             ]
           }
+        },
+        {
+          "id": "nightshelf_holidays",
+          "start": "name",
+          "capitalization": "titleWords",
+          "rules": {
+            "name": [
+              [
+                "slot:nightshelf_magic_part_a~lower^-^slot:nightshelf_holiday_types~cap"
+              ],
+              [
+                "(^slot:nightshelf_magic_partb~lower^)",
+                "slot:nightshelf_holiday_types~cap"
+              ],
+              [
+                "slot:nightshelf_magic_part_c~cap^-^slot:nightshelf_holiday_types~cap"
+              ]
+            ]
+          }
         }
       ],
       "profiles": [
         {
           "id": "nightshelf_default",
+          "name": "Nightshelf Default",
+          "strategyGroups": [
+            {
+              "name": "Default Fallback",
+              "priority": 10,
+              "conditions": null,
+              "strategies": [
+                {
+                  "type": "phonotactic",
+                  "weight": 1,
+                  "domainId": "nightshelf_domain"
+                }
+              ]
+            }
+          ],
+          "isDefault": true
+        },
+        {
+          "id": "nightshelf_npcs",
           "name": "Nightshelf Default",
           "strategyGroups": [
             {
@@ -1926,16 +2077,26 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 2,
+                  "weight": 0.8,
                   "grammarId": "nightshelf_npc"
                 },
                 {
-                  "type": "phonotactic",
-                  "weight": 1,
-                  "domainId": "nightshelf_domain"
+                  "type": "grammar",
+                  "weight": 0.2,
+                  "grammarId": "nightshelf_elite_npc"
                 }
               ]
-            },
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "npc"
+          ]
+        },
+        {
+          "id": "nightshelf_locations",
+          "name": "Nightshelf Default",
+          "strategyGroups": [
             {
               "name": "Location Names",
               "priority": 0,
@@ -1952,28 +2113,31 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 2,
-                  "grammarId": "nightshelf_location"
-                },
-                {
-                  "type": "phonotactic",
                   "weight": 1,
-                  "domainId": "nightshelf_domain"
+                  "grammarId": "nightshelf_location"
                 }
               ]
-            },
+            }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "location"
+          ]
+        },
+        {
+          "id": "nightshelf_rules",
+          "name": "Nightshelf Default",
+          "strategyGroups": [
             {
-              "name": "Region Names",
-              "priority": 0,
+              "name": "Holidays",
+              "priority": 60,
               "conditions": {
                 "entityKinds": [
-                  "npc",
-                  "location",
-                  "faction"
+                  "rules"
                 ],
                 "prominence": [],
                 "subtypes": [
-                  "region"
+                  "social"
                 ],
                 "subtypeMatchAll": false,
                 "tags": [],
@@ -1982,28 +2146,119 @@
               "strategies": [
                 {
                   "type": "grammar",
-                  "weight": 3,
-                  "grammarId": "nightshelf_region"
-                },
-                {
-                  "type": "phonotactic",
                   "weight": 1,
-                  "domainId": "nightshelf_domain"
+                  "grammarId": "nightshelf_holidays"
                 }
               ]
             },
             {
-              "name": "Default Fallback",
-              "priority": 10,
-              "conditions": null,
+              "name": "Laws",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "rules"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
               "strategies": [
                 {
-                  "type": "phonotactic",
+                  "type": "grammar",
                   "weight": 1,
-                  "domainId": "nightshelf_domain"
+                  "grammarId": "nightshelf_magic"
                 }
               ]
             }
+          ],
+          "isDefault": false,
+          "entityKinds": [
+            "rules"
+          ]
+        },
+        {
+          "id": "nightshelf_factions",
+          "strategyGroups": [
+            {
+              "name": "Conditional",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "faction"
+                ],
+                "prominence": [],
+                "subtypes": [],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_faction"
+                }
+              ]
+            }
+          ],
+          "entityKinds": [
+            "faction"
+          ]
+        },
+        {
+          "id": "nightshelf_abilities",
+          "strategyGroups": [
+            {
+              "name": "Conditional",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "magic"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_magic"
+                }
+              ]
+            },
+            {
+              "name": "Conditional",
+              "priority": 50,
+              "conditions": {
+                "entityKinds": [
+                  "abilities"
+                ],
+                "prominence": [],
+                "subtypes": [
+                  "technology"
+                ],
+                "subtypeMatchAll": false,
+                "tags": [],
+                "tagMatchAll": false
+              },
+              "strategies": [
+                {
+                  "type": "grammar",
+                  "weight": 1,
+                  "grammarId": "nightshelf_magic"
+                }
+              ]
+            }
+          ],
+          "entityKinds": [
+            "abilities"
           ]
         }
       ]
@@ -2699,8 +2954,7 @@
             ],
             "vowels": [
               "o",
-              "oo",
-              "ooo"
+              "oo"
             ],
             "syllableTemplates": [
               "CV",
@@ -2710,13 +2964,19 @@
               1,
               4
             ],
-            "favoredClusters": [],
-            "forbiddenClusters": [],
+            "favoredClusters": [
+              "pl"
+            ],
+            "forbiddenClusters": [
+              "ooo"
+            ],
             "favoredClusterBoost": 1
           },
           "morphology": {
             "prefixes": [],
-            "suffixes": [],
+            "suffixes": [
+              "ion"
+            ],
             "structure": [
               "root",
               "root-suffix"

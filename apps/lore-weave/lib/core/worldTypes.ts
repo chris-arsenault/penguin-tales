@@ -65,7 +65,6 @@ export interface CatalyzedEvent {
 
 export interface CatalystProperties {
     canAct: boolean;              // Can this entity perform actions?
-    influence: number;            // 0-1, affects action success probability
     catalyzedEvents: CatalyzedEvent[]; // What has this entity caused
 }
 

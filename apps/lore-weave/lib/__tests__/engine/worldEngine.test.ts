@@ -332,7 +332,8 @@ describe('WorldEngine', () => {
       const graph = await engine.run();
 
       expect(graph).toBeDefined();
-      expect(graph.getEntityCount()).toBe(initialState.length);
+      // Initial entity + era entity created by engine
+      expect(graph.getEntityCount()).toBe(initialState.length + 1);
     });
 
     it('should handle empty system list gracefully', async () => {

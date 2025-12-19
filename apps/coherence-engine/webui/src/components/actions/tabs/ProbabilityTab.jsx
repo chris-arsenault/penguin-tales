@@ -5,6 +5,68 @@
 import React from 'react';
 import { NumberInput } from '../../shared';
 
+/**
+ * Editor for pressure modifiers with multiplier support.
+ * Value is an array of { pressure: string, multiplier: number }
+ */
+function PressureModifiersEditor({ value = [], onChange, pressures = [] }) {
+  const modifiers = Array.isArray(value) ? value : [];
+  const usedPressures = new Set(modifiers.map((m) => m.pressure));
+  const availablePressures = pressures.filter((p) => !usedPressures.has(p.id));
+
+  const updateModifier = (index, field, fieldValue) => {
+    const newModifiers = [...modifiers];
+    newModifiers[index] = { ...newModifiers[index], [field]: fieldValue };
+    onChange(newModifiers);
+  };
+
+  const removeModifier = (index) => {
+    const newModifiers = modifiers.filter((_, i) => i !== index);
+    onChange(newModifiers);
+  };
+
+  const addModifier = (pressureId) => {
+    if (pressureId && !usedPressures.has(pressureId)) {
+      onChange([...modifiers, { pressure: pressureId, multiplier: 1.0 }]);
+    }
+  };
+
+  return (
+    <div>
+      {modifiers.map((mod, index) => (
+        <div key={index} className="flex items-center gap-md mb-md">
+          <span className="text-small flex-1">{mod.pressure}</span>
+          <span className="text-muted text-xs">×</span>
+          <NumberInput
+            value={mod.multiplier}
+            onChange={(v) => updateModifier(index, 'multiplier', v ?? 1.0)}
+            className="input input-xs"
+            step={0.1}
+          />
+          <button className="btn-icon btn-icon-danger" onClick={() => removeModifier(index)}>
+            ×
+          </button>
+        </div>
+      ))}
+      <div className="text-muted text-xs mb-md">
+        Positive multiplier: high pressure increases likelihood. Negative: inverse relationship.
+      </div>
+      <select
+        className="select"
+        value=""
+        onChange={(e) => addModifier(e.target.value)}
+      >
+        <option value="">+ Add pressure modifier...</option>
+        {availablePressures.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name || p.id}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function ProbabilityTab({ action, onChange, pressures }) {
   const probability = action.probability || {};
 
@@ -16,18 +78,6 @@ export function ProbabilityTab({ action, onChange, pressures }) {
   };
 
   const pressureModifiers = probability.pressureModifiers || [];
-  const availablePressures = (pressures || []).filter((p) => !pressureModifiers.includes(p.id));
-
-  const addPressureModifier = (id) => {
-    if (id && !pressureModifiers.includes(id)) {
-      updateProbability('pressureModifiers', [...pressureModifiers, id]);
-    }
-  };
-
-  const removePressureModifier = (id) => {
-    updateProbability('pressureModifiers', pressureModifiers.filter((p) => p !== id));
-  };
-
   const baseSuccessChance = probability.baseSuccessChance ?? 0.5;
   const baseWeight = probability.baseWeight ?? 1.0;
 
@@ -37,7 +87,7 @@ export function ProbabilityTab({ action, onChange, pressures }) {
         <div className="info-box-title">Probability Configuration</div>
         <div className="info-box-text">
           Control how likely this action is to be selected and succeed. Pressure modifiers
-          dynamically adjust probability based on world state.
+          dynamically adjust weight based on world state.
         </div>
       </div>
 
@@ -77,31 +127,13 @@ export function ProbabilityTab({ action, onChange, pressures }) {
       <div className="section">
         <div className="section-title">📊 Pressure Modifiers ({pressureModifiers.length})</div>
         <div className="section-desc">
-          Pressures that affect the probability of this action. Higher pressure values increase
-          the likelihood of this action being selected.
+          Pressures that affect the weight of this action. Formula: weight = baseWeight × (1 + Σ(pressure/100 × multiplier))
         </div>
-        <div className="chip-container">
-          {pressureModifiers.map((p) => (
-            <div key={p} className="chip">
-              {p}
-              <button className="chip-remove" onClick={() => removePressureModifier(p)}>
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-        <select
-          className="select mt-lg"
-          value=""
-          onChange={(e) => addPressureModifier(e.target.value)}
-        >
-          <option value="">+ Add pressure modifier...</option>
-          {availablePressures.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name || p.id}
-            </option>
-          ))}
-        </select>
+        <PressureModifiersEditor
+          value={pressureModifiers}
+          onChange={(v) => updateProbability('pressureModifiers', v.length > 0 ? v : undefined)}
+          pressures={pressures}
+        />
       </div>
     </div>
   );
