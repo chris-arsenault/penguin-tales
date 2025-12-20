@@ -21,7 +21,7 @@ export function ActionModal({ action, onChange, onClose, onDelete, schema, press
       case 'overview':
         return <OverviewTab action={action} onChange={onChange} onDelete={onDelete} />;
       case 'actor':
-        return <ActorTab action={action} onChange={onChange} schema={schema} />;
+        return <ActorTab action={action} onChange={onChange} schema={schema} pressures={pressures} />;
       case 'targeting':
         return <TargetingTab action={action} onChange={onChange} schema={schema} />;
       case 'outcome':

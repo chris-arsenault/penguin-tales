@@ -226,6 +226,46 @@ function RelationshipCard({ rel, onChange, onRemove, schema, availableRefs }) {
 }
 
 // ============================================================================
+// ImpliedRelationshipCard - Read-only card for saturation-implied relationships
+// ============================================================================
+
+function ImpliedRelationshipCard({ saturationLimit, schema, createdEntityRef }) {
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const getRelLabel = (kind) => {
+    const rk = relationshipKindOptions.find(r => r.value === kind);
+    return rk?.label || kind;
+  };
+
+  // Created entity will have a relationship with the target (bidirectional implied)
+  return (
+    <div className="item-card" style={{ opacity: 0.8, borderStyle: 'dashed' }}>
+      <div className="item-card-header">
+        <div className="rel-visual">
+          <span className="rel-ref">{createdEntityRef}</span>
+          <span className="rel-arrow">↔</span>
+          <span className="rel-kind">{getRelLabel(saturationLimit.relationshipKind)}</span>
+          <span className="rel-arrow">↔</span>
+          <span className="rel-ref">$target</span>
+        </div>
+        <span style={{
+          fontSize: '10px',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          background: 'var(--color-accent-muted, #e0e7ff)',
+          color: 'var(--color-accent, #4f46e5)',
+        }}>
+          Implied
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // RelationshipsTab - Main tab component
 // ============================================================================
 
@@ -237,6 +277,7 @@ function RelationshipCard({ rel, onChange, onRemove, schema, availableRefs }) {
  */
 export function RelationshipsTab({ generator, onChange, schema }) {
   const relationships = generator.relationships || [];
+  const saturationLimits = generator.selection?.saturationLimits || [];
 
   const availableRefs = useMemo(() => {
     const refs = ['$target'];
@@ -244,6 +285,12 @@ export function RelationshipsTab({ generator, onChange, schema }) {
     (generator.creation || []).forEach((c) => { if (c.entityRef) refs.push(c.entityRef); });
     return refs;
   }, [generator.variables, generator.creation]);
+
+  // Find the first created entity ref for implied relationships
+  const firstCreatedRef = useMemo(() => {
+    const creation = generator.creation || [];
+    return creation.length > 0 ? creation[0].entityRef : '$created';
+  }, [generator.creation]);
 
   const handleAdd = () => {
     onChange({
@@ -266,7 +313,21 @@ export function RelationshipsTab({ generator, onChange, schema }) {
           created entities like <code className="inline-code">$hero</code>, or variables like <code className="inline-code">$faction</code>.
         </div>
 
-        {relationships.length === 0 ? (
+        {/* Implied relationships from saturation limits */}
+        {saturationLimits.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            {saturationLimits.map((limit, index) => (
+              <ImpliedRelationshipCard
+                key={`implied-${index}`}
+                saturationLimit={limit}
+                schema={schema}
+                createdEntityRef={firstCreatedRef}
+              />
+            ))}
+          </div>
+        )}
+
+        {relationships.length === 0 && saturationLimits.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">🔗</div>
             <div className="empty-state-title">No relationships</div>

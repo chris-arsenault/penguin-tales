@@ -183,6 +183,21 @@ export interface CompositeApplicabilityRule {
 // =============================================================================
 
 /**
+ * Saturation limit - filter targets by relationship count.
+ * Useful for limiting generator creation based on existing relationships.
+ */
+export interface SaturationLimit {
+  /** Relationship kind to count */
+  relationshipKind: string;
+  /** Direction: 'in' = incoming relationships to target, 'out' = outgoing from target. Default: 'in' */
+  direction?: 'in' | 'out';
+  /** Optional: only count relationships from/to this entity kind */
+  fromKind?: string;
+  /** Maximum number of relationships allowed (target is selected only if count < maxCount) */
+  maxCount: number;
+}
+
+/**
  * Rules that determine how to find target entities.
  */
 export interface SelectionRule {
@@ -210,6 +225,9 @@ export interface SelectionRule {
 
   // Post-selection filters
   filters?: SelectionFilter[];
+
+  // Saturation limits - filter by relationship counts
+  saturationLimits?: SaturationLimit[];
 
   // Result handling
   pickStrategy?: 'random' | 'first' | 'all' | 'weighted';

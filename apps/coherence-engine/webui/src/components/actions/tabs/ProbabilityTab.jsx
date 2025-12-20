@@ -14,6 +14,12 @@ function PressureModifiersEditor({ value = [], onChange, pressures = [] }) {
   const usedPressures = new Set(modifiers.map((m) => m.pressure));
   const availablePressures = pressures.filter((p) => !usedPressures.has(p.id));
 
+  // Helper to get pressure name from id
+  const getPressureName = (pressureId) => {
+    const pressure = pressures.find((p) => p.id === pressureId);
+    return pressure?.name || pressureId;
+  };
+
   const updateModifier = (index, field, fieldValue) => {
     const newModifiers = [...modifiers];
     newModifiers[index] = { ...newModifiers[index], [field]: fieldValue };
@@ -35,7 +41,7 @@ function PressureModifiersEditor({ value = [], onChange, pressures = [] }) {
     <div>
       {modifiers.map((mod, index) => (
         <div key={index} className="flex items-center gap-md mb-md">
-          <span className="text-small flex-1">{mod.pressure}</span>
+          <span className="text-small flex-1">{getPressureName(mod.pressure)}</span>
           <span className="text-muted text-xs">×</span>
           <NumberInput
             value={mod.multiplier}

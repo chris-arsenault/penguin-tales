@@ -247,6 +247,24 @@
       }
     },
 
+    "StatusChange": {
+      "type": "object",
+      "required": ["entity", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "entity": {
+          "type": "string",
+          "enum": ["actor", "instigator", "target", "target2"],
+          "description": "Which entity to change status of"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New status to set"
+        }
+      }
+    },
+
     "ActionOutcomeConfig": {
       "type": "object",
       "required": ["descriptionTemplate"],
@@ -261,6 +279,11 @@
           "type": "array",
           "items": { "$ref": "#/$defs/RelationshipStrengthening" },
           "description": "Relationships to strengthen"
+        },
+        "statusChanges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StatusChange" },
+          "description": "Status changes to apply to entities"
         },
         "pressureChanges": {
           "type": "object",

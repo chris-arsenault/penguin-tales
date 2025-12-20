@@ -21,6 +21,7 @@ import type {
   ApplicabilityRule,
   SelectionRule,
   SelectionFilter,
+  SaturationLimit,
   CreationRule,
   RelationshipRule,
   StateUpdateRule,
@@ -903,6 +904,11 @@ export class TemplateInterpreter {
       }
     }
 
+    // Apply saturation limits
+    if (rule.saturationLimits && rule.saturationLimits.length > 0) {
+      entities = this.applySaturationLimits(entities, rule.saturationLimits, graphView);
+    }
+
     // Apply result handling
     if (rule.maxResults && entities.length > rule.maxResults) {
       entities = entities.slice(0, rule.maxResults);
@@ -926,6 +932,59 @@ export class TemplateInterpreter {
   ): HardState[] {
     // Delegate to shared selection filter implementation
     return sharedApplySelectionFilter(entities, filter, context);
+  }
+
+  /**
+   * Apply saturation limits to filter out entities that have too many relationships.
+   * Always counts relationships in both directions (any).
+   * fromKind filters which entity kinds are counted.
+   */
+  private applySaturationLimits(
+    entities: HardState[],
+    limits: SaturationLimit[],
+    graphView: TemplateGraphView
+  ): HardState[] {
+    return entities.filter(entity => {
+      // All limits must pass
+      for (const limit of limits) {
+        // Count relationships matching the criteria (both directions)
+        let count = 0;
+
+        // Count incoming relationships to this entity
+        for (const other of graphView.getEntities()) {
+          if (other.id === entity.id) continue;
+
+          // Skip if fromKind is specified and doesn't match
+          if (limit.fromKind && other.kind !== limit.fromKind) continue;
+
+          // Check for relationship of the specified kind pointing to entity
+          const hasRel = other.links.some(link =>
+            link.kind === limit.relationshipKind && link.dst === entity.id
+          );
+          if (hasRel) count++;
+        }
+
+        // Count outgoing relationships from this entity
+        for (const link of entity.links) {
+          if (link.kind !== limit.relationshipKind) continue;
+
+          // If fromKind is specified, check the destination entity kind
+          if (limit.fromKind) {
+            const destEntity = graphView.getEntity(link.dst);
+            if (!destEntity || destEntity.kind !== limit.fromKind) continue;
+          }
+
+          count++;
+        }
+
+        // If count >= maxCount, this entity is saturated
+        if (count >= limit.maxCount) {
+          return false;
+        }
+      }
+
+      return true;
+    });
   }
 
   // ===========================================================================

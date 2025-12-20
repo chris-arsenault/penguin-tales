@@ -18,10 +18,16 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
 
   const relationships = outcome.relationships || [];
   const strengthenRelationships = outcome.strengthenRelationships || [];
+  const statusChanges = outcome.statusChanges || [];
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,
     label: rk.description || rk.kind,
+  }));
+
+  const statusOptions = (schema?.statuses || []).map((s) => ({
+    value: s,
+    label: s,
   }));
 
   const addRelationship = () => {
@@ -63,13 +69,30 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
     updateOutcome('strengthenRelationships', strengthenRelationships.filter((_, i) => i !== index));
   };
 
+  const addStatusChange = () => {
+    updateOutcome('statusChanges', [
+      ...statusChanges,
+      { entity: 'target', status: '' },
+    ]);
+  };
+
+  const updateStatusChange = (index, item) => {
+    const newItems = [...statusChanges];
+    newItems[index] = item;
+    updateOutcome('statusChanges', newItems);
+  };
+
+  const removeStatusChange = (index) => {
+    updateOutcome('statusChanges', statusChanges.filter((_, i) => i !== index));
+  };
+
   return (
     <div>
       <div className="info-box">
         <div className="info-box-title">Action Outcome</div>
         <div className="info-box-text">
-          Define what happens when this action succeeds. Create relationships, modify pressures,
-          or strengthen existing connections.
+          Define what happens when this action succeeds. Create relationships, change statuses,
+          modify pressures, or strengthen existing connections.
         </div>
       </div>
 
@@ -171,6 +194,48 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
         ))}
         <button className="btn btn-add" onClick={addStrengthen}>
           + Add Strengthen Rule
+        </button>
+      </div>
+
+      <div className="section">
+        <div className="section-title">🔄 Status Changes ({statusChanges.length})</div>
+        <div className="section-desc">
+          Change the status of entities when the action succeeds.
+        </div>
+        {statusChanges.map((item, index) => (
+          <div key={index} className="item-card">
+            <div className="item-card-body">
+              <div className="form-row-with-delete">
+                <div className="form-row-fields">
+                  <ReferenceDropdown
+                    label="Entity"
+                    value={item.entity}
+                    onChange={(v) => updateStatusChange(index, { ...item, entity: v })}
+                    options={RELATIONSHIP_REFS}
+                  />
+                  <div className="form-group flex-1">
+                    <label className="label">New Status</label>
+                    <select
+                      value={item.status || ''}
+                      onChange={(e) => updateStatusChange(index, { ...item, status: e.target.value })}
+                      className="input"
+                    >
+                      <option value="">Select status...</option>
+                      {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button className="btn-icon btn-icon-danger" onClick={() => removeStatusChange(index)}>
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        <button className="btn btn-add" onClick={addStatusChange}>
+          + Add Status Change
         </button>
       </div>
 

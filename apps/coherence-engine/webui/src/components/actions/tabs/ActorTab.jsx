@@ -13,6 +13,12 @@ import { SelectionFiltersEditor } from '../../generators/filters/SelectionFilter
 function PressureBandsEditor({ value = [], onChange, pressures = [] }) {
   const bands = Array.isArray(value) ? value : [];
 
+  // Helper to get pressure name from id
+  const getPressureName = (pressureId) => {
+    const pressure = pressures.find((p) => p.id === pressureId);
+    return pressure?.name || pressureId;
+  };
+
   const updateBand = (index, field, fieldValue) => {
     const newBands = [...bands];
     newBands[index] = { ...newBands[index], [field]: fieldValue };
@@ -43,7 +49,7 @@ function PressureBandsEditor({ value = [], onChange, pressures = [] }) {
           >
             <option value="">Select pressure...</option>
             {pressures.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p.id} value={p.id}>{p.name || p.id}</option>
             ))}
           </select>
           <span className="text-muted text-xs">min</span>

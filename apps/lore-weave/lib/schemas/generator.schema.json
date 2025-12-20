@@ -238,6 +238,31 @@
       ]
     },
 
+    "SaturationLimit": {
+      "type": "object",
+      "required": ["relationshipKind", "maxCount"],
+      "additionalProperties": false,
+      "properties": {
+        "relationshipKind": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "The relationship kind to count"
+        },
+        "direction": {
+          "enum": ["in", "out"],
+          "description": "Direction: 'in' = incoming relationships to target, 'out' = outgoing from target. Default: 'in'"
+        },
+        "fromKind": {
+          "$ref": "#/$defs/NonEmptyString",
+          "description": "Optional: only count relationships from/to this entity kind"
+        },
+        "maxCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of relationships allowed (target is selected only if count < maxCount)"
+        }
+      }
+    },
+
     "SelectionRule": {
       "type": "object",
       "required": ["strategy", "kind"],
@@ -255,6 +280,11 @@
         "maxDistance": { "type": "number", "minimum": 0 },
         "minProminence": { "$ref": "#/$defs/Prominence" },
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
+        "saturationLimits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SaturationLimit" },
+          "description": "Limit target selection to entities that haven't exceeded relationship counts"
+        },
         "pickStrategy": { "enum": ["random", "first", "all", "weighted"] },
         "maxResults": { "type": "integer", "minimum": 1 }
       }

@@ -126,6 +126,16 @@ export interface RelationshipStrengthening {
 }
 
 /**
+ * Status change to apply on success
+ */
+export interface StatusChange {
+  /** Which entity to change status of */
+  entity: OutcomeEntityRef;
+  /** New status to set */
+  status: string;
+}
+
+/**
  * Action outcome configuration
  */
 export interface ActionOutcomeConfig {
@@ -133,6 +143,8 @@ export interface ActionOutcomeConfig {
   relationships?: OutcomeRelationship[];
   /** Relationships to strengthen */
   strengthenRelationships?: RelationshipStrengthening[];
+  /** Status changes to apply to entities */
+  statusChanges?: StatusChange[];
   /** Pressure changes */
   pressureChanges?: Record<string, number>;
   /** Apply system-level prominence changes to actor on success/failure */
@@ -179,6 +191,8 @@ export interface DeclarativeAction {
   name: string;
   /** Description of what this action does */
   description: string;
+  /** Whether this action is enabled (default: true) */
+  enabled?: boolean;
 
   /** Who can attempt this action (primary actor + optional instigator) */
   actor: ActionActorConfig;
@@ -501,6 +515,24 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
       }
     }
 
+    // Handle status changes
+    const modifiedIds = new Set<string>([target.id]);
+    if (target2) modifiedIds.add(target2.id);
+
+    if (action.outcome.statusChanges && action.outcome.statusChanges.length > 0) {
+      for (const statusChange of action.outcome.statusChanges) {
+        const entityId = resolveEntityRef(statusChange.entity, actor, instigator, target, target2);
+        if (!entityId) continue;
+
+        const entity = graph.getEntity(entityId);
+        if (entity) {
+          entity.status = statusChange.status;
+          entity.updatedAt = graph.tick;
+          modifiedIds.add(entityId);
+        }
+      }
+    }
+
     const description = formatDescription(
       action.outcome.descriptionTemplate,
       actor,
@@ -509,14 +541,11 @@ function createActionHandler(action: DeclarativeAction): ExecutableAction['handl
       target2
     );
 
-    const modifiedIds = [target.id];
-    if (target2) modifiedIds.push(target2.id);
-
     return {
       success: true,
       relationships,
       description,
-      entitiesModified: modifiedIds,
+      entitiesModified: Array.from(modifiedIds),
       instigatorId: instigator?.id
     };
   };
