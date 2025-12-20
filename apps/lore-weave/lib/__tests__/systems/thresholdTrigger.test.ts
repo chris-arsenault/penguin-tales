@@ -83,7 +83,7 @@ describe('thresholdTrigger', () => {
         name: 'Test Trigger',
         entityFilter: { kind: 'faction', status: 'active' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'triggered', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'triggered', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -115,9 +115,9 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_count',
           relationshipKind: 'at_war_with',
-          minCount: 2
+          min: 2
         }],
-        actions: [{ type: 'set_tag', tag: 'major_combatant', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'major_combatant', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -137,8 +137,8 @@ describe('thresholdTrigger', () => {
         id: 'waning_trigger',
         name: 'Waning Trigger',
         entityFilter: { kind: 'faction' },
-        conditions: [{ type: 'entity_status', status: 'waning' }],
-        actions: [{ type: 'set_tag', tag: 'declining', tagValue: true }]
+        conditions: [{ type: 'status', status: 'waning' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'declining', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -159,7 +159,7 @@ describe('thresholdTrigger', () => {
         name: 'Leaderless Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [{ type: 'tag_exists', tag: 'leaderless' }],
-        actions: [{ type: 'set_tag', tag: 'power_vacuum', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'power_vacuum', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -180,7 +180,7 @@ describe('thresholdTrigger', () => {
         name: 'Unstable Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [{ type: 'tag_absent', tag: 'stable' }],
-        actions: [{ type: 'set_tag', tag: 'needs_attention', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'needs_attention', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -209,11 +209,11 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_exists',
           relationshipKind: 'leader_of',
-          relationshipDirection: 'dst',
+          direction: 'dst',
           targetKind: 'npc',
           targetStatus: 'dead'
         }],
-        actions: [{ type: 'set_tag', tag: 'power_vacuum', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'power_vacuum', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -236,10 +236,10 @@ describe('thresholdTrigger', () => {
         name: 'Crisis Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [
-          { type: 'entity_status', status: 'waning' },
+          { type: 'status', status: 'waning' },
           { type: 'tag_exists', tag: 'leaderless' }
         ],
-        actions: [{ type: 'set_tag', tag: 'crisis', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'crisis', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -270,9 +270,9 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_count',
           relationshipKind: 'at_war_with',
-          minCount: 1
+          min: 1
         }],
-        actions: [{ type: 'set_cluster_tag', tag: 'war_brewing' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'war_brewing', valueFrom: 'cluster_id' }],
         clusterMode: 'all_matching'
       };
 
@@ -308,9 +308,9 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_count',
           relationshipKind: 'at_war_with',
-          minCount: 1
+          min: 1
         }],
-        actions: [{ type: 'set_cluster_tag', tag: 'war_brewing' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'war_brewing', valueFrom: 'cluster_id' }],
         clusterMode: 'by_relationship',
         clusterRelationshipKind: 'at_war_with'
       };
@@ -338,9 +338,9 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_count',
           relationshipKind: 'at_war_with',
-          minCount: 1
+          min: 1
         }],
-        actions: [{ type: 'set_cluster_tag', tag: 'major_war' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'major_war', valueFrom: 'cluster_id' }],
         clusterMode: 'all_matching',
         minClusterSize: 3  // Need at least 3 factions
       };
@@ -364,7 +364,7 @@ describe('thresholdTrigger', () => {
         name: 'Bool Tag Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'active_conflict', tagValue: true }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'active_conflict', value: true }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -382,7 +382,7 @@ describe('thresholdTrigger', () => {
         name: 'String Tag Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'state', tagValue: 'war_brewing' }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'state', value: 'war_brewing' }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -400,7 +400,7 @@ describe('thresholdTrigger', () => {
         name: 'Remove Tag Trigger',
         entityFilter: { kind: 'faction', hasTag: 'old_state' },
         conditions: [],
-        actions: [{ type: 'remove_tag', tag: 'old_state' }]
+        actions: [{ type: 'remove_tag', entity: '$self', tag: 'old_state' }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -423,8 +423,10 @@ describe('thresholdTrigger', () => {
         conditions: [],
         actions: [{
           type: 'create_relationship',
-          relationshipKind: 'rival_of',
-          relationshipStrength: 0.7,
+          kind: 'rival_of',
+          src: '$member',
+          dst: '$member2',
+          strength: 0.7,
           betweenMatching: true
         }],
         clusterMode: 'all_matching'
@@ -447,7 +449,7 @@ describe('thresholdTrigger', () => {
         name: 'Pressure Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'triggered' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'triggered' }],
         pressureChanges: { conflict: 10, stability: -5 }
       };
 
@@ -489,7 +491,7 @@ describe('thresholdTrigger', () => {
         name: 'Throttled Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'triggered' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'triggered' }],
         throttleChance: 0.1  // Only 10% of ticks
       };
 
@@ -519,7 +521,7 @@ describe('thresholdTrigger', () => {
         name: 'Cooldown Trigger',
         entityFilter: { kind: 'faction' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'triggered' }],
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'triggered' }],
         cooldownTag: 'recently_triggered'
       };
 
@@ -544,7 +546,7 @@ describe('thresholdTrigger', () => {
         name: 'Active Only',
         entityFilter: { kind: 'faction', notStatus: 'historical' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'processed' }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'processed' }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -565,7 +567,7 @@ describe('thresholdTrigger', () => {
         name: 'Unprocessed Only',
         entityFilter: { kind: 'faction', notHasTag: 'already_processed' },
         conditions: [],
-        actions: [{ type: 'set_tag', tag: 'processed' }]
+        actions: [{ type: 'set_tag', entity: '$self', tag: 'processed' }]
       };
 
       const system = createThresholdTriggerSystem(config);
@@ -596,10 +598,10 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_count',
           relationshipKind: 'at_war_with',
-          minCount: 1
+          min: 1
         }],
         actions: [
-          { type: 'set_cluster_tag', tag: 'war_brewing' }
+          { type: 'set_tag', entity: '$self', tag: 'war_brewing', valueFrom: 'cluster_id' }
         ],
         clusterMode: 'by_relationship',
         clusterRelationshipKind: 'at_war_with',
@@ -635,12 +637,12 @@ describe('thresholdTrigger', () => {
         conditions: [{
           type: 'relationship_exists',
           relationshipKind: 'leader_of',
-          relationshipDirection: 'dst',
+          direction: 'dst',
           targetKind: 'npc',
           targetStatus: 'dead'
         }],
         actions: [
-          { type: 'set_tag', tag: 'power_vacuum', tagValue: true }
+          { type: 'set_tag', entity: '$self', tag: 'power_vacuum', value: true }
         ],
         pressureChanges: { stability: -15, conflict: 10 }
       };

@@ -45,28 +45,43 @@
       "thermal_stress_detector": 1
     },
     "entryEffects": {
-      "pressureChanges": {
-        "resource_availibility": 10,
-        "magical_stability": 10
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": 10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": 10
+        }
+      ]
     },
     "exitConditions": [
       {
-        "type": "time",
+        "type": "time_elapsed",
         "minTicks": 20
       },
       {
         "type": "entity_count",
-        "entityKind": "location",
-        "operator": "above",
-        "threshold": 8
+        "kind": "location",
+        "min": 8
       }
     ],
     "exitEffects": {
-      "pressureChanges": {
-        "resource_availibility": -15,
-        "harmony": -15
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": -15
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": -15
+        }
+      ]
     }
   },
   {
@@ -124,34 +139,48 @@
     },
     "entryConditions": [],
     "entryEffects": {
-      "pressureChanges": {
-        "harmony": -25,
-        "security": -10
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": -25
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -10
+        }
+      ]
     },
     "exitConditions": [
       {
-        "type": "time",
+        "type": "time_elapsed",
         "minTicks": 20
       },
       {
         "type": "pressure",
         "pressureId": "harmony",
-        "operator": "above",
-        "threshold": 0
+        "min": 0
       },
       {
         "type": "pressure",
         "pressureId": "resource_availibility",
-        "operator": "above",
-        "threshold": 10
+        "min": 10
       }
     ],
     "exitEffects": {
-      "pressureChanges": {
-        "security": -20,
-        "harmony": 20
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -20
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 20
+        }
+      ]
     }
   },
   {
@@ -206,28 +235,39 @@
     },
     "entryConditions": [],
     "entryEffects": {
-      "pressureChanges": {
-        "magical_stability": 10
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": 10
+        }
+      ]
     },
     "exitConditions": [
       {
-        "type": "time",
+        "type": "time_elapsed",
         "minTicks": 20
       },
       {
         "type": "entity_count",
-        "entityKind": "abilities",
-        "operator": "above",
-        "threshold": 5,
+        "kind": "abilities",
+        "min": 5,
         "subtype": "technology"
       }
     ],
     "exitEffects": {
-      "pressureChanges": {
-        "magical_stability": 10,
-        "security": -15
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": 10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -15
+        }
+      ]
     }
   },
   {
@@ -283,31 +323,58 @@
     },
     "entryConditions": [],
     "entryEffects": {
-      "pressureChanges": {
-        "security": -10,
-        "resource_availibility": -10,
-        "harmony": 10
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": -10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 10
+        }
+      ]
     },
     "exitConditions": [
       {
-        "type": "time",
+        "type": "time_elapsed",
         "minTicks": 20
       },
       {
         "type": "pressure",
         "pressureId": "security",
-        "operator": "above",
-        "threshold": 0
+        "min": 0
       }
     ],
     "exitEffects": {
-      "pressureChanges": {
-        "security": 10,
-        "harmony": 10,
-        "resource_availibility": 10,
-        "magical_stability": 10
-      }
+      "mutations": [
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_availibility",
+          "delta": 10
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": 10
+        }
+      ]
     }
   },
   {
@@ -358,9 +425,6 @@
       "thermal_recovery_detector": 1,
       "thermal_stress_detector": 1
     },
-    "entryConditions": [],
-    "entryEffects": {
-      "pressureChanges": {}
-    }
+    "entryConditions": []
   }
 ]

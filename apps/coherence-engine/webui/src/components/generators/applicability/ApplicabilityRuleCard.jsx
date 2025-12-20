@@ -4,9 +4,11 @@
 
 import React, { useState } from 'react';
 import { APPLICABILITY_TYPES } from '../constants';
-import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
+import { ReferenceDropdown, ChipSelect, NumberInput, PROMINENCE_LEVELS } from '../../shared';
 import { AddRuleButton } from './AddRuleButton';
 import { createNewRule } from './createNewRule';
+import { GraphPathEditor } from '../filters/GraphPathEditor';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * @param {Object} props
@@ -28,7 +30,13 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
     label: ek.description || ek.kind,
   }));
 
-  // Get subtypes for selected entity kind
+  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
+    value: rk.kind,
+    label: rk.description || rk.kind,
+  }));
+
+  const tagRegistry = schema?.tagRegistry || [];
+
   const getSubtypesForKind = (kind) => {
     const ek = entityKinds.find((e) => e.kind === kind);
     if (!ek?.subtypes) return [];
@@ -51,12 +59,28 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
 
   const getSummary = () => {
     switch (rule.type) {
-      case 'entity_count_min':
-        return `${rule.kind || '?'}${rule.subtype ? ':' + rule.subtype : ''} >= ${rule.min ?? '?'}`;
-      case 'entity_count_max':
-        return `${rule.kind || '?'}${rule.subtype ? ':' + rule.subtype : ''} <= ${rule.max ?? '?'}`;
-      case 'pressure_threshold':
-        return `${rule.pressureId || '?'} in [${rule.min ?? 0}, ${rule.max ?? 100}]`;
+      case 'entity_count':
+        return `${rule.kind || '?'}${rule.subtype ? ':' + rule.subtype : ''} ${rule.min !== undefined ? `>= ${rule.min}` : ''}${rule.max !== undefined ? ` <= ${rule.max}` : ''}`;
+      case 'pressure':
+        return `${rule.pressureId || '?'} in [${rule.min ?? '-∞'}, ${rule.max ?? '∞'}]`;
+      case 'pressure_any_above':
+        return `Any of [${rule.pressureIds?.join(', ') || '?'}] > ${rule.threshold ?? '?'}`;
+      case 'pressure_compare':
+        return `${rule.pressureA || '?'} ${rule.operator || '>'} ${rule.pressureB || '?'}`;
+      case 'relationship_count':
+        return `${rule.relationshipKind || 'any'} count ${rule.min !== undefined ? `>= ${rule.min}` : ''}${rule.max !== undefined ? ` <= ${rule.max}` : ''}`;
+      case 'relationship_exists':
+        return `${rule.relationshipKind || '?'} exists${rule.targetKind ? ` to ${rule.targetKind}` : ''}`;
+      case 'tag_exists':
+        return `has tag "${rule.tag || '?'}"`;
+      case 'tag_absent':
+        return `missing tag "${rule.tag || '?'}"`;
+      case 'status':
+        return rule.not ? `status != ${rule.status || '?'}` : `status = ${rule.status || '?'}`;
+      case 'prominence':
+        return `prominence ${rule.min || '?'}-${rule.max || '?'}`;
+      case 'time_elapsed':
+        return `${rule.minTicks || '?'} ticks since ${rule.since || 'updated'}`;
       case 'era_match':
         return rule.eras?.length ? rule.eras.join(', ') : 'No eras selected';
       case 'random_chance':
@@ -65,13 +89,17 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
         return `${rule.cooldownTicks ?? '?'} ticks since last run`;
       case 'creations_per_epoch':
         return `max ${rule.maxPerEpoch ?? '?'} per epoch`;
+      case 'graph_path':
+        return `graph path (${rule.assert?.check || 'exists'})`;
+      case 'entity_exists':
+        return `entity ${rule.entity || '?'} exists`;
+      case 'entity_has_relationship':
+        return `${rule.entity || '?'} has ${rule.relationshipKind || '?'} relationship`;
       case 'or':
       case 'and':
-        return `${rule.rules?.length || 0} sub-rules`;
-      case 'pressure_any_above':
-        return `Any of [${rule.pressureIds?.join(', ') || '?'}] > ${rule.threshold ?? '?'}`;
-      case 'pressure_compare':
-        return `${rule.pressureA || '?'} > ${rule.pressureB || '?'}`;
+        return `${rule.conditions?.length || 0} sub-rules`;
+      case 'always':
+        return 'always';
       default:
         return rule.type;
     }
@@ -104,14 +132,13 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
       {expanded && (
         <div style={{ marginTop: '12px' }}>
           <div className="form-grid">
-            {(rule.type === 'entity_count_min' || rule.type === 'entity_count_max') && (
+            {rule.type === 'entity_count' && (
               <>
                 <ReferenceDropdown
                   label="Entity Kind"
                   value={rule.kind}
                   onChange={(v) => {
                     updateField('kind', v);
-                    // Clear subtype when kind changes
                     if (rule.subtype) updateField('subtype', undefined);
                   }}
                   options={entityKindOptions}
@@ -124,18 +151,29 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                   placeholder="Any"
                 />
                 <div className="form-group">
-                  <label className="label">{rule.type === 'entity_count_min' ? 'Minimum' : 'Maximum'}</label>
+                  <label className="label">Min</label>
                   <NumberInput
-                    value={rule.type === 'entity_count_min' ? rule.min : rule.max}
-                    onChange={(v) => updateField(rule.type === 'entity_count_min' ? 'min' : 'max', v ?? 0)}
+                    value={rule.min}
+                    onChange={(v) => updateField('min', v)}
                     min={0}
                     integer
+                    allowEmpty
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Max</label>
+                  <NumberInput
+                    value={rule.max}
+                    onChange={(v) => updateField('max', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
               </>
             )}
 
-            {rule.type === 'pressure_threshold' && (
+            {rule.type === 'pressure' && (
               <>
                 <ReferenceDropdown
                   label="Pressure"
@@ -170,6 +208,61 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
               </>
             )}
 
+            {rule.type === 'pressure_any_above' && (
+              <>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <ChipSelect
+                    label="Pressures"
+                    value={rule.pressureIds || []}
+                    onChange={(v) => updateField('pressureIds', v)}
+                    options={pressureOptions}
+                    placeholder="+ Add pressure"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Threshold</label>
+                  <NumberInput
+                    value={rule.threshold}
+                    onChange={(v) => updateField('threshold', v ?? 0)}
+                    min={-100}
+                    max={100}
+                    integer
+                    placeholder="50"
+                  />
+                </div>
+              </>
+            )}
+
+            {rule.type === 'pressure_compare' && (
+              <>
+                <ReferenceDropdown
+                  label="Pressure A"
+                  value={rule.pressureA}
+                  onChange={(v) => updateField('pressureA', v)}
+                  options={pressureOptions}
+                />
+                <ReferenceDropdown
+                  label="Operator"
+                  value={rule.operator || '>'}
+                  onChange={(v) => updateField('operator', v)}
+                  options={[
+                    { value: '>', label: '>' },
+                    { value: '>=', label: '>=' },
+                    { value: '<', label: '<' },
+                    { value: '<=', label: '<=' },
+                    { value: '==', label: '==' },
+                    { value: '!=', label: '!=' },
+                  ]}
+                />
+                <ReferenceDropdown
+                  label="Pressure B"
+                  value={rule.pressureB}
+                  onChange={(v) => updateField('pressureB', v)}
+                  options={pressureOptions}
+                />
+              </>
+            )}
+
             {rule.type === 'era_match' && (
               <div style={{ gridColumn: '1 / -1' }}>
                 <ChipSelect
@@ -191,7 +284,7 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
                     min="0"
                     max="100"
                     value={Math.round((rule.chance ?? 0.5) * 100)}
-                    onChange={(e) => updateField('chance', parseInt(e.target.value) / 100)}
+                    onChange={(e) => updateField('chance', parseInt(e.target.value, 10) / 100)}
                     style={{ flex: 1 }}
                   />
                   <NumberInput
@@ -233,47 +326,240 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
               </div>
             )}
 
-            {rule.type === 'pressure_any_above' && (
+            {rule.type === 'relationship_count' && (
               <>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <ChipSelect
-                    label="Pressures"
-                    value={rule.pressureIds || []}
-                    onChange={(v) => updateField('pressureIds', v)}
-                    options={pressureOptions}
-                    placeholder="+ Add pressure"
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={rule.relationshipKind || ''}
+                  onChange={(v) => updateField('relationshipKind', v || undefined)}
+                  options={relationshipKindOptions}
+                  placeholder="Any"
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={rule.direction || 'both'}
+                  onChange={(v) => updateField('direction', v)}
+                  options={[
+                    { value: 'both', label: 'Both' },
+                    { value: 'src', label: 'Outgoing (src)' },
+                    { value: 'dst', label: 'Incoming (dst)' },
+                  ]}
+                />
+                <div className="form-group">
+                  <label className="label">Min Count</label>
+                  <NumberInput
+                    value={rule.min}
+                    onChange={(v) => updateField('min', v)}
+                    min={0}
+                    integer
+                    allowEmpty
                   />
                 </div>
                 <div className="form-group">
-                  <label className="label">Threshold</label>
+                  <label className="label">Max Count</label>
                   <NumberInput
-                    value={rule.threshold}
-                    onChange={(v) => updateField('threshold', v ?? 0)}
+                    value={rule.max}
+                    onChange={(v) => updateField('max', v)}
                     min={0}
-                    max={100}
                     integer
-                    placeholder="50"
+                    allowEmpty
                   />
                 </div>
               </>
             )}
 
-            {rule.type === 'pressure_compare' && (
+            {rule.type === 'relationship_exists' && (
               <>
                 <ReferenceDropdown
-                  label="Pressure A"
-                  value={rule.pressureA}
-                  onChange={(v) => updateField('pressureA', v)}
-                  options={pressureOptions}
+                  label="Relationship Kind"
+                  value={rule.relationshipKind || ''}
+                  onChange={(v) => updateField('relationshipKind', v)}
+                  options={relationshipKindOptions}
                 />
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.5rem', color: '#94a3b8' }}>&gt;</span>
+                <ReferenceDropdown
+                  label="Direction"
+                  value={rule.direction || 'both'}
+                  onChange={(v) => updateField('direction', v)}
+                  options={[
+                    { value: 'both', label: 'Both' },
+                    { value: 'src', label: 'Outgoing (src)' },
+                    { value: 'dst', label: 'Incoming (dst)' },
+                  ]}
+                />
+                <ReferenceDropdown
+                  label="Target Kind"
+                  value={rule.targetKind || ''}
+                  onChange={(v) => updateField('targetKind', v || undefined)}
+                  options={entityKindOptions}
+                  placeholder="Any"
+                />
+                <div className="form-group">
+                  <label className="label">Target Subtype</label>
+                  <input
+                    type="text"
+                    value={rule.targetSubtype || ''}
+                    onChange={(e) => updateField('targetSubtype', e.target.value || undefined)}
+                    className="input"
+                    placeholder="Any"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="label">Target Status</label>
+                  <input
+                    type="text"
+                    value={rule.targetStatus || ''}
+                    onChange={(e) => updateField('targetStatus', e.target.value || undefined)}
+                    className="input"
+                    placeholder="Any"
+                  />
+                </div>
+              </>
+            )}
+
+            {(rule.type === 'tag_exists' || rule.type === 'tag_absent') && (
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Tag</label>
+                <TagSelector
+                  value={rule.tag ? [rule.tag] : []}
+                  onChange={(tags) => updateField('tag', tags[0] || '')}
+                  tagRegistry={tagRegistry}
+                  placeholder="Select tag..."
+                  singleSelect
+                />
+              </div>
+            )}
+
+            {rule.type === 'tag_exists' && (
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Value (optional)</label>
+                <input
+                  type="text"
+                  value={rule.value ?? ''}
+                  onChange={(e) => updateField('value', e.target.value || undefined)}
+                  className="input"
+                  placeholder="Any value"
+                />
+              </div>
+            )}
+
+            {rule.type === 'status' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Status</label>
+                  <input
+                    type="text"
+                    value={rule.status || ''}
+                    onChange={(e) => updateField('status', e.target.value || undefined)}
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={rule.not || false}
+                      onChange={(e) => updateField('not', e.target.checked || undefined)}
+                      className="checkbox"
+                    />
+                    Exclude status
+                  </label>
+                </div>
+              </>
+            )}
+
+            {rule.type === 'prominence' && (
+              <>
+                <ReferenceDropdown
+                  label="Min Prominence"
+                  value={rule.min || ''}
+                  onChange={(v) => updateField('min', v || undefined)}
+                  options={PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label }))}
+                  placeholder="Any"
+                />
+                <ReferenceDropdown
+                  label="Max Prominence"
+                  value={rule.max || ''}
+                  onChange={(v) => updateField('max', v || undefined)}
+                  options={PROMINENCE_LEVELS.map((p) => ({ value: p.value, label: p.label }))}
+                  placeholder="Any"
+                />
+              </>
+            )}
+
+            {rule.type === 'time_elapsed' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Min Ticks</label>
+                  <NumberInput
+                    value={rule.minTicks}
+                    onChange={(v) => updateField('minTicks', v ?? 0)}
+                    min={0}
+                    integer
+                  />
                 </div>
                 <ReferenceDropdown
-                  label="Pressure B"
-                  value={rule.pressureB}
-                  onChange={(v) => updateField('pressureB', v)}
-                  options={pressureOptions}
+                  label="Since"
+                  value={rule.since || 'updated'}
+                  onChange={(v) => updateField('since', v)}
+                  options={[
+                    { value: 'updated', label: 'Updated' },
+                    { value: 'created', label: 'Created' },
+                  ]}
+                />
+              </>
+            )}
+
+            {rule.type === 'graph_path' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <GraphPathEditor
+                  assert={rule.assert}
+                  onChange={(assert) => updateField('assert', assert)}
+                  schema={schema}
+                  availableRefs={['$target']}
+                />
+              </div>
+            )}
+
+            {rule.type === 'entity_exists' && (
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Entity Reference</label>
+                <input
+                  type="text"
+                  value={rule.entity || ''}
+                  onChange={(e) => updateField('entity', e.target.value)}
+                  className="input"
+                  placeholder="$target"
+                />
+              </div>
+            )}
+
+            {rule.type === 'entity_has_relationship' && (
+              <>
+                <div className="form-group">
+                  <label className="label">Entity Reference</label>
+                  <input
+                    type="text"
+                    value={rule.entity || ''}
+                    onChange={(e) => updateField('entity', e.target.value)}
+                    className="input"
+                    placeholder="$target"
+                  />
+                </div>
+                <ReferenceDropdown
+                  label="Relationship Kind"
+                  value={rule.relationshipKind || ''}
+                  onChange={(v) => updateField('relationshipKind', v)}
+                  options={relationshipKindOptions}
+                />
+                <ReferenceDropdown
+                  label="Direction"
+                  value={rule.direction || 'both'}
+                  onChange={(v) => updateField('direction', v)}
+                  options={[
+                    { value: 'both', label: 'Both' },
+                    { value: 'src', label: 'Outgoing (src)' },
+                    { value: 'dst', label: 'Incoming (dst)' },
+                  ]}
                 />
               </>
             )}
@@ -283,16 +569,16 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
 
       {isNested && (
         <div className="condition-card-nested">
-          {(rule.rules || []).map((subRule, idx) => (
+          {(rule.conditions || []).map((subRule, idx) => (
             <ApplicabilityRuleCard
               key={idx}
               rule={subRule}
               onChange={(updated) => {
-                const newRules = [...(rule.rules || [])];
+                const newRules = [...(rule.conditions || [])];
                 newRules[idx] = updated;
-                updateField('rules', newRules);
+                updateField('conditions', newRules);
               }}
-              onRemove={() => updateField('rules', (rule.rules || []).filter((_, i) => i !== idx))}
+              onRemove={() => updateField('conditions', (rule.conditions || []).filter((_, i) => i !== idx))}
               schema={schema}
               pressures={pressures}
               eras={eras}
@@ -302,7 +588,7 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
           <AddRuleButton
             onAdd={(type) => {
               const newRule = createNewRule(type, pressures);
-              updateField('rules', [...(rule.rules || []), newRule]);
+              updateField('conditions', [...(rule.conditions || []), newRule]);
             }}
             depth={depth + 1}
           />

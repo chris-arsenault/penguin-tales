@@ -73,6 +73,7 @@ export function getSystemCategory(systemType) {
 // Cluster mode options
 export const CLUSTER_MODES = [
   { value: 'individual', label: 'Individual', desc: 'Apply to each entity separately' },
+  { value: 'all_matching', label: 'All Matching', desc: 'All matching entities share a cluster' },
   { value: 'by_relationship', label: 'By Relationship', desc: 'Group by relationship clusters' },
 ];
 
@@ -83,26 +84,41 @@ export const DIRECTIONS = [
   { value: 'both', label: 'Both' },
 ];
 
-// Condition type options (must match thresholdTrigger.ts ConditionType)
+// Condition type options (unified rules)
 export const CONDITION_TYPES = [
+  { value: 'pressure', label: 'Pressure Range' },
+  { value: 'pressure_any_above', label: 'Any Pressure Above' },
+  { value: 'pressure_compare', label: 'Pressure Compare' },
+  { value: 'entity_count', label: 'Entity Count' },
   { value: 'relationship_count', label: 'Relationship Count' },
   { value: 'relationship_exists', label: 'Relationship Exists' },
-  { value: 'entity_status', label: 'Entity Status' },
   { value: 'tag_exists', label: 'Tag Exists' },
   { value: 'tag_absent', label: 'Tag Absent' },
-  { value: 'pressure_above', label: 'Pressure Above' },
-  { value: 'pressure_below', label: 'Pressure Below' },
-  { value: 'time_since_update', label: 'Time Since Update' },
-  { value: 'connection_count', label: 'Connection Count' },
+  { value: 'status', label: 'Status' },
+  { value: 'prominence', label: 'Prominence' },
+  { value: 'time_elapsed', label: 'Time Elapsed' },
+  { value: 'cooldown_elapsed', label: 'Cooldown Elapsed' },
+  { value: 'creations_per_epoch', label: 'Creations Per Epoch' },
+  { value: 'graph_path', label: 'Graph Path' },
+  { value: 'entity_exists', label: 'Entity Exists' },
+  { value: 'entity_has_relationship', label: 'Entity Has Relationship' },
+  { value: 'random_chance', label: 'Random Chance' },
+  { value: 'era_match', label: 'Era Match' },
+  { value: 'and', label: 'All Of (AND)' },
+  { value: 'or', label: 'Any Of (OR)' },
+  { value: 'always', label: 'Always' },
 ];
 
-// Action type options (must match thresholdTrigger.ts TriggerActionType)
+// Action type options (unified rules)
 export const ACTION_TYPES = [
   { value: 'set_tag', label: 'Set Tag' },
-  { value: 'set_cluster_tag', label: 'Set Cluster Tag' },
   { value: 'remove_tag', label: 'Remove Tag' },
+  { value: 'change_status', label: 'Change Status' },
+  { value: 'adjust_prominence', label: 'Adjust Prominence' },
   { value: 'modify_pressure', label: 'Modify Pressure' },
   { value: 'create_relationship', label: 'Create Relationship' },
+  { value: 'adjust_relationship_strength', label: 'Adjust Relationship Strength' },
+  { value: 'archive_relationship', label: 'Archive Relationship' },
 ];
 
 // Metric type options (must match connectionEvolution.ts MetricType)

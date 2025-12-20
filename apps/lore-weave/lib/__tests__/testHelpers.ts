@@ -204,6 +204,9 @@ export function createTestGraph(overrides: Partial<Graph> = {}): Graph {
     getRelationships(): Relationship[] {
       return [..._relationships];
     },
+    getAllRelationships(): Relationship[] {
+      return [..._relationships];
+    },
     getRelationshipCount(): number {
       return _relationships.length;
     },

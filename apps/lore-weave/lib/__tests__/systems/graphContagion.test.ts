@@ -84,9 +84,10 @@ describe('graphContagion', () => {
           maxProbability: 1.0
         },
         infectionAction: {
-          type: 'add_tag',
-          tagKey: 'infected',
-          tagValue: true
+          type: 'set_tag',
+          entity: '$self',
+          tag: 'infected',
+          value: true
         }
       };
 
@@ -114,7 +115,8 @@ describe('graphContagion', () => {
         entityKind: 'npc',
         contagion: {
           type: 'relationship',
-          relationshipKind: 'believer_of'
+          relationshipKind: 'believer_of',
+          targetEntityId: 'ideology'
         },
         vectors: [{
           relationshipKind: 'follower_of',
@@ -127,7 +129,9 @@ describe('graphContagion', () => {
         },
         infectionAction: {
           type: 'create_relationship',
-          relationshipKind: 'believer_of',
+          kind: 'believer_of',
+          src: '$self',
+          dst: '$contagion_source',
           strength: 0.5
         }
       };
@@ -138,6 +142,7 @@ describe('graphContagion', () => {
       expect(result.relationshipsAdded.length).toBe(1);
       expect(result.relationshipsAdded[0].src).toBe('susceptible');
       expect(result.relationshipsAdded[0].kind).toBe('believer_of');
+      expect(result.relationshipsAdded[0].dst).toBe('ideology');
     });
 
     it('should not infect entities already infected', () => {
@@ -154,7 +159,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -177,7 +182,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -203,7 +208,7 @@ describe('graphContagion', () => {
         susceptibilityModifiers: [
           { tag: 'conservative', modifier: 0.9 }  // 90% resistance = 3% effective chance
         ],
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -241,7 +246,7 @@ describe('graphContagion', () => {
         susceptibilityModifiers: [
           { tag: 'radical', modifier: -0.3 }  // Negative = more susceptible
         ],
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -277,7 +282,7 @@ describe('graphContagion', () => {
           baseRate: 0.1,
           contactMultiplier: 0.2  // Each contact adds 20%
         },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -323,7 +328,7 @@ describe('graphContagion', () => {
           baseRate: 1.0,  // Guaranteed recovery
           immunityTag: 'immune'
         },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -349,7 +354,7 @@ describe('graphContagion', () => {
             { tag: 'traditional', bonus: 0.5 }
           ]
         },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -389,7 +394,7 @@ describe('graphContagion', () => {
           baseRate: 0.1,
           immunityTag: 'immune'
         },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -424,7 +429,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 0.5, contactMultiplier: 0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' },
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' },
         phaseTransitions: [{
           entityKind: 'rules',
           fromStatus: 'proposed',
@@ -463,7 +468,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 0.0, contactMultiplier: 0 },  // No new infections
-        infectionAction: { type: 'add_tag', tagKey: 'infected' },
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' },
         phaseTransitions: [{
           entityKind: 'rules',
           fromStatus: 'proposed',
@@ -489,7 +494,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' },
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' },
         throttleChance: 0.1  // Only 10% of ticks
       };
 
@@ -530,7 +535,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' },
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' },
         pressureChanges: { conflict: 5, stability: -3 }
       };
 
@@ -551,7 +556,7 @@ describe('graphContagion', () => {
         contagion: { type: 'tag', tagPattern: 'infected' },
         vectors: [{ relationshipKind: 'allied_with', direction: 'both' }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' },
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' },
         pressureChanges: { conflict: 5 }
       };
 
@@ -589,7 +594,7 @@ describe('graphContagion', () => {
           direction: 'dst'  // Entity must be dst to see contacts through this relationship
         }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);
@@ -624,7 +629,7 @@ describe('graphContagion', () => {
           minStrength: 0.5
         }],
         transmission: { baseRate: 1.0, contactMultiplier: 0, maxProbability: 1.0 },
-        infectionAction: { type: 'add_tag', tagKey: 'infected' }
+        infectionAction: { type: 'set_tag', entity: '$self', tag: 'infected' }
       };
 
       const system = createGraphContagionSystem(config);

@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { ReferenceDropdown, PressureChangesEditor, NumberInput } from '../../shared';
+import { PressureChangesEditor, NumberInput } from '../../shared';
+import SelectionRuleEditor from '../../shared/SelectionRuleEditor';
 
 /**
  * @param {Object} props
@@ -14,23 +15,15 @@ import { ReferenceDropdown, PressureChangesEditor, NumberInput } from '../../sha
  */
 export function CommonSettingsTab({ system, onChange, schema, pressures }) {
   const config = system.config || {};
-
-  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
-    value: ek.kind,
-    label: ek.description || ek.kind,
-  }));
-
-  const getSubtypeOptions = (kind) => {
-    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
-    if (!ek?.subtypes) return [];
-    return ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id }));
-  };
-
-  const getStatusOptions = (kind) => {
-    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
-    if (!ek?.statuses) return [];
-    return ek.statuses.map((st) => ({ value: st.id, label: st.name || st.id }));
-  };
+  const selection = config.selection || { strategy: 'by_kind', kind: 'any' };
+  const supportsSelection = [
+    'graphContagion',
+    'connectionEvolution',
+    'thresholdTrigger',
+    'clusterFormation',
+    'tagDiffusion',
+    'planeDiffusion',
+  ].includes(system.systemType);
 
   const updateConfig = (field, value) => {
     onChange({ ...system, config: { ...config, [field]: value } });
@@ -38,39 +31,25 @@ export function CommonSettingsTab({ system, onChange, schema, pressures }) {
 
   return (
     <div>
-      <div className="section">
-        <div className="section-title">Entity Filter</div>
-        <div className="section-desc">
-          Define which entities this system operates on.
-        </div>
-
-        <div className="form-grid">
-          <ReferenceDropdown
-            label="Entity Kind"
-            value={config.entityKind || 'any'}
-            onChange={(v) => updateConfig('entityKind', v)}
-            options={[{ value: 'any', label: 'All Kinds' }, ...entityKindOptions]}
+      {supportsSelection && (
+        <div className="section">
+          <div className="section-title">Entity Selection</div>
+          <div className="section-desc">
+            Define which entities this system operates on.
+          </div>
+          <SelectionRuleEditor
+            value={selection}
+            onChange={(next) => updateConfig('selection', next)}
+            schema={schema}
+            availableRefs={[]}
+            showPickStrategy={false}
+            showMaxResults={false}
+            showFilters
+            allowAnyKind
+            showExcludeSubtypes
           />
-          {config.entityKind && config.entityKind !== 'any' && (
-            <ReferenceDropdown
-              label="Entity Subtype"
-              value={config.entitySubtype}
-              onChange={(v) => updateConfig('entitySubtype', v)}
-              options={getSubtypeOptions(config.entityKind)}
-              placeholder="Any"
-            />
-          )}
-          {config.entityKind && config.entityKind !== 'any' && (
-            <ReferenceDropdown
-              label="Entity Status"
-              value={config.entityStatus}
-              onChange={(v) => updateConfig('entityStatus', v)}
-              options={getStatusOptions(config.entityKind)}
-              placeholder="Any"
-            />
-          )}
         </div>
-      </div>
+      )}
 
       <div className="section">
         <div className="section-title">Throttling</div>

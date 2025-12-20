@@ -240,8 +240,11 @@ export interface ActionApplicationPayload {
     }>;
     relationshipsStrengthened: Array<{
       kind: string;
-      channel: string;
-      amount: number;
+      srcId: string;
+      dstId: string;
+      srcName: string;
+      dstName: string;
+      delta: number;
     }>;
     prominenceChanges: Array<{
       entityId: string;

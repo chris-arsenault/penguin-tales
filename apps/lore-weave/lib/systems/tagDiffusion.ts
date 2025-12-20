@@ -15,8 +15,8 @@ import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/type
 import { HardState } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { rollProbability, pickRandom, hasTag } from '../utils';
-import { SelectionFilter } from '../engine/declarativeTypes';
-import { SimpleEntityResolver, applySelectionFilters } from '../selection';
+import { createSystemContext, selectEntities } from '../rules';
+import type { SelectionRule } from '../rules';
 
 // =============================================================================
 // CONFIGURATION TYPES
@@ -59,12 +59,8 @@ export interface TagDiffusionConfig {
   /** Optional description */
   description?: string;
 
-  /** Entity kind to evaluate */
-  entityKind: string;
-  /** Optional: only evaluate entities with this subtype */
-  entitySubtype?: string;
-  /** Optional: only evaluate entities with this status */
-  entityStatus?: string;
+  /** Selection rule for entities to evaluate */
+  selection: SelectionRule;
 
   /** Relationship kind that indicates "connection" between entities */
   connectionKind: string;
@@ -95,9 +91,6 @@ export interface TagDiffusionConfig {
     /** Pressure delta when triggered */
     delta: number;
   };
-
-  /** Advanced selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
 }
 
 // =============================================================================
@@ -205,19 +198,8 @@ export function createTagDiffusionSystem(
       const modifiedTags = new Map<string, Record<string, boolean | string>>();
 
       // Find entities to evaluate
-      let entities = graphView.findEntities({ kind: config.entityKind });
-      if (config.entitySubtype) {
-        entities = entities.filter(e => e.subtype === config.entitySubtype);
-      }
-      if (config.entityStatus) {
-        entities = entities.filter(e => e.status === config.entityStatus);
-      }
-
-      // Apply advanced selection filters
-      if (config.filters && config.filters.length > 0) {
-        const resolver = new SimpleEntityResolver(graphView);
-        entities = applySelectionFilters(entities, config.filters, resolver);
-      }
+      const selectionCtx = createSystemContext(graphView);
+      let entities = selectEntities(config.selection, selectionCtx);
 
       if (entities.length < 2) {
         return {

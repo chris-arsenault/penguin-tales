@@ -35,7 +35,7 @@ const KNOWN_PROPERTIES = new Set([
 const KNOWN_STATE_UPDATE_TYPES = new Set([
   'modify_pressure',
   'archive_relationship',
-  'update_entity_status',
+  'change_status',
   'set_tag',
   'remove_tag',
   'update_rate_limit',

@@ -2,175 +2,73 @@
  * Action Interpreter
  *
  * Converts declarative action configurations (JSON) into executable action handlers.
- * This enables actions to be defined as pure data in the canonry project files,
- * while the universalCatalyst system executes them.
- *
- * Action Types:
- * - Relationship creation: Create relationships between actor and target
- * - Relationship strengthening: Increase strength of existing relationships
- * - Target selection: Find valid targets based on criteria
+ * Actions are defined as data and executed by the universal catalyst system.
  */
 
 import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
-import { SelectionFilter } from './declarativeTypes';
+import type { Condition, RuleContext } from '../rules';
+import type { Mutation } from '../rules';
+import type { SelectionRule, VariableSelectionRule } from '../rules';
 import {
-  ActionEntityResolver,
-  applySelectionFilters as sharedApplySelectionFilters,
-} from '../selection';
+  applyPickStrategy,
+  createActionContext,
+  evaluateCondition,
+  prepareMutation,
+  selectEntities,
+  selectVariableEntities,
+} from '../rules';
 
 // =============================================================================
 // DECLARATIVE ACTION TYPES
 // =============================================================================
 
 /**
- * Pressure band requirement - action available only when pressure is within range
+ * Instigator selection - optional entity that triggers the action on behalf of the actor.
  */
-export interface PressureBand {
-  /** Pressure ID */
-  pressure: string;
-  /** Minimum value (-100 to 100), optional */
-  min?: number;
-  /** Maximum value (-100 to 100), optional */
-  max?: number;
-}
-
-/**
- * Instigator configuration - optional entity that triggers the action on behalf of the actor
- */
-export interface InstigatorConfig {
-  /** Relationship kind connecting instigator to actor */
-  relationshipKind: string;
-  /** Direction: 'in' = instigator has relationship TO actor, 'out' = actor has relationship TO instigator */
-  direction: 'in' | 'out';
-  /** Entity kinds that can be instigators */
-  kinds?: string[];
-  /** Optional subtype filter */
-  subtypes?: string[];
-  /** Optional status filter */
-  statuses?: string[];
-  /** Selection filters on instigator */
-  filters?: SelectionFilter[];
-  /** Is an instigator required? Default false - actor can act alone */
+export interface InstigatorSelectionRule extends VariableSelectionRule {
+  /** If true, action is unavailable when no instigator is found. */
   required?: boolean;
 }
 
 /**
- * Actor configuration - who can attempt this action
+ * Actor configuration - who can attempt this action.
  */
 export interface ActionActorConfig {
-  /** Entity kinds that can be actors (the entity that interacts with the target) */
-  kinds: string[];
-  /** Optional subtype filter */
-  subtypes?: string[];
-  /** Optional status filter */
-  statuses?: string[];
-  /** Pressure bands - action available only when pressures are within ranges */
-  requiredPressures?: PressureBand[];
-  /** Selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
-  /** Optional instigator - entity that triggers the action on behalf of actor */
-  instigator?: InstigatorConfig;
+  /** How to select eligible actors. */
+  selection: SelectionRule;
+  /** Optional conditions that must pass for this actor. */
+  conditions?: Condition[];
+  /** Optional instigator selection. */
+  instigator?: InstigatorSelectionRule;
 }
 
 /**
- * Target configuration - how to find valid targets
- */
-export interface ActionTargetConfig {
-  /** Target entity kind */
-  kind: string;
-  /** Filter by subtype */
-  subtypes?: string[];
-  /** Filter by status */
-  statuses?: string[];
-  /** Select two targets (for actions like trade routes) */
-  selectTwo?: boolean;
-  /** Exclude self (for faction-to-faction actions) */
-  excludeSelf?: boolean;
-  /** Selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
-}
-
-/** Entity reference for outcome relationships */
-export type OutcomeEntityRef = 'actor' | 'instigator' | 'target' | 'target2';
-
-/**
- * Relationship to create on success
- */
-export interface OutcomeRelationship {
-  /** Relationship kind */
-  kind: string;
-  /** Source entity */
-  src: OutcomeEntityRef;
-  /** Destination entity */
-  dst: OutcomeEntityRef;
-  /** Initial strength */
-  strength: number;
-  /** Create reverse relationship too */
-  bidirectional?: boolean;
-}
-
-/** Channel for relationship strengthening */
-export type StrengtheningChannel = 'instigator_actor' | 'actor_target';
-
-/**
- * Relationship to strengthen on success
- */
-export interface RelationshipStrengthening {
-  /** Relationship kind to strengthen */
-  kind: string;
-  /** Which entities to strengthen relationship between */
-  channel: StrengtheningChannel;
-  /** Amount to increase strength (can be negative to weaken) */
-  amount: number;
-}
-
-/**
- * Status change to apply on success
- */
-export interface StatusChange {
-  /** Which entity to change status of */
-  entity: OutcomeEntityRef;
-  /** New status to set */
-  status: string;
-}
-
-/**
- * Action outcome configuration
+ * Action outcome configuration.
  */
 export interface ActionOutcomeConfig {
-  /** Relationships to create */
-  relationships?: OutcomeRelationship[];
-  /** Relationships to strengthen */
-  strengthenRelationships?: RelationshipStrengthening[];
-  /** Status changes to apply to entities */
-  statusChanges?: StatusChange[];
-  /** Pressure changes */
-  pressureChanges?: Record<string, number>;
-  /** Apply system-level prominence changes to actor on success/failure */
-  applyProminenceToActor?: boolean;
-  /** Apply system-level prominence changes to instigator on success/failure */
-  applyProminenceToInstigator?: boolean;
-  /** Description template (supports {actor.name}, {target.name}, etc.) */
+  /** Mutations to apply on success. */
+  mutations?: Mutation[];
+  /** Description template (supports {actor.name}, {target.name}, etc.). */
   descriptionTemplate: string;
+  /** Apply system-level prominence changes to actor on success/failure. */
+  applyProminenceToActor?: boolean;
+  /** Apply system-level prominence changes to instigator on success/failure. */
+  applyProminenceToInstigator?: boolean;
 }
 
 /**
- * Pressure modifier - how a pressure affects action weight and attempt chance
+ * Pressure modifier - how a pressure affects action weight and attempt chance.
  */
 export interface PressureModifier {
   /** Pressure ID */
   pressure: string;
-  /** Multiplier for how pressure affects weight/attempt chance.
-   *  Positive: high pressure increases likelihood
-   *  Negative: high pressure decreases likelihood (inverse relationship)
-   *  e.g., 1.0 means full effect, 0.5 means half effect, -1.0 means inverse
-   */
+  /** Multiplier for how pressure affects weight/attempt chance. */
   multiplier: number;
 }
 
 /**
- * Action probability configuration
+ * Action probability configuration.
  */
 export interface ActionProbabilityConfig {
   /** Base success chance (0-1) */
@@ -182,7 +80,7 @@ export interface ActionProbabilityConfig {
 }
 
 /**
- * Complete declarative action configuration
+ * Complete declarative action configuration.
  */
 export interface DeclarativeAction {
   /** Unique identifier */
@@ -197,7 +95,7 @@ export interface DeclarativeAction {
   /** Who can attempt this action (primary actor + optional instigator) */
   actor: ActionActorConfig;
   /** How to find valid targets */
-  targeting: ActionTargetConfig;
+  targeting: SelectionRule;
   /** What happens on success */
   outcome: ActionOutcomeConfig;
   /** Probability settings */
@@ -205,7 +103,7 @@ export interface DeclarativeAction {
 }
 
 /**
- * Executable action (what universalCatalyst uses)
+ * Executable action (what universalCatalyst uses).
  */
 export interface ExecutableAction {
   type: string;
@@ -221,335 +119,246 @@ export interface ExecutableAction {
   applyProminenceToActor: boolean;
   /** Apply system-level prominence changes to instigator on success/failure */
   applyProminenceToInstigator: boolean;
-  handler: (graph: TemplateGraphView, actor: HardState, target?: HardState) => ActionResult;
+  handler: (graph: TemplateGraphView, actor: HardState) => ActionResult;
 }
 
 /**
- * Action execution result
+ * Action execution result.
  */
 export interface ActionResult {
   success: boolean;
   relationships: Relationship[];
+  relationshipsAdjusted?: Array<{ kind: string; src: string; dst: string; delta: number }>;
+  entitiesModified?: Array<{ id: string; changes: Partial<HardState> }>;
+  pressureChanges?: Record<string, number>;
   description: string;
   entitiesCreated?: string[];
-  entitiesModified?: string[];
-  /** ID of the instigator entity, if any (for prominence changes) */
   instigatorId?: string;
+  targetId?: string;
+  target2Id?: string;
+  failureReason?: 'no_instigator' | 'no_target' | 'actor_conditions' | 'mutation_failed';
 }
 
-
 // =============================================================================
-// ACTION INTERPRETATION
+// ACTION INTERPRETATION HELPERS
 // =============================================================================
 
-/**
- * Find an instigator for the action based on instigator config.
- * Instigator is an optional entity that triggers the action on behalf of the actor.
- *
- * @param actor The primary actor (e.g., faction)
- * @param instigatorConfig How to find the instigator
- * @param graph The graph to search
- * @returns The instigator entity, or null if not found
- */
-function findInstigator(
-  actor: HardState,
-  instigatorConfig: InstigatorConfig | undefined,
-  graph: TemplateGraphView
-): HardState | null {
-  if (!instigatorConfig) return null;
+function resolveSingleEntity(select: VariableSelectionRule, ctx: RuleContext): HardState | undefined {
+  const candidates = selectVariableEntities(select, ctx);
 
-  const { relationshipKind, direction, kinds, subtypes, statuses, filters } = instigatorConfig;
-
-  // Find entities with the specified relationship to the actor
-  let candidates: HardState[];
-
-  if (direction === 'in') {
-    // Instigator has relationship TO actor (e.g., NPC --leader_of--> Faction)
-    candidates = graph.getEntities().filter(e => {
-      return e.links.some(link =>
-        link.kind === relationshipKind && link.dst === actor.id
-      );
-    });
-  } else {
-    // Actor has relationship TO instigator (e.g., Faction --has_leader--> NPC)
-    const relatedIds = actor.links
-      .filter(link => link.kind === relationshipKind)
-      .map(link => link.dst);
-    candidates = relatedIds
-      .map(id => graph.getEntity(id))
-      .filter((e): e is HardState => e !== undefined);
+  if (candidates.length === 0) {
+    return select.fallback ? ctx.resolver.resolveEntity(select.fallback) : undefined;
   }
 
-  // Apply kind filter
-  if (kinds && kinds.length > 0) {
-    candidates = candidates.filter(e => kinds.includes(e.kind));
-  }
-
-  // Apply subtype filter
-  if (subtypes && subtypes.length > 0) {
-    candidates = candidates.filter(e => subtypes.includes(e.subtype));
-  }
-
-  // Apply status filter
-  if (statuses && statuses.length > 0) {
-    candidates = candidates.filter(e => statuses.includes(e.status));
-  }
-
-  // Apply selection filters
-  if (filters && filters.length > 0) {
-    const resolver = new ActionEntityResolver(graph, actor, null);
-    candidates = sharedApplySelectionFilters(candidates, filters, resolver);
-  }
-
-  // Return first matching instigator (could add weighted selection later)
-  return candidates.length > 0 ? candidates[0] : null;
+  const pickStrategy = select.pickStrategy ?? 'random';
+  const picked = applyPickStrategy(candidates, pickStrategy, select.maxResults);
+  return picked.length > 0 ? picked[0] : undefined;
 }
 
-/**
- * Find valid targets for an action.
- */
-function findTargets(
-  actor: HardState,
-  instigator: HardState | null,
-  targeting: ActionTargetConfig,
-  graph: TemplateGraphView
-): HardState[] {
-  let candidates = graph.getEntities().filter(e => {
-    // Kind filter
-    if (e.kind !== targeting.kind) return false;
+function resolveInstigator(
+  config: InstigatorSelectionRule | undefined,
+  ctx: RuleContext
+): { instigator: HardState | null; failureReason?: ActionResult['failureReason']; failureDescription?: string } {
+  if (!config) {
+    return { instigator: null };
+  }
 
-    // Subtype filter
-    if (targeting.subtypes && !targeting.subtypes.includes(e.subtype)) return false;
+  const instigator = resolveSingleEntity(config, ctx);
 
-    // Status filter
-    if (targeting.statuses && !targeting.statuses.includes(e.status)) return false;
+  if (!instigator && config.required) {
+    return {
+      instigator: null,
+      failureReason: 'no_instigator',
+      failureDescription: 'no instigator available to perform the action',
+    };
+  }
 
-    return true;
+  return { instigator: instigator ?? null };
+}
+
+function formatDescription(
+  template: string,
+  bindings: {
+    actor: HardState;
+    instigator?: HardState | null;
+    target?: HardState;
+    target2?: HardState;
+  }
+): string {
+  const tokenMap: Record<string, string> = {
+    'actor.name': bindings.actor?.name ?? '',
+    'actor.id': bindings.actor?.id ?? '',
+    'instigator.name': bindings.instigator?.name ?? '',
+    'instigator.id': bindings.instigator?.id ?? '',
+    'target.name': bindings.target?.name ?? '',
+    'target.id': bindings.target?.id ?? '',
+    'target2.name': bindings.target2?.name ?? '',
+    'target2.id': bindings.target2?.id ?? '',
+  };
+
+  return template.replace(/\{([^}]+)\}/g, (match, key) => {
+    return tokenMap[key] ?? '';
   });
-
-  // Self exclusion (exclude actor and instigator)
-  if (targeting.excludeSelf) {
-    candidates = candidates.filter(e => {
-      if (e.id === actor.id) return false;
-      if (instigator && e.id === instigator.id) return false;
-      return true;
-    });
-  }
-
-  // Apply selection filters using shared module
-  if (targeting.filters && targeting.filters.length > 0) {
-    const resolver = new ActionEntityResolver(graph, actor, instigator);
-    candidates = sharedApplySelectionFilters(candidates, targeting.filters, resolver);
-  }
-
-  return candidates;
 }
 
-/**
- * Resolve entity reference for relationship creation.
- */
-function resolveEntityRef(
-  ref: OutcomeEntityRef,
-  actor: HardState,
-  instigator: HardState | null,
-  target: HardState,
-  target2: HardState | undefined
-): string | null {
-  switch (ref) {
-    case 'actor':
-      return actor.id;
-    case 'instigator':
-      return instigator?.id || null;
-    case 'target':
-      return target.id;
-    case 'target2':
-      return target2?.id || null;
-    default:
-      return null;
+function evaluateActorConditions(
+  conditions: Condition[] | undefined,
+  ctx: RuleContext
+): { passed: boolean; diagnostic?: string } {
+  if (!conditions || conditions.length === 0) {
+    return { passed: true };
   }
-}
 
-/**
- * Create relationships from outcome configuration.
- */
-function createRelationships(
-  outcomeRels: OutcomeRelationship[],
-  actor: HardState,
-  instigator: HardState | null,
-  target: HardState,
-  target2: HardState | undefined,
-  tick: number
-): Relationship[] {
-  const relationships: Relationship[] = [];
-
-  for (const rel of outcomeRels) {
-    const srcId = resolveEntityRef(rel.src, actor, instigator, target, target2);
-    const dstId = resolveEntityRef(rel.dst, actor, instigator, target, target2);
-
-    if (!srcId || !dstId) continue;
-
-    relationships.push({
-      kind: rel.kind,
-      src: srcId,
-      dst: dstId,
-      strength: rel.strength,
-      createdAt: tick
-    });
-
-    if (rel.bidirectional) {
-      relationships.push({
-        kind: rel.kind,
-        src: dstId,
-        dst: srcId,
-        strength: rel.strength,
-        createdAt: tick
-      });
+  for (const condition of conditions) {
+    const result = evaluateCondition(condition, ctx, ctx.self);
+    if (!result.passed) {
+      return { passed: false, diagnostic: result.diagnostic };
     }
   }
 
-  return relationships;
+  return { passed: true };
 }
 
-/**
- * Format description template with entity names.
- */
-function formatDescription(
-  template: string,
-  actor: HardState,
-  instigator: HardState | null,
-  target: HardState,
-  target2?: HardState
-): string {
-  return template
-    .replace('{actor.name}', actor.name)
-    .replace('{instigator.name}', instigator?.name || '')
-    .replace('{target.name}', target.name)
-    .replace('{target2.name}', target2?.name || '');
-}
+// =============================================================================
+// ACTION HANDLER
+// =============================================================================
 
 /**
  * Create an executable action handler from declarative configuration.
  */
 function createActionHandler(action: DeclarativeAction): ExecutableAction['handler'] {
   return (graph: TemplateGraphView, actor: HardState): ActionResult => {
-    const instigatorConfig = action.actor.instigator;
+    const bindings: Record<string, HardState | undefined> = { actor };
+    const baseCtx = createActionContext(graph, bindings, actor);
 
-    // Find optional instigator
-    const instigator = findInstigator(actor, instigatorConfig, graph);
-
-    // Check if instigator is required but not found
-    if (instigatorConfig?.required && !instigator) {
+    // Resolve optional instigator
+    const instigatorResult = resolveInstigator(action.actor.instigator, baseCtx);
+    if (instigatorResult.failureReason) {
       return {
         success: false,
         relationships: [],
-        description: `has no instigator to perform the action`
+        description: instigatorResult.failureDescription || 'no instigator available',
+        failureReason: instigatorResult.failureReason,
       };
     }
 
-    // Find targets
-    const candidates = findTargets(actor, instigator, action.targeting, graph);
+    const instigator = instigatorResult.instigator;
+    bindings.instigator = instigator ?? undefined;
 
-    if (candidates.length === 0) {
+    // Evaluate actor conditions
+    const conditionsResult = evaluateActorConditions(action.actor.conditions, baseCtx);
+    if (!conditionsResult.passed) {
       return {
         success: false,
         relationships: [],
-        description: `found no valid ${action.targeting.kind} targets`
+        description: conditionsResult.diagnostic || 'actor conditions not met',
+        failureReason: 'actor_conditions',
       };
     }
 
-    // Select target(s)
-    const target = candidates[Math.floor(Math.random() * candidates.length)];
-    let target2: HardState | undefined;
+    // Select targets
+    const targetingRule: SelectionRule = {
+      ...action.targeting,
+      pickStrategy: action.targeting.pickStrategy ?? 'random',
+    };
 
-    if (action.targeting.selectTwo) {
-      const remaining = candidates.filter(c => c.id !== target.id);
-      if (remaining.length === 0) {
-        return {
-          success: false,
-          relationships: [],
-          description: `cannot find second ${action.targeting.kind} target`
-        };
-      }
-      target2 = remaining[Math.floor(Math.random() * remaining.length)];
+    const targets = selectEntities(targetingRule, baseCtx);
+    if (targets.length === 0) {
+      return {
+        success: false,
+        relationships: [],
+        description: 'found no valid targets',
+        failureReason: 'no_target',
+      };
     }
 
-    // Create relationships
-    const relationships = action.outcome.relationships
-      ? createRelationships(
-          action.outcome.relationships,
-          actor,
-          instigator,
-          target,
-          target2,
-          graph.tick
-        )
-      : [];
+    const requiredTargets = action.targeting.maxResults && action.targeting.maxResults > 1
+      ? action.targeting.maxResults
+      : 1;
 
-    // Handle relationship strengthening
-    if (action.outcome.strengthenRelationships && action.outcome.strengthenRelationships.length > 0) {
-      for (const strengthen of action.outcome.strengthenRelationships) {
-        // Determine entities based on channel
-        let entity1: HardState | null = null;
-        let entity2: HardState | null = null;
-
-        if (strengthen.channel === 'instigator_actor') {
-          entity1 = instigator;
-          entity2 = actor;
-        } else if (strengthen.channel === 'actor_target') {
-          entity1 = actor;
-          entity2 = target;
-        }
-
-        if (!entity1 || !entity2) continue;
-
-        // Find and strengthen relationships in both directions
-        const strengthenLink = (source: HardState, destId: string) => {
-          const link = source.links.find(l => l.kind === strengthen.kind && l.dst === destId);
-          if (link) {
-            link.strength = Math.min(1, Math.max(0, (link.strength || 0) + strengthen.amount));
-          }
-        };
-
-        strengthenLink(entity1, entity2.id);
-        strengthenLink(entity2, entity1.id);
-      }
+    if (targets.length < requiredTargets) {
+      return {
+        success: false,
+        relationships: [],
+        description: 'found insufficient targets',
+        failureReason: 'no_target',
+      };
     }
 
-    // Handle status changes
-    const modifiedIds = new Set<string>([target.id]);
-    if (target2) modifiedIds.add(target2.id);
+    const target = targets[0];
+    const target2 = targets[1];
+    bindings.target = target;
+    bindings.target2 = target2;
 
-    if (action.outcome.statusChanges && action.outcome.statusChanges.length > 0) {
-      for (const statusChange of action.outcome.statusChanges) {
-        const entityId = resolveEntityRef(statusChange.entity, actor, instigator, target, target2);
-        if (!entityId) continue;
+    const mutationCtx = createActionContext(graph, bindings, actor);
+    const prepared = (action.outcome.mutations ?? []).map((mutation) => prepareMutation(mutation, mutationCtx));
+    const failed = prepared.filter((result) => !result.applied);
 
-        const entity = graph.getEntity(entityId);
-        if (entity) {
-          entity.status = statusChange.status;
-          entity.updatedAt = graph.tick;
-          modifiedIds.add(entityId);
+    if (failed.length > 0) {
+      return {
+        success: false,
+        relationships: [],
+        description: failed[0]?.diagnostic || 'action mutations failed',
+        failureReason: 'mutation_failed',
+      };
+    }
+
+    const relationships: Relationship[] = [];
+    const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
+    const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+    const pressureChanges: Record<string, number> = {};
+
+    for (const result of prepared) {
+      if (result.entityModifications.length > 0) {
+        modifications.push(...result.entityModifications);
+      }
+
+      if (result.relationshipsCreated.length > 0) {
+        for (const rel of result.relationshipsCreated) {
+          relationships.push({
+            kind: rel.kind,
+            src: rel.src,
+            dst: rel.dst,
+            strength: rel.strength,
+            category: rel.category,
+            createdAt: graph.tick,
+          });
         }
       }
+
+      if (result.relationshipsAdjusted.length > 0) {
+        relationshipsAdjusted.push(...result.relationshipsAdjusted);
+      }
+
+      for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
+        pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+      }
     }
 
-    const description = formatDescription(
-      action.outcome.descriptionTemplate,
+    const description = formatDescription(action.outcome.descriptionTemplate, {
       actor,
       instigator,
       target,
-      target2
-    );
+      target2,
+    });
 
     return {
       success: true,
       relationships,
+      relationshipsAdjusted,
+      entitiesModified: modifications,
+      pressureChanges,
       description,
-      entitiesModified: Array.from(modifiedIds),
-      instigatorId: instigator?.id
+      instigatorId: instigator?.id,
+      targetId: target?.id,
+      target2Id: target2?.id,
     };
   };
 }
+
+// =============================================================================
+// ACTION FACTORY
+// =============================================================================
 
 /**
  * Convert a declarative action to an executable action.
@@ -601,4 +410,3 @@ export function loadActions(actions: DeclarativeAction[]): ExecutableAction[] {
 
   return executableActions;
 }
-

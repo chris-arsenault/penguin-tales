@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { createNewRule } from '../generators/applicability/createNewRule';
 import {
   BasicInfoSection,
   TransitionsGrid,
@@ -38,11 +39,12 @@ export function EraCard({
 
   // Entry condition handlers
   const handleAddEntryCondition = useCallback(() => {
+    const newRule = createNewRule('pressure', pressures);
     onChange({
       ...era,
-      entryConditions: [...(era.entryConditions || []), { type: 'pressure', pressureId: '', operator: 'above', threshold: 50 }],
+      entryConditions: [...(era.entryConditions || []), newRule],
     });
-  }, [era, onChange]);
+  }, [era, onChange, pressures]);
 
   const handleUpdateEntryCondition = useCallback((index, updated) => {
     const newConditions = [...(era.entryConditions || [])];
@@ -59,11 +61,12 @@ export function EraCard({
 
   // Exit condition handlers
   const handleAddExitCondition = useCallback(() => {
+    const newRule = createNewRule('time_elapsed', pressures);
     onChange({
       ...era,
-      exitConditions: [...(era.exitConditions || []), { type: 'time', minTicks: 50 }],
+      exitConditions: [...(era.exitConditions || []), newRule],
     });
-  }, [era, onChange]);
+  }, [era, onChange, pressures]);
 
   const handleUpdateExitCondition = useCallback((index, updated) => {
     const newConditions = [...(era.exitConditions || [])];
@@ -78,81 +81,95 @@ export function EraCard({
     });
   }, [era, onChange]);
 
+  const updateEffectMutations = useCallback((key, nextMutations) => {
+    onChange({
+      ...era,
+      [key]: { ...(era[key] || {}), mutations: nextMutations },
+    });
+  }, [era, onChange]);
+
   // Entry effect handlers
   const handleAddEntryEffect = useCallback((pressureId) => {
-    onChange({
-      ...era,
-      entryEffects: {
-        ...(era.entryEffects || {}),
-        pressureChanges: { ...(era.entryEffects?.pressureChanges || {}), [pressureId]: 10 },
-      },
-    });
-  }, [era, onChange]);
+    const existing = era.entryEffects?.mutations || [];
+    const hasExisting = existing.some((m) => m.type === 'modify_pressure' && m.pressureId === pressureId);
+    if (hasExisting) return;
+    updateEffectMutations('entryEffects', [
+      ...existing,
+      { type: 'modify_pressure', pressureId, delta: 10 },
+    ]);
+  }, [era, updateEffectMutations]);
 
   const handleUpdateEntryEffect = useCallback((pressureId, value) => {
-    onChange({
-      ...era,
-      entryEffects: {
-        ...(era.entryEffects || {}),
-        pressureChanges: { ...(era.entryEffects?.pressureChanges || {}), [pressureId]: value },
-      },
-    });
-  }, [era, onChange]);
+    const existing = era.entryEffects?.mutations || [];
+    const next = existing.map((mutation) => (
+      mutation.type === 'modify_pressure' && mutation.pressureId === pressureId
+        ? { ...mutation, delta: value }
+        : mutation
+    ));
+    updateEffectMutations('entryEffects', next);
+  }, [era, updateEffectMutations]);
 
   const handleRemoveEntryEffect = useCallback((pressureId) => {
-    const newChanges = { ...(era.entryEffects?.pressureChanges || {}) };
-    delete newChanges[pressureId];
-    onChange({
-      ...era,
-      entryEffects: { ...(era.entryEffects || {}), pressureChanges: newChanges },
-    });
-  }, [era, onChange]);
+    const existing = era.entryEffects?.mutations || [];
+    const next = existing.filter((mutation) => !(
+      mutation.type === 'modify_pressure' && mutation.pressureId === pressureId
+    ));
+    updateEffectMutations('entryEffects', next);
+  }, [era, updateEffectMutations]);
 
   // Exit effect handlers
   const handleAddExitEffect = useCallback((pressureId) => {
-    onChange({
-      ...era,
-      exitEffects: {
-        ...(era.exitEffects || {}),
-        pressureChanges: { ...(era.exitEffects?.pressureChanges || {}), [pressureId]: 10 },
-      },
-    });
-  }, [era, onChange]);
+    const existing = era.exitEffects?.mutations || [];
+    const hasExisting = existing.some((m) => m.type === 'modify_pressure' && m.pressureId === pressureId);
+    if (hasExisting) return;
+    updateEffectMutations('exitEffects', [
+      ...existing,
+      { type: 'modify_pressure', pressureId, delta: 10 },
+    ]);
+  }, [era, updateEffectMutations]);
 
   const handleUpdateExitEffect = useCallback((pressureId, value) => {
-    onChange({
-      ...era,
-      exitEffects: {
-        ...(era.exitEffects || {}),
-        pressureChanges: { ...(era.exitEffects?.pressureChanges || {}), [pressureId]: value },
-      },
-    });
-  }, [era, onChange]);
+    const existing = era.exitEffects?.mutations || [];
+    const next = existing.map((mutation) => (
+      mutation.type === 'modify_pressure' && mutation.pressureId === pressureId
+        ? { ...mutation, delta: value }
+        : mutation
+    ));
+    updateEffectMutations('exitEffects', next);
+  }, [era, updateEffectMutations]);
 
   const handleRemoveExitEffect = useCallback((pressureId) => {
-    const newChanges = { ...(era.exitEffects?.pressureChanges || {}) };
-    delete newChanges[pressureId];
-    onChange({
-      ...era,
-      exitEffects: { ...(era.exitEffects || {}), pressureChanges: newChanges },
-    });
-  }, [era, onChange]);
+    const existing = era.exitEffects?.mutations || [];
+    const next = existing.filter((mutation) => !(
+      mutation.type === 'modify_pressure' && mutation.pressureId === pressureId
+    ));
+    updateEffectMutations('exitEffects', next);
+  }, [era, updateEffectMutations]);
+
+  const entryMutations = useMemo(
+    () => (era.entryEffects?.mutations || []).filter((m) => m.type === 'modify_pressure'),
+    [era.entryEffects]
+  );
+  const exitMutations = useMemo(
+    () => (era.exitEffects?.mutations || []).filter((m) => m.type === 'modify_pressure'),
+    [era.exitEffects]
+  );
 
   const availablePressuresForEntry = useMemo(() => {
-    const currentIds = new Set(Object.keys(era.entryEffects?.pressureChanges || {}));
+    const currentIds = new Set(entryMutations.map((mutation) => mutation.pressureId));
     return (pressures || []).filter(p => !currentIds.has(p.id)).map(p => ({ id: p.id, name: p.name || p.id }));
-  }, [pressures, era.entryEffects]);
+  }, [pressures, entryMutations]);
 
   const availablePressuresForExit = useMemo(() => {
-    const currentIds = new Set(Object.keys(era.exitEffects?.pressureChanges || {}));
+    const currentIds = new Set(exitMutations.map((mutation) => mutation.pressureId));
     return (pressures || []).filter(p => !currentIds.has(p.id)).map(p => ({ id: p.id, name: p.name || p.id }));
-  }, [pressures, era.exitEffects]);
+  }, [pressures, exitMutations]);
 
   // Counts
   const entryConditions = era.entryConditions || [];
   const exitConditions = era.exitConditions || [];
-  const entryPressureChanges = Object.entries(era.entryEffects?.pressureChanges || {});
-  const exitPressureChanges = Object.entries(era.exitEffects?.pressureChanges || {});
+  const entryPressureChanges = entryMutations.map((mutation) => [mutation.pressureId, mutation.delta]);
+  const exitPressureChanges = exitMutations.map((mutation) => [mutation.pressureId, mutation.delta]);
 
   return (
     <div className="expandable-card">

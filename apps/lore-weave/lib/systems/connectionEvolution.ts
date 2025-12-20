@@ -1,9 +1,21 @@
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
-import { adjustProminence, getProminenceValue, rollProbability } from '../utils';
-import { SelectionFilter } from '../engine/declarativeTypes';
-import { SimpleEntityResolver, applySelectionFilters } from '../selection';
+import { getProminenceValue, rollProbability } from '../utils';
+import {
+  createSystemContext,
+  evaluateMetric,
+  prepareMutation,
+  applyOperator,
+  selectEntities,
+} from '../rules';
+import type {
+  ComparisonOperator,
+  SelectionRule,
+  Metric,
+  Mutation,
+  MutationResult,
+} from '../rules';
 
 /**
  * Connection Evolution System Factory
@@ -22,37 +34,21 @@ import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 // CONFIGURATION TYPES
 // =============================================================================
 
-export type MetricType =
-  | 'connection_count'      // Total relationships involving entity
-  | 'relationship_count'    // Count of specific relationship kind(s)
-  | 'shared_relationship'   // Count entities sharing a specific relationship (e.g., common enemies)
-  | 'catalyzed_events';     // Number of catalyst events (for NPCs with catalyst data)
-
-export type ConditionOperator = '>' | '<' | '>=' | '<=' | '==';
+export type ConditionOperator = ComparisonOperator;
 
 export type ThresholdValue =
   | number
   | 'prominence_scaled';    // (prominenceLevel + 1) * multiplier
 
-export type ActionType =
-  | { type: 'adjust_prominence'; direction: 'up' | 'down' }
-  | { type: 'create_relationship'; kind: string; category?: string; strength?: number }
-  | { type: 'change_status'; newStatus: string }
-  | { type: 'add_tag'; tag: string; value?: string | boolean };
+export type ActionType = Extract<
+  Mutation,
+  | { type: 'adjust_prominence' }
+  | { type: 'create_relationship' }
+  | { type: 'change_status' }
+  | { type: 'set_tag' }
+>;
 
-export interface MetricConfig {
-  type: MetricType;
-  /** For connection_count: which relationship kinds to count. Empty = all */
-  relationshipKinds?: string[];
-  /** For relationship_count: direction to filter (src = outgoing, dst = incoming, both = either) */
-  direction?: 'src' | 'dst' | 'both';
-  /** For shared_relationship: the relationship kind to check for shared targets */
-  sharedRelationshipKind?: string;
-  /** For shared_relationship: direction to check (src = outgoing shared targets) */
-  sharedDirection?: 'src' | 'dst';
-  /** Minimum relationship strength to count */
-  minStrength?: number;
-}
+export type MetricConfig = Metric;
 
 export interface EvolutionRule {
   /** Condition to check */
@@ -87,12 +83,8 @@ export interface ConnectionEvolutionConfig {
   /** Optional description */
   description?: string;
 
-  /** Entity kind to evaluate */
-  entityKind: string;
-  /** Optional: only evaluate these subtypes */
-  entitySubtypes?: string[];
-  /** Optional: only evaluate entities with this status */
-  entityStatus?: string;
+  /** Selection rule for entities to evaluate */
+  selection: SelectionRule;
 
   /** How to calculate the metric for each entity */
   metric: MetricConfig;
@@ -108,9 +100,6 @@ export interface ConnectionEvolutionConfig {
 
   /** Throttle: only run on some ticks (0-1, default: 1.0 = every tick) */
   throttleChance?: number;
-
-  /** Advanced selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
 }
 
 // =============================================================================
@@ -120,100 +109,10 @@ export interface ConnectionEvolutionConfig {
 function calculateMetric(
   entity: HardState,
   config: MetricConfig,
-  graphView: TemplateGraphView
+  ctx: ReturnType<typeof createSystemContext>
 ): number {
-  switch (config.type) {
-    case 'connection_count': {
-      const relationships = graphView.getAllRelationships();
-      return relationships.filter(r => {
-        const involvesEntity = r.src === entity.id || r.dst === entity.id;
-        if (!involvesEntity) return false;
-
-        if (config.relationshipKinds && config.relationshipKinds.length > 0) {
-          if (!config.relationshipKinds.includes(r.kind)) return false;
-        }
-
-        if (config.minStrength !== undefined) {
-          if ((r.strength ?? 0.5) < config.minStrength) return false;
-        }
-
-        return true;
-      }).length;
-    }
-
-    case 'relationship_count': {
-      const direction = config.direction ?? 'both';
-      const relationships = graphView.getAllRelationships().filter(r => {
-        if (config.relationshipKinds && !config.relationshipKinds.includes(r.kind)) {
-          return false;
-        }
-
-        if (config.minStrength !== undefined && (r.strength ?? 0.5) < config.minStrength) {
-          return false;
-        }
-
-        if (direction === 'src') return r.src === entity.id;
-        if (direction === 'dst') return r.dst === entity.id;
-        return r.src === entity.id || r.dst === entity.id;
-      });
-      return relationships.length;
-    }
-
-    case 'shared_relationship': {
-      // Find entities that share a common target via the specified relationship
-      // E.g., for alliance formation: find entities sharing common enemies (at_war_with)
-      if (!config.sharedRelationshipKind) return 0;
-
-      const direction = config.sharedDirection ?? 'src';
-      const minStrength = config.minStrength ?? 0;
-
-      // Get this entity's targets
-      const entityTargets = new Set<string>();
-      graphView.getAllRelationships().forEach(r => {
-        if (r.kind !== config.sharedRelationshipKind) return;
-        if (config.minStrength !== undefined && (r.strength ?? 0.5) < minStrength) return;
-
-        if (direction === 'src' && r.src === entity.id) {
-          entityTargets.add(r.dst);
-        } else if (direction === 'dst' && r.dst === entity.id) {
-          entityTargets.add(r.src);
-        }
-      });
-
-      if (entityTargets.size === 0) return 0;
-
-      // Count other entities that share at least one target
-      const sharedCount = new Set<string>();
-      graphView.getAllRelationships().forEach(r => {
-        if (r.kind !== config.sharedRelationshipKind) return;
-        if (config.minStrength !== undefined && (r.strength ?? 0.5) < minStrength) return;
-
-        let otherId: string | null = null;
-        let targetId: string | null = null;
-
-        if (direction === 'src' && r.src !== entity.id) {
-          otherId = r.src;
-          targetId = r.dst;
-        } else if (direction === 'dst' && r.dst !== entity.id) {
-          otherId = r.dst;
-          targetId = r.src;
-        }
-
-        if (otherId && targetId && entityTargets.has(targetId)) {
-          sharedCount.add(otherId);
-        }
-      });
-
-      return sharedCount.size;
-    }
-
-    case 'catalyzed_events': {
-      return entity.catalyst?.catalyzedEvents?.length ?? 0;
-    }
-
-    default:
-      return 0;
-  }
+  const result = evaluateMetric(config, ctx, entity);
+  return result.value;
 }
 
 function resolveThreshold(
@@ -229,19 +128,46 @@ function resolveThreshold(
   return (level + 1) * multiplier;
 }
 
+function mergeMutationResult(
+  result: MutationResult,
+  modifications: Array<{ id: string; changes: Partial<HardState> }>,
+  relationships: Relationship[],
+  relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
+  pressureChanges: Record<string, number>
+): void {
+  if (!result.applied) return;
+
+  if (result.entityModifications.length > 0) {
+    modifications.push(...result.entityModifications);
+  }
+
+  if (result.relationshipsCreated.length > 0) {
+    for (const rel of result.relationshipsCreated) {
+      relationships.push({
+        kind: rel.kind,
+        src: rel.src,
+        dst: rel.dst,
+        strength: rel.strength,
+        category: rel.category,
+      });
+    }
+  }
+
+  if (result.relationshipsAdjusted.length > 0) {
+    relationshipsAdjusted.push(...result.relationshipsAdjusted);
+  }
+
+  for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
+    pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+  }
+}
+
 function evaluateCondition(
   value: number,
   operator: ConditionOperator,
   threshold: number
 ): boolean {
-  switch (operator) {
-    case '>': return value > threshold;
-    case '<': return value < threshold;
-    case '>=': return value >= threshold;
-    case '<=': return value <= threshold;
-    case '==': return value === threshold;
-    default: return false;
-  }
+  return applyOperator(value, operator, threshold);
 }
 
 // =============================================================================
@@ -273,30 +199,19 @@ export function createConnectionEvolutionSystem(
 
       const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
       const relationships: Relationship[] = [];
+      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
+      const pressureChanges: Record<string, number> = {};
 
       // Find entities to evaluate
-      let entities = graphView.findEntities({ kind: config.entityKind });
-
-      if (config.entitySubtypes && config.entitySubtypes.length > 0) {
-        entities = entities.filter(e => config.entitySubtypes!.includes(e.subtype!));
-      }
-
-      if (config.entityStatus) {
-        entities = entities.filter(e => e.status === config.entityStatus);
-      }
-
-      // Apply advanced selection filters
-      if (config.filters && config.filters.length > 0) {
-        const resolver = new SimpleEntityResolver(graphView);
-        entities = applySelectionFilters(entities, config.filters, resolver);
-      }
+      const ruleCtx = createSystemContext(graphView);
+      const entities = selectEntities(config.selection, ruleCtx);
 
       // For create_relationship with betweenMatching, track matching entities per rule
       const matchingByRule = new Map<number, HardState[]>();
 
       // Evaluate each entity
       for (const entity of entities) {
-        let metricValue = calculateMetric(entity, config.metric, graphView);
+        let metricValue = calculateMetric(entity, config.metric, ruleCtx);
 
         // Apply subtype bonuses
         if (config.subtypeBonuses && entity.subtype) {
@@ -324,48 +239,16 @@ export function createConnectionEvolutionSystem(
             continue;
           }
 
-          // Apply action
-          switch (rule.action.type) {
-            case 'adjust_prominence': {
-              const delta = rule.action.direction === 'up' ? 1 : -1;
-              modifications.push({
-                id: entity.id,
-                changes: {
-                  prominence: adjustProminence(entity.prominence, delta)
-                }
-              });
-              break;
-            }
+          const entityCtx = { ...ruleCtx, self: entity };
 
-            case 'create_relationship': {
-              if (rule.betweenMatching) {
-                // Track for later pairing
-                if (!matchingByRule.has(ruleIdx)) {
-                  matchingByRule.set(ruleIdx, []);
-                }
-                matchingByRule.get(ruleIdx)!.push(entity);
-              }
-              // Non-betweenMatching relationships would need a target - skip for now
-              break;
+          if (rule.action.type === 'create_relationship' && rule.betweenMatching) {
+            if (!matchingByRule.has(ruleIdx)) {
+              matchingByRule.set(ruleIdx, []);
             }
-
-            case 'change_status': {
-              modifications.push({
-                id: entity.id,
-                changes: { status: rule.action.newStatus }
-              });
-              break;
-            }
-
-            case 'add_tag': {
-              const newTags = { ...entity.tags };
-              newTags[rule.action.tag] = rule.action.value ?? true;
-              modifications.push({
-                id: entity.id,
-                changes: { tags: newTags }
-              });
-              break;
-            }
+            matchingByRule.get(ruleIdx)!.push(entity);
+          } else {
+            const result = prepareMutation(rule.action as Mutation, entityCtx);
+            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
           }
         }
       }
@@ -386,23 +269,25 @@ export function createConnectionEvolutionSystem(
               continue;
             }
 
-            relationships.push({
-              kind: rule.action.kind,
-              src: src.id,
-              dst: dst.id,
-              strength: rule.action.strength ?? 0.5,
-              category: rule.action.category
-            });
+            const pairCtx = {
+              ...ruleCtx,
+              entities: { ...(ruleCtx.entities ?? {}), member: src, member2: dst },
+            };
+            const result = prepareMutation(rule.action as Mutation, pairCtx);
+            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
           }
         }
       }
 
-      const pressureChanges = (modifications.length > 0 || relationships.length > 0)
-        ? (config.pressureChanges ?? {})
-        : {};
+      if (modifications.length > 0 || relationships.length > 0 || relationshipsAdjusted.length > 0) {
+        for (const [pressureId, delta] of Object.entries(config.pressureChanges ?? {})) {
+          pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+        }
+      }
 
       return {
         relationshipsAdded: relationships,
+        relationshipsAdjusted,
         entitiesModified: modifications,
         pressureChanges,
         description: `${config.name}: ${modifications.length} modified, ${relationships.length} relationships`

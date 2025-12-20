@@ -1,24 +1,14 @@
 /**
- * Selection module - unified entity selection and filtering.
+ * Selection module - entity selection strategies.
  *
- * This module provides a single source of truth for selection filters
- * used across templates, actions, and systems.
+ * Note: Filter evaluation, graph path, entity resolver, and actor matching
+ * have been moved to ../rules/. Import from there directly.
+ * This module now only contains higher-level selection strategies.
  */
 
-export type { EntityResolver } from './entityResolver';
-export { ActionEntityResolver, SimpleEntityResolver } from './entityResolver';
-
-export {
-  evaluateGraphPath,
-} from './graphPath';
-
-export {
-  applySelectionFilters,
-  applySelectionFilter,
-  entityPassesFilter,
-  entityPassesAllFilters,
-} from './selectionFilters';
-
-export {
-  matchesActorConfig,
-} from './actorMatcher';
+// Higher-level selectors remain here (not moved to rules/)
+export { TargetSelector } from './targetSelector';
+export type { SelectionBias, SelectionResult } from './targetSelector';
+export { TemplateSelector } from './templateSelector';
+export { SystemSelector } from './systemSelector';
+export { DynamicWeightCalculator } from './dynamicWeightCalculator';

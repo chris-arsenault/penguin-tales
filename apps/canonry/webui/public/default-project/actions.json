@@ -4,35 +4,41 @@
     "name": "Seize Control",
     "description": "Take control of a location adjacent to territory already controlled",
     "actor": {
-      "kinds": [
-        "faction"
-      ],
-      "filters": [
-        {
-          "type": "graph_path",
-          "assert": {
-            "check": "count_max",
-            "path": [
-              {
-                "via": "controls",
-                "direction": "any",
-                "targetKind": "location",
-                "targetSubtype": "any"
-              }
-            ],
-            "count": 2
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "graph_path",
+            "assert": {
+              "check": "count_max",
+              "path": [
+                {
+                  "via": "controls",
+                  "direction": "any",
+                  "targetKind": "location",
+                  "targetSubtype": "any"
+                }
+              ],
+              "count": 2
+            }
           }
-        }
-      ],
+        ]
+      },
       "instigator": {
-        "direction": "in",
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "leader_of",
+          "direction": "dst"
+        },
         "kinds": [
           "npc"
         ],
-        "relationshipKind": "leader_of"
+        "required": true
       }
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "location",
       "filters": [
         {
@@ -40,30 +46,34 @@
           "kind": "controls",
           "with": "$actor"
         }
-      ]
+      ],
+      "pickStrategy": "random"
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "controls",
-          "src": "actor",
-          "dst": "target",
+          "src": "$actor",
+          "dst": "$target",
           "strength": 0.8
-        }
-      ],
-      "descriptionTemplate": " {actor.name} seized control of {target.name}",
-      "strengthenRelationships": [
+        },
         {
+          "type": "adjust_relationship_strength",
           "kind": "leader_of",
-          "amount": 0.1,
-          "channel": "instigator_actor"
+          "src": "$instigator",
+          "dst": "$actor",
+          "delta": 0.1
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": -2
         }
       ],
+      "descriptionTemplate": "{actor.name} seized control of {target.name}",
       "applyProminenceToActor": true,
-      "applyProminenceToInstigator": true,
-      "pressureChanges": {
-        "security": -2
-      }
+      "applyProminenceToInstigator": true
     },
     "probability": {
       "baseSuccessChance": 0.3,
@@ -86,104 +96,130 @@
     "name": "Form Alliance",
     "description": "Create alliance between factions that are not already allied or at war",
     "actor": {
-      "kinds": [
-        "npc",
-        "faction"
-      ],
-      "minProminence": "recognized"
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "leader_of",
-      "targetKind": "faction"
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
+      },
+      "instigator": {
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "leader_of",
+          "direction": "dst"
+        },
+        "kinds": [
+          "npc"
+        ],
+        "required": true
+      }
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "faction",
-      "exclude": {
-        "existingRelationship": {
-          "kind": "allied_with",
-          "direction": "both"
-        }
-      },
-      "excludeMultiple": [
+      "filters": [
         {
-          "existingRelationship": {
-            "kind": "at_war_with",
-            "direction": "both"
-          }
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
         }
-      ],
-      "excludeSelf": true
+      ]
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "allied_with",
-          "src": "resolved_actor",
-          "dst": "target",
+          "src": "$actor",
+          "dst": "$target",
           "strength": 0.7,
           "bidirectional": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 2
         }
       ],
       "descriptionTemplate": "forged alliance with {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 0.8,
-      "pressureModifiers": [
-        "conflict",
-        "stability"
-      ]
+      "baseWeight": 0.8
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "declare_war",
     "name": "Declare War",
     "description": "Create enemy relationship between factions",
     "actor": {
-      "kinds": [
-        "npc",
-        "faction"
-      ],
-      "minProminence": "renowned"
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "leader_of",
-      "targetKind": "faction"
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "graph_path",
+            "assert": {
+              "check": "exists",
+              "path": [
+                {
+                  "via": "leader_of",
+                  "direction": "in",
+                  "targetKind": "npc"
+                }
+              ]
+            }
+          }
+        ]
+      }
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "faction",
-      "exclude": {
-        "existingRelationship": {
+      "filters": [
+        {
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
+        },
+        {
+          "type": "lacks_relationship",
           "kind": "at_war_with",
-          "direction": "both"
+          "with": "$actor"
         }
-      },
-      "excludeSelf": true
+      ]
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "at_war_with",
-          "src": "resolved_actor",
-          "dst": "target",
+          "src": "$actor",
+          "dst": "$target",
           "strength": 0.9,
           "bidirectional": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "conflict",
+          "delta": 10
         }
       ],
-      "pressureChanges": {
-        "conflict": 10
-      },
       "descriptionTemplate": "declared war on {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.6,
       "baseWeight": 0.5,
       "pressureModifiers": [
-        "conflict",
-        "stability"
+        {
+          "pressure": "conflict",
+          "multiplier": 1
+        },
+        {
+          "pressure": "stability",
+          "multiplier": -1
+        }
       ]
     },
     "enabled": false
@@ -193,46 +229,52 @@
     "name": "Raid",
     "description": "Attack an enemy faction",
     "actor": {
-      "kinds": [
-        "npc",
-        "faction"
-      ]
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "leader_of",
-      "targetKind": "faction"
-    },
-    "targeting": {
-      "kind": "faction",
-      "require": {
-        "hasRelationship": {
-          "kind": "at_war_with",
-          "direction": "src",
-          "fromResolvedActor": true
-        }
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
       }
     },
-    "outcome": {
-      "relationships": [
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
         {
+          "type": "has_relationship",
+          "kind": "at_war_with",
+          "with": "$actor",
+          "direction": "both"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
           "kind": "enemy_of",
-          "src": "actor",
-          "dst": "target",
+          "src": "$actor",
+          "dst": "$target",
           "strength": 0.8
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "conflict",
+          "delta": 5
         }
       ],
-      "pressureChanges": {
-        "conflict": 5
-      },
       "descriptionTemplate": "raided {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.35,
       "baseWeight": 1,
       "pressureModifiers": [
-        "conflict",
-        "external_threat"
+        {
+          "pressure": "conflict",
+          "multiplier": 1
+        },
+        {
+          "pressure": "external_threat",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -242,45 +284,58 @@
     "name": "Establish Trade Route",
     "description": "Create trade connection between two thriving locations",
     "actor": {
-      "kinds": [
-        "npc",
-        "faction"
-      ]
+      "selection": {
+        "strategy": "by_kind",
+        "kinds": [
+          "npc",
+          "faction"
+        ]
+      }
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "location",
       "statuses": [
         "thriving"
       ],
-      "selectTwo": true,
-      "exclude": {
-        "existingRelationship": {
-          "kind": "trades_with",
-          "direction": "both"
+      "maxResults": 2,
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "trades_with"
         }
-      }
+      ]
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "trades_with",
-          "src": "target",
-          "dst": "target2",
+          "src": "$target",
+          "dst": "$target2",
           "strength": 0.6,
           "bidirectional": true
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "resource_scarcity",
+          "delta": -5
         }
       ],
-      "pressureChanges": {
-        "resource_scarcity": -5
-      },
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}"
     },
     "probability": {
       "baseSuccessChance": 0.5,
       "baseWeight": 1.2,
       "pressureModifiers": [
-        "resource_scarcity",
-        "stability"
+        {
+          "pressure": "resource_scarcity",
+          "multiplier": -1
+        },
+        {
+          "pressure": "stability",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -290,51 +345,67 @@
     "name": "Corrupt Location",
     "description": "Spread magical corruption to a location",
     "actor": {
-      "kinds": [
-        "npc",
-        "abilities"
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "abilities",
+        "subtypes": [
+          "magic"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "pressure",
+          "pressureId": "magical_instability",
+          "min": 50
+        }
       ],
-      "requiredRelationships": [
-        "practitioner_of"
-      ],
-      "requiredPressures": {
-        "magical_instability": 50
+      "instigator": {
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "practitioner_of",
+          "direction": "dst"
+        },
+        "kinds": [
+          "npc",
+          "faction"
+        ]
       }
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "practitioner_of",
-      "targetKind": "abilities",
-      "requireSubtype": "magic"
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "location",
-      "exclude": {
-        "existingRelationship": {
-          "kind": "corrupted_by",
-          "direction": "src"
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "corrupted_by"
         }
-      }
+      ]
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
-          "kind": "resident_of",
-          "src": "target",
-          "dst": "resolved_actor",
+          "type": "create_relationship",
+          "kind": "corrupted_by",
+          "src": "$target",
+          "dst": "$actor",
           "strength": 0.7
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_instability",
+          "delta": 5
         }
       ],
-      "pressureChanges": {
-        "magical_instability": 5
-      },
       "descriptionTemplate": "corrupted {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.25,
       "baseWeight": 0.8,
       "pressureModifiers": [
-        "magical_instability"
+        {
+          "pressure": "magical_instability",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -344,92 +415,110 @@
     "name": "Manifest Magic",
     "description": "Magic manifests at a location",
     "actor": {
-      "kinds": [
-        "abilities"
-      ],
-      "subtypes": [
-        "magic"
-      ]
-    },
-    "actorResolution": {
-      "type": "self"
-    },
-    "targeting": {
-      "kind": "location",
-      "exclude": {
-        "existingRelationship": {
-          "kind": "manifests_at",
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "abilities",
+        "subtypes": [
+          "magic"
+        ]
+      },
+      "instigator": {
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "practitioner_of",
           "direction": "dst"
-        }
+        },
+        "kinds": [
+          "npc",
+          "faction"
+        ]
       }
     },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "location"
+    },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "manifests_at",
-          "src": "actor",
-          "dst": "target",
+          "src": "$actor",
+          "dst": "$target",
           "strength": 0.8
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_stability",
+          "delta": -2
         }
       ],
-      "descriptionTemplate": "manifested at {target.name}"
+      "descriptionTemplate": "manifested at {target.name}",
+      "applyProminenceToActor": true,
+      "applyProminenceToInstigator": true
     },
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1,
-      "pressureModifiers": [
-        "magical_instability"
-      ]
+      "baseWeight": 1
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "spread_innovation",
     "name": "Spread Innovation",
     "description": "Technology spreads to new practitioners",
     "actor": {
-      "kinds": [
-        "abilities"
-      ],
-      "subtypes": [
-        "technology"
-      ]
-    },
-    "actorResolution": {
-      "type": "self"
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "abilities",
+        "subtypes": [
+          "technology"
+        ]
+      }
     },
     "targeting": {
+      "strategy": "by_kind",
       "kind": "npc",
       "statuses": [
         "alive"
       ],
-      "exclude": {
-        "existingRelationship": {
+      "filters": [
+        {
+          "type": "lacks_relationship",
           "kind": "practitioner_of",
-          "direction": "dst"
+          "with": "$actor"
         }
-      }
+      ]
     },
     "outcome": {
-      "relationships": [
+      "mutations": [
         {
+          "type": "create_relationship",
           "kind": "practitioner_of",
-          "src": "target",
-          "dst": "actor",
+          "src": "$target",
+          "dst": "$actor",
           "strength": 0.6
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_instability",
+          "delta": -2
         }
       ],
-      "pressureChanges": {
-        "magical_instability": -2
-      },
       "descriptionTemplate": "spread to {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.4,
       "baseWeight": 1,
       "pressureModifiers": [
-        "resource_scarcity",
-        "magical_instability"
+        {
+          "pressure": "resource_scarcity",
+          "multiplier": 1
+        },
+        {
+          "pressure": "magical_instability",
+          "multiplier": -1
+        }
       ]
     },
     "enabled": false
@@ -439,46 +528,71 @@
     "name": "Convert Faction",
     "description": "Spread cultural/religious belief to faction",
     "actor": {
-      "kinds": [
-        "npc"
-      ]
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "weaponized_by",
-      "targetKind": "rules"
-    },
-    "targeting": {
-      "kind": "faction",
-      "exclude": {
-        "existingRelationship": {
-          "kind": "member_of",
-          "direction": "src",
-          "toResolvedActor": true
-        }
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "rules",
+        "filters": [
+          {
+            "type": "graph_path",
+            "assert": {
+              "check": "exists",
+              "path": [
+                {
+                  "via": "weaponized_by",
+                  "direction": "in",
+                  "targetKind": "npc"
+                }
+              ]
+            }
+          }
+        ]
       }
     },
-    "outcome": {
-      "relationships": [
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
         {
-          "kind": "practitioner_of",
-          "src": "target",
-          "dst": "resolved_actor",
+          "type": "lacks_relationship",
+          "kind": "related_to",
+          "with": "$actor"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "related_to",
+          "src": "$target",
+          "dst": "$actor",
           "strength": 0.7
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "cultural_tension",
+          "delta": -5
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "stability",
+          "delta": 3
         }
       ],
-      "pressureChanges": {
-        "cultural_tension": -5,
-        "stability": 3
-      },
-      "descriptionTemplate": "converted {target.name} to {resolved_actor.name}"
+      "descriptionTemplate": "converted {target.name} to {actor.name}"
     },
     "probability": {
       "baseSuccessChance": 0.3,
       "baseWeight": 1,
       "pressureModifiers": [
-        "cultural_tension",
-        "stability"
+        {
+          "pressure": "cultural_tension",
+          "multiplier": -1
+        },
+        {
+          "pressure": "stability",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -488,45 +602,54 @@
     "name": "Draw In Faction",
     "description": "Neutral faction becomes war participant",
     "actor": {
-      "kinds": [
-        "occurrence"
-      ],
-      "subtypes": [
-        "war"
-      ]
-    },
-    "actorResolution": {
-      "type": "self"
-    },
-    "targeting": {
-      "kind": "faction",
-      "exclude": {
-        "existingRelationship": {
-          "kind": "participant_in",
-          "direction": "src"
-        }
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "subtypes": [
+          "war"
+        ]
       }
     },
-    "outcome": {
-      "relationships": [
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
         {
+          "type": "lacks_relationship",
           "kind": "participant_in",
-          "src": "target",
-          "dst": "actor",
+          "with": "$actor"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "participant_in",
+          "src": "$target",
+          "dst": "$actor",
           "strength": 0.8
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "conflict",
+          "delta": 8
         }
       ],
-      "pressureChanges": {
-        "conflict": 8
-      },
       "descriptionTemplate": "drew {target.name} into the war"
     },
     "probability": {
       "baseSuccessChance": 0.3,
       "baseWeight": 1.5,
       "pressureModifiers": [
-        "conflict",
-        "external_threat"
+        {
+          "pressure": "conflict",
+          "multiplier": 1
+        },
+        {
+          "pressure": "external_threat",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -536,44 +659,55 @@
     "name": "Escalate War",
     "description": "War intensifies, strengthening participant relationships",
     "actor": {
-      "kinds": [
-        "occurrence"
-      ],
-      "subtypes": [
-        "war"
-      ]
-    },
-    "actorResolution": {
-      "type": "self"
-    },
-    "targeting": {
-      "kind": "faction",
-      "require": {
-        "hasRelationship": {
-          "kind": "participant_in",
-          "direction": "src",
-          "toActor": true
-        }
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "subtypes": [
+          "war"
+        ]
       }
     },
-    "outcome": {
-      "strengthenRelationships": [
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
         {
+          "type": "has_relationship",
           "kind": "participant_in",
-          "amount": 0.1
+          "with": "$actor",
+          "direction": "src"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "adjust_relationship_strength",
+          "kind": "participant_in",
+          "src": "$target",
+          "dst": "$actor",
+          "delta": 0.1
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "conflict",
+          "delta": 5
         }
       ],
-      "pressureChanges": {
-        "conflict": 5
-      },
       "descriptionTemplate": "escalated in intensity"
     },
     "probability": {
       "baseSuccessChance": 0.4,
       "baseWeight": 1,
       "pressureModifiers": [
-        "conflict",
-        "external_threat"
+        {
+          "pressure": "conflict",
+          "multiplier": 1
+        },
+        {
+          "pressure": "external_threat",
+          "multiplier": 1
+        }
       ]
     },
     "enabled": false
@@ -583,53 +717,106 @@
     "name": "Spread Corruption",
     "description": "Disaster corrupts adjacent locations",
     "actor": {
-      "kinds": [
-        "occurrence"
-      ],
-      "subtypes": [
-        "magical_disaster"
-      ]
-    },
-    "actorResolution": {
-      "type": "via_relationship",
-      "relationshipKind": "epicenter_of",
-      "targetKind": "location"
-    },
-    "targeting": {
-      "kind": "location",
-      "require": {
-        "adjacentTo": {
-          "relationshipKind": "adjacent_to",
-          "toResolvedActor": true
-        }
-      },
-      "exclude": {
-        "existingRelationship": {
-          "kind": "corrupted_by",
-          "direction": "src"
-        }
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "location",
+        "filters": [
+          {
+            "type": "graph_path",
+            "assert": {
+              "check": "exists",
+              "path": [
+                {
+                  "via": "epicenter_of",
+                  "direction": "in",
+                  "targetKind": "occurrence",
+                  "targetSubtype": "magical_disaster"
+                }
+              ]
+            }
+          }
+        ]
       }
     },
-    "outcome": {
-      "relationships": [
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "location",
+      "filters": [
         {
+          "type": "has_relationship",
+          "kind": "adjacent_to",
+          "with": "$actor",
+          "direction": "both"
+        },
+        {
+          "type": "lacks_relationship",
           "kind": "corrupted_by",
-          "src": "target",
-          "dst": "corruption_source",
+          "with": "$actor"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "corrupted_by",
+          "src": "$target",
+          "dst": "$actor",
           "strength": 0.8
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "magical_instability",
+          "delta": 10
         }
       ],
-      "pressureChanges": {
-        "magical_instability": 10
-      },
       "descriptionTemplate": "spread corruption to {target.name}"
     },
     "probability": {
       "baseSuccessChance": 0.35,
       "baseWeight": 1.2,
       "pressureModifiers": [
-        "magical_instability"
+        {
+          "pressure": "magical_instability",
+          "multiplier": 1
+        }
       ]
+    },
+    "enabled": false
+  },
+  {
+    "id": "kill_orca",
+    "name": "Kill Orca",
+    "description": "Heros kill Orcas",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc"
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "npc",
+      "filters": [
+        {
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
+        },
+        {
+          "type": "has_tag",
+          "tag": "orca"
+        }
+      ]
+    },
+    "outcome": {
+      "descriptionTemplate": "killed {target.name}"
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 1,
+      "pressureModifiers": []
     },
     "enabled": false
   }

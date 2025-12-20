@@ -4,10 +4,13 @@
 
 import React from 'react';
 import { RELATIONSHIP_REFS } from '../constants';
-import { ReferenceDropdown, PressureChangesEditor, NumberInput } from '../../shared';
+import MutationCard, { DEFAULT_MUTATION_TYPES } from '../../shared/MutationCard';
+
+const ACTION_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
 
 export function OutcomeTab({ action, onChange, schema, pressures }) {
   const outcome = action.outcome || {};
+  const mutations = outcome.mutations || [];
 
   const updateOutcome = (field, value) => {
     onChange({
@@ -16,74 +19,51 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
     });
   };
 
-  const relationships = outcome.relationships || [];
-  const strengthenRelationships = outcome.strengthenRelationships || [];
-  const statusChanges = outcome.statusChanges || [];
+  const createMutation = (type) => {
+    const defaultPressure = pressures?.[0]?.id || '';
+    const defaultEntity = '$actor';
+    const defaultTarget = '$target';
+    const defaultOther = '$target2';
 
-  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
-    value: rk.kind,
-    label: rk.description || rk.kind,
-  }));
-
-  const statusOptions = (schema?.statuses || []).map((s) => ({
-    value: s,
-    label: s,
-  }));
-
-  const addRelationship = () => {
-    updateOutcome('relationships', [
-      ...relationships,
-      { kind: '', src: 'actor', dst: 'target', strength: 0.5 },
-    ]);
+    switch (type) {
+      case 'modify_pressure':
+        return { type: 'modify_pressure', pressureId: defaultPressure, delta: 0 };
+      case 'set_tag':
+        return { type: 'set_tag', entity: defaultTarget, tag: '', value: true };
+      case 'remove_tag':
+        return { type: 'remove_tag', entity: defaultTarget, tag: '' };
+      case 'change_status':
+        return { type: 'change_status', entity: defaultTarget, newStatus: '' };
+      case 'adjust_prominence':
+        return { type: 'adjust_prominence', entity: defaultEntity, direction: 'up' };
+      case 'archive_relationship':
+        return { type: 'archive_relationship', entity: defaultEntity, relationshipKind: '', direction: 'both' };
+      case 'adjust_relationship_strength':
+        return { type: 'adjust_relationship_strength', kind: '', src: defaultEntity, dst: defaultTarget, delta: 0.1 };
+      case 'create_relationship':
+      default:
+        return {
+          type: 'create_relationship',
+          kind: '',
+          src: defaultEntity,
+          dst: defaultTarget || defaultOther,
+          strength: 0.5,
+        };
+    }
   };
 
-  const updateRelationship = (index, rel) => {
-    const newRels = [...relationships];
-    newRels[index] = rel;
-    updateOutcome('relationships', newRels);
+  const addMutation = (type) => {
+    updateOutcome('mutations', [...mutations, createMutation(type)]);
   };
 
-  const removeRelationship = (index) => {
-    updateOutcome('relationships', relationships.filter((_, i) => i !== index));
+  const updateMutation = (index, mutation) => {
+    const next = [...mutations];
+    next[index] = mutation;
+    updateOutcome('mutations', next);
   };
 
-  const addStrengthen = () => {
-    updateOutcome('strengthenRelationships', [
-      ...strengthenRelationships,
-      { kind: '', channel: 'actor_target', amount: 0.1 },
-    ]);
-  };
-
-  const CHANNEL_OPTIONS = [
-    { value: 'instigator_actor', label: 'Instigator ↔ Actor' },
-    { value: 'actor_target', label: 'Actor ↔ Target' },
-  ];
-
-  const updateStrengthen = (index, item) => {
-    const newItems = [...strengthenRelationships];
-    newItems[index] = item;
-    updateOutcome('strengthenRelationships', newItems);
-  };
-
-  const removeStrengthen = (index) => {
-    updateOutcome('strengthenRelationships', strengthenRelationships.filter((_, i) => i !== index));
-  };
-
-  const addStatusChange = () => {
-    updateOutcome('statusChanges', [
-      ...statusChanges,
-      { entity: 'target', status: '' },
-    ]);
-  };
-
-  const updateStatusChange = (index, item) => {
-    const newItems = [...statusChanges];
-    newItems[index] = item;
-    updateOutcome('statusChanges', newItems);
-  };
-
-  const removeStatusChange = (index) => {
-    updateOutcome('statusChanges', statusChanges.filter((_, i) => i !== index));
+  const removeMutation = (index) => {
+    updateOutcome('mutations', mutations.filter((_, i) => i !== index));
   };
 
   return (
@@ -97,146 +77,40 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
       </div>
 
       <div className="section">
-        <div className="section-title">🔗 Create Relationships ({relationships.length})</div>
-        {relationships.map((rel, index) => (
-          <div key={index} className="item-card">
-            <div className="item-card-body">
-              <div className="form-row-with-delete">
-                <div className="form-row-fields">
-                  <ReferenceDropdown
-                    label="Kind"
-                    value={rel.kind}
-                    onChange={(v) => updateRelationship(index, { ...rel, kind: v })}
-                    options={relationshipKindOptions}
-                  />
-                  <ReferenceDropdown
-                    label="Source"
-                    value={rel.src}
-                    onChange={(v) => updateRelationship(index, { ...rel, src: v })}
-                    options={RELATIONSHIP_REFS}
-                  />
-                  <ReferenceDropdown
-                    label="Destination"
-                    value={rel.dst}
-                    onChange={(v) => updateRelationship(index, { ...rel, dst: v })}
-                    options={RELATIONSHIP_REFS}
-                  />
-                  <div className="form-group">
-                    <label className="label">Strength</label>
-                    <NumberInput
-                      value={rel.strength}
-                      onChange={(v) => updateRelationship(index, { ...rel, strength: v ?? 0 })}
-                      min={0}
-                      max={1}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={rel.bidirectional || false}
-                        onChange={(e) => updateRelationship(index, { ...rel, bidirectional: e.target.checked || undefined })}
-                        className="checkbox"
-                      />
-                      Bidirectional
-                    </label>
-                  </div>
-                </div>
-                <button className="btn-icon btn-icon-danger" onClick={() => removeRelationship(index)}>
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-        <button className="btn btn-add" onClick={addRelationship}>
-          + Add Relationship
-        </button>
-      </div>
-
-      <div className="section">
-        <div className="section-title">💪 Strengthen Relationships ({strengthenRelationships.length})</div>
+        <div className="section-title">⚙️ Mutations ({mutations.length})</div>
         <div className="section-desc">
-          Modify strength of existing relationships between entities. Use negative amounts to weaken.
+          Apply mutations when the action succeeds. Each mutation uses the unified rules library.
         </div>
-        {strengthenRelationships.map((item, index) => (
-          <div key={index} className="item-card">
-            <div className="item-card-body">
-              <div className="form-row-with-delete">
-                <div className="form-row-fields">
-                  <ReferenceDropdown
-                    label="Kind"
-                    value={item.kind}
-                    onChange={(v) => updateStrengthen(index, { ...item, kind: v })}
-                    options={relationshipKindOptions}
-                  />
-                  <ReferenceDropdown
-                    label="Channel"
-                    value={item.channel || 'actor_target'}
-                    onChange={(v) => updateStrengthen(index, { ...item, channel: v })}
-                    options={CHANNEL_OPTIONS}
-                  />
-                  <div className="form-group">
-                    <label className="label">Amount</label>
-                    <NumberInput
-                      value={item.amount}
-                      onChange={(v) => updateStrengthen(index, { ...item, amount: v ?? 0 })}
-                      step={0.1}
-                    />
-                  </div>
-                </div>
-                <button className="btn-icon btn-icon-danger" onClick={() => removeStrengthen(index)}>
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-        <button className="btn btn-add" onClick={addStrengthen}>
-          + Add Strengthen Rule
-        </button>
-      </div>
 
-      <div className="section">
-        <div className="section-title">🔄 Status Changes ({statusChanges.length})</div>
-        <div className="section-desc">
-          Change the status of entities when the action succeeds.
-        </div>
-        {statusChanges.map((item, index) => (
-          <div key={index} className="item-card">
-            <div className="item-card-body">
-              <div className="form-row-with-delete">
-                <div className="form-row-fields">
-                  <ReferenceDropdown
-                    label="Entity"
-                    value={item.entity}
-                    onChange={(v) => updateStatusChange(index, { ...item, entity: v })}
-                    options={RELATIONSHIP_REFS}
-                  />
-                  <div className="form-group flex-1">
-                    <label className="label">New Status</label>
-                    <select
-                      value={item.status || ''}
-                      onChange={(e) => updateStatusChange(index, { ...item, status: e.target.value })}
-                      className="input"
-                    >
-                      <option value="">Select status...</option>
-                      {statusOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <button className="btn-icon btn-icon-danger" onClick={() => removeStatusChange(index)}>
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
+        {mutations.map((mutation, index) => (
+          <MutationCard
+            key={index}
+            mutation={mutation}
+            onChange={(updated) => updateMutation(index, updated)}
+            onRemove={() => removeMutation(index)}
+            schema={schema}
+            pressures={pressures}
+            entityOptions={RELATIONSHIP_REFS}
+            typeOptions={ACTION_MUTATION_TYPES}
+            createMutation={createMutation}
+          />
         ))}
-        <button className="btn btn-add" onClick={addStatusChange}>
-          + Add Status Change
-        </button>
+
+        <div className="form-group" style={{ marginTop: '12px' }}>
+          <select
+            className="select"
+            value=""
+            onChange={(e) => {
+              if (!e.target.value) return;
+              addMutation(e.target.value);
+            }}
+          >
+            <option value="">+ Add mutation...</option>
+            {ACTION_MUTATION_TYPES.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="section">
@@ -264,15 +138,6 @@ export function OutcomeTab({ action, onChange, schema, pressures }) {
             Apply prominence changes to Instigator
           </label>
         </div>
-      </div>
-
-      <div className="section">
-        <div className="section-title">📊 Pressure Changes</div>
-        <PressureChangesEditor
-          value={outcome.pressureChanges || {}}
-          onChange={(v) => updateOutcome('pressureChanges', Object.keys(v).length > 0 ? v : undefined)}
-          pressures={pressures}
-        />
       </div>
 
       <div className="section">

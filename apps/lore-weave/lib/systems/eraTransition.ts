@@ -2,10 +2,7 @@ import {
   SimulationSystem,
   SystemResult,
   Era,
-  TransitionCondition,
-  PressureTransitionCondition,
-  EntityCountTransitionCondition,
-  TimeTransitionCondition
+  TransitionCondition
 } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import {
@@ -15,7 +12,9 @@ import {
 } from '../core/frameworkPrimitives';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { EraTransitionConfig } from '../engine/systemInterpreter';
-import { createEraEntity, applyEntryEffects } from './eraSpawner';
+import { createEraEntity } from './eraSpawner';
+import { createSystemContext, evaluateCondition, prepareMutation } from '../rules';
+import type { ConditionResult } from '../rules';
 
 /**
  * Era Transition System
@@ -108,10 +107,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         // Build detailed condition status string
         const conditionSummary = conditionResults.map(r => {
           const status = r.passed ? '✓' : '✗';
-          const details = Object.entries(r.details)
-            .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-            .join(', ');
-          return `${status} ${r.type}: ${details}`;
+          return `${status} ${r.type}: ${r.diagnostic}`;
         }).join(' | ');
 
         graphView.debug('eras',
@@ -143,10 +139,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       // Log transition conditions met
       const conditionSummary = conditionResults.map(r => {
         const status = r.passed ? '✓' : '✗';
-        const details = Object.entries(r.details)
-          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-          .join(', ');
-        return `${status} ${r.type}: ${details}`;
+        return `${status} ${r.type}: ${r.diagnostic}`;
       }).join(' | ');
 
       graphView.debug('eras',
@@ -183,13 +176,23 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       // Collect pressure changes: exitEffects then entryEffects
       const pressureChanges: Record<string, number> = {};
 
-      if (currentEraConfig.exitEffects?.pressureChanges) {
-        Object.assign(pressureChanges, currentEraConfig.exitEffects.pressureChanges);
+      const exitPressureChanges = collectEffectPressureChanges(
+        graphView,
+        currentEraConfig.exitEffects,
+        currentEraEntity
+      );
+      for (const [pressureId, delta] of Object.entries(exitPressureChanges)) {
+        pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
       }
 
-      // Apply entry effects for the new era
-      const entryPressureChanges = applyEntryEffects(graphView, nextEraConfig);
-      Object.assign(pressureChanges, entryPressureChanges);
+      const entryPressureChanges = collectEffectPressureChanges(
+        graphView,
+        nextEraConfig.entryEffects,
+        nextEraEntity
+      );
+      for (const [pressureId, delta] of Object.entries(entryPressureChanges)) {
+        pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+      }
 
       // Create supersedes relationship
       const relationshipsAdded: any[] = [{
@@ -322,15 +325,38 @@ function findNextEra(
   return null;
 }
 
-interface ConditionResult {
+interface TransitionConditionResult {
   type: string;
   passed: boolean;
+  diagnostic: string;
   details: Record<string, unknown>;
 }
 
 interface TransitionCheckResult {
   shouldTransition: boolean;
-  conditionResults: ConditionResult[];
+  conditionResults: TransitionConditionResult[];
+}
+
+function collectEffectPressureChanges(
+  graphView: TemplateGraphView,
+  effects: Era['entryEffects'] | Era['exitEffects'],
+  self: HardState
+): Record<string, number> {
+  const mutations = effects?.mutations || [];
+  if (mutations.length === 0) return {};
+
+  const baseCtx = createSystemContext(graphView);
+  const ctx = { ...baseCtx, self, entities: { ...(baseCtx.entities ?? {}), self } };
+  const pressureChanges: Record<string, number> = {};
+
+  for (const mutation of mutations) {
+    const result = prepareMutation(mutation, ctx);
+    for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
+      pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+    }
+  }
+
+  return pressureChanges;
 }
 
 /**
@@ -346,118 +372,30 @@ function checkTransitionConditions(
   if (conditions.length === 0) {
     return {
       shouldTransition: true,
-      conditionResults: [{ type: 'none', passed: true, details: { reason: 'empty conditions array - immediate transition' } }]
+      conditionResults: [{
+        type: 'none',
+        passed: true,
+        diagnostic: 'empty conditions array - immediate transition',
+        details: { reason: 'empty conditions array - immediate transition' }
+      }]
     };
   }
 
-  // Check each condition - ALL must be met
-  const conditionResults: ConditionResult[] = [];
+  const baseCtx = createSystemContext(graphView);
+  const ctx = { ...baseCtx, self: currentEra };
 
-  for (const condition of conditions) {
-    let passed = false;
-    let details: Record<string, unknown> = {};
-
-    switch (condition.type) {
-      case 'pressure': {
-        const pressureCondition = condition as PressureTransitionCondition;
-        const currentValue = graphView.getPressure(pressureCondition.pressureId);
-        passed = checkPressureCondition(pressureCondition, graphView);
-        details = {
-          pressureId: pressureCondition.pressureId,
-          operator: pressureCondition.operator,
-          threshold: pressureCondition.threshold,
-          currentValue
-        };
-        break;
-      }
-      case 'entity_count': {
-        const entityCondition = condition as EntityCountTransitionCondition;
-        const entities = graphView.findEntities({
-          kind: entityCondition.entityKind,
-          subtype: entityCondition.subtype,
-          status: entityCondition.status
-        });
-        passed = checkEntityCountCondition(entityCondition, graphView);
-        details = {
-          entityKind: entityCondition.entityKind,
-          subtype: entityCondition.subtype,
-          status: entityCondition.status,
-          operator: entityCondition.operator,
-          threshold: entityCondition.threshold,
-          currentCount: entities.length
-        };
-        break;
-      }
-      case 'time': {
-        const timeCondition = condition as TimeTransitionCondition;
-        const eraAge = currentEra.temporal
-          ? graphView.tick - currentEra.temporal.startTick
-          : graphView.tick - currentEra.createdAt;
-        passed = checkTimeCondition(timeCondition, currentEra, graphView);
-        details = {
-          minTicks: timeCondition.minTicks,
-          currentAge: eraAge
-        };
-        break;
-      }
-      default:
-        passed = true;
-        details = { reason: 'unknown condition type' };
-    }
-
-    conditionResults.push({ type: condition.type, passed, details });
-  }
+  const conditionResults: TransitionConditionResult[] = conditions.map((condition) => {
+    const result: ConditionResult = evaluateCondition(condition, ctx, currentEra);
+    return {
+      type: condition.type,
+      passed: result.passed,
+      diagnostic: result.diagnostic,
+      details: result.details,
+    };
+  });
 
   return {
     shouldTransition: conditionResults.every(r => r.passed),
     conditionResults
   };
 }
-
-/**
- * Check pressure-based condition
- */
-function checkPressureCondition(condition: PressureTransitionCondition, graphView: TemplateGraphView): boolean {
-  const pressure = graphView.getPressure(condition.pressureId);
-
-  switch (condition.operator) {
-    case 'above':
-      return pressure > condition.threshold;
-    case 'below':
-      return pressure < condition.threshold;
-    default:
-      return false;
-  }
-}
-
-/**
- * Check entity count condition
- */
-function checkEntityCountCondition(condition: EntityCountTransitionCondition, graphView: TemplateGraphView): boolean {
-  const entities = graphView.findEntities({
-    kind: condition.entityKind,
-    subtype: condition.subtype,
-    status: condition.status
-  });
-
-  switch (condition.operator) {
-    case 'above':
-      return entities.length > condition.threshold;
-    case 'below':
-      return entities.length < condition.threshold;
-    default:
-      return false;
-  }
-}
-
-/**
- * Check time-based condition
- */
-function checkTimeCondition(condition: TimeTransitionCondition, currentEra: HardState, graphView: TemplateGraphView): boolean {
-  const eraAge = currentEra.temporal
-    ? graphView.tick - currentEra.temporal.startTick
-    : graphView.tick - currentEra.createdAt;
-
-  return eraAge >= condition.minTicks;
-}
-

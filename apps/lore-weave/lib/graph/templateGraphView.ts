@@ -3,7 +3,16 @@ import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
 import { CoordinateContext, PlacementContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
-import { addEntity, mergeTags, hasTag, addRelationship, updateEntity as updateEntityUtil, getRelated as getRelatedUtil, recordRelationshipFormation as recordRelationshipFormationUtil } from '../utils';
+import {
+  addEntity,
+  mergeTags,
+  hasTag,
+  addRelationship,
+  modifyRelationshipStrength as modifyRelationshipStrengthUtil,
+  updateEntity as updateEntityUtil,
+  getRelated as getRelatedUtil,
+  recordRelationshipFormation as recordRelationshipFormationUtil
+} from '../utils';
 import { archiveRelationship as archiveRel } from './relationshipMutation';
 import { archiveEntities as archiveEnts, transferRelationships as transferRels, createPartOfRelationships as createPartOf } from './entityArchival';
 import type {
@@ -293,36 +302,29 @@ export class TemplateGraphView {
    * Get relationships for a specific entity
    */
   getRelationships(entityId: string, kind?: string): Relationship[] {
-    const entity = this.graph.getEntity(entityId);
-    if (!entity) return [];
+    if (!this.graph.getEntity(entityId)) return [];
 
+    const relationships = this.graph.getEntityRelationships(entityId, 'both');
     if (kind) {
-      return entity.links.filter(link => link.kind === kind);
+      return relationships.filter(link => link.kind === kind);
     }
-    return [...entity.links];
+    return relationships;
   }
 
   /**
    * Get entities related to a specific entity
    */
   getRelatedEntities(entityId: string, relationshipKind?: string, direction?: 'src' | 'dst' | 'both'): HardState[] {
-    const entity = this.graph.getEntity(entityId);
-    if (!entity) return [];
-
     const related: HardState[] = [];
     const dir = direction || 'both';
 
-    for (const link of entity.links) {
+    const relationships = this.graph.getEntityRelationships(entityId, dir);
+    for (const link of relationships) {
       if (relationshipKind && link.kind !== relationshipKind) continue;
 
-      if ((dir === 'src' || dir === 'both') && link.src === entityId) {
-        const target = this.graph.getEntity(link.dst);
-        if (target) related.push(target);
-      }
-      if ((dir === 'dst' || dir === 'both') && link.dst === entityId) {
-        const source = this.graph.getEntity(link.src);
-        if (source) related.push(source);
-      }
+      const otherId = link.src === entityId ? link.dst : link.src;
+      const other = this.graph.getEntity(otherId);
+      if (other) related.push(other);
     }
 
     return related;
@@ -332,13 +334,13 @@ export class TemplateGraphView {
    * Check if a relationship exists between two entities
    */
   hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
-    const src = this.graph.getEntity(srcId);
-    if (!src) return false;
+    if (!this.graph.getEntity(srcId) || !this.graph.getEntity(dstId)) return false;
 
-    return src.links.some(link => {
-      const kindMatches = !kind || link.kind === kind;
-      const targetMatches = link.dst === dstId || link.src === dstId;
-      return kindMatches && targetMatches;
+    const relationships = this.graph.getEntityRelationships(srcId, 'both');
+    return relationships.some(link => {
+      if (kind && link.kind !== kind) return false;
+      const otherId = link.src === srcId ? link.dst : link.src;
+      return otherId === dstId;
     });
   }
 
@@ -457,6 +459,18 @@ export class TemplateGraphView {
   ): void {
     // Distance is computed from coordinates
     addRelationship(this.graph, kind, srcId, dstId, strength);
+  }
+
+  /**
+   * Modify relationship strength by delta.
+   */
+  modifyRelationshipStrength(
+    srcId: string,
+    dstId: string,
+    kind: string,
+    delta: number
+  ): boolean {
+    return modifyRelationshipStrengthUtil(this.graph, srcId, dstId, kind, delta);
   }
 
   /**

@@ -1,10 +1,10 @@
 /**
  * EffectsTab - Configure state updates (pressure modifications, tags, status changes, etc.)
  *
- * Supports all 6 stateUpdate types:
+ * Supports all mutation types used by templates:
  * - modify_pressure: Change pressure values
  * - archive_relationship: End existing relationships
- * - update_entity_status: Change entity status
+ * - change_status: Change entity status
  * - set_tag: Add/update tags on entities
  * - remove_tag: Remove tags from entities
  * - update_rate_limit: Track template execution for rate limiting
@@ -13,16 +13,6 @@
 import React, { useMemo } from 'react';
 import { ReferenceDropdown, AddItemButton, NumberInput } from '../../shared';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
-
-// All supported stateUpdate types
-const STATE_UPDATE_TYPES = [
-  { value: 'modify_pressure', label: 'Modify Pressure', icon: '🌡️' },
-  { value: 'archive_relationship', label: 'Archive Relationship', icon: '📦' },
-  { value: 'update_entity_status', label: 'Update Status', icon: '🔄' },
-  { value: 'set_tag', label: 'Set Tag', icon: '🏷️' },
-  { value: 'remove_tag', label: 'Remove Tag', icon: '🗑️' },
-  { value: 'update_rate_limit', label: 'Update Rate Limit', icon: '⏱️' },
-];
 
 /**
  * @param {Object} props
@@ -38,16 +28,6 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({ value: rk.kind, label: rk.description || rk.kind }));
   const tagRegistry = schema?.tagRegistry || [];
 
-  // Build entity kind options for status updates
-  const entityKinds = schema?.entityKinds || [];
-  const entityKindOptions = entityKinds.map((ek) => ({ value: ek.kind, label: ek.kind }));
-
-  // Get status options for a specific entity kind
-  const getStatusOptionsForKind = (entityKind) => {
-    const ek = entityKinds.find(e => e.kind === entityKind);
-    if (!ek?.statusValues?.length) return [];
-    return ek.statusValues.map(status => ({ value: status, label: status }));
-  };
 
   // Build available entity references from target + variables + created entities
   const availableRefs = useMemo(() => {
@@ -66,10 +46,10 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         newUpdate = { type: 'modify_pressure', pressureId: pressures?.[0]?.id || '', delta: 0 };
         break;
       case 'archive_relationship':
-        newUpdate = { type: 'archive_relationship', entity: '$target', relationshipKind: '', with: 'any', direction: 'any' };
+        newUpdate = { type: 'archive_relationship', entity: '$target', relationshipKind: '', direction: 'both' };
         break;
-      case 'update_entity_status':
-        newUpdate = { type: 'update_entity_status', entity: '$target', entityKind: entityKinds[0]?.kind || '', newStatus: '' };
+      case 'change_status':
+        newUpdate = { type: 'change_status', entity: '$target', newStatus: '' };
         break;
       case 'set_tag':
         newUpdate = { type: 'set_tag', entity: '$target', tag: '', value: true };
@@ -100,7 +80,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
   const KNOWN_TYPES = new Set([
     'modify_pressure',
     'archive_relationship',
-    'update_entity_status',
+    'change_status',
     'set_tag',
     'remove_tag',
     'update_rate_limit',
@@ -109,7 +89,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
   // Group updates by type for display
   const pressureUpdates = stateUpdates.filter((u) => u.type === 'modify_pressure');
   const archiveUpdates = stateUpdates.filter((u) => u.type === 'archive_relationship');
-  const statusUpdates = stateUpdates.filter((u) => u.type === 'update_entity_status');
+  const statusUpdates = stateUpdates.filter((u) => u.type === 'change_status');
   const setTagUpdates = stateUpdates.filter((u) => u.type === 'set_tag');
   const removeTagUpdates = stateUpdates.filter((u) => u.type === 'remove_tag');
   const rateLimitUpdates = stateUpdates.filter((u) => u.type === 'update_rate_limit');
@@ -209,13 +189,12 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
 
         {archiveUpdates.map((update) => {
           const globalIdx = stateUpdates.indexOf(update);
-          const isAnyWith = update.with === 'any';
           const withOptions = [
-            { value: 'any', label: '(Any - archive all of this kind)' },
-            ...entityRefOptions
+            { value: '', label: '(Any - archive all of this kind)' },
+            ...entityRefOptions,
           ];
           const directionOptions = [
-            { value: 'any', label: 'Any direction' },
+            { value: 'both', label: 'Both directions' },
             { value: 'src', label: 'Entity is source (outgoing)' },
             { value: 'dst', label: 'Entity is destination (incoming)' },
           ];
@@ -238,27 +217,16 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                     />
                     <ReferenceDropdown
                       label="With Entity"
-                      value={update.with || 'any'}
-                      onChange={(v) => {
-                        const newUpdate = { ...update, with: v };
-                        // Add direction when switching to "any", remove when switching to specific
-                        if (v === 'any') {
-                          newUpdate.direction = update.direction || 'any';
-                        } else {
-                          delete newUpdate.direction;
-                        }
-                        handleUpdate(globalIdx, newUpdate);
-                      }}
+                      value={update.with || ''}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, with: v || undefined })}
                       options={withOptions}
                     />
-                    {isAnyWith && (
-                      <ReferenceDropdown
-                        label="Direction"
-                        value={update.direction || 'any'}
-                        onChange={(v) => handleUpdate(globalIdx, { ...update, direction: v })}
-                        options={directionOptions}
-                      />
-                    )}
+                    <ReferenceDropdown
+                      label="Direction"
+                      value={update.direction || 'both'}
+                      onChange={(v) => handleUpdate(globalIdx, { ...update, direction: v })}
+                      options={directionOptions}
+                    />
                   </div>
                   <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
@@ -270,14 +238,13 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         <AddItemButton onClick={() => handleAdd('archive_relationship')} label="Add Archive Rule" />
       </div>
 
-      {/* Update Entity Status */}
+      {/* Change Status */}
       <div className="section">
-        <div className="section-title"><span>🔄</span> Update Entity Status</div>
+        <div className="section-title"><span>🔄</span> Change Status</div>
         <div className="section-desc">Change the status of entities when this generator runs.</div>
 
         {statusUpdates.map((update) => {
           const globalIdx = stateUpdates.indexOf(update);
-          const statusOptionsForKind = getStatusOptionsForKind(update.entityKind);
           return (
             <div key={globalIdx} className="item-card">
               <div style={{ padding: '16px' }}>
@@ -289,29 +256,16 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                       onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
                       options={entityRefOptions}
                     />
-                    <ReferenceDropdown
-                      label="Entity Kind"
-                      value={update.entityKind || ''}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, entityKind: v, newStatus: '' })}
-                      options={entityKindOptions}
-                      placeholder="Select entity kind..."
-                    />
-                    {statusOptionsForKind.length > 0 ? (
-                      <ReferenceDropdown
-                        label="New Status"
+                    <div className="form-group">
+                      <label className="label">New Status</label>
+                      <input
+                        type="text"
                         value={update.newStatus || ''}
-                        onChange={(v) => handleUpdate(globalIdx, { ...update, newStatus: v })}
-                        options={statusOptionsForKind}
-                        placeholder="Select status..."
+                        onChange={(e) => handleUpdate(globalIdx, { ...update, newStatus: e.target.value || undefined })}
+                        className="input"
+                        placeholder="e.g., active"
                       />
-                    ) : (
-                      <div className="form-group">
-                        <label className="label">New Status</label>
-                        <div className="input" style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                          {update.entityKind ? 'No statuses defined for this kind' : 'Select entity kind first'}
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                   <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
                 </div>
@@ -320,7 +274,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
           );
         })}
 
-        <AddItemButton onClick={() => handleAdd('update_entity_status')} label="Add Status Update" />
+        <AddItemButton onClick={() => handleAdd('change_status')} label="Add Status Change" />
       </div>
 
       {/* Set Tags */}

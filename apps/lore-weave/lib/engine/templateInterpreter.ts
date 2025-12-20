@@ -8,13 +8,20 @@
 import type { HardState, Relationship } from '../core/worldTypes';
 import type { TemplateGraphView } from '../graph/templateGraphView';
 import type { TemplateResult, PlacementDebug } from './types';
-import { pickRandom, hasTag } from '../utils';
+import { pickRandom } from '../utils';
 import type { Point } from '../coordinates/types';
+// Rules library imports - unified source for filters, conditions, mutations
 import {
-  EntityResolver,
-  applySelectionFilter as sharedApplySelectionFilter,
+  selectEntities as rulesSelectEntities,
+  selectVariableEntities as rulesSelectVariableEntities,
+  applyPickStrategy as rulesApplyPickStrategy,
+  describeSelectionFilter as rulesDescribeSelectionFilter,
   evaluateGraphPath as sharedEvaluateGraphPath,
-} from '../selection';
+  evaluateCondition as rulesEvaluateCondition,
+  applyMutation,
+  createRuleContext,
+} from '../rules';
+import type { EntityResolver, SelectionTrace, Condition, Mutation, RuleContext } from '../rules';
 
 import type {
   DeclarativeTemplate,
@@ -174,6 +181,13 @@ class ExecutionContext implements IExecutionContext, EntityResolver {
 }
 
 // =============================================================================
+// APPLICABILITY RULE TO CONDITION CONVERTER
+// =============================================================================
+
+// Converter functions removed - ApplicabilityRule is now an alias for Condition,
+// and StateUpdateRule is now an alias for Mutation from the rules/ library.
+
+// =============================================================================
 // TEMPLATE INTERPRETER
 // =============================================================================
 
@@ -313,121 +327,14 @@ export class TemplateInterpreter {
    * Tracks entity counts through each filtering step.
    */
   private diagnoseSelection(rule: SelectionRule, context: ExecutionContext): SelectionDiagnosis {
-    const { graphView } = context;
-    const filterSteps: Array<{ description: string; remaining: number }> = [];
-    let entities: HardState[];
-
-    // Primary selection strategy
-    switch (rule.strategy) {
-      case 'by_kind': {
-        entities = graphView.findEntities({ kind: rule.kind });
-        filterSteps.push({ description: `${rule.kind} entities`, remaining: entities.length });
-
-        if (rule.subtypes && rule.subtypes.length > 0) {
-          entities = entities.filter(e => rule.subtypes!.includes(e.subtype));
-          filterSteps.push({ description: `subtype in [${rule.subtypes.join(', ')}]`, remaining: entities.length });
-        }
-        break;
-      }
-
-      case 'by_preference_order': {
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
-
-        entities = [];
-        for (const subtype of rule.subtypePreferences || []) {
-          const matches = allEntities.filter(e => e.subtype === subtype);
-          if (matches.length > 0) {
-            entities = matches;
-            filterSteps.push({ description: `preferred subtype '${subtype}'`, remaining: entities.length });
-            break;
-          }
-        }
-        if (entities.length === 0) {
-          entities = allEntities;
-          filterSteps.push({ description: 'no preferred subtypes found, using all', remaining: entities.length });
-        }
-        break;
-      }
-
-      case 'by_relationship': {
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
-
-        entities = allEntities.filter(entity => {
-          const hasRel = entity.links.some(link => {
-            if (link.kind !== rule.relationshipKind) return false;
-            if (rule.direction === 'src') return link.src === entity.id;
-            if (rule.direction === 'dst') return link.dst === entity.id;
-            return true;
-          });
-          return rule.mustHave ? hasRel : !hasRel;
-        });
-        const relDesc = rule.mustHave ? `has ${rule.relationshipKind}` : `lacks ${rule.relationshipKind}`;
-        filterSteps.push({ description: relDesc, remaining: entities.length });
-        break;
-      }
-
-      case 'by_proximity': {
-        const refEntity = context.resolveEntity(rule.referenceEntity || '$target');
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
-
-        if (!refEntity?.coordinates) {
-          entities = [];
-          filterSteps.push({ description: 'reference entity has no coordinates', remaining: 0 });
-        } else {
-          const maxDist = rule.maxDistance || 50;
-          entities = allEntities.filter(e => {
-            if (!e.coordinates) return false;
-            const dx = e.coordinates.x - refEntity.coordinates!.x;
-            const dy = e.coordinates.y - refEntity.coordinates!.y;
-            const dz = e.coordinates.z - refEntity.coordinates!.z;
-            return Math.sqrt(dx * dx + dy * dy + dz * dz) <= maxDist;
-          });
-          filterSteps.push({ description: `within distance ${maxDist}`, remaining: entities.length });
-        }
-        break;
-      }
-
-      case 'by_prominence': {
-        const prominenceOrder = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-        const minIndex = prominenceOrder.indexOf(rule.minProminence || 'marginal');
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        filterSteps.push({ description: `${rule.kind} entities`, remaining: allEntities.length });
-
-        entities = allEntities.filter(e => {
-          const entityIndex = prominenceOrder.indexOf(e.prominence);
-          return entityIndex >= minIndex;
-        });
-        filterSteps.push({ description: `prominence >= ${rule.minProminence || 'marginal'}`, remaining: entities.length });
-        break;
-      }
-
-      default:
-        entities = [];
-        filterSteps.push({ description: 'unknown strategy', remaining: 0 });
-    }
-
-    // Apply status filter
-    if (rule.statusFilter) {
-      entities = entities.filter(e => e.status === rule.statusFilter);
-      filterSteps.push({ description: `status = '${rule.statusFilter}'`, remaining: entities.length });
-    }
-
-    // Apply post-filters
-    if (rule.filters) {
-      for (const filter of rule.filters) {
-        const beforeCount = entities.length;
-        entities = this.applySelectionFilter(entities, filter, context);
-        filterSteps.push({ description: this.describeSelectionFilter(filter), remaining: entities.length });
-      }
-    }
+    const trace: SelectionTrace = { steps: [] };
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    rulesSelectEntities(rule, ruleCtx, trace);
 
     return {
       strategy: rule.strategy,
       targetKind: rule.kind,
-      filterSteps
+      filterSteps: trace.steps,
     };
   }
 
@@ -441,104 +348,20 @@ export class TemplateInterpreter {
     context: ExecutionContext
   ): VariableDiagnosis {
     const { select } = def;
-    const { graphView } = context;
-    const filterSteps: Array<{ description: string; remaining: number }> = [];
-    let entities: HardState[];
+    const trace: SelectionTrace = { steps: [] };
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    rulesSelectVariableEntities(select, ruleCtx, trace);
 
-    // Determine source type
     const fromSpec = select.from;
     const isFromRelated = fromSpec && fromSpec !== 'graph';
-    const fromType: 'graph' | 'related' = isFromRelated ? 'related' : 'graph';
-
-    // Step 1: Get source entities
-    if (isFromRelated) {
-      const relatedTo = context.resolveEntity(fromSpec.relatedTo);
-      if (!relatedTo) {
-        filterSteps.push({
-          description: `related to ${fromSpec.relatedTo} (not found)`,
-          remaining: 0
-        });
-        return {
-          name,
-          fromType,
-          relationshipKind: fromSpec.relationship,
-          relatedTo: fromSpec.relatedTo,
-          filterSteps
-        };
-      }
-      entities = graphView.getRelatedEntities(
-        relatedTo.id,
-        fromSpec.relationship,
-        fromSpec.direction
-      );
-      filterSteps.push({
-        description: `via ${fromSpec.relationship} from ${relatedTo.name || relatedTo.id}`,
-        remaining: entities.length
-      });
-    } else {
-      // From graph
-      entities = graphView.findEntities({ kind: select.kind });
-      filterSteps.push({
-        description: `${select.kind} entities`,
-        remaining: entities.length
-      });
-    }
-
-    // Step 2: Apply subtype filter
-    if (select.subtypes && select.subtypes.length > 0) {
-      entities = entities.filter(e => select.subtypes!.includes(e.subtype));
-      filterSteps.push({
-        description: `subtype in [${select.subtypes.join(', ')}]`,
-        remaining: entities.length
-      });
-    }
-
-    // Step 3: Apply status filter
-    if (select.statusFilter) {
-      entities = entities.filter(e => e.status === select.statusFilter);
-      filterSteps.push({
-        description: `status = '${select.statusFilter}'`,
-        remaining: entities.length
-      });
-    }
-
-    // Step 4: Apply post-filters
-    if (select.filters) {
-      for (const filter of select.filters) {
-        entities = this.applySelectionFilter(entities, filter, context);
-        filterSteps.push({
-          description: this.describeSelectionFilter(filter),
-          remaining: entities.length
-        });
-      }
-    }
-
-    // Step 5: Apply prefer filters (if we still have entities)
-    if (select.preferFilters && select.preferFilters.length > 0 && entities.length > 0) {
-      let preferred = entities;
-      for (const filter of select.preferFilters) {
-        preferred = this.applySelectionFilter(preferred, filter, context);
-      }
-      if (preferred.length > 0) {
-        filterSteps.push({
-          description: `prefer filters matched`,
-          remaining: preferred.length
-        });
-      } else {
-        filterSteps.push({
-          description: `prefer filters (no match, using all)`,
-          remaining: entities.length
-        });
-      }
-    }
 
     return {
       name,
-      fromType,
+      fromType: isFromRelated ? 'related' : 'graph',
       kind: select.kind,
       relationshipKind: isFromRelated ? fromSpec.relationship : undefined,
       relatedTo: isFromRelated ? fromSpec.relatedTo : undefined,
-      filterSteps
+      filterSteps: trace.steps,
     };
   }
 
@@ -546,98 +369,16 @@ export class TemplateInterpreter {
    * Describe a selection filter for diagnostic output.
    */
   private describeSelectionFilter(filter: SelectionFilter): string {
-    switch (filter.type) {
-      case 'exclude':
-        return `exclude [${filter.entities.join(', ')}]`;
-      case 'has_relationship':
-        return `has_relationship '${filter.kind}'${filter.with ? ` with ${filter.with}` : ''}`;
-      case 'lacks_relationship':
-        return `lacks_relationship '${filter.kind}'${filter.with ? ` with ${filter.with}` : ''}`;
-      case 'has_tag':
-        return `has_tag '${filter.tag}'${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
-      case 'has_tags':
-        return `has_tags [${filter.tags.join(', ')}]`;
-      case 'has_any_tag':
-        return `has_any_tag [${filter.tags.join(', ')}]`;
-      case 'lacks_tag':
-        return `lacks_tag '${filter.tag}'${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
-      case 'lacks_any_tag':
-        return `lacks_any_tag [${filter.tags.join(', ')}]`;
-      case 'has_culture':
-        return `has_culture '${filter.culture}'`;
-      case 'matches_culture':
-        return `matches_culture with ${filter.with}`;
-      case 'has_status':
-        return `has_status '${filter.status}'`;
-      case 'has_prominence':
-        return `has_prominence >= '${filter.minProminence}'`;
-      case 'shares_related':
-        return `shares '${filter.relationshipKind}' with ${filter.with}`;
-      case 'graph_path':
-        return 'graph_path assertion';
-      default:
-        return 'unknown filter';
-    }
+    return rulesDescribeSelectionFilter(filter);
   }
 
   /**
    * Describe why a specific applicability rule failed.
    */
   private describeRuleFailure(rule: ApplicabilityRule, context: ExecutionContext): string {
-    const { graphView } = context;
-
-    switch (rule.type) {
-      case 'pressure_threshold': {
-        const pressure = graphView.getPressure(rule.pressureId) || 0;
-        return `pressure_threshold: ${rule.pressureId}=${pressure.toFixed(1)} (need ${rule.min}-${rule.max})`;
-      }
-
-      case 'pressure_any_above': {
-        const pressures = rule.pressureIds.map(id => `${id}=${(graphView.getPressure(id) || 0).toFixed(1)}`);
-        return `pressure_any_above: [${pressures.join(', ')}] (need >${rule.threshold})`;
-      }
-
-      case 'pressure_compare': {
-        const pA = graphView.getPressure(rule.pressureA) || 0;
-        const pB = graphView.getPressure(rule.pressureB) || 0;
-        return `pressure_compare: ${rule.pressureA}=${pA.toFixed(1)} > ${rule.pressureB}=${pB.toFixed(1)}`;
-      }
-
-      case 'entity_count_min': {
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) entities = entities.filter(e => e.subtype === rule.subtype);
-        if (rule.status) entities = entities.filter(e => e.status === rule.status);
-        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}${rule.status ? '(' + rule.status + ')' : ''}`;
-        return `entity_count_min: ${desc}=${entities.length} (need >=${rule.min})`;
-      }
-
-      case 'entity_count_max': {
-        const count = graphView.getEntityCount(rule.kind, rule.subtype);
-        const targets = graphView.config.distributionTargets;
-        const kindTargets = targets?.global?.entityKindDistribution?.targets;
-        const target = kindTargets?.[rule.kind] ?? rule.max;
-        const threshold = target * (rule.overshootFactor ?? 1.5);
-        const desc = `${rule.kind}${rule.subtype ? ':' + rule.subtype : ''}`;
-        return `entity_count_max: ${desc}=${count} (limit ${threshold.toFixed(0)})`;
-      }
-
-      case 'era_match': {
-        return `era_match: current=${graphView.currentEra.id} (need [${rule.eras.join(', ')}])`;
-      }
-
-      case 'random_chance': {
-        return `random_chance: ${(rule.chance * 100).toFixed(0)}% failed`;
-      }
-
-      case 'and':
-        return `and: one or more sub-rules failed`;
-
-      case 'or':
-        return `or: all sub-rules failed`;
-
-      default:
-        return `${(rule as ApplicabilityRule).type}: unknown rule failed`;
-    }
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    const result = rulesEvaluateCondition(rule, ruleCtx);
+    return result.diagnostic;
   }
 
   /**
@@ -724,77 +465,15 @@ export class TemplateInterpreter {
   }
 
   private evaluateApplicabilityRule(rule: ApplicabilityRule, context: ExecutionContext): boolean {
-    const { graphView } = context;
+    // ApplicabilityRule is now an alias for Condition from rules/
+    // Pass directly to evaluateCondition
 
-    switch (rule.type) {
-      case 'pressure_threshold': {
-        const pressure = graphView.getPressure(rule.pressureId) || 0;
-        if (pressure < rule.min) return false;
-        if (pressure > rule.max) return false;
-        return true;
-      }
+    // Create RuleContext from ExecutionContext
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
 
-      case 'pressure_any_above': {
-        return rule.pressureIds.some(id =>
-          (graphView.getPressure(id) || 0) > rule.threshold
-        );
-      }
-
-      case 'pressure_compare': {
-        const pressureA = graphView.getPressure(rule.pressureA) || 0;
-        const pressureB = graphView.getPressure(rule.pressureB) || 0;
-        return pressureA > pressureB;
-      }
-
-      case 'entity_count_min': {
-        let entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtype) {
-          entities = entities.filter(e => e.subtype === rule.subtype);
-        }
-        if (rule.status) {
-          entities = entities.filter(e => e.status === rule.status);
-        }
-        return entities.length >= rule.min;
-      }
-
-      case 'entity_count_max': {
-        const count = graphView.getEntityCount(rule.kind, rule.subtype);
-        // Use entity kind distribution targets if available
-        const targets = graphView.config.distributionTargets;
-        const kindTargets = targets?.global?.entityKindDistribution?.targets;
-        const target = kindTargets?.[rule.kind] ?? rule.max;
-        const threshold = target * (rule.overshootFactor ?? 1.5);
-        return count < threshold;
-      }
-
-      case 'era_match': {
-        return rule.eras.includes(graphView.currentEra.id);
-      }
-
-      case 'random_chance': {
-        return Math.random() < rule.chance;
-      }
-
-      case 'cooldown_elapsed': {
-        const ticksSince = graphView.tick - graphView.rateLimitState.lastCreationTick;
-        return ticksSince >= rule.cooldownTicks;
-      }
-
-      case 'creations_per_epoch': {
-        return graphView.rateLimitState.creationsThisEpoch < rule.maxPerEpoch;
-      }
-
-      case 'and': {
-        return rule.rules.every(r => this.evaluateApplicabilityRule(r, context));
-      }
-
-      case 'or': {
-        return rule.rules.some(r => this.evaluateApplicabilityRule(r, context));
-      }
-
-      default:
-        return false;
-    }
+    // Evaluate using rules library
+    const result = rulesEvaluateCondition(rule, ruleCtx);
+    return result.passed;
   }
 
   /**
@@ -818,174 +497,11 @@ export class TemplateInterpreter {
   // ===========================================================================
 
   private executeSelection(rule: SelectionRule, context: ExecutionContext): HardState[] {
-    const { graphView } = context;
-    let entities: HardState[];
-
-    // Primary selection strategy
-    switch (rule.strategy) {
-      case 'by_kind': {
-        entities = graphView.findEntities({ kind: rule.kind });
-        if (rule.subtypes && rule.subtypes.length > 0) {
-          entities = entities.filter(e => rule.subtypes!.includes(e.subtype));
-        }
-        break;
-      }
-
-      case 'by_preference_order': {
-        entities = [];
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        for (const subtype of rule.subtypePreferences || []) {
-          const matches = allEntities.filter(e => e.subtype === subtype);
-          if (matches.length > 0) {
-            entities = matches;
-            break;
-          }
-        }
-        if (entities.length === 0) {
-          entities = allEntities;
-        }
-        break;
-      }
-
-      case 'by_relationship': {
-        const allEntities = graphView.findEntities({ kind: rule.kind });
-        entities = allEntities.filter(entity => {
-          const hasRel = entity.links.some(link => {
-            if (link.kind !== rule.relationshipKind) return false;
-            if (rule.direction === 'src') return link.src === entity.id;
-            if (rule.direction === 'dst') return link.dst === entity.id;
-            return true;
-          });
-          return rule.mustHave ? hasRel : !hasRel;
-        });
-        break;
-      }
-
-      case 'by_proximity': {
-        const refEntity = context.resolveEntity(rule.referenceEntity || '$target');
-        if (!refEntity?.coordinates) {
-          entities = [];
-          break;
-        }
-        const maxDist = rule.maxDistance || 50;
-        entities = graphView.findEntities({ kind: rule.kind }).filter(e => {
-          if (!e.coordinates) return false;
-          const dx = e.coordinates.x - refEntity.coordinates!.x;
-          const dy = e.coordinates.y - refEntity.coordinates!.y;
-          const dz = e.coordinates.z - refEntity.coordinates!.z;
-          return Math.sqrt(dx * dx + dy * dy + dz * dz) <= maxDist;
-        });
-        break;
-      }
-
-      case 'by_prominence': {
-        const prominenceOrder = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
-        const minIndex = prominenceOrder.indexOf(rule.minProminence || 'marginal');
-        entities = graphView.findEntities({ kind: rule.kind }).filter(e => {
-          const entityIndex = prominenceOrder.indexOf(e.prominence);
-          return entityIndex >= minIndex;
-        });
-        break;
-      }
-
-      default:
-        entities = [];
-    }
-
-    // Apply status filter
-    if (rule.statusFilter) {
-      entities = entities.filter(e => e.status === rule.statusFilter);
-    }
-
-    // Apply post-filters
-    if (rule.filters) {
-      for (const filter of rule.filters) {
-        entities = this.applySelectionFilter(entities, filter, context);
-      }
-    }
-
-    // Apply saturation limits
-    if (rule.saturationLimits && rule.saturationLimits.length > 0) {
-      entities = this.applySaturationLimits(entities, rule.saturationLimits, graphView);
-    }
-
-    // Apply result handling
-    if (rule.maxResults && entities.length > rule.maxResults) {
-      entities = entities.slice(0, rule.maxResults);
-    }
-
-    switch (rule.pickStrategy) {
-      case 'random':
-        return entities.length > 0 ? [pickRandom(entities)] : [];
-      case 'first':
-        return entities.slice(0, 1);
-      case 'all':
-      default:
-        return entities;
-    }
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    return rulesSelectEntities(rule, ruleCtx);
   }
 
-  private applySelectionFilter(
-    entities: HardState[],
-    filter: SelectionFilter,
-    context: ExecutionContext
-  ): HardState[] {
-    // Delegate to shared selection filter implementation
-    return sharedApplySelectionFilter(entities, filter, context);
-  }
-
-  /**
-   * Apply saturation limits to filter out entities that have too many relationships.
-   * Always counts relationships in both directions (any).
-   * fromKind filters which entity kinds are counted.
-   */
-  private applySaturationLimits(
-    entities: HardState[],
-    limits: SaturationLimit[],
-    graphView: TemplateGraphView
-  ): HardState[] {
-    return entities.filter(entity => {
-      // All limits must pass
-      for (const limit of limits) {
-        // Count relationships matching the criteria (both directions)
-        let count = 0;
-
-        // Count incoming relationships to this entity
-        for (const other of graphView.getEntities()) {
-          if (other.id === entity.id) continue;
-
-          // Skip if fromKind is specified and doesn't match
-          if (limit.fromKind && other.kind !== limit.fromKind) continue;
-
-          // Check for relationship of the specified kind pointing to entity
-          const hasRel = other.links.some(link =>
-            link.kind === limit.relationshipKind && link.dst === entity.id
-          );
-          if (hasRel) count++;
-        }
-
-        // Count outgoing relationships from this entity
-        for (const link of entity.links) {
-          if (link.kind !== limit.relationshipKind) continue;
-
-          // If fromKind is specified, check the destination entity kind
-          if (limit.fromKind) {
-            const destEntity = graphView.getEntity(link.dst);
-            if (!destEntity || destEntity.kind !== limit.fromKind) continue;
-          }
-
-          count++;
-        }
-
-        // If count >= maxCount, this entity is saturated
-        if (count >= limit.maxCount) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }
+  // Selection filtering and saturation limits are handled by the rules library.
 
   // ===========================================================================
   // STEP 3: CREATION
@@ -1347,24 +863,9 @@ export class TemplateInterpreter {
     condition: RelationshipCondition,
     context: ExecutionContext
   ): boolean {
-    switch (condition.type) {
-      case 'random_chance':
-        return Math.random() < condition.chance;
-
-      case 'entity_exists': {
-        const entity = context.resolveEntity(condition.entity);
-        return !!entity;
-      }
-
-      case 'entity_has_relationship': {
-        const entity = context.resolveEntity(condition.entity);
-        if (!entity) return false;
-        return entity.links.some(l => l.kind === condition.relationshipKind);
-      }
-
-      default:
-        return true;
-    }
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    const result = rulesEvaluateCondition(condition, ruleCtx);
+    return result.passed;
   }
 
   // ===========================================================================
@@ -1372,63 +873,14 @@ export class TemplateInterpreter {
   // ===========================================================================
 
   private executeStateUpdate(rule: StateUpdateRule, context: ExecutionContext): void {
-    const { graphView } = context;
+    // StateUpdateRule is now an alias for Mutation from rules/
+    // Pass directly to applyMutation
 
-    switch (rule.type) {
-      case 'update_rate_limit':
-        graphView.rateLimitState.lastCreationTick = graphView.tick;
-        graphView.rateLimitState.creationsThisEpoch += 1;
-        break;
+    // Create RuleContext from ExecutionContext
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
 
-      case 'archive_relationship': {
-        const entity = context.resolveEntity(rule.entity);
-        if (!entity) break;
-
-        if (rule.with === 'any') {
-          // Archive all relationships of this kind involving the entity
-          const direction = rule.direction || 'any';
-          graphView.archiveRelationshipsByKind(entity.id, rule.relationshipKind, direction);
-        } else {
-          // Archive specific relationship with a known entity
-          const withEntity = context.resolveEntity(rule.with);
-          if (withEntity) {
-            graphView.archiveRelationship(entity.id, withEntity.id, rule.relationshipKind);
-          }
-        }
-        break;
-      }
-
-      case 'modify_pressure':
-        graphView.modifyPressure(rule.pressureId, rule.delta);
-        break;
-
-      case 'update_entity_status': {
-        const entity = context.resolveEntity(rule.entity);
-        if (entity) {
-          graphView.updateEntityStatus(entity.id, rule.newStatus);
-        }
-        break;
-      }
-
-      case 'set_tag': {
-        const entity = context.resolveEntity(rule.entity);
-        if (entity) {
-          const newTags = { ...entity.tags, [rule.tag]: rule.value ?? true };
-          graphView.updateEntity(entity.id, { tags: newTags });
-        }
-        break;
-      }
-
-      case 'remove_tag': {
-        const entity = context.resolveEntity(rule.entity);
-        if (entity) {
-          const newTags = { ...entity.tags };
-          delete newTags[rule.tag];
-          graphView.updateEntity(entity.id, { tags: newTags });
-        }
-        break;
-      }
-    }
+    // Apply using rules library
+    applyMutation(rule, ruleCtx);
   }
 
   // ===========================================================================
@@ -1464,58 +916,9 @@ export class TemplateInterpreter {
    * Evaluate a variant condition.
    */
   private evaluateVariantCondition(condition: VariantCondition, context: ExecutionContext): boolean {
-    const { graphView } = context;
-
-    switch (condition.type) {
-      case 'pressure': {
-        const pressure = graphView.getPressure(condition.pressureId) || 0;
-        if (condition.min !== undefined && pressure < condition.min) return false;
-        if (condition.max !== undefined && pressure > condition.max) return false;
-        return true;
-      }
-
-      case 'pressure_compare': {
-        const pressureA = graphView.getPressure(condition.pressureA) || 0;
-        const pressureB = graphView.getPressure(condition.pressureB) || 0;
-        return pressureA > pressureB;
-      }
-
-      case 'entity_count': {
-        let entities = graphView.findEntities({ kind: condition.kind });
-        if (condition.subtype) {
-          entities = entities.filter(e => e.subtype === condition.subtype);
-        }
-        const count = entities.length;
-        if (condition.min !== undefined && count < condition.min) return false;
-        if (condition.max !== undefined && count > condition.max) return false;
-        return true;
-      }
-
-      case 'has_tag': {
-        const entity = context.resolveEntity(condition.entity);
-        if (!entity) return false;
-        return hasTag(entity.tags, condition.tag);
-      }
-
-      case 'random': {
-        return Math.random() < condition.chance;
-      }
-
-      case 'always': {
-        return true;
-      }
-
-      case 'and': {
-        return condition.conditions.every(c => this.evaluateVariantCondition(c, context));
-      }
-
-      case 'or': {
-        return condition.conditions.some(c => this.evaluateVariantCondition(c, context));
-      }
-
-      default:
-        return false;
-    }
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    const result = rulesEvaluateCondition(condition, ruleCtx);
+    return result.passed;
   }
 
   /**
@@ -1585,64 +988,19 @@ export class TemplateInterpreter {
     context: ExecutionContext
   ): HardState | HardState[] | undefined {
     const { select } = def;
-    const { graphView } = context;
+    const ruleCtx = createRuleContext(context.graphView, context, context.target);
+    const candidates = rulesSelectVariableEntities(select, ruleCtx);
 
-    let entities: HardState[];
-
-    // Determine source
-    if (select.from && select.from !== 'graph') {
-      const relatedTo = context.resolveEntity(select.from.relatedTo);
-      if (!relatedTo) {
-        return select.fallback ? context.resolveEntity(select.fallback) : undefined;
-      }
-      entities = graphView.getRelatedEntities(
-        relatedTo.id,
-        select.from.relationship,
-        select.from.direction
-      );
-    } else {
-      entities = graphView.findEntities({ kind: select.kind });
-    }
-
-    // Apply filters
-    if (select.subtypes && select.subtypes.length > 0) {
-      entities = entities.filter(e => select.subtypes!.includes(e.subtype));
-    }
-    if (select.statusFilter) {
-      entities = entities.filter(e => e.status === select.statusFilter);
-    }
-    if (select.filters) {
-      for (const filter of select.filters) {
-        entities = this.applySelectionFilter(entities, filter, context);
-      }
-    }
-
-    // Apply prefer filters (try these first)
-    if (select.preferFilters && select.preferFilters.length > 0) {
-      let preferred = entities;
-      for (const filter of select.preferFilters) {
-        preferred = this.applySelectionFilter(preferred, filter, context);
-      }
-      if (preferred.length > 0) {
-        entities = preferred;
-      }
-    }
-
-    // Apply pick strategy
-    if (entities.length === 0) {
+    if (candidates.length === 0) {
       return select.fallback ? context.resolveEntity(select.fallback) : undefined;
     }
 
-    switch (select.pickStrategy) {
-      case 'random':
-        return pickRandom(entities);
-      case 'first':
-        return entities[0];
-      case 'all':
-        return entities;
-      default:
-        return pickRandom(entities);
+    const pickStrategy = select.pickStrategy ?? 'random';
+    const picked = rulesApplyPickStrategy(candidates, pickStrategy, select.maxResults);
+    if (pickStrategy === 'all' || (select.maxResults && select.maxResults > 1)) {
+      return picked;
     }
+    return picked[0];
   }
 }
 

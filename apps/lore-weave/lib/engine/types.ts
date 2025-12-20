@@ -4,6 +4,8 @@ import { DomainSchema } from '../domainInterface/domainSchema';
 import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 import type { ISimulationEmitter } from '../observer/types';
 import type { Culture } from '../naming/nameForgeService';
+import type { Condition } from '../rules/conditions/types';
+import type { ModifyPressureMutation } from '../rules/mutations/types';
 
 // =============================================================================
 // DEBUG CONFIGURATION
@@ -89,31 +91,7 @@ export interface NameGenerationService {
  * Transition conditions define when an era can start or end.
  * Multiple conditions are combined with AND logic (all must be met).
  */
-export type TransitionCondition =
-  | PressureTransitionCondition
-  | EntityCountTransitionCondition
-  | TimeTransitionCondition;
-
-export interface PressureTransitionCondition {
-  type: 'pressure';
-  pressureId: string;
-  operator: 'above' | 'below';
-  threshold: number;
-}
-
-export interface EntityCountTransitionCondition {
-  type: 'entity_count';
-  entityKind: string;
-  subtype?: string;
-  status?: string;
-  operator: 'above' | 'below';
-  threshold: number;
-}
-
-export interface TimeTransitionCondition {
-  type: 'time';
-  minTicks: number;
-}
+export type TransitionCondition = Condition;
 
 // =============================================================================
 // ERA TRANSITION EFFECTS
@@ -121,10 +99,10 @@ export interface TimeTransitionCondition {
 
 /**
  * Effects applied during era transitions.
- * These can trigger pressure changes or other state modifications.
+ * These are expressed as mutation rules (currently pressure modifications).
  */
 export interface EraTransitionEffects {
-  pressureChanges?: Record<string, number>;
+  mutations?: ModifyPressureMutation[];
 }
 
 // =============================================================================
@@ -237,6 +215,7 @@ export interface Graph {
   // RELATIONSHIP READ METHODS
   // =============================================================================
   getRelationships(): Relationship[];
+  getAllRelationships(): Relationship[];
   getRelationshipCount(): number;
   findRelationships(criteria: RelationshipCriteria): Relationship[];
   getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[];
@@ -385,6 +364,12 @@ export interface SimulationSystem<TState = unknown> {
 
 export interface SystemResult {
   relationshipsAdded: Relationship[];
+  relationshipsAdjusted?: Array<{
+    kind: string;
+    src: string;
+    dst: string;
+    delta: number;
+  }>;
   entitiesModified: Array<{
     id: string;
     changes: Partial<HardState>;
@@ -938,6 +923,10 @@ export class GraphStore implements Graph {
 
   getRelationships(): Relationship[] {
     return this.#relationships.map(r => ({ ...r }));
+  }
+
+  getAllRelationships(): Relationship[] {
+    return this.getRelationships();
   }
 
   getRelationshipCount(): number {

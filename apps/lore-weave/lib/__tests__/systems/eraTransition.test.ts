@@ -268,7 +268,7 @@ describe('eraTransition', () => {
 
       // Set explicit time condition
       setEraConditions('era1', [{
-        type: 'time',
+        type: 'time_elapsed',
         minTicks: 50
       }]);
 
@@ -285,7 +285,7 @@ describe('eraTransition', () => {
 
       // Set explicit time condition that is met
       setEraConditions('era1', [{
-        type: 'time',
+        type: 'time_elapsed',
         minTicks: 50
       }]);
 
@@ -615,7 +615,7 @@ describe('eraTransition', () => {
       graph.tick = 150;
 
       setEraConditions('era1', [{
-        type: 'time',
+        type: 'time_elapsed',
         minTicks: 100
       }]);
 
@@ -639,7 +639,7 @@ describe('eraTransition', () => {
           threshold: 60
         },
         {
-          type: 'time',
+          type: 'time_elapsed',
           minTicks: 200 // Not met
         }
       ]);
@@ -737,10 +737,10 @@ describe('eraTransition', () => {
 
       // NEW MODEL: Use exitEffects instead of transitionEffects
       setEraConditions('era1', [], {
-        pressureChanges: {
-          conflict: 20,
-          stability: -10
-        }
+        mutations: [
+          { type: 'modify_pressure', pressureId: 'conflict', delta: 20 },
+          { type: 'modify_pressure', pressureId: 'stability', delta: -10 }
+        ]
       });
 
       const result = eraTransition.apply(graph);
@@ -771,7 +771,9 @@ describe('eraTransition', () => {
       graph.tick = 120;
 
       // Set entry effects on era2 (the destination era)
-      setEraConditions('era2', undefined, undefined, [], { pressureChanges: { innovation: 25 } });
+      setEraConditions('era2', undefined, undefined, [], {
+        mutations: [{ type: 'modify_pressure', pressureId: 'innovation', delta: 25 }]
+      });
       // Allow exit from era1
       setEraConditions('era1', []);
 

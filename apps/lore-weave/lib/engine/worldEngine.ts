@@ -10,6 +10,7 @@ import {
   generateId,
   addEntity,
   addRelationship,
+  modifyRelationshipStrength,
   updateEntity,
   pickRandom,
   weightedRandom,
@@ -1566,6 +1567,12 @@ export class WorldEngine {
         }
         totalRelationships += addedFromResult;
 
+        if (result.relationshipsAdjusted && result.relationshipsAdjusted.length > 0) {
+          for (const rel of result.relationshipsAdjusted) {
+            modifyRelationshipStrength(this.graph, rel.src, rel.dst, rel.kind, rel.delta);
+          }
+        }
+
         // Update system metrics and check for aggressive systems
         if (metric.relationshipsCreated > 500 && this.graph.tick - metric.lastThrottleCheck > 20) {
           this.logWarning(`⚠️  AGGRESSIVE SYSTEM: ${system.id} has created ${metric.relationshipsCreated} relationships`);
@@ -1597,6 +1604,7 @@ export class WorldEngine {
         const didMeaningfulWork =
           directAdded > 0 ||
           addedFromResult > 0 ||
+          (result.relationshipsAdjusted && result.relationshipsAdjusted.length > 0) ||
           reportedModifications > 0 ||
           Object.keys(result.pressureChanges).length > 0;
 

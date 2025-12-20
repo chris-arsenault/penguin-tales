@@ -72,7 +72,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 2 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -106,7 +106,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -137,7 +137,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -261,7 +261,7 @@ describe('connectionEvolution', () => {
             multiplier: 6
           },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -299,7 +299,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 3 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -331,7 +331,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'change_status', newStatus: 'legendary' }
+          action: { type: 'change_status', entity: '$self', newStatus: 'legendary' }
         }]
       };
 
@@ -342,7 +342,7 @@ describe('connectionEvolution', () => {
       expect(result.entitiesModified[0].changes.status).toBe('legendary');
     });
 
-    it('handles add_tag action', () => {
+    it('handles set_tag action', () => {
       const npc = createTestEntity({ id: 'npc1', kind: 'npc', prominence: 'marginal', tags: {} });
       // Use a different kind so only npc1 gets evaluated
       const other = createTestEntity({ id: 'other', kind: 'location' });
@@ -352,14 +352,14 @@ describe('connectionEvolution', () => {
       testGraph.addRelationship('allied_with', 'npc1', 'other', 0.5);
 
       const config: ConnectionEvolutionConfig = {
-        id: 'add_tag',
-        name: 'Add Tag',
+        id: 'set_tag',
+        name: 'Set Tag',
         entityKind: 'npc',
         metric: { type: 'connection_count' },
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'add_tag', tag: 'well_connected', value: true }
+          action: { type: 'set_tag', entity: '$self', tag: 'well_connected', value: true }
         }]
       };
 
@@ -384,7 +384,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '<', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'down' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'down' }
         }]
       };
 
@@ -418,7 +418,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -451,7 +451,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -481,7 +481,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -511,7 +511,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 1 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -535,7 +535,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 10 }, // Won't be met
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 
@@ -568,7 +568,7 @@ describe('connectionEvolution', () => {
         rules: [{
           condition: { operator: '>=', threshold: 3 },
           probability: 1.0,
-          action: { type: 'adjust_prominence', direction: 'up' }
+          action: { type: 'adjust_prominence', entity: '$self', direction: 'up' }
         }]
       };
 

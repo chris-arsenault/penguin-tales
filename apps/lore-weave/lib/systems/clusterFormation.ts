@@ -23,28 +23,12 @@ import {
 } from '../graph/clusteringUtils';
 import { FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
 import { pickRandom } from '../utils';
-import { SelectionFilter } from '../engine/declarativeTypes';
-import { SimpleEntityResolver, applySelectionFilters } from '../selection';
+import { selectEntities, createSystemContext } from '../rules';
+import type { SelectionRule } from '../rules';
 
 // =============================================================================
 // CONFIGURATION TYPES
 // =============================================================================
-
-/**
- * Entity filter configuration
- */
-export interface EntityFilter {
-  /** Entity kind to cluster */
-  kind: string;
-  /** Optional: only include these subtypes */
-  subtypes?: string[];
-  /** Optional: exclude these subtypes */
-  excludeSubtypes?: string[];
-  /** Optional: only include entities with this status */
-  status?: string;
-  /** Advanced selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
-}
 
 /**
  * Declarative clustering criterion (JSON-safe, no functions)
@@ -137,8 +121,8 @@ export interface ClusterFormationConfig {
   /** Optional description */
   description?: string;
 
-  /** Entity filter for clustering */
-  entityFilter: EntityFilter;
+  /** Selection rule for clustering candidates */
+  selection: SelectionRule;
 
   /** Whether to only run at epoch end */
   runAtEpochEnd: boolean;
@@ -411,27 +395,11 @@ export function createClusterFormationSystem(
       }
 
       // Find entities eligible for clustering
-      let entities = graphView.findEntities({ kind: config.entityFilter.kind });
-
-      // Apply subtype filters
-      if (config.entityFilter.subtypes) {
-        entities = entities.filter(e => config.entityFilter.subtypes!.includes(e.subtype));
-      }
-      if (config.entityFilter.excludeSubtypes) {
-        entities = entities.filter(e => !config.entityFilter.excludeSubtypes!.includes(e.subtype));
-      }
-      if (config.entityFilter.status) {
-        entities = entities.filter(e => e.status === config.entityFilter.status);
-      }
+      const selectionCtx = createSystemContext(graphView);
+      let entities = selectEntities(config.selection, selectionCtx);
 
       // Filter out historical and meta-entities
       entities = filterClusterableEntities(entities);
-
-      // Apply advanced selection filters
-      if (config.entityFilter.filters && config.entityFilter.filters.length > 0) {
-        const resolver = new SimpleEntityResolver(graphView);
-        entities = applySelectionFilters(entities, config.entityFilter.filters, resolver);
-      }
 
       if (entities.length < clusterConfig.minSize) {
         return {

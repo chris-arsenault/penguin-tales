@@ -1,4 +1,4 @@
-import { SimulationSystem, SystemResult, Era, EraTransitionEffects } from '../engine/types';
+import { SimulationSystem, SystemResult, Era } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import { generateId } from '../utils';
 import {
@@ -7,6 +7,7 @@ import {
 } from '../core/frameworkPrimitives';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { EraSpawnerConfig } from '../engine/systemInterpreter';
+import { createSystemContext, prepareMutation } from '../rules';
 
 /**
  * Era Spawner System
@@ -66,14 +67,21 @@ export function applyEntryEffects(
   graphView: TemplateGraphView,
   configEra: Era
 ): Record<string, number> {
-  // Get entry effects (new model)
   const entryEffects = configEra.entryEffects;
+  const mutations = entryEffects?.mutations || [];
+  if (mutations.length === 0) return {};
 
-  if (!entryEffects?.pressureChanges) {
-    return {};
+  const ctx = createSystemContext(graphView);
+  const pressureChanges: Record<string, number> = {};
+
+  for (const mutation of mutations) {
+    const result = prepareMutation(mutation, ctx);
+    for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
+      pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+    }
   }
 
-  return entryEffects.pressureChanges;
+  return pressureChanges;
 }
 
 /**
@@ -148,4 +156,3 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
     }
   };
 }
-

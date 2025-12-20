@@ -177,10 +177,25 @@ export const validationRules = {
 
     // Check systems for positive pressure changes
     for (const sys of systems) {
-      const cfg = sys.config;
+      const cfg = sys.config || sys;
       if (cfg?.pressureChanges) {
         for (const [pId, delta] of Object.entries(cfg.pressureChanges)) {
           if (delta > 0) pressuresWithSources.add(pId);
+        }
+      }
+
+      const mutationSources = [];
+      if (Array.isArray(cfg?.actions)) mutationSources.push(...cfg.actions);
+      if (cfg?.infectionAction) mutationSources.push(cfg.infectionAction);
+      if (Array.isArray(cfg?.rules)) {
+        cfg.rules.forEach((rule) => {
+          if (rule?.action) mutationSources.push(rule.action);
+        });
+      }
+
+      for (const mutation of mutationSources) {
+        if (mutation?.type === 'modify_pressure' && mutation.delta > 0) {
+          pressuresWithSources.add(mutation.pressureId);
         }
       }
     }
@@ -229,10 +244,25 @@ export const validationRules = {
 
     // Check systems for negative pressure changes
     for (const sys of systems) {
-      const cfg = sys.config;
+      const cfg = sys.config || sys;
       if (cfg?.pressureChanges) {
         for (const [pId, delta] of Object.entries(cfg.pressureChanges)) {
           if (delta < 0) pressuresWithSinks.add(pId);
+        }
+      }
+
+      const mutationSinks = [];
+      if (Array.isArray(cfg?.actions)) mutationSinks.push(...cfg.actions);
+      if (cfg?.infectionAction) mutationSinks.push(cfg.infectionAction);
+      if (Array.isArray(cfg?.rules)) {
+        cfg.rules.forEach((rule) => {
+          if (rule?.action) mutationSinks.push(rule.action);
+        });
+      }
+
+      for (const mutation of mutationSinks) {
+        if (mutation?.type === 'modify_pressure' && mutation.delta < 0) {
+          pressuresWithSinks.add(mutation.pressureId);
         }
       }
     }

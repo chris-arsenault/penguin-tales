@@ -3,6 +3,7 @@ import { Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { DecayRate, RelationshipKindDefinition } from '../domainInterface/domainSchema';
 import type { RelationshipMaintenanceConfig } from '../engine/systemInterpreter';
+import { createSystemContext, evaluateMetric } from '../rules';
 import { isFrameworkRelationshipKind } from '../core/frameworkPrimitives';
 
 /**
@@ -25,14 +26,8 @@ import { isFrameworkRelationshipKind } from '../core/frameworkPrimitives';
 // =============================================================================
 
 /** Map decay rate to strength reduction per cycle */
-function getDecayAmount(rate: DecayRate): number {
-  switch (rate) {
-    case 'none': return 0;
-    case 'slow': return 0.01;
-    case 'medium': return 0.03;
-    case 'fast': return 0.06;
-    default: return 0.03; // default to medium
-  }
+function getDecayAmount(rate: DecayRate, ctx: ReturnType<typeof createSystemContext>): number {
+  return evaluateMetric({ type: 'decay_rate', rate }, ctx).value;
 }
 
 /** Get relationship kind definition from domain schema */
@@ -137,6 +132,8 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
       let reinforced = 0;
       let culled = 0;
 
+      const metricCtx = createSystemContext(graphView);
+
       const keptRelationships: Relationship[] = [];
       const modifiedEntityIds = new Set<string>();
 
@@ -168,7 +165,7 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
         // === DECAY ===
         // Apply decay to relationships that aren't young and have decay enabled
         if (!isYoung && decayRate !== 'none') {
-          const decayAmount = getDecayAmount(decayRate) * modifier;
+          const decayAmount = getDecayAmount(decayRate, metricCtx) * modifier;
           strength = Math.max(0, strength - decayAmount);
           decayed++;
         }

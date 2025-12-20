@@ -8,6 +8,7 @@
 import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../core/worldTypes';
 import { Graph } from '../engine/types';
 import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
+import { getProminenceMultiplierValue } from '../rules';
 
 /**
  * Get all entities that can act (have catalyst.canAct = true)
@@ -169,16 +170,7 @@ export function calculateAttemptChance(
     return 0;
   }
 
-  // More prominent entities act more frequently
-  const prominenceMultipliers: Record<string, number> = {
-    'forgotten': 0.3,
-    'marginal': 0.6,
-    'recognized': 1.0,
-    'renowned': 1.5,
-    'mythic': 2.0
-  };
-
-  const multiplier = prominenceMultipliers[entity.prominence] || 1.0;
+  const multiplier = getProminenceMultiplierValue(entity.prominence, 'action_rate');
   const chance = baseRate * multiplier;
 
   // Clamp to [0, 1]

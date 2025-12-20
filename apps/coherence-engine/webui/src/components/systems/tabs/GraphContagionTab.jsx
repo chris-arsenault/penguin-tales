@@ -5,7 +5,7 @@
 import React from 'react';
 import { DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
-import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
+import TagSelector from '@lore-weave/shared-components/TagSelector';
 
 /**
  * @param {Object} props
@@ -84,25 +84,12 @@ export function GraphContagionTab({ system, onChange, schema }) {
               <label className="label">Tag</label>
               <input
                 type="text"
-                value={config.contagion?.tag || ''}
-                onChange={(e) => updateContagion('tag', e.target.value)}
+                value={config.contagion?.tagPattern || ''}
+                onChange={(e) => updateContagion('tagPattern', e.target.value)}
                 className="input"
               />
             </div>
           )}
-        </div>
-
-        <div className="mt-xl">
-          <div className="section-subtitle">Advanced Population Filters</div>
-          <div className="section-desc">
-            Filter the population by tags, relationships, prominence, culture, and more.
-          </div>
-          <SelectionFiltersEditor
-            filters={config.filters || []}
-            onChange={(v) => updateConfig('filters', v.length > 0 ? v : undefined)}
-            schema={schema}
-            availableRefs={[]}
-          />
         </div>
       </div>
 
@@ -216,9 +203,29 @@ export function GraphContagionTab({ system, onChange, schema }) {
             <>
               <ReferenceDropdown
                 label="Relationship Kind"
-                value={config.infectionAction?.relationshipKind}
-                onChange={(v) => updateInfectionAction('relationshipKind', v)}
+                value={config.infectionAction?.kind}
+                onChange={(v) => updateInfectionAction('kind', v)}
                 options={relationshipKindOptions}
+              />
+              <ReferenceDropdown
+                label="Source"
+                value={config.infectionAction?.src || '$self'}
+                onChange={(v) => updateInfectionAction('src', v)}
+                options={[
+                  { value: '$self', label: '$self' },
+                  { value: '$source', label: '$source' },
+                  { value: '$contagion_source', label: '$contagion_source' },
+                ]}
+              />
+              <ReferenceDropdown
+                label="Destination"
+                value={config.infectionAction?.dst || '$source'}
+                onChange={(v) => updateInfectionAction('dst', v)}
+                options={[
+                  { value: '$self', label: '$self' },
+                  { value: '$source', label: '$source' },
+                  { value: '$contagion_source', label: '$contagion_source' },
+                ]}
               />
               <div className="form-group">
                 <label className="label">Strength</label>
@@ -230,6 +237,51 @@ export function GraphContagionTab({ system, onChange, schema }) {
                   min={0}
                   max={1}
                   allowEmpty
+                />
+              </div>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.infectionAction?.bidirectional || false}
+                    onChange={(e) => updateInfectionAction('bidirectional', e.target.checked || undefined)}
+                    className="checkbox"
+                  />
+                  Bidirectional
+                </label>
+              </div>
+            </>
+          )}
+          {config.infectionAction?.type === 'set_tag' && (
+            <>
+              <ReferenceDropdown
+                label="Entity"
+                value={config.infectionAction?.entity || '$self'}
+                onChange={(v) => updateInfectionAction('entity', v)}
+                options={[
+                  { value: '$self', label: '$self' },
+                  { value: '$source', label: '$source' },
+                  { value: '$contagion_source', label: '$contagion_source' },
+                ]}
+              />
+              <div className="form-group">
+                <label className="label">Tag</label>
+                <TagSelector
+                  value={config.infectionAction?.tag ? [config.infectionAction.tag] : []}
+                  onChange={(tags) => updateInfectionAction('tag', tags[0] || '')}
+                  tagRegistry={schema?.tagRegistry || []}
+                  placeholder="Select tag..."
+                  singleSelect
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Value (optional)</label>
+                <input
+                  type="text"
+                  value={config.infectionAction?.value !== undefined ? String(config.infectionAction.value) : ''}
+                  onChange={(e) => updateInfectionAction('value', e.target.value || undefined)}
+                  className="input"
+                  placeholder="true"
                 />
               </div>
             </>

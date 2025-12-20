@@ -220,7 +220,6 @@ export type {
   TriggerCondition,
   TriggerAction,
   TriggerActionType,
-  ConditionType,
   EntityFilter
 } from './systems/thresholdTrigger';
 
@@ -261,21 +260,16 @@ export { loadActions, createExecutableAction } from './engine/actionInterpreter'
 export type {
   DeclarativeAction,
   ActionActorConfig,
-  InstigatorConfig,
-  ActionTargetConfig,
+  InstigatorSelectionRule,
   ActionOutcomeConfig,
   ActionProbabilityConfig,
-  PressureBand,
   PressureModifier,
-  OutcomeEntityRef,
-  RelationshipStrengthening,
-  StrengtheningChannel,
   ExecutableAction,
   ActionResult
 } from './engine/actionInterpreter';
 
 // Actor matching (for filtering eligible actors for actions)
-export { matchesActorConfig } from './selection';
+export { matchesActorConfig } from './rules';
 
 // =============================================================================
 // FRAMEWORK PRIMITIVES - Minimal constants needed by domain
@@ -405,9 +399,8 @@ export type {
   VariableDefinition,
   ExecutionContext,
   // Specific rule types
-  PressureThresholdRule,
-  EntityCountMinRule,
-  EntityCountMaxRule,
+  PressureRule,
+  EntityCountRule,
   GraphPathAssertion,
   PathStep,
   PathConstraint,
@@ -473,9 +466,6 @@ export type {
 // Era transition condition types (defined per-era in eras.json)
 export type {
   TransitionCondition,
-  PressureTransitionCondition,
-  EntityCountTransitionCondition,
-  TimeTransitionCondition,
   EraTransitionEffects
 } from './engine/types';
 

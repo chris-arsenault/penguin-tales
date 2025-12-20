@@ -8,6 +8,143 @@
 
 import type { Prominence } from '../core/worldTypes';
 
+// Import types from rules/ (single source of truth)
+import type {
+  // Filter types
+  SelectionFilter,
+  ExcludeEntitiesFilter,
+  HasRelationshipFilter,
+  LacksRelationshipFilter,
+  HasTagSelectionFilter,
+  HasTagsSelectionFilter,
+  HasAnyTagSelectionFilter,
+  LacksTagSelectionFilter,
+  LacksAnyTagSelectionFilter,
+  HasCultureFilter,
+  MatchesCultureFilter,
+  HasStatusFilter,
+  HasProminenceFilter,
+  SharesRelatedFilter,
+  GraphPathSelectionFilter,
+  GraphPathAssertion,
+  PathStep,
+  PathConstraint,
+} from '../rules/filters/types';
+
+import type {
+  SelectionRule,
+  SaturationLimit,
+  VariableSelectionRule,
+  RelatedEntitiesSpec,
+} from '../rules/selection/types';
+
+import type {
+  // Condition types (used for ApplicabilityRule)
+  Condition,
+  PressureCondition,
+  PressureCompareCondition,
+  PressureAnyAboveCondition,
+  EntityCountCondition,
+  EraMatchCondition,
+  RandomChanceCondition,
+  CooldownElapsedCondition,
+  CreationsPerEpochCondition,
+  AndCondition,
+  OrCondition,
+} from '../rules/conditions/types';
+
+import type {
+  // Mutation types (used for StateUpdateRule)
+  Mutation,
+  SetTagMutation,
+  RemoveTagMutation,
+  ArchiveRelationshipMutation,
+  ChangeStatusMutation,
+  ModifyPressureMutation,
+  UpdateRateLimitMutation,
+} from '../rules/mutations/types';
+
+// Re-export filter types for callers that import from this module
+export type {
+  SelectionFilter,
+  ExcludeEntitiesFilter,
+  HasRelationshipFilter,
+  LacksRelationshipFilter,
+  HasTagSelectionFilter,
+  HasTagsSelectionFilter,
+  HasAnyTagSelectionFilter,
+  LacksTagSelectionFilter,
+  LacksAnyTagSelectionFilter,
+  HasCultureFilter,
+  MatchesCultureFilter,
+  HasStatusFilter,
+  HasProminenceFilter,
+  SharesRelatedFilter,
+  GraphPathSelectionFilter,
+  GraphPathAssertion,
+  PathStep,
+  PathConstraint,
+};
+
+export type {
+  SelectionRule,
+  SaturationLimit,
+  VariableSelectionRule,
+  RelatedEntitiesSpec,
+};
+
+// =============================================================================
+// UNIFIED TYPE ALIASES
+// =============================================================================
+
+/**
+ * ApplicabilityRule is now an alias for Condition from rules/.
+ * This unifies the type names across the stack.
+ */
+export type ApplicabilityRule = Condition;
+
+// Re-export condition types under their canonical names
+export type {
+  Condition,
+  PressureCondition,
+  PressureCompareCondition,
+  PressureAnyAboveCondition,
+  EntityCountCondition,
+  EraMatchCondition,
+  RandomChanceCondition,
+  CooldownElapsedCondition,
+  CreationsPerEpochCondition,
+  AndCondition,
+  OrCondition,
+};
+
+// Legacy type aliases for backwards compatibility with existing JSON
+export type PressureRule = PressureCondition;
+export type PressureAnyAboveRule = PressureAnyAboveCondition;
+export type PressureCompareRule = PressureCompareCondition;
+export type EntityCountRule = EntityCountCondition;
+export type EraMatchRule = EraMatchCondition;
+export type RandomChanceRule = RandomChanceCondition;
+export type CooldownElapsedRule = CooldownElapsedCondition;
+export type CreationsPerEpochRule = CreationsPerEpochCondition;
+export type CompositeApplicabilityRule = AndCondition | OrCondition;
+
+/**
+ * StateUpdateRule is now an alias for Mutation from rules/.
+ */
+export type StateUpdateRule = Mutation;
+
+// Re-export mutation types
+export type {
+  Mutation,
+  SetTagMutation,
+  RemoveTagMutation,
+  ArchiveRelationshipMutation,
+  ChangeStatusMutation,
+  ModifyPressureMutation,
+  UpdateRateLimitMutation,
+};
+
 // =============================================================================
 // MAIN TEMPLATE STRUCTURE
 // =============================================================================
@@ -52,294 +189,10 @@ export interface DeclarativeTemplate {
 }
 
 // =============================================================================
-// STEP 1: APPLICABILITY RULES
-// =============================================================================
-
-/**
- * Rules that determine when a template can run.
- * Multiple rules are combined with AND logic by default.
- */
-export type ApplicabilityRule =
-  | PressureThresholdRule
-  | PressureAnyAboveRule
-  | PressureCompareRule
-  | EntityCountMinRule
-  | EntityCountMaxRule
-  | EraMatchRule
-  | RandomChanceRule
-  | CooldownElapsedRule
-  | CreationsPerEpochRule
-  | CompositeApplicabilityRule;
-
-export interface PressureThresholdRule {
-  type: 'pressure_threshold';
-  pressureId: string;
-  min: number;
-  max: number;
-}
-
-export interface PressureAnyAboveRule {
-  type: 'pressure_any_above';
-  pressureIds: string[];
-  threshold: number;
-}
-
-export interface PressureCompareRule {
-  type: 'pressure_compare';
-  pressureA: string;
-  pressureB: string;
-  // Only > supported: pressureA > pressureB
-}
-
-export interface EntityCountMinRule {
-  type: 'entity_count_min';
-  kind: string;
-  subtype?: string;
-  status?: string;
-  min: number;
-}
-
-export interface EntityCountMaxRule {
-  type: 'entity_count_max';
-  kind: string;
-  subtype?: string;
-  max: number;
-  overshootFactor?: number;  // Default 1.5
-}
-
-export interface EraMatchRule {
-  type: 'era_match';
-  eras: string[];
-}
-
-export interface RandomChanceRule {
-  type: 'random_chance';
-  chance: number;  // 0-1
-}
-
-export interface CooldownElapsedRule {
-  type: 'cooldown_elapsed';
-  cooldownTicks: number;
-}
-
-export interface CreationsPerEpochRule {
-  type: 'creations_per_epoch';
-  maxPerEpoch: number;
-}
-
-/**
- * Graph path assertion - used by selection filters.
- */
-export interface GraphPathAssertion {
-  // Type of assertion
-  check: 'exists' | 'not_exists' | 'count_min' | 'count_max';
-
-  // Path to traverse (1-2 hops)
-  path: PathStep[];
-
-  // For count assertions
-  count?: number;
-
-  // Additional constraints on the final target
-  where?: PathConstraint[];
-}
-
-/**
- * A single step in a graph traversal path.
- */
-export interface PathStep {
-  // Relationship to traverse
-  via: string;
-  direction: 'out' | 'in' | 'any';
-
-  // Filter targets at this step
-  targetKind?: string;
-  targetSubtype?: string;
-  targetStatus?: string;
-
-  // Store intermediate result for reference
-  as?: string;  // e.g., "$controlled", "$adjacent"
-}
-
-/**
- * Constraints on path targets.
- */
-export type PathConstraint =
-  | { type: 'not_in'; set: string }           // Target not in a stored set (e.g., "$controlled")
-  | { type: 'in'; set: string }               // Target in a stored set
-  | { type: 'lacks_relationship'; kind: string; with: string; direction?: 'out' | 'in' | 'any' }
-  | { type: 'has_relationship'; kind: string; with: string; direction?: 'out' | 'in' | 'any' }
-  | { type: 'not_self' }                      // Target is not the starting entity
-  | { type: 'kind_equals'; kind: string }
-  | { type: 'subtype_equals'; subtype: string }
-
-export interface CompositeApplicabilityRule {
-  type: 'and' | 'or';
-  rules: ApplicabilityRule[];
-}
-
-// =============================================================================
 // STEP 2: SELECTION RULES
 // =============================================================================
 
-/**
- * Saturation limit - filter targets by relationship count.
- * Useful for limiting generator creation based on existing relationships.
- */
-export interface SaturationLimit {
-  /** Relationship kind to count */
-  relationshipKind: string;
-  /** Direction: 'in' = incoming relationships to target, 'out' = outgoing from target. Default: 'in' */
-  direction?: 'in' | 'out';
-  /** Optional: only count relationships from/to this entity kind */
-  fromKind?: string;
-  /** Maximum number of relationships allowed (target is selected only if count < maxCount) */
-  maxCount: number;
-}
-
-/**
- * Rules that determine how to find target entities.
- */
-export interface SelectionRule {
-  strategy: 'by_kind' | 'by_preference_order' | 'by_relationship' | 'by_proximity' | 'by_prominence';
-  kind: string;
-
-  // Common filters
-  subtypes?: string[];
-  statusFilter?: string;
-
-  // For by_relationship strategy
-  relationshipKind?: string;
-  mustHave?: boolean;
-  direction?: 'src' | 'dst' | 'both';
-
-  // For by_preference_order strategy
-  subtypePreferences?: string[];
-
-  // For by_proximity strategy
-  referenceEntity?: string;  // Variable reference like "$target"
-  maxDistance?: number;
-
-  // For by_prominence strategy
-  minProminence?: Prominence;
-
-  // Post-selection filters
-  filters?: SelectionFilter[];
-
-  // Saturation limits - filter by relationship counts
-  saturationLimits?: SaturationLimit[];
-
-  // Result handling
-  pickStrategy?: 'random' | 'first' | 'all' | 'weighted';
-  maxResults?: number;
-}
-
-/**
- * Filters applied after the main selection strategy.
- */
-export type SelectionFilter =
-  | ExcludeEntitiesFilter
-  | HasRelationshipFilter
-  | LacksRelationshipFilter
-  | HasTagSelectionFilter
-  | HasTagsSelectionFilter
-  | HasAnyTagSelectionFilter
-  | LacksTagSelectionFilter
-  | LacksAnyTagSelectionFilter
-  | HasCultureFilter
-  | MatchesCultureFilter
-  | HasStatusFilter
-  | HasProminenceFilter
-  | SharesRelatedFilter
-  | GraphPathSelectionFilter;
-
-/**
- * Graph path selection filter - filters entities based on graph traversal.
- */
-export interface GraphPathSelectionFilter {
-  type: 'graph_path';
-  assert: GraphPathAssertion;
-}
-
-export interface ExcludeEntitiesFilter {
-  type: 'exclude';
-  entities: string[];  // Variable references
-}
-
-export interface HasRelationshipFilter {
-  type: 'has_relationship';
-  kind: string;
-  with?: string;  // Variable reference (optional)
-  direction?: 'src' | 'dst' | 'both';
-}
-
-export interface LacksRelationshipFilter {
-  type: 'lacks_relationship';
-  kind: string;
-  with?: string;  // Variable reference (optional)
-}
-
-export interface HasTagSelectionFilter {
-  type: 'has_tag';
-  tag: string;
-  value?: string | boolean;
-}
-
-/**
- * Filter entities that have ALL specified tags (AND semantics).
- * Use has_any_tag for OR semantics.
- */
-export interface HasTagsSelectionFilter {
-  type: 'has_tags';
-  tags: string[];
-}
-
-export interface HasAnyTagSelectionFilter {
-  type: 'has_any_tag';
-  tags: string[];
-}
-
-export interface LacksTagSelectionFilter {
-  type: 'lacks_tag';
-  tag: string;
-  value?: string | boolean;  // If specified, only excludes if tag has this value
-}
-
-export interface LacksAnyTagSelectionFilter {
-  type: 'lacks_any_tag';
-  tags: string[];  // Excludes entities that have ANY of these tags
-}
-
-export interface HasCultureFilter {
-  type: 'has_culture';
-  culture: string;
-}
-
-export interface MatchesCultureFilter {
-  type: 'matches_culture';
-  with: string;  // Variable reference like "$target"
-}
-
-export interface HasStatusFilter {
-  type: 'has_status';
-  status: string;
-}
-
-export interface HasProminenceFilter {
-  type: 'has_prominence';
-  minProminence: Prominence;
-}
-
-/**
- * Filter entities that share a common related entity with a reference.
- * Example: Find entities that share the same location as $target via 'resident_of' relationship.
- */
-export interface SharesRelatedFilter {
-  type: 'shares_related';
-  relationshipKind: string;  // Relationship kind to check (e.g., 'resident_of')
-  with: string;              // Reference entity (e.g., '$target')
-}
-
+// SelectionRule, SaturationLimit, and variable selection types are imported from rules/selection/types
 
 // =============================================================================
 // STEP 3: CREATION RULES
@@ -470,25 +323,10 @@ export interface RelationshipRule {
   condition?: RelationshipCondition;
 }
 
-export type RelationshipCondition =
-  | { type: 'random_chance'; chance: number }
-  | { type: 'entity_exists'; entity: string }
-  | { type: 'entity_has_relationship'; entity: string; relationshipKind: string };
+export type RelationshipCondition = Condition;
 
 // =============================================================================
-// STEP 5: STATE UPDATE RULES
-// =============================================================================
-
-/**
- * Rules for side effects after entity/relationship creation.
- */
-export type StateUpdateRule =
-  | { type: 'update_rate_limit' }
-  | { type: 'archive_relationship'; entity: string; relationshipKind: string; with: string; direction?: 'src' | 'dst' | 'any' }
-  | { type: 'modify_pressure'; pressureId: string; delta: number }
-  | { type: 'update_entity_status'; entity: string; newStatus: string }
-  | { type: 'set_tag'; entity: string; tag: string; value?: string | boolean }
-  | { type: 'remove_tag'; entity: string; tag: string };
+// StateUpdateRule is now defined at the top as an alias for Mutation from rules/
 
 // =============================================================================
 // VARIABLE DEFINITIONS
@@ -507,31 +345,7 @@ export interface VariableDefinition {
   required?: boolean;
 }
 
-export interface VariableSelectionRule {
-  // Select from graph or from related entities
-  from?: RelatedEntitiesSpec | 'graph';
-
-  // Entity filtering (kind used when from='graph')
-  kind?: string;
-  subtypes?: string[];
-  statusFilter?: string;
-
-  // Post-filters
-  filters?: SelectionFilter[];
-
-  // Prefer filters (try these first, fall back to all matches)
-  preferFilters?: SelectionFilter[];
-
-  // Result handling
-  pickStrategy?: 'random' | 'first' | 'all';
-  fallback?: string;  // Variable reference or fixed value if nothing found
-}
-
-export interface RelatedEntitiesSpec {
-  relatedTo: string;  // Variable reference
-  relationship: string;  // Relationship kind
-  direction: 'src' | 'dst' | 'both';
-}
+// VariableSelectionRule and RelatedEntitiesSpec are imported from rules/selection/types
 
 // =============================================================================
 // STEP 6: TEMPLATE VARIANTS
@@ -567,15 +381,7 @@ export interface TemplateVariant {
 /**
  * Conditions for variant selection.
  */
-export type VariantCondition =
-  | { type: 'pressure'; pressureId: string; min?: number; max?: number }
-  | { type: 'pressure_compare'; pressureA: string; pressureB: string }
-  | { type: 'entity_count'; kind: string; subtype?: string; min?: number; max?: number }
-  | { type: 'has_tag'; entity: string; tag: string }
-  | { type: 'random'; chance: number }
-  | { type: 'always' }
-  | { type: 'and'; conditions: VariantCondition[] }
-  | { type: 'or'; conditions: VariantCondition[] };
+export type VariantCondition = Condition;
 
 /**
  * Effects applied when a variant is selected.

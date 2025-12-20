@@ -72,12 +72,21 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
   }, [systems, onChange, selectedIndex, selectedSystem]);
 
   const handleAddSystem = useCallback((type) => {
+    const needsSelection = [
+      'graphContagion',
+      'connectionEvolution',
+      'thresholdTrigger',
+      'clusterFormation',
+      'tagDiffusion',
+      'planeDiffusion',
+    ].includes(type);
     const newSystem = {
       systemType: type,
       config: {
         id: `system_${Date.now()}`,
         name: `New ${SYSTEM_TYPES[type]?.label || type}`,
         description: '',
+        ...(needsSelection ? { selection: { strategy: 'by_kind', kind: 'any' } } : {}),
       },
     };
     onChange([...systems, newSystem]);

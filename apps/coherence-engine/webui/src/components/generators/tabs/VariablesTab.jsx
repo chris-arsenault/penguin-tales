@@ -3,9 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { VARIABLE_PICK_STRATEGIES } from '../constants';
-import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
-import { SelectionFiltersEditor } from '../filters';
+import VariableSelectionEditor from '../../shared/VariableSelectionEditor';
 
 /**
  * Safely display a value that should be a string.
@@ -29,68 +27,15 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
   const [hovering, setHovering] = useState(false);
 
   // Handle the nested select structure: { select: { from, kind, pickStrategy, ... }, required }
-  const selectConfig = config.select || config;
+  const selectConfig = config.select || {};
   const isRequired = config.required || false;
-
-  const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
-    value: ek.kind,
-    label: ek.description || ek.kind,
-  }));
-
-  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
-    value: rk.kind,
-    label: rk.description || rk.kind,
-  }));
-
-  const getSubtypeOptions = (kind) => {
-    const ek = (schema?.entityKinds || []).find((e) => e.kind === kind);
-    if (!ek?.subtypes) return [];
-    return ek.subtypes.map((st) => ({ value: st.id, label: st.name || st.id }));
-  };
-
-  const updateSelect = (field, value) => {
-    const newSelect = { ...selectConfig, [field]: value };
-    onChange({ ...config, select: newSelect });
-  };
-
-  const updateSelectMultiple = (updates) => {
-    const newSelect = { ...selectConfig, ...updates };
-    onChange({ ...config, select: newSelect });
-  };
 
   const updateRequired = (value) => {
     onChange({ ...config, required: value });
   };
 
-  // Determine mode: 'graph' (select by kind) or 'related' (select related entities)
-  // In lore-weave, from can be 'graph' or { relatedTo, relationship, direction }
-  const isRelatedMode = selectConfig.from && typeof selectConfig.from === 'object';
-  const fromSpec = isRelatedMode ? selectConfig.from : null;
-
-  const setMode = (mode) => {
-    if (mode === 'graph') {
-      // Clear related entity config, keep kind-based selection
-      const { from, ...rest } = selectConfig;
-      onChange({ ...config, select: { ...rest, from: 'graph' } });
-    } else {
-      // Switch to related entity mode
-      onChange({
-        ...config,
-        select: {
-          ...selectConfig,
-          from: { relatedTo: '$target', relationship: '', direction: 'both' },
-        },
-      });
-    }
-  };
-
-  const updateFrom = (field, value) => {
-    const newFrom = { ...(fromSpec || { relatedTo: '$target', relationship: '', direction: 'both' }), [field]: value };
-    updateSelect('from', newFrom);
-  };
-
   // Display info
-  const displayMode = isRelatedMode ? 'Related entities' : (selectConfig.kind || 'Not configured');
+  const displayMode = selectConfig.from && typeof selectConfig.from === 'object' ? 'Related entities' : (selectConfig.kind || 'Not configured');
   const displayStrategy = safeDisplay(selectConfig.pickStrategy, 'Not set', 'pickStrategy');
   const filterCount = (selectConfig.filters || []).length;
 
@@ -136,116 +81,12 @@ function VariableCard({ name, config, onChange, onRemove, schema, availableRefs 
             </label>
           </div>
 
-          <div className="form-grid">
-            <ReferenceDropdown
-              label="Select From"
-              value={isRelatedMode ? 'related' : 'graph'}
-              onChange={(v) => setMode(v)}
-              options={[
-                { value: 'graph', label: 'Graph (by entity kind)' },
-                { value: 'related', label: 'Related Entities' },
-              ]}
-            />
-
-            {!isRelatedMode && (
-              <ReferenceDropdown
-                label="Entity Kind"
-                value={selectConfig.kind}
-                onChange={(v) => updateSelectMultiple({ kind: v, subtypes: undefined })}
-                options={entityKindOptions}
-                placeholder="Select kind..."
-              />
-            )}
-
-            {isRelatedMode && (
-              <>
-                <ReferenceDropdown
-                  label="Related To"
-                  value={fromSpec?.relatedTo || '$target'}
-                  onChange={(v) => updateFrom('relatedTo', v)}
-                  options={availableRefs.map((r) => ({ value: r, label: r }))}
-                  placeholder="Select entity..."
-                />
-                <ReferenceDropdown
-                  label="Relationship Kind"
-                  value={fromSpec?.relationship || ''}
-                  onChange={(v) => updateFrom('relationship', v)}
-                  options={relationshipKindOptions}
-                  placeholder="Select relationship..."
-                />
-                <ReferenceDropdown
-                  label="Direction"
-                  value={fromSpec?.direction || 'both'}
-                  onChange={(v) => updateFrom('direction', v)}
-                  options={[
-                    { value: 'both', label: 'Any direction' },
-                    { value: 'src', label: 'As source (outgoing)' },
-                    { value: 'dst', label: 'As target (incoming)' },
-                  ]}
-                />
-              </>
-            )}
-
-            <ReferenceDropdown
-              label="Pick Strategy"
-              value={selectConfig.pickStrategy || ''}
-              onChange={(v) => updateSelect('pickStrategy', v)}
-              options={VARIABLE_PICK_STRATEGIES}
-              placeholder="Select..."
-            />
-          </div>
-
-          {/* Entity kind filter - applies in both modes */}
-          {isRelatedMode && (
-            <div style={{ marginTop: '16px' }}>
-              <ReferenceDropdown
-                label="Filter by Entity Kind (optional)"
-                value={selectConfig.kind || ''}
-                onChange={(v) => updateSelectMultiple({ kind: v || undefined, subtypes: undefined })}
-                options={entityKindOptions}
-                placeholder="Any kind"
-              />
-            </div>
-          )}
-
-          {/* Subtype filter */}
-          {selectConfig.kind && (
-            <div style={{ marginTop: '16px' }}>
-              <ChipSelect
-                label="Subtypes (optional)"
-                value={selectConfig.subtypes || []}
-                onChange={(v) => updateSelect('subtypes', v.length > 0 ? v : undefined)}
-                options={getSubtypeOptions(selectConfig.kind)}
-                placeholder="Any subtype"
-              />
-            </div>
-          )}
-
-          {/* Status filter */}
-          <div style={{ marginTop: '16px' }}>
-            <label className="label">Status Filter (optional)</label>
-            <input
-              type="text"
-              value={selectConfig.statusFilter || ''}
-              onChange={(e) => updateSelect('statusFilter', e.target.value || undefined)}
-              className="input"
-              placeholder="e.g., active, historical"
-            />
-          </div>
-
-          {/* Selection Filters - same as target selection */}
-          <div style={{ marginTop: '24px' }}>
-            <label className="label">Selection Filters</label>
-            <div className="info-box-text" style={{ marginBottom: '12px', fontSize: '12px' }}>
-              Optional filters to narrow down which entities can be selected. All filters must pass.
-            </div>
-            <SelectionFiltersEditor
-              filters={selectConfig.filters}
-              onChange={(filters) => updateSelect('filters', filters.length > 0 ? filters : undefined)}
-              schema={schema}
-              availableRefs={availableRefs}
-            />
-          </div>
+          <VariableSelectionEditor
+            value={selectConfig}
+            onChange={(updated) => onChange({ ...config, select: updated })}
+            schema={schema}
+            availableRefs={availableRefs}
+          />
         </div>
       )}
     </div>

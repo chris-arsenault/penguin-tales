@@ -25,7 +25,7 @@ export function computeUsageMap(schema, pressures, eras, generators, systems, ac
     subtypes: {},         // { subtype: { generators: [], systems: [], actions: [] } }
     statuses: {},         // { status: { generators: [], systems: [], actions: [] } }
     relationshipKinds: {},// { kindId: { generators: [], systems: [], actions: [], pressures: [] } }
-    tags: {},             // { tag: { pressures: [], systems: [], generators: [] } }
+    tags: {},             // { tag: { pressures: [], systems: [], generators: [], actions: [] } }
 
     // Cross-tab reference tracking
     pressures: {},        // { pressureId: { generators: [], systems: [], actions: [], eras: [] } }
@@ -110,13 +110,13 @@ function initializeFromSchema(usageMap, schema) {
   // Tags (from tag registry if available)
   (schema?.tagRegistry || []).forEach(t => {
     const tagId = typeof t === 'string' ? t : t.tag;
-    usageMap.tags[tagId] = { pressures: [], systems: [], generators: [] };
+    ensureTagEntry(usageMap, tagId);
   });
 }
 
 function initializePressures(usageMap, pressures) {
   (pressures || []).forEach(p => {
-    usageMap.pressures[p.id] = { generators: [], systems: [], actions: [], feedbackSources: [], feedbackSinks: [] };
+    usageMap.pressures[p.id] = { generators: [], systems: [], actions: [], eras: [], feedbackSources: [], feedbackSinks: [] };
   });
 }
 
@@ -129,6 +129,404 @@ function initializeGeneratorsAndSystems(usageMap, generators, systems) {
     const sysId = s.config?.id || s.id;
     usageMap.systems[sysId] = { eras: [] };
   });
+}
+
+function normalizeTagId(tag) {
+  if (!tag) return '';
+  if (typeof tag === 'string') return tag;
+  if (typeof tag === 'object') {
+    if (typeof tag.tag === 'string') return tag.tag;
+    if (typeof tag.id === 'string') return tag.id;
+  }
+  return String(tag);
+}
+
+function ensureTagEntry(usageMap, tag) {
+  const tagId = normalizeTagId(tag);
+  if (!tagId) return '';
+  if (!usageMap.tags[tagId] || typeof usageMap.tags[tagId] !== 'object') {
+    usageMap.tags[tagId] = {};
+  }
+  const entry = usageMap.tags[tagId];
+  if (!Array.isArray(entry.pressures)) entry.pressures = [];
+  if (!Array.isArray(entry.systems)) entry.systems = [];
+  if (!Array.isArray(entry.generators)) entry.generators = [];
+  if (!Array.isArray(entry.actions)) entry.actions = [];
+  return tagId;
+}
+
+function recordEntityKindRef(usageMap, kind, contextKey, ref, info) {
+  if (!kind || kind === 'any') return;
+  if (usageMap.entityKinds[kind]) {
+    usageMap.entityKinds[kind][contextKey].push(ref);
+  } else {
+    usageMap.validation.invalidRefs.push({
+      type: info.type,
+      id: info.id,
+      field: info.field,
+      refType: 'entityKind',
+      refId: kind,
+      location: info.location,
+    });
+  }
+}
+
+function recordRelationshipKindRef(usageMap, kind, contextKey, ref, info) {
+  if (!kind) return;
+  if (usageMap.relationshipKinds[kind]) {
+    usageMap.relationshipKinds[kind][contextKey].push(ref);
+  } else {
+    usageMap.validation.invalidRefs.push({
+      type: info.type,
+      id: info.id,
+      field: info.field,
+      refType: 'relationshipKind',
+      refId: kind,
+      location: info.location,
+    });
+  }
+}
+
+function recordPressureRef(usageMap, pressureIds, pressureId, contextKey, ref, info) {
+  if (!pressureId) return;
+  if (usageMap.pressures[pressureId]) {
+    usageMap.pressures[pressureId][contextKey].push(ref);
+  }
+  if (!pressureIds.has(pressureId)) {
+    usageMap.validation.invalidRefs.push({
+      type: info.type,
+      id: info.id,
+      field: info.field,
+      refType: 'pressure',
+      refId: pressureId,
+      location: info.location,
+    });
+  }
+}
+
+function recordTagRef(usageMap, tag, contextKey, ref) {
+  const tagId = ensureTagEntry(usageMap, tag);
+  if (!tagId) return;
+  if (!Array.isArray(usageMap.tags[tagId][contextKey])) {
+    usageMap.tags[tagId][contextKey] = [];
+  }
+  usageMap.tags[tagId][contextKey].push(ref);
+}
+
+function recordSubtypeRef(usageMap, subtype, contextKey, ref) {
+  if (!subtype) return;
+  if (usageMap.subtypes[subtype]) {
+    usageMap.subtypes[subtype][contextKey].push(ref);
+  }
+}
+
+function recordStatusRef(usageMap, status, contextKey, ref) {
+  if (!status) return;
+  if (usageMap.statuses[status]) {
+    usageMap.statuses[status][contextKey].push(ref);
+  }
+}
+
+function scanGraphPathAssertion(assertion, usageMap, contextKey, ref, info) {
+  if (!assertion) return;
+  (assertion.path || []).forEach((step, idx) => {
+    if (step.via) {
+      recordRelationshipKindRef(
+        usageMap,
+        step.via,
+        contextKey,
+        ref,
+        { ...info, field: `${info.field}.path[${idx}].via` }
+      );
+    }
+    if (step.targetKind && step.targetKind !== 'any') {
+      recordEntityKindRef(
+        usageMap,
+        step.targetKind,
+        contextKey,
+        ref,
+        { ...info, field: `${info.field}.path[${idx}].targetKind` }
+      );
+    }
+    if (step.targetSubtype && step.targetSubtype !== 'any') {
+      recordSubtypeRef(usageMap, step.targetSubtype, contextKey, ref);
+    }
+    if (step.targetStatus && step.targetStatus !== 'any') {
+      recordStatusRef(usageMap, step.targetStatus, contextKey, ref);
+    }
+  });
+
+  (assertion.where || []).forEach((constraint, idx) => {
+    switch (constraint.type) {
+      case 'has_relationship':
+      case 'lacks_relationship':
+        recordRelationshipKindRef(
+          usageMap,
+          constraint.kind,
+          contextKey,
+          ref,
+          { ...info, field: `${info.field}.where[${idx}].kind` }
+        );
+        break;
+      case 'kind_equals':
+        recordEntityKindRef(
+          usageMap,
+          constraint.kind,
+          contextKey,
+          ref,
+          { ...info, field: `${info.field}.where[${idx}].kind` }
+        );
+        break;
+      case 'subtype_equals':
+        recordSubtypeRef(usageMap, constraint.subtype, contextKey, ref);
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+function scanSelectionFilters(filters, usageMap, contextKey, ref, info) {
+  (filters || []).forEach((filter, idx) => {
+    switch (filter.type) {
+      case 'has_relationship':
+      case 'lacks_relationship':
+        recordRelationshipKindRef(
+          usageMap,
+          filter.kind,
+          contextKey,
+          ref,
+          { ...info, field: `${info.field}[${idx}].kind` }
+        );
+        break;
+      case 'shares_related':
+        recordRelationshipKindRef(
+          usageMap,
+          filter.relationshipKind,
+          contextKey,
+          ref,
+          { ...info, field: `${info.field}[${idx}].relationshipKind` }
+        );
+        break;
+      case 'has_tag':
+      case 'lacks_tag':
+        recordTagRef(usageMap, filter.tag, contextKey, ref);
+        break;
+      case 'has_tags':
+      case 'has_any_tag':
+      case 'lacks_any_tag':
+        (filter.tags || []).forEach(tag => recordTagRef(usageMap, tag, contextKey, ref));
+        break;
+      case 'has_status':
+        recordStatusRef(usageMap, filter.status, contextKey, ref);
+        break;
+      case 'graph_path':
+        scanGraphPathAssertion(filter.assert, usageMap, contextKey, ref, {
+          ...info,
+          field: `${info.field}[${idx}].assert`,
+        });
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+function scanSelectionRule(selection, usageMap, contextKey, ref, info) {
+  if (!selection) return;
+  if (selection.kind) {
+    recordEntityKindRef(usageMap, selection.kind, contextKey, ref, { ...info, field: `${info.field}.kind` });
+  }
+  (selection.kinds || []).forEach((kind) => {
+    recordEntityKindRef(usageMap, kind, contextKey, ref, { ...info, field: `${info.field}.kinds` });
+  });
+  (selection.subtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
+  (selection.excludeSubtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
+  if (selection.statusFilter) {
+    recordStatusRef(usageMap, selection.statusFilter, contextKey, ref);
+  }
+  (selection.statuses || []).forEach(status => recordStatusRef(usageMap, status, contextKey, ref));
+  if (selection.notStatus) {
+    recordStatusRef(usageMap, selection.notStatus, contextKey, ref);
+  }
+  if (selection.relationshipKind) {
+    recordRelationshipKindRef(usageMap, selection.relationshipKind, contextKey, ref, {
+      ...info,
+      field: `${info.field}.relationshipKind`,
+    });
+  }
+  scanSelectionFilters(selection.filters, usageMap, contextKey, ref, { ...info, field: `${info.field}.filters` });
+  (selection.saturationLimits || []).forEach((limit, idx) => {
+    recordRelationshipKindRef(usageMap, limit.relationshipKind, contextKey, ref, {
+      ...info,
+      field: `${info.field}.saturationLimits[${idx}].relationshipKind`,
+    });
+    if (limit.fromKind) {
+      recordEntityKindRef(usageMap, limit.fromKind, contextKey, ref, {
+        ...info,
+        field: `${info.field}.saturationLimits[${idx}].fromKind`,
+      });
+    }
+  });
+}
+
+function scanVariableSelectionRule(selection, usageMap, contextKey, ref, info) {
+  if (!selection) return;
+  const from = selection.from;
+  if (from && typeof from === 'object') {
+    recordRelationshipKindRef(usageMap, from.relationship, contextKey, ref, {
+      ...info,
+      field: `${info.field}.from.relationship`,
+    });
+  }
+  if (selection.kind) {
+    recordEntityKindRef(usageMap, selection.kind, contextKey, ref, { ...info, field: `${info.field}.kind` });
+  }
+  (selection.kinds || []).forEach(kind => {
+    recordEntityKindRef(usageMap, kind, contextKey, ref, { ...info, field: `${info.field}.kinds` });
+  });
+  (selection.subtypes || []).forEach(subtype => recordSubtypeRef(usageMap, subtype, contextKey, ref));
+  if (selection.statusFilter) {
+    recordStatusRef(usageMap, selection.statusFilter, contextKey, ref);
+  }
+  (selection.statuses || []).forEach(status => recordStatusRef(usageMap, status, contextKey, ref));
+  if (selection.notStatus) {
+    recordStatusRef(usageMap, selection.notStatus, contextKey, ref);
+  }
+  scanSelectionFilters(selection.filters, usageMap, contextKey, ref, { ...info, field: `${info.field}.filters` });
+  scanSelectionFilters(selection.preferFilters, usageMap, contextKey, ref, { ...info, field: `${info.field}.preferFilters` });
+}
+
+function scanCondition(condition, usageMap, pressureIds, contextKey, ref, info) {
+  if (!condition) return;
+  switch (condition.type) {
+    case 'pressure':
+      recordPressureRef(usageMap, pressureIds, condition.pressureId, contextKey, ref, info);
+      break;
+    case 'pressure_any_above':
+      (condition.pressureIds || []).forEach((pressureId) =>
+        recordPressureRef(usageMap, pressureIds, pressureId, contextKey, ref, info)
+      );
+      break;
+    case 'pressure_compare':
+      recordPressureRef(usageMap, pressureIds, condition.pressureA, contextKey, ref, info);
+      recordPressureRef(usageMap, pressureIds, condition.pressureB, contextKey, ref, info);
+      break;
+    case 'entity_count':
+      recordEntityKindRef(usageMap, condition.kind, contextKey, ref, info);
+      recordSubtypeRef(usageMap, condition.subtype, contextKey, ref);
+      recordStatusRef(usageMap, condition.status, contextKey, ref);
+      break;
+    case 'relationship_count':
+      recordRelationshipKindRef(usageMap, condition.relationshipKind, contextKey, ref, info);
+      break;
+    case 'relationship_exists':
+      recordRelationshipKindRef(usageMap, condition.relationshipKind, contextKey, ref, info);
+      recordEntityKindRef(usageMap, condition.targetKind, contextKey, ref, info);
+      recordSubtypeRef(usageMap, condition.targetSubtype, contextKey, ref);
+      recordStatusRef(usageMap, condition.targetStatus, contextKey, ref);
+      break;
+    case 'tag_exists':
+    case 'tag_absent':
+      recordTagRef(usageMap, condition.tag, contextKey, ref);
+      break;
+    case 'status':
+      recordStatusRef(usageMap, condition.status, contextKey, ref);
+      break;
+    case 'graph_path':
+      scanGraphPathAssertion(condition.assert, usageMap, contextKey, ref, info);
+      break;
+    case 'entity_has_relationship':
+      recordRelationshipKindRef(usageMap, condition.relationshipKind, contextKey, ref, info);
+      break;
+    case 'and':
+    case 'or':
+      (condition.conditions || []).forEach((child, idx) =>
+        scanCondition(child, usageMap, pressureIds, contextKey, ref, { ...info, field: `${info.field}.${condition.type}[${idx}]` })
+      );
+      break;
+    default:
+      break;
+  }
+}
+
+function scanMutations(mutations, usageMap, pressureIds, contextKey, ref, info) {
+  (mutations || []).forEach((mutation, idx) => {
+    switch (mutation.type) {
+      case 'set_tag':
+      case 'remove_tag':
+        recordTagRef(usageMap, mutation.tag, contextKey, ref);
+        break;
+      case 'create_relationship':
+        recordRelationshipKindRef(usageMap, mutation.kind, contextKey, ref, {
+          ...info,
+          field: `${info.field}[${idx}].kind`,
+        });
+        break;
+      case 'adjust_relationship_strength':
+        recordRelationshipKindRef(usageMap, mutation.kind, contextKey, ref, {
+          ...info,
+          field: `${info.field}[${idx}].kind`,
+        });
+        break;
+      case 'archive_relationship':
+        recordRelationshipKindRef(usageMap, mutation.relationshipKind, contextKey, ref, {
+          ...info,
+          field: `${info.field}[${idx}].relationshipKind`,
+        });
+        break;
+      case 'change_status':
+        recordStatusRef(usageMap, mutation.newStatus, contextKey, ref);
+        break;
+      case 'modify_pressure':
+        recordPressureRef(usageMap, pressureIds, mutation.pressureId, contextKey, ref, {
+          ...info,
+          field: `${info.field}[${idx}].pressureId`,
+        });
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+function scanMetric(metric, usageMap, contextKey, ref, info) {
+  if (!metric) return;
+  switch (metric.type) {
+    case 'entity_count':
+      recordEntityKindRef(usageMap, metric.kind, contextKey, ref, info);
+      recordSubtypeRef(usageMap, metric.subtype, contextKey, ref);
+      recordStatusRef(usageMap, metric.status, contextKey, ref);
+      break;
+    case 'relationship_count':
+    case 'connection_count':
+      (metric.relationshipKinds || []).forEach((kind) =>
+        recordRelationshipKindRef(usageMap, kind, contextKey, ref, info)
+      );
+      break;
+    case 'tag_count':
+      (metric.tags || []).forEach(tag => recordTagRef(usageMap, tag, contextKey, ref));
+      break;
+    case 'ratio':
+      scanMetric(metric.numerator, usageMap, contextKey, ref, info);
+      scanMetric(metric.denominator, usageMap, contextKey, ref, info);
+      break;
+    case 'status_ratio':
+      recordEntityKindRef(usageMap, metric.kind, contextKey, ref, info);
+      recordSubtypeRef(usageMap, metric.subtype, contextKey, ref);
+      recordStatusRef(usageMap, metric.aliveStatus, contextKey, ref);
+      break;
+    case 'cross_culture_ratio':
+      (metric.relationshipKinds || []).forEach((kind) =>
+        recordRelationshipKindRef(usageMap, kind, contextKey, ref, info)
+      );
+      break;
+    case 'shared_relationship':
+      recordRelationshipKindRef(usageMap, metric.sharedRelationshipKind, contextKey, ref, info);
+      break;
+    default:
+      break;
+  }
 }
 
 function scanPressureReferences(usageMap, pressures, schema) {
@@ -204,8 +602,11 @@ function scanPressureReferences(usageMap, pressures, schema) {
 function scanEraReferences(usageMap, eras, generators, systems) {
   const generatorIds = new Set((generators || []).map(g => g.id));
   const systemIds = new Set((systems || []).map(s => s.config?.id || s.id));
+  const pressureIds = new Set(Object.keys(usageMap.pressures || {}));
 
   (eras || []).forEach(era => {
+    const eraRef = { id: era.id, name: era.name };
+
     // Track generator references
     Object.entries(era.templateWeights || {}).forEach(([genId, weight]) => {
       if (usageMap.generators[genId]) {
@@ -239,6 +640,25 @@ function scanEraReferences(usageMap, eras, generators, systems) {
         });
       }
     });
+
+    (era.entryEffects?.mutations || []).forEach((mutation) => {
+      if (mutation?.type !== 'modify_pressure') return;
+      recordPressureRef(usageMap, pressureIds, mutation.pressureId, 'eras', eraRef, {
+        type: 'era',
+        id: era.id,
+        field: 'entryEffects.mutations',
+        location: `Era "${era.name || era.id}"`,
+      });
+    });
+    (era.exitEffects?.mutations || []).forEach((mutation) => {
+      if (mutation?.type !== 'modify_pressure') return;
+      recordPressureRef(usageMap, pressureIds, mutation.pressureId, 'eras', eraRef, {
+        type: 'era',
+        id: era.id,
+        field: 'exitEffects.mutations',
+        location: `Era "${era.name || era.id}"`,
+      });
+    });
   });
 }
 
@@ -247,141 +667,107 @@ function scanGeneratorReferences(usageMap, generators, schema, pressures) {
 
   (generators || []).forEach(gen => {
     const genRef = { id: gen.id, name: gen.name };
+    const location = `Generator "${gen.name || gen.id}"`;
 
-    // Scan applicability rules
-    const scanApplicability = (rules) => {
-      (rules || []).forEach(rule => {
-        if (rule.kind && usageMap.entityKinds[rule.kind]) {
-          usageMap.entityKinds[rule.kind].generators.push(genRef);
-        } else if (rule.kind) {
-          usageMap.validation.invalidRefs.push({
-            type: 'generator',
-            id: gen.id,
-            field: 'applicability.kind',
-            refType: 'entityKind',
-            refId: rule.kind,
-            location: `Generator "${gen.name || gen.id}"`,
-          });
-        }
-
-        if (rule.pressureId) {
-          if (usageMap.pressures[rule.pressureId]) {
-            usageMap.pressures[rule.pressureId].generators.push(genRef);
-          }
-          if (!pressureIds.has(rule.pressureId)) {
-            usageMap.validation.invalidRefs.push({
-              type: 'generator',
-              id: gen.id,
-              field: 'applicability.pressureId',
-              refType: 'pressure',
-              refId: rule.pressureId,
-              location: `Generator "${gen.name || gen.id}"`,
-            });
-          }
-        }
-
-        // Scan tag-based applicability rules
-        if (rule.tags && Array.isArray(rule.tags)) {
-          rule.tags.forEach(tag => {
-            if (!usageMap.tags[tag]) {
-              usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-            }
-            usageMap.tags[tag].generators.push(genRef);
-          });
-        }
-
-        // Recurse for nested rules (or/and)
-        if (rule.rules) {
-          scanApplicability(rule.rules);
-        }
+    (gen.applicability || []).forEach((rule, idx) => {
+      scanCondition(rule, usageMap, pressureIds, 'generators', genRef, {
+        type: 'generator',
+        id: gen.id,
+        field: `applicability[${idx}]`,
+        location,
       });
-    };
-    scanApplicability(gen.applicability);
+    });
 
-    // Scan target selection
-    if (gen.selection?.target) {
-      const target = gen.selection.target;
-      if (target.kind && usageMap.entityKinds[target.kind]) {
-        usageMap.entityKinds[target.kind].generators.push(genRef);
-      } else if (target.kind) {
-        usageMap.validation.invalidRefs.push({
-          type: 'generator',
-          id: gen.id,
-          field: 'selection.target.kind',
-          refType: 'entityKind',
-          refId: target.kind,
-          location: `Generator "${gen.name || gen.id}"`,
-        });
-      }
-    }
+    scanSelectionRule(gen.selection, usageMap, 'generators', genRef, {
+      type: 'generator',
+      id: gen.id,
+      field: 'selection',
+      location,
+    });
 
-    // Scan entity creation
+    Object.entries(gen.variables || {}).forEach(([varName, variable]) => {
+      scanVariableSelectionRule(variable?.select, usageMap, 'generators', genRef, {
+        type: 'generator',
+        id: gen.id,
+        field: `variables.${varName}.select`,
+        location,
+      });
+    });
+
     (gen.creation || []).forEach((creation, idx) => {
-      if (creation.kind && usageMap.entityKinds[creation.kind]) {
-        usageMap.entityKinds[creation.kind].generators.push(genRef);
-      } else if (creation.kind) {
-        usageMap.validation.invalidRefs.push({
+      const kind = typeof creation.kind === 'string' ? creation.kind : null;
+      if (kind) {
+        recordEntityKindRef(usageMap, kind, 'generators', genRef, {
           type: 'generator',
           id: gen.id,
           field: `creation[${idx}].kind`,
-          refType: 'entityKind',
-          refId: creation.kind,
-          location: `Generator "${gen.name || gen.id}"`,
+          location,
         });
       }
 
-      if (creation.subtype && usageMap.subtypes[creation.subtype]) {
-        usageMap.subtypes[creation.subtype].generators.push(genRef);
+      if (typeof creation.subtype === 'string') {
+        recordSubtypeRef(usageMap, creation.subtype, 'generators', genRef);
+      } else if (creation.subtype?.random && Array.isArray(creation.subtype.random)) {
+        creation.subtype.random.forEach((subtype) => {
+          recordSubtypeRef(usageMap, subtype, 'generators', genRef);
+        });
       }
 
-      if (creation.status && usageMap.statuses[creation.status]) {
-        usageMap.statuses[creation.status].generators.push(genRef);
+      if (creation.status) {
+        recordStatusRef(usageMap, creation.status, 'generators', genRef);
       }
 
-      // Scan tags assigned to created entities
       if (creation.tags && typeof creation.tags === 'object') {
-        Object.keys(creation.tags).forEach(tag => {
-          if (!usageMap.tags[tag]) {
-            usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-          }
-          usageMap.tags[tag].generators.push(genRef);
-        });
+        Object.keys(creation.tags).forEach(tag => recordTagRef(usageMap, tag, 'generators', genRef));
       }
     });
 
-    // Scan relationships
     (gen.relationships || []).forEach((rel, idx) => {
-      if (rel.kind && usageMap.relationshipKinds[rel.kind]) {
-        usageMap.relationshipKinds[rel.kind].generators.push(genRef);
-      } else if (rel.kind) {
-        usageMap.validation.invalidRefs.push({
+      recordRelationshipKindRef(usageMap, rel.kind, 'generators', genRef, {
+        type: 'generator',
+        id: gen.id,
+        field: `relationships[${idx}].kind`,
+        location,
+      });
+    });
+
+    scanMutations(gen.stateUpdates || [], usageMap, pressureIds, 'generators', genRef, {
+      type: 'generator',
+      id: gen.id,
+      field: 'stateUpdates',
+      location,
+    });
+
+    (gen.variants?.options || []).forEach((variant, idx) => {
+      scanCondition(variant.when, usageMap, pressureIds, 'generators', genRef, {
+        type: 'generator',
+        id: gen.id,
+        field: `variants.options[${idx}].when`,
+        location,
+      });
+
+      (variant.apply?.relationships || []).forEach((rel, relIdx) => {
+        recordRelationshipKindRef(usageMap, rel.kind, 'generators', genRef, {
           type: 'generator',
           id: gen.id,
-          field: `relationships[${idx}].kind`,
-          refType: 'relationshipKind',
-          refId: rel.kind,
-          location: `Generator "${gen.name || gen.id}"`,
+          field: `variants.options[${idx}].apply.relationships[${relIdx}].kind`,
+          location,
+        });
+      });
+
+      if (variant.apply?.tags) {
+        Object.values(variant.apply.tags).forEach((tagMap) => {
+          if (!tagMap || typeof tagMap !== 'object') return;
+          Object.keys(tagMap).forEach((tag) => recordTagRef(usageMap, tag, 'generators', genRef));
         });
       }
-    });
 
-    // Scan effects/state updates for pressure references
-    (gen.stateUpdates || []).forEach((update, idx) => {
-      if (update.pressureId) {
-        if (usageMap.pressures[update.pressureId]) {
-          usageMap.pressures[update.pressureId].generators.push(genRef);
-        }
-        if (!pressureIds.has(update.pressureId)) {
-          usageMap.validation.invalidRefs.push({
-            type: 'generator',
-            id: gen.id,
-            field: `stateUpdates[${idx}].pressureId`,
-            refType: 'pressure',
-            refId: update.pressureId,
-            location: `Generator "${gen.name || gen.id}"`,
-          });
-        }
-      }
+      scanMutations(variant.apply?.stateUpdates || [], usageMap, pressureIds, 'generators', genRef, {
+        type: 'generator',
+        id: gen.id,
+        field: `variants.options[${idx}].apply.stateUpdates`,
+        location,
+      });
     });
   });
 }
@@ -394,171 +780,197 @@ function scanSystemReferences(usageMap, systems, schema, pressures) {
     const sysName = sys.config?.name || sysId;
     const sysRef = { id: sysId, name: sysName };
     const config = sys.config || {};
+    const location = `System "${sysName}"`;
 
-    // Entity filter references
-    if (config.entityFilter?.kind) {
-      if (usageMap.entityKinds[config.entityFilter.kind]) {
-        usageMap.entityKinds[config.entityFilter.kind].systems.push(sysRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'system',
-          id: sysId,
-          field: 'entityFilter.kind',
-          refType: 'entityKind',
-          refId: config.entityFilter.kind,
-          location: `System "${sysName}"`,
-        });
-      }
-    }
+    scanSelectionRule(config.selection, usageMap, 'systems', sysRef, {
+      type: 'system',
+      id: sysId,
+      field: 'selection',
+      location,
+    });
 
-    // Pressure changes
-    Object.keys(config.pressureChanges || {}).forEach(pressureId => {
-      if (usageMap.pressures[pressureId]) {
-        usageMap.pressures[pressureId].systems.push(sysRef);
-      }
-      if (!pressureIds.has(pressureId)) {
-        usageMap.validation.invalidRefs.push({
-          type: 'system',
-          id: sysId,
-          field: 'pressureChanges',
-          refType: 'pressure',
-          refId: pressureId,
-          location: `System "${sysName}"`,
-        });
-      }
+    Object.keys(config.pressureChanges || {}).forEach((pressureId) => {
+      recordPressureRef(usageMap, pressureIds, pressureId, 'systems', sysRef, {
+        type: 'system',
+        id: sysId,
+        field: 'pressureChanges',
+        location,
+      });
     });
 
     // Type-specific scanning
     switch (sys.systemType) {
       case 'graphContagion':
-        // Scan contagion source
-        if (config.contagion?.relationshipKind) {
-          const rk = config.contagion.relationshipKind;
-          if (usageMap.relationshipKinds[rk]) {
-            usageMap.relationshipKinds[rk].systems.push(sysRef);
-          } else {
-            usageMap.validation.invalidRefs.push({
-              type: 'system',
-              id: sysId,
-              field: 'contagion.relationshipKind',
-              refType: 'relationshipKind',
-              refId: rk,
-              location: `System "${sysName}"`,
-            });
-          }
+        if (config.contagion?.type === 'relationship') {
+          recordRelationshipKindRef(usageMap, config.contagion.relationshipKind, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'contagion.relationshipKind',
+            location,
+          });
         }
-        // Scan vectors
+        if (config.contagion?.type === 'tag' && config.contagion.tagPattern) {
+          recordTagRef(usageMap, config.contagion.tagPattern, 'systems', sysRef);
+        }
         (config.vectors || []).forEach((vector, idx) => {
-          if (vector.relationshipKind) {
-            if (usageMap.relationshipKinds[vector.relationshipKind]) {
-              usageMap.relationshipKinds[vector.relationshipKind].systems.push(sysRef);
-            } else {
-              usageMap.validation.invalidRefs.push({
-                type: 'system',
-                id: sysId,
-                field: `vectors[${idx}].relationshipKind`,
-                refType: 'relationshipKind',
-                refId: vector.relationshipKind,
-                location: `System "${sysName}"`,
-              });
-            }
+          recordRelationshipKindRef(usageMap, vector.relationshipKind, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: `vectors[${idx}].relationshipKind`,
+            location,
+          });
+        });
+        scanMutations(
+          config.infectionAction ? [config.infectionAction] : [],
+          usageMap,
+          pressureIds,
+          'systems',
+          sysRef,
+          {
+            type: 'system',
+            id: sysId,
+            field: 'infectionAction',
+            location,
+          }
+        );
+        (config.phaseTransitions || []).forEach((transition, idx) => {
+          scanSelectionRule(transition.selection, usageMap, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: `phaseTransitions[${idx}].selection`,
+            location,
+          });
+          if (transition.toStatus) {
+            recordStatusRef(usageMap, transition.toStatus, 'systems', sysRef);
           }
         });
+        if (config.multiSource?.sourceSelection) {
+          scanSelectionRule(config.multiSource.sourceSelection, usageMap, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'multiSource.sourceSelection',
+            location,
+          });
+        }
+        if (config.multiSource?.immunityTagPrefix) {
+          recordTagRef(usageMap, config.multiSource.immunityTagPrefix, 'systems', sysRef);
+        }
         break;
 
       case 'connectionEvolution':
-        // Scan metric relationship kind
-        if (config.metric?.relationshipKind) {
-          const rk = config.metric.relationshipKind;
-          if (usageMap.relationshipKinds[rk]) {
-            usageMap.relationshipKinds[rk].systems.push(sysRef);
-          }
-        }
+        (config.subtypeBonuses || []).forEach((bonus) => recordSubtypeRef(usageMap, bonus.subtype, 'systems', sysRef));
+        scanMetric(config.metric, usageMap, 'systems', sysRef, {
+          type: 'system',
+          id: sysId,
+          field: 'metric',
+          location,
+        });
+        (config.rules || []).forEach((rule, idx) => {
+          scanMutations(rule?.action ? [rule.action] : [], usageMap, pressureIds, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: `rules[${idx}].action`,
+            location,
+          });
+        });
         break;
 
       case 'thresholdTrigger':
-        // Scan conditions
         (config.conditions || []).forEach((cond, idx) => {
-          if (cond.relationshipKind && usageMap.relationshipKinds[cond.relationshipKind]) {
-            usageMap.relationshipKinds[cond.relationshipKind].systems.push(sysRef);
-          }
-          if (cond.tag) {
-            if (!usageMap.tags[cond.tag]) {
-              usageMap.tags[cond.tag] = { pressures: [], systems: [], generators: [], actions: [] };
-            }
-            usageMap.tags[cond.tag].systems.push(sysRef);
-          }
-          // has_any_tag conditions
-          if (cond.type === 'has_any_tag' && Array.isArray(cond.tags)) {
-            cond.tags.forEach(tag => {
-              if (!usageMap.tags[tag]) {
-                usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-              }
-              usageMap.tags[tag].systems.push(sysRef);
-            });
-          }
+          scanCondition(cond, usageMap, pressureIds, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: `conditions[${idx}]`,
+            location,
+          });
         });
-        // Scan actions
-        (config.actions || []).forEach((action, idx) => {
-          if (action.tag) {
-            if (!usageMap.tags[action.tag]) {
-              usageMap.tags[action.tag] = { pressures: [], systems: [], generators: [], actions: [] };
-            }
-            usageMap.tags[action.tag].systems.push(sysRef);
-          }
-          if (action.relationshipKind && usageMap.relationshipKinds[action.relationshipKind]) {
-            usageMap.relationshipKinds[action.relationshipKind].systems.push(sysRef);
-          }
+        scanMutations(config.actions || [], usageMap, pressureIds, 'systems', sysRef, {
+          type: 'system',
+          id: sysId,
+          field: 'actions',
+          location,
         });
-        // Scan clustering relationship kind
-        if (config.clusterRelationshipKind && usageMap.relationshipKinds[config.clusterRelationshipKind]) {
-          usageMap.relationshipKinds[config.clusterRelationshipKind].systems.push(sysRef);
+        if (config.clusterRelationshipKind) {
+          recordRelationshipKindRef(usageMap, config.clusterRelationshipKind, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'clusterRelationshipKind',
+            location,
+          });
         }
         break;
 
       case 'clusterFormation':
-        // Scan clustering criteria
-        (config.criteria || []).forEach((crit, idx) => {
-          if (crit.relationshipKind && usageMap.relationshipKinds[crit.relationshipKind]) {
-            usageMap.relationshipKinds[crit.relationshipKind].systems.push(sysRef);
-          }
-          // shared_tags criteria type
-          if (crit.type === 'shared_tags' || crit.type === 'has_tags') {
-            (crit.tags || []).forEach(tag => {
-              if (!usageMap.tags[tag]) {
-                usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-              }
-              usageMap.tags[tag].systems.push(sysRef);
+        (config.clustering?.criteria || []).forEach((crit, idx) => {
+          if (crit.type === 'shared_relationship') {
+            recordRelationshipKindRef(usageMap, crit.relationshipKind, 'systems', sysRef, {
+              type: 'system',
+              id: sysId,
+              field: `clustering.criteria[${idx}].relationshipKind`,
+              location,
             });
           }
         });
-        // Scan meta entity kind
-        if (config.metaEntity?.kind && usageMap.entityKinds[config.metaEntity.kind]) {
-          usageMap.entityKinds[config.metaEntity.kind].systems.push(sysRef);
+        if (config.metaEntity?.kind) {
+          recordEntityKindRef(usageMap, config.metaEntity.kind, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'metaEntity.kind',
+            location,
+          });
+        }
+        (config.metaEntity?.additionalTags || []).forEach((tag) => recordTagRef(usageMap, tag, 'systems', sysRef));
+        Object.keys(config.postProcess?.pressureChanges || {}).forEach((pressureId) => {
+          recordPressureRef(usageMap, pressureIds, pressureId, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'postProcess.pressureChanges',
+            location,
+          });
+        });
+        if (config.postProcess?.governanceRelationship) {
+          recordRelationshipKindRef(usageMap, config.postProcess.governanceRelationship, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'postProcess.governanceRelationship',
+            location,
+          });
+        }
+        if (config.postProcess?.governanceFactionSubtype) {
+          recordSubtypeRef(usageMap, config.postProcess.governanceFactionSubtype, 'systems', sysRef);
         }
         break;
 
       case 'tagDiffusion':
-        if (config.connection?.connectionKind && usageMap.relationshipKinds[config.connection.connectionKind]) {
-          usageMap.relationshipKinds[config.connection.connectionKind].systems.push(sysRef);
-        }
-        // Scan convergence/divergence tags
-        if (config.convergence?.tags) {
-          config.convergence.tags.forEach(tag => {
-            if (!usageMap.tags[tag]) {
-              usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-            }
-            usageMap.tags[tag].systems.push(sysRef);
+        if (config.connectionKind) {
+          recordRelationshipKindRef(usageMap, config.connectionKind, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'connectionKind',
+            location,
           });
         }
-        if (config.divergence?.tags) {
-          config.divergence.tags.forEach(tag => {
-            if (!usageMap.tags[tag]) {
-              usageMap.tags[tag] = { pressures: [], systems: [], generators: [], actions: [] };
-            }
-            usageMap.tags[tag].systems.push(sysRef);
+        (config.convergence?.tags || []).forEach((tag) => recordTagRef(usageMap, tag, 'systems', sysRef));
+        (config.divergence?.tags || []).forEach((tag) => recordTagRef(usageMap, tag, 'systems', sysRef));
+        if (config.divergencePressure?.pressureName) {
+          recordPressureRef(usageMap, pressureIds, config.divergencePressure.pressureName, 'systems', sysRef, {
+            type: 'system',
+            id: sysId,
+            field: 'divergencePressure.pressureName',
+            location,
           });
         }
+        break;
+
+      case 'planeDiffusion':
+        if (config.sources?.tagFilter) recordTagRef(usageMap, config.sources.tagFilter, 'systems', sysRef);
+        if (config.sources?.strengthTag) recordTagRef(usageMap, config.sources.strengthTag, 'systems', sysRef);
+        if (config.sinks?.tagFilter) recordTagRef(usageMap, config.sinks.tagFilter, 'systems', sysRef);
+        if (config.sinks?.strengthTag) recordTagRef(usageMap, config.sinks.strengthTag, 'systems', sysRef);
+        (config.outputTags || []).forEach((tagConfig) => recordTagRef(usageMap, tagConfig.tag, 'systems', sysRef));
+        if (config.valueTag) recordTagRef(usageMap, config.valueTag, 'systems', sysRef);
+        break;
+      default:
         break;
     }
   });
@@ -569,214 +981,54 @@ function scanActionReferences(usageMap, actions, schema, pressures) {
 
   (actions || []).forEach(action => {
     const actionRef = { id: action.id, name: action.name };
+    const location = `Action "${action.name || action.id}"`;
 
-    // Actor kinds
-    (action.actor?.kinds || []).forEach(kind => {
-      if (usageMap.entityKinds[kind]) {
-        usageMap.entityKinds[kind].actions.push(actionRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'actor.kinds',
-          refType: 'entityKind',
-          refId: kind,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
+    scanSelectionRule(action.actor?.selection, usageMap, 'actions', actionRef, {
+      type: 'action',
+      id: action.id,
+      field: 'actor.selection',
+      location,
     });
 
-    // Actor subtypes
-    (action.actor?.subtypes || []).forEach(subtype => {
-      if (usageMap.subtypes[subtype]) {
-        usageMap.subtypes[subtype].actions.push(actionRef);
-      }
-    });
-
-    // Actor required relationships
-    (action.actor?.requiredRelationships || []).forEach(rk => {
-      if (usageMap.relationshipKinds[rk]) {
-        usageMap.relationshipKinds[rk].actions.push(actionRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'actor.requiredRelationships',
-          refType: 'relationshipKind',
-          refId: rk,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    });
-
-    // Actor instigator relationship kind
-    if (action.actor?.instigator?.relationshipKind) {
-      const rk = action.actor.instigator.relationshipKind;
-      if (usageMap.relationshipKinds[rk]) {
-        usageMap.relationshipKinds[rk].actions.push(actionRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'actor.instigator.relationshipKind',
-          refType: 'relationshipKind',
-          refId: rk,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    }
-
-    // Actor instigator entity kinds
-    (action.actor?.instigator?.kinds || []).forEach(kind => {
-      if (usageMap.entityKinds[kind]) {
-        usageMap.entityKinds[kind].actions.push(actionRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'actor.instigator.kinds',
-          refType: 'entityKind',
-          refId: kind,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    });
-
-    // Targeting kind
-    if (action.targeting?.kind) {
-      if (usageMap.entityKinds[action.targeting.kind]) {
-        usageMap.entityKinds[action.targeting.kind].actions.push(actionRef);
-      } else {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'targeting.kind',
-          refType: 'entityKind',
-          refId: action.targeting.kind,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    }
-
-    // Targeting statuses
-    (action.targeting?.statuses || []).forEach(status => {
-      if (usageMap.statuses[status]) {
-        usageMap.statuses[status].actions.push(actionRef);
-      }
-    });
-
-    // Targeting exclude/require relationship kinds
-    const scanRelationshipFilter = (filter, fieldPrefix) => {
-      if (filter?.existingRelationship?.kind) {
-        const rk = filter.existingRelationship.kind;
-        if (usageMap.relationshipKinds[rk]) {
-          usageMap.relationshipKinds[rk].actions.push(actionRef);
-        }
-      }
-      if (filter?.hasRelationship?.kind) {
-        const rk = filter.hasRelationship.kind;
-        if (usageMap.relationshipKinds[rk]) {
-          usageMap.relationshipKinds[rk].actions.push(actionRef);
-        }
-      }
-    };
-    scanRelationshipFilter(action.targeting?.exclude, 'targeting.exclude');
-    scanRelationshipFilter(action.targeting?.require, 'targeting.require');
-
-    // Outcome relationships
-    (action.outcome?.relationships || []).forEach((rel, idx) => {
-      if (rel.kind) {
-        if (usageMap.relationshipKinds[rel.kind]) {
-          usageMap.relationshipKinds[rel.kind].actions.push(actionRef);
-        } else {
-          usageMap.validation.invalidRefs.push({
-            type: 'action',
-            id: action.id,
-            field: `outcome.relationships[${idx}].kind`,
-            refType: 'relationshipKind',
-            refId: rel.kind,
-            location: `Action "${action.name || action.id}"`,
-          });
-        }
-      }
-    });
-
-    // Outcome strengthen relationships
-    (action.outcome?.strengthenRelationships || []).forEach((sr, idx) => {
-      if (sr.kind) {
-        if (usageMap.relationshipKinds[sr.kind]) {
-          usageMap.relationshipKinds[sr.kind].actions.push(actionRef);
-        } else {
-          usageMap.validation.invalidRefs.push({
-            type: 'action',
-            id: action.id,
-            field: `outcome.strengthenRelationships[${idx}].kind`,
-            refType: 'relationshipKind',
-            refId: sr.kind,
-            location: `Action "${action.name || action.id}"`,
-          });
-        }
-      }
-    });
-
-    // Outcome pressure changes
-    Object.keys(action.outcome?.pressureChanges || {}).forEach(pressureId => {
-      if (usageMap.pressures[pressureId]) {
-        usageMap.pressures[pressureId].actions.push(actionRef);
-      }
-      if (!pressureIds.has(pressureId)) {
-        usageMap.validation.invalidRefs.push({
-          type: 'action',
-          id: action.id,
-          field: 'outcome.pressureChanges',
-          refType: 'pressure',
-          refId: pressureId,
-          location: `Action "${action.name || action.id}"`,
-        });
-      }
-    });
-
-    // Actor required pressures - now array of { pressure, min?, max? }
-    const requiredPressures = action.actor?.requiredPressures;
-    if (Array.isArray(requiredPressures)) {
-      requiredPressures.forEach(band => {
-        const pressureId = band?.pressure;
-        if (!pressureId) return;
-        if (usageMap.pressures[pressureId]) {
-          usageMap.pressures[pressureId].actions.push(actionRef);
-        }
-        if (!pressureIds.has(pressureId)) {
-          usageMap.validation.invalidRefs.push({
-            type: 'action',
-            id: action.id,
-            field: 'actor.requiredPressures',
-            refType: 'pressure',
-            refId: pressureId,
-            location: `Action "${action.name || action.id}"`,
-          });
-        }
+    (action.actor?.conditions || []).forEach((condition, idx) => {
+      scanCondition(condition, usageMap, pressureIds, 'actions', actionRef, {
+        type: 'action',
+        id: action.id,
+        field: `actor.conditions[${idx}]`,
+        location,
       });
-    }
+    });
 
-    // Probability pressure modifiers - now array of { pressure, multiplier }
+    scanVariableSelectionRule(action.actor?.instigator, usageMap, 'actions', actionRef, {
+      type: 'action',
+      id: action.id,
+      field: 'actor.instigator',
+      location,
+    });
+
+    scanSelectionRule(action.targeting, usageMap, 'actions', actionRef, {
+      type: 'action',
+      id: action.id,
+      field: 'targeting',
+      location,
+    });
+
+    scanMutations(action.outcome?.mutations || [], usageMap, pressureIds, 'actions', actionRef, {
+      type: 'action',
+      id: action.id,
+      field: 'outcome.mutations',
+      location,
+    });
+
     const pressureModifiers = action.probability?.pressureModifiers;
     if (Array.isArray(pressureModifiers)) {
-      pressureModifiers.forEach(mod => {
-        const pressureId = mod?.pressure;
-        if (!pressureId) return;
-        if (usageMap.pressures[pressureId]) {
-          usageMap.pressures[pressureId].actions.push(actionRef);
-        }
-        if (!pressureIds.has(pressureId)) {
-          usageMap.validation.invalidRefs.push({
-            type: 'action',
-            id: action.id,
-            field: 'probability.pressureModifiers',
-            refType: 'pressure',
-            refId: pressureId,
-            location: `Action "${action.name || action.id}"`,
-          });
-        }
+      pressureModifiers.forEach((mod) => {
+        recordPressureRef(usageMap, pressureIds, mod?.pressure, 'actions', actionRef, {
+          type: 'action',
+          id: action.id,
+          field: 'probability.pressureModifiers',
+          location,
+        });
       });
     }
   });
@@ -884,33 +1136,59 @@ function checkRelationshipCompatibility(usageMap, generators, actions, schema) {
 
   // Check action outcome relationship compatibility
   (actions || []).forEach(action => {
-    (action.outcome?.relationships || []).forEach((rel, idx) => {
-      const rkDef = relationshipKinds[rel.kind];
+    const actorSelection = action.actor?.selection || {};
+    const actorKinds = [
+      ...(actorSelection.kind ? [actorSelection.kind] : []),
+      ...(actorSelection.kinds || []),
+    ];
+    const instigatorSelection = action.actor?.instigator || {};
+    const instigatorKinds = [
+      ...(instigatorSelection.kind ? [instigatorSelection.kind] : []),
+      ...(instigatorSelection.kinds || []),
+    ];
+    const targetSelection = action.targeting || {};
+    const targetKinds = [
+      ...(targetSelection.kind ? [targetSelection.kind] : []),
+      ...(targetSelection.kinds || []),
+    ];
+
+    const kindsForRef = (ref) => {
+      if (ref === '$actor') return actorKinds;
+      if (ref === '$instigator') return instigatorKinds;
+      if (ref === '$target' || ref === '$target2') return targetKinds;
+      return [];
+    };
+
+    (action.outcome?.mutations || []).forEach((mutation, idx) => {
+      if (mutation.type !== 'create_relationship' && mutation.type !== 'adjust_relationship_strength') {
+        return;
+      }
+      const rkDef = relationshipKinds[mutation.kind];
       if (!rkDef) return;
 
-      // Basic compatibility check based on actor/target kinds
-      const actorKinds = action.actor?.kinds || [];
-      const targetKind = action.targeting?.kind;
+      const srcKinds = kindsForRef(mutation.src);
+      const dstKinds = kindsForRef(mutation.dst);
 
-      if (rkDef.srcKinds.length > 0 && rel.src === 'actor') {
-        const compatible = actorKinds.some(k => rkDef.srcKinds.includes(k));
-        if (!compatible && actorKinds.length > 0) {
+      if (rkDef.srcKinds.length > 0 && srcKinds.length > 0) {
+        const compatible = srcKinds.some(k => rkDef.srcKinds.includes(k));
+        if (!compatible) {
           usageMap.validation.compatibility.push({
             type: 'action',
             id: action.id,
-            field: `outcome.relationships[${idx}]`,
-            issue: `Relationship "${rel.kind}" requires src to be one of [${rkDef.srcKinds.join(', ')}], but actor kinds are [${actorKinds.join(', ')}]`,
+            field: `outcome.mutations[${idx}]`,
+            issue: `Relationship "${mutation.kind}" requires src to be one of [${rkDef.srcKinds.join(', ')}], but ${mutation.src} kinds are [${srcKinds.join(', ')}]`,
           });
         }
       }
 
-      if (rkDef.dstKinds.length > 0 && rel.dst === 'target' && targetKind) {
-        if (!rkDef.dstKinds.includes(targetKind)) {
+      if (rkDef.dstKinds.length > 0 && dstKinds.length > 0) {
+        const compatible = dstKinds.some(k => rkDef.dstKinds.includes(k));
+        if (!compatible) {
           usageMap.validation.compatibility.push({
             type: 'action',
             id: action.id,
-            field: `outcome.relationships[${idx}]`,
-            issue: `Relationship "${rel.kind}" requires dst to be one of [${rkDef.dstKinds.join(', ')}], but target kind is "${targetKind}"`,
+            field: `outcome.mutations[${idx}]`,
+            issue: `Relationship "${mutation.kind}" requires dst to be one of [${rkDef.dstKinds.join(', ')}], but ${mutation.dst} kinds are [${dstKinds.join(', ')}]`,
           });
         }
       }
@@ -988,6 +1266,54 @@ export function computeTagUsage({ cultures, seedEntities, generators, systems, p
     }
   };
 
+  const addTagUsage = (tag, section) => {
+    if (!tag) return;
+    ensureTag(tag);
+    usage[tag][section] = (usage[tag][section] || 0) + 1;
+  };
+
+  const collectTagsFromFilters = (filters, section) => {
+    (filters || []).forEach((filter) => {
+      switch (filter.type) {
+        case 'has_tag':
+        case 'lacks_tag':
+          addTagUsage(filter.tag, section);
+          break;
+        case 'has_tags':
+        case 'has_any_tag':
+        case 'lacks_any_tag':
+          (filter.tags || []).forEach((tag) => addTagUsage(tag, section));
+          break;
+        default:
+          break;
+      }
+    });
+  };
+
+  const collectTagsFromCondition = (condition, section) => {
+    if (!condition) return;
+    switch (condition.type) {
+      case 'tag_exists':
+      case 'tag_absent':
+        addTagUsage(condition.tag, section);
+        break;
+      case 'and':
+      case 'or':
+        (condition.conditions || []).forEach((child) => collectTagsFromCondition(child, section));
+        break;
+      default:
+        break;
+    }
+  };
+
+  const collectTagsFromMutations = (mutations, section) => {
+    (mutations || []).forEach((mutation) => {
+      if (mutation.type === 'set_tag' || mutation.type === 'remove_tag') {
+        addTagUsage(mutation.tag, section);
+      }
+    });
+  };
+
   // Count tags used in Name Forge profiles
   (cultures || []).forEach(culture => {
     const profiles = culture.naming?.profiles || [];
@@ -1017,68 +1343,32 @@ export function computeTagUsage({ cultures, seedEntities, generators, systems, p
     // Tags in creation entries
     (gen.creation || []).forEach(creation => {
       if (creation.tags && typeof creation.tags === 'object') {
-        Object.keys(creation.tags).forEach(tag => {
-          ensureTag(tag);
-          usage[tag].generators = (usage[tag].generators || 0) + 1;
-        });
+        Object.keys(creation.tags).forEach(tag => addTagUsage(tag, 'generators'));
       }
     });
 
     // Tags in applicability rules
-    const scanApplicabilityTags = (rules) => {
-      (rules || []).forEach(rule => {
-        if (rule.tags && Array.isArray(rule.tags)) {
-          rule.tags.forEach(tag => {
-            ensureTag(tag);
-            usage[tag].generators = (usage[tag].generators || 0) + 1;
-          });
-        }
-        // Recurse for nested rules (or/and)
-        if (rule.rules) {
-          scanApplicabilityTags(rule.rules);
-        }
-      });
-    };
-    scanApplicabilityTags(gen.applicability);
+    (gen.applicability || []).forEach((rule) => collectTagsFromCondition(rule, 'generators'));
 
     // Tags in selection filters
-    (gen.selection?.filters || []).forEach(filter => {
-      if (filter.tag) {
-        ensureTag(filter.tag);
-        usage[filter.tag].generators = (usage[filter.tag].generators || 0) + 1;
-      }
-      if (filter.tags && Array.isArray(filter.tags)) {
-        filter.tags.forEach(tag => {
-          ensureTag(tag);
-          usage[tag].generators = (usage[tag].generators || 0) + 1;
-        });
-      }
-    });
+    collectTagsFromFilters(gen.selection?.filters, 'generators');
 
     // Tags in stateUpdates (set_tag, remove_tag)
-    (gen.stateUpdates || []).forEach(update => {
-      if ((update.type === 'set_tag' || update.type === 'remove_tag') && update.tag) {
-        ensureTag(update.tag);
-        usage[update.tag].generators = (usage[update.tag].generators || 0) + 1;
-      }
-    });
+    collectTagsFromMutations(gen.stateUpdates || [], 'generators');
 
     // Tags in variants
     (gen.variants?.options || []).forEach(variant => {
       // Tags in variant conditions
-      if (variant.when?.tag) {
-        ensureTag(variant.when.tag);
-        usage[variant.when.tag].generators = (usage[variant.when.tag].generators || 0) + 1;
-      }
+      collectTagsFromCondition(variant.when, 'generators');
       // Tags in variant effects
       if (variant.apply?.tags && typeof variant.apply.tags === 'object') {
         Object.entries(variant.apply.tags).forEach(([ref, tagMap]) => {
           Object.keys(tagMap).forEach(tag => {
-            ensureTag(tag);
-            usage[tag].generators = (usage[tag].generators || 0) + 1;
+            addTagUsage(tag, 'generators');
           });
         });
       }
+      collectTagsFromMutations(variant.apply?.stateUpdates || [], 'generators');
     });
   });
 
@@ -1086,59 +1376,53 @@ export function computeTagUsage({ cultures, seedEntities, generators, systems, p
   (systems || []).forEach(sys => {
     const config = sys.config || {};
 
+    // Tags in selection filters
+    collectTagsFromFilters(config.selection?.filters, 'systems');
+    collectTagsFromFilters(config.multiSource?.sourceSelection?.filters, 'systems');
+    (config.phaseTransitions || []).forEach((transition) => {
+      collectTagsFromFilters(transition.selection?.filters, 'systems');
+    });
+
     // Tag diffusion systems
     if (sys.systemType === 'tagDiffusion') {
       (config.convergence?.tags || []).forEach(tag => {
-        ensureTag(tag);
-        usage[tag].systems = (usage[tag].systems || 0) + 1;
+        addTagUsage(tag, 'systems');
       });
       (config.divergence?.tags || []).forEach(tag => {
-        ensureTag(tag);
-        usage[tag].systems = (usage[tag].systems || 0) + 1;
+        addTagUsage(tag, 'systems');
       });
     }
 
     // Threshold trigger conditions
     if (sys.systemType === 'thresholdTrigger') {
-      (config.conditions || []).forEach(cond => {
-        if (cond.tag) {
-          ensureTag(cond.tag);
-          usage[cond.tag].systems = (usage[cond.tag].systems || 0) + 1;
-        }
-        if (cond.type === 'has_any_tag' && Array.isArray(cond.tags)) {
-          cond.tags.forEach(tag => {
-            ensureTag(tag);
-            usage[tag].systems = (usage[tag].systems || 0) + 1;
-          });
-        }
-      });
-      // Threshold trigger actions
-      (config.actions || []).forEach(action => {
-        if (action.tag) {
-          ensureTag(action.tag);
-          usage[action.tag].systems = (usage[action.tag].systems || 0) + 1;
-        }
+      (config.conditions || []).forEach((cond) => collectTagsFromCondition(cond, 'systems'));
+      collectTagsFromMutations(config.actions || [], 'systems');
+    }
+
+    if (sys.systemType === 'graphContagion') {
+      if (config.contagion?.type === 'tag' && config.contagion.tagPattern) {
+        addTagUsage(config.contagion.tagPattern, 'systems');
+      }
+      collectTagsFromMutations(config.infectionAction ? [config.infectionAction] : [], 'systems');
+    }
+
+    if (sys.systemType === 'connectionEvolution') {
+      (config.rules || []).forEach((rule) => {
+        collectTagsFromMutations(rule?.action ? [rule.action] : [], 'systems');
       });
     }
 
-    // Cluster formation criteria
     if (sys.systemType === 'clusterFormation') {
-      (config.criteria || []).forEach(crit => {
-        if ((crit.type === 'shared_tags' || crit.type === 'has_tags') && Array.isArray(crit.tags)) {
-          crit.tags.forEach(tag => {
-            ensureTag(tag);
-            usage[tag].systems = (usage[tag].systems || 0) + 1;
-          });
-        }
-      });
+      (config.metaEntity?.additionalTags || []).forEach((tag) => addTagUsage(tag, 'systems'));
     }
 
-    // Plane diffusion systems
     if (sys.systemType === 'planeDiffusion') {
-      (config.tagFilters || []).forEach(tag => {
-        ensureTag(tag);
-        usage[tag].systems = (usage[tag].systems || 0) + 1;
-      });
+      if (config.sources?.tagFilter) addTagUsage(config.sources.tagFilter, 'systems');
+      if (config.sources?.strengthTag) addTagUsage(config.sources.strengthTag, 'systems');
+      if (config.sinks?.tagFilter) addTagUsage(config.sinks.tagFilter, 'systems');
+      if (config.sinks?.strengthTag) addTagUsage(config.sinks.strengthTag, 'systems');
+      (config.outputTags || []).forEach((tagConfig) => addTagUsage(tagConfig.tag, 'systems'));
+      if (config.valueTag) addTagUsage(config.valueTag, 'systems');
     }
   });
 
@@ -1286,6 +1570,67 @@ export function computeSchemaUsage({
     }
   };
 
+  const addEntityKindUsage = (kind, section, id) => {
+    if (!kind || kind === 'any') return;
+    ensureEntityKind(kind);
+    usage.entityKinds[kind][section].push(id);
+  };
+
+  const addRelationshipKindUsage = (kind, section, id) => {
+    if (!kind) return;
+    ensureRelationshipKind(kind);
+    usage.relationshipKinds[kind][section].push(id);
+  };
+
+  const addSubtypeUsage = (kind, subtype, section, id) => {
+    if (!kind || !subtype) return;
+    ensureSubtype(kind, subtype);
+    usage.subtypes[kind][subtype][section].push(id);
+  };
+
+  const addStatusUsage = (kind, status, section, id) => {
+    if (!kind || !status) return;
+    ensureStatus(kind, status);
+    usage.statuses[kind][status][section].push(id);
+  };
+
+  const recordSelectionUsage = (selection, section, id) => {
+    if (!selection) return;
+    if (selection.kind) addEntityKindUsage(selection.kind, section, id);
+    (selection.kinds || []).forEach((kind) => addEntityKindUsage(kind, section, id));
+  };
+
+  const recordConditionUsage = (condition, section, id) => {
+    if (!condition) return;
+    switch (condition.type) {
+      case 'entity_count':
+        addEntityKindUsage(condition.kind, section, id);
+        if (condition.subtype) addSubtypeUsage(condition.kind, condition.subtype, section, id);
+        if (condition.status) addStatusUsage(condition.kind, condition.status, section, id);
+        break;
+      case 'relationship_count':
+      case 'relationship_exists':
+      case 'entity_has_relationship':
+        addRelationshipKindUsage(condition.relationshipKind, section, id);
+        break;
+      case 'and':
+      case 'or':
+        (condition.conditions || []).forEach((child) => recordConditionUsage(child, section, id));
+        break;
+      default:
+        break;
+    }
+  };
+
+  const recordMutationUsage = (mutation, section, id) => {
+    if (!mutation) return;
+    if (mutation.type === 'create_relationship' || mutation.type === 'adjust_relationship_strength') {
+      addRelationshipKindUsage(mutation.kind, section, id);
+    } else if (mutation.type === 'archive_relationship') {
+      addRelationshipKindUsage(mutation.relationshipKind, section, id);
+    }
+  };
+
   // Analyze generators
   generators.forEach((gen) => {
     const genId = gen.id || gen.name || 'unnamed';
@@ -1293,61 +1638,47 @@ export function computeSchemaUsage({
     // Entity kinds produced (in creation array)
     const creations = gen.creation || [];
     creations.forEach((c) => {
-      if (c.kind) {
-        ensureEntityKind(c.kind);
-        usage.entityKinds[c.kind].generators.push(genId);
+      const kind = typeof c.kind === 'string' ? c.kind : null;
+      if (kind) {
+        addEntityKindUsage(kind, 'generators', genId);
       }
-      if (c.kind && c.subtype) {
-        ensureSubtype(c.kind, c.subtype);
-        usage.subtypes[c.kind][c.subtype].generators.push(genId);
+      if (kind && typeof c.subtype === 'string') {
+        addSubtypeUsage(kind, c.subtype, 'generators', genId);
+      } else if (kind && c.subtype?.random && Array.isArray(c.subtype.random)) {
+        c.subtype.random.forEach((subtype) => addSubtypeUsage(kind, subtype, 'generators', genId));
+      }
+      if (kind && typeof c.status === 'string') {
+        addStatusUsage(kind, c.status, 'generators', genId);
       }
     });
 
     // Also check legacy entityKind field
     if (gen.entityKind) {
-      ensureEntityKind(gen.entityKind);
-      usage.entityKinds[gen.entityKind].generators.push(genId);
+      addEntityKindUsage(gen.entityKind, 'generators', genId);
     }
     if (gen.entityKind && gen.subtype) {
-      ensureSubtype(gen.entityKind, gen.subtype);
-      usage.subtypes[gen.entityKind][gen.subtype].generators.push(genId);
+      addSubtypeUsage(gen.entityKind, gen.subtype, 'generators', genId);
     }
 
     // Selection kind (the kind being selected from)
-    if (gen.selection?.kind) {
-      ensureEntityKind(gen.selection.kind);
-      usage.entityKinds[gen.selection.kind].generators.push(genId);
-    }
+    recordSelectionUsage(gen.selection, 'generators', genId);
 
     // Applicability rules that reference kinds
-    const checkApplicability = (rules) => {
-      for (const rule of rules || []) {
-        if (rule.kind) {
-          ensureEntityKind(rule.kind);
-          usage.entityKinds[rule.kind].generators.push(genId);
-        }
-        if (rule.rules) {
-          checkApplicability(rule.rules);
-        }
-      }
-    };
-    checkApplicability(gen.applicability);
+    (gen.applicability || []).forEach((rule) => recordConditionUsage(rule, 'generators', genId));
 
     // Relationships created (in creation or at top level)
     const relationships = gen.relationships || [];
     relationships.forEach((rel) => {
       const relKind = typeof rel === 'string' ? rel : rel.kind;
       if (relKind) {
-        ensureRelationshipKind(relKind);
-        usage.relationshipKinds[relKind].generators.push(genId);
+        addRelationshipKindUsage(relKind, 'generators', genId);
       }
     });
 
     // Relationships in creation entries
     creations.forEach((c) => {
       if (c.lineage?.relationshipKind) {
-        ensureRelationshipKind(c.lineage.relationshipKind);
-        usage.relationshipKinds[c.lineage.relationshipKind].generators.push(genId);
+        addRelationshipKindUsage(c.lineage.relationshipKind, 'generators', genId);
       }
     });
 
@@ -1356,8 +1687,7 @@ export function computeSchemaUsage({
     targets.forEach((target) => {
       const targetKind = typeof target === 'string' ? target : target.kind;
       if (targetKind) {
-        ensureEntityKind(targetKind);
-        usage.entityKinds[targetKind].generators.push(genId);
+        addEntityKindUsage(targetKind, 'generators', genId);
       }
     });
 
@@ -1365,11 +1695,20 @@ export function computeSchemaUsage({
     if (gen.requires) {
       Object.entries(gen.requires).forEach(([key, value]) => {
         if (key === 'entityKind' || key === 'kind') {
-          ensureEntityKind(value);
-          usage.entityKinds[value].generators.push(genId);
+          addEntityKindUsage(value, 'generators', genId);
         }
       });
     }
+
+    (gen.stateUpdates || []).forEach((mutation) => recordMutationUsage(mutation, 'generators', genId));
+
+    (gen.variants?.options || []).forEach((variant) => {
+      recordConditionUsage(variant.when, 'generators', genId);
+      (variant.apply?.relationships || []).forEach((rel) => {
+        if (rel?.kind) addRelationshipKindUsage(rel.kind, 'generators', genId);
+      });
+      (variant.apply?.stateUpdates || []).forEach((mutation) => recordMutationUsage(mutation, 'generators', genId));
+    });
   });
 
   // Analyze systems
@@ -1378,80 +1717,60 @@ export function computeSchemaUsage({
     const cfg = sys.config || sys;
     const sysId = cfg.id || cfg.name || sys.systemType || 'unnamed';
 
-    // Entity kinds operated on
-    if (cfg.entityKind) {
-      ensureEntityKind(cfg.entityKind);
-      usage.entityKinds[cfg.entityKind].systems.push(sysId);
-    }
+    recordSelectionUsage(cfg.selection, 'systems', sysId);
 
-    // Source and target kinds
-    ['sourceKind', 'targetKind', 'srcKind', 'dstKind'].forEach((field) => {
-      if (cfg[field]) {
-        ensureEntityKind(cfg[field]);
-        usage.entityKinds[cfg[field]].systems.push(sysId);
+    if (sys.systemType === 'graphContagion') {
+      if (cfg.contagion?.relationshipKind) {
+        addRelationshipKindUsage(cfg.contagion.relationshipKind, 'systems', sysId);
       }
-    });
-
-    // Entity kinds array
-    const entityKinds = cfg.entityKinds || cfg.kinds || [];
-    entityKinds.forEach((kind) => {
-      ensureEntityKind(kind);
-      usage.entityKinds[kind].systems.push(sysId);
-    });
-
-    // Relationships created/operated on
-    if (cfg.relationshipKind) {
-      ensureRelationshipKind(cfg.relationshipKind);
-      usage.relationshipKinds[cfg.relationshipKind].systems.push(sysId);
-    }
-
-    const relationshipKinds = cfg.relationshipKinds || cfg.relationships || [];
-    relationshipKinds.forEach((rel) => {
-      const relKind = typeof rel === 'string' ? rel : rel.kind;
-      if (relKind) {
-        ensureRelationshipKind(relKind);
-        usage.relationshipKinds[relKind].systems.push(sysId);
+      (cfg.vectors || []).forEach((vector) => {
+        if (vector.relationshipKind) addRelationshipKindUsage(vector.relationshipKind, 'systems', sysId);
+      });
+      recordMutationUsage(cfg.infectionAction, 'systems', sysId);
+      if (cfg.multiSource?.sourceSelection) {
+        recordSelectionUsage(cfg.multiSource.sourceSelection, 'systems', sysId);
       }
-    });
-
-    // Subtype filters
-    if (cfg.entityKind && cfg.subtype) {
-      ensureSubtype(cfg.entityKind, cfg.subtype);
-      usage.subtypes[cfg.entityKind][cfg.subtype].systems.push(sysId);
+      (cfg.phaseTransitions || []).forEach((transition) => {
+        recordSelectionUsage(transition.selection, 'systems', sysId);
+      });
     }
 
-    // Status transitions
-    if (cfg.entityKind && cfg.fromStatus) {
-      ensureStatus(cfg.entityKind, cfg.fromStatus);
-      usage.statuses[cfg.entityKind][cfg.fromStatus].systems.push(sysId);
+    if (sys.systemType === 'thresholdTrigger') {
+      (cfg.conditions || []).forEach((condition) => recordConditionUsage(condition, 'systems', sysId));
+      (cfg.actions || []).forEach((mutation) => recordMutationUsage(mutation, 'systems', sysId));
+      if (cfg.clusterRelationshipKind) addRelationshipKindUsage(cfg.clusterRelationshipKind, 'systems', sysId);
     }
-    if (cfg.entityKind && cfg.toStatus) {
-      ensureStatus(cfg.entityKind, cfg.toStatus);
-      usage.statuses[cfg.entityKind][cfg.toStatus].systems.push(sysId);
+
+    if (sys.systemType === 'connectionEvolution') {
+      if (cfg.metric?.relationshipKinds) {
+        cfg.metric.relationshipKinds.forEach((kind) => addRelationshipKindUsage(kind, 'systems', sysId));
+      }
+      if (cfg.metric?.sharedRelationshipKind) {
+        addRelationshipKindUsage(cfg.metric.sharedRelationshipKind, 'systems', sysId);
+      }
+      (cfg.rules || []).forEach((rule) => recordMutationUsage(rule?.action, 'systems', sysId));
+    }
+
+    if (sys.systemType === 'tagDiffusion') {
+      if (cfg.connectionKind) addRelationshipKindUsage(cfg.connectionKind, 'systems', sysId);
+    }
+
+    if (sys.systemType === 'clusterFormation') {
+      if (cfg.metaEntity?.kind) addEntityKindUsage(cfg.metaEntity.kind, 'systems', sysId);
+      (cfg.clustering?.criteria || []).forEach((criterion) => {
+        if (criterion.type === 'shared_relationship') {
+          addRelationshipKindUsage(criterion.relationshipKind, 'systems', sysId);
+        }
+      });
     }
   });
 
   // Analyze actions
   actions.forEach((action) => {
     const actionId = action.id || action.name || 'unnamed';
-
-    // Actor kind
-    if (action.actorKind) {
-      ensureEntityKind(action.actorKind);
-      usage.entityKinds[action.actorKind].actions.push(actionId);
-    }
-
-    // Target kind
-    if (action.targetKind) {
-      ensureEntityKind(action.targetKind);
-      usage.entityKinds[action.targetKind].actions.push(actionId);
-    }
-
-    // Relationship kind created
-    if (action.relationshipKind) {
-      ensureRelationshipKind(action.relationshipKind);
-      usage.relationshipKinds[action.relationshipKind].actions.push(actionId);
-    }
+    recordSelectionUsage(action.actor?.selection, 'actions', actionId);
+    recordSelectionUsage(action.targeting, 'actions', actionId);
+    (action.outcome?.mutations || []).forEach((mutation) => recordMutationUsage(mutation, 'actions', actionId));
   });
 
   // Analyze pressures

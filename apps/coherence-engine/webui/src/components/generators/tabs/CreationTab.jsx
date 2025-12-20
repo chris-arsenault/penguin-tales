@@ -795,10 +795,10 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
         value={conditionType}
         onChange={(type) => {
           if (type === 'pressure') setCondition({ type: 'pressure', pressureId: pressureOptions[0]?.value || '', min: 30 });
-          else if (type === 'pressure_compare') setCondition({ type: 'pressure_compare', pressureA: pressureOptions[0]?.value || '', pressureB: pressureOptions[1]?.value || '' });
+          else if (type === 'pressure_compare') setCondition({ type: 'pressure_compare', pressureA: pressureOptions[0]?.value || '', pressureB: pressureOptions[1]?.value || '', operator: '>' });
           else if (type === 'entity_count') setCondition({ type: 'entity_count', kind: entityKindOptions[0]?.value || 'npc', min: 1 });
-          else if (type === 'has_tag') setCondition({ type: 'has_tag', entity: '$target', tag: '' });
-          else if (type === 'random') setCondition({ type: 'random', chance: 0.5 });
+          else if (type === 'tag_exists') setCondition({ type: 'tag_exists', entity: '$target', tag: '' });
+          else if (type === 'random_chance') setCondition({ type: 'random_chance', chance: 0.5 });
           else setCondition({ type: 'always' });
         }}
         options={[
@@ -806,8 +806,8 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
           { value: 'pressure', label: 'Pressure threshold' },
           { value: 'pressure_compare', label: 'Pressure A > B' },
           { value: 'entity_count', label: 'Entity count' },
-          { value: 'has_tag', label: 'Entity has tag' },
-          { value: 'random', label: 'Random chance' },
+          { value: 'tag_exists', label: 'Tag exists on entity' },
+          { value: 'random_chance', label: 'Random chance' },
         ]}
       />
 
@@ -897,7 +897,7 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
         </>
       )}
 
-      {conditionType === 'has_tag' && (
+      {conditionType === 'tag_exists' && (
         <>
           <ReferenceDropdown
             label="Entity Reference"
@@ -919,7 +919,7 @@ function VariantConditionEditor({ condition, onChange, pressureOptions = [], ent
         </>
       )}
 
-      {conditionType === 'random' && (
+      {conditionType === 'random_chance' && (
         <div className="form-group">
           <label className="label">Chance (0-1)</label>
           <NumberInput
@@ -1175,12 +1175,12 @@ function VariantCard({ variant, onChange, onRemove, pressureOptions = [], entity
       case 'pressure':
         return `${when.pressureId || '?'} in [${when.min ?? 0}, ${when.max ?? 100}]`;
       case 'pressure_compare':
-        return `${when.pressureA || '?'} > ${when.pressureB || '?'}`;
+        return `${when.pressureA || '?'} ${when.operator || '>'} ${when.pressureB || '?'}`;
       case 'entity_count':
         return `${when.kind || '?'} count in [${when.min ?? 0}, ${when.max ?? '∞'}]`;
-      case 'has_tag':
+      case 'tag_exists':
         return `${when.entity || '?'} has "${when.tag || '?'}"`;
-      case 'random':
+      case 'random_chance':
         return `${Math.round((when.chance ?? 0.5) * 100)}% chance`;
       case 'always':
         return 'Always applies';

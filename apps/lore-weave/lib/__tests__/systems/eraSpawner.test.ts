@@ -202,7 +202,10 @@ describe('eraSpawner', () => {
 
     it('should apply entry effects for first era', () => {
       graph.config.eras[0].entryEffects = {
-        pressureChanges: { exploration: 10, stability: 5 }
+        mutations: [
+          { type: 'modify_pressure', pressureId: 'exploration', delta: 10 },
+          { type: 'modify_pressure', pressureId: 'stability', delta: 5 }
+        ]
       };
 
       const result = eraSpawner.apply(graph);

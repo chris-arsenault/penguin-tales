@@ -51,9 +51,9 @@ export default function ErasEditor({
       templateWeights: {},
       systemModifiers: {},
       entryConditions: [],
-      entryEffects: {},
-      exitConditions: [{ type: 'time', minTicks: 50 }],
-      exitEffects: {},
+      entryEffects: { mutations: [] },
+      exitConditions: [{ type: 'time_elapsed', minTicks: 50 }],
+      exitEffects: { mutations: [] },
     };
     onChange([...eras, newEra]);
     setExpandedEra(eras.length);

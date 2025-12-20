@@ -1,0 +1,812 @@
+/**
+ * Unified Metric Evaluator
+ *
+ * Single dispatch point for all metric types.
+ * Replaces multiple implementations across:
+ * - evaluateSimpleCount (pressureInterpreter)
+ * - evaluateFactor (pressureInterpreter)
+ * - evaluateFactorWithDetails (pressureInterpreter)
+ * - calculateMetric (connectionEvolution)
+ * - getProminenceMultiplier (universalCatalyst, catalystHelpers)
+ * - getDecayAmount (relationshipMaintenance)
+ * - calculateFalloff (planeDiffusion)
+ */
+
+import type { HardState, Relationship } from '../../core/worldTypes';
+import { hasTag } from '../../utils';
+import { normalizeDirection, Direction } from '../types';
+import type {
+  Metric,
+  MetricResult,
+  SimpleCountMetric,
+  EntityCountMetric,
+  RelationshipCountMetric,
+  TagCountMetric,
+  TotalEntitiesMetric,
+  ConstantMetric,
+  ConnectionCountMetric,
+  RatioMetric,
+  StatusRatioMetric,
+  CrossCultureRatioMetric,
+  SharedRelationshipMetric,
+  CatalyzedEventsMetric,
+  ProminenceMultiplierMetric,
+  DecayRateMetric,
+  FalloffMetric,
+} from './types';
+
+// Re-export types
+export interface MetricGraph {
+  findEntities(criteria: {
+    kind?: string;
+    subtype?: string;
+    status?: string;
+    prominence?: string;
+    tag?: string;
+  }): HardState[];
+  getEntities(): HardState[];
+  getAllRelationships(): readonly Relationship[];
+  getEntity(id: string): HardState | undefined;
+}
+
+export interface MetricContext {
+  graph: MetricGraph;
+}
+
+export * from './types';
+
+function describeSimpleCount(metric: SimpleCountMetric): string {
+  switch (metric.type) {
+    case 'entity_count': {
+      const parts = [metric.kind];
+      if (metric.subtype) parts.push(`:${metric.subtype}`);
+      if (metric.status) parts.push(`(${metric.status})`);
+      return parts.join('');
+    }
+    case 'relationship_count':
+      return metric.relationshipKinds?.join('/') ?? 'relationships';
+    case 'tag_count':
+      return `tags:${metric.tags.join('/')}`;
+    case 'total_entities':
+      return 'total_entities';
+    case 'constant':
+      return 'constant';
+    default:
+      return 'count';
+  }
+}
+
+export function describeMetric(metric: Metric): string {
+  switch (metric.type) {
+    case 'entity_count': {
+      const parts = [metric.kind];
+      if (metric.subtype) parts.push(`:${metric.subtype}`);
+      if (metric.status) parts.push(`(${metric.status})`);
+      return `${parts.join('')} count`;
+    }
+    case 'relationship_count':
+      return `${metric.relationshipKinds?.join('/') ?? 'all'} relationships`;
+    case 'tag_count':
+      return `entities with ${metric.tags.join('/')} tags`;
+    case 'total_entities':
+      return 'total entities';
+    case 'constant':
+      return 'constant';
+    case 'connection_count':
+      return `${metric.relationshipKinds?.join('/') ?? 'all'} connections`;
+    case 'ratio':
+      return `${describeSimpleCount(metric.numerator)}/${describeSimpleCount(metric.denominator)} ratio`;
+    case 'status_ratio':
+      return `${metric.kind} status ratio`;
+    case 'cross_culture_ratio':
+      return `cross-culture ${metric.relationshipKinds.join('/')} ratio`;
+    case 'shared_relationship':
+      return `shared ${metric.sharedRelationshipKind} relationships`;
+    case 'catalyzed_events':
+      return 'catalyzed events';
+    case 'prominence_multiplier':
+      return `prominence multiplier (${metric.mode ?? 'success_chance'})`;
+    case 'decay_rate':
+      return `decay rate ${metric.rate}`;
+    case 'falloff':
+      return `${metric.falloffType} falloff`;
+    default:
+      return metric.type;
+  }
+}
+
+// =============================================================================
+// PROMINENCE MULTIPLIER TABLES (consolidated from 2 duplicates)
+// =============================================================================
+
+const PROMINENCE_SUCCESS_MULTIPLIER: Record<string, number> = {
+  forgotten: 0.6,
+  marginal: 0.8,
+  recognized: 1.0,
+  renowned: 1.2,
+  mythic: 1.5,
+};
+
+const PROMINENCE_ACTION_MULTIPLIER: Record<string, number> = {
+  forgotten: 0.3,
+  marginal: 0.6,
+  recognized: 1.0,
+  renowned: 1.5,
+  mythic: 2.0,
+};
+
+export function getProminenceMultiplierValue(
+  prominence: string,
+  mode: ProminenceMultiplierMetric['mode'] = 'success_chance'
+): number {
+  const table =
+    mode === 'action_rate'
+      ? PROMINENCE_ACTION_MULTIPLIER
+      : PROMINENCE_SUCCESS_MULTIPLIER;
+
+  return table[prominence] ?? 1.0;
+}
+
+// =============================================================================
+// DECAY RATE TABLE (consolidated from relationshipMaintenance)
+// =============================================================================
+
+const DECAY_RATES: Record<string, number> = {
+  none: 0,
+  slow: 0.01,
+  medium: 0.03,
+  fast: 0.06,
+};
+
+// =============================================================================
+// MAIN EVALUATOR
+// =============================================================================
+
+/**
+ * Evaluate a metric against the current context.
+ *
+ * @param metric - The metric to evaluate
+ * @param ctx - The rule context
+ * @param entity - Optional entity for per-entity metrics
+ * @returns MetricResult with value and diagnostic info
+ */
+export function evaluateMetric(
+  metric: Metric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  switch (metric.type) {
+    // =========================================================================
+    // COUNT METRICS
+    // =========================================================================
+
+    case 'entity_count':
+      return evaluateEntityCount(metric, ctx);
+
+    case 'relationship_count':
+      return evaluateRelationshipCount(metric, ctx, entity);
+
+    case 'tag_count':
+      return evaluateTagCount(metric, ctx);
+
+    case 'total_entities':
+      return evaluateTotalEntities(metric, ctx);
+
+    case 'constant':
+      return evaluateConstant(metric);
+
+    case 'connection_count':
+      return evaluateConnectionCount(metric, ctx, entity);
+
+    // =========================================================================
+    // RATIO METRICS
+    // =========================================================================
+
+    case 'ratio':
+      return evaluateRatio(metric, ctx);
+
+    case 'status_ratio':
+      return evaluateStatusRatio(metric, ctx);
+
+    case 'cross_culture_ratio':
+      return evaluateCrossCultureRatio(metric, ctx);
+
+    // =========================================================================
+    // EVOLUTION METRICS
+    // =========================================================================
+
+    case 'shared_relationship':
+      return evaluateSharedRelationship(metric, ctx, entity);
+
+    case 'catalyzed_events':
+      return evaluateCatalyzedEvents(metric, entity);
+
+    // =========================================================================
+    // PROMINENCE METRICS
+    // =========================================================================
+
+    case 'prominence_multiplier':
+      return evaluateProminenceMultiplier(metric, entity);
+
+    // =========================================================================
+    // DECAY/FALLOFF METRICS
+    // =========================================================================
+
+    case 'decay_rate':
+      return evaluateDecayRate(metric);
+
+    case 'falloff':
+      return evaluateFalloff(metric);
+
+    default:
+      return {
+        value: 0,
+        diagnostic: `unknown metric type: ${(metric as Metric).type}`,
+        details: { metric },
+      };
+  }
+}
+
+/**
+ * Evaluate a simple count metric (for use in ratios).
+ */
+export function evaluateSimpleCount(
+  metric: SimpleCountMetric,
+  ctx: MetricContext
+): number {
+  switch (metric.type) {
+    case 'entity_count': {
+      let entities = ctx.graph.findEntities({ kind: metric.kind });
+      if (metric.subtype) {
+        entities = entities.filter((e) => e.subtype === metric.subtype);
+      }
+      if (metric.status) {
+        entities = entities.filter((e) => e.status === metric.status);
+      }
+      return entities.length;
+    }
+
+    case 'relationship_count': {
+      const rels = ctx.graph.getAllRelationships();
+      if (!metric.relationshipKinds || metric.relationshipKinds.length === 0) {
+        return rels.length;
+      }
+      return rels.filter((r) => metric.relationshipKinds!.includes(r.kind)).length;
+    }
+
+    case 'tag_count': {
+      const entities = ctx.graph.getEntities();
+      return entities.filter((e) =>
+        metric.tags.some((tag) => hasTag(e.tags, tag))
+      ).length;
+    }
+
+    case 'total_entities':
+      return ctx.graph.getEntities().length;
+
+    case 'constant':
+      return metric.value;
+
+    default:
+      return 0;
+  }
+}
+
+// =============================================================================
+// COUNT EVALUATORS
+// =============================================================================
+
+function evaluateEntityCount(
+  metric: EntityCountMetric,
+  ctx: MetricContext
+): MetricResult {
+  let entities = ctx.graph.findEntities({ kind: metric.kind });
+  if (metric.subtype) {
+    entities = entities.filter((e) => e.subtype === metric.subtype);
+  }
+  if (metric.status) {
+    entities = entities.filter((e) => e.status === metric.status);
+  }
+
+  const rawCount = entities.length;
+  let value = rawCount * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  const desc = `${metric.kind}${metric.subtype ? ':' + metric.subtype : ''}`;
+  return {
+    value,
+    diagnostic: `${desc} count=${rawCount}${metric.coefficient ? ` * ${metric.coefficient}` : ''}`,
+    details: {
+      kind: metric.kind,
+      subtype: metric.subtype,
+      status: metric.status,
+      rawCount,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateRelationshipCount(
+  metric: RelationshipCountMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  const direction = normalizeDirection(metric.direction);
+  const rels = ctx.graph.getAllRelationships();
+  const count = rels.filter((r) => {
+    if (metric.relationshipKinds?.length && !metric.relationshipKinds.includes(r.kind)) {
+      return false;
+    }
+    if (metric.minStrength !== undefined && r.strength < metric.minStrength) {
+      return false;
+    }
+
+    if (!entity) {
+      return true;
+    }
+
+    if (direction === 'both') {
+      return r.src === entity.id || r.dst === entity.id;
+    }
+    if (direction === 'src') {
+      return r.src === entity.id;
+    }
+    return r.dst === entity.id;
+  }).length;
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `relationship count=${count}`,
+    details: {
+      relationshipKinds: metric.relationshipKinds,
+      direction: metric.direction,
+      minStrength: metric.minStrength,
+      rawCount: count,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateTagCount(
+  metric: TagCountMetric,
+  ctx: MetricContext
+): MetricResult {
+  const entities = ctx.graph.getEntities();
+  const count = entities.filter((e) =>
+    metric.tags.some((tag) => hasTag(e.tags, tag))
+  ).length;
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `tag count (${metric.tags.join(', ')})=${count}`,
+    details: {
+      tags: metric.tags,
+      rawCount: count,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateTotalEntities(
+  metric: TotalEntitiesMetric,
+  ctx: MetricContext
+): MetricResult {
+  const count = ctx.graph.getEntities().length;
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `total entities=${count}`,
+    details: { rawCount: count, coefficient: metric.coefficient, cap: metric.cap },
+  };
+}
+
+function evaluateConstant(metric: ConstantMetric): MetricResult {
+  const value = metric.value * (metric.coefficient ?? 1);
+
+  return {
+    value,
+    diagnostic: `constant=${metric.value}`,
+    details: { value: metric.value, coefficient: metric.coefficient },
+  };
+}
+
+function evaluateConnectionCount(
+  metric: ConnectionCountMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for connection count', details: {} };
+  }
+
+  const direction = normalizeDirection(metric.direction);
+  const rels = ctx.graph.getAllRelationships();
+  const count = rels.filter((link) => {
+    const involvesEntity = link.src === entity.id || link.dst === entity.id;
+    if (!involvesEntity) return false;
+
+    if (metric.relationshipKinds?.length && !metric.relationshipKinds.includes(link.kind)) {
+      return false;
+    }
+    if (metric.minStrength !== undefined && link.strength < metric.minStrength) {
+      return false;
+    }
+
+    const dirOk =
+      direction === 'both' ||
+      (direction === 'src' && link.src === entity.id) ||
+      (direction === 'dst' && link.dst === entity.id);
+
+    return dirOk;
+  }).length;
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `connections=${count}`,
+    details: {
+      entityId: entity.id,
+      relationshipKinds: metric.relationshipKinds,
+      rawCount: count,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+// =============================================================================
+// RATIO EVALUATORS
+// =============================================================================
+
+function evaluateRatio(
+  metric: RatioMetric,
+  ctx: MetricContext
+): MetricResult {
+  const numValue = evaluateSimpleCount(metric.numerator, ctx);
+  const denValue = evaluateSimpleCount(metric.denominator, ctx);
+
+  let ratio: number;
+  if (denValue === 0) {
+    ratio = metric.fallbackValue ?? 0;
+  } else {
+    ratio = numValue / denValue;
+  }
+
+  let value = ratio * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `ratio=${numValue}/${denValue}=${ratio.toFixed(2)}`,
+    details: {
+      numerator: numValue,
+      denominator: denValue,
+      ratio,
+      fallbackValue: metric.fallbackValue,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateStatusRatio(
+  metric: StatusRatioMetric,
+  ctx: MetricContext
+): MetricResult {
+  let entities = ctx.graph.findEntities({ kind: metric.kind });
+  if (metric.subtype) {
+    entities = entities.filter((e) => e.subtype === metric.subtype);
+  }
+
+  const total = entities.length;
+  if (total === 0) {
+    return {
+      value: metric.coefficient ?? 1, // Default to 1 if no entities
+      diagnostic: `status ratio: no ${metric.kind} entities`,
+      details: { total: 0, alive: 0 },
+    };
+  }
+
+  const alive = entities.filter((e) => e.status === metric.aliveStatus).length;
+  let ratio = alive / total;
+
+  let value = ratio * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `status ratio=${alive}/${total}=${ratio.toFixed(2)}`,
+    details: {
+      kind: metric.kind,
+      subtype: metric.subtype,
+      aliveStatus: metric.aliveStatus,
+      alive,
+      total,
+      ratio,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateCrossCultureRatio(
+  metric: CrossCultureRatioMetric,
+  ctx: MetricContext
+): MetricResult {
+  const rels = ctx.graph
+    .getAllRelationships()
+    .filter((r) => metric.relationshipKinds.includes(r.kind));
+
+  const total = rels.length;
+  if (total === 0) {
+    return {
+      value: 0,
+      diagnostic: 'cross-culture ratio: no matching relationships',
+      details: { total: 0, crossCulture: 0 },
+    };
+  }
+
+  let crossCulture = 0;
+  for (const rel of rels) {
+    const src = ctx.graph.getEntity(rel.src);
+    const dst = ctx.graph.getEntity(rel.dst);
+    if (src && dst && src.culture !== dst.culture) {
+      crossCulture++;
+    }
+  }
+
+  let ratio = crossCulture / total;
+
+  let value = ratio * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `cross-culture=${crossCulture}/${total}=${ratio.toFixed(2)}`,
+    details: {
+      relationshipKinds: metric.relationshipKinds,
+      crossCulture,
+      total,
+      ratio,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+// =============================================================================
+// EVOLUTION EVALUATORS
+// =============================================================================
+
+function evaluateSharedRelationship(
+  metric: SharedRelationshipMetric,
+  ctx: MetricContext,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for shared relationship', details: {} };
+  }
+
+  // Find entities that share a target via the specified relationship
+  const direction = metric.sharedDirection ?? 'src';
+  const minStrength = metric.minStrength ?? 0;
+  const myTargets = new Set<string>();
+
+  const rels = ctx.graph.getAllRelationships();
+  for (const link of rels) {
+    if (link.kind !== metric.sharedRelationshipKind) continue;
+    if (link.strength < minStrength) continue;
+
+    if (direction === 'src' && link.src === entity.id) {
+      myTargets.add(link.dst);
+    }
+    if (direction === 'dst' && link.dst === entity.id) {
+      myTargets.add(link.src);
+    }
+  }
+
+  // Count how many other entities share these targets
+  const sharedCount = new Set<string>();
+  for (const link of rels) {
+    if (link.kind !== metric.sharedRelationshipKind) continue;
+    if (link.strength < minStrength) continue;
+
+    let otherId: string | null = null;
+    let targetId: string | null = null;
+
+    if (direction === 'src' && link.src !== entity.id) {
+      otherId = link.src;
+      targetId = link.dst;
+    } else if (direction === 'dst' && link.dst !== entity.id) {
+      otherId = link.dst;
+      targetId = link.src;
+    }
+
+    if (otherId && targetId && myTargets.has(targetId)) {
+      sharedCount.add(otherId);
+    }
+  }
+
+  let value = sharedCount.size * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `shared ${metric.sharedRelationshipKind}=${sharedCount.size}`,
+    details: {
+      sharedRelationshipKind: metric.sharedRelationshipKind,
+      sharedDirection: direction,
+      myTargetCount: myTargets.size,
+      sharedCount: sharedCount.size,
+      minStrength,
+      coefficient: metric.coefficient,
+      cap: metric.cap,
+    },
+  };
+}
+
+function evaluateCatalyzedEvents(
+  metric: CatalyzedEventsMetric,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 0, diagnostic: 'no entity for catalyzed events', details: {} };
+  }
+
+  // Access catalyst data if available
+  const catalyst = (entity as { catalyst?: { catalyzedEvents?: number | unknown[] } }).catalyst;
+  const raw = catalyst?.catalyzedEvents;
+  const count = Array.isArray(raw) ? raw.length : (typeof raw === 'number' ? raw : 0);
+
+  let value = count * (metric.coefficient ?? 1);
+  if (metric.cap !== undefined) {
+    value = Math.min(value, metric.cap);
+  }
+
+  return {
+    value,
+    diagnostic: `catalyzed events=${count}`,
+    details: { entityId: entity.id, count, coefficient: metric.coefficient, cap: metric.cap },
+  };
+}
+
+// =============================================================================
+// PROMINENCE EVALUATORS
+// =============================================================================
+
+function evaluateProminenceMultiplier(
+  metric: ProminenceMultiplierMetric,
+  entity?: HardState
+): MetricResult {
+  if (!entity) {
+    return { value: 1.0, diagnostic: 'no entity (default multiplier=1)', details: {} };
+  }
+
+  const value = getProminenceMultiplierValue(entity.prominence, metric.mode);
+
+  return {
+    value,
+    diagnostic: `prominence ${entity.prominence} = ${value}x`,
+    details: {
+      prominence: entity.prominence,
+      mode: metric.mode ?? 'success_chance',
+      multiplier: value,
+    },
+  };
+}
+
+// =============================================================================
+// DECAY/FALLOFF EVALUATORS
+// =============================================================================
+
+function evaluateDecayRate(metric: DecayRateMetric): MetricResult {
+  const value = DECAY_RATES[metric.rate] ?? 0.03;
+
+  return {
+    value,
+    diagnostic: `decay rate ${metric.rate}=${value}`,
+    details: { rate: metric.rate, value },
+  };
+}
+
+function evaluateFalloff(metric: FalloffMetric): MetricResult {
+  const maxDist = metric.maxDistance ?? 100;
+  const distance = metric.distance;
+  const normalizedDist = maxDist > 0 ? distance / maxDist : 0;
+
+  if (distance <= 0) {
+    return {
+      value: 1,
+      diagnostic: `${metric.falloffType} falloff at d=0 = 1.00`,
+      details: {
+        falloffType: metric.falloffType,
+        distance,
+        maxDistance: maxDist,
+        normalizedDistance: 0,
+        value: 1,
+      },
+    };
+  }
+
+  if (distance >= maxDist) {
+    return {
+      value: 0,
+      diagnostic: `${metric.falloffType} falloff at d=${distance.toFixed(1)} = 0.00`,
+      details: {
+        falloffType: metric.falloffType,
+        distance,
+        maxDistance: maxDist,
+        normalizedDistance: 1,
+        value: 0,
+      },
+    };
+  }
+
+  let value: number;
+  switch (metric.falloffType) {
+    case 'none':
+      value = 1;
+      break;
+    case 'absolute':
+      value = 1 - normalizedDist;
+      break;
+    case 'linear':
+      value = 1 - normalizedDist;
+      break;
+    case 'inverse_square':
+      value = 1 / (1 + (distance * distance) / (maxDist * 0.5));
+      break;
+    case 'sqrt':
+      value = 1 - Math.sqrt(normalizedDist);
+      break;
+    case 'exponential':
+      value = Math.exp(-3 * normalizedDist);
+      break;
+    default:
+      value = 1 - normalizedDist;
+  }
+
+  return {
+    value,
+    diagnostic: `${metric.falloffType} falloff at d=${metric.distance.toFixed(1)} = ${value.toFixed(2)}`,
+    details: {
+      falloffType: metric.falloffType,
+      distance: metric.distance,
+      maxDistance: maxDist,
+      normalizedDistance: normalizedDist,
+      value,
+    },
+  };
+}

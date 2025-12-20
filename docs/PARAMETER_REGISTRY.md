@@ -37,10 +37,10 @@ Location: `src/systems/occurrenceCreation.ts`
 #### era_transition
 Location: `src/systems/eraTransition.ts`
 
-Era transition timing is controlled per-era via `transitionConditions` in eras.json.
-Use a `time` condition to control minimum era length:
+Era transition timing is controlled per-era via `exitConditions` in eras.json.
+Use a `time_elapsed` condition to control minimum era length:
 ```json
-{ "type": "time", "minTicks": 25 }
+{ "type": "time_elapsed", "minTicks": 25 }
 ```
 
 No system-level parameters - all transition logic is per-era.

@@ -30,18 +30,30 @@
       "description": "Either the literal 'any' (meaning match all) or a specific non-empty value"
     },
 
-    "ApplicabilityRule": {
+    "ApplicabilityRule": { "$ref": "#/$defs/Condition" },
+
+    "Condition": {
       "oneOf": [
         { "$ref": "#/$defs/PressureThresholdRule" },
         { "$ref": "#/$defs/PressureAnyAboveRule" },
         { "$ref": "#/$defs/PressureCompareRule" },
-        { "$ref": "#/$defs/EntityCountMinRule" },
-        { "$ref": "#/$defs/EntityCountMaxRule" },
+        { "$ref": "#/$defs/EntityCountCondition" },
+        { "$ref": "#/$defs/RelationshipCountCondition" },
+        { "$ref": "#/$defs/RelationshipExistsCondition" },
+        { "$ref": "#/$defs/TagExistsCondition" },
+        { "$ref": "#/$defs/TagAbsentCondition" },
+        { "$ref": "#/$defs/StatusCondition" },
+        { "$ref": "#/$defs/ProminenceCondition" },
+        { "$ref": "#/$defs/TimeElapsedCondition" },
         { "$ref": "#/$defs/EraMatchRule" },
         { "$ref": "#/$defs/RandomChanceRule" },
         { "$ref": "#/$defs/CooldownElapsedRule" },
         { "$ref": "#/$defs/CreationsPerEpochRule" },
-        { "$ref": "#/$defs/CompositeApplicabilityRule" }
+        { "$ref": "#/$defs/GraphPathCondition" },
+        { "$ref": "#/$defs/EntityExistsCondition" },
+        { "$ref": "#/$defs/EntityHasRelationshipCondition" },
+        { "$ref": "#/$defs/CompositeApplicabilityRule" },
+        { "$ref": "#/$defs/AlwaysCondition" }
       ]
     },
 
@@ -50,7 +62,7 @@
       "required": ["type", "pressureId"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "pressure_threshold" },
+        "type": { "const": "pressure" },
         "pressureId": { "$ref": "#/$defs/NonEmptyString" },
         "min": { "type": "number", "minimum": -100, "maximum": 100 },
         "max": { "type": "number", "minimum": -100, "maximum": 100 }
@@ -75,7 +87,8 @@
       "properties": {
         "type": { "const": "pressure_compare" },
         "pressureA": { "$ref": "#/$defs/NonEmptyString" },
-        "pressureB": { "$ref": "#/$defs/NonEmptyString" }
+        "pressureB": { "$ref": "#/$defs/NonEmptyString" },
+        "operator": { "enum": [">", "<", ">=", "<=", "==", "!="] }
       }
     },
 
@@ -84,7 +97,7 @@
       "required": ["type", "kind", "min"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "entity_count_min" },
+        "type": { "const": "entity_count" },
         "kind": { "$ref": "#/$defs/NonEmptyString" },
         "subtype": { "$ref": "#/$defs/NonEmptyString" },
         "status": { "$ref": "#/$defs/NonEmptyString" },
@@ -97,9 +110,25 @@
       "required": ["type", "kind", "max"],
       "additionalProperties": false,
       "properties": {
-        "type": { "const": "entity_count_max" },
+        "type": { "const": "entity_count" },
         "kind": { "$ref": "#/$defs/NonEmptyString" },
         "subtype": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
+        "max": { "type": "integer", "minimum": 0 },
+        "overshootFactor": { "type": "number", "minimum": 1 }
+      }
+    },
+
+    "EntityCountCondition": {
+      "type": "object",
+      "required": ["type", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "entity_count" },
+        "kind": { "$ref": "#/$defs/NonEmptyString" },
+        "subtype": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
+        "min": { "type": "integer", "minimum": 0 },
         "max": { "type": "integer", "minimum": 0 },
         "overshootFactor": { "type": "number", "minimum": 1 }
       }
@@ -147,11 +176,136 @@
 
     "CompositeApplicabilityRule": {
       "type": "object",
-      "required": ["type", "rules"],
+      "required": ["type", "conditions"],
       "additionalProperties": false,
       "properties": {
         "type": { "enum": ["and", "or"] },
-        "rules": { "type": "array", "items": { "$ref": "#/$defs/ApplicabilityRule" }, "minItems": 1 }
+        "conditions": { "type": "array", "items": { "$ref": "#/$defs/Condition" }, "minItems": 1 }
+      }
+    },
+
+    "AlwaysCondition": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "always" }
+      }
+    },
+
+    "RelationshipCountCondition": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "relationship_count" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["src", "dst", "both"] },
+        "min": { "type": "integer", "minimum": 0 },
+        "max": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "RelationshipExistsCondition": {
+      "type": "object",
+      "required": ["type", "relationshipKind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "relationship_exists" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+        "with": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["src", "dst", "both"] },
+        "targetKind": { "$ref": "#/$defs/NonEmptyString" },
+        "targetSubtype": { "$ref": "#/$defs/NonEmptyString" },
+        "targetStatus": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+
+    "TagExistsCondition": {
+      "type": "object",
+      "required": ["type", "tag"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "tag_exists" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" },
+        "tag": { "$ref": "#/$defs/NonEmptyString" },
+        "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+      }
+    },
+
+    "TagAbsentCondition": {
+      "type": "object",
+      "required": ["type", "tag"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "tag_absent" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" },
+        "tag": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+
+    "StatusCondition": {
+      "type": "object",
+      "required": ["type", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "status" },
+        "status": { "$ref": "#/$defs/NonEmptyString" },
+        "not": { "type": "boolean" }
+      }
+    },
+
+    "ProminenceCondition": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "prominence" },
+        "min": { "$ref": "#/$defs/NonEmptyString" },
+        "max": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+
+    "TimeElapsedCondition": {
+      "type": "object",
+      "required": ["type", "minTicks"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "time_elapsed" },
+        "minTicks": { "type": "integer", "minimum": 0 },
+        "since": { "enum": ["created", "updated"] }
+      }
+    },
+
+    "GraphPathCondition": {
+      "type": "object",
+      "required": ["type", "assert"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "graph_path" },
+        "assert": { "$ref": "#/$defs/GraphPathAssertion" }
+      }
+    },
+
+    "EntityExistsCondition": {
+      "type": "object",
+      "required": ["type", "entity"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "entity_exists" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" }
+      }
+    },
+
+    "EntityHasRelationshipCondition": {
+      "type": "object",
+      "required": ["type", "entity", "relationshipKind"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "entity_has_relationship" },
+        "entity": { "$ref": "#/$defs/NonEmptyString" },
+        "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["src", "dst", "both"] }
       }
     },
 
@@ -248,8 +402,8 @@
           "description": "The relationship kind to count"
         },
         "direction": {
-          "enum": ["in", "out"],
-          "description": "Direction: 'in' = incoming relationships to target, 'out' = outgoing from target. Default: 'in'"
+          "enum": ["src", "dst", "both", "out", "in"],
+          "description": "Direction: 'src'/'dst'/'both' or 'out'/'in' (default: both)"
         },
         "fromKind": {
           "$ref": "#/$defs/NonEmptyString",
@@ -265,13 +419,17 @@
 
     "SelectionRule": {
       "type": "object",
-      "required": ["strategy", "kind"],
+      "required": ["strategy"],
       "additionalProperties": false,
       "properties": {
         "strategy": { "enum": ["by_kind", "by_preference_order", "by_relationship", "by_proximity", "by_prominence"] },
         "kind": { "$ref": "#/$defs/NonEmptyString" },
+        "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+        "excludeSubtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+        "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
         "mustHave": { "type": "boolean" },
         "direction": { "enum": ["src", "dst", "both"] },
@@ -287,7 +445,11 @@
         },
         "pickStrategy": { "enum": ["random", "first", "all", "weighted"] },
         "maxResults": { "type": "integer", "minimum": 1 }
-      }
+      },
+      "anyOf": [
+        { "required": ["kind"] },
+        { "required": ["kinds"] }
+      ]
     },
 
     "SelectionFilter": {
@@ -697,42 +859,11 @@
         "strength": { "type": "number", "minimum": 0, "maximum": 1 },
         "bidirectional": { "type": "boolean" },
         "catalyzedBy": { "$ref": "#/$defs/NonEmptyString" },
-        "condition": { "$ref": "#/$defs/RelationshipCondition" }
+        "condition": { "$ref": "#/$defs/Condition" }
       }
     },
 
-    "RelationshipCondition": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": ["type", "chance"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "random_chance" },
-            "chance": { "type": "number", "minimum": 0, "maximum": 1 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "entity"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "entity_exists" },
-            "entity": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "entity", "relationshipKind"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "entity_has_relationship" },
-            "entity": { "$ref": "#/$defs/NonEmptyString" },
-            "relationshipKind": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        }
-      ]
-    },
+    "RelationshipCondition": { "$ref": "#/$defs/Condition" },
 
     "StateUpdateRule": {
       "oneOf": [
@@ -744,14 +875,28 @@
         },
         {
           "type": "object",
-          "required": ["type", "entity", "relationshipKind", "with"],
+          "required": ["type", "src", "dst", "kind"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "create_relationship" },
+            "src": { "$ref": "#/$defs/NonEmptyString" },
+            "dst": { "$ref": "#/$defs/NonEmptyString" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "strength": { "type": "number", "minimum": 0, "maximum": 1 },
+            "bidirectional": { "type": "boolean" },
+            "category": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "entity", "relationshipKind"],
           "additionalProperties": false,
           "properties": {
             "type": { "const": "archive_relationship" },
             "entity": { "$ref": "#/$defs/NonEmptyString" },
             "relationshipKind": { "$ref": "#/$defs/NonEmptyString" },
             "with": { "$ref": "#/$defs/NonEmptyString", "description": "Entity reference or 'any' to archive all relationships of this kind" },
-            "direction": { "enum": ["src", "dst", "any"], "default": "any", "description": "Only used when with='any': which end of the relationship the entity should be on" }
+            "direction": { "enum": ["src", "dst", "both"], "default": "both", "description": "Which end of the relationship the entity should be on" }
           }
         },
         {
@@ -766,12 +911,35 @@
         },
         {
           "type": "object",
+          "required": ["type", "src", "dst", "kind", "delta"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "adjust_relationship_strength" },
+            "src": { "$ref": "#/$defs/NonEmptyString" },
+            "dst": { "$ref": "#/$defs/NonEmptyString" },
+            "kind": { "$ref": "#/$defs/NonEmptyString" },
+            "delta": { "type": "number" },
+            "bidirectional": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
           "required": ["type", "entity", "newStatus"],
           "additionalProperties": false,
           "properties": {
-            "type": { "const": "update_entity_status" },
+            "type": { "const": "change_status" },
             "entity": { "$ref": "#/$defs/NonEmptyString" },
             "newStatus": { "$ref": "#/$defs/NonEmptyString" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "entity", "direction"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "adjust_prominence" },
+            "entity": { "$ref": "#/$defs/NonEmptyString" },
+            "direction": { "enum": ["up", "down"] }
           }
         },
         {
@@ -782,7 +950,8 @@
             "type": { "const": "set_tag" },
             "entity": { "$ref": "#/$defs/NonEmptyString" },
             "tag": { "$ref": "#/$defs/NonEmptyString" },
-            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] }
+            "value": { "oneOf": [{ "type": "string" }, { "type": "boolean" }] },
+            "valueFrom": { "$ref": "#/$defs/NonEmptyString" }
           }
         },
         {
@@ -819,11 +988,15 @@
           ]
         },
         "kind": { "$ref": "#/$defs/NonEmptyString" },
+        "kinds": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "subtypes": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
         "statusFilter": { "$ref": "#/$defs/NonEmptyString" },
+        "statuses": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" }, "minItems": 1 },
+        "notStatus": { "$ref": "#/$defs/NonEmptyString" },
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "preferFilters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
-        "pickStrategy": { "enum": ["random", "first", "all"] },
+        "pickStrategy": { "enum": ["random", "first", "all", "weighted"] },
+        "maxResults": { "type": "integer", "minimum": 1 },
         "fallback": { "$ref": "#/$defs/NonEmptyString" }
       }
     },
@@ -835,7 +1008,7 @@
       "properties": {
         "relatedTo": { "$ref": "#/$defs/NonEmptyString" },
         "relationship": { "$ref": "#/$defs/NonEmptyString" },
-        "direction": { "enum": ["src", "dst", "both"] }
+        "direction": { "enum": ["src", "dst", "both", "out", "in", "any"] }
       }
     },
 
@@ -861,86 +1034,7 @@
     },
 
     "VariantCondition": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": ["type", "pressureId"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "pressure" },
-            "pressureId": { "$ref": "#/$defs/NonEmptyString" },
-            "min": { "type": "number", "minimum": 0, "maximum": 100 },
-            "max": { "type": "number", "minimum": 0, "maximum": 100 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "pressureA", "pressureB"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "pressure_compare" },
-            "pressureA": { "$ref": "#/$defs/NonEmptyString" },
-            "pressureB": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "kind"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "entity_count" },
-            "kind": { "$ref": "#/$defs/NonEmptyString" },
-            "subtype": { "$ref": "#/$defs/NonEmptyString" },
-            "min": { "type": "integer", "minimum": 0 },
-            "max": { "type": "integer", "minimum": 0 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "entity", "tag"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "has_tag" },
-            "entity": { "$ref": "#/$defs/NonEmptyString" },
-            "tag": { "$ref": "#/$defs/NonEmptyString" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "chance"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "random" },
-            "chance": { "type": "number", "minimum": 0, "maximum": 1 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "always" }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "conditions"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "and" },
-            "conditions": { "type": "array", "items": { "$ref": "#/$defs/VariantCondition" }, "minItems": 1 }
-          }
-        },
-        {
-          "type": "object",
-          "required": ["type", "conditions"],
-          "additionalProperties": false,
-          "properties": {
-            "type": { "const": "or" },
-            "conditions": { "type": "array", "items": { "$ref": "#/$defs/VariantCondition" }, "minItems": 1 }
-          }
-        }
-      ]
+      "$ref": "#/$defs/Condition"
     },
 
     "VariantEffects": {

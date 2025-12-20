@@ -12,32 +12,52 @@ export function createNewRule(type, pressures) {
   // Create rules with empty required fields - validation will flag them
   // No domain-specific defaults - user must explicitly select values
   const newRule = { type };
-  if (type === 'entity_count_min') {
-    newRule.kind = '';
-    newRule.min = 0;
-  } else if (type === 'entity_count_max') {
-    newRule.kind = '';
-    newRule.max = 0;
-  } else if (type === 'pressure_threshold') {
-    newRule.pressureId = '';
-  } else if (type === 'era_match') {
-    newRule.eras = [];
-  } else if (type === 'random_chance') {
-    newRule.chance = 0;
-  } else if (type === 'cooldown_elapsed') {
-    newRule.cooldownTicks = 0;
-  } else if (type === 'creations_per_epoch') {
-    newRule.maxPerEpoch = 0;
-  } else if (type === 'or' || type === 'and') {
-    newRule.rules = [];
-  } else if (type === 'pressure_any_above') {
-    newRule.pressureIds = [];
-    newRule.threshold = 0;
-  } else if (type === 'pressure_compare') {
-    newRule.pressureA = '';
-    newRule.pressureB = '';
+  const firstPressure = (pressures || [])[0]?.id || '';
+
+  switch (type) {
+    case 'pressure':
+      return { ...newRule, pressureId: firstPressure, min: 0, max: 100 };
+    case 'pressure_any_above':
+      return { ...newRule, pressureIds: firstPressure ? [firstPressure] : [], threshold: 50 };
+    case 'pressure_compare':
+      return { ...newRule, pressureA: firstPressure, pressureB: firstPressure, operator: '>' };
+    case 'entity_count':
+      return { ...newRule, kind: '', min: 0 };
+    case 'relationship_count':
+      return { ...newRule, relationshipKind: '', direction: 'both', min: 0 };
+    case 'relationship_exists':
+      return { ...newRule, relationshipKind: '', direction: 'both' };
+    case 'tag_exists':
+      return { ...newRule, tag: '' };
+    case 'tag_absent':
+      return { ...newRule, tag: '' };
+    case 'status':
+      return { ...newRule, status: '' };
+    case 'prominence':
+      return { ...newRule, min: 'recognized' };
+    case 'time_elapsed':
+      return { ...newRule, minTicks: 10, since: 'updated' };
+    case 'era_match':
+      return { ...newRule, eras: [] };
+    case 'random_chance':
+      return { ...newRule, chance: 0.5 };
+    case 'cooldown_elapsed':
+      return { ...newRule, cooldownTicks: 10 };
+    case 'creations_per_epoch':
+      return { ...newRule, maxPerEpoch: 1 };
+    case 'graph_path':
+      return { ...newRule, assert: { check: 'exists', path: [] } };
+    case 'entity_exists':
+      return { ...newRule, entity: '$target' };
+    case 'entity_has_relationship':
+      return { ...newRule, entity: '$target', relationshipKind: '', direction: 'both' };
+    case 'or':
+    case 'and':
+      return { ...newRule, conditions: [] };
+    case 'always':
+    default:
+      return newRule;
   }
-  return newRule;
 }
 
 export default createNewRule;

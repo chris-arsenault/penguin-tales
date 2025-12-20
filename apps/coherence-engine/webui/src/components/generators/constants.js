@@ -21,17 +21,27 @@ export const TABS = [
 // ============================================================================
 
 export const APPLICABILITY_TYPES = {
-  entity_count_min: { label: 'Min Entities', icon: '📊', color: '#3b82f6', desc: 'Requires minimum entity count' },
-  entity_count_max: { label: 'Max Entities', icon: '📉', color: '#8b5cf6', desc: 'Stops at maximum entity count' },
-  pressure_threshold: { label: 'Pressure Range', icon: '🌡️', color: '#f59e0b', desc: 'Runs when pressure is in range' },
-  pressure_any_above: { label: 'Any Pressure Above', icon: '🌡️', color: '#f97316', desc: 'Runs when any pressure exceeds threshold' },
-  pressure_compare: { label: 'Pressure Compare', icon: '⚖️', color: '#eab308', desc: 'Runs when pressure A > pressure B' },
+  pressure: { label: 'Pressure Range', icon: '🌡️', color: '#f59e0b', desc: 'Pressure within a range' },
+  pressure_any_above: { label: 'Any Pressure Above', icon: '🌡️', color: '#f97316', desc: 'Any pressure exceeds threshold' },
+  pressure_compare: { label: 'Pressure Compare', icon: '⚖️', color: '#eab308', desc: 'Compare two pressures' },
+  entity_count: { label: 'Entity Count', icon: '📊', color: '#3b82f6', desc: 'Count entities by kind' },
+  relationship_count: { label: 'Relationship Count', icon: '🔗', color: '#8b5cf6', desc: 'Count relationships' },
+  relationship_exists: { label: 'Relationship Exists', icon: '🔍', color: '#7c3aed', desc: 'Check for relationship' },
+  tag_exists: { label: 'Tag Exists', icon: '🏷️', color: '#10b981', desc: 'Entity has tag' },
+  tag_absent: { label: 'Tag Absent', icon: '🚫', color: '#dc2626', desc: 'Entity lacks tag' },
+  status: { label: 'Status Match', icon: '📌', color: '#0891b2', desc: 'Entity status check' },
+  prominence: { label: 'Prominence', icon: '⭐', color: '#eab308', desc: 'Prominence range check' },
+  time_elapsed: { label: 'Time Elapsed', icon: '⏱️', color: '#06b6d4', desc: 'Time since creation/update' },
   era_match: { label: 'Era Match', icon: '🕰️', color: '#10b981', desc: 'Only runs in specific eras' },
-  random_chance: { label: 'Random Chance', icon: '🎲', color: '#a855f7', desc: 'Runs with a probability (0-100%)' },
-  cooldown_elapsed: { label: 'Cooldown', icon: '⏱️', color: '#06b6d4', desc: 'Wait N ticks since last run' },
+  random_chance: { label: 'Random Chance', icon: '🎲', color: '#a855f7', desc: 'Runs with a probability' },
+  cooldown_elapsed: { label: 'Cooldown', icon: '⏱️', color: '#0ea5e9', desc: 'Wait N ticks since last run' },
   creations_per_epoch: { label: 'Rate Limit', icon: '📈', color: '#f97316', desc: 'Max creations per epoch' },
+  graph_path: { label: 'Graph Path', icon: '🔀', color: '#ec4899', desc: 'Path traversal condition' },
+  entity_exists: { label: 'Entity Exists', icon: '👤', color: '#14b8a6', desc: 'Entity reference resolves' },
+  entity_has_relationship: { label: 'Entity Has Relationship', icon: '🧷', color: '#0f766e', desc: 'Entity has relationship' },
   or: { label: 'Any Of (OR)', icon: '⚡', color: '#ec4899', desc: 'Passes if any sub-rule passes' },
-  and: { label: 'All Of (AND)', icon: '🔗', color: '#14b8a6', desc: 'Passes if all sub-rules pass' },
+  and: { label: 'All Of (AND)', icon: '🔗', color: '#14b8a6', desc: 'Passes if all sub-rule passes' },
+  always: { label: 'Always', icon: '✅', color: '#22c55e', desc: 'Always passes' },
 };
 
 // ============================================================================
@@ -53,11 +63,12 @@ export const PICK_STRATEGIES = [
   { value: 'weighted', label: 'Weighted', desc: 'Weight by prominence' },
 ];
 
-// For variable selection (no weighted support)
+// For variable selection (supports weighted)
 export const VARIABLE_PICK_STRATEGIES = [
   { value: 'random', label: 'Random', desc: 'Pick randomly from matches' },
   { value: 'first', label: 'First', desc: 'Pick the first match' },
   { value: 'all', label: 'All', desc: 'Use all matches' },
+  { value: 'weighted', label: 'Weighted', desc: 'Weight by prominence' },
 ];
 
 // ============================================================================

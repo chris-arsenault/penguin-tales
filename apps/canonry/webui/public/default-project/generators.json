@@ -4,12 +4,12 @@
     "name": "Hero Emergence",
     "applicability": [
       {
-        "type": "entity_count_max",
+        "type": "entity_count",
         "kind": "npc",
         "max": 10
       },
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "security",
         "min": -100,
         "max": -20
@@ -255,7 +255,7 @@
     "name": "Orca Raiders Arrive",
     "applicability": [
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "security",
         "min": -100,
         "max": 0
@@ -447,7 +447,7 @@
     "name": "Faction Splinter",
     "applicability": [
       {
-        "type": "entity_count_min",
+        "type": "entity_count",
         "kind": "faction",
         "min": 1
       }
@@ -725,15 +725,13 @@
         "type": "archive_relationship",
         "entity": "$merchant1",
         "relationshipKind": "resident_of",
-        "with": "any",
-        "direction": "any"
+        "direction": "both"
       },
       {
         "type": "archive_relationship",
         "entity": "$merchant2",
         "relationshipKind": "resident_of",
-        "with": "any",
-        "direction": "any"
+        "direction": "both"
       }
     ],
     "variables": {
@@ -787,10 +785,10 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
-      "subtypes": [
-        "anomaly",
-        "geographic_feature"
-      ],
+        "subtypes": [
+          "anomaly",
+          "point_of_interest"
+        ],
       "pickStrategy": "random",
       "filters": [
         {
@@ -974,8 +972,7 @@
         "type": "archive_relationship",
         "entity": "$cultist",
         "relationshipKind": "resident_of",
-        "with": "any",
-        "direction": "any"
+        "direction": "both"
       }
     ],
     "variables": {
@@ -1315,7 +1312,7 @@
     "name": "Krill Bloom Discovery",
     "applicability": [
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "harmony",
         "min": 40,
         "max": 100
@@ -1658,7 +1655,7 @@
         "value": true
       },
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "waning"
       },
@@ -1681,7 +1678,7 @@
     "name": "Legend Crystallization",
     "applicability": [
       {
-        "type": "entity_count_max",
+        "type": "entity_count",
         "kind": "npc",
         "max": 10,
         "subtype": "hero"
@@ -1780,7 +1777,7 @@
         "value": true
       },
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "fictional"
       }
@@ -1805,7 +1802,7 @@
     "name": "Crisis Law",
     "applicability": [
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "security",
         "min": -100,
         "max": -80
@@ -2306,7 +2303,7 @@
     "name": "Magical Discovery",
     "applicability": [
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "magical_stability",
         "min": -50,
         "max": 50
@@ -2606,7 +2603,7 @@
     "relationships": [],
     "stateUpdates": [
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "waning"
       },
@@ -2647,7 +2644,7 @@
     "relationships": [],
     "stateUpdates": [
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "thriving"
       },
@@ -2825,7 +2822,7 @@
     "relationships": [],
     "stateUpdates": [
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "waning"
       },
@@ -2866,7 +2863,7 @@
     "relationships": [],
     "stateUpdates": [
       {
-        "type": "update_entity_status",
+        "type": "change_status",
         "entity": "$target",
         "newStatus": "thriving"
       },
@@ -2894,13 +2891,13 @@
     "name": "Wild Magical Discovery",
     "applicability": [
       {
-        "type": "pressure_threshold",
+        "type": "pressure",
         "pressureId": "magical_stability",
         "min": -100,
         "max": -50
       },
       {
-        "type": "entity_count_max",
+        "type": "entity_count",
         "kind": "abilities",
         "subtype": "magic",
         "max": 15

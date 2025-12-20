@@ -6,7 +6,6 @@ import React from 'react';
 import { DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
 import TagSelector from '@lore-weave/shared-components/TagSelector';
-import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
 /**
  * @param {Object} props
@@ -64,18 +63,6 @@ export function TagDiffusionTab({ system, onChange, schema }) {
           </div>
         </div>
 
-        <div className="mt-xl">
-          <div className="section-subtitle">Advanced Selection Filters</div>
-          <div className="section-desc">
-            Filter entities by tags, relationships, prominence, culture, and more.
-          </div>
-          <SelectionFiltersEditor
-            filters={config.filters || []}
-            onChange={(v) => updateConfig('filters', v.length > 0 ? v : undefined)}
-            schema={schema}
-            availableRefs={[]}
-          />
-        </div>
       </div>
 
       <div className="section">

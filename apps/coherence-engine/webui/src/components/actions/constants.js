@@ -12,6 +12,7 @@ export {
 export const TABS = [
   { id: 'overview', label: 'Overview', icon: '📋' },
   { id: 'actor', label: 'Actor', icon: '🎭' },
+  { id: 'instigator', label: 'Instigator', icon: '🧭' },
   { id: 'targeting', label: 'Targeting', icon: '🎯' },
   { id: 'outcome', label: 'Outcome', icon: '⚡' },
   { id: 'probability', label: 'Probability', icon: '🎲' },
@@ -32,8 +33,8 @@ export const PROMINENCE_LEVELS = [
 ];
 
 export const RELATIONSHIP_REFS = [
-  { value: 'actor', label: 'Actor' },
-  { value: 'instigator', label: 'Instigator' },
-  { value: 'target', label: 'Target' },
-  { value: 'target2', label: 'Target 2' },
+  { value: '$actor', label: 'Actor' },
+  { value: '$instigator', label: 'Instigator' },
+  { value: '$target', label: 'Target' },
+  { value: '$target2', label: 'Target 2' },
 ];

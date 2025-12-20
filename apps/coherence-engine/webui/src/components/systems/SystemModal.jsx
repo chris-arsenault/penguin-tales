@@ -84,7 +84,7 @@ export function SystemModal({ system, onChange, onClose, onDelete, schema, press
           case 'connectionEvolution':
             return <ConnectionEvolutionTab system={system} onChange={onChange} schema={schema} />;
           case 'thresholdTrigger':
-            return <ThresholdTriggerTab system={system} onChange={onChange} schema={schema} />;
+            return <ThresholdTriggerTab system={system} onChange={onChange} schema={schema} pressures={pressures} />;
           case 'clusterFormation':
             return <ClusterFormationTab system={system} onChange={onChange} schema={schema} />;
           case 'tagDiffusion':

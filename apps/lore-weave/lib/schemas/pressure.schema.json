@@ -59,6 +59,8 @@
         { "$ref": "#/$defs/EntityCountFactor" },
         { "$ref": "#/$defs/RelationshipCountFactor" },
         { "$ref": "#/$defs/TagCountFactor" },
+        { "$ref": "#/$defs/TotalEntitiesFactor" },
+        { "$ref": "#/$defs/ConstantFactor" },
         { "$ref": "#/$defs/RatioFactor" },
         { "$ref": "#/$defs/StatusRatioFactor" },
         { "$ref": "#/$defs/CrossCultureRatioFactor" }
@@ -66,7 +68,6 @@
     },
     "BaseFeedbackFactor": {
       "type": "object",
-      "required": ["coefficient"],
       "properties": {
         "coefficient": {
           "type": "number",
@@ -80,7 +81,7 @@
     },
     "EntityCountFactor": {
       "type": "object",
-      "required": ["type", "kind", "coefficient"],
+      "required": ["type", "kind"],
       "properties": {
         "type": { "const": "entity_count" },
         "kind": { "type": "string" },
@@ -93,13 +94,15 @@
     },
     "RelationshipCountFactor": {
       "type": "object",
-      "required": ["type", "relationshipKinds", "coefficient"],
+      "required": ["type"],
       "properties": {
         "type": { "const": "relationship_count" },
         "relationshipKinds": {
           "type": "array",
           "items": { "type": "string" }
         },
+        "direction": { "enum": ["src", "dst", "both"] },
+        "minStrength": { "type": "number", "minimum": 0, "maximum": 1 },
         "coefficient": { "type": "number" },
         "cap": { "type": "number" }
       },
@@ -107,7 +110,7 @@
     },
     "TagCountFactor": {
       "type": "object",
-      "required": ["type", "tags", "coefficient"],
+      "required": ["type", "tags"],
       "properties": {
         "type": { "const": "tag_count" },
         "tags": {
@@ -119,9 +122,29 @@
       },
       "additionalProperties": false
     },
+    "TotalEntitiesFactor": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "total_entities" },
+        "coefficient": { "type": "number" },
+        "cap": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "ConstantFactor": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "constant" },
+        "value": { "type": "number" },
+        "coefficient": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
     "RatioFactor": {
       "type": "object",
-      "required": ["type", "numerator", "denominator", "coefficient"],
+      "required": ["type", "numerator", "denominator"],
       "properties": {
         "type": { "const": "ratio" },
         "numerator": { "$ref": "#/$defs/SimpleCountFactor" },
@@ -137,7 +160,7 @@
     },
     "StatusRatioFactor": {
       "type": "object",
-      "required": ["type", "kind", "aliveStatus", "coefficient"],
+      "required": ["type", "kind", "aliveStatus"],
       "properties": {
         "type": { "const": "status_ratio" },
         "kind": { "type": "string" },
@@ -150,7 +173,7 @@
     },
     "CrossCultureRatioFactor": {
       "type": "object",
-      "required": ["type", "relationshipKinds", "coefficient"],
+      "required": ["type", "relationshipKinds"],
       "properties": {
         "type": { "const": "cross_culture_ratio" },
         "relationshipKinds": {

@@ -25,6 +25,8 @@ import { HardState } from '../core/worldTypes';
 import { Point } from '../coordinates/types';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { hasTag, getTagValue } from '../utils';
+import { createSystemContext, evaluateMetric, selectEntities } from '../rules';
+import type { Metric, SelectionRule } from '../rules';
 
 // =============================================================================
 // CONSTANTS
@@ -108,10 +110,8 @@ export interface PlaneDiffusionConfig {
   /** Optional description */
   description?: string;
 
-  /** Entity kind to operate on (defines the semantic plane) */
-  entityKind: string;
-  /** Optional: only process entities with this status */
-  entityStatus?: string;
+  /** Selection rule for entities on this semantic plane */
+  selection: SelectionRule;
 
   /** Source configuration: entities that emit into the field */
   sources: DiffusionSourceConfig;
@@ -178,36 +178,7 @@ function setGridValue(grid: Float32Array, x: number, y: number, value: number): 
   grid[y * GRID_SIZE + x] = value;
 }
 
-/**
- * Calculate falloff multiplier based on distance and falloff type
- * Returns a value between 0 and 1
- */
-function calculateFalloff(distance: number, maxDistance: number, falloffType: FalloffType): number {
-  if (distance <= 0) return 1;
-  if (distance >= maxDistance) return 0;
-
-  const normalizedDist = distance / maxDistance;
-
-  switch (falloffType) {
-    case 'linear':
-      return 1 - normalizedDist;
-
-    case 'inverse_square':
-      // 1 / (1 + d²) normalized so it's 1 at d=0 and approaches 0 at maxDistance
-      return 1 / (1 + (distance * distance) / (maxDistance * 0.5));
-
-    case 'sqrt':
-      // sqrt falloff - slower initial decay
-      return 1 - Math.sqrt(normalizedDist);
-
-    case 'exponential':
-      // Exponential decay
-      return Math.exp(-3 * normalizedDist);
-
-    default:
-      return 1 - normalizedDist;
-  }
-}
+// falloff calculation now uses rules/metrics
 
 /**
  * Get numeric strength from entity tags
@@ -294,6 +265,9 @@ export function createPlaneDiffusionSystem(
   if (sourceRadius < 0 || sourceRadius > 50) {
     throw new Error(`[${config.id}] Source radius must be between 0 and 50, got ${sourceRadius}`);
   }
+  if (!config.selection?.kind) {
+    throw new Error(`[${config.id}] Plane diffusion requires selection.kind to define the semantic plane.`);
+  }
 
   // Create the system with internal state
   const system: SimulationSystem<DiffusionState> = {
@@ -341,12 +315,22 @@ export function createPlaneDiffusionSystem(
       }
 
       const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const metricCtx = createSystemContext(graphView);
 
-      // Find all entities of the target kind
-      let entities = graphView.findEntities({ kind: config.entityKind });
-      if (config.entityStatus) {
-        entities = entities.filter(e => e.status === config.entityStatus);
-      }
+      const getFalloff = (distance: number, strength: number): number => {
+        const maxDistance = falloffType === 'absolute' ? strength : sourceRadius + 1;
+        if (maxDistance <= 0) return 0;
+        const metric: Metric = {
+          type: 'falloff',
+          falloffType,
+          distance,
+          maxDistance,
+        };
+        return evaluateMetric(metric, metricCtx).value;
+      };
+
+      // Find all entities on the target plane
+      let entities = selectEntities(config.selection, metricCtx);
 
       // Filter to entities with valid coordinates
       const entitiesWithCoords = entities.filter(hasCoordinates);
@@ -403,18 +387,8 @@ export function createPlaneDiffusionSystem(
           for (let dx = -sourceRadius; dx <= sourceRadius; dx++) {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= sourceRadius) {
-              let injectionValue: number;
-              if (falloffType === 'absolute') {
-                // Absolute: lose 1 unit per cell distance (100→99→98...)
-                injectionValue = Math.max(0, strength - dist);
-              } else if (falloffType === 'none') {
-                // No falloff: full strength everywhere in radius
-                injectionValue = strength;
-              } else {
-                // Percentage-based falloff
-                const falloff = calculateFalloff(dist, sourceRadius + 1, falloffType);
-                injectionValue = strength * falloff;
-              }
+              const falloff = getFalloff(dist, strength);
+              const injectionValue = strength * falloff;
 
               const nx = gx + dx;
               const ny = gy + dy;
@@ -446,18 +420,8 @@ export function createPlaneDiffusionSystem(
           for (let dx = -sourceRadius; dx <= sourceRadius; dx++) {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= sourceRadius) {
-              let subtractAmount: number;
-              if (falloffType === 'absolute') {
-                // Absolute: lose 1 unit per cell distance
-                subtractAmount = Math.max(0, strength - dist);
-              } else if (falloffType === 'none') {
-                // No falloff: full strength everywhere in radius
-                subtractAmount = strength;
-              } else {
-                // Percentage-based falloff
-                const falloff = calculateFalloff(dist, sourceRadius + 1, falloffType);
-                subtractAmount = strength * falloff;
-              }
+              const falloff = getFalloff(dist, strength);
+              const subtractAmount = strength * falloff;
               const nx = gx + dx;
               const ny = gy + dy;
               const currentValue = getGridValue(state.grid, nx, ny);

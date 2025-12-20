@@ -7,7 +7,7 @@ import {
 import { TemplateGraphView } from '../graph/templateGraphView';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
-import { matchesActorConfig } from '../selection';
+import { matchesActorConfig, getProminenceMultiplierValue } from '../rules';
 import { adjustProminence } from '../utils';
 import type { ActionApplicationPayload } from '../observer/types';
 
@@ -47,9 +47,11 @@ interface ExtendedActionOutcome {
   status: ActionOutcomeStatus;
   success: boolean;
   relationships: Relationship[];
+  relationshipsAdjusted?: Array<{ kind: string; src: string; dst: string; delta: number }>;
   description: string;
   entitiesCreated?: string[];
-  entitiesModified?: string[];
+  entitiesModified?: Array<{ id: string; changes: Partial<HardState> }>;
+  pressureChanges?: Record<string, number>;
   instigatorId?: string;
   instigatorName?: string;
   targetId?: string;
@@ -106,7 +108,9 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
       const allAgents = graphView.getEntities().filter(e => e.catalyst?.canAct === true);
 
       const relationshipsAdded: Relationship[] = [];
+      const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
       const entitiesModified: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const pressureChanges: Record<string, number> = {};
       let actionsAttempted = 0;
       let actionsSucceeded = 0;
 
@@ -147,6 +151,22 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
         if (outcome.success) {
           actionsSucceeded++;
+          const historyModifiedIds = new Set<string>();
+
+          if (outcome.entitiesModified && outcome.entitiesModified.length > 0) {
+            entitiesModified.push(...outcome.entitiesModified);
+            outcome.entitiesModified.forEach((mod) => historyModifiedIds.add(mod.id));
+          }
+
+          if (outcome.relationshipsAdjusted && outcome.relationshipsAdjusted.length > 0) {
+            relationshipsAdjusted.push(...outcome.relationshipsAdjusted);
+          }
+
+          if (outcome.pressureChanges) {
+            for (const [pressureId, delta] of Object.entries(outcome.pressureChanges)) {
+              pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+            }
+          }
 
           // Add created relationships with catalyst attribution
           outcome.relationships.forEach(rel => {
@@ -169,6 +189,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
               updatedAt: graphView.tick
             }
           });
+          historyModifiedIds.add(agent.id);
 
           // Apply prominence increase on success (if action opts in)
           if (selectedAction.applyProminenceToActor && Math.random() < prominenceUpChance) {
@@ -178,6 +199,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
               changes: { prominence: agent.prominence }
             });
             prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'up' });
+            historyModifiedIds.add(agent.id);
           }
           if (selectedAction.applyProminenceToInstigator && outcome.instigatorId && Math.random() < prominenceUpChance) {
             const instigator = graphView.getEntity(outcome.instigatorId);
@@ -188,6 +210,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
                 changes: { prominence: instigator.prominence }
               });
               prominenceChanges.push({ entityId: instigator.id, entityName: instigator.name, direction: 'up' });
+              historyModifiedIds.add(instigator.id);
             }
           }
 
@@ -199,7 +222,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             description: `${agent.name} ${outcome.description}`,
             entitiesCreated: outcome.entitiesCreated || [],
             relationshipsCreated: outcome.relationships,
-            entitiesModified: outcome.entitiesModified || [agent.id]
+            entitiesModified: historyModifiedIds.size > 0 ? Array.from(historyModifiedIds) : [agent.id]
           });
         } else {
           // Apply prominence decrease on failure (if action opts in)
@@ -256,7 +279,14 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
                 dstName: graphView.getEntity(rel.dst)?.name || rel.dst,
                 strength: rel.strength
               })),
-              relationshipsStrengthened: [], // TODO: Track if needed
+              relationshipsStrengthened: (outcome.relationshipsAdjusted || []).map(rel => ({
+                kind: rel.kind,
+                srcId: rel.src,
+                dstId: rel.dst,
+                srcName: graphView.getEntity(rel.src)?.name || rel.src,
+                dstName: graphView.getEntity(rel.dst)?.name || rel.dst,
+                delta: rel.delta
+              })),
               prominenceChanges
             }
           };
@@ -266,8 +296,9 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 
       return {
         relationshipsAdded,
+        relationshipsAdjusted,
         entitiesModified,
-        pressureChanges: {},
+        pressureChanges,
         description: actionsSucceeded > 0
           ? `Agents shape the world (${actionsSucceeded}/${actionsAttempted} actions succeeded)`
           : actionsAttempted > 0
@@ -443,21 +474,6 @@ function calculateActionWeightWithBreakdown(action: ExecutableAction, graphView:
 }
 
 /**
- * Get prominence multiplier for success chance calculation.
- * More prominent entities have higher success rates.
- */
-function getProminenceMultiplier(prominence: Prominence): number {
-  const multipliers: Record<Prominence, number> = {
-    'forgotten': 0.6,
-    'marginal': 0.8,
-    'recognized': 1.0,
-    'renowned': 1.2,
-    'mythic': 1.5
-  };
-  return multipliers[prominence] || 1.0;
-}
-
-/**
  * Execute an action via declarative handler with extended outcome for instrumentation
  */
 function executeActionWithContext(
@@ -467,7 +483,7 @@ function executeActionWithContext(
 ): ExtendedActionOutcome {
   // Calculate success chance based on prominence
   const baseChance = action.baseSuccessChance || 0.5;
-  const prominenceMultiplier = getProminenceMultiplier(agent.prominence);
+  const prominenceMultiplier = getProminenceMultiplierValue(agent.prominence, 'success_chance');
   const successChance = Math.min(0.95, baseChance * prominenceMultiplier);
 
   // Action handler is created from declarative config
@@ -493,13 +509,16 @@ function executeActionWithContext(
     // Determine status based on handler result
     let status: ActionOutcomeStatus = 'success';
     if (!handlerResult.success) {
-      // Handler returned failure - check description for reason
-      if (handlerResult.description.includes('no valid') || handlerResult.description.includes('found no')) {
-        status = 'failed_no_target';
-      } else if (handlerResult.description.includes('no instigator')) {
-        status = 'failed_no_instigator';
-      } else {
-        status = 'failed_roll';
+      switch (handlerResult.failureReason) {
+        case 'no_target':
+          status = 'failed_no_target';
+          break;
+        case 'no_instigator':
+          status = 'failed_no_instigator';
+          break;
+        default:
+          status = 'failed_roll';
+          break;
       }
     }
 
@@ -510,29 +529,25 @@ function executeActionWithContext(
       instigatorName = instigator?.name;
     }
 
-    // Extract target info from entitiesModified (first non-actor entity is the target)
-    let targetId: string | undefined;
+    // Extract target info (prefer explicit IDs from handler result)
+    let targetId: string | undefined = handlerResult.targetId;
     let targetName: string | undefined;
     let targetKind: string | undefined;
-    let target2Id: string | undefined;
+    let target2Id: string | undefined = handlerResult.target2Id;
     let target2Name: string | undefined;
 
-    if (handlerResult.entitiesModified) {
-      const targets = handlerResult.entitiesModified.filter(id => id !== agent.id);
-      if (targets.length > 0) {
-        const target = graphView.getEntity(targets[0]);
-        if (target) {
-          targetId = target.id;
-          targetName = target.name;
-          targetKind = target.kind;
-        }
+    if (targetId) {
+      const target = graphView.getEntity(targetId);
+      if (target) {
+        targetName = target.name;
+        targetKind = target.kind;
       }
-      if (targets.length > 1) {
-        const target2 = graphView.getEntity(targets[1]);
-        if (target2) {
-          target2Id = target2.id;
-          target2Name = target2.name;
-        }
+    }
+
+    if (target2Id) {
+      const target2 = graphView.getEntity(target2Id);
+      if (target2) {
+        target2Name = target2.name;
       }
     }
 
@@ -540,9 +555,11 @@ function executeActionWithContext(
       status,
       success: handlerResult.success,
       relationships: handlerResult.relationships,
+      relationshipsAdjusted: handlerResult.relationshipsAdjusted,
       description: handlerResult.description,
       entitiesCreated: handlerResult.entitiesCreated,
       entitiesModified: handlerResult.entitiesModified,
+      pressureChanges: handlerResult.pressureChanges,
       instigatorId: handlerResult.instigatorId,
       instigatorName,
       targetId,
@@ -566,4 +583,3 @@ function executeActionWithContext(
     };
   }
 }
-

@@ -53,6 +53,21 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     return nodeMap.get(id);
   };
 
+  const addPressureEdgesFromMutations = (sourceId, mutations = []) => {
+    mutations.forEach((mutation) => {
+      if (mutation?.type !== 'modify_pressure' || !mutation.pressureId) return;
+      const delta = Number(mutation.delta || 0);
+      const polarity = delta >= 0 ? 'positive' : 'negative';
+      pendingEdges.push({
+        source: sourceId,
+        target: `pressure:${mutation.pressureId}`,
+        polarity,
+        label: delta > 0 ? `+${delta}` : `${delta}`,
+        edgeType: 'direct',
+      });
+    });
+  };
+
   // 1. Add pressure nodes
   pressures.forEach(p => {
     addNode(`pressure:${p.id}`, 'pressure', p.name || p.id, { pressure: p });
@@ -66,19 +81,7 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     addNode(`generator:${gId}`, 'generator', gName, { generator: g }, isDisabled);
 
     // Direct pressure modifications via stateUpdates
-    const stateUpdates = g.stateUpdates || [];
-    stateUpdates.forEach(update => {
-      if (update.type === 'modify_pressure' && update.pressureId) {
-        const polarity = (update.delta || 0) >= 0 ? 'positive' : 'negative';
-        pendingEdges.push({
-          source: `generator:${gId}`,
-          target: `pressure:${update.pressureId}`,
-          polarity,
-          label: update.delta > 0 ? `+${update.delta}` : `${update.delta}`,
-          edgeType: 'direct',
-        });
-      }
-    });
+    addPressureEdgesFromMutations(`generator:${gId}`, g.stateUpdates || []);
 
     // Generator creates entities - extract from creation array
     const creation = g.creation || [];
@@ -111,8 +114,10 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     const isSystemDisabled = s.enabled === false || s.config?.enabled === false;
     addNode(`system:${sId}`, 'system', sName, { system: s }, isSystemDisabled);
 
-    // Pressure changes from systems
-    const pressureChanges = s.pressureChanges || s.config?.pressureChanges || {};
+    const config = s.config || s;
+
+    // Pressure changes from systems (legacy map + mutation-based actions)
+    const pressureChanges = config.pressureChanges || s.pressureChanges || {};
     Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
       if (typeof delta === 'number') {
         const polarity = delta >= 0 ? 'positive' : 'negative';
@@ -125,6 +130,22 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
         });
       }
     });
+
+    if (Array.isArray(config.actions)) {
+      addPressureEdgesFromMutations(`system:${sId}`, config.actions);
+    }
+
+    if (config.infectionAction) {
+      addPressureEdgesFromMutations(`system:${sId}`, [config.infectionAction]);
+    }
+
+    if (Array.isArray(config.rules)) {
+      config.rules.forEach((rule) => {
+        if (rule?.action) {
+          addPressureEdgesFromMutations(`system:${sId}`, [rule.action]);
+        }
+      });
+    }
   });
 
   // 4. Add action nodes
@@ -135,19 +156,7 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
     addNode(`action:${aId}`, 'action', aName, { action: a }, isActionDisabled);
 
     // Action outcome pressure changes
-    const pressureChanges = a.outcome?.pressureChanges || {};
-    Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
-      if (typeof delta === 'number') {
-        const polarity = delta >= 0 ? 'positive' : 'negative';
-        pendingEdges.push({
-          source: `action:${aId}`,
-          target: `pressure:${pressureId}`,
-          polarity,
-          label: delta > 0 ? `+${delta}` : `${delta}`,
-          edgeType: 'direct',
-        });
-      }
-    });
+    addPressureEdgesFromMutations(`action:${aId}`, a.outcome?.mutations || []);
   });
 
   // 5. Pressure feedback loops - entity counts affect pressures

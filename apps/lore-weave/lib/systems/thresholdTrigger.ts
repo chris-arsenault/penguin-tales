@@ -1,9 +1,21 @@
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
-import { HardState, Relationship, EntityTags } from '../core/worldTypes';
+import { HardState, Relationship } from '../core/worldTypes';
 import { TemplateGraphView } from '../graph/templateGraphView';
 import { rollProbability, hasTag, generateId } from '../utils';
-import { SelectionFilter } from '../engine/declarativeTypes';
-import { SimpleEntityResolver, applySelectionFilters } from '../selection';
+import {
+  selectEntities,
+  prepareMutation,
+  evaluateCondition as rulesEvaluateCondition,
+  createSystemContext,
+  withSelf,
+} from '../rules';
+import type {
+  SelectionRule,
+  Mutation,
+  MutationResult,
+  Condition,
+  RuleContext,
+} from '../rules';
 
 /**
  * Threshold Trigger System Factory
@@ -29,86 +41,14 @@ import { SimpleEntityResolver, applySelectionFilters } from '../selection';
 // CONFIGURATION TYPES
 // =============================================================================
 
-export type ConditionType =
-  | 'relationship_count'      // Count relationships of a kind
-  | 'relationship_exists'     // Check if specific relationship pattern exists
-  | 'entity_status'           // Check entity status
-  | 'tag_exists'              // Check if tag is set
-  | 'tag_absent'              // Check if tag is NOT set
-  | 'pressure_above'          // Check pressure threshold
-  | 'pressure_below'          // Check pressure threshold
-  | 'time_since_update'       // Ticks since entity was updated
-  | 'connection_count';       // Total connections for entity
+// TriggerCondition is now an alias for Condition from rules/
+// The canonical condition types are defined in rules/conditions/types.ts
+export type TriggerCondition = Condition;
 
-export interface TriggerCondition {
-  type: ConditionType;
-
-  // For relationship_count
-  relationshipKind?: string;
-  relationshipDirection?: 'src' | 'dst' | 'both';
-  minCount?: number;
-  maxCount?: number;
-
-  // For relationship_exists
-  targetKind?: string;
-  targetStatus?: string;
-
-  // For entity_status
-  status?: string;
-  notStatus?: string;
-
-  // For tag_exists / tag_absent
-  tag?: string;
-
-  // For pressure_above / pressure_below
-  pressureId?: string;
-  threshold?: number;
-
-  // For time_since_update
-  minTicks?: number;
-
-  // For connection_count
-  minConnections?: number;
-  maxConnections?: number;
-}
-
-export type TriggerActionType =
-  | 'set_tag'           // Set a tag on matching entities
-  | 'set_cluster_tag'   // Set a tag with cluster ID for grouped entities
-  | 'remove_tag'        // Remove a tag
-  | 'modify_pressure'   // Change a pressure value
-  | 'create_relationship'; // Create relationship between existing entities
-
-export interface TriggerAction {
-  type: TriggerActionType;
-
-  // For set_tag / set_cluster_tag / remove_tag
-  tag?: string;
-  tagValue?: string | boolean;
-
-  // For modify_pressure
-  pressureId?: string;
-  delta?: number;
-
-  // For create_relationship
-  relationshipKind?: string;
-  relationshipStrength?: number;
+export type TriggerAction = Mutation & {
   /** If true, create relationships between all matching entities */
   betweenMatching?: boolean;
-}
-
-export interface EntityFilter {
-  kind: string;
-  subtypes?: string[];
-  status?: string;
-  notStatus?: string;
-  /** Filter for entities that have this tag */
-  hasTag?: string;
-  /** Filter for entities that do NOT have this tag */
-  notHasTag?: string;
-  /** Advanced selection filters (same as generator targeting) */
-  filters?: SelectionFilter[];
-}
+};
 
 export interface ThresholdTriggerConfig {
   /** Unique system identifier */
@@ -118,8 +58,8 @@ export interface ThresholdTriggerConfig {
   /** Optional description */
   description?: string;
 
-  /** What entities to evaluate */
-  entityFilter: EntityFilter;
+  /** Selection rule for entities to evaluate */
+  selection: SelectionRule;
 
   /** Conditions that must ALL be true for an entity to match */
   conditions: TriggerCondition[];
@@ -154,6 +94,7 @@ export interface ThresholdTriggerConfig {
   pressureChanges?: Record<string, number>;
 }
 
+
 // =============================================================================
 // CONDITION EVALUATION
 // =============================================================================
@@ -163,91 +104,13 @@ function evaluateCondition(
   condition: TriggerCondition,
   graphView: TemplateGraphView
 ): boolean {
-  switch (condition.type) {
-    case 'relationship_count': {
-      const direction = condition.relationshipDirection ?? 'both';
-      const relationships = graphView.getAllRelationships().filter(r => {
-        if (condition.relationshipKind && r.kind !== condition.relationshipKind) return false;
-        if (direction === 'src') return r.src === entity.id;
-        if (direction === 'dst') return r.dst === entity.id;
-        return r.src === entity.id || r.dst === entity.id;
-      });
+  // Create RuleContext with entity as self
+  const baseCtx = createSystemContext(graphView);
+  const ctx = withSelf(baseCtx, entity);
 
-      const count = relationships.length;
-      if (condition.minCount !== undefined && count < condition.minCount) return false;
-      if (condition.maxCount !== undefined && count > condition.maxCount) return false;
-      return true;
-    }
-
-    case 'relationship_exists': {
-      const direction = condition.relationshipDirection ?? 'both';
-      return graphView.getAllRelationships().some(r => {
-        if (condition.relationshipKind && r.kind !== condition.relationshipKind) return false;
-
-        let entityMatches = false;
-        if (direction === 'src') entityMatches = r.src === entity.id;
-        else if (direction === 'dst') entityMatches = r.dst === entity.id;
-        else entityMatches = r.src === entity.id || r.dst === entity.id;
-
-        if (!entityMatches) return false;
-
-        // Check target entity properties if specified
-        if (condition.targetKind || condition.targetStatus) {
-          const targetId = r.src === entity.id ? r.dst : r.src;
-          const target = graphView.getEntity(targetId);
-          if (!target) return false;
-          if (condition.targetKind && target.kind !== condition.targetKind) return false;
-          if (condition.targetStatus && target.status !== condition.targetStatus) return false;
-        }
-
-        return true;
-      });
-    }
-
-    case 'entity_status': {
-      if (condition.status && entity.status !== condition.status) return false;
-      if (condition.notStatus && entity.status === condition.notStatus) return false;
-      return true;
-    }
-
-    case 'tag_exists': {
-      return condition.tag ? hasTag(entity.tags, condition.tag) : false;
-    }
-
-    case 'tag_absent': {
-      return condition.tag ? !hasTag(entity.tags, condition.tag) : true;
-    }
-
-    case 'pressure_above': {
-      if (!condition.pressureId) return false;
-      const pressure = graphView.getPressure(condition.pressureId);
-      return pressure >= (condition.threshold ?? 0);
-    }
-
-    case 'pressure_below': {
-      if (!condition.pressureId) return false;
-      const pressure = graphView.getPressure(condition.pressureId);
-      return pressure < (condition.threshold ?? 0);
-    }
-
-    case 'time_since_update': {
-      const ticksSinceUpdate = graphView.tick - entity.updatedAt;
-      return ticksSinceUpdate >= (condition.minTicks ?? 0);
-    }
-
-    case 'connection_count': {
-      const connections = graphView.getAllRelationships().filter(r =>
-        r.src === entity.id || r.dst === entity.id
-      ).length;
-
-      if (condition.minConnections !== undefined && connections < condition.minConnections) return false;
-      if (condition.maxConnections !== undefined && connections > condition.maxConnections) return false;
-      return true;
-    }
-
-    default:
-      return false;
-  }
+  // Evaluate using rules library (TriggerCondition is now Condition)
+  const result = rulesEvaluateCondition(condition, ctx, entity);
+  return result.passed;
 }
 
 function evaluateAllConditions(
@@ -353,6 +216,40 @@ function clusterEntities(
 // ACTION APPLICATION
 // =============================================================================
 
+function mergeMutationResult(
+  result: MutationResult,
+  modifications: Array<{ id: string; changes: Partial<HardState> }>,
+  relationships: Relationship[],
+  relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
+  pressureChanges: Record<string, number>
+): void {
+  if (!result.applied) return;
+
+  if (result.entityModifications.length > 0) {
+    modifications.push(...result.entityModifications);
+  }
+
+  if (result.relationshipsCreated.length > 0) {
+    for (const rel of result.relationshipsCreated) {
+      relationships.push({
+        kind: rel.kind,
+        src: rel.src,
+        dst: rel.dst,
+        strength: rel.strength,
+        category: rel.category,
+      });
+    }
+  }
+
+  if (result.relationshipsAdjusted.length > 0) {
+    relationshipsAdjusted.push(...result.relationshipsAdjusted);
+  }
+
+  for (const [pressureId, delta] of Object.entries(result.pressureChanges)) {
+    pressureChanges[pressureId] = (pressureChanges[pressureId] || 0) + delta;
+  }
+}
+
 function applyActions(
   clusters: Map<string, HardState[]>,
   config: ThresholdTriggerConfig,
@@ -360,84 +257,60 @@ function applyActions(
 ): {
   modifications: Array<{ id: string; changes: Partial<HardState> }>;
   relationships: Relationship[];
+  relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>;
   pressureChanges: Record<string, number>;
 } {
   const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
   const relationships: Relationship[] = [];
+  const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const pressureChanges: Record<string, number> = {};
+  const baseCtx = createSystemContext(graphView);
 
   for (const [clusterId, members] of clusters) {
+    const clusterCtx = {
+      ...baseCtx,
+      values: { ...(baseCtx.values ?? {}), cluster_id: clusterId },
+    };
+
     for (const action of config.actions) {
-      switch (action.type) {
-        case 'set_tag': {
-          members.forEach(entity => {
-            const newTags: EntityTags = { ...entity.tags };
-            newTags[action.tag!] = action.tagValue ?? true;
-            modifications.push({
-              id: entity.id,
-              changes: { tags: newTags }
-            });
-          });
-          break;
-        }
+      if (action.type === 'modify_pressure') {
+        const result = prepareMutation(action, clusterCtx);
+        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
+        continue;
+      }
 
-        case 'set_cluster_tag': {
-          members.forEach(entity => {
-            const newTags: EntityTags = { ...entity.tags };
-            // Use cluster ID as tag value for correlation
-            newTags[action.tag!] = clusterId;
-            modifications.push({
-              id: entity.id,
-              changes: { tags: newTags }
-            });
-          });
-          break;
-        }
+      if (action.type === 'create_relationship' && action.betweenMatching && members.length >= 2) {
+        for (let i = 0; i < members.length; i++) {
+          for (let j = i + 1; j < members.length; j++) {
+            const src = members[i];
+            const dst = members[j];
 
-        case 'remove_tag': {
-          members.forEach(entity => {
-            if (hasTag(entity.tags, action.tag!)) {
-              const newTags: EntityTags = { ...entity.tags };
-              delete newTags[action.tag!];
-              modifications.push({
-                id: entity.id,
-                changes: { tags: newTags }
-              });
+            if (graphView.hasRelationship(src.id, dst.id, action.kind)) {
+              continue;
             }
-          });
-          break;
-        }
 
-        case 'modify_pressure': {
-          if (action.pressureId && action.delta) {
-            pressureChanges[action.pressureId] =
-              (pressureChanges[action.pressureId] || 0) + action.delta;
+            const pairCtx = {
+              ...clusterCtx,
+              entities: { ...(clusterCtx.entities ?? {}), member: src, member2: dst },
+            };
+
+            const mutation: Mutation = action;
+            const result = prepareMutation(mutation, pairCtx);
+            mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
           }
-          break;
         }
+        continue;
+      }
 
-        case 'create_relationship': {
-          if (action.betweenMatching && members.length >= 2) {
-            // Create relationships between all pairs
-            for (let i = 0; i < members.length; i++) {
-              for (let j = i + 1; j < members.length; j++) {
-                const src = members[i];
-                const dst = members[j];
-
-                // Check if relationship already exists
-                if (!graphView.hasRelationship(src.id, dst.id, action.relationshipKind!)) {
-                  relationships.push({
-                    kind: action.relationshipKind!,
-                    src: src.id,
-                    dst: dst.id,
-                    strength: action.relationshipStrength ?? 0.5
-                  });
-                }
-              }
-            }
-          }
-          break;
-        }
+      for (const member of members) {
+        const memberCtx = {
+          ...clusterCtx,
+          self: member,
+          entities: { ...(clusterCtx.entities ?? {}), self: member },
+        };
+        const mutation: Mutation = action;
+        const result = prepareMutation(mutation, memberCtx);
+        mergeMutationResult(result, modifications, relationships, relationshipsAdjusted, pressureChanges);
       }
     }
   }
@@ -449,7 +322,7 @@ function applyActions(
     }
   }
 
-  return { modifications, relationships, pressureChanges };
+  return { modifications, relationships, relationshipsAdjusted, pressureChanges };
 }
 
 // =============================================================================
@@ -479,42 +352,13 @@ export function createThresholdTriggerSystem(
         }
       }
 
-      // Find entities matching filter
-      let entities = graphView.findEntities({
-        kind: config.entityFilter.kind,
-        subtype: config.entityFilter.subtypes?.[0],
-        status: config.entityFilter.status
-      });
-
-      // Apply additional filters
-      if (config.entityFilter.subtypes && config.entityFilter.subtypes.length > 1) {
-        entities = entities.filter(e =>
-          config.entityFilter.subtypes!.includes(e.subtype!)
-        );
-      }
-
-      if (config.entityFilter.notStatus) {
-        entities = entities.filter(e => e.status !== config.entityFilter.notStatus);
-      }
-
-      // Apply tag filters
-      if (config.entityFilter.hasTag) {
-        entities = entities.filter(e => hasTag(e.tags, config.entityFilter.hasTag!));
-      }
-
-      if (config.entityFilter.notHasTag) {
-        entities = entities.filter(e => !hasTag(e.tags, config.entityFilter.notHasTag!));
-      }
+      // Find entities matching selection
+      const selectionCtx = createSystemContext(graphView);
+      let entities = selectEntities(config.selection, selectionCtx);
 
       // Apply cooldown filter
       if (config.cooldownTag) {
         entities = entities.filter(e => !hasTag(e.tags, config.cooldownTag!));
-      }
-
-      // Apply advanced selection filters
-      if (config.entityFilter.filters && config.entityFilter.filters.length > 0) {
-        const resolver = new SimpleEntityResolver(graphView);
-        entities = applySelectionFilters(entities, config.entityFilter.filters, resolver);
       }
 
       // Evaluate conditions on each entity
@@ -544,11 +388,12 @@ export function createThresholdTriggerSystem(
       }
 
       // Apply actions
-      const { modifications, relationships, pressureChanges } =
+      const { modifications, relationships, relationshipsAdjusted, pressureChanges } =
         applyActions(clusters, config, graphView);
 
       return {
         relationshipsAdded: relationships,
+        relationshipsAdjusted,
         entitiesModified: modifications,
         pressureChanges,
         description: `${config.name}: ${clusters.size} trigger(s), ${modifications.length} entities tagged`

@@ -19,13 +19,19 @@ export function ActionListCard({ action, onClick, onToggle, usageMap }) {
   const hasCompatibilityIssues = validation.compatibility?.length > 0;
 
   const formatActorKinds = () => {
-    if (!action.actor?.kinds) return 'any';
-    return action.actor.kinds.join(', ');
+    const selection = action.actor?.selection;
+    if (!selection) return 'any';
+    if (selection.kind) return selection.kind;
+    if (selection.kinds?.length) return selection.kinds.join(', ');
+    return selection.strategy || 'any';
   };
 
   const formatTargetKind = () => {
-    if (!action.targeting?.kind) return 'none';
-    return action.targeting.kind;
+    const targeting = action.targeting;
+    if (!targeting) return 'none';
+    if (targeting.kind) return targeting.kind;
+    if (targeting.kinds?.length) return targeting.kinds.join(', ');
+    return targeting.strategy || 'none';
   };
 
   const cardClasses = [

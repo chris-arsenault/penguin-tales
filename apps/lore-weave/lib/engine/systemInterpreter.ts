@@ -110,8 +110,8 @@ export interface EraSpawnerConfig extends FrameworkSystemConfig {
  * Transition conditions and effects are defined PER-ERA in eras.json:
  * - exitConditions: Criteria for an era to END (all must be met)
  * - entryConditions: Criteria for an era to START (all must be met)
- * - exitEffects: Pressure changes when leaving an era
- * - entryEffects: Pressure changes when entering an era
+ * - exitEffects: Mutations applied when leaving an era
+ * - entryEffects: Mutations applied when entering an era
  *
  * See Era type in engine/types.ts for details.
  */

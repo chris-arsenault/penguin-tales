@@ -5,7 +5,6 @@
 import React from 'react';
 import { CLUSTERING_CRITERIA_TYPES } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
-import { SelectionFiltersEditor } from '../../generators/filters/SelectionFiltersEditor';
 
 /**
  * @param {Object} props
@@ -30,9 +29,6 @@ export function ClusterFormationTab({ system, onChange, schema }) {
     onChange({ ...system, config: { ...config, [field]: value } });
   };
 
-  const updateEntityFilter = (field, value) => {
-    updateConfig('entityFilter', { ...config.entityFilter, [field]: value });
-  };
 
   const updateClustering = (field, value) => {
     updateConfig('clustering', { ...config.clustering, [field]: value });
@@ -61,31 +57,6 @@ export function ClusterFormationTab({ system, onChange, schema }) {
 
   return (
     <div>
-      <div className="section">
-        <div className="section-title">Entity Filter</div>
-        <div className="form-grid">
-          <ReferenceDropdown
-            label="Kind"
-            value={config.entityFilter?.kind || 'any'}
-            onChange={(v) => updateEntityFilter('kind', v)}
-            options={[{ value: 'any', label: 'All Kinds' }, ...entityKindOptions]}
-          />
-        </div>
-
-        <div className="mt-xl">
-          <div className="section-subtitle">Advanced Selection Filters</div>
-          <div className="section-desc">
-            Filter entities by tags, relationships, prominence, culture, and more.
-          </div>
-          <SelectionFiltersEditor
-            filters={config.entityFilter?.filters || []}
-            onChange={(v) => updateEntityFilter('filters', v.length > 0 ? v : undefined)}
-            schema={schema}
-            availableRefs={[]}
-          />
-        </div>
-      </div>
-
       <div className="section">
         <div className="section-title">Clustering Configuration</div>
         <div className="form-grid">
