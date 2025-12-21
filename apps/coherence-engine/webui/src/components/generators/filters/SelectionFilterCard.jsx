@@ -2,7 +2,7 @@
  * SelectionFilterCard - Display and edit a single selection filter
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FILTER_TYPES } from '../constants';
 import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
 import { GraphPathEditor } from './GraphPathEditor';
@@ -17,6 +17,7 @@ import TagSelector from '@lore-weave/shared-components/TagSelector';
  * @param {Array} props.availableRefs - Available entity references
  */
 export function SelectionFilterCard({ filter, onChange, onRemove, schema, availableRefs }) {
+  const [expanded, setExpanded] = useState(false);
   const typeConfig = FILTER_TYPES[filter.type] || { label: filter.type, icon: '❓', color: '#6b7280' };
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
@@ -32,6 +33,48 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
   const updateFilter = (field, value) => {
     onChange({ ...filter, [field]: value });
   };
+
+  const getSummary = () => {
+    switch (filter.type) {
+      case 'has_tag':
+        return `${filter.tag || '?'}${filter.value !== undefined ? ` = ${filter.value}` : ''}`;
+      case 'has_tags':
+        return (filter.tags || []).join(', ') || 'no tags';
+      case 'has_any_tag':
+        return (filter.tags || []).join(', ') || 'no tags';
+      case 'lacks_tag':
+        return filter.tag || 'tag?';
+      case 'lacks_any_tag':
+        return (filter.tags || []).join(', ') || 'no tags';
+      case 'has_culture':
+        return filter.culture || 'culture?';
+      case 'matches_culture':
+        return `with ${filter.with || '?'}`;
+      case 'has_status':
+        return filter.status || 'status?';
+      case 'has_prominence':
+        return filter.minProminence || 'prominence?';
+      case 'has_relationship': {
+        const withLabel = filter.with ? ` with ${filter.with}` : '';
+        const direction = filter.direction ? ` [${filter.direction}]` : '';
+        return `${filter.kind || '?'}${withLabel}${direction}`;
+      }
+      case 'lacks_relationship': {
+        const withLabel = filter.with ? ` with ${filter.with}` : '';
+        return `${filter.kind || '?'}${withLabel}`;
+      }
+      case 'exclude':
+        return `${(filter.entities || []).length} excluded`;
+      case 'shares_related':
+        return `${filter.relationshipKind || '?'} with ${filter.with || '?'}`;
+      case 'graph_path':
+        return `graph path (${filter.assert?.check || 'exists'})`;
+      default:
+        return '';
+    }
+  };
+
+  const summary = getSummary();
 
   const renderFilterFields = () => {
     switch (filter.type) {
@@ -277,22 +320,30 @@ export function SelectionFilterCard({ filter, onChange, onRemove, schema, availa
 
   return (
     <div className="condition-card">
-      <div className="condition-card-header">
+      <div className="condition-card-header" style={{ marginBottom: expanded ? undefined : 0 }}>
         <div className="condition-card-type">
           <span className="condition-card-icon" style={{ backgroundColor: `${typeConfig.color}20` }}>
             {typeConfig.icon}
           </span>
-          <span className="condition-card-label">
-            {typeConfig.label}
-          </span>
+          <div>
+            <div className="condition-card-label">{typeConfig.label}</div>
+            {summary && <div className="condition-card-summary">{summary}</div>}
+          </div>
         </div>
-        <button onClick={onRemove} className="button-remove">
-          Remove
-        </button>
+        <div className="condition-card-actions">
+          <button className="btn-icon" onClick={() => setExpanded(!expanded)}>
+            {expanded ? '^' : 'v'}
+          </button>
+          <button onClick={onRemove} className="btn-icon btn-icon-danger">
+            x
+          </button>
+        </div>
       </div>
-      <div className="condition-card-fields">
-        {renderFilterFields()}
-      </div>
+      {expanded && (
+        <div className="condition-card-fields">
+          {renderFilterFields()}
+        </div>
+      )}
     </div>
   );
 }

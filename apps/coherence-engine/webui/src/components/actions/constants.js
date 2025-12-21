@@ -38,3 +38,34 @@ export const RELATIONSHIP_REFS = [
   { value: '$target', label: 'Target' },
   { value: '$target2', label: 'Target 2' },
 ];
+
+export const MUTATION_TYPE_META = {
+  modify_pressure: { label: 'Modify Pressure', icon: '🌡️', color: '#f59e0b' },
+  set_tag: { label: 'Set Tag', icon: '🏷️', color: '#10b981' },
+  remove_tag: { label: 'Remove Tag', icon: '🗑️', color: '#ef4444' },
+  change_status: { label: 'Change Status', icon: '🔄', color: '#3b82f6' },
+  adjust_prominence: { label: 'Adjust Prominence', icon: '⭐', color: '#eab308' },
+  create_relationship: { label: 'Create Relationship', icon: '🔗', color: '#8b5cf6' },
+  adjust_relationship_strength: { label: 'Adjust Relationship Strength', icon: '📈', color: '#7c3aed' },
+  archive_relationship: { label: 'Archive Relationship', icon: '📦', color: '#64748b' },
+  update_rate_limit: { label: 'Update Rate Limit', icon: '⏱️', color: '#06b6d4' },
+};
+
+export const MUTATION_TYPE_ORDER = [
+  'set_tag',
+  'remove_tag',
+  'create_relationship',
+  'adjust_relationship_strength',
+  'archive_relationship',
+  'change_status',
+  'adjust_prominence',
+  'modify_pressure',
+  'update_rate_limit',
+];
+
+export const MUTATION_TYPE_OPTIONS = MUTATION_TYPE_ORDER.map((key) => ({
+  value: key,
+  label: MUTATION_TYPE_META[key]?.label || key,
+  icon: MUTATION_TYPE_META[key]?.icon || '⚙️',
+  color: MUTATION_TYPE_META[key]?.color || '#6b7280',
+}));

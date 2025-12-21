@@ -121,10 +121,10 @@ export function ApplicabilityRuleCard({ rule, onChange, onRemove, schema, pressu
         </div>
         <div className="condition-card-actions">
           <button className="btn-icon" onClick={() => setExpanded(!expanded)}>
-            {expanded ? '▲' : '▼'}
+            {expanded ? '^' : 'v'}
           </button>
           <button className="btn-icon btn-icon-danger" onClick={onRemove}>
-            ×
+            x
           </button>
         </div>
       </div>

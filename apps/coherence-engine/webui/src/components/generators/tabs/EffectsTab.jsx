@@ -10,9 +10,9 @@
  * - update_rate_limit: Track template execution for rate limiting
  */
 
-import React, { useMemo } from 'react';
-import { ReferenceDropdown, AddItemButton, NumberInput } from '../../shared';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import MutationCard, { DEFAULT_MUTATION_TYPES } from '../../shared/MutationCard';
+import { MUTATION_TYPE_OPTIONS } from '../../actions/constants';
 
 /**
  * @param {Object} props
@@ -23,11 +23,9 @@ import TagSelector from '@lore-weave/shared-components/TagSelector';
  */
 export function EffectsTab({ generator, onChange, pressures, schema }) {
   const stateUpdates = generator.stateUpdates || [];
-
-  const pressureOptions = (pressures || []).map((p) => ({ value: p.id, label: p.name || p.id }));
-  const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({ value: rk.kind, label: rk.description || rk.kind }));
-  const tagRegistry = schema?.tagRegistry || [];
-
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const addButtonRef = useRef(null);
 
   // Build available entity references from target + variables + created entities
   const availableRefs = useMemo(() => {
@@ -37,9 +35,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
     return refs;
   }, [generator.variables, generator.creation]);
 
-  const entityRefOptions = availableRefs.map((r) => ({ value: r, label: r }));
-
-  const handleAdd = (type) => {
+  const createMutation = (type) => {
     let newUpdate;
     switch (type) {
       case 'modify_pressure':
@@ -61,41 +57,53 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         newUpdate = { type: 'update_rate_limit' };
         break;
       default:
-        return;
+        return null;
     }
-    onChange({ ...generator, stateUpdates: [...stateUpdates, newUpdate] });
+    return newUpdate;
   };
 
-  const handleUpdate = (index, updated) => {
+  const addMutation = (type) => {
+    const next = createMutation(type);
+    if (!next) return;
+    onChange({ ...generator, stateUpdates: [...stateUpdates, next] });
+  };
+
+  const updateMutation = (index, updated) => {
     const newUpdates = [...stateUpdates];
     newUpdates[index] = updated;
     onChange({ ...generator, stateUpdates: newUpdates });
   };
 
-  const handleRemove = (index) => {
+  const removeMutation = (index) => {
     onChange({ ...generator, stateUpdates: stateUpdates.filter((_, i) => i !== index) });
   };
 
-  // Known stateUpdate types
-  const KNOWN_TYPES = new Set([
-    'modify_pressure',
-    'archive_relationship',
-    'change_status',
-    'set_tag',
-    'remove_tag',
-    'update_rate_limit',
-  ]);
+  const knownTypes = new Set(DEFAULT_MUTATION_TYPES.map((type) => type.value));
+  const unrecognizedUpdates = stateUpdates
+    .map((update, index) => (knownTypes.has(update.type) ? null : { update, index }))
+    .filter(Boolean);
 
-  // Group updates by type for display
-  const pressureUpdates = stateUpdates.filter((u) => u.type === 'modify_pressure');
-  const archiveUpdates = stateUpdates.filter((u) => u.type === 'archive_relationship');
-  const statusUpdates = stateUpdates.filter((u) => u.type === 'change_status');
-  const setTagUpdates = stateUpdates.filter((u) => u.type === 'set_tag');
-  const removeTagUpdates = stateUpdates.filter((u) => u.type === 'remove_tag');
-  const rateLimitUpdates = stateUpdates.filter((u) => u.type === 'update_rate_limit');
+  useLayoutEffect(() => {
+    if (showTypeMenu && addButtonRef.current) {
+      const rect = addButtonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: Math.max(rect.width, 220),
+      });
+    }
+  }, [showTypeMenu]);
 
-  // Catch any unrecognized types
-  const unrecognizedUpdates = stateUpdates.filter((u) => !KNOWN_TYPES.has(u.type));
+  useEffect(() => {
+    if (!showTypeMenu) return;
+    const handleClickOutside = (event) => {
+      if (addButtonRef.current && !addButtonRef.current.contains(event.target)) {
+        setShowTypeMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTypeMenu]);
 
   return (
     <div>
@@ -108,8 +116,9 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
             Remove them to clear validation errors.
           </div>
 
-          {unrecognizedUpdates.map((update) => {
-            const globalIdx = stateUpdates.indexOf(update);
+          {unrecognizedUpdates.map((entry) => {
+            const globalIdx = entry.index;
+            const update = entry.update;
             return (
               <div key={globalIdx} className="item-card" style={{ borderColor: 'rgba(248, 113, 113, 0.4)' }}>
                 <div style={{ padding: '16px' }}>
@@ -131,7 +140,7 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
                     </div>
                     <button
                       className="btn btn-danger"
-                      onClick={() => handleRemove(globalIdx)}
+                      onClick={() => removeMutation(globalIdx)}
                       style={{ flexShrink: 0 }}
                     >
                       Remove
@@ -144,253 +153,68 @@ export function EffectsTab({ generator, onChange, pressures, schema }) {
         </div>
       )}
 
-      {/* Pressure Modifications */}
       <div className="section">
-        <div className="section-title"><span>🌡️</span> Pressure Modifications</div>
+        <div className="section-title">⚡ Effects ({stateUpdates.length})</div>
         <div className="section-desc">
-          Change pressure values when this generator runs. Positive values increase pressure, negative values decrease it.
+          Apply state updates when this generator runs. Effects use the unified mutation library.
         </div>
 
-        {pressureUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
+        {stateUpdates.map((update, index) => {
+          if (!knownTypes.has(update.type)) return null;
           return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px' }}>
-                <div className="form-row-with-delete">
-                  <div className="form-row-fields">
-                    <ReferenceDropdown
-                      label="Pressure"
-                      value={update.pressureId}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, pressureId: v })}
-                      options={pressureOptions}
-                    />
-                    <div className="form-group">
-                      <label className="label">Delta</label>
-                      <NumberInput
-                        value={update.delta}
-                        onChange={(v) => handleUpdate(globalIdx, { ...update, delta: v })}
-                      />
-                    </div>
-                  </div>
-                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                </div>
-              </div>
-            </div>
+            <MutationCard
+              key={index}
+              mutation={update}
+              onChange={(updated) => updateMutation(index, updated)}
+              onRemove={() => removeMutation(index)}
+              schema={schema}
+              pressures={pressures}
+              entityOptions={availableRefs}
+              typeOptions={DEFAULT_MUTATION_TYPES}
+              createMutation={createMutation}
+            />
           );
         })}
 
-        <AddItemButton onClick={() => handleAdd('modify_pressure')} label="Add Pressure Modification" />
-      </div>
+        <div ref={addButtonRef} style={{ position: 'relative', marginTop: '12px' }}>
+          <button
+            onClick={() => setShowTypeMenu(!showTypeMenu)}
+            className="btn-add-inline"
+          >
+            + Add Effect
+          </button>
 
-      {/* Archive Relationships */}
-      <div className="section">
-        <div className="section-title"><span>📦</span> Archive Relationships</div>
-        <div className="section-desc">Archive (end) existing relationships when this generator runs.</div>
-
-        {archiveUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
-          const withOptions = [
-            { value: '', label: '(Any - archive all of this kind)' },
-            ...entityRefOptions,
-          ];
-          const directionOptions = [
-            { value: 'both', label: 'Both directions' },
-            { value: 'src', label: 'Entity is source (outgoing)' },
-            { value: 'dst', label: 'Entity is destination (incoming)' },
-          ];
-          return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px' }}>
-                <div className="form-row-with-delete">
-                  <div className="form-row-fields">
-                    <ReferenceDropdown
-                      label="Entity"
-                      value={update.entity || '$target'}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
-                      options={entityRefOptions}
-                    />
-                    <ReferenceDropdown
-                      label="Relationship Kind"
-                      value={update.relationshipKind}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, relationshipKind: v })}
-                      options={relationshipKindOptions}
-                    />
-                    <ReferenceDropdown
-                      label="With Entity"
-                      value={update.with || ''}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, with: v || undefined })}
-                      options={withOptions}
-                    />
-                    <ReferenceDropdown
-                      label="Direction"
-                      value={update.direction || 'both'}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, direction: v })}
-                      options={directionOptions}
-                    />
-                  </div>
-                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
+          {showTypeMenu && (
+            <div
+              className="dropdown-menu"
+              style={{
+                position: 'fixed',
+                top: dropdownPos.top,
+                left: dropdownPos.left,
+                width: dropdownPos.width,
+                maxHeight: '300px',
+                overflowY: 'auto',
+                zIndex: 10000,
+              }}
+            >
+              {MUTATION_TYPE_OPTIONS.map((opt) => (
+                <div
+                  key={opt.value}
+                  onClick={() => {
+                    addMutation(opt.value);
+                    setShowTypeMenu(false);
+                  }}
+                  className="dropdown-menu-item"
+                >
+                  <span className="dropdown-menu-icon" style={{ backgroundColor: `${opt.color}20` }}>
+                    {opt.icon}
+                  </span>
+                  <span className="dropdown-menu-label">{opt.label}</span>
                 </div>
-              </div>
+              ))}
             </div>
-          );
-        })}
-
-        <AddItemButton onClick={() => handleAdd('archive_relationship')} label="Add Archive Rule" />
-      </div>
-
-      {/* Change Status */}
-      <div className="section">
-        <div className="section-title"><span>🔄</span> Change Status</div>
-        <div className="section-desc">Change the status of entities when this generator runs.</div>
-
-        {statusUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
-          return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px' }}>
-                <div className="form-row-with-delete">
-                  <div className="form-row-fields">
-                    <ReferenceDropdown
-                      label="Entity Reference"
-                      value={update.entity || '$target'}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
-                      options={entityRefOptions}
-                    />
-                    <div className="form-group">
-                      <label className="label">New Status</label>
-                      <input
-                        type="text"
-                        value={update.newStatus || ''}
-                        onChange={(e) => handleUpdate(globalIdx, { ...update, newStatus: e.target.value || undefined })}
-                        className="input"
-                        placeholder="e.g., active"
-                      />
-                    </div>
-                  </div>
-                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        <AddItemButton onClick={() => handleAdd('change_status')} label="Add Status Change" />
-      </div>
-
-      {/* Set Tags */}
-      <div className="section">
-        <div className="section-title"><span>🏷️</span> Set Tags</div>
-        <div className="section-desc">Add or update tags on entities when this generator runs.</div>
-
-        {setTagUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
-          return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px' }}>
-                <div className="form-row-with-delete">
-                  <div className="form-row-fields">
-                    <ReferenceDropdown
-                      label="Entity"
-                      value={update.entity || '$target'}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
-                      options={entityRefOptions}
-                    />
-                    <div className="form-group">
-                      <label className="label">Tag</label>
-                      <TagSelector
-                        value={update.tag ? [update.tag] : []}
-                        onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
-                        tagRegistry={tagRegistry}
-                        placeholder="Select tag..."
-                        singleSelect
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="label">Value</label>
-                      <input
-                        type="text"
-                        value={update.value === true ? 'true' : update.value === false ? 'false' : (update.value || '')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          let parsed = val;
-                          if (val === 'true') parsed = true;
-                          else if (val === 'false') parsed = false;
-                          handleUpdate(globalIdx, { ...update, value: parsed });
-                        }}
-                        className="input"
-                        placeholder="true"
-                      />
-                    </div>
-                  </div>
-                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        <AddItemButton onClick={() => handleAdd('set_tag')} label="Add Set Tag" />
-      </div>
-
-      {/* Remove Tags */}
-      <div className="section">
-        <div className="section-title"><span>🗑️</span> Remove Tags</div>
-        <div className="section-desc">Remove tags from entities when this generator runs.</div>
-
-        {removeTagUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
-          return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px' }}>
-                <div className="form-row-with-delete">
-                  <div className="form-row-fields">
-                    <ReferenceDropdown
-                      label="Entity"
-                      value={update.entity || '$target'}
-                      onChange={(v) => handleUpdate(globalIdx, { ...update, entity: v })}
-                      options={entityRefOptions}
-                    />
-                    <div className="form-group">
-                      <label className="label">Tag</label>
-                      <TagSelector
-                        value={update.tag ? [update.tag] : []}
-                        onChange={(tags) => handleUpdate(globalIdx, { ...update, tag: tags[0] || '' })}
-                        tagRegistry={tagRegistry}
-                        placeholder="Select tag..."
-                        singleSelect
-                      />
-                    </div>
-                  </div>
-                  <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        <AddItemButton onClick={() => handleAdd('remove_tag')} label="Add Remove Tag" />
-      </div>
-
-      {/* Rate Limit Updates */}
-      <div className="section">
-        <div className="section-title"><span>⏱️</span> Rate Limit Tracking</div>
-        <div className="section-desc">
-          Track template execution for rate limiting. Used with creations_per_epoch applicability rules.
+          )}
         </div>
-
-        {rateLimitUpdates.map((update) => {
-          const globalIdx = stateUpdates.indexOf(update);
-          return (
-            <div key={globalIdx} className="item-card">
-              <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Updates rate limit counter when this generator runs</span>
-                <button className="btn-icon btn-icon-danger" onClick={() => handleRemove(globalIdx)}>×</button>
-              </div>
-            </div>
-          );
-        })}
-
-        <AddItemButton onClick={() => handleAdd('update_rate_limit')} label="Add Rate Limit Tracking" />
       </div>
     </div>
   );

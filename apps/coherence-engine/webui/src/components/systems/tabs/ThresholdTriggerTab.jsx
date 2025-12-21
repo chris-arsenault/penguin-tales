@@ -70,6 +70,8 @@ export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
         return { type: 'archive_relationship', entity: '$self', relationshipKind: '', direction: 'both' };
       case 'adjust_relationship_strength':
         return { type: 'adjust_relationship_strength', kind: '', src: '$self', dst: '$self', delta: 0.1 };
+      case 'update_rate_limit':
+        return { type: 'update_rate_limit' };
       case 'create_relationship':
       default:
         return { type: 'create_relationship', kind: '', src: '$self', dst: '$self', strength: 0.5 };

@@ -7,7 +7,7 @@
   background-color: var(--color-bg-card);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--color-border);
-  padding: 20px;
+  padding: 16px;
   transition: all var(--transition-normal);
   position: relative;
 }
@@ -85,10 +85,10 @@
 
 /* Item card (collapsible) */
 .item-card {
-  background-color: var(--color-bg-dark);
-  border-radius: var(--radius-xl);
+  background-color: var(--color-bg-nested);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   /* overflow: visible to allow dropdowns to extend outside card bounds */
 }
 
@@ -96,8 +96,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  background-color: var(--color-bg-card);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: transparent;
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
@@ -108,15 +108,16 @@
 }
 
 .item-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-base);
   background-color: rgba(59, 130, 246, 0.2);
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .item-card-icon-variable {
@@ -134,22 +135,22 @@
 .item-card-info {
   flex: 1;
   min-width: 0;
-  margin-left: var(--spacing-lg);
+  margin-left: var(--spacing-md);
 }
 
 .item-card-title {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .item-card-subtitle {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-dim);
-  margin-top: var(--spacing-xs);
+  margin-top: 2px;
 }
 
 .item-card-actions {
@@ -159,7 +160,7 @@
 }
 
 .item-card-body {
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   /* Allow dropdowns to extend outside card bounds */
   overflow: visible;
 }
@@ -284,8 +285,8 @@
 
 /* Card footer */
 .card-footer {
-  margin-top: var(--spacing-2xl);
-  padding-top: var(--spacing-xl);
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
   border-top: 1px solid var(--color-border-light);
 }
 

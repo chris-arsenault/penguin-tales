@@ -7,7 +7,7 @@
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .form-group-wide {
@@ -18,7 +18,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg);
 }
 
 /* Form row with delete button - use instead of form-grid when row has a delete button */
@@ -44,11 +44,11 @@
 /* Labels */
 .label {
   display: block;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .label-small {
@@ -58,17 +58,17 @@
 
 /* Help text below labels */
 .form-help-text {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-dim);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
 }
 
 /* Alert messages */
 .alert {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-sm);
 }
 
 .alert-error {
@@ -92,11 +92,11 @@
 /* Input */
 .input {
   width: 100%;
-  padding: 10px 12px;
-  font-size: var(--font-size-lg);
+  padding: 6px 8px;
+  font-size: var(--font-size-md);
   background-color: var(--color-bg-dark);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--color-text);
   box-sizing: border-box;
   outline: none;
@@ -120,17 +120,17 @@
 /* Textarea */
 .textarea {
   width: 100%;
-  padding: 10px 12px;
-  font-size: var(--font-size-lg);
+  padding: 6px 8px;
+  font-size: var(--font-size-md);
   font-family: inherit;
   background-color: var(--color-bg-dark);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--color-text);
   box-sizing: border-box;
   outline: none;
   resize: vertical;
-  min-height: 80px;
+  min-height: 60px;
   transition: border-color var(--transition-fast);
 }
 
@@ -141,11 +141,11 @@
 /* Select */
 .select {
   width: 100%;
-  padding: 10px 12px;
-  font-size: var(--font-size-lg);
+  padding: 6px 8px;
+  font-size: var(--font-size-md);
   background-color: var(--color-bg-dark);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--color-text);
   box-sizing: border-box;
   outline: none;
@@ -158,16 +158,17 @@
 
 /* Checkbox */
 .checkbox {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   accent-color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  font-size: var(--font-size-lg);
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
   color: var(--color-text);
   cursor: pointer;
 }
@@ -175,8 +176,8 @@
 /* Slider / Range */
 .slider {
   width: 100%;
-  height: 6px;
-  border-radius: 3px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--color-bg-card);
   outline: none;
   accent-color: var(--color-accent);
@@ -185,33 +186,33 @@
 .slider-row {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .slider-value {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-accent);
-  min-width: 40px;
+  min-width: 32px;
 }
 
 /* Chip container */
 .chip-container {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 /* Chip */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 6px 10px;
+  gap: var(--spacing-xs);
+  padding: 3px 8px;
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-xs);
   color: var(--color-text);
 }
 
@@ -224,7 +225,7 @@
 .chip-remove {
   background: none;
   border: none;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-sm);
   color: var(--color-text-dim);
   cursor: pointer;
   padding: 0;
@@ -246,19 +247,19 @@
 }
 
 .chip-container-input {
-  padding: 6px;
+  padding: 4px;
   background-color: var(--color-bg-dark);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: text;
-  min-height: 42px;
+  min-height: 30px;
 }
 
 .chip-input {
   flex: 1;
-  min-width: 100px;
-  padding: 4px 6px;
-  font-size: var(--font-size-base);
+  min-width: 80px;
+  padding: 2px 4px;
+  font-size: var(--font-size-sm);
   background: transparent;
   border: none;
   color: var(--color-text);
@@ -305,13 +306,13 @@
 
 /* Condition editor */
 .condition-editor {
-  padding: 10px 14px;
-  background-color: var(--color-bg-dark);
+  padding: 8px 12px;
+  background-color: var(--color-bg-nested);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .condition-editor-header {
@@ -378,11 +379,11 @@
    ========================================================================== */
 
 .nested-section {
-  background-color: var(--color-bg-dark);
+  background-color: var(--color-bg-nested);
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-top: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-top: 10px;
 }
 
 .nested-title {
@@ -391,7 +392,7 @@
   color: var(--color-text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
 }
 
 /* ==========================================================================
@@ -401,21 +402,21 @@
 .type-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-sm);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
 }
 
 .type-pill {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md) var(--spacing-lg);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
   background-color: var(--color-bg-dark);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   color: var(--color-text);
 }
 
@@ -430,11 +431,11 @@
 }
 
 .type-pill-icon {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
 }
 
 .type-description {
   font-size: var(--font-size-sm);
   color: var(--color-text-dim);
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-sm);
 }

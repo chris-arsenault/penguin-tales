@@ -4,9 +4,9 @@
 
 /* Toggle container */
 .toggle {
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
+  width: 30px;
+  height: 16px;
+  border-radius: 8px;
   background-color: #374151;
   cursor: pointer;
   position: relative;
@@ -28,25 +28,25 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: var(--radius-full);
   background-color: #fff;
   transition: transform var(--transition-normal);
 }
 
 .toggle-on .toggle-knob {
-  transform: translateX(16px);
+  transform: translateX(14px);
 }
 
 /* Toggle with label */
 .toggle-container {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-sm);
 }
 
 .toggle-label {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
