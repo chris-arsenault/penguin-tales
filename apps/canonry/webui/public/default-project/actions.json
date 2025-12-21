@@ -202,8 +202,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "conflict",
-          "delta": 10
+          "pressureId": "harmony",
+          "delta": -10
         }
       ],
       "descriptionTemplate": "declared war on {target.name}"
@@ -213,11 +213,11 @@
       "baseWeight": 0.5,
       "pressureModifiers": [
         {
-          "pressure": "conflict",
-          "multiplier": 1
+          "pressure": "harmony",
+          "multiplier": -1
         },
         {
-          "pressure": "stability",
+          "pressure": "security",
           "multiplier": -1
         }
       ]
@@ -257,8 +257,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "conflict",
-          "delta": 5
+          "pressureId": "harmony",
+          "delta": -5
         }
       ],
       "descriptionTemplate": "raided {target.name}"
@@ -268,12 +268,12 @@
       "baseWeight": 1,
       "pressureModifiers": [
         {
-          "pressure": "conflict",
-          "multiplier": 1
+          "pressure": "harmony",
+          "multiplier": -1
         },
         {
-          "pressure": "external_threat",
-          "multiplier": 1
+          "pressure": "security",
+          "multiplier": -1
         }
       ]
     },
@@ -318,8 +318,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "resource_scarcity",
-          "delta": -5
+          "pressureId": "resource_availibility",
+          "delta": 5
         }
       ],
       "descriptionTemplate": "established trade route between {target.name} and {target2.name}"
@@ -329,11 +329,11 @@
       "baseWeight": 1.2,
       "pressureModifiers": [
         {
-          "pressure": "resource_scarcity",
-          "multiplier": -1
+          "pressure": "resource_availibility",
+          "multiplier": 1
         },
         {
-          "pressure": "stability",
+          "pressure": "security",
           "multiplier": 1
         }
       ]
@@ -355,8 +355,8 @@
       "conditions": [
         {
           "type": "pressure",
-          "pressureId": "magical_instability",
-          "min": 50
+          "pressureId": "magical_stability",
+          "max": -50
         }
       ],
       "instigator": {
@@ -377,7 +377,7 @@
       "filters": [
         {
           "type": "lacks_relationship",
-          "kind": "corrupted_by"
+          "kind": "related_to"
         }
       ]
     },
@@ -385,15 +385,15 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "corrupted_by",
+          "kind": "related_to",
           "src": "$target",
           "dst": "$actor",
           "strength": 0.7
         },
         {
           "type": "modify_pressure",
-          "pressureId": "magical_instability",
-          "delta": 5
+          "pressureId": "magical_stability",
+          "delta": -5
         }
       ],
       "descriptionTemplate": "corrupted {target.name}"
@@ -403,8 +403,8 @@
       "baseWeight": 0.8,
       "pressureModifiers": [
         {
-          "pressure": "magical_instability",
-          "multiplier": 1
+          "pressure": "magical_stability",
+          "multiplier": -1
         }
       ]
     },
@@ -501,8 +501,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "magical_instability",
-          "delta": -2
+          "pressureId": "magical_stability",
+          "delta": 2
         }
       ],
       "descriptionTemplate": "spread to {target.name}"
@@ -512,12 +512,12 @@
       "baseWeight": 1,
       "pressureModifiers": [
         {
-          "pressure": "resource_scarcity",
-          "multiplier": 1
+          "pressure": "resource_availibility",
+          "multiplier": -1
         },
         {
-          "pressure": "magical_instability",
-          "multiplier": -1
+          "pressure": "magical_stability",
+          "multiplier": 1
         }
       ]
     },
@@ -538,7 +538,7 @@
               "check": "exists",
               "path": [
                 {
-                  "via": "weaponized_by",
+                  "via": "believer_of",
                   "direction": "in",
                   "targetKind": "npc"
                 }
@@ -570,12 +570,12 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "cultural_tension",
-          "delta": -5
+          "pressureId": "harmony",
+          "delta": 5
         },
         {
           "type": "modify_pressure",
-          "pressureId": "stability",
+          "pressureId": "security",
           "delta": 3
         }
       ],
@@ -586,11 +586,11 @@
       "baseWeight": 1,
       "pressureModifiers": [
         {
-          "pressure": "cultural_tension",
-          "multiplier": -1
+          "pressure": "harmony",
+          "multiplier": 1
         },
         {
-          "pressure": "stability",
+          "pressure": "security",
           "multiplier": 1
         }
       ]
@@ -632,8 +632,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "conflict",
-          "delta": 8
+          "pressureId": "harmony",
+          "delta": -8
         }
       ],
       "descriptionTemplate": "drew {target.name} into the war"
@@ -643,12 +643,12 @@
       "baseWeight": 1.5,
       "pressureModifiers": [
         {
-          "pressure": "conflict",
-          "multiplier": 1
+          "pressure": "harmony",
+          "multiplier": -1
         },
         {
-          "pressure": "external_threat",
-          "multiplier": 1
+          "pressure": "security",
+          "multiplier": -1
         }
       ]
     },
@@ -690,8 +690,8 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "conflict",
-          "delta": 5
+          "pressureId": "harmony",
+          "delta": -5
         }
       ],
       "descriptionTemplate": "escalated in intensity"
@@ -701,12 +701,12 @@
       "baseWeight": 1,
       "pressureModifiers": [
         {
-          "pressure": "conflict",
-          "multiplier": 1
+          "pressure": "harmony",
+          "multiplier": -1
         },
         {
-          "pressure": "external_threat",
-          "multiplier": 1
+          "pressure": "security",
+          "multiplier": -1
         }
       ]
     },
@@ -727,7 +727,7 @@
               "check": "exists",
               "path": [
                 {
-                  "via": "epicenter_of",
+                  "via": "manifests_at",
                   "direction": "in",
                   "targetKind": "occurrence",
                   "targetSubtype": "magical_disaster"
@@ -750,7 +750,7 @@
         },
         {
           "type": "lacks_relationship",
-          "kind": "corrupted_by",
+          "kind": "related_to",
           "with": "$actor"
         }
       ]
@@ -759,15 +759,15 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "corrupted_by",
+          "kind": "related_to",
           "src": "$target",
           "dst": "$actor",
           "strength": 0.8
         },
         {
           "type": "modify_pressure",
-          "pressureId": "magical_instability",
-          "delta": 10
+          "pressureId": "magical_stability",
+          "delta": -10
         }
       ],
       "descriptionTemplate": "spread corruption to {target.name}"
@@ -777,8 +777,8 @@
       "baseWeight": 1.2,
       "pressureModifiers": [
         {
-          "pressure": "magical_instability",
-          "multiplier": 1
+          "pressure": "magical_stability",
+          "multiplier": -1
         }
       ]
     },

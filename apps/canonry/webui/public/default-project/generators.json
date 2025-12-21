@@ -572,13 +572,13 @@
       },
       {
         "type": "modify_pressure",
-        "pressureId": "conflict",
-        "delta": 3
+        "pressureId": "harmony",
+        "delta": -3
       },
       {
         "type": "modify_pressure",
-        "pressureId": "cultural_tension",
-        "delta": 2
+        "pressureId": "harmony",
+        "delta": -2
       }
     ],
     "variables": {
@@ -1479,7 +1479,7 @@
       "filters": [
         {
           "type": "has_tag",
-          "tag": "war_brewing"
+          "tag": "conflict"
         }
       ],
       "pickStrategy": "random"
@@ -1545,24 +1545,19 @@
     ],
     "stateUpdates": [
       {
-        "type": "remove_tag",
-        "entity": "$target",
-        "tag": "war_brewing"
-      },
-      {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "at_war",
+        "tag": "conflict",
         "value": true
       },
       {
         "type": "modify_pressure",
-        "pressureId": "conflict",
-        "delta": 15
+        "pressureId": "harmony",
+        "delta": -15
       },
       {
         "type": "modify_pressure",
-        "pressureId": "stability",
+        "pressureId": "security",
         "delta": -10
       }
     ],
@@ -1649,25 +1644,19 @@
         "tag": "power_vacuum"
       },
       {
-        "type": "set_tag",
-        "entity": "$target",
-        "tag": "succession_crisis",
-        "value": true
-      },
-      {
         "type": "change_status",
         "entity": "$target",
         "newStatus": "waning"
       },
       {
         "type": "modify_pressure",
-        "pressureId": "stability",
+        "pressureId": "security",
         "delta": -20
       },
       {
         "type": "modify_pressure",
-        "pressureId": "conflict",
-        "delta": 10
+        "pressureId": "harmony",
+        "delta": -10
       }
     ],
     "variables": {},
@@ -1765,11 +1754,6 @@
       }
     ],
     "stateUpdates": [
-      {
-        "type": "remove_tag",
-        "entity": "$target",
-        "tag": "legend_ripe"
-      },
       {
         "type": "set_tag",
         "entity": "$target",
@@ -1890,12 +1874,7 @@
             "relationship": "originated_in",
             "direction": "dst"
           },
-          "filters": [
-            {
-              "type": "lacks_relationship",
-              "kind": "repealed"
-            }
-          ],
+          "notStatus": "repealed",
           "pickStrategy": "random"
         }
       },
@@ -2610,13 +2589,13 @@
       {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "climate_displaced",
+        "tag": "stressed",
         "value": true
       },
       {
         "type": "remove_tag",
         "entity": "$target",
-        "tag": "thermal_stress"
+        "tag": "thriving"
       }
     ],
     "enabled": false
@@ -2635,7 +2614,7 @@
       "filters": [
         {
           "type": "has_tag",
-          "tag": "recovery_ready"
+          "tag": "safe"
         }
       ],
       "pickStrategy": "random"
@@ -2651,18 +2630,13 @@
       {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "climate_adapted",
+        "tag": "thriving",
         "value": true
       },
       {
         "type": "remove_tag",
         "entity": "$target",
-        "tag": "recovery_ready"
-      },
-      {
-        "type": "remove_tag",
-        "entity": "$target",
-        "tag": "climate_displaced"
+        "tag": "stressed"
       }
     ],
     "enabled": false
@@ -2678,8 +2652,8 @@
         {
           "type": "has_any_tag",
           "tags": [
-            "extreme_hot",
-            "extreme_cold"
+            "fire",
+            "ice"
           ]
         }
       ],
@@ -2704,7 +2678,7 @@
           "filters": [
             {
               "type": "has_tag",
-              "tag": "temperate"
+              "tag": "safe"
             },
             {
               "type": "exclude",
@@ -2734,7 +2708,7 @@
       {
         "type": "set_tag",
         "entity": "$migrant",
-        "tag": "climate_refugee",
+        "tag": "emergent",
         "value": true
       }
     ],
@@ -2750,7 +2724,7 @@
       "filters": [
         {
           "type": "has_tag",
-          "tag": "thaw_candidate"
+          "tag": "hidden"
         }
       ],
       "pickStrategy": "random"
@@ -2788,13 +2762,13 @@
       {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "recently_thawed",
+        "tag": "discovered",
         "value": true
       },
       {
         "type": "remove_tag",
         "entity": "$target",
-        "tag": "thaw_candidate"
+        "tag": "hidden"
       }
     ],
     "enabled": false
@@ -2829,13 +2803,13 @@
       {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "resource_depleted",
+        "tag": "stressed",
         "value": true
       },
       {
         "type": "remove_tag",
         "entity": "$target",
-        "tag": "economic_stress"
+        "tag": "thriving"
       }
     ],
     "enabled": false
@@ -2853,8 +2827,11 @@
       "statusFilter": "waning",
       "filters": [
         {
-          "type": "has_tag",
-          "tag": "prosperity_ready"
+          "type": "has_any_tag",
+          "tags": [
+            "trade",
+            "resource"
+          ]
         }
       ],
       "pickStrategy": "random"
@@ -2870,18 +2847,13 @@
       {
         "type": "set_tag",
         "entity": "$target",
-        "tag": "economically_recovered",
+        "tag": "thriving",
         "value": true
       },
       {
         "type": "remove_tag",
         "entity": "$target",
-        "tag": "prosperity_ready"
-      },
-      {
-        "type": "remove_tag",
-        "entity": "$target",
-        "tag": "resource_depleted"
+        "tag": "stressed"
       }
     ],
     "enabled": false

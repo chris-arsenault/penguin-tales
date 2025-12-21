@@ -441,7 +441,7 @@ export function createClusterFormationSystem(
           }
         );
 
-        // Create part_of relationships
+        // Create part_of relationships (member → meta-entity)
         graphView.createPartOfRelationships(clusterIds, metaEntityId);
         clusterIds.forEach(id => {
           relationshipsAdded.push({
@@ -449,6 +449,18 @@ export function createClusterFormationSystem(
             src: id,
             dst: metaEntityId,
             strength: 1.0  // Part-of relationships are strong
+          });
+        });
+
+        // Create supersedes relationships (meta-entity supersedes member)
+        // This makes it explicit that the meta-entity replaces the cluster members
+        clusterIds.forEach(id => {
+          graphView.createRelationship(FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES, metaEntityId, id);
+          relationshipsAdded.push({
+            kind: FRAMEWORK_RELATIONSHIP_KINDS.SUPERSEDES,
+            src: metaEntityId,
+            dst: id,
+            strength: 1.0
           });
         });
 

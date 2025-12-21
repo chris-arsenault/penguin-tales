@@ -192,7 +192,6 @@ export {
 export { createConnectionEvolutionSystem } from './systems/connectionEvolution';
 export type {
   ConnectionEvolutionConfig,
-  MetricType,
   MetricConfig,
   EvolutionRule,
   ActionType,
@@ -218,15 +217,12 @@ export { createThresholdTriggerSystem } from './systems/thresholdTrigger';
 export type {
   ThresholdTriggerConfig,
   TriggerCondition,
-  TriggerAction,
-  TriggerActionType,
-  EntityFilter
+  TriggerAction
 } from './systems/thresholdTrigger';
 
 export { createClusterFormationSystem } from './systems/clusterFormation';
 export type {
   ClusterFormationConfig,
-  EntityFilter as ClusterEntityFilter,
   DeclarativeClusterCriterion,
   DeclarativeClusterConfig,
   MetaEntityConfig as ClusterMetaEntityConfig,
@@ -425,12 +421,6 @@ export type {
   DeclarativePressure,
   PressuresFile,
   FeedbackFactor,
-  EntityCountFactor,
-  RelationshipCountFactor,
-  TagCountFactor,
-  RatioFactor,
-  StatusRatioFactor,
-  CrossCultureRatioFactor,
   SimpleCountFactor
 } from './engine/declarativePressureTypes';
 

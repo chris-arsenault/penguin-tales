@@ -131,11 +131,13 @@
     "description": "Trades With",
     "srcKinds": [
       "faction",
-      "npc"
+      "npc",
+      "location"
     ],
     "dstKinds": [
       "faction",
-      "npc"
+      "npc",
+      "location"
     ],
     "cullable": true,
     "decayRate": "medium"

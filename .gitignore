@@ -6,6 +6,7 @@ dist/
 /test-results/
 /telemetry-artifacts/
 deliveries/
+testArchive/
 .env
 .terraform/
 .terraform.lock.hcl

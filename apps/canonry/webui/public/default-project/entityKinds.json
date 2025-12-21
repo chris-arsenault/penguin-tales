@@ -599,8 +599,7 @@
           "culture": "nightshelf",
           "tags": [
             "secretive",
-            "mystical",
-            "cult"
+            "mystical"
           ],
           "bounds": {
             "shape": "circle",

@@ -44,8 +44,8 @@ export default [
             /* Complexity and structure */
             complexity: ['error', { max: 15 }],
             'max-depth': ['warn', 6],
-            'max-lines': ['warn', 1000],
-            'max-lines-per-function': ['warn', 100],
+            'max-lines': ['error', 1000],
+            'max-lines-per-function': ['error', 100],
             'max-params': ['warn', 4],
             // Cognitive complexity per function (Sonar methodology)
             'sonarjs/cognitive-complexity': ['error', 15],

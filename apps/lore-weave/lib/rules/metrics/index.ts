@@ -111,7 +111,7 @@ export function describeMetric(metric: Metric): string {
     case 'falloff':
       return `${metric.falloffType} falloff`;
     default:
-      return metric.type;
+      return (metric as { type: string }).type;
   }
 }
 

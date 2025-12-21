@@ -1,4 +1,5 @@
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
+import { FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
 import { DistributionTargets } from '../statistics/types';
 import { DomainSchema } from '../domainInterface/domainSchema';
 import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
@@ -175,15 +176,16 @@ export interface Graph {
   // =============================================================================
   getEntity(id: string): HardState | undefined;
   hasEntity(id: string): boolean;
-  getEntityCount(): number;
-  getEntities(): HardState[];  // Returns array of all entities
-  getEntityIds(): string[];
-  forEachEntity(callback: (entity: HardState, id: string) => void): void;
+  getEntityCount(options?: { includeHistorical?: boolean }): number;
+  /** Get all entities. Excludes historical by default. */
+  getEntities(options?: { includeHistorical?: boolean }): HardState[];
+  getEntityIds(options?: { includeHistorical?: boolean }): string[];
+  forEachEntity(callback: (entity: HardState, id: string) => void, options?: { includeHistorical?: boolean }): void;
 
   // Query methods
   findEntities(criteria: EntityCriteria): HardState[];
-  getEntitiesByKind(kind: string): HardState[];
-  getConnectedEntities(entityId: string, relationKind?: string): HardState[];
+  getEntitiesByKind(kind: string, options?: { includeHistorical?: boolean }): HardState[];
+  getConnectedEntities(entityId: string, relationKind?: string, options?: { includeHistorical?: boolean }): HardState[];
 
   // =============================================================================
   // ENTITY MUTATION METHODS (framework-aware)
@@ -212,13 +214,15 @@ export interface Graph {
   _loadEntity(id: string, entity: HardState): void;
 
   // =============================================================================
-  // RELATIONSHIP READ METHODS
+  // RELATIONSHIP READ METHODS (exclude historical by default)
   // =============================================================================
-  getRelationships(): Relationship[];
-  getAllRelationships(): Relationship[];
-  getRelationshipCount(): number;
+  /** Get all relationships. Excludes historical by default. */
+  getRelationships(options?: { includeHistorical?: boolean }): Relationship[];
+  /** Alias for getRelationships. Excludes historical by default. */
+  getAllRelationships(options?: { includeHistorical?: boolean }): Relationship[];
+  getRelationshipCount(options?: { includeHistorical?: boolean }): number;
   findRelationships(criteria: RelationshipCriteria): Relationship[];
-  getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both'): Relationship[];
+  getEntityRelationships(entityId: string, direction?: 'src' | 'dst' | 'both', options?: { includeHistorical?: boolean }): Relationship[];
   hasRelationship(srcId: string, dstId: string, kind?: string): boolean;
 
   // =============================================================================
@@ -275,6 +279,8 @@ export interface EntityCriteria {
   culture?: string;
   tag?: string;  // Check if entity has this tag key
   exclude?: string[];  // Entity IDs to exclude
+  /** Include historical entities (default: false) */
+  includeHistorical?: boolean;
 }
 
 // Criteria for finding relationships
@@ -284,6 +290,8 @@ export interface RelationshipCriteria {
   dst?: string;
   category?: string;
   minStrength?: number;
+  /** Include historical relationships (default: false) */
+  includeHistorical?: boolean;
 }
 
 // History tracking
@@ -745,24 +753,40 @@ export class GraphStore implements Graph {
     return this.#entities.has(id);
   }
 
-  getEntityCount(): number {
-    return this.#entities.size;
+  getEntityCount(options?: { includeHistorical?: boolean }): number {
+    if (options?.includeHistorical) {
+      return this.#entities.size;
+    }
+    let count = 0;
+    for (const entity of this.#entities.values()) {
+      if (entity.status !== FRAMEWORK_STATUS.HISTORICAL) count++;
+    }
+    return count;
   }
 
-  getEntities(): HardState[] {
-    return Array.from(this.#entities.values()).map(e => ({
-      ...e,
-      tags: { ...e.tags },
-      links: [...(e.links || [])]
-    }));
+  getEntities(options?: { includeHistorical?: boolean }): HardState[] {
+    const results: HardState[] = [];
+    for (const e of this.#entities.values()) {
+      if (!options?.includeHistorical && e.status === FRAMEWORK_STATUS.HISTORICAL) continue;
+      results.push({ ...e, tags: { ...e.tags }, links: [...(e.links || [])] });
+    }
+    return results;
   }
 
-  getEntityIds(): string[] {
-    return Array.from(this.#entities.keys());
+  getEntityIds(options?: { includeHistorical?: boolean }): string[] {
+    if (options?.includeHistorical) {
+      return Array.from(this.#entities.keys());
+    }
+    const ids: string[] = [];
+    for (const [id, entity] of this.#entities) {
+      if (entity.status !== FRAMEWORK_STATUS.HISTORICAL) ids.push(id);
+    }
+    return ids;
   }
 
-  forEachEntity(callback: (entity: HardState, id: string) => void): void {
+  forEachEntity(callback: (entity: HardState, id: string) => void, options?: { includeHistorical?: boolean }): void {
     this.#entities.forEach((entity, id) => {
+      if (!options?.includeHistorical && entity.status === FRAMEWORK_STATUS.HISTORICAL) return;
       // Pass clone to callback
       callback({ ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] }, id);
     });
@@ -771,6 +795,8 @@ export class GraphStore implements Graph {
   findEntities(criteria: EntityCriteria): HardState[] {
     const results: HardState[] = [];
     for (const [id, entity] of this.#entities) {
+      // Filter historical by default unless explicitly included
+      if (!criteria.includeHistorical && entity.status === FRAMEWORK_STATUS.HISTORICAL) continue;
       if (criteria.exclude?.includes(id)) continue;
       if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) continue;
       if (criteria.subtype && entity.subtype !== criteria.subtype) continue;
@@ -783,20 +809,27 @@ export class GraphStore implements Graph {
     return results;
   }
 
-  getEntitiesByKind(kind: string): HardState[] {
-    return this.findEntities({ kind });
+  getEntitiesByKind(kind: string, options?: { includeHistorical?: boolean }): HardState[] {
+    return this.findEntities({ kind, includeHistorical: options?.includeHistorical });
   }
 
-  getConnectedEntities(entityId: string, relationKind?: string): HardState[] {
+  getConnectedEntities(entityId: string, relationKind?: string, options?: { includeHistorical?: boolean }): HardState[] {
     const connectedIds = new Set<string>();
     for (const rel of this.#relationships) {
+      // Skip historical relationships by default
+      if (!options?.includeHistorical && rel.status === FRAMEWORK_STATUS.HISTORICAL) continue;
       if (relationKind && rel.kind !== relationKind) continue;
       if (rel.src === entityId) connectedIds.add(rel.dst);
       if (rel.dst === entityId) connectedIds.add(rel.src);
     }
     return Array.from(connectedIds)
       .map(id => this.getEntity(id))
-      .filter((e): e is HardState => e !== undefined);
+      .filter((e): e is HardState => {
+        if (!e) return false;
+        // Also filter historical entities by default
+        if (!options?.includeHistorical && e.status === FRAMEWORK_STATUS.HISTORICAL) return false;
+        return true;
+      });
   }
 
   // ===========================================================================
@@ -918,23 +951,30 @@ export class GraphStore implements Graph {
   }
 
   // ===========================================================================
-  // RELATIONSHIP READ METHODS
+  // RELATIONSHIP READ METHODS (exclude historical by default)
   // ===========================================================================
 
-  getRelationships(): Relationship[] {
-    return this.#relationships.map(r => ({ ...r }));
+  getRelationships(options?: { includeHistorical?: boolean }): Relationship[] {
+    return this.#relationships
+      .filter(r => options?.includeHistorical || r.status !== FRAMEWORK_STATUS.HISTORICAL)
+      .map(r => ({ ...r }));
   }
 
-  getAllRelationships(): Relationship[] {
-    return this.getRelationships();
+  getAllRelationships(options?: { includeHistorical?: boolean }): Relationship[] {
+    return this.getRelationships(options);
   }
 
-  getRelationshipCount(): number {
-    return this.#relationships.length;
+  getRelationshipCount(options?: { includeHistorical?: boolean }): number {
+    if (options?.includeHistorical) {
+      return this.#relationships.length;
+    }
+    return this.#relationships.filter(r => r.status !== FRAMEWORK_STATUS.HISTORICAL).length;
   }
 
   findRelationships(criteria: RelationshipCriteria): Relationship[] {
     return this.#relationships.filter(rel => {
+      // Filter historical by default unless explicitly included
+      if (!criteria.includeHistorical && rel.status === FRAMEWORK_STATUS.HISTORICAL) return false;
       if (criteria.kind && rel.kind !== criteria.kind) return false;
       if (criteria.src && rel.src !== criteria.src) return false;
       if (criteria.dst && rel.dst !== criteria.dst) return false;
@@ -944,8 +984,10 @@ export class GraphStore implements Graph {
     }).map(r => ({ ...r }));
   }
 
-  getEntityRelationships(entityId: string, direction: 'src' | 'dst' | 'both' = 'both'): Relationship[] {
+  getEntityRelationships(entityId: string, direction: 'src' | 'dst' | 'both' = 'both', options?: { includeHistorical?: boolean }): Relationship[] {
     return this.#relationships.filter(rel => {
+      // Filter historical by default
+      if (!options?.includeHistorical && rel.status === FRAMEWORK_STATUS.HISTORICAL) return false;
       if (direction === 'src') return rel.src === entityId;
       if (direction === 'dst') return rel.dst === entityId;
       return rel.src === entityId || rel.dst === entityId;
@@ -953,7 +995,9 @@ export class GraphStore implements Graph {
   }
 
   hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
+    // hasRelationship checks for active relationships only
     return this.#relationships.some(rel =>
+      rel.status !== FRAMEWORK_STATUS.HISTORICAL &&
       rel.src === srcId && rel.dst === dstId && (kind === undefined || rel.kind === kind)
     );
   }

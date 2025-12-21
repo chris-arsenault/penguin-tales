@@ -9,7 +9,7 @@
  * All mutations use `type` as the discriminant field.
  */
 
-import type { Direction } from '../types';
+import type { Direction, Prominence } from '../types';
 
 /**
  * Unified Mutation type.
@@ -216,7 +216,7 @@ export interface EntityModification {
   /** Changes to apply */
   changes: {
     status?: string;
-    prominence?: string;
+    prominence?: Prominence;
     tags?: Record<string, string | boolean>;
   };
 }

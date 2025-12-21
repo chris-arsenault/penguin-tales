@@ -15,6 +15,7 @@ import type {
   Metric,
   Mutation,
   MutationResult,
+  EntityModification,
 } from '../rules';
 
 /**
@@ -130,7 +131,7 @@ function resolveThreshold(
 
 function mergeMutationResult(
   result: MutationResult,
-  modifications: Array<{ id: string; changes: Partial<HardState> }>,
+  modifications: EntityModification[],
   relationships: Relationship[],
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
   pressureChanges: Record<string, number>
@@ -197,7 +198,7 @@ export function createConnectionEvolutionSystem(
         }
       }
 
-      const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+      const modifications: EntityModification[] = [];
       const relationships: Relationship[] = [];
       const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
       const pressureChanges: Record<string, number> = {};

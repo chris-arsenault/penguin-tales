@@ -12,6 +12,7 @@ import type {
   MutationResult,
   SetTagMutation,
   CreateRelationshipMutation,
+  EntityModification,
 } from '../rules';
 
 /**
@@ -256,7 +257,7 @@ function calculateSusceptibility(
 
 function mergeMutationResult(
   result: MutationResult,
-  modifications: Array<{ id: string; changes: Partial<HardState> }>,
+  modifications: EntityModification[],
   relationships: Relationship[],
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
   pressureChanges: Record<string, number>,
@@ -335,7 +336,7 @@ function applySingleSourceContagion(
   graphView: TemplateGraphView,
   modifier: number
 ): SystemResult {
-  const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+  const modifications: EntityModification[] = [];
   const relationships: Relationship[] = [];
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const newInfections: string[] = []; // Track newly infected entities for visualization
@@ -567,7 +568,7 @@ function applyMultiSourceContagion(
   modifier: number
 ): SystemResult {
   const multiSource = config.multiSource!;
-  const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+  const modifications: EntityModification[] = [];
   const relationships: Relationship[] = [];
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const modifiedTags = new Map<string, Record<string, boolean | string>>();

@@ -15,6 +15,7 @@ import type {
   MutationResult,
   Condition,
   RuleContext,
+  EntityModification,
 } from '../rules';
 
 /**
@@ -218,7 +219,7 @@ function clusterEntities(
 
 function mergeMutationResult(
   result: MutationResult,
-  modifications: Array<{ id: string; changes: Partial<HardState> }>,
+  modifications: EntityModification[],
   relationships: Relationship[],
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>,
   pressureChanges: Record<string, number>
@@ -255,12 +256,12 @@ function applyActions(
   config: ThresholdTriggerConfig,
   graphView: TemplateGraphView
 ): {
-  modifications: Array<{ id: string; changes: Partial<HardState> }>;
+  modifications: EntityModification[];
   relationships: Relationship[];
   relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }>;
   pressureChanges: Record<string, number>;
 } {
-  const modifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+  const modifications: EntityModification[] = [];
   const relationships: Relationship[] = [];
   const relationshipsAdjusted: Array<{ kind: string; src: string; dst: string; delta: number }> = [];
   const pressureChanges: Record<string, number> = {};

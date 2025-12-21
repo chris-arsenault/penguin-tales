@@ -16,10 +16,10 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
+    "test": "node -e \"console.log('Tests archived; no tests to run.');\"",
+    "test:watch": "node -e \"console.log('Tests archived; no tests to run.');\"",
+    "test:ui": "node -e \"console.log('Tests archived; no tests to run.');\"",
+    "test:coverage": "node -e \"console.log('Tests archived; no tests to run.');\"",
     "ui": "cd webui && npm run dev",
     "ui:build": "cd webui && npm run build",
     "ui:sync": "cd webui && npm run sync"

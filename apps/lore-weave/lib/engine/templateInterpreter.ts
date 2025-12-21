@@ -333,7 +333,7 @@ export class TemplateInterpreter {
 
     return {
       strategy: rule.strategy,
-      targetKind: rule.kind,
+      targetKind: rule.kind ?? rule.kinds?.join('/') ?? 'unknown',
       filterSteps: trace.steps,
     };
   }

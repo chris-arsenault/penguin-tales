@@ -209,14 +209,20 @@ function prepareSetTag(
     return result;
   }
 
-  let value: string | boolean | undefined;
+  let value: string | boolean;
   if (mutation.valueFrom) {
-    value = ctx.values?.[mutation.valueFrom];
-    if (value === undefined) {
+    const sourceValue = ctx.values?.[mutation.valueFrom];
+    if (sourceValue === undefined) {
       result.applied = false;
       result.diagnostic = `value source ${mutation.valueFrom} not found`;
       return result;
     }
+    if (typeof sourceValue === 'number') {
+      result.applied = false;
+      result.diagnostic = `value source ${mutation.valueFrom} is a number, not a valid tag value`;
+      return result;
+    }
+    value = sourceValue;
   } else {
     value = mutation.value ?? true;
   }

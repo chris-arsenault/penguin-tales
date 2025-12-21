@@ -273,10 +273,12 @@ export class TemplateGraphView {
     status?: string;
     prominence?: string;
     tag?: string;
+    /** Include historical entities (default: false) */
+    includeHistorical?: boolean;
   }): HardState[] {
     const results: HardState[] = [];
 
-    for (const entity of this.graph.getEntities()) {
+    for (const entity of this.graph.getEntities({ includeHistorical: criteria.includeHistorical })) {
       let matches = true;
 
       if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) matches = false;
@@ -292,19 +294,21 @@ export class TemplateGraphView {
   }
 
   /**
-   * Get all relationships in the graph (read-only)
+   * Get all relationships in the graph (read-only).
+   * Excludes historical by default.
    */
-  getAllRelationships(): readonly Relationship[] {
-    return this.graph.getRelationships();
+  getAllRelationships(options?: { includeHistorical?: boolean }): readonly Relationship[] {
+    return this.graph.getRelationships(options);
   }
 
   /**
-   * Get relationships for a specific entity
+   * Get relationships for a specific entity.
+   * Excludes historical by default.
    */
-  getRelationships(entityId: string, kind?: string): Relationship[] {
+  getRelationships(entityId: string, kind?: string, options?: { includeHistorical?: boolean }): Relationship[] {
     if (!this.graph.getEntity(entityId)) return [];
 
-    const relationships = this.graph.getEntityRelationships(entityId, 'both');
+    const relationships = this.graph.getEntityRelationships(entityId, 'both', options);
     if (kind) {
       return relationships.filter(link => link.kind === kind);
     }
@@ -414,16 +418,18 @@ export class TemplateGraphView {
   /**
    * Get all entities in the graph.
    * Use sparingly - prefer findEntities() with criteria for filtering.
+   * Excludes historical by default.
    */
-  getEntities(): HardState[] {
-    return this.graph.getEntities();
+  getEntities(options?: { includeHistorical?: boolean }): HardState[] {
+    return this.graph.getEntities(options);
   }
 
   /**
    * Iterate over all entities.
+   * Excludes historical by default.
    */
-  forEachEntity(callback: (entity: HardState) => void): void {
-    for (const entity of this.graph.getEntities()) {
+  forEachEntity(callback: (entity: HardState) => void, options?: { includeHistorical?: boolean }): void {
+    for (const entity of this.graph.getEntities(options)) {
       callback(entity);
     }
   }

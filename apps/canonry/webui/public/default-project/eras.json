@@ -61,7 +61,8 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 20
+        "minTicks": 20,
+        "since": "created"
       },
       {
         "type": "entity_count",
@@ -155,7 +156,8 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 20
+        "minTicks": 20,
+        "since": "created"
       },
       {
         "type": "pressure",
@@ -246,7 +248,8 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 20
+        "minTicks": 20,
+        "since": "created"
       },
       {
         "type": "entity_count",
@@ -344,7 +347,8 @@
     "exitConditions": [
       {
         "type": "time_elapsed",
-        "minTicks": 20
+        "minTicks": 20,
+        "since": "created"
       },
       {
         "type": "pressure",

@@ -99,8 +99,7 @@
       "mundane"
     ],
     "relatedTags": [
-      "anomaly",
-      "cult"
+      "anomaly"
     ],
     "isAxis": true,
     "mutuallyExclusiveWith": [
@@ -273,8 +272,7 @@
       "raider"
     ],
     "relatedTags": [
-      "friendly",
-      "guild"
+      "friendly"
     ]
   },
   {
@@ -481,7 +479,6 @@
       "central"
     ],
     "relatedTags": [
-      "cult",
       "mystical",
       "hidden"
     ],
@@ -500,7 +497,6 @@
       "chaotic"
     ],
     "relatedTags": [
-      "guild",
       "political"
     ],
     "isAxis": true,
@@ -760,5 +756,38 @@
     "mutuallyExclusiveWith": [
       "west"
     ]
+  },
+  {
+    "tag": "combat-style",
+    "category": "trait",
+    "rarity": "uncommon",
+    "description": "Combat-focused style or doctrine",
+    "entityKinds": [
+      "abilities"
+    ],
+    "conflictingTags": [],
+    "relatedTags": []
+  },
+  {
+    "tag": "immune",
+    "category": "status",
+    "rarity": "uncommon",
+    "description": "Resistant to contagion or ideological spread",
+    "entityKinds": [
+      "npc"
+    ],
+    "conflictingTags": [],
+    "relatedTags": []
+  },
+  {
+    "tag": "temperature",
+    "category": "status",
+    "rarity": "common",
+    "description": "Thermal diffusion value tag",
+    "entityKinds": [
+      "location"
+    ],
+    "conflictingTags": [],
+    "relatedTags": []
   }
 ]

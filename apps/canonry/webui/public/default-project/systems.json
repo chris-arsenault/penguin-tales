@@ -85,7 +85,7 @@
       "throttleChance": 0.2,
       "cooldown": 8,
       "pressureChanges": {
-        "conflict": 5
+        "harmony": -5
       },
       "selection": {
         "strategy": "by_kind",
@@ -125,7 +125,7 @@
       ],
       "throttleChance": 0.3,
       "pressureChanges": {
-        "diplomacy": 3
+        "harmony": 3
       },
       "selection": {
         "strategy": "by_kind",
@@ -202,7 +202,7 @@
       "throttleChance": 0.3,
       "cooldownTag": "conflict_cooldown",
       "pressureChanges": {
-        "conflict": 5
+        "harmony": -5
       },
       "selection": {
         "strategy": "by_kind",
@@ -256,8 +256,8 @@
       "clusterMode": "individual",
       "throttleChance": 0.2,
       "pressureChanges": {
-        "stability": -15,
-        "conflict": 10
+        "security": -15,
+        "harmony": -10
       },
       "selection": {
         "strategy": "by_kind",
@@ -363,7 +363,7 @@
       },
       "postProcess": {
         "pressureChanges": {
-          "stability": 2
+          "security": 2
         }
       },
       "selection": {
@@ -423,7 +423,7 @@
       },
       "postProcess": {
         "pressureChanges": {
-          "stability": 2
+          "security": 2
         }
       },
       "selection": {
@@ -470,9 +470,9 @@
       "postProcess": {
         "createGovernanceFaction": true,
         "governanceFactionSubtype": "political",
-        "governanceRelationship": "weaponized_by",
+        "governanceRelationship": "related_to",
         "pressureChanges": {
-          "stability": 5
+          "security": 5
         }
       },
       "selection": {
@@ -570,8 +570,8 @@
         }
       },
       "pressureChanges": {
-        "cultural_tension": -10,
-        "stability": 5
+        "harmony": 10,
+        "security": 5
       },
       "selection": {
         "strategy": "by_kind",
@@ -611,9 +611,9 @@
       },
       "maxTags": 10,
       "divergencePressure": {
-        "pressureName": "cultural_tension",
+        "pressureName": "harmony",
         "minDivergent": 2,
-        "delta": 10
+        "delta": -10
       },
       "selection": {
         "strategy": "by_kind",
@@ -866,8 +866,8 @@
       "clusterMode": "individual",
       "throttleChance": 0.3,
       "pressureChanges": {
-        "resource_scarcity": 15,
-        "conflict": 5
+        "resource_availibility": -15,
+        "harmony": -5
       },
       "selection": {
         "strategy": "by_kind",
@@ -928,8 +928,8 @@
       "clusterMode": "individual",
       "throttleChance": 0.3,
       "pressureChanges": {
-        "resource_scarcity": -5,
-        "stability": 5
+        "resource_availibility": 5,
+        "security": 5
       },
       "selection": {
         "strategy": "by_kind",
@@ -1022,11 +1022,10 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
+        "subtypes": [
+          "company"
+        ],
         "filters": [
-          {
-            "type": "has_tag",
-            "tag": "guild"
-          },
           {
             "type": "lacks_tag",
             "tag": "trade"
@@ -1069,11 +1068,10 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
+        "subtypes": [
+          "cult"
+        ],
         "filters": [
-          {
-            "type": "has_tag",
-            "tag": "cult"
-          },
           {
             "type": "lacks_tag",
             "tag": "influential"
@@ -1113,7 +1111,7 @@
       "clusterMode": "individual",
       "throttleChance": 0.1,
       "pressureChanges": {
-        "external_threat": 10
+        "security": -10
       },
       "selection": {
         "strategy": "by_kind",
