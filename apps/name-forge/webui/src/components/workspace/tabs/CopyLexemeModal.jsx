@@ -26,11 +26,11 @@ export function CopyLexemeModal({ cultureId, allCultures, existingListIds, onCop
     .map(([id, config]) => ({
       id,
       name: config.name || id,
-      lexemeLists: config.lexemeLists || {}
+      lexemeLists: config.naming?.lexemeLists || {}
     }));
 
   const selectedCultureLists = selectedCulture
-    ? Object.entries(allCultures[selectedCulture]?.lexemeLists || {})
+    ? Object.entries(allCultures[selectedCulture]?.naming?.lexemeLists || {})
     : [];
 
   const toggleList = (listId) => {
@@ -59,7 +59,7 @@ export function CopyLexemeModal({ cultureId, allCultures, existingListIds, onCop
     const usedIds = [...existingListIds];
 
     selectedLists.forEach(listId => {
-      const sourceList = sourceCulture.lexemeLists[listId];
+      const sourceList = sourceCulture?.naming?.lexemeLists?.[listId];
       if (sourceList) {
         const newId = generateUniqueId(cultureId, listId, usedIds);
         usedIds.push(newId);

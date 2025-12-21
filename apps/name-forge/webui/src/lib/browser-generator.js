@@ -11,6 +11,19 @@ import { setMarkovBaseUrl } from '@lib/markov-loader.js';
 // Vite serves from public/ directory
 setMarkovBaseUrl(`${import.meta.env.BASE_URL}markov-models`);
 
+function toNameForgeCulture(culture) {
+  if (!culture) return null;
+  const naming = culture.naming || {};
+  return {
+    ...culture,
+    domains: naming.domains || culture.domains || [],
+    lexemeLists: naming.lexemeLists || culture.lexemeLists || {},
+    lexemeSpecs: naming.lexemeSpecs || culture.lexemeSpecs || [],
+    grammars: naming.grammars || culture.grammars || [],
+    profiles: naming.profiles || culture.profiles || [],
+  };
+}
+
 /**
  * Generate names using a culture's configuration.
  *
@@ -37,17 +50,18 @@ export async function generateTestNames({
   prominence,
   tags = []
 }) {
-  if (!culture) {
+  const nameForgeCulture = toNameForgeCulture(culture);
+  if (!nameForgeCulture) {
     throw new Error('Culture required');
   }
 
-  if (!culture.profiles || culture.profiles.length === 0) {
+  if (!nameForgeCulture.profiles || nameForgeCulture.profiles.length === 0) {
     throw new Error('Culture has no profiles');
   }
 
   // generate() handles Markov model preloading internally
-  return generate(culture, {
-    cultureId: culture.id,
+  return generate(nameForgeCulture, {
+    cultureId: nameForgeCulture.id,
     profileId: profileId,
     context: context,
     count: count,

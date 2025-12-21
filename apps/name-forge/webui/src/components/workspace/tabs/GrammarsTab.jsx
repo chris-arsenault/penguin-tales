@@ -23,9 +23,10 @@ function GrammarsTab({ cultureId, cultureConfig, onGrammarsChange, onLexemesChan
   const lastSavedFormDataRef = useRef(null);
   const lastSavedIdRef = useRef(null);
 
-  const grammars = cultureConfig?.grammars || [];
-  const lexemeLists = cultureConfig?.lexemeLists || {};
-  const domains = cultureConfig?.domains || [];
+  const naming = cultureConfig?.naming || {};
+  const grammars = naming.grammars || [];
+  const lexemeLists = naming.lexemeLists || {};
+  const domains = naming.domains || [];
 
   // Autosave effect
   useEffect(() => {

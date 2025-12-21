@@ -11,24 +11,18 @@ import RunControls from './RunControls';
 import ConfigViewer from './ConfigViewer';
 
 /**
- * Build CoordinateContextConfig from canonry's semantic and culture data.
+ * Build CoordinateContextConfig from canonry's schema.
  */
-function buildCoordinateContextConfig(semanticData, cultureVisuals) {
-  const entityKinds = Object.entries(semanticData || {}).map(([kindId, data]) => ({
-    id: kindId,
-    semanticPlane: data ? {
-      axes: data.axes || {
-        x: { name: 'X', lowTag: 'low', highTag: 'high' },
-        y: { name: 'Y', lowTag: 'low', highTag: 'high' },
-      },
-      regions: data.regions || [],
-    } : undefined,
+function buildCoordinateContextConfig(schema) {
+  const entityKinds = (schema?.entityKinds || []).map((kind) => ({
+    id: kind.kind || kind.id,
+    semanticPlane: kind.semanticPlane,
   }));
 
-  const cultures = Object.entries(cultureVisuals || {}).map(([cultureId, data]) => ({
-    id: cultureId,
-    axisBiases: data.axisBiases || {},
-    homeRegions: data.homeRegions || {},
+  const cultures = (schema?.cultures || []).map((culture) => ({
+    id: culture.id,
+    axisBiases: culture.axisBiases || {},
+    homeRegions: culture.homeRegions || {},
   }));
 
   return { entityKinds, cultures };
@@ -69,9 +63,6 @@ export default function SimulationRunner({
   actions,
   seedEntities,
   seedRelationships,
-  namingData,
-  semanticData,
-  cultureVisuals,
   validation,
   isRunning,
   setIsRunning,
@@ -166,8 +157,8 @@ export default function SimulationRunner({
 
   // Build coordinate context config
   const coordinateContextConfig = useMemo(() => {
-    return buildCoordinateContextConfig(semanticData, cultureVisuals);
-  }, [semanticData, cultureVisuals]);
+    return buildCoordinateContextConfig(schema);
+  }, [schema]);
 
   // Generate the EngineConfig
   const engineConfig = useMemo(() => {
@@ -191,14 +182,9 @@ export default function SimulationRunner({
       cultures: schema.cultures || [],
     };
 
-    const culturesWithNaming = (schema.cultures || []).map(c => ({
-      ...c,
-      naming: namingData[c.id] || c.naming,
-    }));
-
     return {
       domain: domainSchemaJSON,
-      cultures: culturesWithNaming,
+      cultures: schema.cultures || [],
       eras,
       pressures: pressures,
       templates: (generators || []).filter(g => g.enabled !== false),
@@ -217,7 +203,7 @@ export default function SimulationRunner({
       seedRelationships: seedRelationships || [],
       debugConfig,
     };
-  }, [schema, eras, pressures, generators, systems, actions, params, coordinateContextConfig, seedRelationships, namingData, debugConfig]);
+  }, [schema, eras, pressures, generators, systems, actions, params, coordinateContextConfig, seedRelationships, debugConfig]);
 
   // Run simulation
   const runSimulation = useCallback(() => {

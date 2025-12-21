@@ -1971,8 +1971,8 @@ export class WorldEngine {
   /**
    * Import coordinate state from a previously exported world.
    *
-   * NOTE: With the new cosmographer-aligned CoordinateContext, coordinate config
-   * (semanticData, cultureVisuals) is provided at construction time and is immutable.
+   * NOTE: With the cosmographer-aligned CoordinateContext, coordinate config
+   * (entityKinds + cultures with semantic planes/biases) is provided at construction time and is immutable.
    * Emergent regions are not yet supported. This method is a no-op placeholder.
    */
   public importCoordinateState(_coordinateState: ReturnType<CoordinateContext['export']>): void {

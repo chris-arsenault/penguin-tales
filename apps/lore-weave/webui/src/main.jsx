@@ -48,9 +48,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         generators={mockGenerators}
         seedEntities={[]}
         seedRelationships={[]}
-        namingData={{}}
-        semanticData={{}}
-        cultureVisuals={{}}
         activeSection="configure"
         onSectionChange={(section) => console.log('Section changed:', section)}
       />

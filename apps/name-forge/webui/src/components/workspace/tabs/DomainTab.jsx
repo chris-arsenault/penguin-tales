@@ -13,7 +13,7 @@ function DomainTab({ cultureId, cultureConfig, allCultures, onDomainsChange }) {
     weights: false
   });
 
-  const cultureDomains = cultureConfig?.domains || [];
+  const cultureDomains = cultureConfig?.naming?.domains || [];
 
   // Collect ALL domains from ALL cultures for "copy from other cultures" feature
   const allDomains = getAllDomains(allCultures);

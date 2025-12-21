@@ -52,13 +52,13 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
 
   // Get available options from schema
   const cultureIds = Object.keys(cultures || {});
-  const entityKinds = worldSchema?.hardState?.map(e => e.kind) || [];
+  const entityKinds = worldSchema?.entityKinds?.map(e => e.kind) || [];
   const tagRegistry = worldSchema?.tagRegistry || [];
 
   // Get profiles for selected culture
   const availableProfiles = useMemo(() => {
     if (!selectedCulture) return [];
-    return cultures[selectedCulture]?.profiles || [];
+    return cultures[selectedCulture]?.naming?.profiles || [];
   }, [selectedCulture, cultures]);
 
   // Auto-select first profile when culture changes
@@ -73,7 +73,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
   // Get subkinds for selected entity kind
   const subKinds = useMemo(() => {
     if (!selectedKind || !worldSchema?.entityKinds) return [];
-    const entity = worldSchema.entityKinds.find(e => e.id === selectedKind);
+    const entity = worldSchema.entityKinds.find(e => e.kind === selectedKind);
     return entity?.subtypes?.map(s => s.id) || [];
   }, [selectedKind, worldSchema]);
 
@@ -114,7 +114,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
         throw new Error('No culture selected.');
       }
 
-      if (!culture.profiles || culture.profiles.length === 0) {
+      if (!culture?.naming?.profiles || culture.naming.profiles.length === 0) {
         throw new Error('No profile found. Create a profile in Workshop → Profiles.');
       }
 
@@ -171,7 +171,7 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
   // Check if we can generate
   const canGenerate = selectedCulture;
   const culture = canGenerate ? getSelectedCulture() : null;
-  const hasProfile = culture?.profiles?.length > 0;
+  const hasProfile = culture?.naming?.profiles?.length > 0;
 
   return (
     <div className="generate-container">
@@ -382,11 +382,11 @@ function GenerateTab({ worldSchema, cultures, formState, onFormStateChange }) {
             <div className="card mt-md">
               <h4 className="mt-0 mb-sm">Active Culture</h4>
               <div className="culture-preview">
-                <div><strong>Profile:</strong> {selectedProfile || culture.profiles[0]?.id}</div>
-                <div><strong>Profiles:</strong> {culture.profiles?.length || 0}</div>
-                <div><strong>Domains:</strong> {culture.domains?.length || 0}</div>
-                <div><strong>Grammars:</strong> {culture.grammars?.length || 0}</div>
-                <div><strong>Lexeme Lists:</strong> {Object.keys(culture.lexemeLists || {}).length}</div>
+                <div><strong>Profile:</strong> {selectedProfile || culture.naming?.profiles?.[0]?.id}</div>
+                <div><strong>Profiles:</strong> {culture.naming?.profiles?.length || 0}</div>
+                <div><strong>Domains:</strong> {culture.naming?.domains?.length || 0}</div>
+                <div><strong>Grammars:</strong> {culture.naming?.grammars?.length || 0}</div>
+                <div><strong>Lexeme Lists:</strong> {Object.keys(culture.naming?.lexemeLists || {}).length}</div>
               </div>
             </div>
           )}

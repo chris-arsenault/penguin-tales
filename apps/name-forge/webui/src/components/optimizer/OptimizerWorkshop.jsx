@@ -41,7 +41,8 @@ export default function OptimizerWorkshop({ cultures, onCulturesChange }) {
   const allDomains = useMemo(() => {
     const domains = [];
     Object.entries(cultures || {}).forEach(([cultureId, culture]) => {
-      (culture.domains || []).forEach(domain => {
+      const naming = culture?.naming || {};
+      (naming.domains || []).forEach(domain => {
         domains.push({
           ...domain,
           cultureId,
@@ -230,17 +231,21 @@ export default function OptimizerWorkshop({ cultures, onCulturesChange }) {
 
     for (const [cultureId, cultureResults] of Object.entries(byCulture)) {
       const culture = cultures[cultureId];
-      if (!culture?.domains) continue;
+      const naming = culture?.naming || {};
+      if (!naming.domains) continue;
 
       // Replace optimized domains
-      const updatedDomains = culture.domains.map(domain => {
+      const updatedDomains = naming.domains.map(domain => {
         const optimized = cultureResults.find(r => r.domainId === domain.id);
         return optimized ? optimized.optimizedConfig : domain;
       });
 
       updatedCultures[cultureId] = {
         ...culture,
-        domains: updatedDomains,
+        naming: {
+          ...naming,
+          domains: updatedDomains,
+        },
       };
 
       addLog(`  Updated ${cultureResults.length} domain(s) in ${cultureId}`, 'success');

@@ -34,11 +34,13 @@ function CultureSidebar({
     const newCulture = {
       id: newCultureId,
       name: cultureName,
-      domains: [],
-      lexemeLists: {},
-      lexemeSpecs: {},
-      grammars: [],
-      profiles: []
+      naming: {
+        domains: [],
+        lexemeLists: {},
+        lexemeSpecs: [],
+        grammars: [],
+        profiles: [],
+      },
     };
 
     const updatedCultures = { ...cultures, [newCultureId]: newCulture };
@@ -56,11 +58,12 @@ function CultureSidebar({
 
   // Get resource counts for a culture
   const getResourceCounts = (culture) => {
+    const naming = culture?.naming || {};
     return {
-      domains: culture?.domains?.length || 0,
-      lexemes: Object.keys(culture?.lexemeLists || {}).length,
-      grammars: culture?.grammars?.length || 0,
-      profiles: culture?.profiles?.length || 0
+      domains: naming.domains?.length || 0,
+      lexemes: Object.keys(naming.lexemeLists || {}).length,
+      grammars: naming.grammars?.length || 0,
+      profiles: naming.profiles?.length || 0
     };
   };
 

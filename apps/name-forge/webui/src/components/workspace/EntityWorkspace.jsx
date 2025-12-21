@@ -31,7 +31,10 @@ function EntityWorkspace({
     if (onCultureChange) {
       onCultureChange({
         ...cultureConfig,
-        domains: newDomains
+        naming: {
+          ...cultureConfig?.naming,
+          domains: newDomains,
+        },
       });
     }
   };
@@ -40,10 +43,15 @@ function EntityWorkspace({
   // Optional third param allows atomic update with grammars (for copy operations)
   const handleLexemesChange = (newLexemeLists, newLexemeSpecs, newGrammars) => {
     if (onCultureChange) {
-      const updates = { ...cultureConfig };
-      if (newLexemeLists !== undefined) updates.lexemeLists = newLexemeLists;
-      if (newLexemeSpecs !== undefined) updates.lexemeSpecs = newLexemeSpecs;
-      if (newGrammars !== undefined) updates.grammars = newGrammars;
+      const updates = {
+        ...cultureConfig,
+        naming: {
+          ...cultureConfig?.naming,
+        },
+      };
+      if (newLexemeLists !== undefined) updates.naming.lexemeLists = newLexemeLists;
+      if (newLexemeSpecs !== undefined) updates.naming.lexemeSpecs = newLexemeSpecs;
+      if (newGrammars !== undefined) updates.naming.grammars = newGrammars;
       onCultureChange(updates);
     }
   };
@@ -53,7 +61,10 @@ function EntityWorkspace({
     if (onCultureChange) {
       onCultureChange({
         ...cultureConfig,
-        grammars: newGrammars
+        naming: {
+          ...cultureConfig?.naming,
+          grammars: newGrammars,
+        },
       });
     }
   };
@@ -63,24 +74,28 @@ function EntityWorkspace({
     if (onCultureChange) {
       onCultureChange({
         ...cultureConfig,
-        profiles: newProfiles
+        naming: {
+          ...cultureConfig?.naming,
+          profiles: newProfiles,
+        },
       });
     }
   };
 
   const getCompletionBadge = (key) => {
+    const naming = cultureConfig?.naming || {};
     // Compute counts from culture-level data
     if (key === 'domain') {
-      const count = cultureConfig?.domains?.length || 0;
+      const count = naming.domains?.length || 0;
       return count > 0 ? `(${count})` : '';
     } else if (key === 'lexemes') {
-      const count = Object.keys(cultureConfig?.lexemeLists || {}).length;
+      const count = Object.keys(naming.lexemeLists || {}).length;
       return count > 0 ? `(${count})` : '';
     } else if (key === 'grammars') {
-      const count = (cultureConfig?.grammars || []).length;
+      const count = naming.grammars?.length || 0;
       return count > 0 ? `(${count})` : '';
     } else if (key === 'profiles') {
-      const count = (cultureConfig?.profiles || []).length;
+      const count = naming.profiles?.length || 0;
       return count > 0 ? `(${count})` : '';
     }
 

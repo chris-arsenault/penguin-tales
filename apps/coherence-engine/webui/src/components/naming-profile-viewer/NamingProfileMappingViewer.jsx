@@ -11,12 +11,12 @@ import React, { useState, useMemo } from 'react';
 import './naming-profile-viewer.css';
 import { analyzeNamingMappings } from './utils';
 
-export default function NamingProfileMappingViewer({ generators = [], schema = {}, namingData = {} }) {
+export default function NamingProfileMappingViewer({ generators = [], schema = {} }) {
   const [showInherited, setShowInherited] = useState(false);
 
   const { mappings, warnings } = useMemo(
-    () => analyzeNamingMappings(generators, schema, namingData),
-    [generators, schema, namingData]
+    () => analyzeNamingMappings(generators, schema),
+    [generators, schema]
   );
 
   // Group by generator for display

@@ -83,7 +83,7 @@ function computeTabValidation(generator, usageMap) {
   return { tabErrors, isOrphan: validation.isOrphan, totalErrors: validation.invalidRefs.length };
 }
 
-export function GeneratorModal({ generator, onChange, onClose, onDelete, onDuplicate, schema, pressures, eras, usageMap, namingData, tagRegistry = [] }) {
+export function GeneratorModal({ generator, onChange, onClose, onDelete, onDuplicate, schema, pressures, eras, usageMap, tagRegistry = [] }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   const tabValidation = useMemo(() =>
@@ -126,7 +126,7 @@ export function GeneratorModal({ generator, onChange, onClose, onDelete, onDupli
       case 'variables':
         return <VariablesTab generator={generator} onChange={onChange} schema={schema} />;
       case 'creation':
-        return <CreationTab generator={generator} onChange={onChange} schema={schema} namingData={namingData} tagRegistry={tagRegistry} pressures={pressures} />;
+        return <CreationTab generator={generator} onChange={onChange} schema={schema} tagRegistry={tagRegistry} pressures={pressures} />;
       case 'relationships':
         return <RelationshipsTab generator={generator} onChange={onChange} schema={schema} />;
       case 'effects':

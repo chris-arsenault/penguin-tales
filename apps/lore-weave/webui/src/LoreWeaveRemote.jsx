@@ -8,9 +8,6 @@
  * - generators: Array of growth template configurations
  * - seedEntities: Initial entities for the world
  * - seedRelationships: Initial relationships for the world
- * - namingData: Name generation data per culture
- * - semanticData: Semantic plane data per entity kind
- * - cultureVisuals: Culture visual data (axis biases, home regions)
  * - activeSection: Current navigation section
  * - onSectionChange: Callback when navigation changes
  *
@@ -45,9 +42,6 @@ export default function LoreWeaveRemote({
   actions = [],
   seedEntities = [],
   seedRelationships = [],
-  namingData = {},
-  semanticData = {},
-  cultureVisuals = {},
   distributionTargets = null,
   onDistributionTargetsChange,
   activeSection,
@@ -110,7 +104,8 @@ export default function LoreWeaveRemote({
     if (seedEntities.length === 0) {
       warnings.push('No seed entities - world will start empty');
     }
-    if (Object.keys(namingData).length === 0) {
+    const hasNamingProfiles = schema.cultures.some(c => c.naming?.profiles?.length);
+    if (!hasNamingProfiles) {
       warnings.push('No naming data - entities will need explicit names');
     }
 
@@ -129,7 +124,7 @@ export default function LoreWeaveRemote({
         seedRelationships: seedRelationships.length,
       },
     };
-  }, [schema, eras, pressures, generators, seedEntities, seedRelationships, namingData]);
+  }, [schema, eras, pressures, generators, seedEntities, seedRelationships]);
 
   // Handle simulation completion (don't auto-navigate - let user review logs first)
   const handleSimulationComplete = useCallback((results) => {
@@ -149,9 +144,6 @@ export default function LoreWeaveRemote({
             generators={generators}
             seedEntities={seedEntities}
             seedRelationships={seedRelationships}
-            namingData={namingData}
-            semanticData={semanticData}
-            cultureVisuals={cultureVisuals}
             validation={configValidation}
             onNavigateToRun={() => setActiveTab('run')}
           />
@@ -187,9 +179,6 @@ export default function LoreWeaveRemote({
             actions={actions}
             seedEntities={seedEntities}
             seedRelationships={seedRelationships}
-            namingData={namingData}
-            semanticData={semanticData}
-            cultureVisuals={cultureVisuals}
             validation={configValidation}
             isRunning={isRunning}
             setIsRunning={setIsRunning}

@@ -326,8 +326,8 @@ export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = 
     }
 
     // Check if culture has naming profiles
-    if (!culture.profiles || culture.profiles.length === 0) {
-      setGenerateError(`Culture "${culture.name}" has no naming profiles. Configure naming in Name Forge first.`);
+    if (!culture.naming?.profiles || culture.naming.profiles.length === 0) {
+      setGenerateError(`Culture "${culture.name || culture.id}" has no naming profiles. Configure naming in Name Forge first.`);
       return;
     }
 
@@ -354,7 +354,7 @@ export default function EntityEditor({ project, onSave, onAddTag, schemaUsage = 
   const canGenerateName = () => {
     if (!selectedEntity) return false;
     const culture = cultures.find(c => c.id === selectedEntity.culture);
-    return culture && culture.profiles && culture.profiles.length > 0;
+    return culture && culture.naming?.profiles && culture.naming.profiles.length > 0;
   };
 
   // Convert tags from object format { tag: true } to array format ['tag']

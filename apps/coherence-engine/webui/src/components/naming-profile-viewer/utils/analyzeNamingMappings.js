@@ -4,7 +4,7 @@
 
 import { findMatchingProfile } from './findMatchingProfile';
 
-export function analyzeNamingMappings(generators, schema, namingData) {
+export function analyzeNamingMappings(generators, schema) {
   const mappings = [];
   const warnings = [];
 
@@ -51,9 +51,9 @@ export function analyzeNamingMappings(generators, schema, namingData) {
       // Check each possible culture for naming profile match
       for (const cultureId of cultureIds) {
         const culture = culturesById[cultureId];
-        const namingConfig = namingData[cultureId];
-
-        const match = namingConfig
+        const namingConfig = culture?.naming;
+        const hasProfiles = !!namingConfig?.profiles?.length;
+        const match = hasProfiles
           ? findMatchingProfile(namingConfig, entityKind, subtype, prominence, tags)
           : null;
 
@@ -67,12 +67,12 @@ export function analyzeNamingMappings(generators, schema, namingData) {
           cultureName: culture?.name || cultureId,
           cultureColor: culture?.color || '#888',
           cultureSource,
-          hasNamingProfile: !!namingConfig,
+          hasNamingProfile: hasProfiles,
           match,
         });
 
         // Add warning if no match found
-        if (!match && namingConfig) {
+        if (!match && hasProfiles) {
           warnings.push({
             generatorId: gen.id,
             generatorName: gen.name || gen.id,
@@ -83,7 +83,7 @@ export function analyzeNamingMappings(generators, schema, namingData) {
             cultureSource,
             reason: 'No matching strategy group',
           });
-        } else if (!namingConfig) {
+        } else if (!hasProfiles) {
           warnings.push({
             generatorId: gen.id,
             generatorName: gen.name || gen.id,

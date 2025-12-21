@@ -38,14 +38,11 @@ const styles = {
 
 export default function CosmographerHost({
   schema,
-  semanticData,
-  cultureVisuals,
-  namingData,
   axisDefinitions,
   seedEntities,
   seedRelationships,
-  onSemanticDataChange,
-  onCultureVisualsChange,
+  onEntityKindsChange,
+  onCulturesChange,
   onAxisDefinitionsChange,
   onTagRegistryChange,
   onSeedEntitiesChange,
@@ -60,14 +57,11 @@ export default function CosmographerHost({
       <Suspense fallback={<div style={styles.loading}>Loading Cosmographer...</div>}>
         <CosmographerRemote
           schema={schema}
-          semanticData={semanticData}
-          cultureVisuals={cultureVisuals}
-          namingData={namingData}
           axisDefinitions={axisDefinitions}
           seedEntities={seedEntities}
           seedRelationships={seedRelationships}
-          onSemanticDataChange={onSemanticDataChange}
-          onCultureVisualsChange={onCultureVisualsChange}
+          onEntityKindsChange={onEntityKindsChange}
+          onCulturesChange={onCulturesChange}
           onAxisDefinitionsChange={onAxisDefinitionsChange}
           onTagRegistryChange={onTagRegistryChange}
           onSeedEntitiesChange={onSeedEntitiesChange}

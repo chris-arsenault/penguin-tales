@@ -13,9 +13,6 @@ export default function ConfigurationSummary({
   generators,
   seedEntities,
   seedRelationships,
-  namingData,
-  semanticData,
-  cultureVisuals,
   validation,
   onNavigateToRun,
 }) {

@@ -34,8 +34,9 @@ function LexemesTab({ cultureId, cultureConfig, onLexemesChange, apiKey, allCult
   });
 
   // Get culture-level lexeme data
-  const lexemeLists = cultureConfig?.lexemeLists || {};
-  const lexemeSpecs = cultureConfig?.lexemeSpecs || [];
+  const naming = cultureConfig?.naming || {};
+  const lexemeLists = naming.lexemeLists || {};
+  const lexemeSpecs = naming.lexemeSpecs || [];
 
   const handleSaveSpec = () => {
     const newSpec = {

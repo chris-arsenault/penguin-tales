@@ -16,7 +16,7 @@ export default function ProfileTab({
   const [editingProfile, setEditingProfile] = useState(null);
   const [isNewProfile, setIsNewProfile] = useState(false);
 
-  const profiles = cultureConfig?.profiles || [];
+  const profiles = cultureConfig?.naming?.profiles || [];
 
   // Compute generator usage for each profile
   const generatorUsage = useMemo(

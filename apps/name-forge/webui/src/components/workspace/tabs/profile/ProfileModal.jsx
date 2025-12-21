@@ -177,9 +177,10 @@ export default function ProfileModal({
 
   if (!editedProfile) return null;
 
-  const domains = cultureConfig?.domains || [];
-  const grammars = cultureConfig?.grammars || [];
-  const entityKinds = worldSchema?.hardState?.map((e) => e.kind) || [];
+  const naming = cultureConfig?.naming || {};
+  const domains = naming.domains || [];
+  const grammars = naming.grammars || [];
+  const entityKinds = worldSchema?.entityKinds?.map((e) => e.kind) || [];
   const tagRegistry = worldSchema?.tagRegistry || [];
 
   const renderTabContent = () => {

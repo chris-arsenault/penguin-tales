@@ -26,13 +26,13 @@ function safeDisplay(value, fallback = '?', label = 'value') {
 /**
  * Find which naming profile matches a creation entry's conditions
  */
-function findMatchingNamingProfile(namingData, cultureId, entityKind, subtype, prominence, tags = {}) {
-  if (!cultureId || !namingData) return null;
+function findMatchingNamingProfile(culture, entityKind, subtype, prominence, tags = {}) {
+  if (!culture) return null;
 
-  const cultureConfig = namingData[cultureId];
-  if (!cultureConfig?.profiles) return null;
+  const naming = culture.naming;
+  if (!naming?.profiles) return null;
 
-  for (const profile of cultureConfig.profiles) {
+  for (const profile of naming.profiles) {
     for (const group of (profile.strategyGroups || [])) {
       const cond = group.conditions || {};
 
@@ -70,7 +70,7 @@ function findMatchingNamingProfile(namingData, cultureId, entityKind, subtype, p
   }
 
   // No conditional group matched - check for default (no conditions)
-  for (const profile of cultureConfig.profiles) {
+  for (const profile of naming.profiles) {
     for (const group of (profile.strategyGroups || [])) {
       if (!group.conditions || Object.keys(group.conditions).every(k => {
         const val = group.conditions[k];
@@ -92,7 +92,7 @@ function findMatchingNamingProfile(namingData, cultureId, entityKind, subtype, p
 // CreationCard - Individual entity creation card
 // ============================================================================
 
-function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingData = {}, cultureIds = [], generator, tagRegistry = [], onAddToRegistry }) {
+function CreationCard({ item, onChange, onRemove, schema, availableRefs, culturesById = {}, cultureIds = [], generator, tagRegistry = [], onAddToRegistry }) {
   const [expanded, setExpanded] = useState(false);
   const [hovering, setHovering] = useState(false);
 
@@ -149,9 +149,9 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
     const matches = [];
 
     for (const cid of targetCultures) {
+      const culture = culturesById[cid];
       const match = findMatchingNamingProfile(
-        namingData,
-        cid,
+        culture,
         item.kind,
         subtype,
         item.prominence,
@@ -163,7 +163,7 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
     }
 
     return matches;
-  }, [namingData, cultureId, cultureIds, item.kind, subtype, item.prominence, item.tags]);
+  }, [culturesById, cultureId, cultureIds, item.kind, subtype, item.prominence, item.tags]);
 
   const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
     value: ek.kind,
@@ -424,7 +424,7 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, namingD
                   label="Culture ID"
                   value={item.culture.fixed}
                   onChange={(v) => updateField('culture', { fixed: v })}
-                  options={cultureIds.map((c) => ({ value: c, label: c }))}
+                  options={cultureIds.map((c) => ({ value: c, label: culturesById[c]?.name || c }))}
                   placeholder="Select culture..."
                 />
               )}
@@ -1362,12 +1362,11 @@ function VariantsSection({ generator, onChange, pressures = [], schema, tagRegis
  * @param {Object} props.generator - The generator being edited
  * @param {Function} props.onChange - Callback when generator changes
  * @param {Object} props.schema - Domain schema
- * @param {Object} props.namingData - Naming configuration data
  * @param {Array} props.tagRegistry - Available tags
  * @param {Function} props.onAddToRegistry - Callback to add new tag to registry
  * @param {Array} props.pressures - Available pressure definitions
  */
-export function CreationTab({ generator, onChange, schema, namingData = {}, tagRegistry = [], onAddToRegistry, pressures = [] }) {
+export function CreationTab({ generator, onChange, schema, tagRegistry = [], onAddToRegistry, pressures = [] }) {
   const creation = generator.creation || [];
 
   const availableRefs = useMemo(() => {
@@ -1377,8 +1376,15 @@ export function CreationTab({ generator, onChange, schema, namingData = {}, tagR
     return refs;
   }, [generator.variables, creation]);
 
-  // Get all available culture IDs from naming data
-  const cultureIds = useMemo(() => Object.keys(namingData), [namingData]);
+  const culturesById = useMemo(() => {
+    const map = {};
+    (schema?.cultures || []).forEach((culture) => {
+      map[culture.id] = culture;
+    });
+    return map;
+  }, [schema?.cultures]);
+
+  const cultureIds = useMemo(() => Object.keys(culturesById), [culturesById]);
 
   const handleAdd = () => {
     const nextNum = creation.length + 1;
@@ -1418,7 +1424,7 @@ export function CreationTab({ generator, onChange, schema, namingData = {}, tagR
               onRemove={() => onChange({ ...generator, creation: creation.filter((_, i) => i !== index) })}
               schema={schema}
               availableRefs={availableRefs}
-              namingData={namingData}
+              culturesById={culturesById}
               cultureIds={cultureIds}
               generator={generator}
               tagRegistry={tagRegistry}

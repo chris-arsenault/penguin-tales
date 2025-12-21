@@ -39,7 +39,6 @@ const styles = {
 export default function NameForgeHost({
   projectId,
   schema,
-  namingData,
   onNamingDataChange,
   onAddTag,
   activeSection,
@@ -52,7 +51,6 @@ export default function NameForgeHost({
         <NameForgeRemote
           projectId={projectId}
           schema={schema}
-          namingData={namingData}
           onNamingDataChange={onNamingDataChange}
           onAddTag={onAddTag}
           activeSection={activeSection}

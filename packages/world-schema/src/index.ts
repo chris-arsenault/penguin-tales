@@ -39,6 +39,7 @@ export type {
   StyleRules,
   NamingDomain,
   LexemeList,
+  LexemeSpec,
   Grammar,
   NamingStrategy,
   StrategyGroupConditions,
@@ -57,3 +58,26 @@ export type {
 
 // Project types
 export type { WorldSeedProject, ProjectMetadata } from './project.js';
+
+// Canonry MFE contracts
+export type {
+  TagDefinition,
+  AxisDefinition,
+  CanonrySchemaSlice,
+  CanonryProject,
+  CanonryConfigItem,
+  CanonryEraConfig,
+  CanonryPressureConfig,
+  CanonryGeneratorConfig,
+  CanonrySystemConfig,
+  CanonryActionConfig,
+  CanonryDistributionTargets,
+  CanonrySimulationResults,
+  CanonrySimulationState,
+  MfeNavProps,
+  NameForgeRemoteProps,
+  CosmographerRemoteProps,
+  CoherenceEngineRemoteProps,
+  LoreWeaveRemoteProps,
+  ArchivistRemoteProps,
+} from './mfeContracts.js';

@@ -27,9 +27,8 @@ const DEFAULT_KIND_ICONS = {
  * @param {Array} props.pressures - Available pressure definitions
  * @param {Array} props.eras - Available era definitions
  * @param {Object} props.usageMap - Schema usage map for validation
- * @param {Object} props.namingData - Naming configuration data
  */
-export default function GeneratorsEditor({ projectId, generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
+export default function GeneratorsEditor({ projectId, generators = [], onChange, schema, pressures = [], eras = [], usageMap }) {
   const selectionKey = buildStorageKey(projectId, 'generators:selected');
   const [selectedId, setSelectedId] = useState(() => {
     const stored = loadStoredValue(selectionKey);
@@ -245,20 +244,19 @@ export default function GeneratorsEditor({ projectId, generators = [], onChange,
       </div>
 
       {selectedGenerator && (
-        <GeneratorModal
-          generator={selectedGenerator}
-          onChange={handleGeneratorChange}
-          onClose={() => setSelectedId(null)}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          schema={schema}
-          pressures={pressures}
-          eras={eras}
-          usageMap={usageMap}
-          namingData={namingData}
-          tagRegistry={schema.tagRegistry || []}
-        />
-      )}
+          <GeneratorModal
+            generator={selectedGenerator}
+            onChange={handleGeneratorChange}
+            onClose={() => setSelectedId(null)}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            schema={schema}
+            pressures={pressures}
+            eras={eras}
+            usageMap={usageMap}
+            tagRegistry={schema.tagRegistry || []}
+          />
+        )}
     </div>
   );
 }

@@ -57,26 +57,28 @@ const styles = {
   },
 };
 
-// Valid sub-nav values for each tab
-const VALID_SUBNAV = {
-  enumerist: ['entityKinds', 'relationshipKinds', 'cultures', 'tags'],
-  names: ['workshop', 'optimizer', 'generate'],
-  cosmography: ['axes', 'planes', 'cultures', 'entities', 'relationships'],
-  coherence: ['pressures', 'eras', 'generators', 'actions', 'systems'],
-  simulation: ['configure', 'targets', 'validate', 'run', 'results'],
-  archivist: ['explorer'],
-};
-
-const VALID_TABS = Object.keys(VALID_SUBNAV);
+const VALID_TABS = [
+  'enumerist',
+  'names',
+  'cosmography',
+  'coherence',
+  'simulation',
+  'archivist',
+];
 
 function normalizeUiState(raw) {
   const activeTab = VALID_TABS.includes(raw?.activeTab) ? raw.activeTab : null;
-  const activeSection = activeTab && VALID_SUBNAV[activeTab]?.includes(raw?.activeSection)
-    ? raw.activeSection
-    : (activeTab ? VALID_SUBNAV[activeTab]?.[0] || null : null);
+  const activeSectionByTab = raw?.activeSectionByTab && typeof raw.activeSectionByTab === 'object'
+    ? { ...raw.activeSectionByTab }
+    : {};
+  if (activeTab && typeof raw?.activeSection === 'string') {
+    activeSectionByTab[activeTab] = raw.activeSection;
+  }
+  const activeSection = activeTab ? (activeSectionByTab[activeTab] ?? null) : null;
   const showHome = typeof raw?.showHome === 'boolean' ? raw.showHome : !activeTab;
   return {
     activeTab,
+    activeSectionByTab,
     activeSection,
     showHome: activeTab ? showHome : true,
     helpModalOpen: !!raw?.helpModalOpen,
@@ -86,19 +88,27 @@ function normalizeUiState(raw) {
 export default function App() {
   const initialUiState = normalizeUiState(loadUiState());
   const [activeTab, setActiveTab] = useState(initialUiState.activeTab);
-  const [activeSection, setActiveSection] = useState(initialUiState.activeSection);
+  const [activeSectionByTab, setActiveSectionByTab] = useState(initialUiState.activeSectionByTab);
   const [showHome, setShowHome] = useState(initialUiState.showHome);
   const [helpModalOpen, setHelpModalOpen] = useState(initialUiState.helpModalOpen);
   const [archivistData, setArchivistData] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationState, setSimulationState] = useState(null);
   const simulationOwnerRef = useRef(null);
+  const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
 
-  // Handle tab change - reset section to first valid for new tab
+  const setActiveSection = useCallback((section) => {
+    if (!activeTab) return;
+    setActiveSectionByTab((prev) => ({ ...prev, [activeTab]: section }));
+  }, [activeTab]);
+
+  const setActiveSectionForTab = useCallback((tabId, section) => {
+    setActiveSectionByTab((prev) => ({ ...prev, [tabId]: section }));
+  }, []);
+
+  // Handle tab change
   const handleTabChange = useCallback((newTab) => {
     setActiveTab(newTab);
-    const defaultSection = VALID_SUBNAV[newTab]?.[0] || null;
-    setActiveSection(defaultSection);
     setShowHome(false);
   }, []);
 
@@ -110,8 +120,6 @@ export default function App() {
   // Handle navigation from landing page cards
   const handleLandingNavigate = useCallback((tabId) => {
     setActiveTab(tabId);
-    const defaultSection = VALID_SUBNAV[tabId]?.[0] || null;
-    setActiveSection(defaultSection);
     setShowHome(false);
   }, []);
 
@@ -119,10 +127,11 @@ export default function App() {
     saveUiState({
       activeTab,
       activeSection,
+      activeSectionByTab,
       showHome,
       helpModalOpen,
     });
-  }, [activeTab, activeSection, showHome, helpModalOpen]);
+  }, [activeTab, activeSection, activeSectionByTab, showHome, helpModalOpen]);
 
   const {
     projects,
@@ -263,9 +272,9 @@ export default function App() {
     };
     setArchivistData({ worldData, loreData: null, imageData: null });
     setActiveTab('archivist');
-    setActiveSection('explorer');
+    setActiveSectionForTab('archivist', 'explorer');
     setShowHome(false);
-  }, [currentProject]);
+  }, [currentProject, setActiveSectionForTab]);
 
   // Update functions that auto-save
   const updateEntityKinds = useCallback(
@@ -357,32 +366,6 @@ export default function App() {
     [currentProject, save]
   );
 
-  // Update semantic plane for an entity kind (for Cosmographer)
-  const updateEntityKindSemanticPlane = useCallback(
-    (entityKindId, semanticPlane) => {
-      if (!currentProject) return;
-      const entityKinds = currentProject.entityKinds.map((ek) =>
-        ek.kind === entityKindId ? { ...ek, semanticPlane } : ek
-      );
-      save({ entityKinds });
-    },
-    [currentProject, save]
-  );
-
-  // Update a single culture's visual data (for Cosmographer)
-  const updateCultureVisuals = useCallback(
-    (cultureId, visualData) => {
-      if (!currentProject) return;
-      const cultures = currentProject.cultures.map((c) =>
-        c.id === cultureId
-          ? { ...c, axisBiases: visualData.axisBiases, homeRegions: visualData.homeRegions }
-          : c
-      );
-      save({ cultures });
-    },
-    [currentProject, save]
-  );
-
   // Extract naming data for Name Forge (keyed by culture ID)
   const namingData = useMemo(() => {
     if (!currentProject) return {};
@@ -395,46 +378,37 @@ export default function App() {
     return data;
   }, [currentProject?.cultures]);
 
-  // Extract semantic data for Cosmographer (keyed by entity kind)
-  const semanticData = useMemo(() => {
-    if (!currentProject) return {};
-    const data = {};
-    currentProject.entityKinds.forEach((ek) => {
-      if (ek.semanticPlane) {
-        data[ek.kind] = ek.semanticPlane;
-      }
-    });
-    return data;
-  }, [currentProject?.entityKinds]);
-
-  // Extract culture visuals for Cosmographer (keyed by culture ID)
-  const cultureVisuals = useMemo(() => {
-    if (!currentProject) return {};
-    const data = {};
-    currentProject.cultures.forEach((culture) => {
-      data[culture.id] = {
-        axisBiases: culture.axisBiases || {},
-        homeRegions: culture.homeRegions || {},
-      };
-    });
-    return data;
-  }, [currentProject?.cultures]);
-
   // Derived data for remotes (read-only schema)
   const schema = useMemo(() => {
-    if (!currentProject) return { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] };
+    if (!currentProject) {
+      return {
+        id: '',
+        name: '',
+        version: '',
+        entityKinds: [],
+        relationshipKinds: [],
+        cultures: [],
+        tagRegistry: [],
+      };
+    }
     return {
+      id: currentProject.id,
+      name: currentProject.name,
+      version: currentProject.version,
       entityKinds: currentProject.entityKinds,
       relationshipKinds: currentProject.relationshipKinds,
-      cultures: currentProject.cultures.map((c) => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        color: c.color,
-      })),
+      cultures: currentProject.cultures,
       tagRegistry: currentProject.tagRegistry || [],
     };
-  }, [currentProject?.entityKinds, currentProject?.relationshipKinds, currentProject?.cultures, currentProject?.tagRegistry]);
+  }, [
+    currentProject?.id,
+    currentProject?.name,
+    currentProject?.version,
+    currentProject?.entityKinds,
+    currentProject?.relationshipKinds,
+    currentProject?.cultures,
+    currentProject?.tagRegistry,
+  ]);
 
   // Compute tag usage across all tools
   const tagUsage = useMemo(() => {
@@ -501,9 +475,9 @@ export default function App() {
   // Navigate to validation tab
   const handleNavigateToValidation = useCallback(() => {
     setActiveTab('simulation');
-    setActiveSection('validate');
+    setActiveSectionForTab('simulation', 'validate');
     setShowHome(false);
-  }, []);
+  }, [setActiveSectionForTab]);
 
   // Remove property from config at given path (for validation error quick-fix)
   const handleRemoveProperty = useCallback((path, propName) => {
@@ -604,7 +578,6 @@ export default function App() {
           <NameForgeHost
             projectId={currentProject?.id}
             schema={schema}
-            namingData={namingData}
             onNamingDataChange={updateCultureNaming}
             onAddTag={addTag}
             activeSection={activeSection}
@@ -617,14 +590,11 @@ export default function App() {
         return (
           <CosmographerHost
             schema={schema}
-            semanticData={semanticData}
-            cultureVisuals={cultureVisuals}
-            namingData={namingData}
             axisDefinitions={currentProject.axisDefinitions || []}
             seedEntities={currentProject.seedEntities}
             seedRelationships={currentProject.seedRelationships}
-            onSemanticDataChange={updateEntityKindSemanticPlane}
-            onCultureVisualsChange={updateCultureVisuals}
+            onEntityKindsChange={updateEntityKinds}
+            onCulturesChange={updateCultures}
             onAxisDefinitionsChange={updateAxisDefinitions}
             onTagRegistryChange={updateTagRegistry}
             onSeedEntitiesChange={updateSeedEntities}
@@ -653,7 +623,6 @@ export default function App() {
             onSystemsChange={updateSystems}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
-            namingData={namingData}
           />
         );
 
@@ -674,9 +643,6 @@ export default function App() {
                 actions={currentProject?.actions || []}
                 seedEntities={currentProject?.seedEntities || []}
                 seedRelationships={currentProject?.seedRelationships || []}
-                namingData={namingData}
-                semanticData={semanticData}
-                cultureVisuals={cultureVisuals}
                 distributionTargets={currentProject?.distributionTargets || null}
                 onDistributionTargetsChange={updateDistributionTargets}
                 activeSection={activeSection}

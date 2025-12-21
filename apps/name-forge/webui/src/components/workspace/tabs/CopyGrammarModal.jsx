@@ -40,10 +40,12 @@ function extractSlotReferences(grammar) {
  * Substitute grammar references from source culture to target culture.
  */
 function substituteGrammarReferences(sourceGrammar, sourceCulture, targetCulture, targetCultureId) {
-  const sourceDomains = (sourceCulture.domains || []).map(d => d.id);
-  const targetDomains = (targetCulture.domains || []).map(d => d.id);
-  const sourceLexemes = Object.keys(sourceCulture.lexemeLists || {});
-  const targetLexemes = Object.keys(targetCulture.lexemeLists || {});
+  const sourceNaming = sourceCulture?.naming || {};
+  const targetNaming = targetCulture?.naming || {};
+  const sourceDomains = (sourceNaming.domains || []).map(d => d.id);
+  const targetDomains = (targetNaming.domains || []).map(d => d.id);
+  const sourceLexemes = Object.keys(sourceNaming.lexemeLists || {});
+  const targetLexemes = Object.keys(targetNaming.lexemeLists || {});
 
   const substitutions = {};
 
@@ -161,7 +163,7 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
 
   const otherCultures = Object.entries(allCultures || {})
     .filter(([id]) => id !== cultureId)
-    .map(([id, config]) => ({ id, name: config.name || id, grammars: config.grammars || [] }));
+    .map(([id, config]) => ({ id, name: config.name || id, grammars: config.naming?.grammars || [] }));
 
   useEffect(() => {
     if (!selectedGrammar || !selectedCulture) {
@@ -172,13 +174,13 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
     }
 
     const sourceCulture = allCultures[selectedCulture];
-    const sourceGrammar = sourceCulture?.grammars?.find(g => g.id === selectedGrammar);
+    const sourceGrammar = sourceCulture?.naming?.grammars?.find(g => g.id === selectedGrammar);
     if (!sourceGrammar) return;
 
     // Find dependencies
     const slotRefs = extractSlotReferences(sourceGrammar);
-    const targetLexemes = Object.keys(cultureConfig?.lexemeLists || {});
-    const sourceLexemes = sourceCulture.lexemeLists || {};
+    const targetLexemes = Object.keys(cultureConfig?.naming?.lexemeLists || {});
+    const sourceLexemes = sourceCulture?.naming?.lexemeLists || {};
 
     const missing = [];
     const existing = [];
@@ -223,10 +225,10 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
 
     const copiedLexemeLists = {};
     const sourceCulture = allCultures[selectedCulture];
-    const existingListIds = Object.keys(cultureConfig?.lexemeLists || {});
+    const existingListIds = Object.keys(cultureConfig?.naming?.lexemeLists || {});
 
     selectedDeps.forEach(sourceId => {
-      const sourceList = sourceCulture.lexemeLists?.[sourceId];
+      const sourceList = sourceCulture?.naming?.lexemeLists?.[sourceId];
       if (sourceList) {
         const newId = generateUniqueId(cultureId, sourceId, [...existingListIds, ...Object.keys(copiedLexemeLists)]);
         copiedLexemeLists[newId] = {
@@ -270,7 +272,7 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
   };
 
   const selectedCultureGrammars = selectedCulture
-    ? (allCultures[selectedCulture]?.grammars || []).filter(g => Object.keys(g.rules || {}).length > 0)
+    ? (allCultures[selectedCulture]?.naming?.grammars || []).filter(g => Object.keys(g.rules || {}).length > 0)
     : [];
 
   return (
@@ -394,8 +396,8 @@ export function CopyGrammarModal({ cultureId, cultureConfig, allCultures, existi
                 <h4>Sample Names</h4>
                 <GrammarPreview
                   grammar={substitutedGrammar}
-                  domains={cultureConfig?.domains || []}
-                  lexemeLists={cultureConfig?.lexemeLists || {}}
+                  domains={cultureConfig?.naming?.domains || []}
+                  lexemeLists={cultureConfig?.naming?.lexemeLists || {}}
                 />
               </div>
             </div>

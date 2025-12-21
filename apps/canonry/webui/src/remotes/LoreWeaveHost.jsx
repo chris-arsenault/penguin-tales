@@ -48,9 +48,6 @@ export default function LoreWeaveHost({
   actions,
   seedEntities,
   seedRelationships,
-  namingData,
-  semanticData,
-  cultureVisuals,
   distributionTargets,
   onDistributionTargetsChange,
   activeSection,
@@ -74,9 +71,6 @@ export default function LoreWeaveHost({
           actions={actions}
           seedEntities={seedEntities}
           seedRelationships={seedRelationships}
-          namingData={namingData}
-          semanticData={semanticData}
-          cultureVisuals={cultureVisuals}
           distributionTargets={distributionTargets}
           onDistributionTargetsChange={onDistributionTargetsChange}
           activeSection={activeSection}

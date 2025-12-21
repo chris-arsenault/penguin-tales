@@ -2,8 +2,7 @@
  * NameForgeRemote - Module Federation entry point for Name Forge
  *
  * This component is loaded by The Canonry shell and receives:
- * - schema: Read-only world schema (entityKinds, cultures identity)
- * - namingData: Writable naming data keyed by culture ID
+ * - schema: Read-only world schema (entityKinds, cultures with naming)
  * - onNamingDataChange: Callback when naming data changes
  *
  * It focuses on the Workshop/Optimizer/Generate functionality
@@ -18,62 +17,6 @@ import { OptimizerWorkshop } from './components/optimizer';
 import { GenerateTab } from './components/generator';
 import ProfileCoverageMatrix from './components/coverage/ProfileCoverageMatrix';
 
-/**
- * Convert Canonry schema format to Name Forge internal format
- */
-function convertSchemaToInternal(schema) {
-  if (!schema) return null;
-
-  // Convert entityKinds array to hardState format
-  // Schema uses 'kind' as ID field and 'description' as display name
-  const hardState = (schema.entityKinds || []).map((ek) => ({
-    kind: ek.kind,
-    subtype: (ek.subtypes || []).map((s) => s.id),
-    status: (ek.statuses || []).map((s) => s.id),
-  }));
-
-  return {
-    hardState,
-    tagRegistry: schema.tagRegistry || [],
-  };
-}
-
-/**
- * Convert Canonry cultures + namingData to Name Forge cultures format
- */
-function convertCulturesToInternal(schemaCultures, namingData) {
-  const cultures = {};
-
-  (schemaCultures || []).forEach((culture) => {
-    const naming = namingData?.[culture.id];
-    cultures[culture.id] = {
-      id: culture.id,
-      name: culture.name,
-      description: culture.description || '',
-      domains: naming?.domains || [],
-      lexemeLists: naming?.lexemeLists || {},
-      lexemeSpecs: naming?.lexemeSpecs || [],
-      grammars: naming?.grammars || [],
-      profiles: naming?.profiles || [],
-    };
-  });
-
-  return cultures;
-}
-
-/**
- * Extract naming data from internal culture format
- */
-function extractNamingData(culture) {
-  return {
-    domains: culture.domains || [],
-    lexemeLists: culture.lexemeLists || {},
-    lexemeSpecs: culture.lexemeSpecs || [],
-    grammars: culture.grammars || [],
-    profiles: culture.profiles || [],
-  };
-}
-
 const TABS = [
   { id: 'workshop', label: 'Workshop' },
   { id: 'optimizer', label: 'Optimizer' },
@@ -84,7 +27,6 @@ const TABS = [
 export default function NameForgeRemote({
   projectId,
   schema,
-  namingData,
   onNamingDataChange,
   onAddTag,
   activeSection,
@@ -115,25 +57,31 @@ export default function NameForgeRemote({
     contextPairs: [{ key: '', value: '' }],
   });
 
-  // Convert schema to internal format
   const worldSchema = useMemo(
-    () => convertSchemaToInternal(schema),
+    () => schema || { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] },
     [schema]
   );
 
-  // Convert cultures to internal format
-  const cultures = useMemo(
-    () => convertCulturesToInternal(schema?.cultures, namingData),
-    [schema?.cultures, namingData]
-  );
+  const cultures = useMemo(() => {
+    const map = {};
+    (schema?.cultures || []).forEach((culture) => {
+      map[culture.id] = culture;
+    });
+    return map;
+  }, [schema?.cultures]);
 
   // Handle culture updates from the workspace
   const handleCultureChange = useCallback(
     (updatedCulture) => {
       if (!selectedCulture || !onNamingDataChange) return;
 
-      // Extract naming data and send to host
-      const newNamingData = extractNamingData(updatedCulture);
+      const newNamingData = updatedCulture?.naming || {
+        domains: [],
+        lexemeLists: {},
+        lexemeSpecs: [],
+        grammars: [],
+        profiles: [],
+      };
       onNamingDataChange(selectedCulture, newNamingData);
     },
     [selectedCulture, onNamingDataChange]
@@ -144,10 +92,15 @@ export default function NameForgeRemote({
     (newCultures) => {
       if (!onNamingDataChange) return;
 
-      // Update naming data for all cultures
       Object.entries(newCultures).forEach(([cultureId, culture]) => {
-        const newNamingData = extractNamingData(culture);
-        onNamingDataChange(cultureId, newNamingData);
+        const naming = culture?.naming || {
+          domains: [],
+          lexemeLists: {},
+          lexemeSpecs: [],
+          grammars: [],
+          profiles: [],
+        };
+        onNamingDataChange(cultureId, naming);
       });
     },
     [onNamingDataChange]

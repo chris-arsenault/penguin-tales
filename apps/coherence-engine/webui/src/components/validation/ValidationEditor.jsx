@@ -29,7 +29,6 @@ export default function ValidationEditor({
   systems = [],
   actions = [],
   usageMap = null,
-  namingData = {},
   onNavigateToGenerator,
 }) {
   const validationResults = useMemo(() =>
@@ -49,6 +48,10 @@ export default function ValidationEditor({
 
   const overallStatus = getOverallStatus(validationResults);
   const totalIssues = validationResults.errors.length + validationResults.warnings.length;
+  const hasNamingProfiles = useMemo(
+    () => (schema.cultures || []).some(culture => culture.naming?.profiles?.length),
+    [schema]
+  );
 
   const statusBadgeClass = `validation-status-badge ${
     overallStatus === 'clean' ? 'validation-status-clean' :
@@ -199,12 +202,11 @@ export default function ValidationEditor({
       )}
 
       {/* Naming Profile Mappings */}
-      {Object.keys(namingData).length > 0 && (
+      {hasNamingProfiles && (
         <div className="mb-2xl">
           <NamingProfileMappingViewer
             generators={generators}
             schema={schema}
-            namingData={namingData}
           />
         </div>
       )}
