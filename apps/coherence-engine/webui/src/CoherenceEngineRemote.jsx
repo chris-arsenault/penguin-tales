@@ -174,6 +174,7 @@ const SECTION_INFO = {
 };
 
 export default function CoherenceEngineRemote({
+  projectId,
   schema,
   eras = [],
   onErasChange,
@@ -242,6 +243,7 @@ export default function CoherenceEngineRemote({
       case 'pressures':
         return (
           <PressuresEditor
+            projectId={projectId}
             pressures={pressures}
             onChange={onPressuresChange || (() => {})}
             schema={schema}
@@ -272,6 +274,7 @@ export default function CoherenceEngineRemote({
       case 'generators':
         return (
           <GeneratorsEditor
+            projectId={projectId}
             generators={generators}
             onChange={onGeneratorsChange || (() => {})}
             schema={schema}
@@ -284,6 +287,7 @@ export default function CoherenceEngineRemote({
       case 'actions':
         return (
           <ActionsEditor
+            projectId={projectId}
             actions={actions}
             onChange={onActionsChange || (() => {})}
             schema={schema}
@@ -294,6 +298,7 @@ export default function CoherenceEngineRemote({
       case 'systems':
         return (
           <SystemsEditor
+            projectId={projectId}
             systems={systems}
             onChange={onSystemsChange || (() => {})}
             schema={schema}

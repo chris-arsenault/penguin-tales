@@ -10,7 +10,7 @@
  * without the project management or schema editing overhead.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
 import { CultureSidebar } from './components/sidebar';
 import { EntityWorkspace } from './components/workspace';
@@ -82,6 +82,7 @@ const TABS = [
 ];
 
 export default function NameForgeRemote({
+  projectId,
   schema,
   namingData,
   onNamingDataChange,
@@ -93,8 +94,10 @@ export default function NameForgeRemote({
   // Use passed-in section or default to 'workshop'
   const activeTab = activeSection || 'workshop';
   const setActiveTab = onSectionChange || (() => {});
+  const storageKey = projectId ? `nameforge:ui:${projectId}` : null;
   const [selectedCulture, setSelectedCulture] = useState(null);
   const [workspaceTab, setWorkspaceTab] = useState('domain');
+  const [hydratedKey, setHydratedKey] = useState(null);
 
   // Session-only API key (not persisted)
   const [apiKey, setApiKey] = useState('');
@@ -152,9 +155,49 @@ export default function NameForgeRemote({
 
   // Auto-select first culture if none selected
   const cultureIds = Object.keys(cultures);
-  if (!selectedCulture && cultureIds.length > 0) {
+
+  useEffect(() => {
+    if (!storageKey || typeof localStorage === 'undefined') {
+      setHydratedKey(storageKey);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setSelectedCulture(parsed?.selectedCulture || null);
+        setWorkspaceTab(parsed?.workspaceTab || 'domain');
+      } else {
+        setSelectedCulture(null);
+        setWorkspaceTab('domain');
+      }
+    } catch {
+      setSelectedCulture(null);
+      setWorkspaceTab('domain');
+    } finally {
+      setHydratedKey(storageKey);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || typeof localStorage === 'undefined') return;
+    if (hydratedKey !== storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        selectedCulture,
+        workspaceTab,
+      }));
+    } catch {
+      // Best-effort only.
+    }
+  }, [storageKey, hydratedKey, selectedCulture, workspaceTab]);
+
+  useEffect(() => {
+    if (hydratedKey !== storageKey) return;
+    if (!cultureIds.length) return;
+    if (selectedCulture && cultures[selectedCulture]) return;
     setSelectedCulture(cultureIds[0]);
-  }
+  }, [hydratedKey, storageKey, cultureIds, cultures, selectedCulture]);
 
   const hasCultures = cultureIds.length > 0;
 

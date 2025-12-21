@@ -36,6 +36,7 @@ const styles = {
 };
 
 export default function CoherenceEngineHost({
+  projectId,
   schema,
   eras,
   onErasChange,
@@ -55,6 +56,7 @@ export default function CoherenceEngineHost({
     <div style={styles.container}>
       <Suspense fallback={<div style={styles.loading}>Loading Coherence Engine...</div>}>
         <CoherenceEngineRemote
+          projectId={projectId}
           schema={schema}
           eras={eras}
           onErasChange={onErasChange}

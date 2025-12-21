@@ -39,6 +39,7 @@ const styles = {
 };
 
 export default function LoreWeaveHost({
+  projectId,
   schema,
   eras,
   pressures,
@@ -64,6 +65,7 @@ export default function LoreWeaveHost({
     <div style={styles.container}>
       <Suspense fallback={<div style={styles.loading}>Loading Lore Weave...</div>}>
         <LoreWeaveRemote
+          projectId={projectId}
           schema={schema}
           eras={eras}
           pressures={pressures}

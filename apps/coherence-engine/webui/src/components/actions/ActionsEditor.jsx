@@ -2,8 +2,9 @@
  * ActionsEditor - Main component for editing action configurations
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useEditorState } from '../shared';
+import { buildStorageKey } from '../../utils/persistence';
 import { ActionListCard } from './cards';
 import { ActionModal } from './modals';
 
@@ -21,9 +22,9 @@ const createAction = () => ({
   },
 });
 
-export default function ActionsEditor({ actions = [], onChange, schema, pressures = [], usageMap }) {
+export default function ActionsEditor({ projectId, actions = [], onChange, schema, pressures = [], usageMap }) {
+  const selectionKey = buildStorageKey(projectId, 'actions:selected');
   const {
-    selectedIndex,
     selectedItem: selectedAction,
     handleItemChange: handleActionChange,
     handleToggle,
@@ -31,7 +32,7 @@ export default function ActionsEditor({ actions = [], onChange, schema, pressure
     handleAdd: handleAddAction,
     handleSelect,
     handleClose,
-  } = useEditorState(actions, onChange, { createItem: createAction });
+  } = useEditorState(actions, onChange, { createItem: createAction, persistKey: selectionKey });
 
   // Collect unique pressures across all actions
   const uniquePressures = new Set();

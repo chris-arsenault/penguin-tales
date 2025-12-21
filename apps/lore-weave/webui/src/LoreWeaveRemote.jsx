@@ -36,6 +36,7 @@ const TABS = [
 ];
 
 export default function LoreWeaveRemote({
+  projectId,
   schema = { entityKinds: [], relationshipKinds: [], cultures: [] },
   eras = [],
   pressures = [],
@@ -177,6 +178,7 @@ export default function LoreWeaveRemote({
       case 'run':
         return (
           <SimulationRunner
+            projectId={projectId}
             schema={schema}
             eras={eras}
             pressures={pressures}

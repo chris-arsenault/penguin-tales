@@ -2,15 +2,17 @@
  * PressureCard - Expandable card for editing a pressure
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { FactorCard } from './FactorCard';
 import { FactorEditorModal } from '../modals/FactorEditorModal';
 import { getElementValidation, useLocalInputState, NumberInput } from '../../shared';
+import { buildStorageKey, clearStoredValue, loadStoredValue, saveStoredValue } from '../../../utils/persistence';
 
-export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema, usageMap }) {
+export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete, schema, usageMap, projectId }) {
   const [hovering, setHovering] = useState(false);
   const [editingFactor, setEditingFactor] = useState(null);
   const [addingFactorType, setAddingFactorType] = useState(null);
+  const factorModalKey = buildStorageKey(projectId, 'pressures:factorModal');
 
   const handleFieldChange = useCallback((field, value) => {
     onChange({
@@ -57,9 +59,23 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
     });
   }, [pressure, onChange]);
 
+  const persistFactorModal = useCallback((payload) => {
+    if (!factorModalKey) return;
+    if (payload) {
+      saveStoredValue(factorModalKey, payload);
+    } else {
+      clearStoredValue(factorModalKey);
+    }
+  }, [factorModalKey]);
+
   const handleAddFactor = useCallback((feedbackType) => {
     setAddingFactorType(feedbackType);
-  }, []);
+    persistFactorModal({
+      pressureId: pressure.id,
+      mode: 'add',
+      feedbackType,
+    });
+  }, [pressure.id, persistFactorModal]);
 
   const handleSaveFactor = useCallback((factor, feedbackType, index) => {
     const feedbackKey = feedbackType === 'positive' ? 'positiveFeedback' : 'negativeFeedback';
@@ -74,7 +90,24 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
     handleGrowthChange(feedbackKey, currentFactors);
     setEditingFactor(null);
     setAddingFactorType(null);
-  }, [pressure, handleGrowthChange]);
+    persistFactorModal(null);
+  }, [pressure, handleGrowthChange, persistFactorModal]);
+
+  const handleEditFactor = useCallback((factor, feedbackType, index) => {
+    setEditingFactor({ factor, feedbackType, index });
+    persistFactorModal({
+      pressureId: pressure.id,
+      mode: 'edit',
+      feedbackType,
+      factorIndex: index,
+    });
+  }, [pressure.id, persistFactorModal]);
+
+  const handleCloseFactorModal = useCallback(() => {
+    setEditingFactor(null);
+    setAddingFactorType(null);
+    persistFactorModal(null);
+  }, [persistFactorModal]);
 
   const handleRemoveFactor = useCallback((feedbackType, index) => {
     const feedbackKey = feedbackType === 'positive' ? 'positiveFeedback' : 'negativeFeedback';
@@ -108,6 +141,26 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
     // Both present - self-correcting
     return { icon: '⚖️', color: '#22c55e', label: 'Balanced', description: 'Feedback plus homeostasis provide stabilization' };
   }, [positiveFeedback.length, negativeFeedback.length, pressure.homeostasis]);
+
+  useEffect(() => {
+    if (!factorModalKey) return;
+    if (editingFactor || addingFactorType) return;
+    const stored = loadStoredValue(factorModalKey);
+    if (!stored || stored.pressureId !== pressure.id) return;
+    if (stored.mode === 'add') {
+      setAddingFactorType(stored.feedbackType);
+      return;
+    }
+    if (stored.mode === 'edit') {
+      const feedbackKey = stored.feedbackType === 'positive' ? 'positiveFeedback' : 'negativeFeedback';
+      const factor = pressure.growth?.[feedbackKey]?.[stored.factorIndex];
+      if (factor) {
+        setEditingFactor({ factor, feedbackType: stored.feedbackType, index: stored.factorIndex });
+      } else {
+        clearStoredValue(factorModalKey);
+      }
+    }
+  }, [factorModalKey, pressure.id, pressure.growth, editingFactor, addingFactorType]);
 
   return (
     <div className="expandable-card">
@@ -269,7 +322,7 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
                     factor={factor}
                     feedbackType="positive"
                     schema={schema}
-                    onEdit={() => setEditingFactor({ factor, feedbackType: 'positive', index })}
+                    onEdit={() => handleEditFactor(factor, 'positive', index)}
                     onDelete={() => handleRemoveFactor('positive', index)}
                   />
                 ))
@@ -304,7 +357,7 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
                     factor={factor}
                     feedbackType="negative"
                     schema={schema}
-                    onEdit={() => setEditingFactor({ factor, feedbackType: 'negative', index })}
+                    onEdit={() => handleEditFactor(factor, 'negative', index)}
                     onDelete={() => handleRemoveFactor('negative', index)}
                   />
                 ))
@@ -334,7 +387,7 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
       {editingFactor && (
         <FactorEditorModal
           isOpen={true}
-          onClose={() => setEditingFactor(null)}
+          onClose={handleCloseFactorModal}
           factor={editingFactor.factor}
           feedbackType={editingFactor.feedbackType}
           schema={schema}
@@ -346,7 +399,7 @@ export function PressureCard({ pressure, expanded, onToggle, onChange, onDelete,
       {addingFactorType && (
         <FactorEditorModal
           isOpen={true}
-          onClose={() => setAddingFactorType(null)}
+          onClose={handleCloseFactorModal}
           factor={null}
           feedbackType={addingFactorType}
           schema={schema}

@@ -11,6 +11,7 @@ import {
   listProjects,
   createEmptyProject,
 } from './db.js';
+import { loadLastProjectId, saveLastProjectId } from './uiState.js';
 
 /**
  * Project file names for individual domain files
@@ -212,8 +213,16 @@ export function useProjectStorage() {
 
         setProjects(list);
 
-        // Auto-load most recent project if exists
+        // Auto-load last opened project if possible, otherwise most recent
         if (list.length > 0) {
+          const lastProjectId = loadLastProjectId();
+          if (lastProjectId) {
+            const project = await loadProject(lastProjectId);
+            if (project) {
+              setCurrentProject(project);
+              return;
+            }
+          }
           const project = await loadProject(list[0].id);
           setCurrentProject(project);
         }
@@ -225,6 +234,14 @@ export function useProjectStorage() {
     }
     init();
   }, []);
+
+  useEffect(() => {
+    if (currentProject?.id) {
+      saveLastProjectId(currentProject.id);
+    } else {
+      saveLastProjectId(null);
+    }
+  }, [currentProject?.id]);
 
   // Refresh project list
   const refreshList = useCallback(async () => {

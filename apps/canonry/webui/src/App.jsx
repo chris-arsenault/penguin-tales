@@ -5,8 +5,10 @@
  * as module federation remotes with a unified WorldSeedProject schema.
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useProjectStorage } from './storage/useProjectStorage';
+import { loadUiState, saveUiState } from './storage/uiState';
+import { loadSimulationRun, saveSimulationRun } from './storage/simulationStore';
 import ProjectManager from './components/ProjectManager';
 import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
@@ -65,53 +67,32 @@ const VALID_SUBNAV = {
   archivist: ['explorer'],
 };
 
-// URL state management
-function getInitialState() {
-  const params = new URLSearchParams(window.location.search);
-  const tab = params.get('tab');
-  const section = params.get('section');
+const VALID_TABS = Object.keys(VALID_SUBNAV);
 
-  // If no tab param, show home (landing page)
-  if (!tab) {
-    return { tab: null, section: null, showHome: true };
-  }
-
-  const validTab = ['enumerist', 'names', 'cosmography', 'coherence', 'simulation', 'archivist'].includes(tab)
-    ? tab
-    : 'enumerist';
-
-  const validSection = VALID_SUBNAV[validTab]?.includes(section)
-    ? section
-    : VALID_SUBNAV[validTab]?.[0] || null;
-
-  return { tab: validTab, section: validSection, showHome: false };
-}
-
-function updateUrl(tab, section, showHome) {
-  const url = new URL(window.location.href);
-  if (showHome) {
-    url.searchParams.delete('tab');
-    url.searchParams.delete('section');
-  } else {
-    url.searchParams.set('tab', tab);
-    if (section) {
-      url.searchParams.set('section', section);
-    } else {
-      url.searchParams.delete('section');
-    }
-  }
-  window.history.replaceState({}, '', url);
+function normalizeUiState(raw) {
+  const activeTab = VALID_TABS.includes(raw?.activeTab) ? raw.activeTab : null;
+  const activeSection = activeTab && VALID_SUBNAV[activeTab]?.includes(raw?.activeSection)
+    ? raw.activeSection
+    : (activeTab ? VALID_SUBNAV[activeTab]?.[0] || null : null);
+  const showHome = typeof raw?.showHome === 'boolean' ? raw.showHome : !activeTab;
+  return {
+    activeTab,
+    activeSection,
+    showHome: activeTab ? showHome : true,
+    helpModalOpen: !!raw?.helpModalOpen,
+  };
 }
 
 export default function App() {
-  const initialState = getInitialState();
-  const [activeTab, setActiveTab] = useState(initialState.tab);
-  const [activeSection, setActiveSection] = useState(initialState.section);
-  const [showHome, setShowHome] = useState(initialState.showHome);
-  const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const initialUiState = normalizeUiState(loadUiState());
+  const [activeTab, setActiveTab] = useState(initialUiState.activeTab);
+  const [activeSection, setActiveSection] = useState(initialUiState.activeSection);
+  const [showHome, setShowHome] = useState(initialUiState.showHome);
+  const [helpModalOpen, setHelpModalOpen] = useState(initialUiState.helpModalOpen);
   const [archivistData, setArchivistData] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationState, setSimulationState] = useState(null);
+  const simulationOwnerRef = useRef(null);
 
   // Handle tab change - reset section to first valid for new tab
   const handleTabChange = useCallback((newTab) => {
@@ -134,10 +115,14 @@ export default function App() {
     setShowHome(false);
   }, []);
 
-  // Sync state changes to URL
   useEffect(() => {
-    updateUrl(activeTab, activeSection, showHome);
-  }, [activeTab, activeSection, showHome]);
+    saveUiState({
+      activeTab,
+      activeSection,
+      showHome,
+      helpModalOpen,
+    });
+  }, [activeTab, activeSection, showHome, helpModalOpen]);
 
   const {
     projects,
@@ -152,6 +137,41 @@ export default function App() {
     exportProject,
     importProject,
   } = useProjectStorage();
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentProject?.id) {
+      simulationOwnerRef.current = null;
+      setSimulationResults(null);
+      setSimulationState(null);
+      return undefined;
+    }
+
+    simulationOwnerRef.current = null;
+    setSimulationResults(null);
+    setSimulationState(null);
+    loadSimulationRun(currentProject.id).then((run) => {
+      if (cancelled) return;
+      simulationOwnerRef.current = currentProject.id;
+      setSimulationResults(run?.simulationResults || null);
+      setSimulationState(run?.simulationState || null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProject?.id]);
+
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (simulationOwnerRef.current !== currentProject.id) return;
+    if (!simulationResults && !simulationState) return;
+    const status = simulationState?.status;
+    if (status && status !== 'complete' && status !== 'error') return;
+    saveSimulationRun(currentProject.id, {
+      simulationResults,
+      simulationState,
+    });
+  }, [currentProject?.id, simulationResults, simulationState]);
 
   // Handle viewing simulation results in Archivist
   const handleViewInArchivist = useCallback((simulationResults) => {
@@ -582,6 +602,7 @@ export default function App() {
       case 'names':
         return (
           <NameForgeHost
+            projectId={currentProject?.id}
             schema={schema}
             namingData={namingData}
             onNamingDataChange={updateCultureNaming}
@@ -618,6 +639,7 @@ export default function App() {
       case 'coherence':
         return (
           <CoherenceEngineHost
+            projectId={currentProject?.id}
             schema={schema}
             eras={currentProject?.eras || []}
             onErasChange={updateEras}
@@ -643,6 +665,7 @@ export default function App() {
           <>
             <div style={{ display: activeTab === 'simulation' ? 'contents' : 'none' }}>
               <LoreWeaveHost
+                projectId={currentProject?.id}
                 schema={schema}
                 eras={currentProject?.eras || []}
                 pressures={currentProject?.pressures || []}

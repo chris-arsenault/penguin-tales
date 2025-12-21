@@ -34,7 +34,33 @@ function buildCoordinateContextConfig(semanticData, cultureVisuals) {
   return { entityKinds, cultures };
 }
 
+const DEBUG_MODAL_PREFIX = 'loreweave:debugModal:';
+
+function loadStoredBoolean(key) {
+  if (!key || typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) === true : false;
+  } catch {
+    return false;
+  }
+}
+
+function saveStoredBoolean(key, value) {
+  if (!key || typeof localStorage === 'undefined') return;
+  try {
+    if (value) {
+      localStorage.setItem(key, JSON.stringify(true));
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // Best-effort only.
+  }
+}
+
 export default function SimulationRunner({
+  projectId,
   schema,
   eras,
   pressures,
@@ -72,7 +98,16 @@ export default function SimulationRunner({
     enabled: false,
     enabledCategories: [],
   });
-  const [showDebugModal, setShowDebugModal] = useState(false);
+  const debugModalKey = projectId ? `${DEBUG_MODAL_PREFIX}${projectId}` : `${DEBUG_MODAL_PREFIX}global`;
+  const [showDebugModal, setShowDebugModal] = useState(() => loadStoredBoolean(debugModalKey));
+
+  useEffect(() => {
+    setShowDebugModal(loadStoredBoolean(debugModalKey));
+  }, [debugModalKey]);
+
+  useEffect(() => {
+    saveStoredBoolean(debugModalKey, showDebugModal);
+  }, [debugModalKey, showDebugModal]);
 
   // Use simulation worker passed from parent
   const {

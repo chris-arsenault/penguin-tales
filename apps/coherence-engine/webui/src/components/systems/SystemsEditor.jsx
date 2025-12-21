@@ -2,17 +2,27 @@
  * SystemsEditor - Main component for editing simulation systems
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { SYSTEM_TYPES, SYSTEM_CATEGORIES, getSystemCategory } from './constants';
 import { CategorySection } from '../shared';
 import { SystemListCard } from './cards/SystemListCard';
 import { SystemModal } from './SystemModal';
+import { buildStorageKey, clearStoredValue, loadStoredValue, saveStoredValue } from '../../utils/persistence';
 
-export default function SystemsEditor({ systems = [], onChange, schema, pressures = [], usageMap }) {
-  const [selectedIndex, setSelectedIndex] = useState(null);
-  const [showTypePicker, setShowTypePicker] = useState(false);
+export default function SystemsEditor({ projectId, systems = [], onChange, schema, pressures = [], usageMap }) {
+  const selectionKey = buildStorageKey(projectId, 'systems:selected');
+  const typePickerKey = buildStorageKey(projectId, 'systems:typePicker');
+  const [selectedId, setSelectedId] = useState(() => {
+    const stored = loadStoredValue(selectionKey);
+    return typeof stored === 'string' ? stored : null;
+  });
+  const [showTypePicker, setShowTypePicker] = useState(() => loadStoredValue(typePickerKey) === true);
 
   // Derive selectedSystem from index
+  const resolvedIndex = selectedId
+    ? systems.findIndex((system) => system.config?.id === selectedId)
+    : -1;
+  const selectedIndex = resolvedIndex >= 0 ? resolvedIndex : null;
   const selectedSystem = selectedIndex !== null ? systems[selectedIndex] : null;
   const [expandedCategories, setExpandedCategories] = useState(() => {
     // Start with all categories expanded
@@ -46,6 +56,42 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
     });
   }, [groupedSystems]);
 
+  useEffect(() => {
+    const stored = loadStoredValue(selectionKey);
+    setSelectedId(typeof stored === 'string' ? stored : null);
+  }, [selectionKey]);
+
+  useEffect(() => {
+    setShowTypePicker(loadStoredValue(typePickerKey) === true);
+  }, [typePickerKey]);
+
+  useEffect(() => {
+    if (selectionKey) {
+      if (selectedId) {
+        saveStoredValue(selectionKey, selectedId);
+      } else {
+        clearStoredValue(selectionKey);
+      }
+    }
+  }, [selectionKey, selectedId]);
+
+  useEffect(() => {
+    if (typePickerKey) {
+      if (showTypePicker) {
+        saveStoredValue(typePickerKey, true);
+      } else {
+        clearStoredValue(typePickerKey);
+      }
+    }
+  }, [typePickerKey, showTypePicker]);
+
+  useEffect(() => {
+    if (selectedId && selectedIndex === null) {
+      setSelectedId(null);
+      clearStoredValue(selectionKey);
+    }
+  }, [selectedId, selectedIndex, selectionKey]);
+
   const handleSystemChange = useCallback((updated) => {
     if (selectedIndex !== null && selectedIndex >= 0 && selectedIndex < systems.length) {
       const newSystems = [...systems];
@@ -67,7 +113,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
     if (selectedIndex !== null && selectedSystem && confirm(`Delete system "${selectedSystem.config?.name || selectedSystem.config?.id}"?`)) {
       const newSystems = systems.filter((_, i) => i !== selectedIndex);
       onChange(newSystems);
-      setSelectedIndex(null);
+      setSelectedId(null);
     }
   }, [systems, onChange, selectedIndex, selectedSystem]);
 
@@ -90,7 +136,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
       },
     };
     onChange([...systems, newSystem]);
-    setSelectedIndex(systems.length); // Index of newly added system
+    setSelectedId(newSystem.config?.id || null);
     setShowTypePicker(false);
   }, [systems, onChange]);
 
@@ -149,7 +195,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
                 <SystemListCard
                   key={flatIndex}
                   system={system}
-                  onClick={() => setSelectedIndex(flatIndex)}
+                  onClick={() => setSelectedId(system.config?.id || null)}
                   onToggle={() => handleToggle(system)}
                   usageMap={usageMap}
                 />
@@ -201,7 +247,7 @@ export default function SystemsEditor({ systems = [], onChange, schema, pressure
         <SystemModal
           system={selectedSystem}
           onChange={handleSystemChange}
-          onClose={() => setSelectedIndex(null)}
+          onClose={() => setSelectedId(null)}
           onDelete={handleDelete}
           schema={schema}
           pressures={pressures}

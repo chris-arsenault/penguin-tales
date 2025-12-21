@@ -6,6 +6,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { CategorySection, AddCard } from '../shared';
 import { GeneratorModal } from './GeneratorModal';
 import { GeneratorListCard } from './cards';
+import { buildStorageKey, clearStoredValue, loadStoredValue, saveStoredValue } from '../../utils/persistence';
 
 // Default icons for entity kinds (used when schema doesn't provide one)
 const DEFAULT_KIND_ICONS = {
@@ -28,11 +29,17 @@ const DEFAULT_KIND_ICONS = {
  * @param {Object} props.usageMap - Schema usage map for validation
  * @param {Object} props.namingData - Naming configuration data
  */
-export default function GeneratorsEditor({ generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
-  const [selectedIndex, setSelectedIndex] = useState(null);
+export default function GeneratorsEditor({ projectId, generators = [], onChange, schema, pressures = [], eras = [], usageMap, namingData = {} }) {
+  const selectionKey = buildStorageKey(projectId, 'generators:selected');
+  const [selectedId, setSelectedId] = useState(() => {
+    const stored = loadStoredValue(selectionKey);
+    return typeof stored === 'string' ? stored : null;
+  });
   const [expandedCategories, setExpandedCategories] = useState({});
 
   // Derive selected generator from index - this ensures we always have the latest data
+  const resolvedIndex = selectedId ? generators.findIndex((g) => g.id === selectedId) : -1;
+  const selectedIndex = resolvedIndex >= 0 ? resolvedIndex : null;
   const selectedGenerator = selectedIndex !== null ? generators[selectedIndex] : null;
 
   // Build entity kind info map for icons and labels
@@ -95,6 +102,27 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
     });
   }, [categories]);
 
+  useEffect(() => {
+    const stored = loadStoredValue(selectionKey);
+    setSelectedId(typeof stored === 'string' ? stored : null);
+  }, [selectionKey]);
+
+  useEffect(() => {
+    if (!selectionKey) return;
+    if (selectedId) {
+      saveStoredValue(selectionKey, selectedId);
+    } else {
+      clearStoredValue(selectionKey);
+    }
+  }, [selectionKey, selectedId]);
+
+  useEffect(() => {
+    if (selectedId && selectedIndex === null) {
+      setSelectedId(null);
+      clearStoredValue(selectionKey);
+    }
+  }, [selectedId, selectedIndex, selectionKey]);
+
   const handleGeneratorChange = useCallback((updated) => {
     if (selectedIndex !== null && selectedIndex < generators.length) {
       const newGenerators = [...generators];
@@ -117,7 +145,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
       const newGenerators = [...generators];
       newGenerators.splice(selectedIndex, 1);
       onChange(newGenerators);
-      setSelectedIndex(null);
+      setSelectedId(null);
     }
   }, [generators, onChange, selectedIndex, selectedGenerator]);
 
@@ -133,7 +161,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
       variables: {},
     };
     onChange([...generators, newGenerator]);
-    setSelectedIndex(generators.length); // New item will be at the end
+    setSelectedId(newGenerator.id);
   }, [generators, onChange]);
 
   const handleDuplicate = useCallback(() => {
@@ -144,7 +172,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
       name: `${selectedGenerator.name || selectedGenerator.id} (Copy)`,
     };
     onChange([...generators, duplicated]);
-    setSelectedIndex(generators.length); // New item will be at the end
+    setSelectedId(duplicated.id);
   }, [generators, onChange, selectedGenerator]);
 
   const toggleCategoryExpand = useCallback((kind) => {
@@ -202,7 +230,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
               <GeneratorListCard
                 key={generator.id}
                 generator={generator}
-                onClick={() => setSelectedIndex(generators.findIndex(g => g.id === generator.id))}
+                onClick={() => setSelectedId(generator.id)}
                 onToggle={() => handleToggle(generator)}
                 usageMap={usageMap}
               />
@@ -220,7 +248,7 @@ export default function GeneratorsEditor({ generators = [], onChange, schema, pr
         <GeneratorModal
           generator={selectedGenerator}
           onChange={handleGeneratorChange}
-          onClose={() => setSelectedIndex(null)}
+          onClose={() => setSelectedId(null)}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
           schema={schema}
