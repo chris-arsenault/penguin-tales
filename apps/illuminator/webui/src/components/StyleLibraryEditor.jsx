@@ -22,10 +22,6 @@ function generateStyleId(prefix) {
  * Style card component for displaying a single style
  */
 function StyleCard({ style, type, onEdit, onDelete }) {
-  const kindsList = type === 'composition' && style.suitableForKinds?.length > 0
-    ? style.suitableForKinds.join(', ')
-    : null;
-
   return (
     <div className="illuminator-style-card">
       <div className="illuminator-style-card-header">
@@ -60,11 +56,6 @@ function StyleCard({ style, type, onEdit, onDelete }) {
           ))}
         </div>
       )}
-      {kindsList && (
-        <div className="illuminator-style-card-kinds">
-          <strong>For:</strong> {kindsList}
-        </div>
-      )}
     </div>
   );
 }
@@ -72,30 +63,19 @@ function StyleCard({ style, type, onEdit, onDelete }) {
 /**
  * Modal for editing a style
  */
-function StyleEditModal({ style, type, onSave, onCancel, entityKinds = [] }) {
+function StyleEditModal({ style, type, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     id: style?.id || '',
     name: style?.name || '',
     description: style?.description || '',
     promptFragment: style?.promptFragment || '',
     keywords: style?.keywords?.join(', ') || '',
-    suitableForKinds: style?.suitableForKinds || [],
   });
 
   const isNew = !style?.id;
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleKindToggle = (kind) => {
-    setFormData((prev) => {
-      const current = prev.suitableForKinds || [];
-      if (current.includes(kind)) {
-        return { ...prev, suitableForKinds: current.filter((k) => k !== kind) };
-      }
-      return { ...prev, suitableForKinds: [...current, kind] };
-    });
   };
 
   const handleSubmit = (e) => {
@@ -113,10 +93,6 @@ function StyleEditModal({ style, type, onSave, onCancel, entityKinds = [] }) {
 
     if (type === 'artistic' && formData.keywords.trim()) {
       result.keywords = formData.keywords.split(',').map((k) => k.trim()).filter(Boolean);
-    }
-
-    if (type === 'composition' && formData.suitableForKinds.length > 0) {
-      result.suitableForKinds = formData.suitableForKinds;
     }
 
     onSave(result, isNew);
@@ -186,28 +162,6 @@ function StyleEditModal({ style, type, onSave, onCancel, entityKinds = [] }) {
             </div>
           )}
 
-          {type === 'composition' && entityKinds.length > 0 && (
-            <div className="illuminator-form-group">
-              <label className="illuminator-label">Suitable For</label>
-              <div className="illuminator-checkbox-grid">
-                {entityKinds.map((kind) => (
-                  <label key={kind} className="illuminator-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={formData.suitableForKinds.includes(kind)}
-                      onChange={() => handleKindToggle(kind)}
-                      className="illuminator-checkbox"
-                    />
-                    {kind}
-                  </label>
-                ))}
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Leave empty if suitable for all entity kinds.
-              </p>
-            </div>
-          )}
-
           <div className="illuminator-modal-footer">
             <button type="button" onClick={onCancel} className="illuminator-btn">
               Cancel
@@ -236,7 +190,6 @@ export default function StyleLibraryEditor({
   onUpdateCompositionStyle,
   onDeleteCompositionStyle,
   onReset,
-  entityKinds = ['npc', 'location', 'faction', 'artifact', 'era', 'occurrence'],
 }) {
   const [editingStyle, setEditingStyle] = useState(null);
   const [editingType, setEditingType] = useState(null);
@@ -425,7 +378,6 @@ export default function StyleLibraryEditor({
           type={editingType}
           onSave={handleSaveStyle}
           onCancel={handleCloseModal}
-          entityKinds={entityKinds}
         />
       )}
     </div>

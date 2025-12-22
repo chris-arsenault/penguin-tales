@@ -677,9 +677,9 @@ export default function EntityBrowser({
   );
 
   return (
-    <div>
-      {/* Filters and Settings Card */}
-      <div className="illuminator-card">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      {/* Filters and Settings Card - fixed header */}
+      <div className="illuminator-card" style={{ flexShrink: 0 }}>
         <div className="illuminator-card-header">
           <h2 className="illuminator-card-title">Entities</h2>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -856,7 +856,7 @@ export default function EntityBrowser({
         </div>
       </div>
 
-      {/* Selection actions */}
+      {/* Selection actions - fixed */}
       {selectedIds.size > 0 && (
         <div
           style={{
@@ -869,6 +869,7 @@ export default function EntityBrowser({
             border: '1px solid var(--accent-color)',
             borderRadius: '6px',
             flexWrap: 'wrap',
+            flexShrink: 0,
           }}
         >
           <span style={{ fontSize: '13px' }}>
@@ -916,9 +917,9 @@ export default function EntityBrowser({
         </div>
       )}
 
-      {/* Entity list */}
-      <div className="illuminator-card" style={{ padding: 0 }}>
-        {/* Header row */}
+      {/* Entity list - scrollable */}
+      <div className="illuminator-card" style={{ padding: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Header row - sticky */}
         <div
           style={{
             display: 'flex',
@@ -927,6 +928,7 @@ export default function EntityBrowser({
             padding: '8px 12px',
             borderBottom: '1px solid var(--border-color)',
             background: 'var(--bg-tertiary)',
+            flexShrink: 0,
           }}
         >
           <input
@@ -940,38 +942,40 @@ export default function EntityBrowser({
           </span>
         </div>
 
-        {/* Entity rows */}
-        {filteredEntities.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No entities match the current filters.
-          </div>
-        ) : (
-          filteredEntities.map((entity) => {
-            const descStatus = getStatus(entity, 'description');
-            const imgStatus = getStatus(entity, 'image');
-            const enrichment = entity.enrichment || {};
-            return (
-              <EntityRow
-                key={entity.id}
-                entity={entity}
-                descStatus={descStatus}
-                imgStatus={imgStatus}
-                selected={selectedIds.has(entity.id)}
-                onToggleSelect={() => toggleSelect(entity.id)}
-                onQueueDesc={() => queueItem(entity, 'description')}
-                onQueueImg={() => queueItem(entity, 'image')}
-                onCancelDesc={() => cancelItem(entity, 'description')}
-                onCancelImg={() => cancelItem(entity, 'image')}
-                onAssignImage={() => openImagePicker(entity)}
-                canQueueImage={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && (!config.requireDescription || enrichment.description?.text)}
-                needsDescription={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && config.requireDescription && !enrichment.description?.text}
-                onImageClick={openImageModal}
-                descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
-                imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
-              />
-            );
-          })
-        )}
+        {/* Entity rows - scrollable container */}
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          {filteredEntities.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No entities match the current filters.
+            </div>
+          ) : (
+            filteredEntities.map((entity) => {
+              const descStatus = getStatus(entity, 'description');
+              const imgStatus = getStatus(entity, 'image');
+              const enrichment = entity.enrichment || {};
+              return (
+                <EntityRow
+                  key={entity.id}
+                  entity={entity}
+                  descStatus={descStatus}
+                  imgStatus={imgStatus}
+                  selected={selectedIds.has(entity.id)}
+                  onToggleSelect={() => toggleSelect(entity.id)}
+                  onQueueDesc={() => queueItem(entity, 'description')}
+                  onQueueImg={() => queueItem(entity, 'image')}
+                  onCancelDesc={() => cancelItem(entity, 'description')}
+                  onCancelImg={() => cancelItem(entity, 'image')}
+                  onAssignImage={() => openImagePicker(entity)}
+                  canQueueImage={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && (!config.requireDescription || enrichment.description?.text)}
+                  needsDescription={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && config.requireDescription && !enrichment.description?.text}
+                  onImageClick={openImageModal}
+                  descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
+                  imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
+                />
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Image Modal */}

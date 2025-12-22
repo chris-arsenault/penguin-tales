@@ -16,6 +16,9 @@ interface UseImageUrlResult {
     entityId?: string;
     entityName?: string;
     entityKind?: string;
+    entityCulture?: string;
+    originalPrompt?: string;
+    finalPrompt?: string;
     generatedAt?: number;
     model?: string;
     revisedPrompt?: string;
@@ -64,6 +67,9 @@ export function useImageUrl(imageId: string | null | undefined): UseImageUrlResu
             entityId: result.entityId,
             entityName: result.entityName,
             entityKind: result.entityKind,
+            entityCulture: result.entityCulture,
+            originalPrompt: result.originalPrompt,
+            finalPrompt: result.finalPrompt,
             generatedAt: result.generatedAt,
             model: result.model,
             revisedPrompt: result.revisedPrompt,
@@ -141,6 +147,9 @@ export function useImageUrls(imageIds: (string | null | undefined)[]): Map<strin
               entityId: result.entityId,
               entityName: result.entityName,
               entityKind: result.entityKind,
+              entityCulture: result.entityCulture,
+              originalPrompt: result.originalPrompt,
+              finalPrompt: result.finalPrompt,
               generatedAt: result.generatedAt,
               model: result.model,
               revisedPrompt: result.revisedPrompt,

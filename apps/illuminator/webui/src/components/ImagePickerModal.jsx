@@ -25,14 +25,6 @@ function formatDate(timestamp) {
   });
 }
 
-/**
- * Truncate a long string with ellipsis
- */
-function truncate(str, maxLen = 50) {
-  if (!str || str.length <= maxLen) return str;
-  return str.slice(0, maxLen) + '...';
-}
-
 export default function ImagePickerModal({
   isOpen,
   onClose,
@@ -58,9 +50,9 @@ export default function ImagePickerModal({
       try {
         const allImages = await getAllImages();
         setImages(allImages);
-        // Pre-select suggested filter based on entity
-        if (entityKind) setFilterKind(entityKind);
-        if (entityCulture) setFilterCulture(entityCulture);
+        // Reset filters to show all - let user filter manually
+        setFilterKind('all');
+        setFilterCulture('all');
       } catch (err) {
         console.error('Failed to load images:', err);
       } finally {
@@ -69,7 +61,7 @@ export default function ImagePickerModal({
     }
 
     loadData();
-  }, [isOpen, entityKind, entityCulture]);
+  }, [isOpen]);
 
   // Load thumbnail URLs for visible images
   useEffect(() => {
@@ -355,7 +347,7 @@ export default function ImagePickerModal({
                         </div>
 
                         {/* Prompt preview */}
-                        {img.prompt && (
+                        {(img.finalPrompt || img.originalPrompt) && (
                           <div
                             style={{
                               marginTop: '6px',
@@ -364,15 +356,18 @@ export default function ImagePickerModal({
                               borderRadius: '4px',
                               fontSize: '9px',
                               color: 'var(--text-muted)',
+                              maxHeight: expandedPrompt === img.imageId ? '200px' : '40px',
+                              overflow: 'hidden',
                               cursor: 'pointer',
+                              transition: 'max-height 0.2s ease',
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
                               setExpandedPrompt(expandedPrompt === img.imageId ? null : img.imageId);
                             }}
-                            title="Click to expand prompt"
+                            title="Click to expand/collapse prompt"
                           >
-                            {expandedPrompt === img.imageId ? img.prompt : truncate(img.prompt, 60)}
+                            {img.finalPrompt || img.originalPrompt}
                           </div>
                         )}
                       </div>

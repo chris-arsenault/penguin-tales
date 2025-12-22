@@ -33,8 +33,6 @@ export interface CompositionStyle {
   description?: string;
   /** Prompt fragment for composition (injected into image prompt) */
   promptFragment: string;
-  /** Entity kinds this composition is suitable for (empty = all) */
-  suitableForKinds?: string[];
 }
 
 /**
@@ -124,70 +122,60 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     name: 'Portrait',
     description: 'Head and shoulders portrait',
     promptFragment: 'portrait composition, head and shoulders, focused on face, eye contact',
-    suitableForKinds: ['npc'],
   },
   {
     id: 'full-body',
     name: 'Full Body',
     description: 'Full figure standing pose',
     promptFragment: 'full body view, character standing, showing attire and posture, clear silhouette',
-    suitableForKinds: ['npc'],
   },
   {
     id: 'bust',
     name: 'Bust',
     description: 'Upper body portrait with more context',
     promptFragment: 'bust composition, upper body visible, showing costume details, medium shot',
-    suitableForKinds: ['npc'],
   },
   {
     id: 'establishing-shot',
     name: 'Establishing Shot',
     description: 'Wide environmental shot',
     promptFragment: 'wide establishing shot, environmental storytelling, sense of scale, cinematic',
-    suitableForKinds: ['location'],
   },
   {
     id: 'interior',
     name: 'Interior View',
     description: 'Interior space with atmosphere',
     promptFragment: 'interior view, atmospheric lighting, detailed environment, lived-in feeling',
-    suitableForKinds: ['location'],
   },
   {
     id: 'aerial',
     name: 'Aerial View',
     description: 'Bird\'s eye view from above',
     promptFragment: 'aerial view, bird\'s eye perspective, showing layout and scope',
-    suitableForKinds: ['location'],
   },
   {
     id: 'group-scene',
     name: 'Group Scene',
     description: 'Multiple figures in composition',
     promptFragment: 'group composition, multiple figures, unified aesthetic, collective identity',
-    suitableForKinds: ['faction'],
   },
   {
     id: 'symbolic',
     name: 'Symbolic',
     description: 'Allegorical or symbolic representation',
     promptFragment: 'symbolic representation, iconographic, allegorical, conceptual',
-    suitableForKinds: ['faction', 'era'],
   },
   {
     id: 'action',
     name: 'Action Scene',
     description: 'Dynamic action moment',
     promptFragment: 'dynamic action pose, motion blur, dramatic angle, tension, movement',
-    suitableForKinds: ['npc', 'occurrence'],
   },
   {
     id: 'object-study',
     name: 'Object Study',
     description: 'Focused object with dramatic lighting',
     promptFragment: 'object study, dramatic lighting, showing scale and detail, museum quality',
-    suitableForKinds: ['artifact'],
   },
 ];
 
@@ -213,13 +201,4 @@ export function findArtisticStyle(library: StyleLibrary, id: string): ArtisticSt
  */
 export function findCompositionStyle(library: StyleLibrary, id: string): CompositionStyle | undefined {
   return library.compositionStyles.find(s => s.id === id);
-}
-
-/**
- * Get composition styles suitable for an entity kind
- */
-export function getCompositionStylesForKind(library: StyleLibrary, kind: string): CompositionStyle[] {
-  return library.compositionStyles.filter(s =>
-    !s.suitableForKinds || s.suitableForKinds.length === 0 || s.suitableForKinds.includes(kind)
-  );
 }

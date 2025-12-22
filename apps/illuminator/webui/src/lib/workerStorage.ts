@@ -53,8 +53,10 @@ export interface ImageMetadata {
   entityName?: string;
   entityKind?: string;
   entityCulture?: string;
-  /** The original prompt sent to the image model */
-  prompt?: string;
+  /** The original prompt built from template (before Claude refinement) */
+  originalPrompt?: string;
+  /** The final prompt sent to image model (after Claude refinement, or same as original if no refinement) */
+  finalPrompt?: string;
   generatedAt: number;
   model: string;
   /** The revised prompt returned by the model (DALL-E) */
