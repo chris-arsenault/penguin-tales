@@ -10,6 +10,8 @@ import type { CultureNamingData } from './naming.js';
 import type { EntityKindDefinition } from './entityKind.js';
 import type { RelationshipKindDefinition } from './relationship.js';
 import type { SeedEntity, SeedRelationship } from './seed.js';
+import type { WorldOutput } from './world.js';
+import type { DomainUIConfig } from './ui.js';
 
 // =============================================================================
 // Shared Canonry slices
@@ -20,6 +22,8 @@ export interface TagDefinition {
   category?: string;
   rarity?: string;
   description?: string;
+  /** True if this tag is defined by the framework and is read-only in editors */
+  isFramework?: boolean;
   usageCount?: number;
   templates?: string[];
   entityKinds?: string[];
@@ -45,10 +49,11 @@ export interface CanonrySchemaSlice {
   relationshipKinds: RelationshipKindDefinition[];
   cultures: CultureDefinition[];
   tagRegistry?: TagDefinition[];
+  axisDefinitions?: AxisDefinition[];
+  uiConfig?: DomainUIConfig;
 }
 
 export interface CanonryProject extends CanonrySchemaSlice {
-  axisDefinitions?: AxisDefinition[];
   seedEntities?: SeedEntity[];
   seedRelationships?: SeedRelationship[];
   eras?: CanonryEraConfig[];
@@ -84,16 +89,7 @@ export type CanonryDistributionTargets = Record<string, unknown>;
 // Simulation payloads (shell <-> Lore Weave <-> Archivist)
 // =============================================================================
 
-export interface CanonrySimulationResults {
-  metadata?: Record<string, unknown>;
-  hardState?: unknown[];
-  relationships?: unknown[];
-  history?: unknown[];
-  pressures?: Record<string, number>;
-  distributionMetrics?: Record<string, unknown>;
-  coordinateState?: Record<string, unknown>;
-  uiSchema?: Record<string, unknown>;
-}
+export type CanonrySimulationResults = WorldOutput;
 
 export interface CanonrySimulationState {
   status?: string;

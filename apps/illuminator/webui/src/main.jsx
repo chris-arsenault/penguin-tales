@@ -8,9 +8,24 @@ import './App.css';
 
 const mockSchema = {
   entityKinds: [
-    { kind: 'npc', description: 'Character', subtypes: [{ id: 'hero', name: 'Hero' }, { id: 'merchant', name: 'Merchant' }] },
-    { kind: 'location', description: 'Location', subtypes: [{ id: 'settlement', name: 'Settlement' }, { id: 'landmark', name: 'Landmark' }] },
-    { kind: 'faction', description: 'Faction', subtypes: [{ id: 'guild', name: 'Guild' }, { id: 'nation', name: 'Nation' }] },
+    {
+      kind: 'npc',
+      description: 'Character',
+      subtypes: [{ id: 'hero', name: 'Hero' }, { id: 'merchant', name: 'Merchant' }],
+      statuses: [{ id: 'active', name: 'Active', isTerminal: false }, { id: 'historical', name: 'Historical', isTerminal: true }],
+    },
+    {
+      kind: 'location',
+      description: 'Location',
+      subtypes: [{ id: 'settlement', name: 'Settlement' }, { id: 'landmark', name: 'Landmark' }],
+      statuses: [{ id: 'active', name: 'Active', isTerminal: false }, { id: 'historical', name: 'Historical', isTerminal: true }],
+    },
+    {
+      kind: 'faction',
+      description: 'Faction',
+      subtypes: [{ id: 'guild', name: 'Guild' }, { id: 'nation', name: 'Nation' }],
+      statuses: [{ id: 'active', name: 'Active', isTerminal: false }, { id: 'historical', name: 'Historical', isTerminal: true }],
+    },
   ],
   relationshipKinds: [
     { kind: 'leader_of', description: 'Leadership', srcKinds: ['npc'], dstKinds: ['faction'] },
@@ -24,15 +39,20 @@ const mockSchema = {
 
 // Mock world data simulating lore-weave output
 const mockWorldData = {
+  schema: mockSchema,
   metadata: {
-    generatedAt: Date.now(),
-    version: '1.0.0',
+    tick: 120,
+    epoch: 6,
+    era: 'Age of Frost',
+    historyEventCount: 0,
+    entityCount: 4,
+    relationshipCount: 0,
   },
   hardState: [
-    { id: 'hero_001', kind: 'npc', subtype: 'hero', name: 'Grizzletooth the Bold', description: '', status: 'active', prominence: 'mythic', culture: 'northern', tags: {}, links: [], coordinates: { x: 50, y: 50 }, createdAt: 1, updatedAt: 10 },
-    { id: 'hero_002', kind: 'npc', subtype: 'hero', name: 'Silverfin the Swift', description: '', status: 'active', prominence: 'renowned', culture: 'southern', tags: {}, links: [], coordinates: { x: 60, y: 40 }, createdAt: 2, updatedAt: 8 },
-    { id: 'loc_001', kind: 'location', subtype: 'landmark', name: 'The Frozen Throne', description: '', status: 'active', prominence: 'mythic', culture: 'northern', tags: {}, links: [], coordinates: { x: 45, y: 55 }, createdAt: 1, updatedAt: 5 },
-    { id: 'faction_001', kind: 'faction', subtype: 'nation', name: 'The Ice Confederacy', description: '', status: 'active', prominence: 'renowned', culture: 'northern', tags: {}, links: [], coordinates: { x: 40, y: 50 }, createdAt: 3, updatedAt: 12 },
+    { id: 'hero_001', kind: 'npc', subtype: 'hero', name: 'Grizzletooth the Bold', description: '', status: 'active', prominence: 'mythic', culture: 'northern', tags: {}, coordinates: { x: 50, y: 50, z: 10 }, createdAt: 1, updatedAt: 10 },
+    { id: 'hero_002', kind: 'npc', subtype: 'hero', name: 'Silverfin the Swift', description: '', status: 'active', prominence: 'renowned', culture: 'southern', tags: {}, coordinates: { x: 60, y: 40, z: 5 }, createdAt: 2, updatedAt: 8 },
+    { id: 'loc_001', kind: 'location', subtype: 'landmark', name: 'The Frozen Throne', description: '', status: 'active', prominence: 'mythic', culture: 'northern', tags: {}, coordinates: { x: 45, y: 55, z: 15 }, createdAt: 1, updatedAt: 5 },
+    { id: 'faction_001', kind: 'faction', subtype: 'nation', name: 'The Ice Confederacy', description: '', status: 'active', prominence: 'renowned', culture: 'northern', tags: {}, coordinates: { x: 40, y: 50, z: 8 }, createdAt: 3, updatedAt: 12 },
   ],
   relationships: [],
   pressures: {},

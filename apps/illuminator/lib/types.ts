@@ -6,38 +6,20 @@
  * from @lore-weave/core instead.
  */
 
+import type {
+  HistoryEvent as CanonryHistoryEvent,
+  Prominence as CanonryProminence,
+  WorldEntity,
+  WorldRelationship,
+} from '@canonry/world-schema';
+
 // Re-export from llm types
 export * from './llm/types';
 
-// Placeholder types that match lore-weave's types
-// These will be replaced with imports from @lore-weave/core when illuminator is built
-
-export interface HardState {
-  id: string;
-  kind: string;
-  subtype: string;
-  name: string;
-  description: string;
-  status: string;
-  prominence: string;
-  culture?: string;
-  tags: Record<string, string | number | boolean>;
-  links: Relationship[];
-  coordinates?: { x: number; y: number; z?: number };
-  temporal?: { startTick: number; endTick: number | null };
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface Relationship {
-  kind: string;
-  src: string;
-  dst: string;
-  strength?: number;
-  distance?: number;
-  category?: string;
-  status?: string;
-}
+export type HardState = WorldEntity;
+export type Relationship = WorldRelationship;
+export type HistoryEvent = CanonryHistoryEvent;
+export type Prominence = CanonryProminence;
 
 export interface Era {
   id: string;
@@ -46,16 +28,6 @@ export interface Era {
   templateWeights: Record<string, number>;
   systemModifiers: Record<string, number>;
   pressureModifiers?: Record<string, number>;
-}
-
-export interface HistoryEvent {
-  tick: number;
-  era: string;
-  type: 'growth' | 'simulation' | 'special';
-  description: string;
-  entitiesCreated: string[];
-  relationshipsCreated: Relationship[];
-  entitiesModified: string[];
 }
 
 /**

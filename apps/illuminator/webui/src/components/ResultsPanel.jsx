@@ -5,7 +5,8 @@
  * - Completed enrichments with previews
  * - Image thumbnails with full-size preview
  * - Multi-select for regeneration
- * - Export to Archivist button
+ *
+ * Note: Enrichment results are auto-saved to IndexedDB per slot.
  */
 
 import { useState, useMemo } from 'react';
@@ -59,9 +60,9 @@ function EntityResultCard({
         <div className="illuminator-entity-kind">
           {entity.kind}/{entity.subtype} - {entity.prominence}
         </div>
-        {descriptionTask?.result?.loreRecord?.description && (
+        {descriptionTask?.result?.text && (
           <div className="illuminator-entity-description">
-            {descriptionTask.result.loreRecord.description}
+            {descriptionTask.result.text}
           </div>
         )}
         <div className="illuminator-entity-actions">
@@ -154,7 +155,6 @@ export default function ResultsPanel({
   tasks,
   worldData,
   onRegenerateTask,
-  onExportToArchivist,
 }) {
   const [selectedEntities, setSelectedEntities] = useState(new Set());
   const [previewImage, setPreviewImage] = useState(null);
@@ -223,15 +223,9 @@ export default function ResultsPanel({
       <div className="illuminator-card">
         <div className="illuminator-card-header">
           <h2 className="illuminator-card-title">Enrichment Results</h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={onExportToArchivist}
-              className="illuminator-button"
-              disabled={enrichedEntities.length === 0}
-            >
-              Export to Archivist
-            </button>
-          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Changes auto-save to current slot
+          </span>
         </div>
 
         {enrichedEntities.length === 0 ? (

@@ -15,7 +15,7 @@ import { getElementValidation } from '../../shared';
  * @param {Object} props.usageMap - Schema usage map for validation
  */
 export function SystemListCard({ system, onClick, onToggle, usageMap }) {
-  const config = system.config || {};
+  const config = system.config;
   const sysId = config.id;
   const isEnabled = system.enabled !== false;
   const typeConfig = SYSTEM_TYPES[system.systemType] || {};

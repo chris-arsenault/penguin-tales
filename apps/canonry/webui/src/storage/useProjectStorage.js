@@ -23,6 +23,7 @@ const PROJECT_FILES = [
   'cultures',
   'tagRegistry',
   'axisDefinitions',
+  'uiConfig',
   'eras',
   'pressures',
   'generators',
@@ -61,7 +62,7 @@ async function fetchDefaultProject() {
     }
 
     // Assemble the project from individual files
-    const project = { ...manifestResult.data };
+    let project = { ...manifestResult.data };
     for (const { file, data } of responses) {
       if (file !== 'manifest' && data !== null) {
         project[file] = data;
@@ -115,6 +116,9 @@ async function createProjectZip(project) {
   if (project.axisDefinitions) {
     zip.file('axisDefinitions.json', JSON.stringify(project.axisDefinitions, null, 2));
   }
+  if (project.uiConfig) {
+    zip.file('uiConfig.json', JSON.stringify(project.uiConfig, null, 2));
+  }
   if (project.eras) {
     zip.file('eras.json', JSON.stringify(project.eras, null, 2));
   }
@@ -136,7 +140,7 @@ async function createProjectZip(project) {
   if (project.seedRelationships) {
     zip.file('seedRelationships.json', JSON.stringify(project.seedRelationships, null, 2));
   }
-  if (project.distributionTargets) {
+  if (project.distributionTargets !== undefined) {
     zip.file('distributionTargets.json', JSON.stringify(project.distributionTargets, null, 2));
   }
 
@@ -167,6 +171,7 @@ async function extractProjectZip(zipBlob) {
     'cultures',
     'tagRegistry',
     'axisDefinitions',
+    'uiConfig',
     'eras',
     'pressures',
     'generators',
@@ -177,12 +182,19 @@ async function extractProjectZip(zipBlob) {
     'distributionTargets',
   ];
 
+  const defaultValues = {
+    uiConfig: null,
+    distributionTargets: null,
+  };
+
   for (const fileName of fileNames) {
     const file = zip.file(`${fileName}.json`);
     if (file) {
       project[fileName] = JSON.parse(await file.async('string'));
     } else {
-      project[fileName] = [];
+      project[fileName] = Object.prototype.hasOwnProperty.call(defaultValues, fileName)
+        ? defaultValues[fileName]
+        : [];
     }
   }
 
@@ -382,24 +394,21 @@ export function useProjectStorage() {
     [currentProject]
   );
 
-  // Import project from zip file (Blob or File) or legacy JSON string
+  // Import project from zip file (Blob or File)
   const importProject = useCallback(
     async (input) => {
       try {
         let data;
 
-        // Check if input is a Blob/File (zip) or string (legacy JSON)
+        // Check if input is a Blob/File (zip)
         if (input instanceof Blob) {
           data = await extractProjectZip(input);
-        } else if (typeof input === 'string') {
-          // Legacy JSON import support
-          data = JSON.parse(input);
         } else {
-          throw new Error('Invalid import format: expected zip file or JSON string');
+          throw new Error('Invalid import format: expected zip file');
         }
 
         // Generate new ID to avoid conflicts
-        const project = {
+        let project = {
           ...data,
           id: `project_${Date.now()}`,
           createdAt: new Date().toISOString(),

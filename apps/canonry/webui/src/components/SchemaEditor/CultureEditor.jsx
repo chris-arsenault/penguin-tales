@@ -39,10 +39,14 @@ export default function CultureEditor({ cultures, onChange }) {
   };
 
   const updateCulture = (cultureId, updates) => {
+    const existing = cultures.find((c) => c.id === cultureId);
+    if (existing?.isFramework) return;
     onChange(cultures.map((c) => (c.id === cultureId ? { ...c, ...updates } : c)));
   };
 
   const deleteCulture = (cultureId) => {
+    const existing = cultures.find((c) => c.id === cultureId);
+    if (existing?.isFramework) return;
     if (confirm('Delete this culture?')) {
       onChange(cultures.filter((c) => c.id !== cultureId));
     }
@@ -79,6 +83,7 @@ export default function CultureEditor({ cultures, onChange }) {
           {cultures.map((culture) => {
             const stableKey = getStableKey(culture);
             const isExpanded = expandedCultures[stableKey];
+            const isFramework = Boolean(culture.isFramework);
 
             return (
               <ExpandableCard
@@ -100,7 +105,12 @@ export default function CultureEditor({ cultures, onChange }) {
                   </span>
                 }
                 subtitle={culture.id}
-                actions={<span className="text-muted text-small">{getCultureSummary(culture)}</span>}
+                actions={
+                  <span className="text-muted text-small">
+                    {getCultureSummary(culture)}
+                    {isFramework && <span className="badge badge-info" style={{ marginLeft: '8px' }}>framework</span>}
+                  </span>
+                }
               >
                 {/* Name and ID */}
                 <FormRow>
@@ -108,6 +118,7 @@ export default function CultureEditor({ cultures, onChange }) {
                     <input
                       className="input"
                       value={culture.name}
+                      disabled={isFramework}
                       onChange={(e) => updateCulture(culture.id, { name: e.target.value })}
                       placeholder="Culture name"
                     />
@@ -116,6 +127,7 @@ export default function CultureEditor({ cultures, onChange }) {
                     <input
                       className="input"
                       value={culture.id}
+                      disabled={isFramework}
                       onChange={(e) => {
                         const newId = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
                         if (newId && !cultures.some((c) => c.id === newId && c.id !== culture.id)) {
@@ -132,6 +144,7 @@ export default function CultureEditor({ cultures, onChange }) {
                     <input
                       className="input"
                       value={culture.description || ''}
+                      disabled={isFramework}
                       onChange={(e) => updateCulture(culture.id, { description: e.target.value })}
                       placeholder="Optional description"
                     />
@@ -149,7 +162,7 @@ export default function CultureEditor({ cultures, onChange }) {
                         borderRadius: '50%',
                         backgroundColor: culture.color,
                         border: '3px solid var(--color-border)',
-                      }}
+                        }}
                     />
                     <div className="chip-list">
                       {PRESET_COLORS.map((color) => (
@@ -162,6 +175,8 @@ export default function CultureEditor({ cultures, onChange }) {
                             padding: 0,
                             backgroundColor: color,
                             borderColor: culture.color === color ? '#fff' : 'transparent',
+                            opacity: isFramework ? 0.6 : 1,
+                            pointerEvents: isFramework ? 'none' : 'auto',
                           }}
                           onClick={() => updateCulture(culture.id, { color })}
                         />
@@ -184,7 +199,7 @@ export default function CultureEditor({ cultures, onChange }) {
                     {culture.naming && <span className="badge">has naming</span>}
                     {culture.axisBiases && <span className="badge">has biases</span>}
                   </div>
-                  <button className="btn btn-danger" onClick={() => deleteCulture(culture.id)}>
+                  <button className="btn btn-danger" onClick={() => deleteCulture(culture.id)} disabled={isFramework}>
                     Delete Culture
                   </button>
                 </div>

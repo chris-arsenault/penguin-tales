@@ -12,14 +12,14 @@ A React-based application for navigating knowledge graphs of ~150-200 interconne
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (remote-only)
 npm run dev
 
 # Build for production
 npm run build
 ```
 
-**Access**: Runs as a micro-frontend in the Canonry shell at http://localhost:5176/archivist/
+**Access**: Runs as a micro-frontend in the Canonry shell at http://localhost:5176/archivist/. There is no standalone Archivist app; the dev server only hosts the remote entry.
 
 ---
 

@@ -6,6 +6,3 @@ export { default as SimulationRunner } from './SimulationRunner';
 export { default as ParameterForm } from './ParameterForm';
 export { default as RunControls } from './RunControls';
 export { default as ConfigViewer } from './ConfigViewer';
-
-// Re-export default for backwards compatibility
-export { default } from './SimulationRunner';

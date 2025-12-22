@@ -13,7 +13,7 @@ import { ReferenceDropdown, NumberInput } from '../../shared';
  * @param {Object} props.schema - Domain schema
  */
 export function ClusterFormationTab({ system, onChange, schema }) {
-  const config = system.config || {};
+  const config = system.config;
 
   const entityKindOptions = (schema?.entityKinds || []).map((ek) => ({
     value: ek.kind,

@@ -1,4 +1,5 @@
 import type { WorldState } from '../types/world.ts';
+import { getProminenceColor, getProminenceLevels } from '../utils/dataTransform.ts';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -9,6 +10,8 @@ interface StatsPanelProps {
 
 export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelProps) {
   const { pressures, distributionMetrics, validation } = worldData;
+  const prominenceLevels = getProminenceLevels(worldData.schema);
+  const prominenceOrder = new Map(prominenceLevels.map((level, index) => [level, index]));
 
   // Get pressure entries and sort by value
   const pressureEntries = Object.entries(pressures).sort((a, b) => b[1] - a[1]);
@@ -152,17 +155,17 @@ export default function StatsPanel({ worldData, isOpen, onToggle }: StatsPanelPr
                     <h4 className="stats-section-title">Prominence Distribution</h4>
                     <div className="distribution-bars">
                       {Object.entries(distributionMetrics.prominenceRatios)
-                        .sort((a, b) => {
-                          const order = ['mythic', 'renowned', 'recognized', 'marginal', 'forgotten'];
-                          return order.indexOf(a[0]) - order.indexOf(b[0]);
-                        })
+                        .sort((a, b) => (prominenceOrder.get(a[0]) ?? 0) - (prominenceOrder.get(b[0]) ?? 0))
                         .map(([prominence, ratio]) => (
                           <div key={prominence} className="distribution-item">
                             <div className="distribution-label">{prominence}</div>
                             <div className="distribution-bar-container">
                               <div
-                                className={`distribution-bar-fill prominence-${prominence}`}
-                                style={{ width: `${ratio * 100}%` }}
+                                className="distribution-bar-fill"
+                                style={{
+                                  width: `${ratio * 100}%`,
+                                  background: getProminenceColor(prominence, worldData.schema),
+                                }}
                               />
                               <span className="distribution-percentage">{(ratio * 100).toFixed(1)}%</span>
                             </div>

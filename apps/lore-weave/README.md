@@ -61,27 +61,26 @@ The framework uses **concern-specific organization**:
 | `coordinates/` | Spatial coordinate system and regions |
 | `statistics/` | Metrics and distribution tracking |
 | `llm/` | LLM integration (optional) |
-| `domainInterface/` | Domain schema contract |
 | `utils/` | Concern-agnostic utilities (last resort) |
 
 **Organization principle:** Always place code in its concern-specific folder. Only use `utils/` for pure utilities with no specific concern (e.g., `shuffle`, `pickRandom`).
 
-## Creating a Domain
+## Schema
 
-Domains provide world-specific content via the `DomainSchema` interface:
+Schemas provide world-specific content via `CanonrySchemaSlice` from `@canonry/world-schema`:
 
 ```typescript
-export const mySchema: DomainSchema = {
-  entityKinds: {
-    npc: { subtypes: ['hero', 'merchant'], statuses: ['alive', 'dead'] },
-    location: { subtypes: ['city', 'wilderness'], statuses: ['active', 'ruins'] },
-    faction: { subtypes: ['guild', 'kingdom'], statuses: ['active', 'disbanded'] },
-  },
-  relationshipKinds: {
-    member_of: { category: 'social', strength: 0.5 },
-    allied_with: { category: 'political', strength: 0.7 },
-  },
-  generateName: (type, context) => { /* ... */ },
+export const mySchema: CanonrySchemaSlice = {
+  entityKinds: [
+    { kind: 'npc', subtypes: [{ id: 'hero', name: 'Hero' }], statuses: [{ id: 'alive', name: 'Alive', isTerminal: false }] },
+    { kind: 'location', subtypes: [{ id: 'city', name: 'City' }], statuses: [{ id: 'active', name: 'Active', isTerminal: false }] },
+  ],
+  relationshipKinds: [
+    { kind: 'member_of', srcKinds: ['npc'], dstKinds: ['faction'] },
+  ],
+  cultures: [
+    { id: 'world', name: 'World' },
+  ],
 };
 ```
 

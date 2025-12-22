@@ -239,7 +239,7 @@ export class FrameworkValidator {
   }
 
   /**
-   * Check if an entity kind exists in the domain schema
+   * Check if an entity kind exists in the canonical schema
    */
   private entityKindExists(kind: string): boolean {
     // Check entity registries first
@@ -249,25 +249,13 @@ export class FrameworkValidator {
       }
     }
 
-    // Check domain schema (entityKinds is an array of EntityKindDefinition objects)
-    if (this.config.domain && this.config.domain.entityKinds) {
-      return this.config.domain.entityKinds.some(ekd => ekd.kind === kind);
-    }
-
-    // Fallback: assume standard kinds
-    return ['npc', 'faction', 'location', 'abilities', 'rules'].includes(kind);
+    return this.config.schema.entityKinds.some(ekd => ekd.kind === kind);
   }
 
   /**
-   * Check if a relationship kind exists in the domain schema
+   * Check if a relationship kind exists in the canonical schema
    */
   private relationshipKindExists(kind: string): boolean {
-    // Check domain schema
-    if (this.config.domain && this.config.domain.relationshipKinds) {
-      return this.config.domain.relationshipKinds.some(rkd => rkd.kind === kind);
-    }
-
-    // Fallback: assume common relationship kinds
-    return ['member_of', 'leader_of', 'ally_of', 'enemy_of', 'resident_of', 'inspired_by'].includes(kind);
+    return this.config.schema.relationshipKinds.some(rkd => rkd.kind === kind);
   }
 }

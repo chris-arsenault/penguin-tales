@@ -5,15 +5,46 @@
  * Extracted from worldEngine.ts for better separation of concerns.
  */
 
-import { HardState, Relationship } from '../core/worldTypes';
-import { Graph } from '../engine/types';
+import type { Graph, HardState, Relationship } from '../types';
 import { getProminenceValue } from '../utils';
-import {
-  countRelationships,
-  findRelationship,
-  getRelatedEntity,
-  getRelationshipIdSet
-} from '../graph/graphQueries';
+
+function countRelationships(
+  graph: Graph,
+  entityId: string,
+  kind: string,
+  direction: 'src' | 'dst' | 'both'
+): number {
+  return graph.getEntityRelationships(entityId, direction).filter(rel => rel.kind === kind).length;
+}
+
+function findRelationship(
+  graph: Graph,
+  entityId: string,
+  kind: string,
+  direction: 'src' | 'dst' | 'both'
+): Relationship | undefined {
+  return graph.getEntityRelationships(entityId, direction).find(rel => rel.kind === kind);
+}
+
+function getRelationshipIdSet(
+  graph: Graph,
+  entityId: string,
+  kinds: string[],
+  direction: 'src' | 'dst' | 'both'
+): Set<string> {
+  const ids = new Set<string>();
+  graph.getEntityRelationships(entityId, direction).forEach(rel => {
+    if (!kinds.includes(rel.kind)) return;
+    if (direction === 'dst') {
+      ids.add(rel.src);
+    } else if (direction === 'src') {
+      ids.add(rel.dst);
+    } else {
+      ids.add(rel.src === entityId ? rel.dst : rel.src);
+    }
+  });
+  return ids;
+}
 
 /**
  * Entity snapshot for change detection
@@ -51,11 +82,15 @@ export interface EntitySnapshot {
  * Create a snapshot of an entity's current state
  */
 export function captureEntitySnapshot(entity: HardState, graph: Graph): EntitySnapshot {
+  const relationshipIds = graph
+    .getEntityRelationships(entity.id, 'both')
+    .map(rel => `${rel.kind}:${rel.src}:${rel.dst}`);
+
   const snapshot: EntitySnapshot = {
     tick: graph.tick,
     status: entity.status,
     prominence: entity.prominence,
-    keyRelationshipIds: new Set(entity.links.map(l => `${l.kind}:${l.src}:${l.dst}`))
+    keyRelationshipIds: new Set(relationshipIds)
   };
 
   // Location-specific tracking
@@ -98,11 +133,7 @@ export function captureEntitySnapshot(entity: HardState, graph: Graph): EntitySn
 
   // NPC-specific tracking
   if (entity.kind === 'npc') {
-    snapshot.leadershipIds = new Set(
-      entity.links
-        .filter(l => l.kind === 'leader_of')
-        .map(l => l.dst)
-    );
+    snapshot.leadershipIds = getRelationshipIdSet(graph, entity.id, ['leader_of'], 'src');
   }
 
   return snapshot;
@@ -361,11 +392,7 @@ export function detectNPCChanges(
   if (prominenceValue < 3) return changes; // Skip if not 'renowned' or 'mythic'
 
   // Leadership changes (track as src of leader_of)
-  const currentLeaderships = new Set(
-    npc.links
-      .filter(l => l.kind === 'leader_of')
-      .map(l => l.dst)
-  );
+  const currentLeaderships = getRelationshipIdSet(graph, npc.id, ['leader_of'], 'src');
   changes.push(...detectSetChanges(
     currentLeaderships,
     snapshot.leadershipIds || new Set(),

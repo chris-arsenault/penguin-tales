@@ -40,7 +40,6 @@ import type {
   PlacementAnchor,
   PlacementSpacing,
   PlacementRegionPolicy,
-  PlacementFallback,
   CountRange,
   RelationshipCondition,
   GraphPathAssertion,
@@ -532,10 +531,26 @@ export class TemplateInterpreter {
       placeholders.push(placeholder);
 
       // Resolve subtype
-      const subtype = this.resolveSubtype(rule.subtype, context);
+      const subtype = this.resolveSubtype(rule.subtype, context, rule.kind);
 
       // Resolve culture
+      if (!rule.culture) {
+        throw new Error(
+          `Creation rule for kind "${rule.kind}" is missing culture spec.`
+        );
+      }
       const culture = this.resolveCulture(rule.culture, context);
+
+      if (!rule.status) {
+        throw new Error(
+          `Creation rule for kind "${rule.kind}" is missing status.`
+        );
+      }
+      if (!rule.prominence) {
+        throw new Error(
+          `Creation rule for kind "${rule.kind}" is missing prominence.`
+        );
+      }
 
       // Resolve description
       const description = this.resolveDescription(rule.description, context);
@@ -550,8 +565,8 @@ export class TemplateInterpreter {
       const entity: Partial<HardState> = {
         kind: rule.kind,
         subtype,
-        status: rule.status || 'active',
-        prominence: rule.prominence || 'marginal',
+        status: rule.status,
+        prominence: rule.prominence,
         culture,
         description,
         tags: mergedTags,
@@ -584,7 +599,7 @@ export class TemplateInterpreter {
     return count.min + Math.floor(Math.random() * (count.max - count.min + 1));
   }
 
-  private resolveSubtype(spec: SubtypeSpec, context: ExecutionContext): string {
+  private resolveSubtype(spec: SubtypeSpec, context: ExecutionContext, entityKind: string): string {
     if (typeof spec === 'string') {
       return spec;
     }
@@ -594,19 +609,21 @@ export class TemplateInterpreter {
       if (refEntity && (!spec.chance || Math.random() < spec.chance)) {
         return refEntity.subtype;
       }
-      if (spec.fallback === 'random') {
-        // Would need subtype list from domain schema
-        return 'default';
-      }
-      return spec.fallback || 'default';
+      throw new Error(
+        `Subtype inheritance failed for kind "${entityKind}".`
+      );
     }
 
     if ('fromPressure' in spec) {
       const { graphView } = context;
       let maxPressure = -1;
-      let selectedSubtype = Object.values(spec.fromPressure)[0] || 'default';
+      const entries = Object.entries(spec.fromPressure);
+      if (entries.length === 0) {
+        throw new Error(`Subtype fromPressure map is empty for kind "${entityKind}".`);
+      }
+      let selectedSubtype = entries[0][1];
 
-      for (const [pressureId, subtype] of Object.entries(spec.fromPressure)) {
+      for (const [pressureId, subtype] of entries) {
         const value = graphView.getPressure(pressureId) || 0;
         if (value > maxPressure) {
           maxPressure = value;
@@ -617,24 +634,29 @@ export class TemplateInterpreter {
     }
 
     if ('random' in spec) {
+      if (!spec.random.length) {
+        throw new Error(`Subtype random list is empty for kind "${entityKind}".`);
+      }
       return pickRandom(spec.random);
     }
 
-    return 'default';
+    throw new Error(`Invalid subtype spec for kind "${entityKind}": ${JSON.stringify(spec)}.`);
   }
 
-  private resolveCulture(spec: CultureSpec | undefined, context: ExecutionContext): string {
-    if (!spec) {
-      return context.target?.culture || 'world';
-    }
-
+  private resolveCulture(spec: CultureSpec, context: ExecutionContext): string {
     if (typeof spec === 'string') {
       throw new Error(`Invalid culture spec: "${spec}". Use { fixed: "${spec}" } or { inherit: "entity_ref" }`);
     }
 
     if ('inherit' in spec) {
       const refEntity = context.resolveEntity(spec.inherit);
-      const resolvedCulture = refEntity?.culture || 'world';
+      if (!refEntity) {
+        throw new Error(`Culture inherit reference "${spec.inherit}" could not be resolved.`);
+      }
+      if (!refEntity.culture) {
+        throw new Error(`Entity "${refEntity.id}" has no culture to inherit.`);
+      }
+      const resolvedCulture = refEntity.culture;
       // Debug: ensure we're not returning the raw variable reference
       if (resolvedCulture.startsWith('$')) {
         console.warn(`[resolveCulture] BUG: Resolved culture is a variable reference: ${resolvedCulture}. RefEntity: ${refEntity?.id}, spec.inherit: ${spec.inherit}`);
@@ -761,20 +783,9 @@ export class TemplateInterpreter {
       };
     }
 
-    // Fallback to random placement (shouldn't happen if placeWithPlacementOptions handles fallbacks)
-    const fallbackCoords = {
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      z: 50
-    };
-    return {
-      coordinates: fallbackCoords,
-      strategy: 'random_fallback',
-      debug: {
-        anchorType: spec.anchor.type,
-        resolvedVia: 'interpreter_fallback'
-      }
-    };
+    throw new Error(
+      `resolvePlacement: could not resolve placement for "${entityKind}" using anchor "${spec.anchor.type}".`
+    );
   }
 
   // ===========================================================================
@@ -991,7 +1002,7 @@ export class TemplateInterpreter {
     const candidates = rulesSelectVariableEntities(select, ruleCtx);
 
     if (candidates.length === 0) {
-      return select.fallback ? context.resolveEntity(select.fallback) : undefined;
+      return undefined;
     }
 
     const pickStrategy = select.pickStrategy ?? 'random';

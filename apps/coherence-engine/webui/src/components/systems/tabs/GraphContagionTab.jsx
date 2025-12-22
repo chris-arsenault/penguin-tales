@@ -14,7 +14,7 @@ import TagSelector from '@penguin-tales/shared-components/TagSelector';
  * @param {Object} props.schema - Domain schema
  */
 export function GraphContagionTab({ system, onChange, schema }) {
-  const config = system.config || {};
+  const config = system.config;
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,

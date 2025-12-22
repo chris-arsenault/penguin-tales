@@ -36,10 +36,14 @@ export default function RelationshipKindEditor({
   };
 
   const updateRel = (relKind, updates) => {
+    const existing = relationshipKinds.find((r) => r.kind === relKind);
+    if (existing?.isFramework) return;
     onChange(relationshipKinds.map((r) => (r.kind === relKind ? { ...r, ...updates } : r)));
   };
 
   const deleteRel = (relKind) => {
+    const existing = relationshipKinds.find((r) => r.kind === relKind);
+    if (existing?.isFramework) return;
     if (confirm('Delete this relationship kind?')) {
       onChange(relationshipKinds.filter((r) => r.kind !== relKind));
     }
@@ -47,7 +51,7 @@ export default function RelationshipKindEditor({
 
   const toggleEntityKind = (relKind, field, entityKindId) => {
     const rel = relationshipKinds.find((r) => r.kind === relKind);
-    if (!rel) return;
+    if (!rel || rel.isFramework) return;
     const current = rel[field] || [];
     const updated = current.includes(entityKindId)
       ? current.filter((k) => k !== entityKindId)
@@ -90,6 +94,7 @@ export default function RelationshipKindEditor({
             const stableKey = getStableKey(rel);
             const isExpanded = expandedRels[stableKey];
             const { srcNames, dstNames } = getSummary(rel);
+            const isFramework = Boolean(rel.isFramework);
 
             return (
               <ExpandableCard
@@ -101,6 +106,7 @@ export default function RelationshipKindEditor({
                 actions={
                   <>
                     <UsageBadges usage={getRelationshipKindUsageSummary(schemaUsage, rel.kind)} compact />
+                    {isFramework && <span className="badge badge-info">framework</span>}
                     {rel.cullable === false && <span className="badge badge-info">protected</span>}
                     <div className="text-muted text-small" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {srcNames.map((name, i) => (
@@ -122,6 +128,7 @@ export default function RelationshipKindEditor({
                     <input
                       className="input"
                       value={rel.description}
+                      disabled={isFramework}
                       onChange={(e) => updateRel(rel.kind, { description: e.target.value })}
                       placeholder="Relationship display name"
                     />
@@ -130,6 +137,7 @@ export default function RelationshipKindEditor({
                     <input
                       className="input"
                       value={rel.kind}
+                      disabled={isFramework}
                       onChange={(e) => {
                         const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
                         if (newKind && !relationshipKinds.some((r) => r.kind === newKind && r.kind !== rel.kind)) {
@@ -159,6 +167,7 @@ export default function RelationshipKindEditor({
                               key={ek.kind}
                               className={`chip chip-clickable ${rel.srcKinds?.includes(ek.kind) ? 'chip-active' : ''}`}
                               onClick={() => toggleEntityKind(rel.kind, 'srcKinds', ek.kind)}
+                              style={isFramework ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
                             >
                               {ek.description}
                             </div>
@@ -177,6 +186,7 @@ export default function RelationshipKindEditor({
                               key={ek.kind}
                               className={`chip chip-clickable ${rel.dstKinds?.includes(ek.kind) ? 'chip-active' : ''}`}
                               onClick={() => toggleEntityKind(rel.kind, 'dstKinds', ek.kind)}
+                              style={isFramework ? { pointerEvents: 'none', opacity: 0.6 } : undefined}
                             >
                               {ek.description}
                             </div>
@@ -195,6 +205,7 @@ export default function RelationshipKindEditor({
                       <select
                         className="input"
                         value={rel.decayRate || 'medium'}
+                        disabled={isFramework}
                         onChange={(e) => updateRel(rel.kind, { decayRate: e.target.value })}
                       >
                         <option value="none">None (permanent)</option>
@@ -208,6 +219,7 @@ export default function RelationshipKindEditor({
                         <input
                           type="checkbox"
                           checked={rel.cullable !== false}
+                          disabled={isFramework}
                           onChange={(e) => updateRel(rel.kind, { cullable: e.target.checked })}
                         />
                         Cullable (can be removed when weak)
@@ -218,7 +230,7 @@ export default function RelationshipKindEditor({
 
                 {/* Delete */}
                 <div className="danger-zone">
-                  <button className="btn btn-danger" onClick={() => deleteRel(rel.kind)}>
+                  <button className="btn btn-danger" onClick={() => deleteRel(rel.kind)} disabled={isFramework}>
                     Delete Relationship
                   </button>
                 </div>

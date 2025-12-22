@@ -14,10 +14,13 @@ import {
   loadSimulationData,
   loadWorldData,
   saveWorldData,
-  loadDomainContext,
-  saveDomainContext,
+  loadWorldContext,
+  saveWorldContext,
+  loadPromptTemplates,
+  savePromptTemplates,
   getSlots,
   getActiveSlotIndex,
+  saveSlot,
   saveToSlot,
   loadSlot,
   clearSlot,
@@ -31,6 +34,14 @@ import LandingPage from './components/LandingPage';
 import HelpModal from './components/HelpModal';
 import { computeTagUsage, computeSchemaUsage } from '@penguin-tales/shared-components';
 import { validateAllConfigs } from '../../../lore-weave/lib/engine/configSchemaValidator';
+import {
+  mergeFrameworkSchemaSlice,
+  FRAMEWORK_ENTITY_KIND_VALUES,
+  FRAMEWORK_RELATIONSHIP_KIND_VALUES,
+  FRAMEWORK_CULTURES,
+  FRAMEWORK_CULTURE_DEFINITIONS,
+  FRAMEWORK_TAG_VALUES,
+} from '@canonry/world-schema';
 import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
@@ -83,6 +94,22 @@ const VALID_TABS = [
   'archivist',
 ];
 
+const SLOT_EXPORT_FORMAT = 'canonry-slot-export';
+const SLOT_EXPORT_VERSION = 1;
+
+function isWorldOutput(candidate) {
+  if (!candidate || typeof candidate !== 'object') return false;
+  return Boolean(
+    candidate.schema &&
+    candidate.metadata &&
+    Array.isArray(candidate.hardState) &&
+    Array.isArray(candidate.relationships) &&
+    Array.isArray(candidate.history) &&
+    candidate.pressures &&
+    typeof candidate.pressures === 'object'
+  );
+}
+
 function normalizeUiState(raw) {
   const activeTab = VALID_TABS.includes(raw?.activeTab) ? raw.activeTab : null;
   const activeSectionByTab = raw?.activeSectionByTab && typeof raw.activeSectionByTab === 'object'
@@ -109,13 +136,28 @@ export default function App() {
   const [showHome, setShowHome] = useState(initialUiState.showHome);
   const [helpModalOpen, setHelpModalOpen] = useState(initialUiState.helpModalOpen);
   const [archivistData, setArchivistData] = useState(null);
-  const [domainContext, setDomainContext] = useState(null);
+  const [worldContext, setWorldContext] = useState(null);
+  const [promptTemplates, setPromptTemplates] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationState, setSimulationState] = useState(null);
   const [slots, setSlots] = useState({});
   const [activeSlotIndex, setActiveSlotIndex] = useState(0);
   const simulationOwnerRef = useRef(null);
+  // Track whether we're loading from a saved slot (to skip auto-save to scratch)
+  const isLoadingSlotRef = useRef(false);
+  // Track the last saved simulation results ID to detect new simulations
+  const lastSavedSimIdRef = useRef(null);
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
+
+  const handleIlluminatorWorldDataChange = useCallback((enrichedWorld) => {
+    setArchivistData((prev) => {
+      if (prev?.worldData === enrichedWorld) return prev;
+      return {
+        ...(prev || { loreData: null, imageData: null }),
+        worldData: enrichedWorld,
+      };
+    });
+  }, []);
 
   const setActiveSection = useCallback((section) => {
     if (!activeTab) return;
@@ -180,10 +222,13 @@ export default function App() {
     }
 
     simulationOwnerRef.current = null;
+    isLoadingSlotRef.current = false;
+    lastSavedSimIdRef.current = null;
     setSimulationResults(null);
     setSimulationState(null);
     setArchivistData(null);
-    setDomainContext(null);
+    setWorldContext(null);
+    setPromptTemplates(null);
     setSlots({});
     setActiveSlotIndex(0);
 
@@ -200,7 +245,17 @@ export default function App() {
 
       // Load data from active slot
       const activeSlot = loadedSlots[loadedActiveIndex];
+      // Only skip auto-save if we actually loaded prior simulation/world data
+      isLoadingSlotRef.current = Boolean(
+        activeSlot?.simulationResults ||
+        activeSlot?.simulationState ||
+        activeSlot?.worldData
+      );
       if (activeSlot) {
+        // Track the loaded simulation ID to prevent re-saving as "new"
+        if (activeSlot.simulationResults?.hardState) {
+          lastSavedSimIdRef.current = `${activeSlot.simulationResults.hardState.length}-${activeSlot.simulationResults.hardState[0]?.id || 'none'}`;
+        }
         setSimulationResults(activeSlot.simulationResults || null);
         setSimulationState(activeSlot.simulationState || null);
         if (activeSlot.worldData) {
@@ -208,9 +263,12 @@ export default function App() {
         }
       }
 
-      // Load shared data (domain context)
-      if (store?.domainContext) {
-        setDomainContext(store.domainContext);
+      // Load shared data (world context and prompt templates)
+      if (store?.worldContext) {
+        setWorldContext(store.worldContext);
+      }
+      if (store?.promptTemplates) {
+        setPromptTemplates(store.promptTemplates);
       }
     });
 
@@ -219,95 +277,6 @@ export default function App() {
     };
   }, [currentProject?.id]);
 
-  // Transform simulation results to worldData format for Archivist/Illuminator
-  const transformToWorldData = useCallback((simResults) => {
-    if (!simResults?.hardState) return null;
-    if (simResults?.uiSchema) return simResults;
-    if (!currentProject) return null;
-
-    // Build per-kind map configs from semantic plane data
-    const perKindMaps = {};
-    currentProject.entityKinds?.forEach(ek => {
-      if (ek.semanticPlane) {
-        const sp = ek.semanticPlane;
-        perKindMaps[ek.kind] = {
-          entityKind: ek.kind,
-          name: `${ek.description || ek.kind} Semantic Map`,
-          description: `Coordinate space for ${ek.description || ek.kind}`,
-          bounds: { min: 0, max: 100 },
-          hasZAxis: !!sp.axes?.z,
-          zAxisLabel: sp.axes?.z?.name,
-          xAxis: sp.axes?.x,
-          yAxis: sp.axes?.y,
-          zAxis: sp.axes?.z,
-        };
-      }
-    });
-
-    // Build per-kind regions from coordinateState
-    const perKindRegions = {};
-    const coordRegions = simResults.coordinateState?.regions;
-    const cultureColors = {};
-    currentProject.cultures?.forEach(c => {
-      if (c.id && c.color) {
-        cultureColors[c.id] = c.color;
-      }
-    });
-
-    if (coordRegions) {
-      Object.entries(coordRegions).forEach(([entityKind, regions]) => {
-        if (regions && regions.length > 0) {
-          perKindRegions[entityKind] = regions.map(r => ({
-            id: r.id,
-            label: r.label,
-            description: r.description,
-            bounds: r.bounds,
-            metadata: {
-              color: r.color || (r.culture && cultureColors[r.culture]),
-              culture: r.culture,
-              tags: r.tags,
-              subtype: r.culture ? 'colony' : 'default',
-              emergent: r.emergent,
-              createdAt: r.createdAt,
-              createdBy: r.createdBy,
-            },
-          }));
-        }
-      });
-    }
-
-    // Build uiSchema for Archivist
-    const uiSchema = {
-      worldName: currentProject.name || 'Simulation Results',
-      worldIcon: '',
-      entityKinds: currentProject.entityKinds || [],
-      relationshipKinds: currentProject.relationshipKinds || [],
-      prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
-      cultures: currentProject.cultures?.map(c => ({
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        color: c.color,
-      })) || [],
-      perKindMaps,
-      perKindRegions,
-    };
-
-    return {
-      metadata: {
-        ...simResults.metadata,
-        enrichmentTriggers: {},
-      },
-      hardState: simResults.hardState || [],
-      relationships: simResults.relationships || [],
-      pressures: simResults.pressures || {},
-      history: simResults.history || [],
-      distributionMetrics: simResults.distributionMetrics,
-      coordinateState: simResults.coordinateState,
-      uiSchema,
-    };
-  }, [currentProject]);
-
   useEffect(() => {
     if (!currentProject?.id) return;
     if (simulationOwnerRef.current !== currentProject.id) return;
@@ -315,23 +284,22 @@ export default function App() {
     const status = simulationState?.status;
     if (status && status !== 'complete' && status !== 'error') return;
 
-    // Generate a title for the run based on simulation results
-    let runTitle = 'Scratch';
-    if (simulationResults?.hardState) {
-      const entityCount = simulationResults.hardState.length;
-      const date = new Date();
-      const timeStr = date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-      runTitle = `Run - ${timeStr} (${entityCount} entities)`;
+    // Skip auto-save to scratch if we're loading from a saved slot
+    if (isLoadingSlotRef.current) {
+      isLoadingSlotRef.current = false;
+      return;
     }
 
-    // Transform simulation results to worldData for Archivist/Illuminator
-    const worldData = transformToWorldData(simulationResults);
+    // Generate a unique ID for this simulation result to detect new vs repeated saves
+    const simId = simulationResults?.hardState ?
+      `${simulationResults.hardState.length}-${simulationResults.hardState[0]?.id || 'none'}` :
+      null;
+
+    // Check if this is a genuinely new simulation (different from last saved)
+    const isNewSimulation = simId && simId !== lastSavedSimIdRef.current;
+
+    const worldData = simulationResults ?? null;
+    const now = Date.now();
 
     // Save to scratch slot (slot 0) and update local slots state
     saveSimulationData(currentProject.id, {
@@ -344,17 +312,42 @@ export default function App() {
       }
 
       // Update local slots state to reflect save
-      setSlots((prev) => ({
-        ...prev,
-        0: {
-          ...prev[0],
-          simulationResults,
-          simulationState,
-          worldData,
-          title: runTitle,
-          createdAt: Date.now(),
-        },
-      }));
+      // Only update title/createdAt for NEW simulations, preserve existing for re-saves
+      setSlots((prev) => {
+        const existingSlot = prev[0] || {};
+        let title = existingSlot.title || 'Scratch';
+        let createdAt = existingSlot.createdAt || now;
+
+        // Only generate new title for genuinely new simulations
+        if (isNewSimulation && simulationResults?.hardState) {
+          const entityCount = simulationResults.hardState.length;
+          const date = new Date(now);
+          const timeStr = date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          });
+          title = `Run - ${timeStr} (${entityCount} entities)`;
+          createdAt = now;
+        }
+
+        return {
+          ...prev,
+          0: {
+            ...existingSlot,
+            simulationResults,
+            simulationState,
+            worldData,
+            title,
+            createdAt,
+          },
+        };
+      });
+
+      // Track this simulation as saved
+      lastSavedSimIdRef.current = simId;
 
       // Update archivistData for immediate use
       if (worldData) {
@@ -364,7 +357,7 @@ export default function App() {
       // Ensure we're viewing scratch after new simulation
       setActiveSlotIndex(0);
     });
-  }, [currentProject?.id, simulationResults, simulationState, transformToWorldData]);
+  }, [currentProject?.id, simulationResults, simulationState]);
 
   // Persist world data when it changes (for Archivist/Illuminator)
   useEffect(() => {
@@ -373,27 +366,66 @@ export default function App() {
     saveWorldData(currentProject.id, archivistData.worldData);
   }, [currentProject?.id, archivistData]);
 
-  // Persist domain context when it changes (for Illuminator)
+  // Persist world context when it changes (for Illuminator)
   useEffect(() => {
     if (!currentProject?.id) return;
-    if (!domainContext) return;
-    saveDomainContext(currentProject.id, domainContext);
-  }, [currentProject?.id, domainContext]);
+    if (!worldContext) return;
+    const timeoutId = setTimeout(() => {
+      saveWorldContext(currentProject.id, worldContext);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentProject?.id, worldContext]);
+
+  // Persist prompt templates when they change (for Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!promptTemplates) return;
+    const timeoutId = setTimeout(() => {
+      savePromptTemplates(currentProject.id, promptTemplates);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentProject?.id, promptTemplates]);
+
+  const mergeFrameworkOverrides = (items, existingItems, frameworkKeys, keyField) => {
+    const filtered = (items || []).filter((item) => !item?.isFramework);
+    const existingOverrides = (existingItems || []).filter((item) => frameworkKeys.has(item?.[keyField]));
+    const existingKeys = new Set(filtered.map((item) => item?.[keyField]));
+    const merged = [
+      ...filtered,
+      ...existingOverrides.filter((item) => !existingKeys.has(item?.[keyField])),
+    ];
+    return merged;
+  };
 
   // Update functions that auto-save
   const updateEntityKinds = useCallback(
-    (entityKinds) => save({ entityKinds }),
-    [save]
+    (entityKinds) => {
+      if (!currentProject) return;
+      const frameworkKeys = new Set(FRAMEWORK_ENTITY_KIND_VALUES);
+      const merged = mergeFrameworkOverrides(entityKinds, currentProject.entityKinds, frameworkKeys, 'kind');
+      save({ entityKinds: merged });
+    },
+    [currentProject, save]
   );
 
   const updateRelationshipKinds = useCallback(
-    (relationshipKinds) => save({ relationshipKinds }),
-    [save]
+    (relationshipKinds) => {
+      if (!currentProject) return;
+      const frameworkKeys = new Set(FRAMEWORK_RELATIONSHIP_KIND_VALUES);
+      const merged = mergeFrameworkOverrides(relationshipKinds, currentProject.relationshipKinds, frameworkKeys, 'kind');
+      save({ relationshipKinds: merged });
+    },
+    [currentProject, save]
   );
 
   const updateCultures = useCallback(
-    (cultures) => save({ cultures }),
-    [save]
+    (cultures) => {
+      if (!currentProject) return;
+      const frameworkKeys = new Set(Object.values(FRAMEWORK_CULTURES));
+      const merged = mergeFrameworkOverrides(cultures, currentProject.cultures, frameworkKeys, 'id');
+      save({ cultures: merged });
+    },
+    [currentProject, save]
   );
 
   const updateSeedEntities = useCallback(
@@ -432,8 +464,13 @@ export default function App() {
   );
 
   const updateTagRegistry = useCallback(
-    (tagRegistry) => save({ tagRegistry }),
-    [save]
+    (tagRegistry) => {
+      if (!currentProject) return;
+      const frameworkKeys = new Set(FRAMEWORK_TAG_VALUES);
+      const merged = mergeFrameworkOverrides(tagRegistry, currentProject.tagRegistry, frameworkKeys, 'tag');
+      save({ tagRegistry: merged });
+    },
+    [currentProject, save]
   );
 
   const updateAxisDefinitions = useCallback(
@@ -462,9 +499,22 @@ export default function App() {
   const updateCultureNaming = useCallback(
     (cultureId, namingData) => {
       if (!currentProject) return;
-      const cultures = currentProject.cultures.map((c) =>
-        c.id === cultureId ? { ...c, naming: namingData } : c
-      );
+      const existing = currentProject.cultures.find((c) => c.id === cultureId);
+      if (existing) {
+        const cultures = currentProject.cultures.map((c) =>
+          c.id === cultureId ? { ...c, naming: namingData } : c
+        );
+        save({ cultures });
+        return;
+      }
+
+      const baseCulture = FRAMEWORK_CULTURE_DEFINITIONS.find((c) => c.id === cultureId);
+      if (!baseCulture) return;
+
+      const cultures = [
+        ...currentProject.cultures,
+        { id: baseCulture.id, name: baseCulture.name, naming: namingData },
+      ];
       save({ cultures });
     },
     [currentProject, save]
@@ -491,8 +541,15 @@ export default function App() {
         setSlots(store.slots);
       }
 
+      // Mark that we're loading from a saved slot (skip auto-save effect)
+      isLoadingSlotRef.current = true;
+
       // Set simulation state from stored slot
       if (storedSlot) {
+        // Track the loaded simulation ID to prevent re-saving as "new"
+        if (storedSlot.simulationResults?.hardState) {
+          lastSavedSimIdRef.current = `${storedSlot.simulationResults.hardState.length}-${storedSlot.simulationResults.hardState[0]?.id || 'none'}`;
+        }
         setSimulationResults(storedSlot.simulationResults || null);
         setSimulationState(storedSlot.simulationState || null);
         if (storedSlot.worldData) {
@@ -501,6 +558,7 @@ export default function App() {
           setArchivistData(null);
         }
       } else {
+        lastSavedSimIdRef.current = null;
         setSimulationResults(null);
         setSimulationState(null);
         setArchivistData(null);
@@ -523,6 +581,12 @@ export default function App() {
         setSlots(store.slots);
       }
       setActiveSlotIndex(targetSlotIndex);
+
+      // Update the ref to match the saved slot's data (now in targetSlotIndex)
+      const savedSlot = store?.slots?.[targetSlotIndex];
+      if (savedSlot?.simulationResults?.hardState) {
+        lastSavedSimIdRef.current = `${savedSlot.simulationResults.hardState.length}-${savedSlot.simulationResults.hardState[0]?.id || 'none'}`;
+      }
     } catch (err) {
       console.error('Failed to save to slot:', err);
       alert(err.message || 'Failed to save to slot');
@@ -553,24 +617,170 @@ export default function App() {
 
       // Reload slots from storage
       const store = await loadWorldStore(currentProject.id);
-      if (store?.slots) {
-        setSlots(store.slots);
-      }
+      const loadedSlots = store?.slots || {};
+      setSlots(loadedSlots);
 
       // If we cleared the active slot, reset state
       if (slotIndex === activeSlotIndex) {
+        // Mark as loading to prevent auto-save effect from triggering
+        isLoadingSlotRef.current = true;
+        lastSavedSimIdRef.current = null;
         setSimulationResults(null);
         setSimulationState(null);
         setArchivistData(null);
-        // Switch to scratch if we were on a different slot
+
+        // If we cleared slot 0 (scratch), stay on it but with empty state
+        // If we cleared a saved slot, switch to scratch (or first available)
         if (slotIndex !== 0) {
-          setActiveSlotIndex(0);
+          // Find first slot with data, or default to scratch
+          const availableSlot = loadedSlots[0] ? 0 : Object.keys(loadedSlots).map(Number).sort()[0];
+          setActiveSlotIndex(availableSlot ?? 0);
         }
+        // For slot 0, activeSlotIndex stays at 0 (scratch is always slot 0 even if empty)
       }
     } catch (err) {
       console.error('Failed to clear slot:', err);
     }
   }, [currentProject?.id, activeSlotIndex]);
+
+  const parseSlotImportPayload = useCallback((payload) => {
+    if (payload?.format === SLOT_EXPORT_FORMAT && payload?.version === SLOT_EXPORT_VERSION) {
+      const worldData = payload.worldData || payload.simulationResults;
+      if (!isWorldOutput(worldData)) {
+        throw new Error('Slot export is missing a valid world output.');
+      }
+      return {
+        worldData,
+        simulationResults: payload.simulationResults ?? worldData,
+        simulationState: payload.simulationState ?? null,
+        worldContext: payload.worldContext,
+        promptTemplates: payload.promptTemplates,
+        slotTitle: payload.slot?.title,
+        slotCreatedAt: payload.slot?.createdAt,
+      };
+    }
+
+    if (isWorldOutput(payload)) {
+      return {
+        worldData: payload,
+        simulationResults: payload,
+        simulationState: null,
+      };
+    }
+
+    throw new Error('Unsupported import format. Expected a Canonry slot export or world output JSON.');
+  }, []);
+
+  const importSlotPayload = useCallback(async (slotIndex, payload, options = {}) => {
+    if (!currentProject?.id) return;
+    const parsed = parseSlotImportPayload(payload);
+    const now = Date.now();
+    const title = parsed.slotTitle
+      || options.defaultTitle
+      || (slotIndex === 0 ? 'Scratch' : generateSlotTitle(slotIndex, now));
+
+    const slotData = {
+      title,
+      createdAt: parsed.slotCreatedAt ?? now,
+      savedAt: now,
+      simulationResults: parsed.simulationResults ?? parsed.worldData,
+      simulationState: parsed.simulationState ?? null,
+      worldData: parsed.worldData,
+    };
+
+    await saveSlot(currentProject.id, slotIndex, slotData);
+
+    if (parsed.worldContext !== undefined) {
+      setWorldContext(parsed.worldContext);
+      await saveWorldContext(currentProject.id, parsed.worldContext);
+    }
+    if (parsed.promptTemplates !== undefined) {
+      setPromptTemplates(parsed.promptTemplates);
+      await savePromptTemplates(currentProject.id, parsed.promptTemplates);
+    }
+
+    await handleLoadSlot(slotIndex);
+  }, [
+    currentProject?.id,
+    parseSlotImportPayload,
+    handleLoadSlot,
+    saveSlot,
+    saveWorldContext,
+    savePromptTemplates,
+    generateSlotTitle,
+  ]);
+
+  const handleExportSlot = useCallback((slotIndex) => {
+    const slot = slots[slotIndex];
+    if (!slot) {
+      alert('Slot is empty.');
+      return;
+    }
+    const worldData = slot.worldData || slot.simulationResults;
+    if (!isWorldOutput(worldData)) {
+      alert('Slot does not contain a valid world output.');
+      return;
+    }
+
+    const exportPayload = {
+      format: SLOT_EXPORT_FORMAT,
+      version: SLOT_EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      slot: {
+        index: slotIndex,
+        title: slot.title || (slotIndex === 0 ? 'Scratch' : `Slot ${slotIndex}`),
+        createdAt: slot.createdAt || null,
+        savedAt: slot.savedAt || null,
+      },
+      worldData,
+      simulationResults: slot.simulationResults || null,
+      simulationState: slot.simulationState || null,
+      worldContext: worldContext ?? null,
+      promptTemplates: promptTemplates ?? null,
+    };
+
+    const safeBase = (exportPayload.slot.title || `slot-${slotIndex}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const filename = `${safeBase || `slot-${slotIndex}`}.canonry-slot.json`;
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [slots, worldContext, promptTemplates]);
+
+  const handleImportSlot = useCallback(async (slotIndex, file) => {
+    if (!currentProject?.id || !file) return;
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      await importSlotPayload(slotIndex, payload, { defaultTitle: 'Imported Output' });
+    } catch (err) {
+      console.error('Failed to import slot:', err);
+      alert(err.message || 'Failed to import slot data');
+    }
+  }, [currentProject?.id, importSlotPayload]);
+
+  const handleLoadExampleOutput = useCallback(async () => {
+    if (!currentProject?.id) return;
+    try {
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const response = await fetch(`${baseUrl}default-project/worldOutput.json`);
+      if (!response.ok) {
+        throw new Error('Example output not found.');
+      }
+      const payload = await response.json();
+      await importSlotPayload(0, payload, { defaultTitle: 'Example Output' });
+    } catch (err) {
+      console.error('Failed to load example output:', err);
+      alert(err.message || 'Failed to load example output');
+    }
+  }, [currentProject?.id, importSlotPayload]);
 
   // Check if scratch has data
   const hasDataInScratch = Boolean(slots[0]?.simulationResults);
@@ -589,26 +799,30 @@ export default function App() {
 
   // Derived data for remotes (read-only schema)
   const schema = useMemo(() => {
-    if (!currentProject) {
-      return {
-        id: '',
-        name: '',
-        version: '',
-        entityKinds: [],
-        relationshipKinds: [],
-        cultures: [],
-        tagRegistry: [],
-      };
-    }
-    return {
-      id: currentProject.id,
-      name: currentProject.name,
-      version: currentProject.version,
-      entityKinds: currentProject.entityKinds,
-      relationshipKinds: currentProject.relationshipKinds,
-      cultures: currentProject.cultures,
-      tagRegistry: currentProject.tagRegistry || [],
-    };
+    const baseSchema = currentProject
+      ? {
+          id: currentProject.id,
+          name: currentProject.name,
+          version: currentProject.version,
+          entityKinds: currentProject.entityKinds || [],
+          relationshipKinds: currentProject.relationshipKinds || [],
+          cultures: currentProject.cultures || [],
+          tagRegistry: currentProject.tagRegistry || [],
+          axisDefinitions: currentProject.axisDefinitions || [],
+          uiConfig: currentProject.uiConfig,
+        }
+      : {
+          id: '',
+          name: '',
+          version: '',
+          entityKinds: [],
+          relationshipKinds: [],
+          cultures: [],
+          tagRegistry: [],
+          axisDefinitions: [],
+          uiConfig: undefined,
+        };
+    return mergeFrameworkSchemaSlice(baseSchema);
   }, [
     currentProject?.id,
     currentProject?.name,
@@ -617,6 +831,8 @@ export default function App() {
     currentProject?.relationshipKinds,
     currentProject?.cultures,
     currentProject?.tagRegistry,
+    currentProject?.axisDefinitions,
+    currentProject?.uiConfig,
   ]);
 
   // Compute tag usage across all tools
@@ -629,8 +845,17 @@ export default function App() {
       systems: currentProject.systems,
       pressures: currentProject.pressures,
       entityKinds: currentProject.entityKinds,
+      axisDefinitions: currentProject.axisDefinitions,
     });
-  }, [currentProject?.cultures, currentProject?.seedEntities, currentProject?.generators, currentProject?.systems, currentProject?.pressures, currentProject?.entityKinds]);
+  }, [
+    currentProject?.cultures,
+    currentProject?.seedEntities,
+    currentProject?.generators,
+    currentProject?.systems,
+    currentProject?.pressures,
+    currentProject?.entityKinds,
+    currentProject?.axisDefinitions,
+  ]);
 
   // Compute schema element usage across Coherence Engine
   const schemaUsage = useMemo(() => {
@@ -654,9 +879,9 @@ export default function App() {
   const validationResult = useMemo(() => {
     if (!currentProject) return { valid: true, errors: [], warnings: [] };
 
-    const cultures = currentProject.cultures?.map(c => c.id) || [];
-    const entityKinds = currentProject.entityKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
-    const relationshipKinds = currentProject.relationshipKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
+    const cultures = schema.cultures?.map(c => c.id) || [];
+    const entityKinds = schema.entityKinds?.map(k => k.kind) || [];
+    const relationshipKinds = schema.relationshipKinds?.map(k => k.kind) || [];
 
     return validateAllConfigs({
       templates: currentProject.generators || [],
@@ -676,9 +901,7 @@ export default function App() {
     currentProject?.systems,
     currentProject?.eras,
     currentProject?.actions,
-    currentProject?.cultures,
-    currentProject?.entityKinds,
-    currentProject?.relationshipKinds,
+    schema,
   ]);
 
   // Navigate to validation tab
@@ -769,7 +992,7 @@ export default function App() {
       case 'enumerist':
         return (
           <SchemaEditor
-            project={currentProject}
+            project={schema}
             activeSection={activeSection}
             onSectionChange={setActiveSection}
             onUpdateEntityKinds={updateEntityKinds}
@@ -868,11 +1091,11 @@ export default function App() {
                 projectId={currentProject?.id}
                 schema={schema}
                 worldData={archivistData?.worldData}
-                onWorldDataChange={(enrichedWorld) => {
-                  setArchivistData((prev) => ({ ...prev, worldData: enrichedWorld }));
-                }}
-                domainContext={domainContext}
-                onDomainContextChange={setDomainContext}
+                onWorldDataChange={handleIlluminatorWorldDataChange}
+                worldContext={worldContext}
+                onWorldContextChange={setWorldContext}
+                promptTemplates={promptTemplates}
+                onPromptTemplatesChange={setPromptTemplates}
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
                 activeSlotIndex={activeSlotIndex}
@@ -925,6 +1148,9 @@ export default function App() {
         onSaveToSlot={handleSaveToSlot}
         onClearSlot={handleClearSlot}
         onUpdateSlotTitle={handleUpdateSlotTitle}
+        onExportSlot={handleExportSlot}
+        onImportSlot={handleImportSlot}
+        onLoadExampleOutput={handleLoadExampleOutput}
         hasDataInScratch={hasDataInScratch}
       />
       {currentProject && !showHome && (

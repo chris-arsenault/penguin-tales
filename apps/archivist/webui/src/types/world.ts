@@ -1,169 +1,28 @@
 import type {
-  RegionBounds,
-  EntityKindDefinition,
-  RelationshipKindDefinition,
+  CanonrySchemaSlice,
   CultureDefinition,
+  DistributionMetrics,
+  EntityKindDefinition,
+  HistoryEvent,
+  Prominence as CanonryProminence,
+  SemanticCoordinates,
+  SemanticRegion,
+  Validation,
+  WorldEntity as CanonryWorldEntity,
+  WorldMetadata as CanonryWorldMetadata,
+  WorldOutput as CanonryWorldOutput,
+  WorldRelationship as CanonryWorldRelationship,
 } from '@canonry/world-schema';
 
-// Prominence is now dynamic from uiSchema, but we keep a type alias for compatibility
-export type Prominence = string;
-
-// EntityKind is now dynamic from uiSchema
-export type EntityKind = string;
-
-// Region schema for coordinate map visualization
-// (extends semantic region concept with UI-specific fields)
-export interface RegionSchema {
-  id: string;
-  label: string;
-  description: string;
-  bounds: RegionBounds;
-  zRange?: { min: number; max: number };
-  parentRegion?: string;
-  metadata?: Record<string, unknown>;
-}
-
-// Entity coordinate types - simple Point per entity kind
-export interface Point {
-  x: number;
-  y: number;
-  z: number;
-}
-
-// Axis configuration with semantic tags
-export interface AxisConfig {
-  name: string;
-  lowTag: string;
-  highTag: string;
-}
-
-// Each entity kind has its own coordinate space with its own regions
-export interface EntityKindMapConfig {
-  entityKind: string;
-  name: string;
-  description: string;
-  bounds: { min: number; max: number };
-  hasZAxis: boolean;
-  zAxisLabel?: string;
-  // Semantic axis labels (low/high tags at each end)
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
-  zAxis?: AxisConfig;
-}
-
-export interface UISchema {
-  worldName: string;
-  worldIcon: string;
-  entityKinds: EntityKindDefinition[];
-  relationshipKinds: RelationshipKindDefinition[];
-  prominenceLevels: string[];
-  cultures: CultureDefinition[];
-  regions?: RegionSchema[];  // Global regions (deprecated - use perKindMaps)
-  coordinateBounds?: { min: number; max: number };  // Global bounds (deprecated - use perKindMaps)
-  perKindMaps?: Record<string, EntityKindMapConfig>;  // Per-entity-kind map configurations
-  perKindRegions?: Record<string, RegionSchema[]>;  // Per-entity-kind region lists
-}
-
-export interface Relationship {
-  kind: string;
-  src: string;
-  dst: string;
-  strength?: number;
-  distance?: number;
-  status?: 'active' | 'historical';
-  archivedAt?: number;
-}
-
-export interface HardState {
-  id: string;
-  kind: EntityKind;
-  subtype: string;
-  name: string;
-  description: string;
-  status: string;
-  prominence: Prominence;
-  culture?: string;
-  tags: Record<string, string | boolean> | string[];
-  links: Relationship[];
-  coordinates?: Point;  // Simple {x, y, z} - each entity kind has its own coordinate space
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface HistoryEvent {
-  tick: number;
-  era: string;
-  type: 'growth' | 'simulation' | 'special';
-  description: string;
-  entitiesCreated: string[];
-  relationshipsCreated: Relationship[];
-  entitiesModified: string[];
-}
-
-export interface EnrichmentTriggers {
-  total: number;
-  byKind: {
-    locationEnrichments: number;
-    factionEnrichments: number;
-    ruleEnrichments: number;
-    abilityEnrichments: number;
-    npcEnrichments: number;
-  };
-  comment: string;
-}
-
-export interface WorldMetadata {
-  tick: number;
-  epoch: number;
-  era: string;
-  entityCount: number;
-  relationshipCount: number;
-  historyEventCount: number;
-  enrichmentTriggers: EnrichmentTriggers;
-}
-
-export interface ValidationResult {
-  name: string;
-  passed: boolean;
-  failureCount: number;
-  details: string;
-}
-
-export interface Validation {
-  totalChecks: number;
-  passed: number;
-  failed: number;
-  results: ValidationResult[];
-}
-
-export interface GraphMetrics {
-  clusters: number;
-  avgClusterSize: number;
-  intraClusterDensity: number;
-  interClusterDensity: number;
-  isolatedNodes: number;
-  isolatedNodeRatio: number;
-}
-
-export interface DistributionMetrics {
-  entityKindRatios: Record<string, number>;
-  prominenceRatios: Record<string, number>;
-  relationshipTypeRatios: Record<string, number>;
-  graphMetrics: GraphMetrics;
-  deviation: Record<string, number>;
-  targets: Record<string, any>;
-}
-
-export interface WorldState {
-  metadata: WorldMetadata;
-  hardState: HardState[];
-  relationships: Relationship[];
-  pressures: Record<string, number>;
-  history: HistoryEvent[];
-  uiSchema?: UISchema;
-  distributionMetrics?: DistributionMetrics;
-  validation?: Validation;
-}
+export type WorldState = CanonryWorldOutput;
+export type HardState = CanonryWorldEntity;
+export type Relationship = CanonryWorldRelationship;
+export type WorldMetadata = CanonryWorldMetadata;
+export type Prominence = CanonryProminence;
+export type EntityKind = EntityKindDefinition['kind'];
+export type Point = SemanticCoordinates;
+export type Region = SemanticRegion;
+export type Schema = CanonrySchemaSlice;
 
 export interface Filters {
   kinds: EntityKind[];
@@ -254,3 +113,12 @@ export interface ImageMetadata {
   totalImages: number;
   results: EntityImage[];
 }
+
+export type {
+  CanonrySchemaSlice,
+  CultureDefinition,
+  DistributionMetrics,
+  EntityKindDefinition,
+  HistoryEvent,
+  Validation,
+};

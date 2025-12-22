@@ -15,6 +15,7 @@ export default function PlaneCanvas({
   regions = [],
   entities = [],
   cultures = [],
+  axisDefinitions = [],
   selectedEntityId,
   selectedRegionId,
   onSelectEntity,
@@ -258,36 +259,48 @@ export default function PlaneCanvas({
 
     // Draw axis labels on the edges
     const axes = plane?.axes || {};
+    const axisById = new Map((axisDefinitions || []).map(axis => [axis.id, axis]));
+    const resolveAxis = (axisRef) => axisRef?.axisId ? axisById.get(axisRef.axisId) : undefined;
 
     ctx.fillStyle = '#666';
     ctx.font = '11px sans-serif';
 
     // X axis labels
     if (axes.x) {
+      const axisRef = axes.x;
+      const axisDef = resolveAxis(axisRef);
+      const axisName = axisDef?.name || axisRef.axisId || 'X Axis';
+      const lowLabel = axisDef?.lowTag || '0';
+      const highLabel = axisDef?.highTag || '100';
       ctx.textAlign = 'left';
-      ctx.fillText(axes.x.lowTag || '0', topLeft.x, bottomRight.y + 16);
+      ctx.fillText(lowLabel, topLeft.x, bottomRight.y + 16);
       ctx.textAlign = 'right';
-      ctx.fillText(axes.x.highTag || '100', bottomRight.x, bottomRight.y + 16);
+      ctx.fillText(highLabel, bottomRight.x, bottomRight.y + 16);
       ctx.textAlign = 'center';
-      ctx.fillText(axes.x.name || 'X Axis', (topLeft.x + bottomRight.x) / 2, bottomRight.y + 28);
+      ctx.fillText(axisName, (topLeft.x + bottomRight.x) / 2, bottomRight.y + 28);
     }
 
     // Y axis labels
     if (axes.y) {
+      const axisRef = axes.y;
+      const axisDef = resolveAxis(axisRef);
+      const axisName = axisDef?.name || axisRef.axisId || 'Y Axis';
+      const lowLabel = axisDef?.lowTag || '0';
+      const highLabel = axisDef?.highTag || '100';
       ctx.textAlign = 'right';
-      ctx.fillText(axes.y.lowTag || '0', topLeft.x - 6, bottomRight.y);
-      ctx.fillText(axes.y.highTag || '100', topLeft.x - 6, topLeft.y + 4);
+      ctx.fillText(lowLabel, topLeft.x - 6, bottomRight.y);
+      ctx.fillText(highLabel, topLeft.x - 6, topLeft.y + 4);
 
       // Rotated Y axis name
       ctx.save();
       ctx.translate(topLeft.x - 28, (topLeft.y + bottomRight.y) / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = 'center';
-      ctx.fillText(axes.y.name || 'Y Axis', 0, 0);
+      ctx.fillText(axisName, 0, 0);
       ctx.restore();
     }
 
-  }, [plane, regions, entities, cultures, selectedEntityId, selectedRegionId, size, camera, baseScale, worldToCanvas, renderTrigger]);
+  }, [plane, regions, entities, cultures, axisDefinitions, selectedEntityId, selectedRegionId, size, camera, baseScale, worldToCanvas, renderTrigger]);
 
   // Find entity at canvas position
   const findEntityAt = (cx, cy) => {

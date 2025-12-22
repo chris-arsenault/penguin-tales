@@ -2,9 +2,6 @@
  * Constants for PressuresEditor
  */
 
-// Re-export colors from shared-components for backwards compatibility
-export { ACCENT_COLOR, ACCENT_GRADIENT } from '@penguin-tales/shared-components';
-
 // Factor type configuration with visual styling
 export const FACTOR_TYPES = {
   entity_count: {

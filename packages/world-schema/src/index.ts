@@ -1,14 +1,14 @@
 /**
  * @canonry/world-schema
  *
- * Shared types for The Canonry world-building suite.
- * This package contains ONLY types - no runtime code, no dependencies.
+ * Shared types and canonical framework primitives for The Canonry.
  */
 
 // Entity Kind types
 export type {
   Subtype,
   Status,
+  RequiredRelationshipRule,
   SemanticAxis,
   CircleBounds,
   RectBounds,
@@ -48,6 +48,26 @@ export type {
   CultureNamingData,
 } from './naming.js';
 
+// UI configuration types
+export type { DomainUIConfig } from './ui.js';
+
+// Style library types
+export type {
+  ArtisticStyle,
+  CompositionStyle,
+  StyleLibrary,
+  StyleSelection,
+} from './style.js';
+
+export {
+  DEFAULT_ARTISTIC_STYLES,
+  DEFAULT_COMPOSITION_STYLES,
+  createDefaultStyleLibrary,
+  findArtisticStyle,
+  findCompositionStyle,
+  getCompositionStylesForKind,
+} from './style.js';
+
 // Seed data types
 export type {
   Prominence,
@@ -55,6 +75,21 @@ export type {
   SeedEntity,
   SeedRelationship,
 } from './seed.js';
+
+// World output types
+export type {
+  WorldOutput,
+  WorldMetadata,
+  WorldEntity,
+  WorldRelationship,
+  HistoryEvent,
+  CoordinateState,
+  DistributionMetrics,
+  GraphMetrics,
+  Validation,
+  ValidationResult,
+  EntityTags,
+} from './world.js';
 
 // Project types
 export type { WorldSeedProject, ProjectMetadata } from './project.js';
@@ -81,3 +116,41 @@ export type {
   LoreWeaveRemoteProps,
   ArchivistRemoteProps,
 } from './mfeContracts.js';
+
+// Framework primitives and schema helpers
+export {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_ENTITY_KIND_VALUES,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_RELATIONSHIP_KIND_VALUES,
+  FRAMEWORK_STATUS,
+  FRAMEWORK_STATUS_VALUES,
+  FRAMEWORK_SUBTYPES,
+  FRAMEWORK_SUBTYPE_VALUES,
+  FRAMEWORK_CULTURES,
+  FRAMEWORK_TAGS,
+  FRAMEWORK_TAG_VALUES,
+  FRAMEWORK_ERA_STATUS_VALUES,
+  FRAMEWORK_OCCURRENCE_STATUS_VALUES,
+  FRAMEWORK_RELATIONSHIP_PROPERTIES,
+  FRAMEWORK_ENTITY_KIND_DEFINITIONS,
+  FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS,
+  FRAMEWORK_CULTURE_DEFINITIONS,
+  FRAMEWORK_TAG_DEFINITIONS,
+  isFrameworkEntityKind,
+  isFrameworkRelationshipKind,
+  isFrameworkStatus,
+  isFrameworkSubtype,
+  isFrameworkTag,
+  getFrameworkRelationshipStrength,
+  mergeFrameworkSchemaSlice,
+} from './frameworkPrimitives.js';
+
+export type {
+  FrameworkEntityKind,
+  FrameworkRelationshipKind,
+  FrameworkStatus,
+  FrameworkSubtype,
+  FrameworkCultureId,
+  FrameworkTag,
+} from './frameworkPrimitives.js';

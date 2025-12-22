@@ -14,49 +14,7 @@ import {
   RelationshipsTab,
   EffectsTab,
   ApplicabilityTab,
-  UnmappedTab,
 } from './tabs';
-
-// Known top-level properties for a DeclarativeTemplate
-const KNOWN_PROPERTIES = new Set([
-  'id',
-  'name',
-  'enabled',
-  'applicability',
-  'selection',
-  'creation',
-  'relationships',
-  'stateUpdates',
-  'variables',
-  'variants',
-]);
-
-// Known stateUpdate types
-const KNOWN_STATE_UPDATE_TYPES = new Set([
-  'modify_pressure',
-  'archive_relationship',
-  'change_status',
-  'set_tag',
-  'remove_tag',
-  'update_rate_limit',
-]);
-
-function countUnmappedProperties(generator) {
-  if (!generator) return 0;
-  let count = 0;
-
-  // Count unknown top-level properties
-  Object.keys(generator).forEach(key => {
-    if (!KNOWN_PROPERTIES.has(key)) count++;
-  });
-
-  // Count unknown stateUpdate types
-  (generator.stateUpdates || []).forEach(update => {
-    if (!KNOWN_STATE_UPDATE_TYPES.has(update.type)) count++;
-  });
-
-  return count;
-}
 
 // Helper to compute validation issues per generator tab
 function computeTabValidation(generator, usageMap) {
@@ -91,23 +49,9 @@ export function GeneratorModal({ generator, onChange, onClose, onDelete, onDupli
     [generator, usageMap]
   );
 
-  // Count unmapped properties to show tab conditionally
-  const unmappedCount = useMemo(() => countUnmappedProperties(generator), [generator]);
-
-  // Build tabs list - add Unmapped tab if there are unmapped properties
-  const tabs = useMemo(() => {
-    if (unmappedCount > 0) {
-      return [...TABS, { id: 'unmapped', label: 'Unmapped', icon: '⚠️' }];
-    }
-    return TABS;
-  }, [unmappedCount]);
-
   const renderTabBadge = useCallback((tabId) => {
-    if (tabId === 'unmapped') {
-      return <TabValidationBadge count={unmappedCount} />;
-    }
     return <TabValidationBadge count={tabValidation.tabErrors[tabId]} />;
-  }, [tabValidation.tabErrors, unmappedCount]);
+  }, [tabValidation.tabErrors]);
 
   const sidebarFooter = tabValidation.isOrphan ? (
     <div className="orphan-badge-container">
@@ -131,8 +75,6 @@ export function GeneratorModal({ generator, onChange, onClose, onDelete, onDupli
         return <RelationshipsTab generator={generator} onChange={onChange} schema={schema} />;
       case 'effects':
         return <EffectsTab generator={generator} onChange={onChange} pressures={pressures} schema={schema} />;
-      case 'unmapped':
-        return <UnmappedTab generator={generator} onChange={onChange} />;
       default:
         return null;
     }
@@ -144,7 +86,7 @@ export function GeneratorModal({ generator, onChange, onClose, onDelete, onDupli
       icon="⚙️"
       title={generator.name || generator.id}
       disabled={generator.enabled === false}
-      tabs={tabs}
+      tabs={TABS}
       activeTab={activeTab}
       onTabChange={setActiveTab}
       renderTabBadge={renderTabBadge}

@@ -8,7 +8,7 @@
 import { Graph } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import { DistributionTargets } from '../statistics/types';
-import { DomainSchema } from '../domainInterface/domainSchema';
+import type { CanonrySchemaSlice } from '@canonry/world-schema';
 
 export interface EntityMetric {
   kind: string;
@@ -49,11 +49,11 @@ export class PopulationTracker {
   private metrics: PopulationMetrics;
   private distributionTargets: DistributionTargets;
   private historyWindow: number = 10; // Ticks to keep in history
-  private domainSchema: DomainSchema;
+  private schema: CanonrySchemaSlice;
 
-  constructor(distributionTargets: DistributionTargets, domainSchema: DomainSchema) {
+  constructor(distributionTargets: DistributionTargets, schema: CanonrySchemaSlice) {
     this.distributionTargets = distributionTargets;
-    this.domainSchema = domainSchema;
+    this.schema = schema;
     this.metrics = {
       tick: 0,
       entities: new Map(),
@@ -66,11 +66,11 @@ export class PopulationTracker {
   }
 
   /**
-   * Initialize metrics for all known subtypes from domain schema
+   * Initialize metrics for all known subtypes from the canonical schema
    * This ensures feedback loops can find metrics even for zero-count subtypes
    */
   private initializeSubtypeMetrics(): void {
-    this.domainSchema.entityKinds.forEach(kindDef => {
+    this.schema.entityKinds.forEach(kindDef => {
       kindDef.subtypes.forEach(subtypeDef => {
         const key = `${kindDef.kind}:${subtypeDef.id}`;
         this.metrics.entities.set(key, {

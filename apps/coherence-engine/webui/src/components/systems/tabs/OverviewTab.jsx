@@ -13,7 +13,7 @@ import { EnableToggle, useLocalInputState } from '../../shared';
  * @param {Function} props.onDelete - Called to delete the system
  */
 export function OverviewTab({ system, onChange, onDelete }) {
-  const config = system.config || {};
+  const config = system.config;
   const typeConfig = SYSTEM_TYPES[system.systemType] || {};
 
   const updateConfig = (field, value) => {

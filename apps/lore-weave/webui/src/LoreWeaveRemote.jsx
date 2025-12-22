@@ -18,9 +18,9 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import './App.css';
 import ConfigurationSummary from './components/config';
-import DistributionTargetsEditor from './components/targets';
+import { DistributionTargetsEditor } from './components/targets';
 import ValidationPanel from './components/validation/ValidationPanel';
-import SimulationRunner from './components/runner';
+import { SimulationRunner } from './components/runner';
 import ResultsViewer from './components/results';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 

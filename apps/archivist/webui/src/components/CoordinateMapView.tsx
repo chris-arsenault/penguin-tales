@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import type { WorldState, HardState, RegionSchema, Point, EntityKindMapConfig } from '../types/world.ts';
+import type { WorldState, HardState, Point, Region } from '../types/world.ts';
 import type { EntityKindDefinition } from '@canonry/world-schema';
 import './CoordinateMapView.css';
 
@@ -9,35 +9,20 @@ interface CoordinateMapViewProps {
   onNodeSelect: (nodeId: string | undefined) => void;
 }
 
-// Default entity styles for when uiSchema is not present
-const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
-  { kind: 'npc', description: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
-  { kind: 'faction', description: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
-  { kind: 'location', description: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
-  { kind: 'rules', description: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
-  { kind: 'abilities', description: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
-];
-
-// Generate a default map config for any entity kind
-function getDefaultMapConfig(kind: string): EntityKindMapConfig {
-  return {
-    entityKind: kind,
-    name: `${kind.charAt(0).toUpperCase() + kind.slice(1)} Map`,
-    description: `Coordinate space for ${kind} entities`,
-    bounds: { min: 0, max: 100 },
-    hasZAxis: true,
-    zAxisLabel: 'Z'
-  };
+function getKindDisplayName(kindDef: EntityKindDefinition): string {
+  return kindDef.style?.displayName || kindDef.description || kindDef.kind;
 }
 
-// Default region colors by type (fallback if no color in metadata)
-const REGION_COLORS: Record<string, { fill: string; stroke: string }> = {
-  colony: { fill: 'rgba(111, 177, 252, 0.15)', stroke: 'rgba(111, 177, 252, 0.6)' },
-  geographic_feature: { fill: 'rgba(107, 252, 156, 0.15)', stroke: 'rgba(107, 252, 156, 0.6)' },
-  anomaly: { fill: 'rgba(199, 107, 252, 0.15)', stroke: 'rgba(199, 107, 252, 0.6)' },
-  iceberg: { fill: 'rgba(200, 220, 255, 0.08)', stroke: 'rgba(200, 220, 255, 0.3)' },
-  default: { fill: 'rgba(150, 150, 150, 0.1)', stroke: 'rgba(150, 150, 150, 0.4)' }
-};
+function mergeRegions(seed: Region[], emergent: Region[]): Region[] {
+  const merged = [...seed];
+  const seen = new Set(seed.map(region => region.id));
+  for (const region of emergent) {
+    if (!seen.has(region.id)) {
+      merged.push(region);
+    }
+  }
+  return merged;
+}
 
 // Convert hex color to rgba with alpha
 function hexToRgba(hex: string, alpha: number): string {
@@ -45,46 +30,27 @@ function hexToRgba(hex: string, alpha: number): string {
   if (result) {
     return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
   }
-  return `rgba(150, 150, 150, ${alpha})`;
+  throw new Error(`Archivist: invalid color "${hex}".`);
 }
 
-// Get region color - prefer color from metadata, fallback to subtype colors
-function getRegionColor(region: RegionSchema): { fill: string; stroke: string } {
-  // Use color from metadata if available
-  const metadataColor = region.metadata?.color as string;
-  if (metadataColor) {
-    return {
-      fill: hexToRgba(metadataColor, 0.15),
-      stroke: hexToRgba(metadataColor, 0.7)
-    };
+function getRegionColor(region: Region): { fill: string; stroke: string } {
+  if (!region.color) {
+    throw new Error(`Archivist: region "${region.id}" is missing color.`);
   }
-  // Fallback to subtype-based colors
-  const subtype = (region.metadata?.subtype as string) || 'default';
-  return REGION_COLORS[subtype] || REGION_COLORS.default;
+  return {
+    fill: hexToRgba(region.color, 0.15),
+    stroke: hexToRgba(region.color, 0.7)
+  };
 }
 
-// Get entity coordinates (now directly on entity as Point)
-// Returns {x: 0, y: 0, z: 0, invalid: true} if coordinates are missing or have null values
-// This makes invalid coordinates visible instead of hiding them
-interface EntityPoint extends Point {
-  invalid?: boolean;
-}
-
-function getEntityCoords(entity: HardState): EntityPoint {
+// Get entity coordinates (requires valid x/y/z)
+function getEntityCoords(entity: HardState): Point {
   const coords = entity.coordinates;
 
-  // Check if we have valid numeric values (not null/undefined)
-  if (coords && typeof coords.x === 'number' && typeof coords.y === 'number') {
-    return {
-      x: coords.x,
-      y: coords.y,
-      z: typeof coords.z === 'number' ? coords.z : 50
-    };
+  if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number' || typeof coords.z !== 'number') {
+    throw new Error(`Archivist: entity "${entity.id}" is missing valid coordinates.`);
   }
-
-  // Invalid coordinates - place at origin with flag
-  console.warn(`Entity "${entity.name}" (${entity.kind}/${entity.id}) has invalid coordinates:`, coords);
-  return { x: 0, y: 0, z: 0, invalid: true };
+  return coords;
 }
 
 // Simple force-directed layout for floating entities
@@ -165,28 +131,60 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [mapKind, setMapKind] = useState<string>('location');  // Which entity kind's map to show
+  const [mapKind, setMapKind] = useState<string>(() => {
+    const firstKind = data.schema.entityKinds.find(kind => kind.semanticPlane)?.kind;
+    return firstKind ?? '';
+  });  // Which entity kind's map to show
   const [showRelatedKinds, setShowRelatedKinds] = useState<boolean>(true);  // Show related entities from other kinds
   const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set(['regions', 'entities', 'relationships']));
   const [hoveredEntity, setHoveredEntity] = useState<HardState | null>(null);
-  const [hoveredRegion, setHoveredRegion] = useState<RegionSchema | null>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<Region | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   // Get entity kind schemas
-  const entityKindSchemas = data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
-  const entityKinds = entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind);
+  const entityKindSchemas = data.schema.entityKinds;
+  const kindDisplayNames = useMemo(() => {
+    return new Map(entityKindSchemas.map(kind => [kind.kind, getKindDisplayName(kind)]));
+  }, [entityKindSchemas]);
+
+  const axisDefinitions = data.schema.axisDefinitions || [];
+  const axisById = useMemo(() => {
+    return new Map(axisDefinitions.map(axis => [axis.id, axis]));
+  }, [axisDefinitions]);
+
+  const mappableKindSchemas = useMemo(
+    () => entityKindSchemas.filter(kind => kind.semanticPlane),
+    [entityKindSchemas]
+  );
+  const mappableKinds = mappableKindSchemas.map(kind => kind.kind);
 
   // Ensure mapKind is valid - default to first available kind if current selection is invalid
   useEffect(() => {
-    if (entityKinds.length > 0 && !entityKinds.includes(mapKind)) {
-      setMapKind(entityKinds[0]);
+    if (mappableKinds.length > 0 && !mappableKinds.includes(mapKind)) {
+      setMapKind(mappableKinds[0]);
     }
-  }, [entityKinds, mapKind]);
+  }, [mappableKinds, mapKind]);
 
-  // Get per-kind map config and regions
-  const mapConfig = data.uiSchema?.perKindMaps?.[mapKind] ?? getDefaultMapConfig(mapKind);
-  const regions = data.uiSchema?.perKindRegions?.[mapKind] ?? data.uiSchema?.regions ?? [];
-  const bounds = mapConfig.bounds ?? { min: 0, max: 100 };
+  // Get per-kind map config and regions (seed + emergent)
+  const activeKindDef = mappableKindSchemas.find(kind => kind.kind === mapKind);
+  if (!activeKindDef || !activeKindDef.semanticPlane) {
+    throw new Error('Archivist: map view requires a semantic plane on the selected entity kind.');
+  }
+  const displayName = getKindDisplayName(activeKindDef);
+  const planeAxes = activeKindDef.semanticPlane.axes;
+  const xAxis = planeAxes?.x?.axisId ? axisById.get(planeAxes.x.axisId) : undefined;
+  const yAxis = planeAxes?.y?.axisId ? axisById.get(planeAxes.y.axisId) : undefined;
+  if (planeAxes?.x?.axisId && !xAxis) {
+    throw new Error(`Archivist: axis "${planeAxes.x.axisId}" not found in schema.axisDefinitions.`);
+  }
+  if (planeAxes?.y?.axisId && !yAxis) {
+    throw new Error(`Archivist: axis "${planeAxes.y.axisId}" not found in schema.axisDefinitions.`);
+  }
+  const mapDescription = `Coordinate space for ${displayName} entities`;
+  const seedRegions = activeKindDef.semanticPlane.regions ?? [];
+  const emergentRegions = data.coordinateState?.emergentRegions?.[mapKind] ?? [];
+  const regions = mergeRegions(seedRegions, emergentRegions);
+  const bounds = { min: 0, max: 100 };
 
   // Filter entities for the current map - primary kind always shown, related kinds optionally
   const mapEntities = useMemo(() => {
@@ -215,7 +213,12 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   // Build entity color map
   const entityColorMap = useMemo(() => {
     const map = new Map<string, string>();
-    entityKindSchemas.forEach(ek => map.set(ek.kind, ek.style?.color || '#999'));
+    entityKindSchemas.forEach(ek => {
+      if (!ek.style?.color) {
+        throw new Error(`Archivist: entity kind "${ek.kind}" is missing style.color.`);
+      }
+      map.set(ek.kind, ek.style.color);
+    });
     return map;
   }, [entityKindSchemas]);
 
@@ -223,10 +226,9 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
   const entityPositions = useMemo(() => {
     const nodes: LayoutNode[] = [];
 
-    // All entities get coordinates - invalid ones are placed at origin
+    // All entities get coordinates
     mapEntities.forEach(entity => {
       const coords = getEntityCoords(entity);
-      const isValidCoords = !coords.invalid;
 
       nodes.push({
         id: entity.id,
@@ -234,8 +236,8 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
         y: coords.y,
         vx: 0,
         vy: 0,
-        // Only anchor if valid coords AND primary kind
-        anchored: isValidCoords && entity.kind === mapKind,
+        // Only anchor primary kind entities
+        anchored: entity.kind === mapKind,
         entity
       });
     });
@@ -331,25 +333,25 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
     ctx.textAlign = 'center';
 
     // X-axis labels (low on left, high on right)
-    if (mapConfig.xAxis) {
+    if (xAxis) {
       // Low tag (left side)
       ctx.fillStyle = 'rgba(252, 107, 107, 0.8)';  // Reddish for low
       const xLowPos = worldToCanvas(bounds.min + 5, bounds.min);
-      ctx.fillText(`← ${mapConfig.xAxis.lowTag}`, xLowPos.x + 30, xLowPos.y + 25);
+      ctx.fillText(`← ${xAxis.lowTag}`, xLowPos.x + 30, xLowPos.y + 25);
 
       // Axis name (center bottom)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       const xCenterPos = worldToCanvas((bounds.min + bounds.max) / 2, bounds.min);
-      ctx.fillText(mapConfig.xAxis.name, xCenterPos.x, xCenterPos.y + 25);
+      ctx.fillText(xAxis.name, xCenterPos.x, xCenterPos.y + 25);
 
       // High tag (right side)
       ctx.fillStyle = 'rgba(107, 252, 156, 0.8)';  // Greenish for high
       const xHighPos = worldToCanvas(bounds.max - 5, bounds.min);
-      ctx.fillText(`${mapConfig.xAxis.highTag} →`, xHighPos.x - 30, xHighPos.y + 25);
+      ctx.fillText(`${xAxis.highTag} →`, xHighPos.x - 30, xHighPos.y + 25);
     }
 
     // Y-axis labels (low on bottom, high on top)
-    if (mapConfig.yAxis) {
+    if (yAxis) {
       ctx.save();
 
       // Low tag (bottom)
@@ -357,7 +359,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       const yLowPos = worldToCanvas(bounds.min, bounds.min + 5);
       ctx.translate(yLowPos.x - 25, yLowPos.y - 20);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillText(`← ${mapConfig.yAxis.lowTag}`, 0, 0);
+      ctx.fillText(`← ${yAxis.lowTag}`, 0, 0);
       ctx.restore();
 
       // Axis name (center left)
@@ -366,7 +368,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       const yCenterPos = worldToCanvas(bounds.min, (bounds.min + bounds.max) / 2);
       ctx.translate(yCenterPos.x - 25, yCenterPos.y);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillText(mapConfig.yAxis.name, 0, 0);
+      ctx.fillText(yAxis.name, 0, 0);
       ctx.restore();
 
       // High tag (top)
@@ -375,7 +377,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       const yHighPos = worldToCanvas(bounds.min, bounds.max - 5);
       ctx.translate(yHighPos.x - 25, yHighPos.y + 20);
       ctx.rotate(-Math.PI / 2);
-      ctx.fillText(`${mapConfig.yAxis.highTag} →`, 0, 0);
+      ctx.fillText(`${yAxis.highTag} →`, 0, 0);
       ctx.restore();
     }
 
@@ -491,34 +493,23 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
         if (!pos) return;
 
         const canvasPos = worldToCanvas(pos.x, pos.y);
-        const color = entityColorMap.get(entity.kind) || '#999';
+        const color = entityColorMap.get(entity.kind);
+        if (!color) {
+          throw new Error(`Archivist: entity kind "${entity.kind}" is missing style.color.`);
+        }
         const isPrimaryKind = entity.kind === mapKind;
         const isSelected = entity.id === selectedNodeId;
         const isHovered = entity.id === hoveredEntity?.id;
-
-        // Check if coordinates are invalid
-        const entityCoords = getEntityCoords(entity);
-        const hasInvalidCoords = entityCoords.invalid;
 
         // Draw entity - primary kind entities are larger
         const radius = isPrimaryKind ? 8 : 5;
         ctx.beginPath();
         ctx.arc(canvasPos.x, canvasPos.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = hasInvalidCoords ? '#666' : color;  // Gray out invalid coords
+        ctx.fillStyle = color;
         ctx.fill();
 
-        // Draw invalid coordinates indicator (red dashed border)
-        if (hasInvalidCoords) {
-          ctx.strokeStyle = '#FF4444';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([3, 3]);
-          ctx.beginPath();
-          ctx.arc(canvasPos.x, canvasPos.y, radius + 3, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);  // Reset dash
-        }
         // Draw primary kind indicator (white border)
-        else if (isPrimaryKind) {
+        if (isPrimaryKind) {
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = 2;
           ctx.stroke();
@@ -535,7 +526,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
         // Draw label for primary kind or selected/hovered entities
         if (isPrimaryKind || isSelected || isHovered) {
-          ctx.fillStyle = hasInvalidCoords ? '#FF4444' : '#fff';
+          ctx.fillStyle = '#fff';
           ctx.font = '10px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(entity.name, canvasPos.x, canvasPos.y - radius - 5);
@@ -543,10 +534,10 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       });
     }
 
-  }, [data, dimensions, mapKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity, hoveredRegion, mapEntities]);
+  }, [data, dimensions, mapKind, visibleLayers, entityPositions, entityColorMap, regions, bounds, selectedNodeId, hoveredEntity, hoveredRegion, mapEntities, xAxis, yAxis]);
 
   // Check if a point is inside a region
-  const isPointInRegion = (region: RegionSchema, worldX: number, worldY: number): boolean => {
+  const isPointInRegion = (region: Region, worldX: number, worldY: number): boolean => {
     if (region.bounds.shape === 'circle') {
       const dx = worldX - region.bounds.center.x;
       const dy = worldY - region.bounds.center.y;
@@ -591,7 +582,7 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
 
     // Find region under cursor (if no entity found and regions visible)
     // Check regions in reverse order so topmost (last drawn) is selected first
-    let foundRegion: RegionSchema | null = null;
+    let foundRegion: Region | null = null;
     if (!foundEntity && visibleLayers.has('regions')) {
       for (let i = regions.length - 1; i >= 0; i--) {
         if (isPointInRegion(regions[i], worldPos.x, worldPos.y)) {
@@ -646,13 +637,13 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
             onChange={e => setMapKind(e.target.value)}
             className="control-select"
           >
-            {entityKinds.map(kind => (
+            {mappableKinds.map(kind => (
               <option key={kind} value={kind}>
-                {entityKindSchemas.find(ek => ek.kind === kind)?.description ?? kind}
+                {kindDisplayNames.get(kind) ?? kind}
               </option>
             ))}
           </select>
-          <div className="control-description">{mapConfig.description}</div>
+          <div className="control-description">{mapDescription}</div>
         </div>
 
         <div className="control-section">
@@ -686,32 +677,42 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
       {/* Legend */}
       <div className="coordinate-map-legend">
         <div className="legend-title">Entity Types</div>
-        {entityKindSchemas.map(ek => (
-          <div key={ek.kind} className="legend-item">
-            <div
-              className="legend-dot"
-              style={{
-                backgroundColor: ek.style?.color || '#999',
-                border: ek.kind === mapKind ? '2px solid white' : 'none'
-              }}
-            />
-            <span>{ek.description || ek.kind}</span>
-            {ek.kind === mapKind && <span className="anchor-badge">primary</span>}
-          </div>
-        ))}
+        {entityKindSchemas.map(ek => {
+          if (!ek.style?.color) {
+            throw new Error(`Archivist: entity kind "${ek.kind}" is missing style.color.`);
+          }
+          return (
+            <div key={ek.kind} className="legend-item">
+              <div
+                className="legend-dot"
+                style={{
+                  backgroundColor: ek.style.color,
+                  border: ek.kind === mapKind ? '2px solid white' : 'none'
+                }}
+              />
+              <span>{ek.description || ek.kind}</span>
+              {ek.kind === mapKind && <span className="anchor-badge">primary</span>}
+            </div>
+          );
+        })}
         {regions.length > 0 && (
           <>
             <div className="legend-divider" />
             <div className="legend-title">Regions ({regions.length})</div>
-            {Object.entries(REGION_COLORS).filter(([k]) => k !== 'default').map(([type, colors]) => (
-              <div key={type} className="legend-item">
-                <div
-                  className="legend-dot"
-                  style={{ backgroundColor: colors.stroke }}
-                />
-                <span>{type.replace('_', ' ')}</span>
-              </div>
-            ))}
+            {regions.map(region => {
+              if (!region.color) {
+                throw new Error(`Archivist: region "${region.id}" is missing color.`);
+              }
+              return (
+                <div key={region.id} className="legend-item">
+                  <div
+                    className="legend-dot"
+                    style={{ backgroundColor: region.color }}
+                  />
+                  <span>{region.label}</span>
+                </div>
+              );
+            })}
           </>
         )}
       </div>
@@ -727,17 +728,11 @@ export default function CoordinateMapView({ data, selectedNodeId, onNodeSelect }
             <div className="tooltip-name">{hoveredEntity.name}</div>
             <div className="tooltip-info">{hoveredEntity.kind} / {hoveredEntity.subtype}</div>
             <div className="tooltip-info">{hoveredEntity.status}</div>
-            {coords.invalid ? (
-              <div className="tooltip-coords" style={{ color: '#FF4444' }}>
-                ⚠️ INVALID COORDINATES
-              </div>
-            ) : (
-              <div className="tooltip-coords">
-                x: {coords.x.toFixed(1)},
-                y: {coords.y.toFixed(1)},
-                z: {coords.z.toFixed(1)}
-              </div>
-            )}
+            <div className="tooltip-coords">
+              x: {coords.x.toFixed(1)},
+              y: {coords.y.toFixed(1)},
+              z: {coords.z.toFixed(1)}
+            </div>
           </div>
         );
       })()}

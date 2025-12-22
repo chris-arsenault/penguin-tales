@@ -7,7 +7,7 @@
  * - activeSlotIndex: Currently active slot (0=scratch, 1-4=saved)
  * - slots: Object mapping slot index to slot data
  *   - Each slot contains: title, simulationResults, simulationState, worldData, createdAt
- * - domainContext: Illuminator's world lore context (shared across slots)
+ * - worldContext: Illuminator's world context (name, description, canon facts, tone)
  * - enrichmentConfig: Illuminator's saved settings (shared across slots)
  *
  * Slot behavior:
@@ -16,7 +16,7 @@
  */
 
 const DB_NAME = 'canonry-world';
-const DB_VERSION = 2; // Bumped for slot migration
+const DB_VERSION = 2;
 const STORE_NAME = 'projects';
 const LOCAL_PREFIX = 'canonry:world:';
 
@@ -111,37 +111,15 @@ function lsDelete(projectId) {
   }
 }
 
-// =============================================================================
-// Migration: Convert old flat format to slot-based format
-// =============================================================================
-
-function migrateToSlots(record) {
+function assertSlotStore(record) {
   if (!record) return null;
-
-  // Already migrated?
-  if (record.slots !== undefined) {
-    return record;
+  if (!record.slots || typeof record.slots !== 'object') {
+    throw new Error('Unsupported world store format: expected slot-based storage.');
   }
-
-  // Migrate old flat format to slot 0
-  const { simulationResults, simulationState, worldData, domainContext, enrichmentConfig, ...rest } = record;
-
-  const slot0 = {};
-  if (simulationResults) slot0.simulationResults = simulationResults;
-  if (simulationState) slot0.simulationState = simulationState;
-  if (worldData) slot0.worldData = worldData;
-  if (Object.keys(slot0).length > 0) {
-    slot0.title = 'Scratch';
-    slot0.createdAt = record.savedAt || Date.now();
+  if (record.activeSlotIndex === undefined) {
+    throw new Error('Unsupported world store format: missing activeSlotIndex.');
   }
-
-  return {
-    ...rest,
-    activeSlotIndex: 0,
-    slots: Object.keys(slot0).length > 0 ? { 0: slot0 } : {},
-    domainContext: domainContext || null,
-    enrichmentConfig: enrichmentConfig || null,
-  };
+  return record;
 }
 
 // =============================================================================
@@ -161,7 +139,7 @@ export async function loadWorldStore(projectId) {
     record = lsGet(projectId);
   }
   if (!record) record = lsGet(projectId);
-  return migrateToSlots(record);
+  return assertSlotStore(record);
 }
 
 /**
@@ -169,14 +147,21 @@ export async function loadWorldStore(projectId) {
  */
 export async function saveWorldStore(projectId, data) {
   if (!projectId) return;
+  let existing = null;
   try {
-    const existing = migrateToSlots(await idbGet(projectId)) || { slots: {}, activeSlotIndex: 0 };
-    const merged = { ...existing, ...data };
-    delete merged.projectId;
+    existing = await idbGet(projectId);
+  } catch {
+    existing = null;
+  }
+
+  const merged = { ...(assertSlotStore(existing) || { slots: {}, activeSlotIndex: 0 }), ...data };
+  delete merged.projectId;
+
+  try {
     await idbSet(projectId, merged);
   } catch {
-    const existing = migrateToSlots(lsGet(projectId)) || { slots: {}, activeSlotIndex: 0 };
-    lsSet(projectId, { ...existing, ...data });
+    const localExisting = assertSlotStore(lsGet(projectId)) || { slots: {}, activeSlotIndex: 0 };
+    lsSet(projectId, { ...localExisting, ...data });
   }
 }
 
@@ -317,10 +302,22 @@ export async function clearSlot(projectId, slotIndex) {
   const slots = { ...store.slots };
   delete slots[slotIndex];
 
-  // If clearing the active slot, switch to scratch
-  const activeSlotIndex = store.activeSlotIndex === slotIndex ? 0 : store.activeSlotIndex;
+  // Determine new active slot index
+  let newActiveSlotIndex = store.activeSlotIndex;
+  if (store.activeSlotIndex === slotIndex) {
+    // If clearing the active slot:
+    // - If it's slot 0 (scratch), stay on 0 (scratch is conceptually always available)
+    // - Otherwise, switch to scratch (0) or first available slot
+    if (slotIndex === 0) {
+      newActiveSlotIndex = 0;
+    } else {
+      // Find first available slot (prefer scratch if it exists, otherwise first saved slot)
+      const availableSlots = Object.keys(slots).map(Number).sort((a, b) => a - b);
+      newActiveSlotIndex = availableSlots.length > 0 ? availableSlots[0] : 0;
+    }
+  }
 
-  await saveWorldStore(projectId, { slots, activeSlotIndex });
+  await saveWorldStore(projectId, { slots, activeSlotIndex: newActiveSlotIndex });
 }
 
 /**
@@ -412,18 +409,18 @@ export async function loadWorldData(projectId) {
 }
 
 /**
- * Save Illuminator domain context (shared across slots)
+ * Save Illuminator world context (shared across slots)
  */
-export async function saveDomainContext(projectId, domainContext) {
-  await saveWorldStore(projectId, { domainContext });
+export async function saveWorldContext(projectId, worldContext) {
+  await saveWorldStore(projectId, { worldContext });
 }
 
 /**
- * Load Illuminator domain context
+ * Load Illuminator world context
  */
-export async function loadDomainContext(projectId) {
+export async function loadWorldContext(projectId) {
   const store = await loadWorldStore(projectId);
-  return store?.domainContext || null;
+  return store?.worldContext || null;
 }
 
 /**
@@ -441,32 +438,18 @@ export async function loadEnrichmentConfig(projectId) {
   return store?.enrichmentConfig || null;
 }
 
-// =============================================================================
-// Backwards compatibility
-// =============================================================================
-
 /**
- * @deprecated Use saveSimulationData instead
+ * Save Illuminator prompt templates (shared across slots)
  */
-export async function saveSimulationRun(projectId, run) {
-  await saveSimulationData(projectId, {
-    simulationResults: run?.simulationResults,
-    simulationState: run?.simulationState,
-  });
+export async function savePromptTemplates(projectId, promptTemplates) {
+  await saveWorldStore(projectId, { promptTemplates });
 }
 
 /**
- * @deprecated Use loadSimulationData instead
+ * Load Illuminator prompt templates
  */
-export async function loadSimulationRun(projectId) {
-  const { simulationResults, simulationState } = await loadSimulationData(projectId);
-  if (!simulationResults && !simulationState) return null;
-  return { simulationResults, simulationState };
+export async function loadPromptTemplates(projectId) {
+  const store = await loadWorldStore(projectId);
+  return store?.promptTemplates || null;
 }
 
-/**
- * @deprecated Use clearSlot(projectId, 0) instead
- */
-export async function clearSimulationRun(projectId) {
-  await clearSlot(projectId, 0);
-}

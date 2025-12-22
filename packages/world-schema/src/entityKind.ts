@@ -23,15 +23,21 @@ export interface Status {
 }
 
 /**
- * A semantic axis defines a dimension of meaning for entity placement
+ * Required relationship rule for structural validation
+ */
+export interface RequiredRelationshipRule {
+  /** Relationship kind that must exist */
+  kind: string;
+  /** Human-readable description of why this is required */
+  description?: string;
+}
+
+/**
+ * A semantic axis reference points to a registered axis definition
  */
 export interface SemanticAxis {
-  /** Display name for the axis */
-  name: string;
-  /** Tag for the low end (0) of the axis - applied to entities placed at low values */
-  lowTag: string;
-  /** Tag for the high end (100) of the axis - applied to entities placed at high values */
-  highTag: string;
+  /** Reference to axisDefinitions[].id */
+  axisId: string;
 }
 
 /**
@@ -73,11 +79,26 @@ export type RegionBounds = CircleBounds | RectBounds | PolygonBounds;
 export interface SemanticRegion {
   id: string;
   label: string;
-  color: string;
+  /** Display color (hex string, optional) */
+  color?: string;
   /** Culture that "owns" this region (optional) */
-  culture?: string;
+  culture?: string | null;
   /** Tags to apply to entities placed in this region */
   tags?: string[];
+  /** Narrative description (optional) */
+  description?: string;
+  /** Optional z-range constraint */
+  zRange?: { min: number; max: number };
+  /** Parent region (for nested regions like city within planet) */
+  parentRegion?: string;
+  /** Whether this region was created dynamically */
+  emergent?: boolean;
+  /** Tick when region was created (for emergent regions) */
+  createdAt?: number;
+  /** Entity that triggered creation (for emergent regions) */
+  createdBy?: string;
+  /** Custom metadata */
+  metadata?: Record<string, unknown>;
   bounds: RegionBounds;
 }
 
@@ -86,9 +107,9 @@ export interface SemanticRegion {
  */
 export interface SemanticPlane {
   axes: {
-    x: SemanticAxis;
-    y: SemanticAxis;
-    z: SemanticAxis;
+    x?: SemanticAxis;
+    y?: SemanticAxis;
+    z?: SemanticAxis;
   };
   regions: SemanticRegion[];
 }
@@ -101,6 +122,8 @@ export interface EntityKindStyle {
   color?: string;
   /** Shape for graph visualization (e.g., 'ellipse', 'diamond', 'hexagon') */
   shape?: string;
+  /** Display name for UI (defaults to description/kind) */
+  displayName?: string;
 }
 
 /**
@@ -111,10 +134,14 @@ export interface EntityKindDefinition {
   kind: string;
   /** Human-readable description (used as display name) */
   description?: string;
+  /** True if this kind is defined by the framework and is read-only in editors */
+  isFramework?: boolean;
   /** Valid subtypes for this entity kind */
   subtypes: Subtype[];
   /** Valid status values for this entity kind */
   statuses: Status[];
+  /** Relationships required for this entity kind to be structurally valid */
+  requiredRelationships?: RequiredRelationshipRule[];
   /** Default status for new entities of this kind */
   defaultStatus?: string;
   /** Visual styling for UI */

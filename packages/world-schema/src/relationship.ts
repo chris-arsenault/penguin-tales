@@ -9,11 +9,13 @@
  */
 export interface RelationshipKindDefinition {
   /** Unique identifier (e.g., "member_of", "controls") */
-  id: string;
+  kind: string;
   /** Display name (e.g., "Member Of", "Controls") */
-  name: string;
+  name?: string;
   /** Human-readable description */
   description?: string;
+  /** True if this relationship is defined by the framework and is read-only in editors */
+  isFramework?: boolean;
   /** Entity kinds that can be the source of this relationship */
   srcKinds: string[];
   /** Entity kinds that can be the destination of this relationship */
@@ -22,4 +24,8 @@ export interface RelationshipKindDefinition {
   symmetric?: boolean;
   /** Optional category for grouping (e.g., "social", "political", "economic") */
   category?: string;
+  /** If false, this relationship is immutable (used by simulation) */
+  cullable?: boolean;
+  /** Decay rate used by simulation systems */
+  decayRate?: 'none' | 'slow' | 'medium' | 'fast';
 }

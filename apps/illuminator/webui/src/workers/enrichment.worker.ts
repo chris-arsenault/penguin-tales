@@ -1,14 +1,35 @@
 /**
- * Web Worker for Entity Enrichment
+ * Enrichment Worker - Single Task Executor with Direct Persistence
  *
- * Runs LLM enrichment off the main UI thread with entity-level granularity.
- * Each enrichment task is a single entity operation, enabling selective re-runs.
+ * This worker executes enrichment tasks AND persists images directly to IndexedDB.
+ * By persisting in the worker (before notifying main thread), we minimize data loss
+ * when users navigate away mid-operation.
  *
- * Communicates progress and results via postMessage.
+ * Flow:
+ * 1. Receive task from main thread
+ * 2. Make API call
+ * 3. For images: save blob to IndexedDB immediately
+ * 4. Notify main thread of completion (with imageId, not blob)
+ *
+ * Messages:
+ * - init: Set up API clients with keys and config
+ * - execute: Run a single enrichment task
+ * - abort: Cancel current task (if possible)
  */
 
-import { LLMClient, ImageGenerationClient } from '../lib/llmClient.browser';
-import type { LLMConfig, ImageConfig } from '../lib/llmClient.browser';
+import { LLMClient } from '../lib/llmClient';
+import { ImageClient } from '../lib/imageClient';
+import type { EnrichmentType, WorkerTask, WorkerResult, EnrichmentResult } from '../lib/enrichmentTypes';
+import {
+  estimateTextCost,
+  estimateImageCost,
+  calculateActualTextCost,
+  calculateActualImageCost,
+} from '../lib/costEstimation';
+import {
+  saveImage,
+  generateImageId,
+} from '../lib/workerStorage';
 
 // Worker context
 const ctx: Worker = self as unknown as Worker;
@@ -17,133 +38,39 @@ const ctx: Worker = self as unknown as Worker;
 // Types
 // ============================================================================
 
-export type TaskType = 'description' | 'relationship' | 'era_narrative' | 'image';
-export type TaskStatus = 'pending' | 'queued' | 'running' | 'complete' | 'error' | 'skipped';
-export type Prominence = 'forgotten' | 'marginal' | 'recognized' | 'renowned' | 'mythic';
-
-export interface EnrichmentTask {
-  id: string;
-  type: TaskType;
-  entityId: string;
-  entityName: string;
-  entityKind: string;
-  entitySubtype: string;
-  prominence: Prominence;
-  culture: string;
-  status: TaskStatus;
-  prompt: string;
-  customPrompt?: string;
-  result?: EnrichmentResult;
-  error?: string;
-  runAt?: number;
-  cached?: boolean;
-}
-
-export interface EnrichmentResult {
-  text?: string;
-  imageUrl?: string;
-  revisedPrompt?: string;
-}
-
-export interface TaskFilter {
-  entityKinds?: string[];
-  minProminence?: Prominence;
-  taskTypes?: TaskType[];
-  status?: TaskStatus[];
-}
-
-export interface HardState {
-  id: string;
-  kind: string;
-  subtype: string;
-  name: string;
-  description: string;
-  status: string;
-  prominence: Prominence;
-  culture?: string;
-  tags: Record<string, string | number | boolean>;
-  links: Array<{ kind: string; src: string; dst: string }>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface DomainContext {
-  worldName: string;
-  worldDescription: string;
-  canonFacts: string[];
-  cultureNotes: Record<
-    string,
-    {
-      namingStyle: string;
-      values: string[];
-      styleNotes: string;
-    }
-  >;
-  relationshipPatterns: string[];
-  conflictPatterns: string[];
-  technologyNotes: string[];
-  magicNotes: string[];
-  geographyScale: string;
-  geographyTraits: string[];
-}
-
-export interface EnrichmentConfig {
+export interface WorkerConfig {
   anthropicApiKey: string;
   openaiApiKey: string;
-  mode: 'off' | 'partial' | 'full';
-  enrichDescriptions: boolean;
-  enrichRelationships: boolean;
-  enrichEraNarratives: boolean;
-  generateImages: boolean;
-  minProminenceForDescription: Prominence;
-  minProminenceForImage: Prominence;
-  batchSize: number;
-  delayBetweenBatches: number;
   textModel: string;
   imageModel: string;
-  imageSize: '1024x1024' | '1792x1024' | '1024x1792';
-  imageQuality: 'standard' | 'hd';
+  imageSize: string;
+  imageQuality: string;
+  numWorkers?: number;
+  // Multishot prompting options
+  useClaudeForImagePrompt?: boolean;
+  claudeImagePromptTemplate?: string;
 }
 
-// Inbound messages from main thread
 export type WorkerInbound =
-  | { type: 'init'; config: EnrichmentConfig; worldData: HardState[]; domainContext: DomainContext }
-  | { type: 'runAll' }
-  | { type: 'runFiltered'; filter: TaskFilter }
-  | { type: 'runEntity'; entityId: string }
-  | { type: 'runTask'; taskId: string }
-  | { type: 'runTasks'; taskIds: string[] }
-  | { type: 'pause' }
-  | { type: 'resume' }
-  | { type: 'abort' }
-  | { type: 'reset'; entityIds?: string[] };
+  | { type: 'init'; config: WorkerConfig }
+  | { type: 'execute'; task: WorkerTask }
+  | { type: 'abort'; taskId?: string };
 
-// Outbound messages to main thread
 export type WorkerOutbound =
-  | { type: 'queueBuilt'; tasks: EnrichmentTask[] }
-  | { type: 'taskStarted'; taskId: string; entityId: string; taskType: TaskType }
-  | { type: 'taskComplete'; taskId: string; entityId: string; result: EnrichmentResult }
-  | { type: 'taskError'; taskId: string; entityId: string; error: string }
-  | { type: 'progress'; completed: number; total: number; running: string[] }
-  | { type: 'batchComplete'; completedTasks: EnrichmentTask[] }
-  | { type: 'allComplete'; enrichedEntities: HardState[] }
-  | { type: 'error'; message: string };
+  | { type: 'ready' }
+  | { type: 'started'; taskId: string }
+  | { type: 'complete'; result: WorkerResult }
+  | { type: 'error'; taskId: string; error: string };
 
 // ============================================================================
 // State
 // ============================================================================
 
-let config: EnrichmentConfig | null = null;
-let worldData: HardState[] = [];
-let domainContext: DomainContext | null = null;
-let tasks: EnrichmentTask[] = [];
+let config: WorkerConfig | null = null;
 let llmClient: LLMClient | null = null;
-let imageClient: ImageGenerationClient | null = null;
-let isPaused = false;
+let imageClient: ImageClient | null = null;
+let currentTaskId: string | null = null;
 let isAborted = false;
-let runningTaskIds: string[] = [];
-
-const PROMINENCE_ORDER: Prominence[] = ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
 
 // ============================================================================
 // Helpers
@@ -153,286 +80,222 @@ function emit(message: WorkerOutbound): void {
   ctx.postMessage(message);
 }
 
-function prominenceAtLeast(entity: Prominence, threshold: Prominence): boolean {
-  return PROMINENCE_ORDER.indexOf(entity) >= PROMINENCE_ORDER.indexOf(threshold);
-}
-
-function buildPromptForEntity(entity: HardState, taskType: TaskType): string {
-  const context = domainContext!;
-  const cultureNote = context.cultureNotes[entity.culture || ''];
-
-  let prompt = '';
-
-  switch (taskType) {
-    case 'description':
-      prompt = `Write a compelling description for ${entity.name}, a ${entity.subtype} ${entity.kind} in ${context.worldName}.
-
-Entity details:
-- Kind: ${entity.kind}
-- Subtype: ${entity.subtype}
-- Prominence: ${entity.prominence}
-- Culture: ${entity.culture || 'unknown'}
-${cultureNote ? `- Cultural style: ${cultureNote.styleNotes}` : ''}
-
-World context:
-${context.worldDescription}
-
-Canon facts that must not be contradicted:
-${context.canonFacts.map((f) => `- ${f}`).join('\n')}
-
-Write 2-3 sentences that capture the essence of this ${entity.kind}.`;
-      break;
-
-    case 'image':
-      prompt = `Create a portrait/scene for ${entity.name}, a ${entity.subtype} ${entity.kind}.
-
-Visual style: ${cultureNote?.styleNotes || 'fantasy illustration'}
-World: ${context.worldName}
-Setting: ${context.geographyTraits.join(', ')}
-
-The image should capture their ${entity.prominence} level of importance in the world.
-${entity.description ? `Description: ${entity.description}` : ''}`;
-      break;
-
-    case 'relationship':
-      prompt = `Describe the relationship dynamics involving ${entity.name}.
-
-Entity: ${entity.name} (${entity.subtype} ${entity.kind})
-Prominence: ${entity.prominence}
-
-Known relationship patterns in this world:
-${context.relationshipPatterns.map((p) => `- ${p}`).join('\n')}
-
-Conflict patterns:
-${context.conflictPatterns.map((p) => `- ${p}`).join('\n')}`;
-      break;
-
-    case 'era_narrative':
-      prompt = `Write a narrative summary for the era/event: ${entity.name}
-
-Type: ${entity.subtype}
-Description: ${entity.description}
-
-World context: ${context.worldDescription}
-
-Technology notes:
-${context.technologyNotes.map((n) => `- ${n}`).join('\n')}
-
-Magic system notes:
-${context.magicNotes.map((n) => `- ${n}`).join('\n')}`;
-      break;
-  }
-
-  return prompt;
-}
-
 function buildSystemPrompt(): string {
-  const context = domainContext!;
-  return `You are a lore writer for ${context.worldName}.
-Your writing should be evocative and consistent with the world's established canon.
-Keep responses concise but vivid. Focus on what makes each element unique.`;
+  return `You are a creative writer helping to build rich, consistent world lore.
+
+Write descriptions that capture the ESSENCE of the entity - their personality, appearance, mannerisms, or defining traits. The description should stand on its own and make the entity feel real and distinctive.
+
+IMPORTANT: Do NOT write a tour of the entity's relationships. The description should be ABOUT the entity, not a catalog of places they've been or people they know. You may reference ONE relationship that truly defines or shaped them, but only if it reveals something essential about who they are - not as a list item.
+
+Bad example (relationship catalog): "She oversees the treasury of Place X, discovered the caverns of Place Y, and manages trade at Place Z."
+Good example (entity-focused): "Her obsidian beak angles perpetually downward, as if still searching for miscounted coins. Every word she speaks has the weight of a merchant's scale."
+
+Be concise but vivid. Avoid generic fantasy tropes unless they fit the world's tone.`;
 }
 
-function buildImagePrompt(entity: HardState): string {
-  const context = domainContext!;
-  const cultureNote = context.cultureNotes[entity.culture || ''];
-
-  return `A detailed fantasy illustration of ${entity.name}, a ${entity.subtype} ${entity.kind}.
-${entity.description ? `Character/scene description: ${entity.description}` : ''}
-${cultureNote?.styleNotes ? `Art style: ${cultureNote.styleNotes}` : 'Style: detailed fantasy art'}
-Setting: ${context.worldName} - ${context.geographyTraits.slice(0, 2).join(', ')}
-Mood: ${entity.prominence === 'mythic' ? 'epic and legendary' : entity.prominence === 'renowned' ? 'notable and impressive' : 'atmospheric and fitting'}`;
-}
-
-function buildTasksForEntity(entity: HardState): EnrichmentTask[] {
-  const entityTasks: EnrichmentTask[] = [];
-
-  // Description task
-  if (
-    config!.enrichDescriptions &&
-    prominenceAtLeast(entity.prominence, config!.minProminenceForDescription)
-  ) {
-    entityTasks.push({
-      id: `desc_${entity.id}`,
-      type: 'description',
-      entityId: entity.id,
-      entityName: entity.name,
-      entityKind: entity.kind,
-      entitySubtype: entity.subtype,
-      prominence: entity.prominence,
-      culture: entity.culture || '',
-      status: 'pending',
-      prompt: buildPromptForEntity(entity, 'description'),
-    });
+/**
+ * Format an image prompt using Claude (multishot prompting)
+ */
+async function formatImagePromptWithClaude(originalPrompt: string): Promise<string> {
+  if (!config?.useClaudeForImagePrompt || !config?.claudeImagePromptTemplate) {
+    return originalPrompt;
   }
 
-  // Image task (higher prominence threshold)
-  if (
-    config!.generateImages &&
-    prominenceAtLeast(entity.prominence, config!.minProminenceForImage)
-  ) {
-    entityTasks.push({
-      id: `img_${entity.id}`,
-      type: 'image',
-      entityId: entity.id,
-      entityName: entity.name,
-      entityKind: entity.kind,
-      entitySubtype: entity.subtype,
-      prominence: entity.prominence,
-      culture: entity.culture || '',
-      status: 'pending',
-      prompt: buildImagePrompt(entity),
-    });
+  if (!llmClient?.isEnabled()) {
+    console.warn('[Worker] Claude not configured, skipping image prompt formatting');
+    return originalPrompt;
   }
 
-  // Era narrative task (for occurrences/eras)
-  if (
-    config!.enrichEraNarratives &&
-    (entity.kind === 'era' || entity.kind === 'occurrence')
-  ) {
-    entityTasks.push({
-      id: `era_${entity.id}`,
-      type: 'era_narrative',
-      entityId: entity.id,
-      entityName: entity.name,
-      entityKind: entity.kind,
-      entitySubtype: entity.subtype,
-      prominence: entity.prominence,
-      culture: entity.culture || '',
-      status: 'pending',
-      prompt: buildPromptForEntity(entity, 'era_narrative'),
-    });
-  }
+  const imageModel = config.imageModel || 'dall-e-3';
 
-  return entityTasks;
-}
-
-function filterTasks(filter: TaskFilter): EnrichmentTask[] {
-  return tasks.filter((task) => {
-    if (filter.entityKinds && !filter.entityKinds.includes(task.entityKind)) {
-      return false;
-    }
-    if (filter.minProminence && !prominenceAtLeast(task.prominence, filter.minProminence)) {
-      return false;
-    }
-    if (filter.taskTypes && !filter.taskTypes.includes(task.type)) {
-      return false;
-    }
-    if (filter.status && !filter.status.includes(task.status)) {
-      return false;
-    }
-    return true;
-  });
-}
-
-async function executeTask(task: EnrichmentTask): Promise<void> {
-  if (isAborted) return;
-  while (isPaused && !isAborted) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  if (isAborted) return;
-
-  task.status = 'running';
-  runningTaskIds.push(task.id);
-  emit({ type: 'taskStarted', taskId: task.id, entityId: task.entityId, taskType: task.type });
+  // Replace template variables
+  const formattingPrompt = config.claudeImagePromptTemplate
+    .replace(/\{\{modelName\}\}/g, imageModel)
+    .replace(/\{\{prompt\}\}/g, originalPrompt);
 
   try {
-    const prompt = task.customPrompt || task.prompt;
+    const result = await llmClient.complete({
+      systemPrompt: 'You are a prompt engineer specializing in image generation. Respond only with the reformatted prompt, no explanations or preamble.',
+      prompt: formattingPrompt,
+      maxTokens: 1024,
+      temperature: 0.3,
+    });
 
+    if (result.text && !result.error) {
+      console.log('[Worker] Formatted image prompt with Claude');
+      return result.text.trim();
+    }
+  } catch (err) {
+    console.warn('[Worker] Failed to format image prompt with Claude:', err);
+  }
+
+  return originalPrompt;
+}
+
+// ============================================================================
+// Task Execution
+// ============================================================================
+
+async function executeTask(task: WorkerTask): Promise<WorkerResult> {
+  currentTaskId = task.id;
+  isAborted = false;
+
+  emit({ type: 'started', taskId: task.id });
+
+  try {
     if (task.type === 'image') {
       // Image generation
       if (!imageClient?.isEnabled()) {
-        throw new Error('Image generation not configured');
+        throw new Error('Image generation not configured - missing OpenAI API key');
       }
-      const result = await imageClient.generate({ prompt });
+
+      // Calculate estimated cost
+      const imageModel = config?.imageModel || 'dall-e-3';
+      const imageSize = config?.imageSize || '1024x1024';
+      const imageQuality = config?.imageQuality || 'standard';
+      const estimatedCost = estimateImageCost(imageModel, imageSize, imageQuality);
+
+      // Optionally format the prompt with Claude first (multishot prompting)
+      const finalPrompt = await formatImagePromptWithClaude(task.prompt);
+
+      if (isAborted) {
+        throw new Error('Task aborted');
+      }
+
+      const result = await imageClient.generate({ prompt: finalPrompt });
+
+      if (isAborted) {
+        throw new Error('Task aborted');
+      }
+
       if (result.error) {
         throw new Error(result.error);
       }
-      task.result = {
-        imageUrl: result.imageUrl || undefined,
+
+      if (!result.imageBlob) {
+        throw new Error('No image data returned from API');
+      }
+
+      if (isAborted) {
+        throw new Error('Task aborted');
+      }
+
+      // Calculate actual cost (GPT Image models provide token usage, DALL-E uses per-image pricing)
+      const actualCost = calculateActualImageCost(imageModel, imageSize, imageQuality, result.usage);
+      const generatedAt = Date.now();
+
+      // Generate imageId and save directly to IndexedDB (before notifying main thread)
+      const imageId = generateImageId(task.entityId);
+
+      try {
+        await saveImage(imageId, result.imageBlob, {
+          entityId: task.entityId,
+          projectId: task.projectId,
+          entityName: task.entityName,
+          entityKind: task.entityKind,
+          entityCulture: task.entityCulture,
+          prompt: finalPrompt,  // Save the prompt used for generation
+          generatedAt,
+          model: imageModel,
+          revisedPrompt: result.revisedPrompt,
+          estimatedCost,
+          actualCost,
+          inputTokens: result.usage?.inputTokens,
+          outputTokens: result.usage?.outputTokens,
+        });
+        // Note: Old images are NOT deleted - they remain in the library for potential reuse
+      } catch (err) {
+        console.error('[Worker] Failed to save image to IndexedDB:', err);
+        throw new Error('Failed to save image to storage');
+      }
+
+      // Return imageId instead of blob - blob is already persisted
+      const enrichmentResult: EnrichmentResult = {
+        imageId,
         revisedPrompt: result.revisedPrompt,
+        generatedAt,
+        model: imageModel,
+        estimatedCost,
+        actualCost,
+        inputTokens: result.usage?.inputTokens,
+        outputTokens: result.usage?.outputTokens,
+      };
+
+      return {
+        id: task.id,
+        entityId: task.entityId,
+        type: task.type,
+        success: true,
+        result: enrichmentResult,
       };
     } else {
-      // Text generation
+      // Text generation (description or eraNarrative)
       if (!llmClient?.isEnabled()) {
-        throw new Error('LLM not configured');
+        throw new Error('Text generation not configured - missing Anthropic API key');
       }
+
+      const textModel = config?.textModel || 'claude-sonnet-4-20250514';
+      const taskType = task.type === 'eraNarrative' ? 'eraNarrative' :
+                       task.type === 'relationship' ? 'relationship' : 'description';
+
+      // Calculate estimated cost before API call
+      const estimate = estimateTextCost(task.prompt, taskType, textModel);
+
       const result = await llmClient.complete({
         systemPrompt: buildSystemPrompt(),
-        prompt,
+        prompt: task.prompt,
         maxTokens: 512,
         temperature: 0.7,
       });
+
+      if (isAborted) {
+        throw new Error('Task aborted');
+      }
+
       if (result.error) {
         throw new Error(result.error);
       }
-      task.result = { text: result.text };
-      task.cached = result.cached;
-    }
 
-    task.status = 'complete';
-    task.runAt = Date.now();
-    emit({ type: 'taskComplete', taskId: task.id, entityId: task.entityId, result: task.result! });
+      // Calculate actual cost from usage data
+      let actualCost = estimate.estimatedCost;
+      let inputTokens = estimate.inputTokens;
+      let outputTokens = estimate.outputTokens;
+
+      if (result.usage) {
+        inputTokens = result.usage.inputTokens;
+        outputTokens = result.usage.outputTokens;
+        actualCost = calculateActualTextCost(inputTokens, outputTokens, textModel);
+      }
+
+      const enrichmentResult: EnrichmentResult = {
+        text: result.text,
+        generatedAt: Date.now(),
+        model: textModel,
+        estimatedCost: estimate.estimatedCost,
+        actualCost,
+        inputTokens,
+        outputTokens,
+      };
+
+      return {
+        id: task.id,
+        entityId: task.entityId,
+        type: task.type,
+        success: true,
+        result: enrichmentResult,
+      };
+    }
   } catch (error) {
-    task.status = 'error';
-    task.error = error instanceof Error ? error.message : String(error);
-    emit({ type: 'taskError', taskId: task.id, entityId: task.entityId, error: task.error });
+    return {
+      id: task.id,
+      entityId: task.entityId,
+      type: task.type,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   } finally {
-    runningTaskIds = runningTaskIds.filter((id) => id !== task.id);
+    currentTaskId = null;
   }
-}
-
-async function runTaskBatch(tasksToRun: EnrichmentTask[]): Promise<void> {
-  const batchSize = config?.batchSize || 6;
-  const delay = config?.delayBetweenBatches || 1000;
-  let completed = 0;
-  const total = tasksToRun.length;
-
-  for (let i = 0; i < tasksToRun.length; i += batchSize) {
-    if (isAborted) break;
-
-    const batch = tasksToRun.slice(i, i + batchSize);
-
-    // Run batch in parallel
-    await Promise.all(batch.map((task) => executeTask(task)));
-
-    completed += batch.length;
-    emit({
-      type: 'progress',
-      completed,
-      total,
-      running: runningTaskIds,
-    });
-
-    // Delay between batches (except for last batch)
-    if (i + batchSize < tasksToRun.length && !isAborted) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  // Emit batch complete
-  const completedTasks = tasksToRun.filter((t) => t.status === 'complete');
-  emit({ type: 'batchComplete', completedTasks });
-}
-
-function buildEnrichedEntities(): HardState[] {
-  // Merge enrichment results back into entities
-  const entityMap = new Map(worldData.map((e) => [e.id, { ...e }]));
-
-  for (const task of tasks) {
-    if (task.status !== 'complete' || !task.result) continue;
-
-    const entity = entityMap.get(task.entityId);
-    if (!entity) continue;
-
-    if (task.type === 'description' && task.result.text) {
-      entity.description = task.result.text;
-    }
-    // Image URLs and other results are stored in task.result
-    // and can be retrieved by the UI
-  }
-
-  return Array.from(entityMap.values());
 }
 
 // ============================================================================
@@ -445,11 +308,6 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
   switch (message.type) {
     case 'init': {
       config = message.config;
-      worldData = message.worldData;
-      domainContext = message.domainContext;
-      isPaused = false;
-      isAborted = false;
-      runningTaskIds = [];
 
       // Initialize clients
       llmClient = new LLMClient({
@@ -458,99 +316,56 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
         model: config.textModel || 'claude-sonnet-4-20250514',
       });
 
-      imageClient = new ImageGenerationClient({
-        enabled: Boolean(config.openaiApiKey) && config.generateImages,
+      imageClient = new ImageClient({
+        enabled: Boolean(config.openaiApiKey),
         apiKey: config.openaiApiKey,
         model: config.imageModel || 'dall-e-3',
-        size: config.imageSize,
-        quality: config.imageQuality,
+        size: config.imageSize || '1024x1024',
+        quality: config.imageQuality || 'standard',
       });
 
-      // Build task queue
-      tasks = [];
-      for (const entity of worldData) {
-        tasks.push(...buildTasksForEntity(entity));
+      emit({ type: 'ready' });
+      break;
+    }
+
+    case 'execute': {
+      if (!config) {
+        emit({
+          type: 'error',
+          taskId: message.task.id,
+          error: 'Worker not initialized - call init first',
+        });
+        break;
       }
 
-      emit({ type: 'queueBuilt', tasks });
-      break;
-    }
+      const result = await executeTask(message.task);
 
-    case 'runAll': {
-      const pendingTasks = tasks.filter((t) => t.status === 'pending' || t.status === 'error');
-      await runTaskBatch(pendingTasks);
-      emit({ type: 'allComplete', enrichedEntities: buildEnrichedEntities() });
-      break;
-    }
-
-    case 'runFiltered': {
-      const filtered = filterTasks(message.filter).filter(
-        (t) => t.status === 'pending' || t.status === 'error'
-      );
-      await runTaskBatch(filtered);
-      emit({ type: 'allComplete', enrichedEntities: buildEnrichedEntities() });
-      break;
-    }
-
-    case 'runEntity': {
-      const entityTasks = tasks.filter(
-        (t) => t.entityId === message.entityId && (t.status === 'pending' || t.status === 'error')
-      );
-      await runTaskBatch(entityTasks);
-      break;
-    }
-
-    case 'runTask': {
-      const task = tasks.find((t) => t.id === message.taskId);
-      if (task) {
-        await executeTask(task);
-      }
-      break;
-    }
-
-    case 'runTasks': {
-      const selectedTasks = tasks.filter((t) => message.taskIds.includes(t.id));
-      await runTaskBatch(selectedTasks);
-      break;
-    }
-
-    case 'pause':
-      isPaused = true;
-      break;
-
-    case 'resume':
-      isPaused = false;
-      break;
-
-    case 'abort':
-      isAborted = true;
-      isPaused = false;
-      break;
-
-    case 'reset': {
-      if (message.entityIds) {
-        // Reset specific entities
-        for (const task of tasks) {
-          if (message.entityIds.includes(task.entityId)) {
-            task.status = 'pending';
-            task.result = undefined;
-            task.error = undefined;
-            task.runAt = undefined;
-          }
-        }
+      if (result.success) {
+        emit({ type: 'complete', result });
       } else {
-        // Reset all
-        for (const task of tasks) {
-          task.status = 'pending';
-          task.result = undefined;
-          task.error = undefined;
-          task.runAt = undefined;
-        }
+        emit({
+          type: 'error',
+          taskId: result.id,
+          error: result.error || 'Unknown error',
+        });
       }
-      emit({ type: 'queueBuilt', tasks });
+      break;
+    }
+
+    case 'abort': {
+      isAborted = true;
+      const taskIdToAbort = message.taskId || currentTaskId;
+      if (taskIdToAbort) {
+        emit({
+          type: 'error',
+          taskId: taskIdToAbort,
+          error: 'Task aborted by user',
+        });
+      }
       break;
     }
   }
 };
 
-export {};
+// Re-export types for consumers
+export type { WorkerTask, WorkerResult, EnrichmentResult, EnrichmentType };

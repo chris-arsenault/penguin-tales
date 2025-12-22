@@ -1,141 +1,115 @@
 /**
- * ConfigPanel - Enrichment configuration settings
+ * ConfigPanel - Model and API configuration
  *
- * Allows users to configure:
- * - Which enrichment types to run (descriptions, images, etc.)
- * - Prominence thresholds
- * - Model selection
- * - Batch settings
+ * Contains settings for:
+ * - Model selection (text and image)
+ * - Image size and quality options (model-specific)
+ * - Multishot prompting options
  */
 
-const PROMINENCE_LEVELS = [
-  { value: 'forgotten', label: 'Forgotten' },
-  { value: 'marginal', label: 'Marginal' },
-  { value: 'recognized', label: 'Recognized' },
-  { value: 'renowned', label: 'Renowned' },
-  { value: 'mythic', label: 'Mythic' },
-];
-
 const TEXT_MODELS = [
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-  { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (faster)' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (faster)' },
 ];
 
 const IMAGE_MODELS = [
+  { value: 'gpt-image-1.5', label: 'GPT Image 1.5' },
+  { value: 'gpt-image-1', label: 'GPT Image 1' },
   { value: 'dall-e-3', label: 'DALL-E 3' },
   { value: 'dall-e-2', label: 'DALL-E 2 (cheaper)' },
 ];
 
-const IMAGE_SIZES = [
-  { value: '1024x1024', label: '1024x1024 (Square)' },
-  { value: '1792x1024', label: '1792x1024 (Landscape)' },
-  { value: '1024x1792', label: '1024x1792 (Portrait)' },
-];
+const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Reformat the below prompt into something appropriate for generating a {{modelName}} image of an entity. Avoid bestiary/manuscript/folio style pages - instead create artwork that directly represents the subject as if they exist in the world.
 
-export default function ConfigPanel({ config, onConfigChange, worldSchema }) {
+Original prompt:
+{{prompt}}`;
+
+// Model-specific size options
+const IMAGE_SIZES_BY_MODEL = {
+  'gpt-image-1.5': [
+    { value: 'auto', label: 'Auto' },
+    { value: '1024x1024', label: '1024x1024 (Square)' },
+    { value: '1536x1024', label: '1536x1024 (Landscape)' },
+    { value: '1024x1536', label: '1024x1536 (Portrait)' },
+  ],
+  'gpt-image-1': [
+    { value: 'auto', label: 'Auto' },
+    { value: '1024x1024', label: '1024x1024 (Square)' },
+    { value: '1536x1024', label: '1536x1024 (Landscape)' },
+    { value: '1024x1536', label: '1024x1536 (Portrait)' },
+  ],
+  'dall-e-3': [
+    { value: '1024x1024', label: '1024x1024 (Square)' },
+    { value: '1792x1024', label: '1792x1024 (Landscape)' },
+    { value: '1024x1792', label: '1024x1792 (Portrait)' },
+  ],
+  'dall-e-2': [
+    { value: '1024x1024', label: '1024x1024' },
+    { value: '512x512', label: '512x512' },
+    { value: '256x256', label: '256x256' },
+  ],
+};
+
+// Model-specific quality options
+const IMAGE_QUALITY_BY_MODEL = {
+  'gpt-image-1.5': [
+    { value: 'auto', label: 'Auto' },
+    { value: 'high', label: 'High' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'low', label: 'Low' },
+  ],
+  'gpt-image-1': [
+    { value: 'auto', label: 'Auto' },
+    { value: 'high', label: 'High' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'low', label: 'Low' },
+  ],
+  'dall-e-3': [
+    { value: 'standard', label: 'Standard' },
+    { value: 'hd', label: 'HD' },
+  ],
+  'dall-e-2': [
+    { value: 'standard', label: 'Standard' },
+  ],
+};
+
+function isGptImageModel(model) {
+  return model?.startsWith('gpt-image');
+}
+
+export default function ConfigPanel({ config, onConfigChange }) {
+  const sizeOptions = IMAGE_SIZES_BY_MODEL[config.imageModel] || IMAGE_SIZES_BY_MODEL['dall-e-3'];
+  const qualityOptions = IMAGE_QUALITY_BY_MODEL[config.imageModel] || IMAGE_QUALITY_BY_MODEL['dall-e-3'];
+
+  // When model changes, reset size and quality to first valid option for that model
+  const handleModelChange = (newModel) => {
+    const newSizes = IMAGE_SIZES_BY_MODEL[newModel] || IMAGE_SIZES_BY_MODEL['dall-e-3'];
+    const newQualities = IMAGE_QUALITY_BY_MODEL[newModel] || IMAGE_QUALITY_BY_MODEL['dall-e-3'];
+
+    const updates = { imageModel: newModel };
+
+    // Reset size if current value isn't valid for new model
+    if (!newSizes.some((s) => s.value === config.imageSize)) {
+      updates.imageSize = newSizes[0].value;
+    }
+
+    // Reset quality if current value isn't valid for new model
+    if (!newQualities.some((q) => q.value === config.imageQuality)) {
+      updates.imageQuality = newQualities[0].value;
+    }
+
+    onConfigChange(updates);
+  };
+
   return (
     <div>
       <div className="illuminator-card">
         <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Enrichment Types</h2>
-        </div>
-
-        <div className="illuminator-checkbox-group">
-          <input
-            type="checkbox"
-            id="enrichDescriptions"
-            checked={config.enrichDescriptions}
-            onChange={(e) => onConfigChange({ enrichDescriptions: e.target.checked })}
-            className="illuminator-checkbox"
-          />
-          <label htmlFor="enrichDescriptions">Enrich entity descriptions</label>
-        </div>
-
-        <div className="illuminator-checkbox-group">
-          <input
-            type="checkbox"
-            id="enrichRelationships"
-            checked={config.enrichRelationships}
-            onChange={(e) => onConfigChange({ enrichRelationships: e.target.checked })}
-            className="illuminator-checkbox"
-          />
-          <label htmlFor="enrichRelationships">Enrich relationship stories</label>
-        </div>
-
-        <div className="illuminator-checkbox-group">
-          <input
-            type="checkbox"
-            id="enrichEraNarratives"
-            checked={config.enrichEraNarratives}
-            onChange={(e) => onConfigChange({ enrichEraNarratives: e.target.checked })}
-            className="illuminator-checkbox"
-          />
-          <label htmlFor="enrichEraNarratives">Generate era narratives</label>
-        </div>
-
-        <div className="illuminator-checkbox-group">
-          <input
-            type="checkbox"
-            id="generateImages"
-            checked={config.generateImages}
-            onChange={(e) => onConfigChange({ generateImages: e.target.checked })}
-            className="illuminator-checkbox"
-          />
-          <label htmlFor="generateImages">Generate entity images</label>
-        </div>
-      </div>
-
-      <div className="illuminator-card">
-        <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Prominence Thresholds</h2>
+          <h2 className="illuminator-card-title">Text Generation</h2>
         </div>
 
         <div className="illuminator-form-group">
-          <label className="illuminator-label">
-            Minimum prominence for descriptions
-          </label>
-          <select
-            value={config.minProminenceForDescription}
-            onChange={(e) => onConfigChange({ minProminenceForDescription: e.target.value })}
-            className="illuminator-select"
-          >
-            {PROMINENCE_LEVELS.map((level) => (
-              <option key={level.value} value={level.value}>
-                {level.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="illuminator-form-group">
-          <label className="illuminator-label">
-            Minimum prominence for images
-          </label>
-          <select
-            value={config.minProminenceForImage}
-            onChange={(e) => onConfigChange({ minProminenceForImage: e.target.value })}
-            className="illuminator-select"
-          >
-            {PROMINENCE_LEVELS.map((level) => (
-              <option key={level.value} value={level.value}>
-                {level.label}
-              </option>
-            ))}
-          </select>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Images are expensive - consider limiting to Mythic entities
-          </p>
-        </div>
-      </div>
-
-      <div className="illuminator-card">
-        <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Model Settings</h2>
-        </div>
-
-        <div className="illuminator-form-group">
-          <label className="illuminator-label">Text model (Anthropic)</label>
+          <label className="illuminator-label">Model (Anthropic)</label>
           <select
             value={config.textModel}
             onChange={(e) => onConfigChange({ textModel: e.target.value })}
@@ -147,15 +121,23 @@ export default function ConfigPanel({ config, onConfigChange, worldSchema }) {
               </option>
             ))}
           </select>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Used for entity descriptions, era narratives, and relationship stories.
+          </p>
+        </div>
+      </div>
+
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">Image Generation</h2>
         </div>
 
         <div className="illuminator-form-group">
-          <label className="illuminator-label">Image model (OpenAI)</label>
+          <label className="illuminator-label">Model (OpenAI)</label>
           <select
             value={config.imageModel}
-            onChange={(e) => onConfigChange({ imageModel: e.target.value })}
+            onChange={(e) => handleModelChange(e.target.value)}
             className="illuminator-select"
-            disabled={!config.generateImages}
           >
             {IMAGE_MODELS.map((model) => (
               <option key={model.value} value={model.value}>
@@ -171,9 +153,8 @@ export default function ConfigPanel({ config, onConfigChange, worldSchema }) {
             value={config.imageSize}
             onChange={(e) => onConfigChange({ imageSize: e.target.value })}
             className="illuminator-select"
-            disabled={!config.generateImages}
           >
-            {IMAGE_SIZES.map((size) => (
+            {sizeOptions.map((size) => (
               <option key={size.value} value={size.value}>
                 {size.label}
               </option>
@@ -181,53 +162,112 @@ export default function ConfigPanel({ config, onConfigChange, worldSchema }) {
           </select>
         </div>
 
-        <div className="illuminator-checkbox-group">
-          <input
-            type="checkbox"
-            id="imageQualityHD"
-            checked={config.imageQuality === 'hd'}
-            onChange={(e) => onConfigChange({ imageQuality: e.target.checked ? 'hd' : 'standard' })}
-            className="illuminator-checkbox"
-            disabled={!config.generateImages}
-          />
-          <label htmlFor="imageQualityHD">HD quality (higher cost)</label>
+        <div className="illuminator-form-group">
+          <label className="illuminator-label">Quality</label>
+          <select
+            value={config.imageQuality}
+            onChange={(e) => onConfigChange({ imageQuality: e.target.value })}
+            className="illuminator-select"
+          >
+            {qualityOptions.map((quality) => (
+              <option key={quality.value} value={quality.value}>
+                {quality.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="illuminator-card">
         <div className="illuminator-card-header">
-          <h2 className="illuminator-card-title">Batch Settings</h2>
+          <h2 className="illuminator-card-title">Multishot Prompting</h2>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Improve image generation by chaining multiple AI calls.
+        </p>
+
+        <div className="illuminator-checkbox-group" style={{ marginBottom: '12px' }}>
+          <input
+            type="checkbox"
+            id="requireDescription"
+            checked={config.requireDescription || false}
+            onChange={(e) => onConfigChange({ requireDescription: e.target.checked })}
+            className="illuminator-checkbox"
+          />
+          <label htmlFor="requireDescription">Require description before image</label>
+        </div>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', marginLeft: '24px' }}>
+          Enforces description generation before image generation. The description will be included in the image prompt.
+        </p>
+
+        <div className="illuminator-checkbox-group" style={{ marginBottom: '12px' }}>
+          <input
+            type="checkbox"
+            id="useClaudeForImagePrompt"
+            checked={config.useClaudeForImagePrompt || false}
+            onChange={(e) => onConfigChange({ useClaudeForImagePrompt: e.target.checked })}
+            className="illuminator-checkbox"
+          />
+          <label htmlFor="useClaudeForImagePrompt">Use Claude to format image prompt</label>
+        </div>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', marginLeft: '24px' }}>
+          Sends the image prompt through Claude first to optimize it for the image model.
+        </p>
+
+        {config.useClaudeForImagePrompt && (
+          <div className="illuminator-form-group" style={{ marginLeft: '24px' }}>
+            <label className="illuminator-label">Claude formatting prompt</label>
+            <textarea
+              value={config.claudeImagePromptTemplate || DEFAULT_IMAGE_PROMPT_TEMPLATE}
+              onChange={(e) => onConfigChange({ claudeImagePromptTemplate: e.target.value })}
+              className="illuminator-template-textarea"
+              placeholder={DEFAULT_IMAGE_PROMPT_TEMPLATE}
+            />
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Use {'{{modelName}}'} for the image model name and {'{{prompt}}'} for the original prompt.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">Performance</h2>
         </div>
 
         <div className="illuminator-form-group">
-          <label className="illuminator-label">Batch size</label>
-          <input
-            type="number"
-            value={config.batchSize}
-            onChange={(e) => onConfigChange({ batchSize: parseInt(e.target.value) || 1 })}
-            min={1}
-            max={20}
-            className="illuminator-input"
-            style={{ width: '100px' }}
-          />
+          <label className="illuminator-label">Parallel workers</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input
+              type="range"
+              min="1"
+              max="8"
+              value={config.numWorkers || 4}
+              onChange={(e) => onConfigChange({ numWorkers: parseInt(e.target.value, 10) })}
+              style={{ flex: 1 }}
+            />
+            <span style={{ minWidth: '24px', textAlign: 'right', fontWeight: 500 }}>
+              {config.numWorkers || 4}
+            </span>
+          </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Number of tasks to process concurrently
+            Number of concurrent API calls. Higher = faster but may hit rate limits.
           </p>
         </div>
+      </div>
 
-        <div className="illuminator-form-group">
-          <label className="illuminator-label">Delay between batches (ms)</label>
-          <input
-            type="number"
-            value={config.delayBetweenBatches}
-            onChange={(e) => onConfigChange({ delayBetweenBatches: parseInt(e.target.value) || 0 })}
-            min={0}
-            max={10000}
-            step={100}
-            className="illuminator-input"
-            style={{ width: '100px' }}
-          />
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">About</h2>
         </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          Illuminator enriches your world simulation with LLM-generated content.
+          Use the <strong>Entities</strong> tab to generate descriptions and images for entities.
+          Use the <strong>Narratives</strong> tab to generate era summaries and relationship stories.
+        </p>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginTop: '12px' }}>
+          All enrichments are saved automatically to your current world slot.
+        </p>
       </div>
     </div>
   );

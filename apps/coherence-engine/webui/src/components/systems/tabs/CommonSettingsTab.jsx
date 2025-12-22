@@ -14,7 +14,7 @@ import SelectionRuleEditor from '../../shared/SelectionRuleEditor';
  * @param {Array} props.pressures - Available pressure definitions
  */
 export function CommonSettingsTab({ system, onChange, schema, pressures }) {
-  const config = system.config || {};
+  const config = system.config;
   const selection = config.selection || { strategy: 'by_kind', kind: 'any' };
   const supportsSelection = [
     'graphContagion',

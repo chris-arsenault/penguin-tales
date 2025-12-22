@@ -3,30 +3,11 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { createDomainSchemaFromJSON } from '@lib';
-import SimulationDashboard from '../dashboard';
+import { SimulationDashboard } from '../dashboard';
 import DebugSettingsModal from '../DebugSettingsModal';
 import ParameterForm from './ParameterForm';
 import RunControls from './RunControls';
 import ConfigViewer from './ConfigViewer';
-
-/**
- * Build CoordinateContextConfig from canonry's schema.
- */
-function buildCoordinateContextConfig(schema) {
-  const entityKinds = (schema?.entityKinds || []).map((kind) => ({
-    id: kind.kind || kind.id,
-    semanticPlane: kind.semanticPlane,
-  }));
-
-  const cultures = (schema?.cultures || []).map((culture) => ({
-    id: culture.id,
-    axisBiases: culture.axisBiases || {},
-    homeRegions: culture.homeRegions || {},
-  }));
-
-  return { entityKinds, cultures };
-}
 
 const DEBUG_MODAL_PREFIX = 'loreweave:debugModal:';
 
@@ -140,56 +121,19 @@ export default function SimulationRunner({
   // Handle completion
   useEffect(() => {
     if (simState.status === 'complete' && simState.result) {
-      const results = {
-        metadata: simState.result.metadata,
-        hardState: simState.result.hardState,
-        relationships: simState.result.relationships,
-        history: simState.result.history,
-        pressures: simState.result.pressures,
-        distributionMetrics: simState.result.distributionMetrics,
-        coordinateState: simState.result.coordinateState,
-        uiSchema: simState.result.uiSchema,
-      };
-      onComplete(results);
+      onComplete(simState.result);
     }
   }, [simState.status, simState.result, onComplete]);
 
-  // Build coordinate context config
-  const coordinateContextConfig = useMemo(() => {
-    return buildCoordinateContextConfig(schema);
-  }, [schema]);
-
   // Generate the EngineConfig
   const engineConfig = useMemo(() => {
-    const domainSchemaJSON = {
-      id: schema.id || 'canonry-domain',
-      name: schema.name || 'Generated World',
-      version: schema.version || '1.0.0',
-      entityKinds: schema.entityKinds.map(ek => ({
-        ...ek,
-        kind: ek.kind || ek.id,
-        name: ek.name || ek.description,
-        description: ek.description || ek.name,
-      })),
-      relationshipKinds: schema.relationshipKinds.map(rk => ({
-        ...rk,
-        kind: rk.kind || rk.id,
-        name: rk.name || rk.description,
-        srcKinds: rk.srcKinds || rk.sourceKinds || [],
-        dstKinds: rk.dstKinds || rk.targetKinds || [],
-      })),
-      cultures: schema.cultures || [],
-    };
-
     return {
-      domain: domainSchemaJSON,
-      cultures: schema.cultures || [],
+      schema,
       eras,
       pressures: pressures,
       templates: (generators || []).filter(g => g.enabled !== false),
       systems: (systems || []).filter(s => s.enabled !== false),
       actions: (actions || []).filter(a => a.enabled !== false),
-      tagRegistry: schema.tagRegistry || [],
       ticksPerEpoch: params.ticksPerEpoch,
       maxEpochs: params.maxEpochs,
       targetEntitiesPerKind: params.targetEntitiesPerKind,
@@ -198,30 +142,25 @@ export default function SimulationRunner({
       scaleFactor: params.scaleFactor,
       defaultMinDistance: params.defaultMinDistance,
       pressureDeltaSmoothing: params.pressureDeltaSmoothing,
-      coordinateContextConfig,
       seedRelationships: seedRelationships || [],
       debugConfig,
     };
-  }, [schema, eras, pressures, generators, systems, actions, params, coordinateContextConfig, seedRelationships, debugConfig]);
+  }, [schema, eras, pressures, generators, systems, actions, params, seedRelationships, debugConfig]);
 
   // Run simulation
   const runSimulation = useCallback(() => {
     if (!validation.isValid) return;
 
-    const domain = createDomainSchemaFromJSON(engineConfig.domain);
-    const fullConfig = { ...engineConfig, domain };
     const initialEntities = seedEntities || [];
-    startWorker(fullConfig, initialEntities);
+    startWorker(engineConfig, initialEntities);
   }, [validation, engineConfig, seedEntities, startWorker]);
 
   // Start in step mode
   const startStepMode = useCallback(() => {
     if (!validation.isValid) return;
 
-    const domain = createDomainSchemaFromJSON(engineConfig.domain);
-    const fullConfig = { ...engineConfig, domain };
     const initialEntities = seedEntities || [];
-    startSteppingWorker(fullConfig, initialEntities);
+    startSteppingWorker(engineConfig, initialEntities);
   }, [validation, engineConfig, seedEntities, startSteppingWorker]);
 
   const handleParamChange = (field, value) => {

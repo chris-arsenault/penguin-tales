@@ -126,7 +126,7 @@ function initializeGeneratorsAndSystems(usageMap, generators, systems) {
   });
 
   (systems || []).forEach(s => {
-    const sysId = s.config?.id || s.id;
+    const sysId = s.config.id;
     usageMap.systems[sysId] = { eras: [] };
   });
 }
@@ -601,7 +601,7 @@ function scanPressureReferences(usageMap, pressures, schema) {
 
 function scanEraReferences(usageMap, eras, generators, systems) {
   const generatorIds = new Set((generators || []).map(g => g.id));
-  const systemIds = new Set((systems || []).map(s => s.config?.id || s.id));
+  const systemIds = new Set((systems || []).map(s => s.config.id));
   const pressureIds = new Set(Object.keys(usageMap.pressures || {}));
 
   (eras || []).forEach(era => {
@@ -776,10 +776,10 @@ function scanSystemReferences(usageMap, systems, schema, pressures) {
   const pressureIds = new Set((pressures || []).map(p => p.id));
 
   (systems || []).forEach(sys => {
-    const sysId = sys.config?.id || sys.id;
-    const sysName = sys.config?.name || sysId;
+    const sysId = sys.config.id;
+    const sysName = sys.config.name || sysId;
     const sysRef = { id: sysId, name: sysName };
-    const config = sys.config || {};
+    const config = sys.config;
     const location = `System "${sysName}"`;
 
     scanSelectionRule(config.selection, usageMap, 'systems', sysRef, {
@@ -1255,9 +1255,10 @@ export function getUsageSummary(usage) {
  * @param {Array} params.systems - Array of system configs
  * @param {Array} params.pressures - Array of pressure configs
  * @param {Array} params.entityKinds - Array of entity kind definitions (with semantic planes)
+ * @param {Array} params.axisDefinitions - Axis definitions referenced by semantic planes
  * @returns {Object} - Map of tag -> { nameforge, seed, generators, systems, pressures, axis }
  */
-export function computeTagUsage({ cultures, seedEntities, generators, systems, pressures, entityKinds } = {}) {
+export function computeTagUsage({ cultures, seedEntities, generators, systems, pressures, entityKinds, axisDefinitions } = {}) {
   const usage = {};
 
   const ensureTag = (tag) => {
@@ -1374,7 +1375,7 @@ export function computeTagUsage({ cultures, seedEntities, generators, systems, p
 
   // Count tags used in systems
   (systems || []).forEach(sys => {
-    const config = sys.config || {};
+    const config = sys.config;
 
     // Tags in selection filters
     collectTagsFromFilters(config.selection?.filters, 'systems');
@@ -1447,9 +1448,13 @@ export function computeTagUsage({ cultures, seedEntities, generators, systems, p
   });
 
   // Count tags used as semantic plane axis labels
+  const axisById = new Map((axisDefinitions || []).map(axis => [axis.id, axis]));
   (entityKinds || []).forEach(ek => {
     const axes = ek.semanticPlane?.axes || {};
-    Object.values(axes).forEach(axis => {
+    Object.values(axes).forEach(axisRef => {
+      if (!axisRef?.axisId) return;
+      const axis = axisById.get(axisRef.axisId);
+      if (!axis) return;
       if (axis.lowTag) {
         ensureTag(axis.lowTag);
         usage[axis.lowTag].axis = (usage[axis.lowTag].axis || 0) + 1;
@@ -1652,14 +1657,6 @@ export function computeSchemaUsage({
       }
     });
 
-    // Also check legacy entityKind field
-    if (gen.entityKind) {
-      addEntityKindUsage(gen.entityKind, 'generators', genId);
-    }
-    if (gen.entityKind && gen.subtype) {
-      addSubtypeUsage(gen.entityKind, gen.subtype, 'generators', genId);
-    }
-
     // Selection kind (the kind being selected from)
     recordSelectionUsage(gen.selection, 'generators', genId);
 
@@ -1679,15 +1676,6 @@ export function computeSchemaUsage({
     creations.forEach((c) => {
       if (c.lineage?.relationshipKind) {
         addRelationshipKindUsage(c.lineage.relationshipKind, 'generators', genId);
-      }
-    });
-
-    // Target entity kinds (for relationship targets)
-    const targets = gen.targets || gen.targetKinds || [];
-    targets.forEach((target) => {
-      const targetKind = typeof target === 'string' ? target : target.kind;
-      if (targetKind) {
-        addEntityKindUsage(targetKind, 'generators', genId);
       }
     });
 
@@ -1713,9 +1701,8 @@ export function computeSchemaUsage({
 
   // Analyze systems
   systems.forEach((sys) => {
-    // Systems can have config wrapper or be flat
-    const cfg = sys.config || sys;
-    const sysId = cfg.id || cfg.name || sys.systemType || 'unnamed';
+    const cfg = sys.config;
+    const sysId = cfg.id;
 
     recordSelectionUsage(cfg.selection, 'systems', sysId);
 
@@ -1771,24 +1758,6 @@ export function computeSchemaUsage({
     recordSelectionUsage(action.actor?.selection, 'actions', actionId);
     recordSelectionUsage(action.targeting, 'actions', actionId);
     (action.outcome?.mutations || []).forEach((mutation) => recordMutationUsage(mutation, 'actions', actionId));
-  });
-
-  // Analyze pressures
-  pressures.forEach((pressure) => {
-    const pressureId = pressure.id || pressure.name || 'unnamed';
-
-    // Entity kinds affected
-    const affectedKinds = pressure.affectedKinds || pressure.entityKinds || [];
-    affectedKinds.forEach((kind) => {
-      ensureEntityKind(kind);
-      usage.entityKinds[kind].pressures.push(pressureId);
-    });
-
-    // Single entity kind
-    if (pressure.entityKind) {
-      ensureEntityKind(pressure.entityKind);
-      usage.entityKinds[pressure.entityKind].pressures.push(pressureId);
-    }
   });
 
   // Analyze seed entities

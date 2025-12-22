@@ -370,8 +370,7 @@
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "preferFilters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "pickStrategy": { "$ref": "#/$defs/SelectionPickStrategy" },
-        "maxResults": { "type": "integer", "minimum": 1 },
-        "fallback": { "$ref": "#/$defs/NonEmptyString" }
+        "maxResults": { "type": "integer", "minimum": 1 }
       }
     },
 
@@ -395,7 +394,6 @@
         "preferFilters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "pickStrategy": { "$ref": "#/$defs/SelectionPickStrategy" },
         "maxResults": { "type": "integer", "minimum": 1 },
-        "fallback": { "$ref": "#/$defs/NonEmptyString" },
         "required": { "type": "boolean" }
       }
     },

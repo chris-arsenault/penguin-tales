@@ -8,7 +8,7 @@
 
 import { HardState, EntityTags } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
-import { FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_STATUS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { hasTag } from '../utils';
 
 /**
@@ -247,7 +247,7 @@ export function detectClusters(
 export function filterClusterableEntities(entities: HardState[]): HardState[] {
   return entities.filter(e =>
     e.status !== FRAMEWORK_STATUS.HISTORICAL &&
-    !hasTag(e.tags, 'meta-entity')
+    !hasTag(e.tags, FRAMEWORK_TAGS.META_ENTITY)
   );
 }
 

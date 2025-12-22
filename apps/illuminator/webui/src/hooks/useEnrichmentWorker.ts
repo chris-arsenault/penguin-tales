@@ -13,11 +13,13 @@ import type {
   WorkerOutbound,
   EnrichmentTask,
   EnrichmentConfig,
-  DomainContext,
+  WorldContextInput,
+  SimulationMetadata,
   TaskFilter,
   EnrichmentResult,
   HardState,
 } from '../workers/enrichment.worker';
+import type { PromptTemplates } from '../lib/promptTemplates';
 
 export type EnrichmentStatus =
   | 'idle'
@@ -40,7 +42,13 @@ export interface EnrichmentState {
 
 export interface UseEnrichmentWorkerReturn {
   state: EnrichmentState;
-  initialize: (config: EnrichmentConfig, worldData: HardState[], domainContext: DomainContext) => void;
+  initialize: (
+    config: EnrichmentConfig,
+    worldData: HardState[],
+    worldContext: WorldContextInput,
+    simulationMetadata?: SimulationMetadata,
+    promptTemplates?: Partial<PromptTemplates> | null
+  ) => void;
   runAll: () => void;
   runFiltered: (filter: TaskFilter) => void;
   runEntity: (entityId: string) => void;
@@ -189,7 +197,13 @@ export function useEnrichmentWorker(): UseEnrichmentWorkerReturn {
   }, [handleMessage]);
 
   const initialize = useCallback(
-    (config: EnrichmentConfig, worldData: HardState[], domainContext: DomainContext) => {
+    (
+      config: EnrichmentConfig,
+      worldData: HardState[],
+      worldContext: WorldContextInput,
+      simulationMetadata?: SimulationMetadata,
+      promptTemplates?: Partial<PromptTemplates> | null
+    ) => {
       setState({
         ...initialState,
         status: 'initializing',
@@ -200,7 +214,9 @@ export function useEnrichmentWorker(): UseEnrichmentWorkerReturn {
         type: 'init',
         config,
         worldData,
-        domainContext,
+        worldContext,
+        simulationMetadata,
+        promptTemplates,
       });
     },
     [createWorker]
@@ -294,4 +310,4 @@ export function useEnrichmentWorker(): UseEnrichmentWorkerReturn {
 }
 
 // Re-export types for convenience
-export type { EnrichmentTask, EnrichmentConfig, DomainContext, TaskFilter, EnrichmentResult };
+export type { EnrichmentTask, EnrichmentConfig, WorldContextInput, SimulationMetadata, TaskFilter, EnrichmentResult };

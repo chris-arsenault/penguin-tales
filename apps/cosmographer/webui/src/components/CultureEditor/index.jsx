@@ -5,7 +5,7 @@
  * contains x, y, z values corresponding to that kind's semantic plane axes.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 
 const styles = {
   container: {
@@ -167,6 +167,10 @@ export default function CultureEditor({ project, onSave }) {
 
   const cultures = project?.cultures || [];
   const entityKinds = project?.entityKinds || [];
+  const axisDefinitions = project?.axisDefinitions || [];
+  const axisById = useMemo(() => {
+    return new Map(axisDefinitions.map(axis => [axis.id, axis]));
+  }, [axisDefinitions]);
 
   const toggleCulture = (cultureId) => {
     setExpandedCultures(prev => ({ ...prev, [cultureId]: !prev[cultureId] }));
@@ -177,6 +181,8 @@ export default function CultureEditor({ project, onSave }) {
   };
 
   const updateCulture = (cultureId, updates) => {
+    const existing = cultures.find(c => c.id === cultureId);
+    if (existing?.isFramework) return;
     updateCultures(cultures.map(c =>
       c.id === cultureId ? { ...c, ...updates } : c
     ));
@@ -254,6 +260,7 @@ export default function CultureEditor({ project, onSave }) {
         <div style={styles.cultureList}>
           {cultures.map((culture) => {
             const isExpanded = expandedCultures[culture.id];
+            const isFramework = Boolean(culture.isFramework);
 
             return (
               <div key={culture.id} style={styles.cultureCard}>
@@ -271,6 +278,9 @@ export default function CultureEditor({ project, onSave }) {
                     <div style={{ ...styles.colorDot, backgroundColor: culture.color }} />
                     <span style={styles.cultureName}>{culture.name}</span>
                     <span style={styles.cultureId}>({culture.id})</span>
+                    {isFramework && (
+                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>framework</span>
+                    )}
                   </div>
                   <div style={styles.cultureSummary}>
                     {getBiasSummary(culture)}
@@ -298,21 +308,26 @@ export default function CultureEditor({ project, onSave }) {
                                 </span>
                               </div>
                               {['x', 'y', 'z'].map((axis) => {
-                                const axisConfig = axes[axis] || { name: `${axis.toUpperCase()} Axis`, lowTag: 'low', highTag: 'high' };
+                                const axisRef = axes[axis];
+                                const axisConfig = axisRef?.axisId ? axisById.get(axisRef.axisId) : undefined;
+                                const axisPlaceholder = axisRef?.axisId && !axisConfig
+                                  ? `Missing axis (${axisRef.axisId})`
+                                  : 'Unassigned';
                                 const storedValue = biases[axis] ?? 50;
                                 const displayValue = getDisplayValue(culture.id, kind.kind, axis, storedValue);
 
                                 return (
                                   <div key={axis} style={styles.axisRow}>
                                     <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
-                                    <span style={styles.tagLabel} title={axisConfig.lowTag}>
-                                      {axisConfig.lowTag}
+                                    <span style={styles.tagLabel} title={axisConfig?.lowTag || axisPlaceholder}>
+                                      {axisConfig?.lowTag || '—'}
                                     </span>
                                     <input
                                       type="range"
                                       min="0"
                                       max="100"
                                       value={displayValue}
+                                      disabled={isFramework}
                                       onMouseDown={(e) => handleSliderStart(culture.id, kind.kind, axis, e.target.value)}
                                       onTouchStart={(e) => handleSliderStart(culture.id, kind.kind, axis, e.target.value)}
                                       onChange={(e) => handleSliderChange(e.target.value)}
@@ -321,10 +336,14 @@ export default function CultureEditor({ project, onSave }) {
                                       onMouseLeave={() => {
                                         if (draggingRef.current) handleSliderEnd();
                                       }}
-                                      style={styles.slider}
+                                      style={{
+                                        ...styles.slider,
+                                        opacity: isFramework ? 0.5 : 1,
+                                        pointerEvents: isFramework ? 'none' : 'auto'
+                                      }}
                                     />
-                                    <span style={styles.tagLabelRight} title={axisConfig.highTag}>
-                                      {axisConfig.highTag}
+                                    <span style={styles.tagLabelRight} title={axisConfig?.highTag || axisPlaceholder}>
+                                      {axisConfig?.highTag || '—'}
                                     </span>
                                     <span style={styles.axisValue}>{displayValue}</span>
                                   </div>

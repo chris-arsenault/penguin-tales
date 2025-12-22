@@ -32,7 +32,7 @@ export class ContractEnforcer {
   private registry: TagMetadata[];
 
   constructor(private config: EngineConfig) {
-    this.registry = config.tagRegistry || [];
+    this.registry = config.schema.tagRegistry || [];
     this.tagAnalyzer = new TagHealthAnalyzer(this.registry);
   }
 

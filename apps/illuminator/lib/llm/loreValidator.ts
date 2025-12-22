@@ -1,4 +1,4 @@
-import { HardState } from '../core/worldTypes';
+import type { HardState } from '../types';
 import { DomainLoreProvider } from '../llm/types';
 
 export interface ValidationResult {

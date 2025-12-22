@@ -7,8 +7,7 @@
 
 import { HardState, Relationship } from '../core/worldTypes';
 import { Era, HistoryEvent } from '../engine/types';
-import type { EntityKindDefinition, RelationshipKindDefinition, CultureDefinition } from '@canonry/world-schema';
-import type { RegionBounds } from '../coordinates/types';
+import type { WorldOutput } from '@canonry/world-schema';
 
 // =============================================================================
 // Event Payloads
@@ -82,49 +81,6 @@ export interface PopulationPayload {
     overpopulated: PopulationMetricPayload[];
     underpopulated: PopulationMetricPayload[];
   };
-}
-
-// =============================================================================
-// World Output (Archivist-ready)
-// =============================================================================
-
-export interface AxisConfig {
-  name: string;
-  lowTag: string;
-  highTag: string;
-}
-
-export interface EntityKindMapConfig {
-  entityKind: string;
-  name: string;
-  description: string;
-  bounds: { min: number; max: number };
-  hasZAxis: boolean;
-  zAxisLabel?: string;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
-  zAxis?: AxisConfig;
-}
-
-export interface RegionSchema {
-  id: string;
-  label: string;
-  description?: string;
-  bounds: RegionBounds;
-  zRange?: { min: number; max: number };
-  parentRegion?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface WorldUiSchema {
-  worldName: string;
-  worldIcon: string;
-  entityKinds: EntityKindDefinition[];
-  relationshipKinds: RelationshipKindDefinition[];
-  prominenceLevels: string[];
-  cultures: CultureDefinition[];
-  perKindMaps?: Record<string, EntityKindMapConfig>;
-  perKindRegions?: Record<string, RegionSchema[]>;
 }
 
 export interface TemplateUsagePayload {
@@ -299,25 +255,7 @@ export interface ActionApplicationPayload {
   };
 }
 
-export interface SimulationResultPayload {
-  metadata: {
-    tick: number;
-    epoch: number;
-    era: string;
-    entityCount: number;
-    relationshipCount: number;
-    historyEventCount: number;
-    durationMs: number;
-    enrichmentTriggers?: Record<string, unknown>;
-  };
-  hardState: HardState[];
-  relationships: Relationship[];
-  history: HistoryEvent[];
-  pressures: Record<string, number>;
-  distributionMetrics?: DistributionMetrics;
-  coordinateState?: unknown;
-  uiSchema?: WorldUiSchema;
-}
+export type SimulationResultPayload = WorldOutput;
 
 export interface ErrorPayload {
   message: string;
@@ -342,34 +280,6 @@ export interface TagHealthPayload {
     overusedTagCount: number;
     conflictCount: number;
   };
-}
-
-// =============================================================================
-// Distribution Metrics (optional)
-// =============================================================================
-
-export interface GraphMetrics {
-  clusters: number;
-  avgClusterSize: number;
-  intraClusterDensity: number;
-  interClusterDensity: number;
-  isolatedNodes: number;
-  isolatedNodeRatio: number;
-}
-
-export interface DistributionMetrics {
-  entityKindRatios?: Record<string, number>;
-  prominenceRatios?: Record<string, number>;
-  relationshipTypeRatios?: Record<string, number>;
-  graphMetrics?: GraphMetrics;
-  deviation?: {
-    overall: number;
-    entityKind: number;
-    prominence: number;
-    relationship: number;
-    connectivity: number;
-  };
-  targets?: Record<string, unknown>;
 }
 
 // =============================================================================
@@ -525,25 +435,7 @@ export interface SystemActionPayload {
  * State export payload - emitted on request for intermediate state export
  * Contains the same structure as SimulationResultPayload but for in-progress simulation
  */
-export interface StateExportPayload {
-  metadata: {
-    tick: number;
-    epoch: number;
-    era: string;
-    entityCount: number;
-    relationshipCount: number;
-    historyEventCount: number;
-    isComplete: boolean;
-    enrichmentTriggers?: Record<string, unknown>;
-  };
-  hardState: HardState[];
-  relationships: Relationship[];
-  history: HistoryEvent[];
-  pressures: Record<string, number>;
-  distributionMetrics?: DistributionMetrics;
-  coordinateState?: unknown;
-  uiSchema?: WorldUiSchema;
-}
+export type StateExportPayload = WorldOutput;
 
 // =============================================================================
 // Event Union Type

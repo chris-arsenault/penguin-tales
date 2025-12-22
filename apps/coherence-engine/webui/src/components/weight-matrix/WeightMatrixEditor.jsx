@@ -51,8 +51,8 @@ export default function WeightMatrixEditor({
   const items = useMemo(() => {
     const source = viewMode === 'generators' ? generators : systems;
     return source.map((item) => ({
-      id: viewMode === 'generators' ? item.id : (item.config?.id || item.id),
-      name: viewMode === 'generators' ? (item.name || item.id) : (item.config?.name || item.config?.id || item.id),
+      id: viewMode === 'generators' ? item.id : item.config.id,
+      name: viewMode === 'generators' ? (item.name || item.id) : (item.config.name || item.config.id),
       type: viewMode === 'generators' ? 'generator' : item.systemType,
     }));
   }, [viewMode, generators, systems]);
@@ -60,7 +60,7 @@ export default function WeightMatrixEditor({
   // Detect orphaned references - IDs in eras that don't exist in generators/systems
   const orphanedReferences = useMemo(() => {
     const generatorIds = new Set(generators.map(g => g.id));
-    const systemIds = new Set(systems.map(s => s.config?.id || s.id));
+    const systemIds = new Set(systems.map(s => s.config.id));
 
     const orphanedGenerators = [];
     const orphanedSystems = [];
@@ -90,7 +90,7 @@ export default function WeightMatrixEditor({
   // Clean up all orphaned references
   const cleanupOrphanedReferences = useCallback(() => {
     const generatorIds = new Set(generators.map(g => g.id));
-    const systemIds = new Set(systems.map(s => s.config?.id || s.id));
+    const systemIds = new Set(systems.map(s => s.config.id));
 
     const newEras = eras.map(era => {
       const newTemplateWeights = { ...era.templateWeights };

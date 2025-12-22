@@ -75,8 +75,8 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
 
   // 2. Add generator nodes and their edges to pressures
   generators.forEach(g => {
-    const gId = g.id || g.config?.id;
-    const gName = g.name || g.config?.name || gId;
+    const gId = g.id;
+    const gName = g.name || gId;
     const isDisabled = g.enabled === false;
     addNode(`generator:${gId}`, 'generator', gName, { generator: g }, isDisabled);
 
@@ -109,15 +109,15 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
 
   // 3. Add system nodes and their edges
   systems.forEach(s => {
-    const sId = s.config?.id || s.id;
-    const sName = s.config?.name || s.name || sId;
-    const isSystemDisabled = s.enabled === false || s.config?.enabled === false;
+    const sId = s.config.id;
+    const sName = s.config.name || sId;
+    const isSystemDisabled = s.enabled === false || s.config.enabled === false;
     addNode(`system:${sId}`, 'system', sName, { system: s }, isSystemDisabled);
 
-    const config = s.config || s;
+    const config = s.config;
 
-    // Pressure changes from systems (legacy map + mutation-based actions)
-    const pressureChanges = config.pressureChanges || s.pressureChanges || {};
+    // Pressure changes from systems (mutation-based actions)
+    const pressureChanges = config.pressureChanges || {};
     Object.entries(pressureChanges).forEach(([pressureId, delta]) => {
       if (typeof delta === 'number') {
         const polarity = delta >= 0 ? 'positive' : 'negative';
@@ -150,9 +150,9 @@ function extractCausalGraph(pressures, generators, systems, actions, schema, sho
 
   // 4. Add action nodes
   actions.forEach(a => {
-    const aId = a.id || a.config?.id;
-    const aName = a.name || a.config?.name || aId;
-    const isActionDisabled = a.enabled === false || a.config?.enabled === false;
+    const aId = a.id;
+    const aName = a.name || aId;
+    const isActionDisabled = a.enabled === false;
     addNode(`action:${aId}`, 'action', aName, { action: a }, isActionDisabled);
 
     // Action outcome pressure changes

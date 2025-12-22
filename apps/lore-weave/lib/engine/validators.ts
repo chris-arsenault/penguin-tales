@@ -68,23 +68,35 @@ export function validateConnectedEntities(graph: Graph): ValidationResult {
 }
 
 /**
- * Validate that entities have required structural relationships
- * Uses domain schema to determine requirements (no hardcoded entity kinds!)
+ * Validate that entities have required structural relationships.
+ * Uses canonical schema requirements (no hardcoded entity kinds).
  */
 export function validateNPCStructure(graph: Graph, config: EngineConfig): ValidationResult {
   const invalidEntities: HardState[] = [];
   const missingByKindSubtype = new Map<string, Map<string, number>>();
+  const kindsWithRequirements = config.schema.entityKinds.filter(
+    kindDef => kindDef.requiredRelationships && kindDef.requiredRelationships.length > 0
+  );
 
-  // Check all entities against domain schema requirements
+  if (kindsWithRequirements.length === 0) {
+    return {
+      name: 'Entity Structure',
+      passed: true,
+      failureCount: 0,
+      details: 'No requiredRelationships defined in schema'
+    };
+  }
+
+  // Check all entities against schema requirements
   for (const entity of graph.getEntities()) {
-    if (!config.domain.validateEntityStructure) {
-      // Domain doesn't provide validation - skip
-      continue;
-    }
+    const kindDef = config.schema.entityKinds.find(kind => kind.kind === entity.kind);
+    const required = kindDef?.requiredRelationships;
+    if (!required || required.length === 0) continue;
 
-    const validation = config.domain.validateEntityStructure(entity, graph);
+    const relationships = graph.getEntityRelationships(entity.id, 'both', { includeHistorical: true });
+    const missing = required.filter(rule => !relationships.some(rel => rel.kind === rule.kind));
 
-    if (!validation.valid) {
+    if (missing.length > 0) {
       invalidEntities.push(entity);
 
       // Track missing relationships by kind:subtype
@@ -94,8 +106,8 @@ export function validateNPCStructure(graph: Graph, config: EngineConfig): Valida
       }
       const subtypeMap = missingByKindSubtype.get(key)!;
 
-      validation.missing.forEach(relKind => {
-        subtypeMap.set(relKind, (subtypeMap.get(relKind) || 0) + 1);
+      missing.forEach(rule => {
+        subtypeMap.set(rule.kind, (subtypeMap.get(rule.kind) || 0) + 1);
       });
     }
   }
@@ -116,7 +128,7 @@ export function validateNPCStructure(graph: Graph, config: EngineConfig): Valida
   }
 
   return {
-    name: 'Entity Structure',  // Renamed from 'NPC Structure'
+    name: 'Entity Structure',
     passed,
     failureCount: invalidEntities.length,
     details,

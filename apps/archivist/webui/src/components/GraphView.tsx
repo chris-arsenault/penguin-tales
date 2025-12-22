@@ -9,24 +9,18 @@ import { transformWorldData } from '../utils/dataTransform.ts';
 
 cytoscape.use(coseBilkent);
 
-// Default entity kind styles (fallback when uiSchema not present)
-const DEFAULT_ENTITY_STYLES: EntityKindDefinition[] = [
-  { kind: 'npc', description: 'NPCs', subtypes: [], statuses: [], style: { color: '#6FB1FC', shape: 'ellipse' } },
-  { kind: 'faction', description: 'Factions', subtypes: [], statuses: [], style: { color: '#FC6B6B', shape: 'diamond' } },
-  { kind: 'location', description: 'Locations', subtypes: [], statuses: [], style: { color: '#6BFC9C', shape: 'hexagon' } },
-  { kind: 'rules', description: 'Rules', subtypes: [], statuses: [], style: { color: '#FCA86B', shape: 'rectangle' } },
-  { kind: 'abilities', description: 'Abilities', subtypes: [], statuses: [], style: { color: '#C76BFC', shape: 'star' } },
-  { kind: 'era', description: 'Eras', subtypes: [], statuses: [], style: { color: '#FFD700', shape: 'octagon' } },
-  { kind: 'occurrence', description: 'Occurrences', subtypes: [], statuses: [], style: { color: '#FF69B4', shape: 'triangle' } }
-];
-
 // Generate Cytoscape style array from entity kind definitions
 function generateEntityKindStyles(entityKinds: EntityKindDefinition[]) {
   return entityKinds.map(ek => ({
     selector: `node[kind="${ek.kind}"]`,
     style: {
-      'background-color': ek.style?.color || '#999',
-      'shape': (ek.style?.shape || 'ellipse') as any
+      'background-color': (() => {
+        if (!ek.style?.color) {
+          throw new Error(`Archivist: entity kind "${ek.kind}" is missing style.color.`);
+        }
+        return ek.style.color;
+      })(),
+      ...(ek.style?.shape ? { shape: ek.style.shape } : {})
     }
   }));
 }
@@ -66,10 +60,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
   const cyRef = useRef<Core | null>(null);
   const isInitializedRef = useRef(false);
 
-  // Get entity kind schemas from uiSchema or use defaults
-  const entityKindSchemas = useMemo(() => {
-    return data.uiSchema?.entityKinds ?? DEFAULT_ENTITY_STYLES;
-  }, [data.uiSchema?.entityKinds]);
+  // Get entity kind schemas from canonical schema
+  const entityKindSchemas = useMemo(() => data.schema.entityKinds, [data.schema.entityKinds]);
 
   const handleRecalculateLayout = () => {
     if (!cyRef.current) return;
@@ -137,8 +129,8 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
             'background-color': '#666'
           }
         },
-        // Dynamic entity kind styles from uiSchema
-        // Dynamic entity kind styles from uiSchema
+        // Dynamic entity kind styles from schema
+        // Dynamic entity kind styles from schema
         ...entityStyles as any,
         {
           selector: 'node:selected',
@@ -416,7 +408,7 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <div ref={containerRef} className="cytoscape-container" />
 
-      {/* Legend - Dynamic from uiSchema */}
+      {/* Legend - Dynamic from schema */}
       <div className="absolute bottom-6 left-6 rounded-xl text-white text-sm shadow-2xl border border-blue-500/30 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, rgba(30, 58, 95, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%)' }}>
         <div className="px-5 py-3 border-b border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
@@ -428,11 +420,16 @@ export default function GraphView({ data, selectedNodeId, onNodeSelect, showCata
               <div
                 className="w-5 h-5 shadow-lg flex-shrink-0"
                 style={{
-                  backgroundColor: ek.style?.color || '#999',
+                  backgroundColor: (() => {
+                    if (!ek.style?.color) {
+                      throw new Error(`Archivist: entity kind "${ek.kind}" is missing style.color.`);
+                    }
+                    return ek.style.color;
+                  })(),
                   ...shapeToLegendStyle(ek.style?.shape || 'ellipse')
                 }}
               ></div>
-              <span className="font-medium">{ek.description || ek.kind}</span>
+              <span className="font-medium">{ek.style?.displayName || ek.description || ek.kind}</span>
             </div>
           ))}
         </div>

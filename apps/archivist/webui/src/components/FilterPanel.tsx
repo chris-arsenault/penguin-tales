@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { EntityKind, Filters, Prominence, WorldState } from '../types/world.ts';
-import { getAllTags, getAllRelationshipTypes, getRelationshipTypeCounts } from '../utils/dataTransform.ts';
+import { getAllTags, getProminenceLevels, getRelationshipTypeCounts } from '../utils/dataTransform.ts';
 import './FilterPanel.css';
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
@@ -30,10 +30,10 @@ export default function FilterPanel({
   onToggleStats,
 }: FilterPanelProps) {
   const allTags = getAllTags(worldData);
-  const allRelationshipTypes = getAllRelationshipTypes(worldData);
   const relationshipTypeCounts = getRelationshipTypeCounts(worldData);
   const maxTick = worldData.metadata.tick;
 
+  const allRelationshipTypes = worldData.schema.relationshipKinds.map(rel => rel.kind);
   // Sort relationship types by count (descending)
   const sortedRelationshipTypes = [...allRelationshipTypes].sort((a, b) => {
     return (relationshipTypeCounts[b] || 0) - (relationshipTypeCounts[a] || 0);
@@ -41,24 +41,14 @@ export default function FilterPanel({
 
   const [isRelTypesExpanded, setIsRelTypesExpanded] = useState(false);
 
-  // Dynamically discover entity kinds from actual entities in world data
-  // This makes archivist domain-agnostic - it shows ALL kinds present in the data
-  const kindsFromEntities = [...new Set(worldData.hardState.map(e => e.kind))];
+  const entityKindSchemas = worldData.schema.entityKinds;
+  const entityKinds: EntityKind[] = entityKindSchemas.map(ek => ek.kind);
 
-  // Also get kinds from uiSchema for display names (if available)
-  const entityKindSchemas = worldData.uiSchema?.entityKinds ?? [];
-  const kindsFromSchema = entityKindSchemas.map(ek => ek.kind).filter((kind): kind is string => !!kind);
-
-  // Merge both sources: discovered kinds + schema kinds (schema may define kinds with no entities yet)
-  const allKindsSet = new Set([...kindsFromEntities, ...kindsFromSchema]);
-  const entityKinds: EntityKind[] = [...allKindsSet].sort();
-
-  const prominenceLevels: Prominence[] = worldData.uiSchema?.prominenceLevels
-    ?? ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'];
+  const prominenceLevels: Prominence[] = getProminenceLevels(worldData.schema) as Prominence[];
 
   // Build a map from kind to display name (from schema if available, otherwise use kind as-is)
   const kindDisplayNames = Object.fromEntries(
-    entityKindSchemas.map(ek => [ek.kind, ek.description || ek.kind])
+    entityKindSchemas.map(ek => [ek.kind, ek.style?.displayName || ek.description || ek.kind])
   );
 
   const toggleKind = (kind: EntityKind) => {
@@ -378,7 +368,7 @@ export default function FilterPanel({
       <button
         onClick={() => onChange({
           kinds: entityKinds,
-          minProminence: prominenceLevels[0] ?? 'forgotten',
+          minProminence: prominenceLevels[0],
           timeRange: [0, maxTick],
           tags: [],
           searchQuery: '',

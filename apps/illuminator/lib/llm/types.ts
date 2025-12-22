@@ -4,7 +4,7 @@
  * Types for LLM enrichment, lore indexing, and domain lore providers.
  */
 
-import { HardState, Relationship } from '../core/worldTypes';
+import type { HardState, Relationship } from '../types';
 
 // ============================================================================
 // LORE INDEX AND RECORDS

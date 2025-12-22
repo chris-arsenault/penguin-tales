@@ -16,13 +16,18 @@ export default function SlotSelector({
   onSaveToSlot,
   onClearSlot,
   onUpdateTitle,
+  onExportSlot,
+  onImportSlot,
+  onLoadExampleOutput,
   hasDataInScratch,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [editingSlot, setEditingSlot] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [importTargetSlot, setImportTargetSlot] = useState(null);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -70,6 +75,29 @@ export default function SlotSelector({
       handleCancelEdit();
     }
   }, [handleSaveEdit, handleCancelEdit]);
+
+  const handleImportRequest = useCallback((slotIndex) => {
+    if (!onImportSlot) return;
+    const slot = slots[slotIndex];
+    const slotTitle = slot?.title || (slotIndex === 0 ? 'Scratch' : `Slot ${slotIndex}`);
+    if (slot && !window.confirm(`Overwrite "${slotTitle}" with imported data?`)) {
+      return;
+    }
+    setImportTargetSlot(slotIndex);
+    fileInputRef.current?.click();
+  }, [onImportSlot, slots]);
+
+  const handleImportFile = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file || importTargetSlot === null || !onImportSlot) {
+      e.target.value = '';
+      return;
+    }
+    onImportSlot(importTargetSlot, file);
+    setImportTargetSlot(null);
+    setShowDropdown(false);
+    e.target.value = '';
+  }, [importTargetSlot, onImportSlot]);
 
   // Get active slot data for display
   const activeSlot = slots[activeSlotIndex];
@@ -120,6 +148,8 @@ export default function SlotSelector({
               const isEmpty = !slot;
               const isScratch = slotIndex === 0;
               const isEditing = editingSlot === slotIndex;
+              const canExport = Boolean(onExportSlot && slot);
+              const canImport = Boolean(onImportSlot);
 
               const title = isScratch
                 ? (slot?.title || 'Scratch')
@@ -170,6 +200,25 @@ export default function SlotSelector({
                     {isScratch ? (
                       // Scratch slot - Load if not active, Clear if has data
                       <>
+                        {canImport && (
+                          <button
+                            className="btn-xs"
+                            onClick={() => handleImportRequest(slotIndex)}
+                          >
+                            Import
+                          </button>
+                        )}
+                        {canExport && (
+                          <button
+                            className="btn-xs"
+                            onClick={() => {
+                              onExportSlot(slotIndex);
+                              setShowDropdown(false);
+                            }}
+                          >
+                            Export
+                          </button>
+                        )}
                         {isActive ? (
                           <span className="slot-status">Active</span>
                         ) : (
@@ -200,20 +249,49 @@ export default function SlotSelector({
                       </>
                     ) : isEmpty ? (
                       // Empty save slot - only show Save if scratch has data
-                      hasDataInScratch && activeSlotIndex === 0 && (
-                        <button
-                          className="btn-xs btn-xs-primary"
-                          onClick={() => {
-                            onSaveToSlot(slotIndex);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          Save
-                        </button>
-                      )
+                      <>
+                        {canImport && (
+                          <button
+                            className="btn-xs"
+                            onClick={() => handleImportRequest(slotIndex)}
+                          >
+                            Import
+                          </button>
+                        )}
+                        {hasDataInScratch && activeSlotIndex === 0 && (
+                          <button
+                            className="btn-xs btn-xs-primary"
+                            onClick={() => {
+                              onSaveToSlot(slotIndex);
+                              setShowDropdown(false);
+                            }}
+                          >
+                            Save
+                          </button>
+                        )}
+                      </>
                     ) : (
                       // Filled save slot - show Save (if on scratch), Load, and Clear
                       <>
+                        {canImport && (
+                          <button
+                            className="btn-xs"
+                            onClick={() => handleImportRequest(slotIndex)}
+                          >
+                            Import
+                          </button>
+                        )}
+                        {canExport && (
+                          <button
+                            className="btn-xs"
+                            onClick={() => {
+                              onExportSlot(slotIndex);
+                              setShowDropdown(false);
+                            }}
+                          >
+                            Export
+                          </button>
+                        )}
                         {hasDataInScratch && activeSlotIndex === 0 && (
                           <button
                             className="btn-xs"
@@ -265,9 +343,40 @@ export default function SlotSelector({
                 Run a simulation to create data, then save to a slot.
               </div>
             )}
+
+            {onLoadExampleOutput && (
+              <div className="slot-item slot-item-empty">
+                <div className="slot-item-content">
+                  <div className="slot-item-name">Example Output</div>
+                  <div className="slot-item-meta">Load a sample Lore Weave run.</div>
+                </div>
+                <div className="slot-item-actions">
+                  <button
+                    className="btn-xs"
+                    onClick={() => {
+                      if (hasDataInScratch && !window.confirm('Overwrite scratch with the example output?')) {
+                        return;
+                      }
+                      onLoadExampleOutput();
+                      setShowDropdown(false);
+                    }}
+                  >
+                    Load
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={handleImportFile}
+      />
     </div>
   );
 }

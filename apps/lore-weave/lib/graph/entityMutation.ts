@@ -13,7 +13,7 @@ import {
   FRAMEWORK_RELATIONSHIP_KINDS,
   FRAMEWORK_RELATIONSHIP_PROPERTIES,
   FRAMEWORK_STATUS
-} from '../core/frameworkPrimitives';
+} from '@canonry/world-schema';
 
 /**
  * Slugify a name for use in IDs or other contexts
@@ -43,6 +43,31 @@ export function normalizeInitialState(entities: any[]): HardState[] {
         `Initial state entities must have coordinates defined in JSON.`
       );
     }
+    if (!entity.kind) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no kind.`
+      );
+    }
+    if (!entity.subtype) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no subtype.`
+      );
+    }
+    if (!entity.status) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no status.`
+      );
+    }
+    if (!entity.prominence) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no prominence.`
+      );
+    }
+    if (!entity.culture) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no culture.`
+      );
+    }
 
     // Handle both old array format and new KVP format for tags
     let tags: EntityTags;
@@ -53,14 +78,14 @@ export function normalizeInitialState(entities: any[]): HardState[] {
     }
 
     return {
-      id: entity.id || entity.name || generateId(entity.kind || 'unknown'),
-      kind: entity.kind as HardState['kind'] || 'npc',
-      subtype: entity.subtype || 'default',
+      id: entity.id || entity.name || generateId(entity.kind),
+      kind: entity.kind as HardState['kind'],
+      subtype: entity.subtype,
       name: entity.name,
       description: entity.description || '',
-      status: entity.status || 'alive',
-      prominence: entity.prominence as HardState['prominence'] || 'marginal',
-      culture: entity.culture || 'world',
+      status: entity.status,
+      prominence: entity.prominence as HardState['prominence'],
+      culture: entity.culture,
       tags,
       createdAt: 0,
       updatedAt: 0,
@@ -81,11 +106,26 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
   const coords = entity.coordinates;
   if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') {
     throw new Error(
-      `addEntity: valid coordinates {x: number, y: number, z?: number} are required. ` +
+      `addEntity: valid coordinates {x: number, y: number, z: number} are required. ` +
       `Entity kind: ${entity.kind || 'unknown'}, name: ${entity.name || 'unnamed'}. ` +
       `Received: ${JSON.stringify(coords)}. ` +
-      `Use addEntityInRegion() or provide valid coordinates explicitly.`
+      `Provide valid coordinates explicitly.`
     );
+  }
+  if (!entity.kind) {
+    throw new Error('addEntity: kind is required.');
+  }
+  if (!entity.subtype) {
+    throw new Error(`addEntity: subtype is required for kind "${entity.kind}".`);
+  }
+  if (!entity.status) {
+    throw new Error(`addEntity: status is required for kind "${entity.kind}".`);
+  }
+  if (!entity.prominence) {
+    throw new Error(`addEntity: prominence is required for kind "${entity.kind}".`);
+  }
+  if (!entity.culture) {
+    throw new Error(`addEntity: culture is required for kind "${entity.kind}".`);
   }
 
   // Normalize tags: handle both old array format and new KVP format
@@ -106,11 +146,18 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
 
   // Delegate to Graph.createEntity()
   // Use validated coords to satisfy TypeScript (already validated above)
-  const validCoords = { x: coords.x, y: coords.y, z: coords.z ?? 50 };
+  if (typeof coords.z !== 'number') {
+    throw new Error(
+      `addEntity: coordinates must include numeric z. ` +
+      `Entity kind: ${entity.kind}, name: ${entity.name || 'unnamed'}. ` +
+      `Received: ${JSON.stringify(coords)}.`
+    );
+  }
+  const validCoords = { x: coords.x, y: coords.y, z: coords.z };
 
   const entityId = await graph.createEntity({
-    kind: entity.kind || 'npc',
-    subtype: entity.subtype || 'default',
+    kind: entity.kind,
+    subtype: entity.subtype,
     coordinates: validCoords,
     tags,
     name: entity.name,

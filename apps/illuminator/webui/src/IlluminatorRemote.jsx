@@ -5,60 +5,123 @@
  * - projectId: Current project ID
  * - schema: Read-only world schema (entityKinds, cultures)
  * - worldData: Simulation results from lore-weave
- * - onEnrichmentComplete: Callback when enrichment is done
+ * - onEnrichmentComplete: Callback when enrichment changes
  *
- * Enriches lore-weave output with LLM-generated descriptions and images.
+ * Architecture:
+ * - Entity-centric view (Entities tab is primary)
+ * - UI-side queue management
+ * - Worker is a pure executor
+ * - Enrichment state stored on entities and persisted
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import './App.css';
+import EntityBrowser from './components/EntityBrowser';
+import NarrativesPanel from './components/NarrativesPanel';
+import WorldContextEditor from './components/WorldContextEditor';
+import PromptTemplateEditor from './components/PromptTemplateEditor';
+import ActivityPanel from './components/ActivityPanel';
 import ConfigPanel from './components/ConfigPanel';
-import DomainContextEditor from './components/DomainContextEditor';
-import PromptPreviewPanel from './components/PromptPreviewPanel';
-import EnrichmentQueue from './components/EnrichmentQueue';
-import ProgressPanel from './components/ProgressPanel';
-import ResultsPanel from './components/ResultsPanel';
-import { useEnrichmentWorker } from './hooks/useEnrichmentWorker';
+import CostsPanel from './components/CostsPanel';
+import StoragePanel from './components/StoragePanel';
+import StyleLibraryEditor from './components/StyleLibraryEditor';
+import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
+import { useStyleLibrary } from './hooks/useStyleLibrary';
+import {
+  createDefaultPromptTemplates,
+  buildDescriptionPrompt,
+  buildImagePrompt,
+  getEffectiveTemplate,
+  mergeWithDefaults,
+} from './lib/promptTemplates';
+import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
+import { resolveStyleSelection } from './components/StyleSelector';
 
+// Tabs ordered by workflow: setup → work → monitor → manage
 const TABS = [
-  { id: 'configure', label: 'Configure' },
-  { id: 'context', label: 'Context' },
-  { id: 'prompts', label: 'Prompts' },
-  { id: 'queue', label: 'Queue' },
-  { id: 'run', label: 'Run' },
-  { id: 'results', label: 'Results' },
+  { id: 'configure', label: 'Configure' },   // 1. Set API keys and models
+  { id: 'context', label: 'Context' },       // 2. Define world context
+  { id: 'templates', label: 'Templates' },   // 3. Customize prompts
+  { id: 'styles', label: 'Styles' },         // 4. Manage style library
+  { id: 'entities', label: 'Entities' },     // 5. Main enrichment work
+  { id: 'narratives', label: 'Narratives' }, // 6. Era/relationship narratives
+  { id: 'activity', label: 'Activity' },     // 7. Monitor queue
+  { id: 'costs', label: 'Costs' },           // 8. Track spending
+  { id: 'storage', label: 'Storage' },       // 9. Manage images
 ];
+
+// Default image prompt template for Claude formatting
+const DEFAULT_IMAGE_PROMPT_TEMPLATE = `Reformat the below prompt into something appropriate for generating a {{modelName}} image of an entity. Avoid bestiary/manuscript/folio style pages - instead create artwork that directly represents the subject as if they exist in the world.
+
+Original prompt:
+{{prompt}}`;
 
 // Default enrichment config
 const DEFAULT_CONFIG = {
-  enrichDescriptions: true,
-  enrichRelationships: false,
-  enrichEraNarratives: true,
-  generateImages: true,
-  minProminenceForDescription: 'recognized',
+  textModel: 'claude-sonnet-4-5-20250929',
+  imageModel: 'gpt-image-1.5',
+  imageSize: 'auto',
+  imageQuality: 'auto',
   minProminenceForImage: 'mythic',
-  batchSize: 6,
-  delayBetweenBatches: 1000,
-  textModel: 'claude-sonnet-4-20250514',
-  imageModel: 'dall-e-3',
-  imageSize: '1024x1024',
-  imageQuality: 'standard',
+  numWorkers: 4,
+  // Multishot prompting options
+  requireDescription: false,
+  useClaudeForImagePrompt: false,
+  claudeImagePromptTemplate: DEFAULT_IMAGE_PROMPT_TEMPLATE,
 };
 
-// Default domain context
-const DEFAULT_DOMAIN_CONTEXT = {
-  worldName: '',
-  worldDescription: '',
+// Default world context
+const DEFAULT_WORLD_CONTEXT = {
+  name: '',
+  description: '',
   canonFacts: [],
-  cultureNotes: {},
-  relationshipPatterns: [],
-  conflictPatterns: [],
-  technologyNotes: [],
-  magicNotes: [],
-  geographyScale: '',
-  geographyTraits: [],
-  entityPromptHints: {},
-  relationshipPromptHints: {},
+  tone: '',
+};
+
+const DESCRIPTION_FIELDS = [
+  'text',
+  'generatedAt',
+  'model',
+  'estimatedCost',
+  'actualCost',
+  'inputTokens',
+  'outputTokens',
+];
+const IMAGE_FIELDS = [
+  'url',
+  'generatedAt',
+  'model',
+  'revisedPrompt',
+  'estimatedCost',
+  'actualCost',
+];
+const NARRATIVE_FIELDS = [
+  'text',
+  'generatedAt',
+  'model',
+  'estimatedCost',
+  'actualCost',
+  'inputTokens',
+  'outputTokens',
+];
+
+const isSectionEqual = (left, right, fields) => {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  for (const field of fields) {
+    if (left[field] !== right[field]) return false;
+  }
+  return true;
+};
+
+const isEnrichmentEqual = (left, right) => {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    isSectionEqual(left.description, right.description, DESCRIPTION_FIELDS) &&
+    isSectionEqual(left.image, right.image, IMAGE_FIELDS) &&
+    isSectionEqual(left.eraNarrative, right.eraNarrative, NARRATIVE_FIELDS)
+  );
 };
 
 export default function IlluminatorRemote({
@@ -66,58 +129,330 @@ export default function IlluminatorRemote({
   schema,
   worldData,
   onEnrichmentComplete,
-  domainContext: externalDomainContext,
-  onDomainContextChange,
+  worldContext: externalWorldContext,
+  onWorldContextChange,
+  promptTemplates: externalPromptTemplates,
+  onPromptTemplatesChange,
   activeSection,
   onSectionChange,
   activeSlotIndex = 0,
 }) {
   // Show warning when enriching data in temporary slot
   const isTemporarySlot = activeSlotIndex === 0;
-  // Use passed-in section or default to 'configure'
-  const activeTab = activeSection || 'configure';
+
+  // Use passed-in section or default to 'entities'
+  const activeTab = activeSection || 'entities';
   const setActiveTab = onSectionChange || (() => {});
 
-  // API Keys (session-only, not persisted)
-  const [anthropicApiKey, setAnthropicApiKey] = useState('');
-  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  // API Keys - optionally persisted to localStorage
+  const [persistApiKeys, setPersistApiKeys] = useState(() => {
+    try {
+      return localStorage.getItem('illuminator:persistApiKeys') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [anthropicApiKey, setAnthropicApiKey] = useState(() => {
+    try {
+      if (localStorage.getItem('illuminator:persistApiKeys') === 'true') {
+        return localStorage.getItem('illuminator:anthropicApiKey') || '';
+      }
+    } catch {}
+    return '';
+  });
+  const [openaiApiKey, setOpenaiApiKey] = useState(() => {
+    try {
+      if (localStorage.getItem('illuminator:persistApiKeys') === 'true') {
+        return localStorage.getItem('illuminator:openaiApiKey') || '';
+      }
+    } catch {}
+    return '';
+  });
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
-  // Enrichment config (persisted per project)
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  // Persist API keys when enabled
+  useEffect(() => {
+    try {
+      localStorage.setItem('illuminator:persistApiKeys', persistApiKeys ? 'true' : 'false');
+      if (persistApiKeys) {
+        localStorage.setItem('illuminator:anthropicApiKey', anthropicApiKey);
+        localStorage.setItem('illuminator:openaiApiKey', openaiApiKey);
+      } else {
+        localStorage.removeItem('illuminator:anthropicApiKey');
+        localStorage.removeItem('illuminator:openaiApiKey');
+      }
+    } catch {}
+  }, [persistApiKeys, anthropicApiKey, openaiApiKey]);
 
-  // Domain context - use external if provided, otherwise local state
-  const [localDomainContext, setLocalDomainContext] = useState(DEFAULT_DOMAIN_CONTEXT);
-  const domainContext = externalDomainContext || localDomainContext;
-  const setDomainContext = onDomainContextChange || setLocalDomainContext;
+  // Enrichment config - persisted to localStorage
+  const [config, setConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('illuminator:config');
+      if (saved) {
+        return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return DEFAULT_CONFIG;
+  });
 
-  // Worker for enrichment
+  // Persist config changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('illuminator:config', JSON.stringify(config));
+    } catch {}
+  }, [config]);
+
+  // Style selection - persisted to localStorage per session
+  const [styleSelection, setStyleSelection] = useState(() => {
+    try {
+      const saved = localStorage.getItem('illuminator:styleSelection');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return { artisticStyleId: null, compositionStyleId: null };
+  });
+
+  // Persist style selection changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('illuminator:styleSelection', JSON.stringify(styleSelection));
+    } catch {}
+  }, [styleSelection]);
+
+  // Style library - loaded from IndexedDB or defaults from world-schema
   const {
-    state: workerState,
-    initialize: initializeWorker,
-    runAll,
-    runFiltered,
-    runEntity,
-    runTask,
-    runTasks: runWorkerTasks,
-    pause,
-    resume,
-    abort,
-    reset,
-    isRunning,
-    isPaused,
-  } = useEnrichmentWorker();
+    styleLibrary,
+    loading: styleLibraryLoading,
+    isCustom: hasCustomStyleLibrary,
+    save: saveStyleLibrary,
+    reset: resetStyleLibrary,
+    addArtisticStyle,
+    updateArtisticStyle,
+    deleteArtisticStyle,
+    addCompositionStyle,
+    updateCompositionStyle,
+    deleteCompositionStyle,
+  } = useStyleLibrary();
 
-  // Map worker state to component state
-  const tasks = workerState.tasks;
-  const enrichmentStatus = workerState.status;
-  const progress = { completed: workerState.completedCount, total: workerState.totalCount };
+  // World context - edit locally and debounce sync to shell to avoid re-rendering MFEs on each keypress
+  const [localWorldContext, setLocalWorldContext] = useState(DEFAULT_WORLD_CONTEXT);
+  const worldContext = localWorldContext;
+  const worldContextSyncTimeoutRef = useRef(null);
+  const worldContextDirtyRef = useRef(false);
+  const pendingWorldContextRef = useRef(localWorldContext);
+
+  useEffect(() => {
+    if (externalWorldContext === undefined) return;
+    if (worldContextSyncTimeoutRef.current) {
+      clearTimeout(worldContextSyncTimeoutRef.current);
+      worldContextSyncTimeoutRef.current = null;
+    }
+    worldContextDirtyRef.current = false;
+    const nextContext = externalWorldContext || DEFAULT_WORLD_CONTEXT;
+    pendingWorldContextRef.current = nextContext;
+    setLocalWorldContext(nextContext);
+  }, [externalWorldContext]);
+
+  // Prompt templates - edit locally and debounce sync to shell
+  const [localPromptTemplates, setLocalPromptTemplates] = useState(() => createDefaultPromptTemplates());
+  const promptTemplates = localPromptTemplates;
+  const promptTemplatesSyncTimeoutRef = useRef(null);
+  const promptTemplatesDirtyRef = useRef(false);
+  const pendingPromptTemplatesRef = useRef(localPromptTemplates);
+
+  useEffect(() => {
+    if (externalPromptTemplates === undefined) return;
+    if (promptTemplatesSyncTimeoutRef.current) {
+      clearTimeout(promptTemplatesSyncTimeoutRef.current);
+      promptTemplatesSyncTimeoutRef.current = null;
+    }
+    promptTemplatesDirtyRef.current = false;
+    const nextTemplates = externalPromptTemplates || createDefaultPromptTemplates();
+    pendingPromptTemplatesRef.current = nextTemplates;
+    setLocalPromptTemplates(nextTemplates);
+  }, [externalPromptTemplates]);
+
+  // Entities with enrichment state
+  const [entities, setEntities] = useState([]);
+
+  // Era and relationship narratives
+  const [eraNarratives, setEraNarratives] = useState({});
+  const [relationshipNarratives, setRelationshipNarratives] = useState({});
+
+  // Initialize entities from worldData
+  useEffect(() => {
+    if (!worldData?.hardState) {
+      setEntities([]);
+      return;
+    }
+
+    // Merge existing enrichment with incoming entities
+    setEntities((prev) => {
+      if (worldData.hardState === prev) return prev;
+      const prevMap = new Map(prev.map((e) => [e.id, e]));
+      return worldData.hardState.map((entity) => {
+        const existing = prevMap.get(entity.id);
+        return {
+          ...entity,
+          enrichment: existing?.enrichment || entity.enrichment || undefined,
+        };
+      });
+    });
+  }, [worldData]);
+
+  const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
+  const relationshipsByEntity = useMemo(
+    () => buildRelationshipIndex(worldData?.relationships || []),
+    [worldData?.relationships]
+  );
+  const currentEra = useMemo(
+    () => resolveEraInfo(worldData?.metadata, entities),
+    [worldData?.metadata, entities]
+  );
+  const prominentByCulture = useMemo(() => {
+    const map = new Map();
+    for (const entity of entities) {
+      if (!entity.culture) continue;
+      if (!['mythic', 'renowned'].includes(entity.prominence)) continue;
+      const existing = map.get(entity.culture);
+      if (existing) {
+        existing.push(entity);
+      } else {
+        map.set(entity.culture, [entity]);
+      }
+    }
+    return map;
+  }, [entities]);
+  const mergedPromptTemplates = useMemo(
+    () => mergeWithDefaults(promptTemplates),
+    [promptTemplates]
+  );
+
+  // Handle assigning an existing image from the library to an entity
+  const handleAssignImage = useCallback((entityId, imageId, imageMetadata) => {
+    const enrichment = {
+      image: {
+        imageId,
+        generatedAt: imageMetadata?.generatedAt || Date.now(),
+        model: imageMetadata?.model || 'assigned',
+        revisedPrompt: imageMetadata?.revisedPrompt,
+        // No cost for assignment - image already exists
+        estimatedCost: 0,
+        actualCost: 0,
+      },
+    };
+
+    setEntities((prev) =>
+      prev.map((entity) =>
+        entity.id === entityId
+          ? { ...entity, enrichment: { ...entity.enrichment, ...enrichment } }
+          : entity
+      )
+    );
+  }, []);
+
+  // Handle entity enrichment update from queue
+  const handleEntityUpdate = useCallback((entityId, enrichment) => {
+    // Check if this is an era narrative (entityId matches an era)
+    const isEra = entities.some((e) => e.id === entityId && e.kind === 'era');
+    if (isEra && enrichment.eraNarrative) {
+      setEraNarratives((prev) => ({
+        ...prev,
+        [entityId]: enrichment.eraNarrative.text,
+      }));
+      return;
+    }
+
+    // Check if this is a relationship narrative (entityId contains _)
+    if (entityId.includes('_') && enrichment.eraNarrative) {
+      setRelationshipNarratives((prev) => ({
+        ...prev,
+        [entityId]: enrichment.eraNarrative.text,
+      }));
+      return;
+    }
+
+    // For regular entities, update their enrichment
+    setEntities((prev) =>
+      prev.map((entity) =>
+        entity.id === entityId
+          ? { ...entity, enrichment: { ...entity.enrichment, ...enrichment } }
+          : entity
+      )
+    );
+  }, [entities]);
+
+  // Queue management
+  const {
+    queue,
+    isWorkerReady,
+    stats,
+    initialize: initializeWorker,
+    enqueue,
+    cancel,
+    cancelAll,
+    retry,
+    clearCompleted,
+  } = useEnrichmentQueue(handleEntityUpdate, projectId);
+
+  // Initialize worker when API keys change
+  useEffect(() => {
+    if (anthropicApiKey || openaiApiKey) {
+      initializeWorker({
+        anthropicApiKey,
+        openaiApiKey,
+        textModel: config.textModel,
+        imageModel: config.imageModel,
+        imageSize: config.imageSize,
+        imageQuality: config.imageQuality,
+        // Multishot prompting options
+        useClaudeForImagePrompt: config.useClaudeForImagePrompt,
+        claudeImagePromptTemplate: config.claudeImagePromptTemplate,
+      });
+    }
+  }, [anthropicApiKey, openaiApiKey, config, initializeWorker]);
+
+  // Save enriched entities to IndexedDB when they change
+  useEffect(() => {
+    if (!worldData?.hardState?.length || !onEnrichmentComplete) return;
+
+    let didChange = false;
+    const enrichedHardState = worldData.hardState.map((entity) => {
+      const local = entityById.get(entity.id);
+      if (!local?.enrichment) return entity;
+      if (isEnrichmentEqual(local.enrichment, entity.enrichment)) return entity;
+      didChange = true;
+      return { ...entity, enrichment: local.enrichment };
+    });
+
+    if (!didChange) return;
+
+    const enrichedWorld = {
+      ...worldData,
+      hardState: enrichedHardState,
+      metadata: {
+        ...worldData.metadata,
+        enriched: true,
+        enrichedAt: Date.now(),
+      },
+    };
+    onEnrichmentComplete(enrichedWorld);
+  }, [entityById, worldData, onEnrichmentComplete]);
 
   // Build world schema from props
-  const worldSchema = useMemo(
-    () => schema || { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] },
-    [schema]
-  );
+  const worldSchema = useMemo(() => {
+    if (worldData?.schema) return worldData.schema;
+    return schema || { entityKinds: [], relationshipKinds: [], cultures: [], tagRegistry: [] };
+  }, [worldData?.schema, schema]);
+
+  const simulationMetadata = useMemo(() => {
+    if (!worldData?.metadata) return undefined;
+    return {
+      currentTick: worldData.metadata.tick,
+      currentEra: currentEra || undefined,
+    };
+  }, [worldData?.metadata, currentEra]);
 
   // Check if we have world data
   const hasWorldData = worldData?.hardState?.length > 0;
@@ -125,61 +460,167 @@ export default function IlluminatorRemote({
   // Check if API keys are set
   const hasAnthropicKey = anthropicApiKey.length > 0;
   const hasOpenaiKey = openaiApiKey.length > 0;
-  const hasRequiredKeys = hasAnthropicKey && (config.generateImages ? hasOpenaiKey : true);
+  const hasRequiredKeys = hasAnthropicKey;
 
-  // Initialize worker when world data or config changes
-  // Note: API keys are NOT required to build the task queue - only to run tasks
-  useEffect(() => {
-    if (!worldData?.hardState) {
-      return;
-    }
+  // Build prompt for entity
+  const buildPrompt = useCallback(
+    (entity, type) => {
+      const templates = mergedPromptTemplates;
+      const relationships = (relationshipsByEntity.get(entity.id) || []).slice(0, 5).map((rel) => {
+        const targetId = rel.src === entity.id ? rel.dst : rel.src;
+        const target = entityById.get(targetId);
+        return {
+          kind: rel.kind,
+          targetName: target?.name || targetId,
+          targetKind: target?.kind || 'unknown',
+          strength: rel.strength,
+        };
+      });
 
-    // Build full config for worker (keys may be empty for preview)
-    const workerConfig = {
-      anthropicApiKey,
-      openaiApiKey,
-      mode: 'full',
-      ...config,
-    };
+      // Build minimal context for prompt
+      const context = {
+        world: {
+          name: worldContext.name || '[World Name]',
+          description: worldContext.description || '',
+          canonFacts: worldContext.canonFacts || [],
+          tone: worldContext.tone || '',
+        },
+        entity: {
+          entity: {
+            id: entity.id,
+            name: entity.name,
+            kind: entity.kind,
+            subtype: entity.subtype,
+            prominence: entity.prominence,
+            culture: entity.culture || '',
+            status: entity.status || 'active',
+            description: entity.description || '',
+            tags: entity.tags || {},
+          },
+          relationships,
+          era: {
+            name: currentEra?.name || worldData?.metadata?.era || '',
+            description: currentEra?.description,
+          },
+          entityAge: 'established',
+          culturalPeers: (prominentByCulture.get(entity.culture) || [])
+            .filter((peer) => peer.id !== entity.id)
+            .slice(0, 3)
+            .map((peer) => peer.name),
+        },
+      };
 
-    initializeWorker(workerConfig, worldData.hardState, domainContext);
-  }, [worldData, config, domainContext, anthropicApiKey, openaiApiKey, initializeWorker]);
+      if (type === 'description') {
+        const template = getEffectiveTemplate(templates, entity.kind, 'description');
+        return buildDescriptionPrompt(template, context);
+      } else if (type === 'image') {
+        const template = getEffectiveTemplate(templates, entity.kind, 'image');
+        // Include enriched description if available (for multishot prompting)
+        const enrichedDescription = entity.enrichment?.description?.text;
+        if (enrichedDescription) {
+          context.entity.enrichedDescription = enrichedDescription;
+        }
+
+        // Resolve style selection for this entity
+        const resolvedStyle = resolveStyleSelection({
+          selection: styleSelection,
+          entityCultureId: entity.culture,
+          entityKind: entity.kind,
+          cultures: worldSchema?.cultures || [],
+          styleLibrary,
+        });
+
+        // Build style info for the prompt
+        const styleInfo = {
+          artisticPromptFragment: resolvedStyle.artisticStyle?.promptFragment,
+          compositionPromptFragment: resolvedStyle.compositionStyle?.promptFragment,
+          cultureKeywords: resolvedStyle.cultureKeywords,
+        };
+
+        return buildImagePrompt(template, context, styleInfo);
+      }
+
+      return `Describe ${entity.name}, a ${entity.subtype} ${entity.kind}.`;
+    },
+    [
+      worldContext,
+      mergedPromptTemplates,
+      relationshipsByEntity,
+      entityById,
+      currentEra,
+      worldData?.metadata?.era,
+      prominentByCulture,
+      styleSelection,
+      worldSchema?.cultures,
+      styleLibrary,
+    ]
+  );
 
   // Update config
   const updateConfig = useCallback((updates) => {
     setConfig((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Update domain context - merge updates with current context
-  const updateDomainContext = useCallback((updates) => {
-    const merged = { ...domainContext, ...updates };
-    setDomainContext(merged);
-  }, [domainContext, setDomainContext]);
+  const updateWorldContext = useCallback(
+    (updates) => {
+      setLocalWorldContext((prev) => {
+        const merged = { ...prev, ...updates };
+        pendingWorldContextRef.current = merged;
+        if (onWorldContextChange) {
+          worldContextDirtyRef.current = true;
+          if (worldContextSyncTimeoutRef.current) {
+            clearTimeout(worldContextSyncTimeoutRef.current);
+          }
+          worldContextSyncTimeoutRef.current = setTimeout(() => {
+            if (!worldContextDirtyRef.current) return;
+            worldContextDirtyRef.current = false;
+            onWorldContextChange(pendingWorldContextRef.current);
+            worldContextSyncTimeoutRef.current = null;
+          }, 300);
+        }
+        return merged;
+      });
+    },
+    [onWorldContextChange]
+  );
 
-  // Run selected tasks using worker
-  const runTasks = useCallback((taskIds) => {
-    runWorkerTasks(taskIds);
-  }, [runWorkerTasks]);
+  const updatePromptTemplates = useCallback(
+    (nextTemplates) => {
+      setLocalPromptTemplates(nextTemplates);
+      pendingPromptTemplatesRef.current = nextTemplates;
+      if (!onPromptTemplatesChange) return;
+      promptTemplatesDirtyRef.current = true;
+      if (promptTemplatesSyncTimeoutRef.current) {
+        clearTimeout(promptTemplatesSyncTimeoutRef.current);
+      }
+      promptTemplatesSyncTimeoutRef.current = setTimeout(() => {
+        if (!promptTemplatesDirtyRef.current) return;
+        promptTemplatesDirtyRef.current = false;
+        onPromptTemplatesChange(pendingPromptTemplatesRef.current);
+        promptTemplatesSyncTimeoutRef.current = null;
+      }, 300);
+    },
+    [onPromptTemplatesChange]
+  );
 
-  // Run all pending tasks using worker
-  const runAllTasks = useCallback(() => {
-    runAll();
-  }, [runAll]);
-
-  // Pause enrichment using worker
-  const pauseEnrichment = useCallback(() => {
-    pause();
-  }, [pause]);
-
-  // Resume enrichment using worker
-  const resumeEnrichment = useCallback(() => {
-    resume();
-  }, [resume]);
-
-  // Abort enrichment using worker
-  const abortEnrichment = useCallback(() => {
-    abort();
-  }, [abort]);
+  useEffect(() => {
+    return () => {
+      if (worldContextSyncTimeoutRef.current) {
+        clearTimeout(worldContextSyncTimeoutRef.current);
+        worldContextSyncTimeoutRef.current = null;
+      }
+      if (promptTemplatesSyncTimeoutRef.current) {
+        clearTimeout(promptTemplatesSyncTimeoutRef.current);
+        promptTemplatesSyncTimeoutRef.current = null;
+      }
+      if (worldContextDirtyRef.current && onWorldContextChange) {
+        onWorldContextChange(pendingWorldContextRef.current);
+      }
+      if (promptTemplatesDirtyRef.current && onPromptTemplatesChange) {
+        onPromptTemplatesChange(pendingPromptTemplatesRef.current);
+      }
+    };
+  }, [onWorldContextChange, onPromptTemplatesChange]);
 
   if (!hasWorldData) {
     return (
@@ -187,8 +628,8 @@ export default function IlluminatorRemote({
         <div className="illuminator-empty-state-icon">&#x2728;</div>
         <div className="illuminator-empty-state-title">No World Data</div>
         <div className="illuminator-empty-state-desc">
-          Run a simulation in <strong>Lore Weave</strong> first, then return here
-          to enrich your world with LLM-generated descriptions and images.
+          Run a simulation in <strong>Lore Weave</strong> first, then return here to enrich your
+          world with LLM-generated descriptions and images.
         </div>
       </div>
     );
@@ -196,7 +637,7 @@ export default function IlluminatorRemote({
 
   return (
     <div className="illuminator-container">
-      {/* Left sidebar with nav and API keys */}
+      {/* Left sidebar with nav, progress, and API keys */}
       <div className="illuminator-sidebar">
         <nav className="illuminator-nav">
           {TABS.map((tab) => (
@@ -206,9 +647,32 @@ export default function IlluminatorRemote({
               className={`illuminator-nav-button ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.label}
-              {tab.id === 'queue' && tasks.length > 0 && (
-                <span style={{ marginLeft: 'auto', opacity: 0.7 }}>
-                  {tasks.filter((t) => t.status === 'pending').length}
+              {tab.id === 'activity' && stats.running > 0 && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    background: '#f59e0b',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {stats.running}
+                </span>
+              )}
+              {tab.id === 'activity' && stats.errored > 0 && stats.running === 0 && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    background: '#ef4444',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {stats.errored}
                 </span>
               )}
             </button>
@@ -226,9 +690,7 @@ export default function IlluminatorRemote({
           {showApiKeyInput && (
             <div className="illuminator-api-dropdown">
               <div className="illuminator-api-dropdown-title">Anthropic API Key</div>
-              <p className="illuminator-api-dropdown-hint">
-                Required for text enrichment.
-              </p>
+              <p className="illuminator-api-dropdown-hint">Required for text enrichment.</p>
               <input
                 type="password"
                 value={anthropicApiKey}
@@ -237,9 +699,7 @@ export default function IlluminatorRemote({
                 className="illuminator-api-input"
               />
               <div className="illuminator-api-dropdown-title">OpenAI API Key</div>
-              <p className="illuminator-api-dropdown-hint">
-                Required for image generation.
-              </p>
+              <p className="illuminator-api-dropdown-hint">Required for image generation.</p>
               <input
                 type="password"
                 value={openaiApiKey}
@@ -247,9 +707,27 @@ export default function IlluminatorRemote({
                 placeholder="sk-..."
                 className="illuminator-api-input"
               />
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '12px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={persistApiKeys}
+                  onChange={(e) => setPersistApiKeys(e.target.checked)}
+                />
+                Remember API keys (stored in browser)
+              </label>
               <button
                 onClick={() => setShowApiKeyInput(false)}
                 className="illuminator-api-button active"
+                style={{ marginTop: '12px' }}
               >
                 Done
               </button>
@@ -266,98 +744,131 @@ export default function IlluminatorRemote({
             <span className="illuminator-temp-slot-warning-icon">⚠</span>
             <span>
               You are enriching data in a <strong>temporary slot</strong>, which will be
-              automatically deleted when a new Lore Weave simulation is run. Consider saving
-              to a permanent slot before enrichment.
+              automatically deleted when a new Lore Weave simulation is run. Consider saving to a
+              permanent slot before enrichment.
             </span>
           </div>
         )}
 
-        {activeTab === 'configure' && (
+        {/* No API keys warning */}
+        {!hasRequiredKeys && activeTab === 'entities' && (
+          <div
+            style={{
+              padding: '12px 16px',
+              marginBottom: '16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '6px',
+              fontSize: '13px',
+            }}
+          >
+            Set your API keys in the sidebar to enable enrichment.
+          </div>
+        )}
+
+        {activeTab === 'entities' && (
           <div className="illuminator-content">
-            <ConfigPanel
+            <EntityBrowser
+              entities={entities}
+              queue={queue}
+              onEnqueue={enqueue}
+              onCancel={cancel}
+              onAssignImage={handleAssignImage}
+              worldSchema={worldSchema}
               config={config}
               onConfigChange={updateConfig}
-              worldSchema={worldSchema}
+              buildPrompt={buildPrompt}
+              styleLibrary={styleLibrary}
+              styleSelection={styleSelection}
+              onStyleSelectionChange={setStyleSelection}
+            />
+          </div>
+        )}
+
+        {activeTab === 'narratives' && (
+          <div className="illuminator-content">
+            <NarrativesPanel
+              worldData={worldData}
+              entities={entities}
+              queue={queue}
+              onEnqueue={enqueue}
+              onCancel={cancel}
+              worldContext={worldContext}
+              eraNarratives={eraNarratives}
+              relationshipNarratives={relationshipNarratives}
             />
           </div>
         )}
 
         {activeTab === 'context' && (
           <div className="illuminator-content">
-            <DomainContextEditor
-              domainContext={domainContext}
-              onDomainContextChange={updateDomainContext}
-              worldSchema={worldSchema}
+            <WorldContextEditor
+              worldContext={worldContext}
+              onWorldContextChange={updateWorldContext}
             />
           </div>
         )}
 
-        {activeTab === 'prompts' && (
+        {activeTab === 'templates' && (
           <div className="illuminator-content">
-            <PromptPreviewPanel
-              domainContext={domainContext}
-              worldData={worldData?.hardState}
-              worldSchema={worldSchema}
-            />
-          </div>
-        )}
-
-        {activeTab === 'queue' && (
-          <div className="illuminator-content">
-            <EnrichmentQueue
-              tasks={tasks}
-              onRunTasks={runTasks}
-              onRunAll={runAllTasks}
-              worldSchema={worldSchema}
-              hasRequiredKeys={hasRequiredKeys}
-            />
-          </div>
-        )}
-
-        {activeTab === 'run' && (
-          <div className="illuminator-content">
-            <ProgressPanel
-              status={enrichmentStatus}
-              progress={progress}
-              tasks={tasks}
-              onPause={pauseEnrichment}
-              onResume={resumeEnrichment}
-              onAbort={abortEnrichment}
-              onRunAll={runAllTasks}
-              hasRequiredKeys={hasRequiredKeys}
-            />
-          </div>
-        )}
-
-        {activeTab === 'results' && (
-          <div className="illuminator-content">
-            <ResultsPanel
-              tasks={tasks}
+            <PromptTemplateEditor
+              templates={promptTemplates}
+              onTemplatesChange={updatePromptTemplates}
+              worldContext={worldContext}
               worldData={worldData}
-              onRegenerateTask={(taskId) => runTasks([taskId])}
-              onExportToArchivist={() => {
-                if (onEnrichmentComplete && workerState.enrichedEntities) {
-                  // Mark as enriched with timestamp and count completed tasks
-                  const completedTasks = tasks.filter((t) => t.status === 'complete');
-                  const enrichedWorld = {
-                    ...worldData,
-                    hardState: workerState.enrichedEntities,
-                    metadata: {
-                      ...worldData.metadata,
-                      enriched: true,
-                      enrichedAt: Date.now(),
-                      enrichmentStats: {
-                        descriptions: completedTasks.filter((t) => t.type === 'description').length,
-                        images: completedTasks.filter((t) => t.type === 'image').length,
-                      },
-                    },
-                  };
-                  onEnrichmentComplete(enrichedWorld);
-                } else if (onEnrichmentComplete && worldData) {
-                  onEnrichmentComplete(worldData);
-                }
-              }}
+              worldSchema={worldSchema}
+              simulationMetadata={simulationMetadata}
             />
+          </div>
+        )}
+
+        {activeTab === 'styles' && (
+          <div className="illuminator-content">
+            <StyleLibraryEditor
+              styleLibrary={styleLibrary}
+              loading={styleLibraryLoading}
+              isCustom={hasCustomStyleLibrary}
+              onAddArtisticStyle={addArtisticStyle}
+              onUpdateArtisticStyle={updateArtisticStyle}
+              onDeleteArtisticStyle={deleteArtisticStyle}
+              onAddCompositionStyle={addCompositionStyle}
+              onUpdateCompositionStyle={updateCompositionStyle}
+              onDeleteCompositionStyle={deleteCompositionStyle}
+              onReset={resetStyleLibrary}
+              entityKinds={(worldSchema?.entityKinds || []).map((k) => k.id)}
+            />
+          </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="illuminator-content">
+            <ActivityPanel
+              queue={queue}
+              stats={stats}
+              onCancel={cancel}
+              onRetry={retry}
+              onCancelAll={cancelAll}
+              onClearCompleted={clearCompleted}
+              enrichmentTriggers={worldData?.metadata?.enrichmentTriggers}
+            />
+          </div>
+        )}
+
+        {activeTab === 'costs' && (
+          <div className="illuminator-content">
+            <CostsPanel entities={entities} queue={queue} projectId={projectId} activeSlotIndex={activeSlotIndex} />
+          </div>
+        )}
+
+        {activeTab === 'storage' && (
+          <div className="illuminator-content">
+            <StoragePanel projectId={projectId} />
+          </div>
+        )}
+
+        {activeTab === 'configure' && (
+          <div className="illuminator-content">
+            <ConfigPanel config={config} onConfigChange={updateConfig} worldSchema={worldSchema} />
           </div>
         )}
       </div>

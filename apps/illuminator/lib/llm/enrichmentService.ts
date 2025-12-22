@@ -1,12 +1,11 @@
-import { HardState, Relationship } from '../core/worldTypes';
-import { EnrichmentConfig, LLMConfig } from '../engine/types';
+import type { HardState, Relationship, EnrichmentConfig, LLMConfig } from '../types';
 import { EnrichmentContext, LoreRecord } from '../llm/types';
 import { DomainLoreProvider } from '../llm/types';
 import { LLMClient } from './llmClient';
 import { LoreValidator } from './loreValidator';
 import { NameLogger } from '../naming/nameLogger';
 import { upsertNameTag, parseJsonSafe, chunk, generateLoreId, hasTag } from '../utils';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 
 export class EnrichmentService {
   private llm: LLMClient;
@@ -64,52 +63,46 @@ export class EnrichmentService {
       const promptEntities = batch.map(e => {
         // Build relationship context using the SNAPSHOT to avoid timing issues
         // (entity relationships might change during simulation after enrichment is queued)
-        const snapshotEntity = context.graphSnapshot.entities.get(e.id);
         const relationships: Record<string, string[]> = {};
         const historicalRelationships: Record<string, string[]> = {};
 
-        if (snapshotEntity) {
-          // Current relationships
-          snapshotEntity.links.forEach(link => {
-            if (link.status === 'historical') return;  // Skip historical here
-            const target = context.graphSnapshot.entities.get(link.dst);
-            if (target) {
-              if (!relationships[link.kind]) relationships[link.kind] = [];
-              relationships[link.kind].push(target.name);
-            }
-          });
+        const addRelationship = (
+          rel: Relationship,
+          targetMap: Record<string, string[]>
+        ) => {
+          const targetId = rel.src === e.id ? rel.dst : rel.src;
+          const target = context.graphSnapshot.entities.get(targetId);
+          if (!target) return;
+          if (!targetMap[rel.kind]) targetMap[rel.kind] = [];
+          targetMap[rel.kind].push(target.name);
+        };
 
-          // Historical relationships (for meta-entities and enriched lore)
-          if (context.graphSnapshot.historicalRelationships) {
-            context.graphSnapshot.historicalRelationships
-              .filter(r => r.src === e.id || r.dst === e.id)
-              .forEach(link => {
-                const targetId = link.src === e.id ? link.dst : link.src;
-                const target = context.graphSnapshot.entities.get(targetId);
-                if (target) {
-                  if (!historicalRelationships[link.kind]) historicalRelationships[link.kind] = [];
-                  historicalRelationships[link.kind].push(target.name);
-                }
-              });
-          }
+        context.graphSnapshot.relationships
+          .filter(rel => rel.src === e.id || rel.dst === e.id)
+          .forEach(rel => addRelationship(rel, relationships));
+
+        if (context.graphSnapshot.historicalRelationships) {
+          context.graphSnapshot.historicalRelationships
+            .filter(rel => rel.src === e.id || rel.dst === e.id)
+            .forEach(rel => addRelationship(rel, historicalRelationships));
         }
 
         // Add catalyst information (Phase 3)
         const catalystInfo: any = {};
         if (e.catalyst) {
           catalystInfo.canAct = e.catalyst.canAct;
-          catalystInfo.actionDomains = e.catalyst.actionDomains;
-          catalystInfo.influence = e.catalyst.influence;
           catalystInfo.eventsTriggered = e.catalyst.catalyzedEvents?.length || 0;
         }
 
         // Detect meta-entities
-        const isMetaEntity = hasTag(e.tags, 'meta-entity');
+        const isMetaEntity = hasTag(e.tags, FRAMEWORK_TAGS.META_ENTITY);
         const clusterInfo: any = {};
         if (isMetaEntity) {
           // Find part_of relationships (components of this meta-entity)
-          const components = Array.from(context.graphSnapshot.entities.values())
-            .filter(ent => ent.links.some(l => l.kind === 'part_of' && l.dst === e.id));
+          const components = context.graphSnapshot.relationships
+            .filter(rel => rel.kind === 'part_of' && rel.dst === e.id)
+            .map(rel => context.graphSnapshot.entities.get(rel.src))
+            .filter((ent): ent is HardState => !!ent);
           clusterInfo.isMetaEntity = true;
           clusterInfo.componentCount = components.length;
           clusterInfo.componentNames = components.map(c => c.name).slice(0, 5);  // First 5
@@ -163,9 +156,7 @@ export class EnrichmentService {
         ``,
         `CATALYST AWARENESS: Some entities have agency and trigger events.`,
         `If entity.catalyst.eventsTriggered > 5, describe them as influential/impactful.`,
-        `If entity.catalyst.actionDomains includes specific domains, reflect that in their description.`,
         `Action domains: ${actionDomainContext}`,
-        `Use catalyst.influence to determine tone (high influence = respected/feared/powerful).`,
         ``,
         `Do not invent new mechanics; stay within canon: ${this.loreProvider.getCanonFacts().join('; ')}.`,
         `IMPORTANT: Keep each description under 50 words. Be concise and evocative.`,

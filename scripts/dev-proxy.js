@@ -49,7 +49,7 @@ proxy.on('error', (err, req, res) => {
 // Log proxied requests
 proxy.on('proxyReq', (proxyReq, req) => {
   const route = routes.find(r => req.url.startsWith(r.prefix) && r.prefix !== '/') || routes[routes.length - 1];
-  console.log(`${req.method} ${req.url} → ${route.target}${proxyReq.path}`);
+  // console.log(`${req.method} ${req.url} → ${route.target}${proxyReq.path}`);
 });
 
 function findRoute(url) {

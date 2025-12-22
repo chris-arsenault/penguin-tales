@@ -11,7 +11,7 @@ import { NumberInput } from '../../shared';
  * @param {Function} props.onChange - Called when system changes
  */
 export function FrameworkSystemTab({ system, onChange }) {
-  const config = system.config || {};
+  const config = system.config;
 
   const updateConfig = (field, value) => {
     onChange({ ...system, config: { ...config, [field]: value } });

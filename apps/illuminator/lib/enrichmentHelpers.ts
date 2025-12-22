@@ -155,11 +155,15 @@ export function createEntitySnapshot(
   entity: HardState,
   graph: Graph
 ): EntitySnapshot {
+  const relationshipIds = graph
+    .getEntityRelationships(entity.id, 'both')
+    .map(rel => `${rel.kind}:${rel.src}:${rel.dst}`);
+
   const snapshot: EntitySnapshot = {
     tick: graph.tick,
     status: entity.status,
     prominence: entity.prominence,
-    keyRelationshipIds: new Set(entity.links.map(l => `${l.kind}:${l.dst}`)),
+    keyRelationshipIds: new Set(relationshipIds),
   };
 
   // Kind-specific tracking
@@ -205,7 +209,7 @@ export function createEntitySnapshot(
     }
     case 'npc': {
       snapshot.leadershipIds = new Set(
-        entity.links.filter(l => l.kind === 'leader_of').map(l => l.dst)
+        graph.findRelationships({ kind: 'leader_of', src: entity.id }).map(rel => rel.dst)
       );
       break;
     }

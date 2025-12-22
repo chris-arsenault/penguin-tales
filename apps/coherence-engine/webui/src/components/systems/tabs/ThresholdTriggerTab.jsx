@@ -20,7 +20,7 @@ const TRIGGER_MUTATION_TYPES = DEFAULT_MUTATION_TYPES;
  * @param {Array} props.pressures - Pressure definitions
  */
 export function ThresholdTriggerTab({ system, onChange, schema, pressures }) {
-  const config = system.config || {};
+  const config = system.config;
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({
     value: rk.kind,

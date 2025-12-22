@@ -43,7 +43,7 @@ const FALLOFF_OPTIONS = [
  * @param {Object} props.schema - Domain schema (for tag registry)
  */
 export function PlaneDiffusionTab({ system, onChange, schema }) {
-  const config = system.config || {};
+  const config = system.config;
   const tagRegistry = schema?.tagRegistry || [];
 
   const updateConfig = (field, value) => {

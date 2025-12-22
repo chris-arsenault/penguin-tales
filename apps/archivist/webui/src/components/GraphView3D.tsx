@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import type { WorldState } from '../types/world.ts';
-import { getKindColor } from '../utils/dataTransform.ts';
+import { getKindColor, prominenceToNumber } from '../utils/dataTransform.ts';
 import * as THREE from 'three';
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
@@ -60,25 +60,25 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
   // Transform data to force-graph format
   const graphData = useRef({ nodes: [] as GraphNode[], links: [] as GraphLink[] });
 
-  useEffect(() => {
-    const prominenceToNumber = (prominence: string): number => {
-      const map: Record<string, number> = {
-        forgotten: 0,
-        marginal: 1,
-        recognized: 2,
-        renowned: 3,
-        mythic: 4
+  const legendItems = useMemo(() => {
+    return data.schema.entityKinds.map(kind => {
+      const label = kind.style?.displayName || kind.description || kind.kind;
+      return {
+        kind: kind.kind,
+        label,
+        color: getKindColor(kind.kind, data.schema),
       };
-      return map[prominence] || 0;
-    };
+    });
+  }, [data.schema]);
 
+  useEffect(() => {
     const nodes: GraphNode[] = data.hardState.map(entity => ({
       id: entity.id,
       name: entity.name,
       kind: entity.kind,
-      prominence: prominenceToNumber(entity.prominence),
-      color: getKindColor(entity.kind),
-      val: prominenceToNumber(entity.prominence) + 1 // Size multiplier (1-5)
+      prominence: prominenceToNumber(entity.prominence, data.schema),
+      color: getKindColor(entity.kind, data.schema),
+      val: prominenceToNumber(entity.prominence, data.schema) + 1 // Size multiplier (1-5)
     }));
 
     const links: GraphLink[] = data.relationships.map(rel => {
@@ -273,26 +273,12 @@ export default function GraphView3D({ data, selectedNodeId, onNodeSelect, showCa
           <div className="font-bold text-blue-200 uppercase tracking-wider text-xs">Legend</div>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#6FB1FC' }}></div>
-            <span className="font-medium">NPCs</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#FC6B6B' }}></div>
-            <span className="font-medium">Factions</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#6BFC9C' }}></div>
-            <span className="font-medium">Locations</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#FCA86B' }}></div>
-            <span className="font-medium">Rules</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#C76BFC' }}></div>
-            <span className="font-medium">Abilities</span>
-          </div>
+          {legendItems.map(item => (
+            <div key={item.kind} className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+              <span className="font-medium">{item.label}</span>
+            </div>
+          ))}
         </div>
         <div className="px-5 py-3 border-t border-blue-500/20" style={{ background: 'rgba(59, 130, 246, 0.05)' }}>
           <div className="text-xs text-blue-300 italic">Size indicates prominence</div>

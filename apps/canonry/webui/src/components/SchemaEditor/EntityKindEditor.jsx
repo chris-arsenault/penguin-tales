@@ -49,6 +49,31 @@ function computeNamingProfileUsage(namingData) {
   return usage;
 }
 
+const DEFAULT_KIND_COLORS = [
+  '#6FB1FC',
+  '#FC6B6B',
+  '#6BFC9C',
+  '#FCA86B',
+  '#C76BFC',
+  '#FCD76B',
+  '#60A5FA',
+  '#A78BFA',
+];
+
+const DEFAULT_KIND_COLOR_MAP = {
+  npc: '#6FB1FC',
+  faction: '#FC6B6B',
+  location: '#6BFC9C',
+  rules: '#FCA86B',
+  abilities: '#C76BFC',
+  occurrence: '#FCD76B',
+  era: '#FFD700',
+};
+
+function getDefaultKindColor(kind, index) {
+  return DEFAULT_KIND_COLOR_MAP[kind] || DEFAULT_KIND_COLORS[index % DEFAULT_KIND_COLORS.length];
+}
+
 function generateId(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
@@ -97,6 +122,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
       subtypes: [],
       statuses: [{ id: 'active', name: 'Active', isTerminal: false }],
       defaultStatus: 'active',
+      style: { color: getDefaultKindColor(stableKey, entityKinds.length) },
       _key: stableKey,
     };
     onChange([...entityKinds, newKind]);
@@ -104,16 +130,27 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   };
 
   const updateKind = (kindKey, updates) => {
+    const existing = entityKinds.find((k) => k.kind === kindKey);
+    if (existing?.isFramework) return;
     onChange(entityKinds.map((k) => (k.kind === kindKey ? { ...k, ...updates } : k)));
   };
 
+  const updateKindStyle = (kindKey, updates) => {
+    const kind = entityKinds.find((k) => k.kind === kindKey);
+    if (!kind) return;
+    updateKind(kindKey, { style: { ...(kind.style || {}), ...updates } });
+  };
+
   const deleteKind = (kindKey) => {
+    const kind = entityKinds.find((k) => k.kind === kindKey);
+    if (kind?.isFramework) return;
     if (confirm('Delete this entity kind? This cannot be undone.')) {
       onChange(entityKinds.filter((k) => k.kind !== kindKey));
     }
   };
 
   const addSubtype = (kindKey) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const name = newSubtype[kindKey]?.trim();
     if (!name) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
@@ -124,12 +161,14 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   };
 
   const removeSubtype = (kindKey, subtypeId) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
     updateKind(kindKey, { subtypes: ek.subtypes.filter((s) => s.id !== subtypeId) });
   };
 
   const addStatus = (kindKey) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const name = newStatus[kindKey]?.trim();
     if (!name) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
@@ -140,12 +179,14 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
   };
 
   const removeStatus = (kindKey, statusId) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
     updateKind(kindKey, { statuses: ek.statuses.filter((s) => s.id !== statusId) });
   };
 
   const toggleStatusTerminal = (kindKey, statusId) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
     updateKind(kindKey, {
@@ -176,10 +217,12 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
         />
       ) : (
         <div className="list-stack">
-          {entityKinds.map((ek) => {
+          {entityKinds.map((ek, index) => {
             const stableKey = getStableKey(ek);
             const isExpanded = expandedKinds[stableKey];
             const profileCount = getNamingProfileCount(ek.kind);
+            const kindColor = ek.style?.color;
+            const isFramework = Boolean(ek.isFramework);
 
             return (
               <ExpandableCard
@@ -191,6 +234,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                 actions={
                   <>
                     <UsageBadges usage={getEntityKindUsageSummary(schemaUsage, ek.kind)} compact />
+                    {isFramework && <span className="badge badge-info">framework</span>}
                     {profileCount > 0 && (
                       <span
                         className="badge badge-warning"
@@ -211,6 +255,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                     <input
                       className="input"
                       value={ek.description}
+                      disabled={isFramework}
                       onChange={(e) => updateKind(ek.kind, { description: e.target.value })}
                       placeholder="Entity kind display name"
                     />
@@ -219,6 +264,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                     <input
                       className="input"
                       value={ek.kind}
+                      disabled={isFramework}
                       onChange={(e) => {
                         const newKind = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
                         if (newKind && !entityKinds.some((k) => k.kind === newKind && k.kind !== ek.kind)) {
@@ -227,6 +273,20 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                       }}
                       placeholder="entity_kind_id"
                     />
+                  </FormGroup>
+                  <FormGroup label="Color">
+                    <input
+                      className="input"
+                      type="color"
+                      value={kindColor ?? '#000000'}
+                      disabled={isFramework}
+                      onChange={(e) => updateKindStyle(ek.kind, { color: e.target.value })}
+                    />
+                    {!kindColor && (
+                      <div style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px' }}>
+                        Color required
+                      </div>
+                    )}
                   </FormGroup>
                 </FormRow>
 
@@ -263,6 +323,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                           <button
                             className="chip-remove"
                             onClick={() => removeSubtype(ek.kind, subtype.id)}
+                            disabled={isFramework}
                           >
                             ×
                           </button>
@@ -274,11 +335,12 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                     <input
                       className="input input-sm"
                       value={newSubtype[ek.kind] || ''}
+                      disabled={isFramework}
                       onChange={(e) => setNewSubtype((prev) => ({ ...prev, [ek.kind]: e.target.value }))}
                       placeholder="New subtype name"
                       onKeyDown={(e) => e.key === 'Enter' && addSubtype(ek.kind)}
                     />
-                    <button className="btn btn-secondary" onClick={() => addSubtype(ek.kind)}>
+                    <button className="btn btn-secondary" onClick={() => addSubtype(ek.kind)} disabled={isFramework}>
                       Add
                     </button>
                   </div>
@@ -293,6 +355,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                         <input
                           type="checkbox"
                           checked={status.isTerminal}
+                          disabled={isFramework}
                           onChange={() => toggleStatusTerminal(ek.kind, status.id)}
                           title="Terminal status"
                         />
@@ -305,6 +368,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                         <button
                           className="chip-remove"
                           onClick={() => removeStatus(ek.kind, status.id)}
+                          disabled={isFramework}
                         >
                           ×
                         </button>
@@ -315,11 +379,12 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                     <input
                       className="input input-sm"
                       value={newStatus[ek.kind] || ''}
+                      disabled={isFramework}
                       onChange={(e) => setNewStatus((prev) => ({ ...prev, [ek.kind]: e.target.value }))}
                       placeholder="New status name"
                       onKeyDown={(e) => e.key === 'Enter' && addStatus(ek.kind)}
                     />
-                    <button className="btn btn-secondary" onClick={() => addStatus(ek.kind)}>
+                    <button className="btn btn-secondary" onClick={() => addStatus(ek.kind)} disabled={isFramework}>
                       Add
                     </button>
                   </div>
@@ -332,6 +397,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                     <select
                       className="input"
                       value={ek.defaultStatus || ''}
+                      disabled={isFramework}
                       onChange={(e) => updateKind(ek.kind, { defaultStatus: e.target.value })}
                     >
                       <option value="">-- Select --</option>
@@ -344,7 +410,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
 
                 {/* Delete */}
                 <div className="danger-zone">
-                  <button className="btn btn-danger" onClick={() => deleteKind(ek.kind)}>
+                  <button className="btn btn-danger" onClick={() => deleteKind(ek.kind)} disabled={isFramework}>
                     Delete Entity Kind
                   </button>
                 </div>

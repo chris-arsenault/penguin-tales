@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react';
 import type { WorldState, Filters, EntityKind, LoreData, ImageMetadata } from '../types/world.ts';
-import { applyFilters, applyTemporalFilter } from '../utils/dataTransform.ts';
+import { applyFilters, applyTemporalFilter, getProminenceLevels } from '../utils/dataTransform.ts';
 import CoordinateMapView from './CoordinateMapView.tsx';
 import FilterPanel from './FilterPanel.tsx';
 import EntityDetail from './EntityDetail.tsx';
@@ -29,10 +29,9 @@ export default function WorldExplorer({ worldData, loreData, imageData }: WorldE
   const [edgeMetric, setEdgeMetric] = useState<EdgeMetric>('strength');
   const recalculateLayoutRef = useRef<(() => void) | null>(null);
 
-  // Get UI configuration from schema (with fallbacks)
-  const entityKinds = worldData.uiSchema?.entityKinds?.map(ek => ek.kind)
-    ?? ['npc', 'faction', 'location', 'rules', 'abilities', 'era', 'occurrence'];
-  const defaultMinProminence = worldData.uiSchema?.prominenceLevels?.[0] ?? 'forgotten';
+  // Get UI configuration from schema
+  const entityKinds = worldData.schema.entityKinds.map(ek => ek.kind);
+  const defaultMinProminence = getProminenceLevels(worldData.schema)[0];
 
   const [filters, setFilters] = useState<Filters>({
     kinds: entityKinds as EntityKind[],

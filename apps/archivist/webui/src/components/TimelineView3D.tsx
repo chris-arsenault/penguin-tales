@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import type { WorldState } from '../types/world.ts';
-import { getKindColor } from '../utils/dataTransform.ts';
+import { getKindColor, prominenceToNumber } from '../utils/dataTransform.ts';
 import * as THREE from 'three';
 
 export type EdgeMetric = 'strength' | 'distance' | 'none';
@@ -87,19 +87,21 @@ export default function TimelineView3D({
     return positions;
   }, [data.hardState]);
 
+  const legendItems = useMemo(() => {
+    return data.schema.entityKinds
+      .filter(kind => kind.kind !== 'era')
+      .map(kind => {
+        const label = kind.style?.displayName || kind.description || kind.kind;
+        return {
+          kind: kind.kind,
+          label,
+          color: getKindColor(kind.kind, data.schema),
+        };
+      });
+  }, [data.schema]);
+
   // Transform data to force-graph format
   const graphData = useMemo(() => {
-    const prominenceToNumber = (prominence: string): number => {
-      const map: Record<string, number> = {
-        forgotten: 0,
-        marginal: 1,
-        recognized: 2,
-        renowned: 3,
-        mythic: 4
-      };
-      return map[prominence] || 0;
-    };
-
     const nodes: GraphNode[] = data.hardState.map(entity => {
       const isEra = entity.kind === 'era';
       const eraX = eraPositions.get(entity.id);
@@ -108,9 +110,9 @@ export default function TimelineView3D({
         id: entity.id,
         name: entity.name,
         kind: entity.kind,
-        prominence: prominenceToNumber(entity.prominence),
-        color: isEra ? '#FFD700' : getKindColor(entity.kind), // Gold for eras
-        val: isEra ? 6 : prominenceToNumber(entity.prominence) + 1, // Eras are larger
+        prominence: prominenceToNumber(entity.prominence, data.schema),
+        color: isEra ? '#FFD700' : getKindColor(entity.kind, data.schema), // Gold for eras
+        val: isEra ? 6 : prominenceToNumber(entity.prominence, data.schema) + 1, // Eras are larger
         createdAt: entity.createdAt,
         // Fix era positions along X-axis
         fx: isEra ? eraX : undefined,
@@ -351,10 +353,12 @@ export default function TimelineView3D({
             <div className="w-5 h-5 rounded shadow-lg flex-shrink-0" style={{ backgroundColor: '#FFD700' }}></div>
             <span className="font-medium">Eras (fixed timeline)</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: '#6FB1FC' }}></div>
-            <span className="font-medium">Entities (spring-positioned)</span>
-          </div>
+          {legendItems.map(item => (
+            <div key={item.kind} className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+              <span className="font-medium">{item.label}</span>
+            </div>
+          ))}
           <div className="flex items-center gap-3">
             <div className="w-8 h-0.5 shadow-lg flex-shrink-0" style={{ backgroundColor: '#FFD700' }}></div>
             <span className="font-medium">created_during links</span>

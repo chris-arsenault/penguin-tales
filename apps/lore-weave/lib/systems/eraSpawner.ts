@@ -3,8 +3,10 @@ import { HardState } from '../core/worldTypes';
 import { generateId } from '../utils';
 import {
   FRAMEWORK_ENTITY_KINDS,
-  FRAMEWORK_STATUS
-} from '../core/frameworkPrimitives';
+  FRAMEWORK_STATUS,
+  FRAMEWORK_CULTURES,
+  FRAMEWORK_TAGS
+} from '@canonry/world-schema';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraSpawnerConfig } from '../engine/systemInterpreter';
 import { createSystemContext, prepareMutation } from '../rules';
@@ -45,8 +47,12 @@ export function createEraEntity(
     description: configEra.description,
     status: status,
     prominence: 'mythic',  // Eras are always mythic (world-defining)
-    culture: 'world',  // Eras are world-level entities
-    tags: { temporal: true, era: true, eraId: configEra.id },
+    culture: FRAMEWORK_CULTURES.WORLD,  // Eras are world-level entities
+    tags: {
+      [FRAMEWORK_TAGS.TEMPORAL]: true,
+      [FRAMEWORK_TAGS.ERA]: true,
+      [FRAMEWORK_TAGS.ERA_ID]: configEra.id
+    },
     createdAt: tick,
     updatedAt: tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map

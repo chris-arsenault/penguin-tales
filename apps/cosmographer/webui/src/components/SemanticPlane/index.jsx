@@ -282,8 +282,11 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
     regions: []
   };
   const planeEntities = seedEntities.filter(e => e.kind === selectedKind?.kind);
+  const isFrameworkKind = Boolean(selectedKind?.isFramework);
 
   const updateEntityKind = (kindId, updates) => {
+    const target = entityKinds.find(k => k.kind === kindId);
+    if (target?.isFramework) return;
     const newKinds = entityKinds.map(k =>
       k.kind === kindId ? { ...k, ...updates } : k
     );
@@ -291,6 +294,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const addRegion = () => {
+    if (isFrameworkKind) return;
     if (!selectedKind || !newRegion.label.trim()) return;
 
     // Use culture color if culture is selected, otherwise random color
@@ -322,6 +326,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const deleteRegion = (regionId) => {
+    if (isFrameworkKind) return;
     if (!selectedKind) return;
 
     const updatedPlane = {
@@ -343,6 +348,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const handleMoveRegion = (regionId, coords) => {
+    if (isFrameworkKind) return;
     if (!selectedKind) return;
 
     const updatedRegions = (semanticPlane.regions || []).map(r =>
@@ -366,6 +372,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const handleResizeRegion = (regionId, newRadius) => {
+    if (isFrameworkKind) return;
     if (!selectedKind) return;
 
     const updatedRegions = (semanticPlane.regions || []).map(r =>
@@ -393,6 +400,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const openRegionEditor = (region) => {
+    if (isFrameworkKind) return;
     setEditingRegion({
       ...region,
       tags: region.tags || []
@@ -401,6 +409,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const saveRegionConfig = () => {
+    if (isFrameworkKind) return;
     if (!selectedKind || !editingRegion) return;
 
     const updatedRegions = (semanticPlane.regions || []).map(r =>
@@ -425,6 +434,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const openAxisEditor = (axisKey) => {
+    if (isFrameworkKind) return;
     const rawAxisConfig = semanticPlane.axes?.[axisKey];
     const resolved = resolveAxis(rawAxisConfig);
     setEditingAxis({
@@ -451,6 +461,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
   };
 
   const saveAxisConfig = () => {
+    if (isFrameworkKind) return;
     if (!selectedKind || !editingAxis?.axisId) return;
 
     const updatedAxes = {
@@ -509,7 +520,15 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
             </option>
           ))}
         </select>
-        <button style={styles.addButton} onClick={() => setShowNewRegionModal(true)}>
+        <button
+          style={{
+            ...styles.addButton,
+            opacity: isFrameworkKind ? 0.6 : 1,
+            pointerEvents: isFrameworkKind ? 'none' : 'auto'
+          }}
+          onClick={() => setShowNewRegionModal(true)}
+          disabled={isFrameworkKind}
+        >
           + Add Region
         </button>
       </div>
@@ -521,6 +540,7 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
             regions={semanticPlane.regions || []}
             entities={planeEntities}
             cultures={cultures}
+            axisDefinitions={axisDefinitions}
             selectedEntityId={selectedEntityId}
             selectedRegionId={selectedRegionId}
             onSelectEntity={setSelectedEntityId}
@@ -540,7 +560,16 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
               return (
                 <div
                   key={axis}
-                  style={{ ...styles.axisInfo, cursor: 'pointer', padding: '6px 8px', borderRadius: '4px', backgroundColor: '#1a1a2e', marginBottom: '4px' }}
+                  style={{
+                    ...styles.axisInfo,
+                    cursor: isFrameworkKind ? 'default' : 'pointer',
+                    padding: '6px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: '#1a1a2e',
+                    marginBottom: '4px',
+                    opacity: isFrameworkKind ? 0.6 : 1,
+                    pointerEvents: isFrameworkKind ? 'none' : 'auto'
+                  }}
                   onClick={() => openAxisEditor(axis)}
                 >
                   <span style={styles.axisLabel}>{axis.toUpperCase()}</span>
@@ -591,22 +620,35 @@ export default function SemanticPlaneEditor({ project, onSave, axisDefinitions =
                       )}
                     </div>
                     <button
-                      style={{ ...styles.deleteButton, backgroundColor: '#0f3460', color: '#aaa', border: 'none' }}
+                      style={{
+                        ...styles.deleteButton,
+                        backgroundColor: '#0f3460',
+                        color: '#aaa',
+                        border: 'none',
+                        opacity: isFrameworkKind ? 0.5 : 1,
+                        pointerEvents: isFrameworkKind ? 'none' : 'auto'
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         openRegionEditor(region);
                       }}
                       title="Edit region"
+                      disabled={isFrameworkKind}
                     >
                       ✎
                     </button>
                     <button
-                      style={styles.deleteButton}
+                      style={{
+                        ...styles.deleteButton,
+                        opacity: isFrameworkKind ? 0.5 : 1,
+                        pointerEvents: isFrameworkKind ? 'none' : 'auto'
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteRegion(region.id);
                       }}
                       title="Delete region"
+                      disabled={isFrameworkKind}
                     >
                       ×
                     </button>

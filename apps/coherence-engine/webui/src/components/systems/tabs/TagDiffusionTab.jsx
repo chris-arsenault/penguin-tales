@@ -14,7 +14,7 @@ import TagSelector from '@penguin-tales/shared-components/TagSelector';
  * @param {Object} props.schema - Domain schema
  */
 export function TagDiffusionTab({ system, onChange, schema }) {
-  const config = system.config || {};
+  const config = system.config;
   const tagRegistry = schema?.tagRegistry || [];
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({

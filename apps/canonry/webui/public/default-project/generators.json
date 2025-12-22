@@ -48,7 +48,7 @@
             "ref": "$mentor",
             "stickToRegion": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -316,7 +316,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -343,7 +343,7 @@
             "allowEmergent": true,
             "preferSparse": true
           },
-          "fallback": [
+          "steps": [
             "sparse",
             "random"
           ]
@@ -480,8 +480,7 @@
         "kind": "faction",
         "subtype": {
           "inherit": "$target",
-          "chance": 0.6,
-          "fallback": "random"
+          "chance": 0.6
         },
         "status": "waning",
         "prominence": "marginal",
@@ -505,7 +504,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -605,8 +604,7 @@
               "kind": "leader_of"
             }
           ],
-          "pickStrategy": "random",
-          "fallback": "$firstMember"
+          "pickStrategy": "random"
         }
       },
       "$location": {
@@ -616,8 +614,7 @@
             "relationship": "controls",
             "direction": "src"
           },
-          "pickStrategy": "random",
-          "fallback": "$occupiedLocation"
+          "pickStrategy": "random"
         }
       }
     },
@@ -664,7 +661,7 @@
             "allowEmergent": true,
             "preferSparse": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -785,10 +782,10 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
-        "subtypes": [
-          "anomaly",
-          "point_of_interest"
-        ],
+      "subtypes": [
+        "anomaly",
+        "point_of_interest"
+      ],
       "pickStrategy": "random",
       "filters": [
         {
@@ -836,7 +833,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -870,7 +867,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -1079,7 +1076,7 @@
             "allowEmergent": true,
             "createRegion": true
           },
-          "fallback": [
+          "steps": [
             "sparse",
             "random"
           ]
@@ -1105,7 +1102,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region"
           ]
         },
@@ -1193,7 +1190,7 @@
             "allowEmergent": true,
             "preferSparse": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -1362,7 +1359,7 @@
             "ref": "$target",
             "stickToRegion": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -1390,7 +1387,7 @@
             "type": "culture",
             "id": "$target"
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -1511,7 +1508,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -1615,7 +1612,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -1711,7 +1708,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -1827,7 +1824,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -1964,7 +1961,7 @@
           "regionPolicy": {
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "seed_region",
             "sparse",
             "random"
@@ -2092,7 +2089,7 @@
             "allowEmergent": true,
             "preferSparse": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -2211,7 +2208,7 @@
             "ref": "$parentTechnique",
             "stickToRegion": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -2339,7 +2336,7 @@
             "preferSparse": true,
             "allowEmergent": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -2448,7 +2445,7 @@
             "allowEmergent": true,
             "preferSparse": true
           },
-          "fallback": [
+          "steps": [
             "anchor_region",
             "seed_region",
             "sparse",
@@ -2930,7 +2927,7 @@
             "allowEmergent": true,
             "createRegion": true
           },
-          "fallback": [
+          "steps": [
             "sparse",
             "random"
           ]

@@ -17,6 +17,7 @@ const CATEGORY_COLORS = {
   behavior: { bg: 'rgba(249, 115, 22, 0.2)', color: '#f97316' },
   theme: { bg: 'rgba(236, 72, 153, 0.2)', color: '#ec4899' },
   location: { bg: 'rgba(20, 184, 166, 0.2)', color: '#14b8a6' },
+  system: { bg: 'rgba(148, 163, 184, 0.2)', color: '#94a3b8' },
 };
 
 // Rarity colors (dynamic - keep as objects)
@@ -27,11 +28,11 @@ const RARITY_COLORS = {
   legendary: { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24' },
 };
 
-const CATEGORIES = ['status', 'trait', 'affiliation', 'behavior', 'theme', 'location'];
+const CATEGORIES = ['status', 'trait', 'affiliation', 'behavior', 'theme', 'location', 'system'];
 const RARITIES = ['common', 'uncommon', 'rare', 'legendary'];
 
 // Separate component for tag ID input to prevent cursor jumping
-function TagIdInput({ value, onChange, allTagIds }) {
+function TagIdInput({ value, onChange, allTagIds, disabled }) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ function TagIdInput({ value, onChange, allTagIds }) {
       className="input"
       style={{ fontFamily: 'monospace' }}
       value={localValue}
+      disabled={disabled}
       onChange={handleChange}
       onBlur={handleBlur}
       placeholder="tag_id"
@@ -120,10 +122,14 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   };
 
   const updateTag = (tagId, updates) => {
+    const existing = tagRegistry.find((t) => t.tag === tagId);
+    if (existing?.isFramework) return;
     onChange(tagRegistry.map((t) => (t.tag === tagId ? { ...t, ...updates } : t)));
   };
 
   const deleteTag = (tagId) => {
+    const existing = tagRegistry.find((t) => t.tag === tagId);
+    if (existing?.isFramework) return;
     if (confirm('Delete this tag? This cannot be undone.')) {
       onChange(tagRegistry.filter((t) => t.tag !== tagId));
     }
@@ -243,6 +249,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
             const isExpanded = expandedTags[tag.tag];
             const catColor = CATEGORY_COLORS[tag.category] || CATEGORY_COLORS.trait;
             const rarColor = RARITY_COLORS[tag.rarity] || RARITY_COLORS.common;
+            const isFramework = Boolean(tag.isFramework);
 
             return (
               <ExpandableCard
@@ -263,6 +270,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                         ↔ axis
                       </span>
                     )}
+                    {isFramework && <span className="badge badge-info">framework</span>}
                     {tagUsage[tag.tag] && <UsageBadges usage={tagUsage[tag.tag]} compact />}
                     <span className="text-muted text-small">
                       {tag.minUsage || 0}-{tag.maxUsage || '∞'} | {(tag.entityKinds || []).length} kinds
@@ -276,6 +284,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <TagIdInput
                       value={tag.tag}
                       allTagIds={allTagNames.filter(t => t !== tag.tag)}
+                      disabled={isFramework}
                       onChange={(newId) => {
                         const oldId = tag.tag;
                         const updatedRegistry = tagRegistry.map(t => {
@@ -302,12 +311,12 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     />
                   </FormGroup>
                   <FormGroup label="Category">
-                    <select className="input" value={tag.category} onChange={(e) => updateTag(tag.tag, { category: e.target.value })}>
+                    <select className="input" value={tag.category} onChange={(e) => updateTag(tag.tag, { category: e.target.value })} disabled={isFramework}>
                       {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                   </FormGroup>
                   <FormGroup label="Rarity">
-                    <select className="input" value={tag.rarity} onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })}>
+                    <select className="input" value={tag.rarity} onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })} disabled={isFramework}>
                       {RARITIES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </FormGroup>
@@ -319,6 +328,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       style={{ minHeight: '60px', resize: 'vertical' }}
                       value={tag.description || ''}
+                      disabled={isFramework}
                       onChange={(e) => updateTag(tag.tag, { description: e.target.value })}
                       placeholder="Describe what this tag represents..."
                     />
@@ -331,6 +341,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <input
                       type="checkbox"
                       checked={tag.isAxis || false}
+                      disabled={isFramework}
                       onChange={(e) => updateTag(tag.tag, { isAxis: e.target.checked })}
                     />
                     <span style={{ fontWeight: 500 }}>Semantic Plane Axis Label</span>
@@ -345,6 +356,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       min={0}
                       value={tag.minUsage || 0}
+                      disabled={isFramework}
                       onChange={(v) => updateTag(tag.tag, { minUsage: v ?? 0 })}
                       integer
                     />
@@ -354,6 +366,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       min={0}
                       value={tag.maxUsage || 50}
+                      disabled={isFramework}
                       onChange={(v) => updateTag(tag.tag, { maxUsage: v ?? 50 })}
                       integer
                     />
@@ -362,6 +375,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     <select
                       className="input"
                       value={tag.consolidateInto || ''}
+                      disabled={isFramework}
                       onChange={(e) => updateTag(tag.tag, { consolidateInto: e.target.value || undefined })}
                     >
                       <option value="">-- None --</option>
@@ -377,7 +391,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     {(tag.entityKinds || []).map((kind) => (
                       <div key={kind} className="chip">
                         <span>{kind}</span>
-                        <button className="chip-remove" onClick={() => removeTagEntityKind(tag.tag, kind)}>×</button>
+                        <button className="chip-remove" onClick={() => removeTagEntityKind(tag.tag, kind)} disabled={isFramework}>×</button>
                       </div>
                     ))}
                   </div>
@@ -386,6 +400,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       style={{ flex: 1, maxWidth: '300px' }}
                       value={newEntityKind[tag.tag] || ''}
+                      disabled={isFramework}
                       onChange={(e) => setNewEntityKind((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >
                       <option value="">Select entity kind...</option>
@@ -393,7 +408,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                         <option key={ek.kind} value={ek.kind}>{ek.description || ek.kind}</option>
                       ))}
                     </select>
-                    <button className="btn btn-secondary" onClick={() => addTagEntityKind(tag.tag)}>Add</button>
+                    <button className="btn btn-secondary" onClick={() => addTagEntityKind(tag.tag)} disabled={isFramework}>Add</button>
                   </div>
                   <div className="hint">Which entity kinds can have this tag</div>
                 </div>
@@ -405,7 +420,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     {(tag.relatedTags || []).map((relatedTag) => (
                       <div key={relatedTag} className="chip">
                         <span>{relatedTag}</span>
-                        <button className="chip-remove" onClick={() => removeRelatedTag(tag.tag, relatedTag)}>×</button>
+                        <button className="chip-remove" onClick={() => removeRelatedTag(tag.tag, relatedTag)} disabled={isFramework}>×</button>
                       </div>
                     ))}
                   </div>
@@ -414,6 +429,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       style={{ flex: 1, maxWidth: '300px' }}
                       value={newRelatedTag[tag.tag] || ''}
+                      disabled={isFramework}
                       onChange={(e) => setNewRelatedTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >
                       <option value="">Select related tag...</option>
@@ -421,7 +437,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                         <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
-                    <button className="btn btn-secondary" onClick={() => addRelatedTag(tag.tag)}>Add</button>
+                    <button className="btn btn-secondary" onClick={() => addRelatedTag(tag.tag)} disabled={isFramework}>Add</button>
                   </div>
                   <div className="hint">Tags that commonly appear together</div>
                 </div>
@@ -433,7 +449,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                     {(tag.conflictingTags || []).map((conflictingTag) => (
                       <div key={conflictingTag} className="chip" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}>
                         <span>{conflictingTag}</span>
-                        <button className="chip-remove" onClick={() => removeConflictingTag(tag.tag, conflictingTag)}>×</button>
+                        <button className="chip-remove" onClick={() => removeConflictingTag(tag.tag, conflictingTag)} disabled={isFramework}>×</button>
                       </div>
                     ))}
                   </div>
@@ -442,6 +458,7 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                       className="input"
                       style={{ flex: 1, maxWidth: '300px' }}
                       value={newConflictingTag[tag.tag] || ''}
+                      disabled={isFramework}
                       onChange={(e) => setNewConflictingTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
                     >
                       <option value="">Select conflicting tag...</option>
@@ -449,14 +466,14 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                         <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
-                    <button className="btn btn-secondary" onClick={() => addConflictingTag(tag.tag)}>Add</button>
+                    <button className="btn btn-secondary" onClick={() => addConflictingTag(tag.tag)} disabled={isFramework}>Add</button>
                   </div>
                   <div className="hint">Tags that should never appear together</div>
                 </div>
 
                 {/* Delete */}
                 <div className="danger-zone">
-                  <button className="btn btn-danger" onClick={() => deleteTag(tag.tag)}>Delete Tag</button>
+                  <button className="btn btn-danger" onClick={() => deleteTag(tag.tag)} disabled={isFramework}>Delete Tag</button>
                 </div>
               </ExpandableCard>
             );

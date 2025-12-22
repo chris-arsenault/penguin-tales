@@ -96,7 +96,6 @@ export interface VariableSelectionRule {
   // Result handling
   pickStrategy?: SelectionPickStrategy;
   maxResults?: number;
-  fallback?: string;  // Variable reference or fixed value if nothing found
 }
 
 /**

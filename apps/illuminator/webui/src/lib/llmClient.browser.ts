@@ -27,6 +27,10 @@ export interface LLMResult {
   cached: boolean;
   skipped?: boolean;
   error?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+  };
 }
 
 export interface CallLogEntry {
@@ -119,6 +123,12 @@ export class LLMClient {
           }
         }
 
+        // Extract usage data from response
+        const usage = data.usage ? {
+          inputTokens: data.usage.input_tokens || 0,
+          outputTokens: data.usage.output_tokens || 0,
+        } : undefined;
+
         this.logResponse(logEntry, text);
 
         if (text) {
@@ -126,7 +136,7 @@ export class LLMClient {
         }
 
         this.callsCompleted++;
-        return { text, cached: false };
+        return { text, cached: false, usage };
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[LLM] Call ${callNumber}, Attempt ${attempt}/${maxAttempts}: ${message}`);
@@ -212,9 +222,14 @@ export interface ImageRequest {
 
 export interface ImageResult {
   imageUrl: string | null;
+  imageBlob?: Blob;  // Base64 decoded blob
   revisedPrompt?: string;
   skipped?: boolean;
   error?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+  };
 }
 
 export class ImageGenerationClient {
@@ -240,19 +255,46 @@ export class ImageGenerationClient {
     }
 
     try {
+      const model = this.config.model || 'dall-e-3';
+      const isGptImageModel = model.startsWith('gpt-image');
+
+      // Build request body with model-appropriate parameters
+      const requestBody: Record<string, unknown> = {
+        model,
+        prompt: request.prompt,
+        n: 1,
+      };
+
+      // Size parameter
+      const size = request.size || this.config.size;
+      if (size && size !== 'auto') {
+        requestBody.size = size;
+      } else if (isGptImageModel && size === 'auto') {
+        // GPT image models support 'auto' as an explicit value
+        requestBody.size = 'auto';
+      }
+
+      // Quality parameter
+      const quality = request.quality || this.config.quality;
+      if (quality && quality !== 'auto') {
+        requestBody.quality = quality;
+      } else if (isGptImageModel && quality === 'auto') {
+        // GPT image models support 'auto' as an explicit value
+        requestBody.quality = 'auto';
+      }
+
+      // response_format: only for DALL-E models (GPT image models always return base64)
+      if (!isGptImageModel) {
+        requestBody.response_format = 'b64_json';
+      }
+
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.config.apiKey}`,
         },
-        body: JSON.stringify({
-          model: this.config.model,
-          prompt: request.prompt,
-          n: 1,
-          size: request.size || this.config.size,
-          quality: request.quality || this.config.quality,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -263,9 +305,30 @@ export class ImageGenerationClient {
       const data = await response.json();
       this.imagesGenerated++;
 
+      // Decode base64 to blob
+      const b64Data = data.data[0]?.b64_json;
+      let imageBlob: Blob | undefined;
+      if (b64Data) {
+        const byteCharacters = atob(b64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        imageBlob = new Blob([byteArray], { type: 'image/png' });
+      }
+
+      // Extract usage data (GPT Image models return token usage)
+      const usage = data.usage ? {
+        inputTokens: data.usage.input_tokens || 0,
+        outputTokens: data.usage.output_tokens || 0,
+      } : undefined;
+
       return {
-        imageUrl: data.data[0]?.url || null,
+        imageUrl: null,  // No URL when using b64_json format
+        imageBlob,
         revisedPrompt: data.data[0]?.revised_prompt,
+        usage,
       };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

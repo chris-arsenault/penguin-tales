@@ -26,6 +26,7 @@ const ctx: Worker = self as unknown as Worker;
 let engine: WorldEngine | null = null;
 let initialState: HardState[] = [];
 let emitter: SimulationEmitter | null = null;
+let engineMaxTicks: number | null = null;
 
 /**
  * Create an emitter that posts messages to the main thread
@@ -41,20 +42,10 @@ function createWorkerEmitter(): SimulationEmitter {
  * Returns true if valid, false if invalid (error already emitted).
  */
 function validateConfigBeforeRun(config: EngineConfig, workerEmitter: SimulationEmitter): boolean {
-  // Extract culture names from domain schema if available
-  const cultures = config.domain?.cultures?.map(c =>
-    typeof c === 'string' ? c : c.id
-  );
-
-  // Extract entity kinds from domain schema if available
-  const entityKinds = config.domain?.entityKinds?.map(k =>
-    typeof k === 'string' ? k : k.id
-  );
-
-  // Extract relationship kinds from domain schema if available
-  const relationshipKinds = config.domain?.relationshipKinds?.map(k =>
-    typeof k === 'string' ? k : k.id
-  );
+  // Extract schema identifiers from canonical schema
+  const cultures = config.schema?.cultures?.map(c => c.id);
+  const entityKinds = config.schema?.entityKinds?.map(k => k.kind);
+  const relationshipKinds = config.schema?.relationshipKinds?.map(k => k.kind);
 
   const result = validateAllConfigs({
     templates: config.templates,
@@ -120,6 +111,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
       // Clear engine state
       engine = null;
       emitter = null;
+      engineMaxTicks = null;
       break;
 
     case 'exportState':
@@ -134,6 +126,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
 async function runSimulation(config: EngineConfig, state: HardState[]): Promise<void> {
   emitter = createWorkerEmitter();
   initialState = state;
+  engineMaxTicks = config.maxTicks;
 
   // Validate configuration before starting
   if (!validateConfigBeforeRun(config, emitter)) {
@@ -171,6 +164,7 @@ async function runSimulation(config: EngineConfig, state: HardState[]): Promise<
 async function initializeForStepping(config: EngineConfig, state: HardState[]): Promise<void> {
   emitter = createWorkerEmitter();
   initialState = state;
+  engineMaxTicks = config.maxTicks;
 
   // Validate configuration before starting
   if (!validateConfigBeforeRun(config, emitter)) {
@@ -226,11 +220,14 @@ async function stepSimulation(): Promise<void> {
     if (!hasMore) {
       // Simulation complete - complete event already emitted by finalize()
     } else {
+      if (engineMaxTicks === null) {
+        throw new Error('Step mode missing maxTicks. Initialize stepping with a valid config.');
+      }
       // Emit paused progress to indicate step completed
       emitter.progress({
         phase: 'paused',
         tick: engine.getGraph().tick,
-        maxTicks: engine.getGraph().config.maxTicks,
+        maxTicks: engineMaxTicks,
         epoch: engine.getCurrentEpoch(),
         totalEpochs: engine.getTotalEpochs(),
         entityCount: engine.getGraph().getEntityCount(),

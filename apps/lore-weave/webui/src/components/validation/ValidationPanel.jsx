@@ -255,8 +255,8 @@ export default function ValidationPanel({
   const validationResult = useMemo(() => {
     // Extract culture/entity/relationship IDs from schema
     const cultures = schema?.cultures?.map(c => c.id) || [];
-    const entityKinds = schema?.entityKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
-    const relationshipKinds = schema?.relationshipKinds?.map(k => typeof k === 'string' ? k : k.kind) || [];
+    const entityKinds = schema?.entityKinds?.map(k => k.kind) || [];
+    const relationshipKinds = schema?.relationshipKinds?.map(k => k.kind) || [];
 
     // Debug: log what we're validating
     console.log('[ValidationPanel] Validating actions:', actions?.length, 'items');

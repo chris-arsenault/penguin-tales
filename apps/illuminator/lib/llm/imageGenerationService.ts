@@ -2,9 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import OpenAI from 'openai';
-import { HardState } from '../core/worldTypes';
+import type { HardState } from '../types';
 import { EnrichmentContext } from '../llm/types';
-import { ImageGenerationPromptConfig } from '../domainInterface/domainSchema';
+import type { ImageGenerationPromptConfig } from '@lore-weave/core';
 
 export interface ImageGenerationConfig {
   enabled: boolean;

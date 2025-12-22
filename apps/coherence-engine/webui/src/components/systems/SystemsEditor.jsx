@@ -136,7 +136,7 @@ export default function SystemsEditor({ projectId, systems = [], onChange, schem
       },
     };
     onChange([...systems, newSystem]);
-    setSelectedId(newSystem.config?.id || null);
+    setSelectedId(newSystem.config.id);
     setShowTypePicker(false);
   }, [systems, onChange]);
 
@@ -195,7 +195,7 @@ export default function SystemsEditor({ projectId, systems = [], onChange, schem
                 <SystemListCard
                   key={flatIndex}
                   system={system}
-                  onClick={() => setSelectedId(system.config?.id || null)}
+                  onClick={() => setSelectedId(system.config.id)}
                   onToggle={() => handleToggle(system)}
                   usageMap={usageMap}
                 />

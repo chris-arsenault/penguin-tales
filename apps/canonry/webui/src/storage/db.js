@@ -6,6 +6,18 @@ const DB_NAME = 'canonry';
 const DB_VERSION = 1;
 const STORE_NAME = 'projects';
 
+const DEFAULT_UI_CONFIG = {
+  worldIcon: 'penguin',
+  prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
+  prominenceColors: {
+    forgotten: '#6b7280',
+    marginal: '#d97706',
+    recognized: '#059669',
+    renowned: '#2563eb',
+    mythic: '#7c3aed',
+  },
+};
+
 let dbInstance = null;
 
 /**
@@ -137,11 +149,22 @@ export function createEmptyProject(name = 'New World') {
     cultures: [],
     // Tag Registry (Enumerist)
     tagRegistry: [],
+    // Axis definitions (Cosmographer)
+    axisDefinitions: [],
+    // UI configuration (Archivist + UI hints)
+    uiConfig: DEFAULT_UI_CONFIG,
     // Temporal structure (Cosmographer)
     eras: [],
+    // Simulation config (Coherence Engine)
+    pressures: [],
+    generators: [],
+    systems: [],
+    actions: [],
     // Seed data (Cosmographer)
     seedEntities: [],
     seedRelationships: [],
+    // Distribution targets (Lore Weave)
+    distributionTargets: null,
     // Simulation (Simulation Workshop) - optional, undefined until configured
     simulation: undefined,
   };

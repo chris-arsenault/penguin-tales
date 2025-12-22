@@ -32,16 +32,13 @@ import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { createEraEntity } from '../systems/eraSpawner';
 import type {
   ISimulationEmitter,
   PressureChangeDetail,
   DiscretePressureModification,
-  PressureModificationSource,
-  WorldUiSchema,
-  EntityKindMapConfig,
-  RegionSchema
+  PressureModificationSource
 } from '../observer/types';
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
@@ -133,6 +130,12 @@ export class WorldEngine {
       throw new Error(
         'WorldEngine: emitter is required in EngineConfig. ' +
         'Provide a SimulationEmitter instance that handles simulation events.'
+      );
+    }
+    if (!config.schema) {
+      throw new Error(
+        'WorldEngine: schema is required in EngineConfig. ' +
+        'Provide the canonical world schema used to run the simulation.'
       );
     }
     this.emitter = config.emitter;
@@ -247,7 +250,7 @@ export class WorldEngine {
     // Initialize homeostatic control system
     this.populationTracker = new PopulationTracker(
       config.distributionTargets || {} as any,
-      config.domain
+      config.schema
     );
     this.dynamicWeightCalculator = new DynamicWeightCalculator();
     this.emitter.log('info', 'Population tracking enabled');
@@ -266,15 +269,16 @@ export class WorldEngine {
     this.targetSelector = new TargetSelector();
     this.emitter.log('info', 'Intelligent target selection enabled (anti-super-hub)');
 
-    // Initialize NameForgeService from cultures that have naming config
+    // Initialize NameForgeService from schema cultures that have naming config
     // Must be done before CoordinateContext since it requires nameForgeService
-    if (!config.cultures || config.cultures.length === 0) {
+    const schemaCultures = config.schema.cultures;
+    if (!schemaCultures || schemaCultures.length === 0) {
       throw new Error(
-        'WorldEngine: cultures array is required in EngineConfig. ' +
+        'WorldEngine: schema.cultures is required in EngineConfig. ' +
         'Provide cultures with naming configuration for name generation.'
       );
     }
-    const culturesWithNaming = config.cultures.filter(c => c.naming);
+    const culturesWithNaming = schemaCultures.filter(c => c.naming);
     if (culturesWithNaming.length === 0) {
       throw new Error(
         'WorldEngine: No cultures have naming configuration. ' +
@@ -290,17 +294,10 @@ export class WorldEngine {
     });
 
     // Initialize coordinate context (REQUIRED - no fallbacks)
-    if (!config.coordinateContextConfig) {
-      throw new Error(
-        'WorldEngine: coordinateContextConfig is required in EngineConfig. ' +
-        'Domain must provide kindRegionConfig, semanticConfig, and culture definitions.'
-      );
-    }
-    // Pass defaultMinDistance and nameForgeService to CoordinateContext
     const coordinateConfig = {
-      ...config.coordinateContextConfig,
-      defaultMinDistance: config.defaultMinDistance ?? config.coordinateContextConfig.defaultMinDistance,
-      nameForgeService: this.nameForgeService
+      schema: config.schema,
+      defaultMinDistance: config.defaultMinDistance,
+      nameForgeService: this.nameForgeService,
     };
     this.coordinateContext = new CoordinateContext(coordinateConfig);
     this.emitter.log('info', 'Coordinate context initialized', {
@@ -399,27 +396,17 @@ export class WorldEngine {
     // Load initial entities and initialize catalysts
     initialState.forEach(entity => {
       const id = entity.id || generateId(entity.kind);
-
-      // Convert legacy 6D coordinates to simple Point format
-      let coordinates = entity.coordinates;
-      if (coordinates && !('x' in coordinates && typeof (coordinates as any).x === 'number')) {
-        // Legacy format - convert to Point
-        const physical = (coordinates as any).physical;
-        if (physical) {
-          const zBandValues: Record<string, number> = {
-            'sky': 90, 'surface': 70, 'shallow_water': 50,
-            'deep_water': 30, 'ice_caverns': 10
-          };
-          coordinates = {
-            x: typeof physical.sector_x === 'number' ? physical.sector_x : 50,
-            y: typeof physical.sector_y === 'number' ? physical.sector_y : 50,
-            z: typeof physical.z_band === 'string' ? (zBandValues[physical.z_band] ?? 50) : 50
-          };
-        } else {
-          // No valid coordinates - use default
-          this.emitter.log('warn', `Entity "${entity.name}" (${entity.kind}) has invalid coordinates format, using default`);
-          coordinates = { x: 50, y: 50, z: 50 };
-        }
+      const coordinates = entity.coordinates;
+      if (!coordinates || typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number' || typeof coordinates.z !== 'number') {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has invalid coordinates. ` +
+          `Expected {x, y, z} numbers, received: ${JSON.stringify(coordinates)}.`
+        );
+      }
+      if (!entity.culture || entity.culture.startsWith('$')) {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has invalid culture "${entity.culture}".`
+        );
       }
 
       const loadedEntity: HardState = {
@@ -655,8 +642,10 @@ export class WorldEngine {
    * Get total expected epochs
    */
   public getTotalEpochs(): number {
-    // maxEpochs is the hard limit; default to eras.length * 2 for backwards compatibility
-    return this.config.maxEpochs ?? (this.config.eras.length * 2);
+    if (this.config.maxEpochs === undefined) {
+      throw new Error('WorldEngine config missing required maxEpochs');
+    }
+    return this.config.maxEpochs;
   }
 
   /**
@@ -694,24 +683,17 @@ export class WorldEngine {
     // Reload initial entities
     initialState.forEach(entity => {
       const id = entity.id || generateId(entity.kind);
-
-      // Convert legacy 6D coordinates to simple Point format
-      let coordinates = entity.coordinates;
-      if (coordinates && !('x' in coordinates && typeof (coordinates as any).x === 'number')) {
-        const physical = (coordinates as any).physical;
-        if (physical) {
-          const zBandValues: Record<string, number> = {
-            'sky': 90, 'surface': 70, 'shallow_water': 50,
-            'deep_water': 30, 'ice_caverns': 10
-          };
-          coordinates = {
-            x: typeof physical.sector_x === 'number' ? physical.sector_x : 50,
-            y: typeof physical.sector_y === 'number' ? physical.sector_y : 50,
-            z: typeof physical.z_band === 'string' ? (zBandValues[physical.z_band] ?? 50) : 50
-          };
-        } else {
-          coordinates = { x: 50, y: 50, z: 50 };
-        }
+      const coordinates = entity.coordinates;
+      if (!coordinates || typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number' || typeof coordinates.z !== 'number') {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has invalid coordinates. ` +
+          `Expected {x, y, z} numbers, received: ${JSON.stringify(coordinates)}.`
+        );
+      }
+      if (!entity.culture || entity.culture.startsWith('$')) {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has invalid culture "${entity.culture}".`
+        );
       }
 
       const loadedEntity: HardState = {
@@ -1366,21 +1348,27 @@ export class WorldEngine {
   private emitCompleteEvent(): void {
     const durationMs = Date.now() - this.startTime;
     const coordinateState = this.coordinateContext.export();
-    const uiSchema = this.buildUiSchema(coordinateState);
+    const entities = this.graph.getEntities();
+    const allRelationships = this.graph.getRelationships({ includeHistorical: true });
+    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
+    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
 
     this.emitter.complete({
+      schema: this.config.schema,
       metadata: {
         tick: this.graph.tick,
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
-        entityCount: this.graph.getEntityCount(),
-        relationshipCount: this.graph.getRelationshipCount(),
+        entityCount: entities.length,
+        relationshipCount: activeRelationships.length,
+        historicalRelationshipCount: historicalRelationships.length,
         historyEventCount: this.graph.history.length,
         durationMs,
         enrichmentTriggers: {}
       },
-      hardState: this.graph.getEntities(),
-      relationships: this.graph.getRelationships(),
+      hardState: entities,
+      relationships: activeRelationships,
+      historicalRelationships,
       history: this.graph.history,
       pressures: Object.fromEntries(this.graph.pressures),
       distributionMetrics: this.templateSelector ? (() => {
@@ -1401,8 +1389,7 @@ export class WorldEngine {
           targets: this.config.distributionTargets?.global
         };
       })() : undefined,
-      coordinateState,
-      uiSchema
+      coordinateState
     });
   }
   // Meta-entity formation is now handled by SimulationSystems:
@@ -1481,8 +1468,8 @@ export class WorldEngine {
    * Calculate dynamic growth target based on remaining entity deficits
    */
   private calculateGrowthTarget(): number {
-    // Get entity kinds from domain schema (not hardcoded)
-    const entityKinds = this.config.domain.entityKinds.map(ek => ek.kind);
+    // Get entity kinds from canonical schema (not hardcoded)
+    const entityKinds = this.config.schema.entityKinds.map(ek => ek.kind);
     const currentCounts = new Map<string, number>();
 
     // Count current entities by kind
@@ -1924,164 +1911,22 @@ export class WorldEngine {
     // Enrichment moved to @illuminator - this is now a no-op
   }
 
-  private buildUiSchema(
-    coordinateState: ReturnType<CoordinateContext['export']>
-  ): WorldUiSchema {
-    const domain = this.config.domain;
-    const uiConfig = domain.uiConfig || {};
-    const prominenceLevels = uiConfig.prominenceLevels || [
-      'forgotten',
-      'marginal',
-      'recognized',
-      'renowned',
-      'mythic'
-    ];
-
-    const entityKinds = (domain.entityKinds || []).map((kind) => {
-      if (typeof kind === 'string') {
-        return { kind, description: kind, subtypes: [], statuses: [] } as any;
-      }
-      return {
-        ...kind,
-        kind: (kind as any).kind || (kind as any).id
-      };
-    });
-
-    const relationshipKinds = (domain.relationshipKinds || []).map((rel) => {
-      if (typeof rel === 'string') {
-        return {
-          id: rel,
-          name: rel,
-          description: rel,
-          srcKinds: [],
-          dstKinds: []
-        };
-      }
-      return {
-        id: (rel as any).id || rel.kind,
-        name: (rel as any).name || rel.description || rel.kind,
-        description: rel.description,
-        srcKinds: rel.srcKinds || [],
-        dstKinds: rel.dstKinds || [],
-        symmetric: (rel as any).symmetric,
-        category: (rel as any).category
-      };
-    });
-
-    const cultures = (domain.cultures || []).map((culture) => {
-      if (typeof culture === 'string') {
-        return { id: culture, name: culture } as any;
-      }
-      return {
-        ...culture,
-        id: (culture as any).id || String(culture)
-      };
-    });
-
-    const cultureColors: Record<string, string> = {};
-    cultures.forEach((culture) => {
-      const color = (culture as any).color;
-      if (culture.id && color) {
-        cultureColors[culture.id] = color;
-      }
-    });
-
-    const perKindMaps: Record<string, EntityKindMapConfig> = {};
-    const perKindRegions: Record<string, RegionSchema[]> = {};
-
-    const semanticPlaneByKind = new Map<string, any>();
-    const contextKinds = this.config.coordinateContextConfig?.entityKinds || [];
-    contextKinds.forEach((kindConfig) => {
-      if (kindConfig.semanticPlane) {
-        semanticPlaneByKind.set(kindConfig.id, kindConfig.semanticPlane);
-      }
-    });
-
-    entityKinds.forEach((kind) => {
-      const kindId = (kind as any).kind || (kind as any).id;
-      if (!kindId) return;
-      const semanticPlane = (kind as any).semanticPlane || semanticPlaneByKind.get(kindId);
-      if (!semanticPlane) return;
-      const axes = semanticPlane.axes || {};
-      perKindMaps[kindId] = {
-        entityKind: kindId,
-        name: `${kind.description || kindId} Semantic Map`,
-        description: `Coordinate space for ${kind.description || kindId}`,
-        bounds: { min: 0, max: 100 },
-        hasZAxis: !!axes.z,
-        zAxisLabel: axes.z?.name,
-        xAxis: axes.x,
-        yAxis: axes.y,
-        zAxis: axes.z
-      };
-    });
-
-    if (coordinateState?.regions) {
-      Object.entries(coordinateState.regions).forEach(([entityKind, regions]) => {
-        if (!regions || regions.length === 0) return;
-        perKindRegions[entityKind] = regions.map((region) => {
-          const metadataColor =
-            region.color ||
-            (region.metadata?.color as string | undefined) ||
-            (region.culture ? cultureColors[region.culture] : undefined);
-          return {
-            id: region.id,
-            label: region.label,
-            description: region.description || '',
-            bounds: region.bounds,
-            zRange: region.zRange,
-            parentRegion: region.parentRegion,
-            metadata: {
-              ...(region.metadata || {}),
-              color: metadataColor,
-              culture: region.culture,
-              tags: region.tags,
-              subtype: region.culture ? 'colony' : 'default',
-              emergent: region.emergent,
-              createdAt: region.createdAt,
-              createdBy: region.createdBy
-            }
-          };
-        });
-      });
-    }
-
-    const schema: WorldUiSchema = {
-      worldName: domain.name || 'Simulation Results',
-      worldIcon: uiConfig.worldIcon || '',
-      entityKinds,
-      relationshipKinds,
-      prominenceLevels,
-      cultures
-    };
-
-    if (Object.keys(perKindMaps).length > 0) {
-      schema.perKindMaps = perKindMaps;
-    }
-
-    if (Object.keys(perKindRegions).length > 0) {
-      schema.perKindRegions = perKindRegions;
-    }
-
-    return schema;
-  }
-
   public exportState(): any {
     const entities = this.graph.getEntities();
 
     // Filter historical relationships for day 0 coherence
     // Exported state represents the current moment, not accumulated history
-    const allRelationships = this.graph.getRelationships();
+    const allRelationships = this.graph.getRelationships({ includeHistorical: true });
     const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
     const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
 
     // Extract meta-entities for visibility
-    const metaEntities = entities.filter(e => hasTag(e.tags, 'meta-entity'));
+    const metaEntities = entities.filter(e => hasTag(e.tags, FRAMEWORK_TAGS.META_ENTITY));
 
     const coordinateState = this.coordinateContext.export();
-    const uiSchema = this.buildUiSchema(coordinateState);
 
     const exportData: any = {
+      schema: this.config.schema,
       metadata: {
         tick: this.graph.tick,
         epoch: this.currentEpoch,
@@ -2102,8 +1947,7 @@ export class WorldEngine {
       relationships: activeRelationships,  // Only active relationships for day 0 game state
       historicalRelationships: historicalRelationships,  // Historical relationships for lore generation
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history,  // Export ALL events, not just last 50
-      uiSchema
+      history: this.graph.history  // Export ALL events, not just last 50
       // loreRecords moved to @illuminator
     };
 
@@ -2136,14 +1980,10 @@ export class WorldEngine {
 
   /**
    * Import coordinate state from a previously exported world.
-   *
-   * NOTE: With the cosmographer-aligned CoordinateContext, coordinate config
-   * (entityKinds + cultures with semantic planes/biases) is provided at construction time and is immutable.
-   * Emergent regions are not yet supported. This method is a no-op placeholder.
+   * Restores emergent regions into the active coordinate context.
    */
-  public importCoordinateState(_coordinateState: ReturnType<CoordinateContext['export']>): void {
-    // No-op: CoordinateContext is now initialized with immutable config from cosmographer.
-    // Emergent region restoration will be implemented when emergentConfig is added.
+  public importCoordinateState(coordinateState: ReturnType<CoordinateContext['export']>): void {
+    this.coordinateContext.import(coordinateState);
   }
 
   /**

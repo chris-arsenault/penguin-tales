@@ -2,13 +2,6 @@
  * Constants for ActionsEditor
  */
 
-// Re-export colors from shared-components for backwards compatibility
-export {
-  ACCENT_COLOR,
-  ACCENT_GRADIENT,
-  COLORS,
-} from '@penguin-tales/shared-components';
-
 export const TABS = [
   { id: 'overview', label: 'Overview', icon: '📋' },
   { id: 'actor', label: 'Actor', icon: '🎭' },

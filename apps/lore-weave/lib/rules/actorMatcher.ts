@@ -17,7 +17,7 @@ function resolveSingleEntity(select: VariableSelectionRule, ctx: RuleContext): H
   const candidates = selectVariableEntities(select, ctx);
 
   if (candidates.length === 0) {
-    return select.fallback ? ctx.resolver.resolveEntity(select.fallback) : undefined;
+    return undefined;
   }
 
   const pickStrategy = select.pickStrategy ?? 'random';

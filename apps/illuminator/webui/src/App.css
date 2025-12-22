@@ -192,6 +192,44 @@ body {
   border-color: var(--accent-color);
 }
 
+/* Progress Section (sidebar) */
+.illuminator-progress-section {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-md);
+}
+
+.illuminator-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.illuminator-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.illuminator-progress-fill {
+  height: 100%;
+  background: var(--accent-color);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.illuminator-progress-stats {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
 /* Main Content */
 .illuminator-main {
   flex: 1;
@@ -631,4 +669,484 @@ body {
 
 .illuminator-prompt-warning strong {
   color: #fef08a;
+}
+
+/* ============================================================================
+   Prompt Template Editor Styles
+   ============================================================================ */
+
+.illuminator-template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Kind Selector */
+.illuminator-template-kind-section {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.illuminator-template-kind-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.illuminator-kind-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.illuminator-kind-button {
+  padding: var(--space-xs) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.illuminator-kind-button:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+.illuminator-kind-button.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.illuminator-template-kind-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.illuminator-template-kind-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--accent-color);
+}
+
+.illuminator-template-kind-badge.default {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+}
+
+/* Mode Toggle */
+.illuminator-template-mode-toggle {
+  display: flex;
+  gap: 0;
+  margin-top: var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.illuminator-mode-button {
+  padding: var(--space-sm) var(--space-lg);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.illuminator-mode-button:hover {
+  background: var(--bg-tertiary);
+}
+
+.illuminator-mode-button.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Template Sections */
+.illuminator-template-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.illuminator-template-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.illuminator-template-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+}
+
+.illuminator-template-section-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.illuminator-template-textarea {
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: var(--text-sm);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.illuminator-template-textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.illuminator-template-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.illuminator-template-textarea-large {
+  min-height: 200px;
+}
+
+/* Template Variables */
+.illuminator-template-variables {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.illuminator-template-variables code {
+  padding: 2px 6px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: var(--text-xs);
+  color: var(--accent-hover);
+}
+
+/* Override Notice */
+.illuminator-template-override-notice {
+  padding: var(--space-md);
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 6px;
+  color: #fcd34d;
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* Full Template Badge */
+.illuminator-template-full-badge {
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--accent-color);
+}
+
+/* Button Link */
+.illuminator-button-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-color);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.illuminator-button-link:hover {
+  color: var(--accent-hover);
+  text-decoration-style: solid;
+}
+
+/* Preview Entity Info */
+.illuminator-preview-entity-info {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.illuminator-preview-entity-badge {
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* Card subtitle */
+.illuminator-card-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ============================================================================
+   Style Library Editor Styles
+   ============================================================================ */
+
+/* Style Grid */
+.illuminator-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+/* Style Card */
+.illuminator-style-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.illuminator-style-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.illuminator-style-card-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.illuminator-style-card-actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.illuminator-style-card-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.illuminator-style-card-prompt {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--space-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.illuminator-style-card-prompt strong {
+  font-style: normal;
+  color: var(--text-secondary);
+}
+
+.illuminator-style-card-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.illuminator-style-keyword {
+  padding: 2px 8px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 3px;
+  font-size: var(--text-xs);
+  color: var(--accent-hover);
+}
+
+.illuminator-style-card-kinds {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.illuminator-style-card-kinds strong {
+  color: var(--text-secondary);
+}
+
+/* Generic Button Styles */
+.illuminator-btn {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.illuminator-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+.illuminator-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.illuminator-btn-primary {
+  background: var(--button-primary);
+  border-color: var(--button-primary);
+  color: white;
+}
+
+.illuminator-btn-primary:hover {
+  background: var(--button-primary-hover);
+  border-color: var(--button-primary-hover);
+}
+
+.illuminator-btn-danger {
+  color: var(--danger);
+}
+
+.illuminator-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--danger);
+}
+
+.illuminator-btn-icon {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+/* Modal Styles */
+.illuminator-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: var(--space-xl);
+}
+
+.illuminator-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.illuminator-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.illuminator-modal-header h3 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.illuminator-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.illuminator-modal-close:hover {
+  color: var(--text-color);
+}
+
+.illuminator-modal-body {
+  padding: var(--space-lg);
+}
+
+.illuminator-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-top: var(--space-lg);
+  margin-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Textarea for modal */
+.illuminator-textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.illuminator-textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* Checkbox Grid */
+.illuminator-checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.illuminator-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.illuminator-checkbox-label:has(input:checked) {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-hover);
 }

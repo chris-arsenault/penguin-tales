@@ -10,6 +10,3 @@ export { default as PopulationMetrics } from './PopulationMetrics';
 export { default as TemplateUsage } from './TemplateUsage';
 export { default as FinalDiagnostics } from './FinalDiagnostics';
 export { default as LogStream } from './LogStream';
-
-// Re-export default for backwards compatibility
-export { default } from './SimulationDashboard';

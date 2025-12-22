@@ -591,7 +591,7 @@
 
     "CreationRule": {
       "type": "object",
-      "required": ["entityRef", "kind", "subtype", "placement"],
+      "required": ["entityRef", "kind", "subtype", "status", "prominence", "culture", "placement"],
       "additionalProperties": false,
       "properties": {
         "entityRef": { "$ref": "#/$defs/NonEmptyString", "description": "Variable name for this entity (e.g., $newFaction)" },
@@ -617,8 +617,7 @@
           "additionalProperties": false,
           "properties": {
             "inherit": { "$ref": "#/$defs/NonEmptyString" },
-            "chance": { "type": "number", "minimum": 0, "maximum": 1 },
-            "fallback": { "$ref": "#/$defs/NonEmptyString" }
+            "chance": { "type": "number", "minimum": 0, "maximum": 1 }
           }
         },
         {
@@ -813,10 +812,11 @@
                 "preferSparse": { "type": "boolean", "description": "Bias region selection toward sparser regions (weighted by inverse entity count)" }
               }
             },
-            "fallback": {
+            "steps": {
               "type": "array",
+              "minItems": 1,
               "items": {
-                "enum": ["anchor_region", "ref_region", "seed_region", "sparse", "bounds", "random"]
+                "enum": ["anchor_region", "seed_region", "sparse", "random"]
               }
             }
           }
@@ -996,8 +996,7 @@
         "filters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "preferFilters": { "type": "array", "items": { "$ref": "#/$defs/SelectionFilter" } },
         "pickStrategy": { "enum": ["random", "first", "all", "weighted"] },
-        "maxResults": { "type": "integer", "minimum": 1 },
-        "fallback": { "$ref": "#/$defs/NonEmptyString" }
+        "maxResults": { "type": "integer", "minimum": 1 }
       }
     },
 

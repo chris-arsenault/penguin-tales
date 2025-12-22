@@ -7,7 +7,7 @@
 
 import { HardState, Relationship, CatalystProperties, CatalyzedEvent } from '../core/worldTypes';
 import { Graph } from '../engine/types';
-import { FRAMEWORK_ENTITY_KINDS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_ENTITY_KINDS } from '@canonry/world-schema';
 import { getProminenceMultiplierValue } from '../rules';
 
 /**

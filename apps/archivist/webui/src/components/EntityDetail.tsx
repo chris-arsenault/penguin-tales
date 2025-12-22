@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore, RegionSchema } from '../types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, DescriptionLore, RelationshipBackstoryLore, ChainLinkLore, DiscoveryEventLore, Region } from '../types/world.ts';
 import { getEntityById, getRelatedEntities, getRelationships, getTagsArray } from '../utils/dataTransform.ts';
 import LoreSection from './LoreSection.tsx';
 import RelationshipStoryModal from './RelationshipStoryModal.tsx';
@@ -25,26 +25,21 @@ function parseSelectionId(selectionId: string): { type: 'entity'; id: string } |
 }
 
 // Find a region by entityKind and regionId
-function findRegion(worldData: WorldState, entityKind: string, regionId: string): RegionSchema | undefined {
-  const regions = worldData.uiSchema?.perKindRegions?.[entityKind];
-  return regions?.find(r => r.id === regionId);
-}
-
-// Region metadata type for type safety
-interface RegionMetadata {
-  color?: string;
-  culture?: string;
-  tags?: string[];
-  subtype?: string;
-  emergent?: boolean;
-  createdAt?: number;
-  createdBy?: string;
+function findRegion(worldData: WorldState, entityKind: string, regionId: string): Region | undefined {
+  const kindDef = worldData.schema.entityKinds.find(kind => kind.kind === entityKind);
+  if (!kindDef?.semanticPlane) {
+    throw new Error(`Archivist: entity kind "${entityKind}" is missing semanticPlane.`);
+  }
+  const seedRegions = kindDef.semanticPlane.regions;
+  const emergentRegions = worldData.coordinateState?.emergentRegions?.[entityKind] ?? [];
+  return [...seedRegions, ...emergentRegions].find(region => region.id === regionId);
 }
 
 // Region detail component
-function RegionDetail({ region, entityKind, worldData }: { region: RegionSchema; entityKind: string; worldData: WorldState }) {
-  const metadata = (region.metadata || {}) as RegionMetadata;
-  const culture = worldData.uiSchema?.cultures?.find(c => c.id === metadata.culture);
+function RegionDetail({ region, entityKind, worldData }: { region: Region; entityKind: string; worldData: WorldState }) {
+  const culture = region.culture
+    ? worldData.schema.cultures.find(c => c.id === region.culture)
+    : undefined;
 
   return (
     <div className="entity-detail">
@@ -52,8 +47,8 @@ function RegionDetail({ region, entityKind, worldData }: { region: RegionSchema;
       <div className="entity-detail-header">
         <h2 className="entity-detail-name">{region.label}</h2>
         <div className="entity-detail-badges">
-          <span className={`entity-badge ${metadata.emergent ? 'entity-badge-emergent' : ''}`}>
-            {metadata.emergent ? 'Emergent' : 'Seed'} Region
+          <span className={`entity-badge ${region.emergent ? 'entity-badge-emergent' : ''}`}>
+            {region.emergent ? 'Emergent' : 'Seed'} Region
           </span>
           <span className="entity-badge entity-badge-kind">{entityKind}</span>
           {culture && (
@@ -92,20 +87,20 @@ function RegionDetail({ region, entityKind, worldData }: { region: RegionSchema;
             </div>
           </>
         )}
-        {metadata.emergent && metadata.createdAt !== undefined && (
-          <div className="entity-meta-item">
-            <span className="entity-meta-label">Created</span>
-            <span className="entity-meta-value">Tick {metadata.createdAt}</span>
-          </div>
-        )}
+      {region.emergent && region.createdAt !== undefined && (
+        <div className="entity-meta-item">
+          <span className="entity-meta-label">Created</span>
+          <span className="entity-meta-value">Tick {region.createdAt}</span>
+        </div>
+      )}
       </div>
 
       {/* Tags */}
-      {metadata.tags && metadata.tags.length > 0 && (
+      {region.tags && region.tags.length > 0 && (
         <div className="entity-tags-section">
           <div className="section-header">Tags</div>
           <div className="tags-container">
-            {metadata.tags.map((tag: string) => (
+            {region.tags.map((tag: string) => (
               <span key={tag} className="tag">{tag}</span>
             ))}
           </div>
@@ -162,7 +157,7 @@ export default function EntityDetail({ entityId, worldData, loreData, imageData,
 
   // Look up culture info
   const entityCulture = entity.culture
-    ? worldData.uiSchema?.cultures?.find(c => c.id === entity.culture)
+    ? worldData.schema.cultures.find(c => c.id === entity.culture)
     : undefined;
 
   // Find lore for this entity

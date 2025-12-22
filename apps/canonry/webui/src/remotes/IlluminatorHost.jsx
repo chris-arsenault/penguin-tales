@@ -43,8 +43,10 @@ export default function IlluminatorHost({
   schema,
   worldData,
   onWorldDataChange,
-  domainContext,
-  onDomainContextChange,
+  worldContext,
+  onWorldContextChange,
+  promptTemplates,
+  onPromptTemplatesChange,
   activeSection,
   onSectionChange,
   activeSlotIndex,
@@ -57,8 +59,10 @@ export default function IlluminatorHost({
           schema={schema}
           worldData={worldData}
           onEnrichmentComplete={onWorldDataChange}
-          domainContext={domainContext}
-          onDomainContextChange={onDomainContextChange}
+          worldContext={worldContext}
+          onWorldContextChange={onWorldContextChange}
+          promptTemplates={promptTemplates}
+          onPromptTemplatesChange={onPromptTemplatesChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
           activeSlotIndex={activeSlotIndex}

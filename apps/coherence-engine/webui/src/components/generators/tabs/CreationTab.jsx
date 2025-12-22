@@ -182,12 +182,8 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
     return ek.statuses.map((st) => ({ value: st.id, label: st.name || st.id }));
   };
 
-  // Default V2 placement - used when no placement exists or when resetting
-  const defaultPlacement = { anchor: { type: 'sparse' } };
-
-  // Get current placement - must be V2 format (has anchor property)
-  // If legacy format or missing, use default
-  const placement = (item.placement?.anchor) ? item.placement : defaultPlacement;
+  const placement = item.placement;
+  const hasAnchor = Boolean(placement?.anchor);
 
   // Replace entire placement object - no merging with old values
   const setPlacement = (newPlacement) => {
@@ -198,9 +194,9 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
   const setAnchor = (anchor) => {
     setPlacement({
       anchor,
-      ...(placement.spacing && { spacing: placement.spacing }),
-      ...(placement.regionPolicy && { regionPolicy: placement.regionPolicy }),
-      ...(placement.fallback && { fallback: placement.fallback }),
+      ...(placement?.spacing && { spacing: placement.spacing }),
+      ...(placement?.regionPolicy && { regionPolicy: placement.regionPolicy }),
+      ...(placement?.steps && { steps: placement.steps }),
     });
   };
 
@@ -209,8 +205,8 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
     setPlacement({
       anchor: placement.anchor,
       ...(spacing && Object.keys(spacing).length > 0 && { spacing }),
-      ...(placement.regionPolicy && { regionPolicy: placement.regionPolicy }),
-      ...(placement.fallback && { fallback: placement.fallback }),
+      ...(placement?.regionPolicy && { regionPolicy: placement.regionPolicy }),
+      ...(placement?.steps && { steps: placement.steps }),
     });
   };
 
@@ -218,19 +214,19 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
   const setRegionPolicy = (regionPolicy) => {
     setPlacement({
       anchor: placement.anchor,
-      ...(placement.spacing && { spacing: placement.spacing }),
+      ...(placement?.spacing && { spacing: placement.spacing }),
       ...(regionPolicy && Object.keys(regionPolicy).length > 0 && { regionPolicy }),
-      ...(placement.fallback && { fallback: placement.fallback }),
+      ...(placement?.steps && { steps: placement.steps }),
     });
   };
 
-  // Update fallback
-  const setFallback = (fallback) => {
+  // Update placement steps
+  const setSteps = (steps) => {
     setPlacement({
       anchor: placement.anchor,
-      ...(placement.spacing && { spacing: placement.spacing }),
-      ...(placement.regionPolicy && { regionPolicy: placement.regionPolicy }),
-      ...(fallback && fallback.length > 0 && { fallback }),
+      ...(placement?.spacing && { spacing: placement.spacing }),
+      ...(placement?.regionPolicy && { regionPolicy: placement.regionPolicy }),
+      ...(steps && steps.length > 0 && { steps }),
     });
   };
 
@@ -442,14 +438,15 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
               {/* ANCHOR SECTION */}
               <div className="nested-title">Anchor Strategy</div>
               <div className="form-grid">
-                <ReferenceDropdown
-                  label="Strategy Type"
-                  value={placement.anchor?.type || 'sparse'}
-                  onChange={(v) => {
-                    if (v === 'entity') {
-                      // ref is required and must be non-empty - use first available or placeholder
-                      const ref = sameKindRefs[0] || '$target';
-                      setAnchor({ type: 'entity', ref, stickToRegion: true });
+              <ReferenceDropdown
+                label="Strategy Type"
+                value={placement?.anchor?.type || ''}
+                onChange={(v) => {
+                  if (!v) return;
+                  if (v === 'entity') {
+                    // ref is required and must be non-empty - use first available or placeholder
+                    const ref = sameKindRefs[0] || '$target';
+                    setAnchor({ type: 'entity', ref, stickToRegion: true });
                     } else if (v === 'culture') {
                       setAnchor({ type: 'culture', id: '$target' });
                     } else if (v === 'refs_centroid') {
@@ -462,83 +459,84 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
                       setAnchor({ type: 'bounds', bounds: { x: [0, 100], y: [0, 100] } });
                     }
                   }}
-                  options={[
-                    { value: 'entity', label: 'Near Entity (same kind)' },
-                    { value: 'culture', label: 'In Culture Region' },
-                    { value: 'refs_centroid', label: 'At Refs Centroid' },
-                    { value: 'sparse', label: 'Sparse Area' },
-                    { value: 'bounds', label: 'Within Bounds' },
-                  ]}
+                options={[
+                  { value: 'entity', label: 'Near Entity (same kind)' },
+                  { value: 'culture', label: 'In Culture Region' },
+                  { value: 'refs_centroid', label: 'At Refs Centroid' },
+                  { value: 'sparse', label: 'Sparse Area' },
+                  { value: 'bounds', label: 'Within Bounds' },
+                ]}
+                placeholder="Select anchor..."
+              />
+            </div>
+
+            {/* Entity Anchor Options */}
+            {placement?.anchor?.type === 'entity' && (
+              <div className="form-grid" style={{ marginTop: '12px' }}>
+                <ReferenceDropdown
+                  label="Reference Entity"
+                  value={placement.anchor?.ref}
+                  onChange={(v) => {
+                    // ref must be non-empty per schema
+                    if (!v) return;
+                    setAnchor({ ...placement.anchor, ref: v });
+                  }}
+                  options={sameKindRefs.length > 0
+                    ? sameKindRefs.map((r) => ({ value: r, label: `${r} (${item.kind})` }))
+                    : [{ value: '$target', label: '$target' }]}
+                  placeholder={sameKindRefs.length > 0 ? 'Select...' : `Define a ${item.kind} variable first`}
+                />
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={placement.anchor?.stickToRegion || false}
+                      onChange={(e) => setAnchor({ ...placement.anchor, stickToRegion: e.target.checked })}
+                    />
+                    Stick to Region
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Culture Anchor Options */}
+            {placement?.anchor?.type === 'culture' && (
+              <div className="form-grid" style={{ marginTop: '12px' }}>
+                <ReferenceDropdown
+                  label="Culture Source"
+                  value={placement.anchor?.id}
+                  onChange={(v) => {
+                    // id must be non-empty per schema
+                    if (!v) return;
+                    setAnchor({ ...placement.anchor, id: v });
+                  }}
+                  options={availableRefs.length > 0
+                    ? availableRefs.map((r) => ({ value: r, label: r }))
+                    : [{ value: '$target', label: '$target' }]}
+                  placeholder="Select entity..."
                 />
               </div>
+            )}
 
-              {/* Entity Anchor Options */}
-              {placement.anchor?.type === 'entity' && (
-                <div className="form-grid" style={{ marginTop: '12px' }}>
-                  <ReferenceDropdown
-                    label="Reference Entity"
-                    value={placement.anchor.ref}
-                    onChange={(v) => {
-                      // ref must be non-empty per schema
-                      if (!v) return;
-                      setAnchor({ ...placement.anchor, ref: v });
-                    }}
-                    options={sameKindRefs.length > 0
-                      ? sameKindRefs.map((r) => ({ value: r, label: `${r} (${item.kind})` }))
-                      : [{ value: '$target', label: '$target (fallback)' }]}
-                    placeholder={sameKindRefs.length > 0 ? 'Select...' : `Define a ${item.kind} variable first`}
-                  />
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={placement.anchor.stickToRegion || false}
-                        onChange={(e) => setAnchor({ ...placement.anchor, stickToRegion: e.target.checked })}
-                      />
-                      Stick to Region
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Culture Anchor Options */}
-              {placement.anchor?.type === 'culture' && (
-                <div className="form-grid" style={{ marginTop: '12px' }}>
-                  <ReferenceDropdown
-                    label="Culture Source"
-                    value={placement.anchor.id}
-                    onChange={(v) => {
-                      // id must be non-empty per schema
-                      if (!v) return;
-                      setAnchor({ ...placement.anchor, id: v });
-                    }}
-                    options={availableRefs.length > 0
-                      ? availableRefs.map((r) => ({ value: r, label: r }))
-                      : [{ value: '$target', label: '$target (fallback)' }]}
-                    placeholder="Select entity..."
-                  />
-                </div>
-              )}
-
-              {/* Refs Centroid Anchor Options */}
-              {placement.anchor?.type === 'refs_centroid' && (
-                <div className="form-grid" style={{ marginTop: '12px' }}>
-                  <ChipSelect
-                    label="Reference Entities"
-                    value={placement.anchor.refs || []}
-                    onChange={(v) => {
-                      // refs must have at least 1 item per schema
-                      if (v.length === 0) return;
-                      setAnchor({ ...placement.anchor, refs: v });
-                    }}
+            {/* Refs Centroid Anchor Options */}
+            {placement?.anchor?.type === 'refs_centroid' && (
+              <div className="form-grid" style={{ marginTop: '12px' }}>
+                <ChipSelect
+                  label="Reference Entities"
+                  value={placement.anchor?.refs || []}
+                  onChange={(v) => {
+                    // refs must have at least 1 item per schema
+                    if (v.length === 0) return;
+                    setAnchor({ ...placement.anchor, refs: v });
+                  }}
                     options={sameKindRefs.map((r) => ({ value: r, label: r }))}
                     placeholder="Select entities..."
                   />
                   <div className="form-group">
                     <label className="label">Jitter Radius</label>
                     <NumberInput
-                      value={placement.anchor.jitter ?? ''}
+                      value={placement.anchor?.jitter ?? ''}
                       onChange={(v) => setAnchor({ ...placement.anchor, jitter: v === '' ? undefined : Number(v) })}
                       min={0}
                       step={1}
@@ -549,45 +547,45 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
               )}
 
               {/* Sparse Anchor Options */}
-              {placement.anchor?.type === 'sparse' && (
-                <div className="form-grid" style={{ marginTop: '12px' }}>
-                  <div className="form-group">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={placement.anchor.preferPeriphery || false}
-                        onChange={(e) => setAnchor({ ...placement.anchor, preferPeriphery: e.target.checked })}
-                      />
-                      Prefer Periphery
-                    </label>
-                  </div>
+            {placement?.anchor?.type === 'sparse' && (
+              <div className="form-grid" style={{ marginTop: '12px' }}>
+                <div className="form-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={placement.anchor?.preferPeriphery || false}
+                      onChange={(e) => setAnchor({ ...placement.anchor, preferPeriphery: e.target.checked })}
+                    />
+                    Prefer Periphery
+                  </label>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Bounds Anchor Options */}
-              {placement.anchor?.type === 'bounds' && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '8px', alignItems: 'end' }}>
-                    <div></div>
-                    <label className="label" style={{ textAlign: 'center' }}>Min</label>
-                    <label className="label" style={{ textAlign: 'center' }}>Max</label>
+            {/* Bounds Anchor Options */}
+            {placement?.anchor?.type === 'bounds' && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr', gap: '8px', alignItems: 'end' }}>
+                  <div></div>
+                  <label className="label" style={{ textAlign: 'center' }}>Min</label>
+                  <label className="label" style={{ textAlign: 'center' }}>Max</label>
 
                     <label className="label">X</label>
                     <NumberInput
-                      value={placement.anchor.bounds?.x?.[0] ?? ''}
+                      value={placement.anchor?.bounds?.x?.[0] ?? ''}
                       onChange={(v) => {
-                        const x = placement.anchor.bounds?.x || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, x: [v === '' ? 0 : Number(v), x[1]] } });
+                        const x = placement.anchor?.bounds?.x || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, x: [v === '' ? 0 : Number(v), x[1]] } });
                       }}
                       step={1}
                       placeholder="0"
                     />
                     <NumberInput
-                      value={placement.anchor.bounds?.x?.[1] ?? ''}
+                      value={placement.anchor?.bounds?.x?.[1] ?? ''}
                       onChange={(v) => {
-                        const x = placement.anchor.bounds?.x || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, x: [x[0], v === '' ? 100 : Number(v)] } });
+                        const x = placement.anchor?.bounds?.x || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, x: [x[0], v === '' ? 100 : Number(v)] } });
                       }}
                       step={1}
                       placeholder="100"
@@ -595,19 +593,19 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
 
                     <label className="label">Y</label>
                     <NumberInput
-                      value={placement.anchor.bounds?.y?.[0] ?? ''}
+                      value={placement.anchor?.bounds?.y?.[0] ?? ''}
                       onChange={(v) => {
-                        const y = placement.anchor.bounds?.y || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, y: [v === '' ? 0 : Number(v), y[1]] } });
+                        const y = placement.anchor?.bounds?.y || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, y: [v === '' ? 0 : Number(v), y[1]] } });
                       }}
                       step={1}
                       placeholder="0"
                     />
                     <NumberInput
-                      value={placement.anchor.bounds?.y?.[1] ?? ''}
+                      value={placement.anchor?.bounds?.y?.[1] ?? ''}
                       onChange={(v) => {
-                        const y = placement.anchor.bounds?.y || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, y: [y[0], v === '' ? 100 : Number(v)] } });
+                        const y = placement.anchor?.bounds?.y || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, y: [y[0], v === '' ? 100 : Number(v)] } });
                       }}
                       step={1}
                       placeholder="100"
@@ -615,19 +613,19 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
 
                     <label className="label">Z</label>
                     <NumberInput
-                      value={placement.anchor.bounds?.z?.[0] ?? ''}
+                      value={placement.anchor?.bounds?.z?.[0] ?? ''}
                       onChange={(v) => {
-                        const z = placement.anchor.bounds?.z || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, z: [v === '' ? 0 : Number(v), z[1]] } });
+                        const z = placement.anchor?.bounds?.z || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, z: [v === '' ? 0 : Number(v), z[1]] } });
                       }}
                       step={1}
                       placeholder="0"
                     />
                     <NumberInput
-                      value={placement.anchor.bounds?.z?.[1] ?? ''}
+                      value={placement.anchor?.bounds?.z?.[1] ?? ''}
                       onChange={(v) => {
-                        const z = placement.anchor.bounds?.z || [0, 100];
-                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor.bounds, z: [z[0], v === '' ? 100 : Number(v)] } });
+                        const z = placement.anchor?.bounds?.z || [0, 100];
+                        setAnchor({ ...placement.anchor, bounds: { ...placement.anchor?.bounds, z: [z[0], v === '' ? 100 : Number(v)] } });
                       }}
                       step={1}
                       placeholder="100"
@@ -636,104 +634,114 @@ function CreationCard({ item, onChange, onRemove, schema, availableRefs, culture
                 </div>
               )}
 
-              {/* SPACING SECTION */}
-              <div className="nested-title" style={{ marginTop: '20px' }}>Spacing</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="label">Min Distance</label>
-                  <NumberInput
-                    value={placement.spacing?.minDistance ?? ''}
-                    onChange={(v) => {
-                      const minDistance = v === '' ? undefined : Number(v);
-                      const avoidRefs = placement.spacing?.avoidRefs;
-                      setSpacing({ ...(minDistance !== undefined && { minDistance }), ...(avoidRefs?.length && { avoidRefs }) });
-                    }}
-                    min={0}
-                    step={1}
-                    placeholder="No minimum"
+              {!hasAnchor && (
+                <div className="hint" style={{ marginTop: '12px' }}>
+                  Select an anchor strategy to configure spacing, region policy, and placement steps.
+                </div>
+              )}
+
+              {hasAnchor && (
+                <>
+                  {/* SPACING SECTION */}
+                  <div className="nested-title" style={{ marginTop: '20px' }}>Spacing</div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="label">Min Distance</label>
+                      <NumberInput
+                        value={placement?.spacing?.minDistance ?? ''}
+                        onChange={(v) => {
+                          const minDistance = v === '' ? undefined : Number(v);
+                          const avoidRefs = placement?.spacing?.avoidRefs;
+                          setSpacing({ ...(minDistance !== undefined && { minDistance }), ...(avoidRefs?.length && { avoidRefs }) });
+                        }}
+                        min={0}
+                        step={1}
+                        placeholder="No minimum"
+                      />
+                    </div>
+                    <ChipSelect
+                      label="Avoid Refs"
+                      value={placement?.spacing?.avoidRefs || []}
+                      onChange={(v) => {
+                        const minDistance = placement?.spacing?.minDistance;
+                        setSpacing({ ...(minDistance !== undefined && { minDistance }), ...(v.length && { avoidRefs: v }) });
+                      }}
+                      options={availableRefs.map((r) => ({ value: r, label: r }))}
+                      placeholder="Select entities to avoid..."
+                    />
+                  </div>
+
+                  {/* REGION POLICY SECTION */}
+                  <div className="nested-title" style={{ marginTop: '20px' }}>Region Policy</div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={placement?.regionPolicy?.allowEmergent || false}
+                          onChange={(e) => {
+                            const current = placement?.regionPolicy || {};
+                            const allowEmergent = e.target.checked;
+                            setRegionPolicy({ ...current, allowEmergent: allowEmergent || undefined });
+                          }}
+                        />
+                        Allow Emergent Regions
+                      </label>
+                      <div className="hint">When enabled, creates new regions when existing regions are at capacity</div>
+                    </div>
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={placement?.regionPolicy?.createRegion || false}
+                          onChange={(e) => {
+                            const current = placement?.regionPolicy || {};
+                            const createRegion = e.target.checked;
+                            setRegionPolicy({ ...current, createRegion: createRegion || undefined });
+                          }}
+                        />
+                        Create Region at Location
+                      </label>
+                      <div className="hint">Creates a new region centered on the placed entity (useful for establishing new territories)</div>
+                    </div>
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={placement?.regionPolicy?.preferSparse || false}
+                          onChange={(e) => {
+                            const current = placement?.regionPolicy || {};
+                            const preferSparse = e.target.checked;
+                            setRegionPolicy({ ...current, preferSparse: preferSparse || undefined });
+                          }}
+                        />
+                        Prefer Sparse Regions
+                      </label>
+                      <div className="hint">Bias region selection toward regions with fewer entities (weighted random selection)</div>
+                    </div>
+                  </div>
+
+                  {/* STEPS SECTION */}
+                  <div className="nested-title" style={{ marginTop: '20px' }}>Placement Steps</div>
+                  <ChipSelect
+                    label="Steps"
+                    value={placement?.steps || []}
+                    onChange={(v) => setSteps(v)}
+                    options={[
+                      { value: 'anchor_region', label: 'Anchor Region' },
+                      { value: 'ref_region', label: 'Ref Region' },
+                      { value: 'seed_region', label: 'Seed Region' },
+                      { value: 'sparse', label: 'Sparse' },
+                      { value: 'bounds', label: 'Bounds' },
+                      { value: 'random', label: 'Random' },
+                    ]}
+                    placeholder="Add placement steps..."
                   />
-                </div>
-                <ChipSelect
-                  label="Avoid Refs"
-                  value={placement.spacing?.avoidRefs || []}
-                  onChange={(v) => {
-                    const minDistance = placement.spacing?.minDistance;
-                    setSpacing({ ...(minDistance !== undefined && { minDistance }), ...(v.length && { avoidRefs: v }) });
-                  }}
-                  options={availableRefs.map((r) => ({ value: r, label: r }))}
-                  placeholder="Select entities to avoid..."
-                />
-              </div>
-
-              {/* REGION POLICY SECTION */}
-              <div className="nested-title" style={{ marginTop: '20px' }}>Region Policy</div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={placement.regionPolicy?.allowEmergent || false}
-                      onChange={(e) => {
-                        const current = placement.regionPolicy || {};
-                        const allowEmergent = e.target.checked;
-                        setRegionPolicy({ ...current, allowEmergent: allowEmergent || undefined });
-                      }}
-                    />
-                    Allow Emergent Regions
-                  </label>
-                  <div className="hint">When enabled, creates new regions when existing regions are at capacity</div>
-                </div>
-                <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={placement.regionPolicy?.createRegion || false}
-                      onChange={(e) => {
-                        const current = placement.regionPolicy || {};
-                        const createRegion = e.target.checked;
-                        setRegionPolicy({ ...current, createRegion: createRegion || undefined });
-                      }}
-                    />
-                    Create Region at Location
-                  </label>
-                  <div className="hint">Creates a new region centered on the placed entity (useful for establishing new territories)</div>
-                </div>
-                <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={placement.regionPolicy?.preferSparse || false}
-                      onChange={(e) => {
-                        const current = placement.regionPolicy || {};
-                        const preferSparse = e.target.checked;
-                        setRegionPolicy({ ...current, preferSparse: preferSparse || undefined });
-                      }}
-                    />
-                    Prefer Sparse Regions
-                  </label>
-                  <div className="hint">Bias region selection toward regions with fewer entities (weighted random selection)</div>
-                </div>
-              </div>
-
-              {/* FALLBACK SECTION */}
-              <div className="nested-title" style={{ marginTop: '20px' }}>Fallback Order</div>
-              <ChipSelect
-                label="Strategies"
-                value={placement.fallback || []}
-                onChange={(v) => setFallback(v)}
-                options={[
-                  { value: 'anchor_region', label: 'Anchor Region' },
-                  { value: 'ref_region', label: 'Ref Region' },
-                  { value: 'seed_region', label: 'Seed Region' },
-                  { value: 'sparse', label: 'Sparse' },
-                  { value: 'bounds', label: 'Bounds' },
-                  { value: 'random', label: 'Random' },
-                ]}
-                placeholder="Add fallback strategies..."
-              />
+                </>
+              )}
             </div>
           </div>
 

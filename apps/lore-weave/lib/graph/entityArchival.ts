@@ -8,7 +8,7 @@
 
 import { Graph } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
-import { FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_STATUS, FRAMEWORK_RELATIONSHIP_KINDS } from '@canonry/world-schema';
 import { archiveRelationship, addRelationship } from '../utils';
 
 /**

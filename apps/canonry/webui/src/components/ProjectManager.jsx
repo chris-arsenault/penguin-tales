@@ -29,6 +29,9 @@ export default function ProjectManager({
   onSaveToSlot,
   onClearSlot,
   onUpdateSlotTitle,
+  onExportSlot,
+  onImportSlot,
+  onLoadExampleOutput,
   hasDataInScratch = false,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -63,15 +66,11 @@ export default function ProjectManager({
     if (!file) return;
 
     try {
-      // Check file type - support both zip and legacy JSON
-      if (file.name.endsWith('.zip') || file.type === 'application/zip') {
-        // Import as zip file
-        await onImportProject(file);
-      } else {
-        // Legacy JSON import
-        const text = await file.text();
-        await onImportProject(text);
+      // Require zip file imports
+      if (!file.name.endsWith('.zip') && file.type !== 'application/zip') {
+        throw new Error('Unsupported file type. Import requires a .zip project export.');
       }
+      await onImportProject(file);
       setShowDropdown(false);
     } catch (err) {
       alert('Failed to import: ' + err.message);
@@ -207,6 +206,9 @@ export default function ProjectManager({
             onSaveToSlot={onSaveToSlot}
             onClearSlot={onClearSlot}
             onUpdateTitle={onUpdateSlotTitle}
+            onExportSlot={onExportSlot}
+            onImportSlot={onImportSlot}
+            onLoadExampleOutput={onLoadExampleOutput}
             hasDataInScratch={hasDataInScratch}
           />
         )}
@@ -233,7 +235,7 @@ export default function ProjectManager({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".zip,.json"
+          accept=".zip"
           style={{ display: 'none' }}
           onChange={handleImport}
         />

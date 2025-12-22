@@ -118,17 +118,6 @@ export type {
   OrCondition,
 };
 
-// Legacy type aliases for backwards compatibility with existing JSON
-export type PressureRule = PressureCondition;
-export type PressureAnyAboveRule = PressureAnyAboveCondition;
-export type PressureCompareRule = PressureCompareCondition;
-export type EntityCountRule = EntityCountCondition;
-export type EraMatchRule = EraMatchCondition;
-export type RandomChanceRule = RandomChanceCondition;
-export type CooldownElapsedRule = CooldownElapsedCondition;
-export type CreationsPerEpochRule = CreationsPerEpochCondition;
-export type CompositeApplicabilityRule = AndCondition | OrCondition;
-
 /**
  * StateUpdateRule is now an alias for Mutation from rules/.
  */
@@ -210,9 +199,9 @@ export interface CreationRule {
   subtype: SubtypeSpec;
 
   // Attributes
-  status?: string;
-  prominence?: Prominence;
-  culture?: CultureSpec;
+  status: string;
+  prominence: Prominence;
+  culture: CultureSpec;
   description?: DescriptionSpec;
   tags?: Record<string, boolean>;
 
@@ -228,7 +217,7 @@ export interface CreationRule {
  */
 export type SubtypeSpec =
   | string  // Fixed subtype
-  | { inherit: string; chance?: number; fallback?: string | 'random' }  // Inherit from reference
+  | { inherit: string; chance?: number }  // Inherit from reference
   | { fromPressure: Record<string, string> }  // Choose based on dominant pressure
   | { random: string[] };  // Random from list
 
@@ -280,15 +269,15 @@ export interface PlacementRegionPolicy {
   preferSparse?: boolean;
 }
 
-/** Fallback strategies when primary placement fails */
-export type PlacementFallback = 'anchor_region' | 'ref_region' | 'seed_region' | 'sparse' | 'bounds' | 'random';
+/** Ordered placement steps to attempt if the primary anchor placement fails */
+export type PlacementStep = 'anchor_region' | 'seed_region' | 'sparse' | 'random';
 
 /** Placement specification */
 export interface PlacementSpec {
   anchor: PlacementAnchor;
   spacing?: PlacementSpacing;
   regionPolicy?: PlacementRegionPolicy;
-  fallback?: PlacementFallback[];
+  steps?: PlacementStep[];
 }
 
 export interface CountRange {

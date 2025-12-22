@@ -21,7 +21,7 @@ import {
   detectClusters,
   filterClusterableEntities
 } from '../graph/clusteringUtils';
-import { FRAMEWORK_RELATIONSHIP_KINDS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_RELATIONSHIP_KINDS, FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { pickRandom } from '../utils';
 import { selectEntities, createSystemContext } from '../rules';
 import type { SelectionRule } from '../rules';
@@ -204,17 +204,16 @@ async function createMetaEntity(
   // Determine culture from majority
   const cultureCounts = new Map<string, number>();
   cluster.forEach(e => {
-    const culture = e.culture || 'world';
-    cultureCounts.set(culture, (cultureCounts.get(culture) || 0) + 1);
+    cultureCounts.set(e.culture, (cultureCounts.get(e.culture) || 0) + 1);
   });
-  const culture = getMajority(cultureCounts, 'world');
+  const culture = getMajority(cultureCounts, cluster[0].culture);
 
   // Aggregate tags from cluster (top 4 to leave room for meta-entity tag)
   const allTags = new Set<string>();
   cluster.forEach(e => {
     Object.keys(e.tags || {}).forEach(tag => {
       // Skip meta-entity and temp tags
-      if (!tag.startsWith('meta-entity') && !tag.startsWith('temp:')) {
+      if (!tag.startsWith(FRAMEWORK_TAGS.META_ENTITY) && !tag.startsWith('temp:')) {
         allTags.add(tag);
       }
     });
@@ -224,7 +223,7 @@ async function createMetaEntity(
   // Build tags object
   const tags: Record<string, boolean> = {};
   tagArray.forEach(tag => tags[tag] = true);
-  tags['meta-entity'] = true;
+  tags[FRAMEWORK_TAGS.META_ENTITY] = true;
   if (config.additionalTags) {
     config.additionalTags.forEach(tag => tags[tag] = true);
   }
@@ -246,12 +245,6 @@ async function createMetaEntity(
     config.kind,
     cluster
   );
-  if (!placement) {
-    throw new Error(
-      `cluster_formation: Failed to derive coordinates for meta-entity. ` +
-      `Ensure coordinate system is configured for '${config.kind}' entities.`
-    );
-  }
 
   return {
     kind: config.kind,
@@ -313,15 +306,14 @@ async function createGovernanceFaction(
   }
 
   // Derive coordinates for faction
+  if (!primaryLocation.culture) {
+    throw new Error(`createGovernanceFaction: primary location "${primaryLocation.name}" has no culture.`);
+  }
   const factionPlacement = await graphView.deriveCoordinatesWithCulture(
-    primaryLocation.culture ?? 'default',
+    primaryLocation.culture,
     'faction',
     [primaryLocation, metaEntity]
   );
-  if (!factionPlacement) {
-    return { factionId: null, relationships: [] };
-  }
-
   // Create political faction
   const factionPartial: Partial<HardState> = {
     kind: 'faction',
@@ -475,7 +467,9 @@ export function createClusterFormationSystem(
             config.metaEntity.kind,
             metaEntityPartial.coordinates,
             regionLabel,
-            regionDescription
+            regionDescription,
+            metaEntity.culture,
+            metaEntityId
           );
 
           if (regionResult.success && regionResult.region) {

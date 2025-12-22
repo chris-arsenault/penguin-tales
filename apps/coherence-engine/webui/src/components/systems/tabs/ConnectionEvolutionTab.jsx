@@ -255,7 +255,7 @@ function RuleCard({ rule, onChange, onRemove, schema }) {
  * @param {Object} props.schema - Domain schema
  */
 export function ConnectionEvolutionTab({ system, onChange, schema }) {
-  const config = system.config || {};
+  const config = system.config;
   const selectionKind = config.selection?.kind && config.selection.kind !== 'any' ? config.selection.kind : undefined;
 
   const relationshipKindOptions = (schema?.relationshipKinds || []).map((rk) => ({

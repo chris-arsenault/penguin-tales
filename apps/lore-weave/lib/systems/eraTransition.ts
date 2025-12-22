@@ -9,7 +9,7 @@ import {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_STATUS,
   FRAMEWORK_RELATIONSHIP_KINDS
-} from '../core/frameworkPrimitives';
+} from '@canonry/world-schema';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraTransitionConfig } from '../engine/systemInterpreter';
 import { createEraEntity } from './eraSpawner';

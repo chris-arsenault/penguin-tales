@@ -14,7 +14,6 @@ export function VariableSelectionEditor({
   availableRefs = [],
   showPickStrategy = true,
   showMaxResults = true,
-  showFallback = true,
   allowPreferFilters = true,
 }) {
   const select = value || {};
@@ -184,19 +183,6 @@ export function VariableSelectionEditor({
           placeholder="e.g., dead"
         />
       </div>
-
-      {showFallback && (
-        <div style={{ marginTop: '16px' }}>
-          <label className="label">Fallback (optional)</label>
-          <input
-            type="text"
-            value={select.fallback || ''}
-            onChange={(e) => updateSelect('fallback', e.target.value || undefined)}
-            className="input"
-            placeholder="$target or literal id"
-          />
-        </div>
-      )}
 
       <div style={{ marginTop: '24px' }}>
         <label className="label">Selection Filters</label>

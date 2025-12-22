@@ -103,7 +103,10 @@
         }
       ]
     },
-    "defaultStatus": "emergent"
+    "defaultStatus": "emergent",
+    "style": {
+      "color": "#C76BFC"
+    }
   },
   {
     "kind": "occurrence",
@@ -162,7 +165,10 @@
       },
       "regions": []
     },
-    "defaultStatus": "brewing"
+    "defaultStatus": "brewing",
+    "style": {
+      "color": "#FCD76B"
+    }
   },
   {
     "kind": "rules",
@@ -272,7 +278,10 @@
         }
       ]
     },
-    "defaultStatus": "proposed"
+    "defaultStatus": "proposed",
+    "style": {
+      "color": "#FCA86B"
+    }
   },
   {
     "kind": "npc",
@@ -392,7 +401,10 @@
         }
       ]
     },
-    "defaultStatus": "alive"
+    "defaultStatus": "alive",
+    "style": {
+      "color": "#6FB1FC"
+    }
   },
   {
     "kind": "location",
@@ -509,7 +521,10 @@
         }
       ]
     },
-    "defaultStatus": "thriving"
+    "defaultStatus": "thriving",
+    "style": {
+      "color": "#6BFC9C"
+    }
   },
   {
     "kind": "faction",
@@ -631,6 +646,9 @@
         }
       ]
     },
-    "defaultStatus": "active"
+    "defaultStatus": "active",
+    "style": {
+      "color": "#FC6B6B"
+    }
   }
 ]

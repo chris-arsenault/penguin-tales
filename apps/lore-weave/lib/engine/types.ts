@@ -1,12 +1,12 @@
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
-import { FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
+import { FRAMEWORK_STATUS } from '@canonry/world-schema';
 import { DistributionTargets } from '../statistics/types';
-import { DomainSchema } from '../domainInterface/domainSchema';
-import type { CoordinateContextConfig } from '../coordinates/coordinateContext';
 import type { ISimulationEmitter } from '../observer/types';
-import type { Culture } from '../naming/nameForgeService';
 import type { Condition } from '../rules/conditions/types';
 import type { ModifyPressureMutation } from '../rules/mutations/types';
+import type { CanonrySchemaSlice, HistoryEvent as CanonryHistoryEvent } from '@canonry/world-schema';
+
+export type HistoryEvent = CanonryHistoryEvent;
 
 // =============================================================================
 // DEBUG CONFIGURATION
@@ -160,9 +160,9 @@ export interface CreateEntitySettings {
   tags?: EntityTags;  // Optional - defaults to {}
   name?: string;  // Optional - runtime may auto-generate if not provided
   description?: string;
-  status?: string;
-  prominence?: import('../core/worldTypes').Prominence;
-  culture?: string;
+  status: string;
+  prominence: import('../core/worldTypes').Prominence;
+  culture: string;
   temporal?: { startTick: number; endTick: number | null };
   source?: string;  // Optional - for debugging (e.g., template ID, system ID)
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
@@ -290,17 +290,6 @@ export interface RelationshipCriteria {
   minStrength?: number;
   /** Include historical relationships (default: false) */
   includeHistorical?: boolean;
-}
-
-// History tracking
-export interface HistoryEvent {
-  tick: number;
-  era: string;
-  type: 'growth' | 'simulation' | 'special';
-  description: string;
-  entitiesCreated: string[];
-  relationshipsCreated: Relationship[];
-  entitiesModified: string[];
 }
 
 // Growth template interface
@@ -504,8 +493,8 @@ export interface Pressure {
 
 // Engine configuration
 export interface EngineConfig {
-  // Domain schema (defines entity kinds, relationship kinds, validation rules)
-  domain: DomainSchema;
+  // Canonry schema (canonical, no mapping)
+  schema: CanonrySchemaSlice;
 
   eras: Era[];
 
@@ -533,7 +522,7 @@ export interface EngineConfig {
 
   // Configuration
   ticksPerEpoch: number;  // simulation ticks per epoch
-  maxEpochs?: number;     // maximum epochs to run (default: eras.length * 2)
+  maxEpochs: number;      // maximum epochs to run
   targetEntitiesPerKind: number;
   maxTicks: number;
   maxRelationshipsPerType: number;  // max relationships of same type per entity
@@ -560,19 +549,9 @@ export interface EngineConfig {
   // loreIndex?: LoreIndex;
   distributionTargets?: DistributionTargets;  // Optional statistical distribution targets for guided template selection
 
-  // Tag registry for tag health analysis and validation (domain-specific)
-  tagRegistry?: TagMetadata[];
-
-  // Cultures with naming configuration (REQUIRED for name generation)
-  // WorldEngine creates NameForgeService internally from cultures that have naming config
-  cultures: Culture[];
-
   // Name generation service - created by WorldEngine from cultures, then set here
   // Graph uses this for entity name generation
   nameForgeService?: NameGenerationService;
-
-  // Coordinate context configuration (REQUIRED for coordinate system)
-  coordinateContextConfig: CoordinateContextConfig;
 
   // Seed relationships (optional - loaded alongside initial entities)
   // Populates relationships at load time
@@ -584,41 +563,6 @@ export interface EngineConfig {
 
   // Debug configuration (optional - defaults to all debug disabled)
   debugConfig?: DebugConfig;
-}
-
-// Meta-entity formation config (legacy - used by validationOrchestrator)
-export interface MetaEntityConfig {
-  sourceKind: string;       // Entity kind to cluster (e.g., 'abilities', 'rules')
-  metaKind: string;         // Meta-entity kind to create (e.g., 'school', 'legal_code')
-  trigger: 'epoch_end';     // When to run meta-entity formation
-
-  clustering: {
-    minSize: number;        // Minimum entities in cluster to form meta-entity
-    maxSize?: number;       // Optional maximum size
-    criteria: Array<{
-      type: 'shares_related' | 'shared_tags' | 'temporal_proximity';
-      weight: number;       // Contribution to similarity score
-      threshold?: number;   // Optional threshold for this criterion
-      relationshipKind?: string;  // Required for 'shares_related' - the relationship kind to check
-    }>;
-    minimumScore: number;   // Minimum similarity score to form cluster
-  };
-
-  transformation: {
-    markOriginalsHistorical: boolean;       // Archive original entities' relationships
-    transferRelationships: boolean;          // Transfer relationships to meta-entity
-    redirectFutureRelationships: boolean;    // Future relationships go to meta-entity
-    preserveOriginalLinks: boolean;          // Keep part_of relationships to originals
-  };
-
-  // Factory function to create meta-entity from cluster
-  factory: (cluster: HardState[], runtime: import('../runtime/worldRuntime').WorldRuntime) => Partial<HardState>;
-}
-
-export interface Cluster {
-  entities: HardState[];      // Entities in this cluster
-  score: number;              // Similarity score
-  matchedCriteria: string[];  // Which criteria contributed to clustering
 }
 
 // Tag Taxonomy System
@@ -824,6 +768,15 @@ export class GraphStore implements Graph {
       );
     }
 
+    const { x, y, z } = settings.coordinates as any;
+    if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') {
+      throw new Error(
+        `createEntity: coordinates must include numeric x, y, z values. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}. ` +
+        `Received: ${JSON.stringify(settings.coordinates)}.`
+      );
+    }
+
     // Tags default to empty object - IMPORTANT: clone to avoid mutating source
     const tags: EntityTags = { ...(settings.tags || {}) };
 
@@ -836,9 +789,30 @@ export class GraphStore implements Graph {
       );
     }
 
-    // Validate culture - must not be a variable reference
-    const culture = settings.culture || 'world';
-    const normalizedCulture = culture.startsWith('$') ? 'world' : culture;
+    if (!settings.culture) {
+      throw new Error(
+        `createEntity: culture is required for all entities. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
+    if (settings.culture.startsWith('$')) {
+      throw new Error(
+        `createEntity: culture must be a resolved value, not a variable reference. ` +
+        `Received: ${settings.culture}. Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
+    if (!settings.status) {
+      throw new Error(
+        `createEntity: status is required for all entities. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
+    if (!settings.prominence) {
+      throw new Error(
+        `createEntity: prominence is required for all entities. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
 
     // Build the full entity
     const entity: HardState = {
@@ -847,9 +821,9 @@ export class GraphStore implements Graph {
       subtype: settings.subtype,
       name,
       description: settings.description || '',
-      status: settings.status || 'active',
-      prominence: settings.prominence || 'marginal',
-      culture: normalizedCulture,
+      status: settings.status,
+      prominence: settings.prominence,
+      culture: settings.culture,
       tags,
       coordinates: settings.coordinates,
       temporal: settings.temporal,

@@ -1,10 +1,12 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
 import { Relationship } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
-import type { DecayRate, RelationshipKindDefinition } from '../domainInterface/domainSchema';
+import type { RelationshipKindDefinition } from '@canonry/world-schema';
 import type { RelationshipMaintenanceConfig } from '../engine/systemInterpreter';
 import { createSystemContext, evaluateMetric } from '../rules';
-import { isFrameworkRelationshipKind } from '../core/frameworkPrimitives';
+import { isFrameworkRelationshipKind } from '@canonry/world-schema';
+
+type DecayRate = NonNullable<RelationshipKindDefinition['decayRate']>;
 
 /**
  * Relationship Maintenance System
@@ -30,14 +32,14 @@ function getDecayAmount(rate: DecayRate, ctx: ReturnType<typeof createSystemCont
   return evaluateMetric({ type: 'decay_rate', rate }, ctx).value;
 }
 
-/** Get relationship kind definition from domain schema */
+/** Get relationship kind definition from the canonical schema */
 function getRelationshipKindDef(
   graphView: WorldRuntime,
   kind: string
 ): RelationshipKindDefinition | undefined {
-  const relationshipKinds = graphView.config?.domain?.relationshipKinds;
-  if (!relationshipKinds) return undefined;
-  return relationshipKinds.find((rk: RelationshipKindDefinition) => rk.kind === kind);
+  return graphView.config.schema.relationshipKinds.find(
+    (rk: RelationshipKindDefinition) => rk.kind === kind
+  );
 }
 
 /** Check if a relationship kind is cullable */

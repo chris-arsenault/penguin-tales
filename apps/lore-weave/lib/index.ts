@@ -19,10 +19,9 @@ export type {
   HardState,
   Relationship,
   Prominence,
-  EntityKind,
   EntityTags,
-  NPCSubtype,
-  FactionSubtype
+  CatalystProperties,
+  CatalyzedEvent
 } from './core/worldTypes';
 
 export type {
@@ -35,7 +34,6 @@ export type {
   HistoryEvent,
   SystemResult,
   TemplateResult,
-  MetaEntityConfig,
   EntityOperatorRegistry,
   NameGenerationService,
   TagMetadata,
@@ -43,29 +41,6 @@ export type {
 } from './engine/types';
 
 export { ComponentPurpose, GraphStore } from './engine/types';
-
-// =============================================================================
-// DOMAIN SCHEMA TYPES - For implementing domain schemas
-// =============================================================================
-
-export type {
-  DomainSchema,
-  RelationshipKindDefinition,
-  DecayRate,
-  SnapshotConfig,
-  EntityKindDefinition,
-  SubtypeDefinition,
-  StatusDefinition,
-  EntityKindStyle,
-  DomainUIConfig,
-  CultureDefinition,
-  NameGenerator,
-  ImageGenerationPromptConfig,
-  CultureImageConfig
-} from './domainInterface/domainSchema';
-
-// BaseDomainSchema is a class, not just a type
-export { BaseDomainSchema } from './domainInterface/domainSchema';
 
 // LLM types moved to @illuminator - import from there if needed
 
@@ -275,13 +250,13 @@ export {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_RELATIONSHIP_KINDS,
   FRAMEWORK_STATUS
-} from './core/frameworkPrimitives';
+} from '@canonry/world-schema';
 
 export type {
   FrameworkEntityKind,
   FrameworkRelationshipKind,
   FrameworkStatus
-} from './core/frameworkPrimitives';
+} from '@canonry/world-schema';
 
 // =============================================================================
 // REGION-BASED COORDINATE SYSTEM
@@ -295,58 +270,13 @@ export type {
   CircleBounds,
   RectBounds,
   PolygonBounds,
-  RegionMapperConfig,
   RegionLookupResult,
-  SampleRegionOptions,
-  EmergentRegionConfig,
   EmergentRegionResult,
-  RegionCreatedEvent,
-  EntityPlacedInRegionEvent,
-  // Per-kind coordinate maps
-  MapBounds,
-  EntityKindMapConfig,
-  EntityKindMapState,
-  EntityKindMaps,
-  EntityKindMapsState
+  SparseAreaResult,
+  SparseAreaOptions
 } from './coordinates/types';
 
 export { SPACE_BOUNDS } from './coordinates/types';
-
-export { RegionMapper } from './coordinates/regionMapper';
-
-export { RegionPlacementService } from './coordinates/regionPlacement';
-export type {
-  PlacementOptions as RegionPlacementOptions,
-  PlacementResult as RegionPlacementResult,
-  BatchPlacementOptions as RegionBatchPlacementOptions,
-  BatchPlacementResult as RegionBatchPlacementResult
-} from './coordinates/regionPlacement';
-
-// Per-kind region management
-export {
-  KindRegionService,
-  createDefaultEmergentConfig,
-  createKindMapConfig
-} from './coordinates/kindRegionService';
-export type { KindRegionServiceConfig } from './coordinates/kindRegionService';
-
-// =============================================================================
-// SEMANTIC AXIS SYSTEM
-// =============================================================================
-
-export type {
-  SemanticAxis,
-  EntityKindAxes,
-  TagSemanticWeight,
-  TagSemanticWeights,
-  SemanticEncodingResult,
-  SemanticEncoderConfig
-} from './coordinates/types';
-
-export {
-  SemanticEncoder,
-  createSemanticEncoder
-} from './coordinates/semanticEncoder';
 
 // =============================================================================
 // COORDINATE CONTEXT (Culture-First Placement)
@@ -394,9 +324,6 @@ export type {
   StateUpdateRule,
   VariableDefinition,
   ExecutionContext,
-  // Specific rule types
-  PressureRule,
-  EntityCountRule,
   GraphPathAssertion,
   PathStep,
   PathConstraint,
@@ -404,6 +331,7 @@ export type {
   SubtypeSpec,
   CultureSpec,
   PlacementSpec,
+  PlacementStep,
   RelationshipCondition
 } from './engine/declarativeTypes';
 
@@ -458,24 +386,6 @@ export type {
   TransitionCondition,
   EraTransitionEffects
 } from './engine/types';
-
-// =============================================================================
-// DECLARATIVE DOMAIN SCHEMA SYSTEM
-// =============================================================================
-
-export {
-  createDomainSchemaFromJSON,
-  loadDomainSchema
-} from './engine/domainSchemaInterpreter';
-
-export type {
-  JSONDomainSchema,
-  JSONEntityKind,
-  JSONRelationshipKind,
-  JSONCulture,
-  JSONSubtype,
-  JSONStatus
-} from './engine/domainSchemaInterpreter';
 
 // =============================================================================
 // OBSERVER PATTERN - Real-time simulation events
