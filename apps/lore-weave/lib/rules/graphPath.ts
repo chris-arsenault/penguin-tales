@@ -6,7 +6,7 @@
  */
 
 import { HardState } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { GraphPathAssertion, PathStep, PathConstraint } from './filters/types';
 import { EntityResolver } from './resolver';
 
@@ -72,7 +72,7 @@ export function evaluateGraphPath(
 function traverseStep(
   entity: HardState,
   step: PathStep,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): HardState[] {
   // Convert direction format from JSON ('out'/'in'/'any') to internal ('src'/'dst'/'both')
   const direction = step.direction === 'out' ? 'src' :

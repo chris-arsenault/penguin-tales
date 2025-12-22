@@ -23,7 +23,7 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 import { Point } from '../coordinates/types';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { hasTag, getTagValue } from '../utils';
 import { createSystemContext, evaluateMetric, selectEntities } from '../rules';
 import type { Metric, SelectionRule } from '../rules';
@@ -286,7 +286,7 @@ export function createPlaneDiffusionSystem(
       };
     },
 
-    apply: function(graphView: TemplateGraphView, modifier: number = 1.0): SystemResult {
+    apply: function(graphView: WorldRuntime, modifier: number = 1.0): SystemResult {
       // Ensure state is initialized (safety check)
       if (!this.state?.initialized) {
         this.initialize!();

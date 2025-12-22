@@ -5,7 +5,7 @@
  */
 
 import { HardState } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { ActionActorConfig } from '../engine/actionInterpreter';
 import { applyPickStrategy, selectEntities, selectVariableEntities } from './selection';
 import { createActionContext } from './context';
@@ -31,7 +31,7 @@ function resolveSingleEntity(select: VariableSelectionRule, ctx: RuleContext): H
 export function matchesActorConfig(
   entity: HardState,
   actorConfig: ActionActorConfig,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): boolean {
   const bindings: Record<string, HardState | undefined> = { actor: entity };
   const ctx = createActionContext(graphView, bindings, entity);

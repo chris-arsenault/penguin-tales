@@ -6,7 +6,7 @@
  */
 
 import { HardState, Relationship } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import type { Condition, RuleContext } from '../rules';
 import type { Mutation } from '../rules';
 import type { SelectionRule, VariableSelectionRule } from '../rules';
@@ -119,7 +119,7 @@ export interface ExecutableAction {
   applyProminenceToActor: boolean;
   /** Apply system-level prominence changes to instigator on success/failure */
   applyProminenceToInstigator: boolean;
-  handler: (graph: TemplateGraphView, actor: HardState) => ActionResult;
+  handler: (graph: WorldRuntime, actor: HardState) => ActionResult;
 }
 
 /**
@@ -227,7 +227,7 @@ function evaluateActorConditions(
  * Create an executable action handler from declarative configuration.
  */
 function createActionHandler(action: DeclarativeAction): ExecutableAction['handler'] {
-  return (graph: TemplateGraphView, actor: HardState): ActionResult => {
+  return (graph: WorldRuntime, actor: HardState): ActionResult => {
     const bindings: Record<string, HardState | undefined> = { actor };
     const baseCtx = createActionContext(graph, bindings, actor);
 

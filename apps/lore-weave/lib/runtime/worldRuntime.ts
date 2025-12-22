@@ -1,20 +1,25 @@
-import { Graph, DebugCategory, DebugConfig, DEFAULT_DEBUG_CONFIG } from '../engine/types';
+import { Graph, DebugCategory, DEFAULT_DEBUG_CONFIG, EngineConfig } from '../engine/types';
+import type { CreateEntitySettings, EntityCriteria, RelationshipCriteria } from '../engine/types';
 import { HardState, Relationship, EntityTags } from '../core/worldTypes';
 import { TargetSelector } from '../selection/targetSelector';
 import { CoordinateContext, PlacementContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
 import {
-  addEntity,
   mergeTags,
-  hasTag,
+  arrayToTags,
   addRelationship,
   modifyRelationshipStrength as modifyRelationshipStrengthUtil,
-  updateEntity as updateEntityUtil,
   getRelated as getRelatedUtil,
   recordRelationshipFormation as recordRelationshipFormationUtil
 } from '../utils';
-import { archiveRelationship as archiveRel } from './relationshipMutation';
-import { archiveEntities as archiveEnts, transferRelationships as transferRels, createPartOfRelationships as createPartOf } from './entityArchival';
+import {
+  FRAMEWORK_ENTITY_KINDS,
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_RELATIONSHIP_PROPERTIES,
+  FRAMEWORK_STATUS
+} from '../core/frameworkPrimitives';
+import { archiveRelationship as archiveRel } from '../graph/relationshipMutation';
+import { archiveEntities as archiveEnts, transferRelationships as transferRels, createPartOfRelationships as createPartOf } from '../graph/entityArchival';
 import type {
   Point,
   Region,
@@ -50,25 +55,16 @@ export type PressureModificationCallback = (
 ) => void;
 
 /**
- * TemplateGraphView
+ * WorldRuntime
  *
- * A restricted view of the Graph provided to templates during expansion.
- * This wrapper enforces correct entity selection patterns by:
- *
- * 1. Providing only read-only access to graph state
- * 2. Exposing targetSelector as the PRIMARY entity selection mechanism
- * 3. Hiding direct access to entities Map (preventing ad-hoc selection)
- * 4. Providing safe query methods for graph inspection
- *
- * Benefits:
- * - Compile-time guarantee that templates use targetSelector
- * - No more ad-hoc findEntities() calls that create super-hubs
- * - Clearer API surface for template authors
- * - Easier to maintain and refactor framework internals
+ * Runtime orchestration layer that combines graph data with
+ * selection, placement, and pressure services. This replaces
+ * the old WorldRuntime facade.
  */
-export class TemplateGraphView {
+export class WorldRuntime implements Graph {
   private graph: Graph;
   public readonly targetSelector: TargetSelector;
+  private readonly engineConfig: EngineConfig;
 
   // Shared coordinate context (REQUIRED - no internal instantiation)
   private readonly coordinateContext: CoordinateContext;
@@ -79,17 +75,23 @@ export class TemplateGraphView {
   // Current source context for pressure modifications (set before template/system execution)
   private currentSource?: PressureModificationSource;
 
-  constructor(graph: Graph, targetSelector: TargetSelector, coordinateContext: CoordinateContext) {
+  constructor(
+    graph: Graph,
+    targetSelector: TargetSelector,
+    coordinateContext: CoordinateContext,
+    config: EngineConfig
+  ) {
     if (!coordinateContext) {
       throw new Error(
-        'TemplateGraphView: coordinateContext is required. ' +
-        'Graph must provide a CoordinateContext instance.'
+        'WorldRuntime: coordinateContext is required. ' +
+        'Runtime must provide a CoordinateContext instance.'
       );
     }
 
     this.graph = graph;
     this.targetSelector = targetSelector;
     this.coordinateContext = coordinateContext;
+    this.engineConfig = config;
   }
 
   /**
@@ -141,10 +143,66 @@ export class TemplateGraphView {
   get tick(): number {
     return this.graph.tick;
   }
+  set tick(value: number) {
+    this.graph.tick = value;
+  }
 
   /** Current era */
   get currentEra() {
     return this.graph.currentEra;
+  }
+  set currentEra(value: import('../engine/types').Era) {
+    this.graph.currentEra = value;
+  }
+
+  /** Pressure map (mutable) */
+  get pressures(): Map<string, number> {
+    return this.graph.pressures;
+  }
+  set pressures(value: Map<string, number>) {
+    this.graph.pressures = value;
+  }
+
+  /** History events (mutable) */
+  get history(): import('../engine/types').HistoryEvent[] {
+    return this.graph.history;
+  }
+  set history(value: import('../engine/types').HistoryEvent[]) {
+    this.graph.history = value;
+  }
+
+  /** Relationship cooldowns (mutable) */
+  get relationshipCooldowns(): Map<string, Map<string, number>> {
+    return this.graph.relationshipCooldowns;
+  }
+  set relationshipCooldowns(value: Map<string, Map<string, number>>) {
+    this.graph.relationshipCooldowns = value;
+  }
+
+  /** Growth metrics (mutable) */
+  get growthMetrics(): { relationshipsPerTick: number[]; averageGrowthRate: number } {
+    return this.graph.growthMetrics;
+  }
+  set growthMetrics(value: { relationshipsPerTick: number[]; averageGrowthRate: number }) {
+    this.graph.growthMetrics = value;
+  }
+
+  /** Optional subtype metrics (mutable) */
+  get subtypeMetrics(): Map<string, number> | undefined {
+    return this.graph.subtypeMetrics;
+  }
+  set subtypeMetrics(value: Map<string, number> | undefined) {
+    this.graph.subtypeMetrics = value;
+  }
+
+  /** Optional protected relationship violations (mutable) */
+  get protectedRelationshipViolations(): Array<{ tick: number; violations: Array<{ kind: string; strength: number }> }> | undefined {
+    return this.graph.protectedRelationshipViolations;
+  }
+  set protectedRelationshipViolations(
+    value: Array<{ tick: number; violations: Array<{ kind: string; strength: number }> }> | undefined
+  ) {
+    this.graph.protectedRelationshipViolations = value;
   }
 
   /** Current pressure values (read-only) */
@@ -159,7 +217,7 @@ export class TemplateGraphView {
 
   /** Get engine configuration (read-only) */
   get config() {
-    return this.graph.config;
+    return this.engineConfig;
   }
 
   /**
@@ -211,17 +269,8 @@ export class TemplateGraphView {
   get rateLimitState() {
     return this.graph.rateLimitState;
   }
-
-  /**
-   * FRAMEWORK INTERNAL USE ONLY.
-   *
-   * Direct graph access is provided ONLY for framework systems that need
-   * internal operations (era management, relationship culling, etc.).
-   *
-   * DOMAIN CODE MUST NOT USE THIS. Use TemplateGraphView methods instead.
-   */
-  getInternalGraph(): Graph {
-    return this.graph;
+  set rateLimitState(value: import('../core/worldTypes').RateLimitState) {
+    this.graph.rateLimitState = value;
   }
 
   // ============================================================================
@@ -240,13 +289,20 @@ export class TemplateGraphView {
    * Check if an entity exists
    */
   hasEntity(id: string): boolean {
-    return this.graph.getEntity(id) !== undefined;
+    return this.graph.hasEntity(id);
   }
 
   /**
    * Get total entity count (useful for canApply checks)
    */
-  getEntityCount(kind?: string, subtype?: string): number {
+  getEntityCount(options?: { includeHistorical?: boolean }): number;
+  getEntityCount(kind?: string, subtype?: string): number;
+  getEntityCount(kindOrOptions?: string | { includeHistorical?: boolean }, subtype?: string): number {
+    if (typeof kindOrOptions === 'object') {
+      return this.graph.getEntityCount(kindOrOptions);
+    }
+
+    const kind = kindOrOptions;
     if (!kind) {
       return this.graph.getEntityCount();
     }
@@ -267,52 +323,83 @@ export class TemplateGraphView {
    * For entity SELECTION, use targetSelector.selectTargets() instead
    * to ensure proper hub-aware distribution.
    */
-  findEntities(criteria: {
-    kind?: string;
-    subtype?: string;
-    status?: string;
-    prominence?: string;
-    tag?: string;
-    /** Include historical entities (default: false) */
-    includeHistorical?: boolean;
-  }): HardState[] {
-    const results: HardState[] = [];
+  findEntities(criteria: EntityCriteria): HardState[] {
+    return this.graph.findEntities(criteria);
+  }
 
-    for (const entity of this.graph.getEntities({ includeHistorical: criteria.includeHistorical })) {
-      let matches = true;
+  /**
+   * Get entities by kind.
+   */
+  getEntitiesByKind(kind: string, options?: { includeHistorical?: boolean }): HardState[] {
+    return this.graph.getEntitiesByKind(kind, options);
+  }
 
-      if (criteria.kind && criteria.kind !== 'any' && entity.kind !== criteria.kind) matches = false;
-      if (criteria.subtype && entity.subtype !== criteria.subtype) matches = false;
-      if (criteria.status && entity.status !== criteria.status) matches = false;
-      if (criteria.prominence && entity.prominence !== criteria.prominence) matches = false;
-      if (criteria.tag && !hasTag(entity.tags, criteria.tag)) matches = false;
+  /**
+   * Get entity IDs.
+   */
+  getEntityIds(options?: { includeHistorical?: boolean }): string[] {
+    return this.graph.getEntityIds(options);
+  }
 
-      if (matches) results.push(entity);
-    }
-
-    return results;
+  /**
+   * Get entities connected to a specific entity by relationship kind.
+   */
+  getConnectedEntities(
+    entityId: string,
+    relationKind?: string,
+    options?: { includeHistorical?: boolean }
+  ): HardState[] {
+    return this.graph.getConnectedEntities(entityId, relationKind, options);
   }
 
   /**
    * Get all relationships in the graph (read-only).
    * Excludes historical by default.
    */
-  getAllRelationships(options?: { includeHistorical?: boolean }): readonly Relationship[] {
+  getRelationships(): Relationship[];
+  getRelationships(options?: { includeHistorical?: boolean }): Relationship[];
+  getRelationships(entityId: string, kind?: string, options?: { includeHistorical?: boolean }): Relationship[];
+  getRelationships(
+    entityIdOrOptions?: string | { includeHistorical?: boolean },
+    kind?: string,
+    options?: { includeHistorical?: boolean }
+  ): Relationship[] {
+    if (typeof entityIdOrOptions === 'string') {
+      if (!this.graph.getEntity(entityIdOrOptions)) return [];
+
+      const relationships = this.graph.getEntityRelationships(entityIdOrOptions, 'both', options);
+      if (kind) {
+        return relationships.filter(link => link.kind === kind);
+      }
+      return relationships;
+    }
+
+    return this.graph.getRelationships(entityIdOrOptions);
+  }
+
+  /**
+   * Alias for getRelationships() returning all relationships.
+   */
+  getAllRelationships(options?: { includeHistorical?: boolean }): Relationship[] {
     return this.graph.getRelationships(options);
   }
 
   /**
-   * Get relationships for a specific entity.
-   * Excludes historical by default.
+   * Find relationships matching criteria.
    */
-  getRelationships(entityId: string, kind?: string, options?: { includeHistorical?: boolean }): Relationship[] {
-    if (!this.graph.getEntity(entityId)) return [];
+  findRelationships(criteria: RelationshipCriteria): Relationship[] {
+    return this.graph.findRelationships(criteria);
+  }
 
-    const relationships = this.graph.getEntityRelationships(entityId, 'both', options);
-    if (kind) {
-      return relationships.filter(link => link.kind === kind);
-    }
-    return relationships;
+  /**
+   * Get relationships for a specific entity and direction.
+   */
+  getEntityRelationships(
+    entityId: string,
+    direction: 'src' | 'dst' | 'both' = 'both',
+    options?: { includeHistorical?: boolean }
+  ): Relationship[] {
+    return this.graph.getEntityRelationships(entityId, direction, options);
   }
 
   /**
@@ -338,14 +425,7 @@ export class TemplateGraphView {
    * Check if a relationship exists between two entities
    */
   hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
-    if (!this.graph.getEntity(srcId) || !this.graph.getEntity(dstId)) return false;
-
-    const relationships = this.graph.getEntityRelationships(srcId, 'both');
-    return relationships.some(link => {
-      if (kind && link.kind !== kind) return false;
-      const otherId = link.src === srcId ? link.dst : link.src;
-      return otherId === dstId;
-    });
+    return this.graph.hasRelationship(srcId, dstId, kind);
   }
 
   /**
@@ -428,10 +508,8 @@ export class TemplateGraphView {
    * Iterate over all entities.
    * Excludes historical by default.
    */
-  forEachEntity(callback: (entity: HardState) => void, options?: { includeHistorical?: boolean }): void {
-    for (const entity of this.graph.getEntities(options)) {
-      callback(entity);
-    }
+  forEachEntity(callback: (entity: HardState, id: string) => void, options?: { includeHistorical?: boolean }): void {
+    this.graph.forEachEntity(callback, options);
   }
 
   /**
@@ -445,8 +523,138 @@ export class TemplateGraphView {
    * Add an entity to the graph.
    * For coordinate-aware placement, use placeWithCulture() instead.
    */
-  async createEntity(partial: Partial<HardState>): Promise<string> {
-    return await addEntity(this.graph, partial);
+  async createEntity(settings: CreateEntitySettings): Promise<string>;
+  async createEntity(partial: Partial<HardState>, source?: string, placementStrategy?: string): Promise<string>;
+  async createEntity(
+    settingsOrPartial: CreateEntitySettings | Partial<HardState>,
+    source?: string,
+    placementStrategy?: string
+  ): Promise<string> {
+    const partial = settingsOrPartial as Partial<HardState>;
+    const resolvedSource = (settingsOrPartial as CreateEntitySettings).source ?? source;
+    const resolvedPlacementStrategy = (settingsOrPartial as CreateEntitySettings).placementStrategy ?? placementStrategy;
+
+    const coords = partial.coordinates;
+    if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') {
+      throw new Error(
+        `createEntity: valid coordinates {x: number, y: number, z?: number} are required. ` +
+        `Entity kind: ${partial.kind || 'unknown'}, name: ${partial.name || 'unnamed'}. ` +
+        `Received: ${JSON.stringify(coords)}.`
+      );
+    }
+
+    const validCoords = { x: coords.x, y: coords.y, z: coords.z ?? 50 };
+
+    let tags: EntityTags;
+    if (Array.isArray(partial.tags)) {
+      tags = arrayToTags(partial.tags);
+    } else {
+      tags = { ...(partial.tags || {}) };
+    }
+
+    let name = partial.name;
+    if (!name) {
+      const nameForge = this.engineConfig.nameForgeService;
+      if (!nameForge) {
+        throw new Error(
+          `createEntity: name not provided and no NameForgeService configured. ` +
+          `Either provide a name or configure nameForgeService in EngineConfig.`
+        );
+      }
+
+      const tagArray = Object.keys(tags);
+      name = await nameForge.generate(
+        partial.kind || 'npc',
+        partial.subtype || 'default',
+        partial.prominence || 'marginal',
+        tagArray,
+        partial.culture || 'world'
+      );
+    }
+
+    const culture = partial.culture || 'world';
+    if (culture.startsWith('$')) {
+      this.engineConfig.emitter?.log(
+        'warn',
+        `[createEntity] culture value is unresolved: ${culture}. Entity: ${partial.kind}/${partial.subtype}. Using 'world' fallback.`
+      );
+    }
+    const normalizedCulture = culture.startsWith('$') ? 'world' : culture;
+
+    // Warn on coordinate overlap with existing entities of the same kind
+    const overlapThreshold = 1.0;
+    for (const existing of this.graph.getEntities()) {
+      if (existing.kind !== (partial.kind || 'npc')) continue;
+      if (!existing.coordinates) continue;
+
+      const dx = existing.coordinates.x - validCoords.x;
+      const dy = existing.coordinates.y - validCoords.y;
+      const dz = (existing.coordinates.z ?? 50) - validCoords.z;
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      if (distance < overlapThreshold) {
+        this.engineConfig.emitter?.log(
+          'warn',
+          `Coordinate overlap: ${partial.kind}:${partial.subtype} "${name}" ` +
+          `placed at (${validCoords.x.toFixed(1)}, ${validCoords.y.toFixed(1)}, ${(validCoords.z ?? 50).toFixed(1)}) ` +
+          `overlaps with existing "${existing.name}" at ` +
+          `(${existing.coordinates.x.toFixed(1)}, ${existing.coordinates.y.toFixed(1)}, ${(existing.coordinates.z ?? 50).toFixed(1)}) ` +
+          `[distance: ${distance.toFixed(2)}]`
+        );
+      }
+    }
+
+    const entityId = await this.graph.createEntity({
+      kind: partial.kind || 'npc',
+      subtype: partial.subtype || 'default',
+      coordinates: validCoords,
+      tags,
+      name,
+      description: partial.description,
+      status: partial.status,
+      prominence: partial.prominence,
+      culture: normalizedCulture,
+      temporal: partial.temporal,
+      source: resolvedSource,
+      placementStrategy: resolvedPlacementStrategy
+    });
+
+    if (partial.kind !== FRAMEWORK_ENTITY_KINDS.ERA) {
+      const currentEraEntity = this.graph.findEntities({
+        kind: FRAMEWORK_ENTITY_KINDS.ERA,
+        status: FRAMEWORK_STATUS.CURRENT
+      })[0];
+
+      if (currentEraEntity) {
+        this.graph.addRelationship(
+          FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
+          entityId,
+          currentEraEntity.id,
+          FRAMEWORK_RELATIONSHIP_PROPERTIES[FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING].defaultStrength
+        );
+      }
+    }
+
+    return entityId;
+  }
+
+  /**
+   * Add a relationship between two entities.
+   * @param kind - Relationship kind
+   * @param srcId - Source entity ID
+   * @param dstId - Destination entity ID
+   * @param strength - Optional strength override
+   * Distance is computed from entity coordinates.
+   */
+  addRelationship(
+    kind: string,
+    srcId: string,
+    dstId: string,
+    strength?: number,
+    distanceIgnored?: number,
+    category?: string
+  ): boolean {
+    return this.graph.addRelationship(kind, srcId, dstId, strength, distanceIgnored, category);
   }
 
   /**
@@ -468,6 +676,13 @@ export class TemplateGraphView {
   }
 
   /**
+   * Remove a relationship between two entities.
+   */
+  removeRelationship(srcId: string, dstId: string, kind: string): boolean {
+    return this.graph.removeRelationship(srcId, dstId, kind);
+  }
+
+  /**
    * Modify relationship strength by delta.
    */
   modifyRelationshipStrength(
@@ -482,8 +697,15 @@ export class TemplateGraphView {
   /**
    * Update an entity's properties.
    */
-  updateEntity(entityId: string, changes: Partial<HardState>): void {
-    updateEntityUtil(this.graph, entityId, changes);
+  updateEntity(entityId: string, changes: Partial<HardState>): boolean {
+    return this.graph.updateEntity(entityId, changes);
+  }
+
+  /**
+   * Delete an entity from the graph.
+   */
+  deleteEntity(entityId: string): boolean {
+    return this.graph.deleteEntity(entityId);
   }
 
   /**
@@ -526,14 +748,22 @@ export class TemplateGraphView {
    * Used by era spawner for framework entity creation.
    */
   loadEntity(entity: HardState): void {
-    this.graph._loadEntity(entity.id, entity);
+    this._loadEntity(entity.id, entity);
+  }
+
+  /**
+   * Load a pre-existing entity into the graph.
+   * @internal Should only be used by framework systems.
+   */
+  _loadEntity(id: string, entity: HardState): void {
+    this.graph._loadEntity(id, entity);
   }
 
   /**
    * Get total relationship count.
    */
-  getRelationshipCount(): number {
-    return this.graph.getRelationshipCount();
+  getRelationshipCount(options?: { includeHistorical?: boolean }): number {
+    return this.graph.getRelationshipCount(options);
   }
 
   /**
@@ -541,6 +771,13 @@ export class TemplateGraphView {
    * Used by relationship culling system.
    */
   setRelationships(relationships: Relationship[]): void {
+    this._setRelationships(relationships);
+  }
+
+  /**
+   * Bulk replace relationships (framework use only).
+   */
+  _setRelationships(relationships: Relationship[]): void {
     this.graph._setRelationships(relationships);
   }
 
@@ -680,10 +917,10 @@ export class TemplateGraphView {
 
   /**
    * Add an entity to the graph (async).
-   * Wrapper for addEntity utility - handles naming and ID generation.
+   * Wrapper for createEntity to support optional source metadata.
    */
-  async addEntity(partial: Partial<HardState>): Promise<string> {
-    return await addEntity(this.graph, partial);
+  async addEntity(partial: Partial<HardState>, source?: string, placementStrategy?: string): Promise<string> {
+    return await this.createEntity(partial, source, placementStrategy);
   }
 
   // ============================================================================
@@ -1549,7 +1786,7 @@ export class TemplateGraphView {
       culture: context.cultureId ?? entity.culture
     };
 
-    return await addEntity(this.graph, entityWithCoords);
+    return await this.createEntity(entityWithCoords);
   }
 
   /**
@@ -1607,7 +1844,7 @@ export class TemplateGraphView {
       culture: context.cultureId ?? referenceEntity.culture ?? entity.culture
     };
 
-    return await addEntity(this.graph, entityWithCoords);
+    return await this.createEntity(entityWithCoords);
   }
 
   /**
@@ -1654,7 +1891,7 @@ export class TemplateGraphView {
       culture: context.cultureId ?? entity.culture
     };
 
-    const entityId = await addEntity(this.graph, entityWithCoords);
+    const entityId = await this.createEntity(entityWithCoords);
     if (!entityId) return null;
 
     return {
@@ -1726,7 +1963,7 @@ export class TemplateGraphView {
       culture: cultureId
     };
 
-    return await addEntity(this.graph, entityWithCoords);
+    return await this.createEntity(entityWithCoords);
   }
 
   // ============================================================================

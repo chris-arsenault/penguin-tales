@@ -4,7 +4,7 @@ import {
   calculateAttemptChance,
   addCatalyzedEvent
 } from '../systems/catalystHelpers';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
 import { matchesActorConfig, getProminenceMultiplierValue } from '../rules';
@@ -91,7 +91,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
     id: config.id || 'universal_catalyst',
     name: config.name || 'Agent Actions',
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Get executable actions from declarative config
       const actions: ExecutableAction[] = graphView.config.executableActions || [];
 
@@ -315,7 +315,7 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
 function getAvailableActions(
   agent: HardState,
   actions: ExecutableAction[],
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): ExecutableAction[] {
   return actions.filter(action => meetsRequirements(agent, action, graphView));
 }
@@ -325,7 +325,7 @@ function getAvailableActions(
  * Uses the same multiplier-based approach as weight calculation.
  * Returns a value that can be added to the base attempt chance.
  */
-function getRelevantPressuresFromActions(graphView: TemplateGraphView, actions: ExecutableAction[]): number {
+function getRelevantPressuresFromActions(graphView: WorldRuntime, actions: ExecutableAction[]): number {
   if (actions.length === 0) return 0;
 
   // Collect all unique pressure modifiers across actions
@@ -362,7 +362,7 @@ function getRelevantPressuresFromActions(graphView: TemplateGraphView, actions: 
 function selectActionWithContext(
   agent: HardState,
   availableActions: ExecutableAction[],
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   attemptChance: number,
   prominenceBonus: number
 ): ActionSelectionResult {
@@ -429,7 +429,7 @@ function selectActionWithContext(
  * Check if agent meets action requirements.
  * Delegates to matchesActorConfig for consistent actor filtering.
  */
-function meetsRequirements(agent: HardState, action: ExecutableAction, graphView: TemplateGraphView): boolean {
+function meetsRequirements(agent: HardState, action: ExecutableAction, graphView: WorldRuntime): boolean {
   return matchesActorConfig(agent, action.actorConfig, graphView);
 }
 
@@ -444,7 +444,7 @@ function meetsRequirements(agent: HardState, action: ExecutableAction, graphView
  *   multiplier -1.0 → contribution = -0.8, weight *= 0.2 (inverse)
  *   multiplier 0.5  → contribution = 0.4, weight *= 1.4
  */
-function calculateActionWeightWithBreakdown(action: ExecutableAction, graphView: TemplateGraphView): ActionWeightBreakdown {
+function calculateActionWeightWithBreakdown(action: ExecutableAction, graphView: WorldRuntime): ActionWeightBreakdown {
   const baseWeight = action.baseWeight || 1.0;
   const pressureInfluences: PressureInfluence[] = [];
 
@@ -479,7 +479,7 @@ function calculateActionWeightWithBreakdown(action: ExecutableAction, graphView:
 function executeActionWithContext(
   agent: HardState,
   action: ExecutableAction,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): ExtendedActionOutcome {
   // Calculate success chance based on prominence
   const baseChance = action.baseSuccessChance || 0.5;

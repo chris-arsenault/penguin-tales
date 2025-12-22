@@ -68,7 +68,6 @@ export default function SimulationRunner({
   setIsRunning,
   onComplete,
   onViewResults,
-  onViewInArchivist,
   externalSimulationState,
   onSimulationStateChange,
   simulationWorker,
@@ -110,7 +109,6 @@ export default function SimulationRunner({
     reset: resetWorker,
     abort: abortWorker,
     clearLogs: workerClearLogs,
-    requestExport: workerRequestExport,
     isRunning: workerIsRunning,
     isPaused: workerIsPaused
   } = simulationWorker;
@@ -150,6 +148,7 @@ export default function SimulationRunner({
         pressures: simState.result.pressures,
         distributionMetrics: simState.result.distributionMetrics,
         coordinateState: simState.result.coordinateState,
+        uiSchema: simState.result.uiSchema,
       };
       onComplete(results);
     }
@@ -229,33 +228,6 @@ export default function SimulationRunner({
     setParams(prev => ({ ...prev, [field]: value }));
   };
 
-  // Export to Archivist handling
-  const [pendingExport, setPendingExport] = useState(false);
-
-  const handleExportToArchivist = useCallback(() => {
-    if (!onViewInArchivist) return;
-    setPendingExport(true);
-    workerRequestExport();
-  }, [onViewInArchivist, workerRequestExport]);
-
-  useEffect(() => {
-    if (pendingExport && simState.stateExport && onViewInArchivist) {
-      setPendingExport(false);
-      const results = {
-        metadata: {
-          ...simState.stateExport.metadata,
-          durationMs: 0,
-        },
-        hardState: simState.stateExport.hardState,
-        relationships: simState.stateExport.relationships,
-        history: simState.stateExport.history,
-        pressures: simState.stateExport.pressures,
-        coordinateState: simState.stateExport.coordinateState,
-      };
-      onViewInArchivist(results);
-    }
-  }, [pendingExport, simState.stateExport, onViewInArchivist]);
-
   // Show dashboard when running or has data
   const showDashboard = workerIsRunning ||
     workerIsPaused ||
@@ -303,9 +275,7 @@ export default function SimulationRunner({
               onRunToCompletion={runToCompletionWorker}
               onAbort={abortWorker}
               onReset={resetWorker}
-              onExportToArchivist={handleExportToArchivist}
               onViewResults={onViewResults}
-              showArchivist={!!onViewInArchivist}
             />
           </div>
         </div>

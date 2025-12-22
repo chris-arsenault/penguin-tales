@@ -5,7 +5,7 @@
 import React from 'react';
 import { DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
  * @param {Object} props

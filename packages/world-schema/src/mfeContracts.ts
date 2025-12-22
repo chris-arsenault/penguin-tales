@@ -92,6 +92,7 @@ export interface CanonrySimulationResults {
   pressures?: Record<string, number>;
   distributionMetrics?: Record<string, unknown>;
   coordinateState?: Record<string, unknown>;
+  uiSchema?: Record<string, unknown>;
 }
 
 export interface CanonrySimulationState {

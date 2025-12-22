@@ -52,7 +52,6 @@ export default function LoreWeaveHost({
   onDistributionTargetsChange,
   activeSection,
   onSectionChange,
-  onViewInArchivist,
   simulationResults,
   onSimulationResultsChange,
   simulationState,
@@ -75,7 +74,6 @@ export default function LoreWeaveHost({
           onDistributionTargetsChange={onDistributionTargetsChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
-          onViewInArchivist={onViewInArchivist}
           simulationResults={simulationResults}
           onSimulationResultsChange={onSimulationResultsChange}
           simulationState={simulationState}

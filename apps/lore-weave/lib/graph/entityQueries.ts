@@ -126,8 +126,8 @@ export function adjustProminence(
  * Calculate relationship formation weight based on existing connection count.
  * Favors underconnected entities to balance network density and prevent hubs.
  */
-export function getConnectionWeight(entity: HardState): number {
-  const connectionCount = entity.links.length;
+export function getConnectionWeight(graph: Graph, entity: HardState): number {
+  const connectionCount = graph.getEntityRelationships(entity.id, 'both').length;
 
   // Boost isolated/underconnected entities
   if (connectionCount === 0) return 3.0;    // Strongly boost isolated

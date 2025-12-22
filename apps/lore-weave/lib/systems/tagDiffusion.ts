@@ -13,7 +13,7 @@
 
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { rollProbability, pickRandom, hasTag } from '../utils';
 import { createSystemContext, selectEntities } from '../rules';
 import type { SelectionRule } from '../rules';
@@ -104,7 +104,7 @@ function countConnections(
   entity: HardState,
   connectionKind: string,
   direction: 'src' | 'dst' | 'both',
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): number {
   const connections = new Set<string>();
 
@@ -128,7 +128,7 @@ function getConnectedEntities(
   entity: HardState,
   connectionKind: string,
   direction: 'src' | 'dst' | 'both',
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): HardState[] {
   const connectionIds = new Set<string>();
 
@@ -181,7 +181,7 @@ export function createTagDiffusionSystem(
     id: config.id,
     name: config.name,
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {
         if (!rollProbability(config.throttleChance, modifier)) {

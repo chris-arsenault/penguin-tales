@@ -5,6 +5,7 @@
  * Framework code uses this interface to remain domain-agnostic.
  */
 
+import { Graph } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
 import { SemanticEncoderConfig } from '../coordinates/types';
 
@@ -424,18 +425,19 @@ export class BaseDomainSchema implements DomainSchema {
   /**
    * Validate that an entity has all required relationships
    */
-  validateEntityStructure(entity: HardState): { valid: boolean; missing: string[] } {
+  validateEntityStructure(entity: HardState, graph: Graph): { valid: boolean; missing: string[] } {
     const kindDef = this.getEntityKind(entity.kind);
     if (!kindDef) return { valid: true, missing: [] };
 
     const missing: string[] = [];
+    const relationships = graph.getEntityRelationships(entity.id, 'both', { includeHistorical: true });
 
     kindDef.requiredRelationships?.forEach(rule => {
       // Check condition if present
       if (rule.when && !rule.when(entity)) return;
 
       // Check if entity has this relationship
-      const hasRelationship = entity.links.some(l => l.kind === rule.kind);
+      const hasRelationship = relationships.some(rel => rel.kind === rule.kind);
       if (!hasRelationship) {
         missing.push(rule.kind);
       }

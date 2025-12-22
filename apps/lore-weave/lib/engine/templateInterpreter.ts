@@ -6,7 +6,7 @@
  */
 
 import type { HardState, Relationship } from '../core/worldTypes';
-import type { TemplateGraphView } from '../graph/templateGraphView';
+import type { WorldRuntime } from '../runtime/worldRuntime';
 import type { TemplateResult, PlacementDebug } from './types';
 import { pickRandom } from '../utils';
 import type { Point } from '../coordinates/types';
@@ -92,12 +92,12 @@ export interface VariableDiagnosis {
  * Implements EntityResolver for use with shared selection filters.
  */
 class ExecutionContext implements IExecutionContext, EntityResolver {
-  graphView: TemplateGraphView;
+  graphView: WorldRuntime;
   variables: Map<string, HardState | HardState[] | undefined> = new Map();
   target?: HardState;
   pathSets: Map<string, Set<string>> = new Map();
 
-  constructor(graphView: TemplateGraphView) {
+  constructor(graphView: WorldRuntime) {
     this.graphView = graphView;
   }
 
@@ -118,7 +118,7 @@ class ExecutionContext implements IExecutionContext, EntityResolver {
   }
 
   /** EntityResolver interface */
-  getGraphView(): TemplateGraphView {
+  getGraphView(): WorldRuntime {
     return this.graphView;
   }
 
@@ -208,7 +208,7 @@ export class TemplateInterpreter {
    * This means graph_path rules only need to be in selection, not duplicated
    * in applicability.
    */
-  canApply(template: DeclarativeTemplate, graphView: TemplateGraphView): boolean {
+  canApply(template: DeclarativeTemplate, graphView: WorldRuntime): boolean {
     const context = new ExecutionContext(graphView);
 
     // First check explicit applicability rules (pressure, era, counts, etc.)
@@ -246,7 +246,7 @@ export class TemplateInterpreter {
    * Diagnose why a template can't apply.
    * Returns detailed information about which checks failed.
    */
-  diagnoseCanApply(template: DeclarativeTemplate, graphView: TemplateGraphView): {
+  diagnoseCanApply(template: DeclarativeTemplate, graphView: WorldRuntime): {
     canApply: boolean;
     applicabilityPassed: boolean;
     failedRules: string[];
@@ -384,7 +384,7 @@ export class TemplateInterpreter {
   /**
    * Find valid targets for a template.
    */
-  findTargets(template: DeclarativeTemplate, graphView: TemplateGraphView): HardState[] {
+  findTargets(template: DeclarativeTemplate, graphView: WorldRuntime): HardState[] {
     const context = new ExecutionContext(graphView);
     return this.executeSelection(template.selection, context);
   }
@@ -394,7 +394,7 @@ export class TemplateInterpreter {
    */
   async expand(
     template: DeclarativeTemplate,
-    graphView: TemplateGraphView,
+    graphView: WorldRuntime,
     target?: HardState
   ): Promise<TemplateResult> {
     const context = new ExecutionContext(graphView);
@@ -555,8 +555,7 @@ export class TemplateInterpreter {
         culture,
         description,
         tags: mergedTags,
-        coordinates: placementResult.coordinates,
-        links: []
+        coordinates: placementResult.coordinates
       };
 
       entities.push(entity);
@@ -1022,15 +1021,15 @@ export function createTemplateFromDeclarative(
     id: template.id,
     name: template.name,
 
-    canApply: (graphView: TemplateGraphView) => {
+    canApply: (graphView: WorldRuntime) => {
       return interpreter.canApply(template, graphView);
     },
 
-    findTargets: (graphView: TemplateGraphView) => {
+    findTargets: (graphView: WorldRuntime) => {
       return interpreter.findTargets(template, graphView);
     },
 
-    expand: async (graphView: TemplateGraphView, target?: HardState) => {
+    expand: async (graphView: WorldRuntime, target?: HardState) => {
       return interpreter.expand(template, graphView, target);
     }
   };

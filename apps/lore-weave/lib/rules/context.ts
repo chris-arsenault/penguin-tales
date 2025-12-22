@@ -6,7 +6,7 @@
  */
 
 import { HardState } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import {
   EntityResolver,
   SimpleEntityResolver,
@@ -21,7 +21,7 @@ import {
  */
 export interface RuleContext {
   /** Graph access for all queries and mutations */
-  readonly graph: TemplateGraphView;
+  readonly graph: WorldRuntime;
 
   /** Current simulation tick */
   readonly tick: number;
@@ -43,14 +43,14 @@ export interface RuleContext {
 }
 
 /**
- * Create a RuleContext from a TemplateGraphView and EntityResolver.
+ * Create a RuleContext from a WorldRuntime and EntityResolver.
  *
  * @param graph - Graph view
  * @param resolver - Entity resolver
  * @param self - Optional current entity
  */
 export function createRuleContext(
-  graph: TemplateGraphView,
+  graph: WorldRuntime,
   resolver: EntityResolver,
   self?: HardState
 ): RuleContext {
@@ -70,7 +70,7 @@ export function createRuleContext(
  *
  * @param graph - Graph view
  */
-export function createSystemContext(graph: TemplateGraphView): RuleContext {
+export function createSystemContext(graph: WorldRuntime): RuleContext {
   const resolver = new SimpleEntityResolver(graph);
 
   return {
@@ -92,7 +92,7 @@ export function createSystemContext(graph: TemplateGraphView): RuleContext {
  * @param self - Optional current entity being evaluated
  */
 export function createActionContext(
-  graph: TemplateGraphView,
+  graph: WorldRuntime,
   bindings: Record<string, HardState | undefined>,
   self?: HardState,
   values?: Record<string, string | number | boolean>

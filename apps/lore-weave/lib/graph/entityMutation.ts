@@ -62,7 +62,6 @@ export function normalizeInitialState(entities: any[]): HardState[] {
       prominence: entity.prominence as HardState['prominence'] || 'marginal',
       culture: entity.culture || 'world',
       tags,
-      links: entity.links || [],
       createdAt: 0,
       updatedAt: 0,
       coordinates: entity.coordinates
@@ -72,6 +71,7 @@ export function normalizeInitialState(entities: any[]): HardState[] {
 
 /**
  * Add entity to graph (coordinates required)
+ * Note: Name generation is handled by runtime; GraphStore requires name to be set.
  * @param source - Optional source identifier for debugging (e.g., template ID)
  * @param placementStrategy - Optional placement strategy for debugging
  */
@@ -97,8 +97,14 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     tags = { ...(entity.tags || {}) };
   }
 
-  // Delegate to Graph.createEntity() which enforces the contract:
-  // coordinates (required) → tags → name (auto-generated if not provided)
+  if (!entity.name) {
+    throw new Error(
+      `addEntity: name is required for GraphStore. ` +
+      `Use WorldRuntime.createEntity() to generate names.`
+    );
+  }
+
+  // Delegate to Graph.createEntity()
   // Use validated coords to satisfy TypeScript (already validated above)
   const validCoords = { x: coords.x, y: coords.y, z: coords.z ?? 50 };
 
@@ -107,7 +113,7 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     subtype: entity.subtype || 'default',
     coordinates: validCoords,
     tags,
-    name: entity.name,  // May be undefined - createEntity will auto-generate
+    name: entity.name,
     description: entity.description,
     status: entity.status,
     prominence: entity.prominence,

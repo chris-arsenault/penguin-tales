@@ -316,23 +316,15 @@ function exportCurrentState(): void {
   }
 
   try {
-    const graph = engine.getGraph();
     const isComplete = engine.isComplete();
 
+    const exportData = engine.exportState();
     emitter.stateExport({
+      ...exportData,
       metadata: {
-        tick: graph.tick,
-        epoch: engine.getCurrentEpoch(),
-        era: graph.currentEra.name,
-        entityCount: graph.getEntityCount(),
-        relationshipCount: graph.getRelationshipCount(),
-        historyEventCount: graph.history.length,
+        ...exportData.metadata,
         isComplete
-      },
-      hardState: graph.getEntities(),
-      relationships: graph.getRelationships(),
-      history: graph.history,
-      pressures: Object.fromEntries(graph.pressures)
+      }
     });
   } catch (error) {
     emitter?.error({

@@ -1,6 +1,6 @@
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { rollProbability, hasTag, generateId } from '../utils';
 import {
   selectEntities,
@@ -103,7 +103,7 @@ export interface ThresholdTriggerConfig {
 function evaluateCondition(
   entity: HardState,
   condition: TriggerCondition,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): boolean {
   // Create RuleContext with entity as self
   const baseCtx = createSystemContext(graphView);
@@ -117,7 +117,7 @@ function evaluateCondition(
 function evaluateAllConditions(
   entity: HardState,
   conditions: TriggerCondition[],
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): boolean {
   return conditions.every(condition => evaluateCondition(entity, condition, graphView));
 }
@@ -129,7 +129,7 @@ function evaluateAllConditions(
 function clusterEntities(
   entities: HardState[],
   config: ThresholdTriggerConfig,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): Map<string, HardState[]> {
   const clusters = new Map<string, HardState[]>();
 
@@ -254,7 +254,7 @@ function mergeMutationResult(
 function applyActions(
   clusters: Map<string, HardState[]>,
   config: ThresholdTriggerConfig,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): {
   modifications: EntityModification[];
   relationships: Relationship[];
@@ -340,7 +340,7 @@ export function createThresholdTriggerSystem(
     id: config.id,
     name: config.name,
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {
         if (!rollProbability(config.throttleChance, modifier)) {

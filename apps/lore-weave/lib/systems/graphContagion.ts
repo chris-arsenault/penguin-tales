@@ -1,6 +1,6 @@
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { rollProbability, hasTag } from '../utils';
 import {
   createSystemContext,
@@ -165,7 +165,7 @@ export interface GraphContagionConfig {
 function isInfected(
   entity: HardState,
   config: ContagionMarker,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): boolean {
   if (config.type === 'tag') {
     return hasTag(entity.tags, config.tagPattern || '');
@@ -188,7 +188,7 @@ function isInfectedWith(
   entity: HardState,
   config: ContagionMarker,
   targetId: string,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): boolean {
   if (config.type === 'tag') {
     // For tag-based contagion with specific target
@@ -212,7 +212,7 @@ function isImmune(entity: HardState, immunityTag: string, targetId?: string): bo
 function getContacts(
   entity: HardState,
   vectors: TransmissionVector[],
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): HardState[] {
   const contactIds = new Set<string>();
 
@@ -305,7 +305,7 @@ export function createGraphContagionSystem(
     id: config.id,
     name: config.name,
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Throttle check
       if (config.throttleChance !== undefined && config.throttleChance < 1.0) {
         if (!rollProbability(config.throttleChance, modifier)) {
@@ -333,7 +333,7 @@ export function createGraphContagionSystem(
  */
 function applySingleSourceContagion(
   config: GraphContagionConfig,
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   modifier: number
 ): SystemResult {
   const modifications: EntityModification[] = [];
@@ -564,7 +564,7 @@ function applySingleSourceContagion(
  */
 function applyMultiSourceContagion(
   config: GraphContagionConfig,
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   modifier: number
 ): SystemResult {
   const multiSource = config.multiSource!;

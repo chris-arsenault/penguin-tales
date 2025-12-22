@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FACTOR_TYPES } from '../constants';
 import { ReferenceDropdown, ChipSelect, NumberInput } from '../../shared';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 export function FactorEditorModal({
   isOpen,

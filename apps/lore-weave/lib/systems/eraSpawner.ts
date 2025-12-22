@@ -5,7 +5,7 @@ import {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_STATUS
 } from '../core/frameworkPrimitives';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraSpawnerConfig } from '../engine/systemInterpreter';
 import { createSystemContext, prepareMutation } from '../rules';
 
@@ -47,7 +47,6 @@ export function createEraEntity(
     prominence: 'mythic',  // Eras are always mythic (world-defining)
     culture: 'world',  // Eras are world-level entities
     tags: { temporal: true, era: true, eraId: configEra.id },
-    links: [],
     createdAt: tick,
     updatedAt: tick,
     coordinates: { x: 50, y: 50, z: 50 },  // Eras are world-level, centered in their map
@@ -64,7 +63,7 @@ export function createEraEntity(
  * Apply entry effects when transitioning INTO an era.
  */
 export function applyEntryEffects(
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   configEra: Era
 ): Record<string, number> {
   const entryEffects = configEra.entryEffects;
@@ -92,7 +91,7 @@ export function createEraSpawnerSystem(config: EraSpawnerConfig): SimulationSyst
     id: config.id || 'era_spawner',
     name: config.name || 'Era Initialization',
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Check if any era entities already exist
       const existingEras = graphView.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA });
 

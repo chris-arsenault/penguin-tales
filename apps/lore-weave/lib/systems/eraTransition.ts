@@ -10,7 +10,7 @@ import {
   FRAMEWORK_STATUS,
   FRAMEWORK_RELATIONSHIP_KINDS
 } from '../core/frameworkPrimitives';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraTransitionConfig } from '../engine/systemInterpreter';
 import { createEraEntity } from './eraSpawner';
 import { createSystemContext, evaluateCondition, prepareMutation } from '../rules';
@@ -50,7 +50,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
     id: config.id || 'era_transition',
     name: config.name || 'Era Progression',
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Find current era entity
       const currentEraEntity = graphView.findEntities({
         kind: FRAMEWORK_ENTITY_KINDS.ERA,
@@ -271,13 +271,13 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
 function findNextEra(
   currentEraConfig: Era,
   currentEraEntity: HardState,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): Era | null {
   const allEras = graphView.config.eras;
 
   // Get set of era IDs that already have entities (including current)
   const existingEraIds = new Set(
-    graphView.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA })
+    graphView.findEntities({ kind: FRAMEWORK_ENTITY_KINDS.ERA, includeHistorical: true })
       .map(e => e.subtype)
   );
 
@@ -338,7 +338,7 @@ interface TransitionCheckResult {
 }
 
 function collectEffectPressureChanges(
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   effects: Era['entryEffects'] | Era['exitEffects'],
   self: HardState
 ): Record<string, number> {
@@ -365,7 +365,7 @@ function collectEffectPressureChanges(
  */
 function checkTransitionConditions(
   currentEra: HardState,
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   conditions: TransitionCondition[]
 ): TransitionCheckResult {
   // Empty conditions array = allow immediate transition

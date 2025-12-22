@@ -3,8 +3,8 @@ import { DeclarativeTemplate } from '../engine/declarativeTypes';
 import { TemplateInterpreter } from '../engine/templateInterpreter';
 import { PopulationTracker, PopulationMetrics } from '../statistics/populationTracker';
 import { ContractEnforcer } from '../engine/contractEnforcer';
-import { TemplateGraphView } from '../graph/templateGraphView';
-import { addEntity, pickRandom, addRelationship } from '../utils';
+import { WorldRuntime } from '../runtime/worldRuntime';
+import { pickRandom } from '../utils';
 import { initializeCatalystSmart } from '../systems/catalystHelpers';
 import { StatisticsCollector } from '../statistics/statisticsCollector';
 import type { HardState, Relationship } from '../core/worldTypes';
@@ -94,7 +94,7 @@ export function createGrowthSystem(
 
   async function applyTemplateOnce(
     template: GrowthTemplate,
-    graphView: TemplateGraphView,
+    graphView: WorldRuntime,
     era: Era
   ): Promise<number> {
     // Check applicability
@@ -134,7 +134,7 @@ export function createGrowthSystem(
       Object.keys(entity.tags || {}).forEach(tag => allTagsSet.add(tag));
     }
     const allTagsToAdd = Array.from(allTagsSet);
-    const tagSaturationCheck = deps.contractEnforcer.checkTagSaturation(graphView.getInternalGraph(), allTagsToAdd);
+    const tagSaturationCheck = deps.contractEnforcer.checkTagSaturation(graphView, allTagsToAdd);
     if (tagSaturationCheck.saturated) {
       deps.emitter.log('warn', `Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
     }
@@ -146,22 +146,21 @@ export function createGrowthSystem(
     deps.statisticsCollector.recordTemplateApplication(template.id);
 
     const createdEntities: HardState[] = [];
-    const graph = graphView.getInternalGraph();
     const newIds: string[] = [];
 
     for (let i = 0; i < result.entities.length; i++) {
       const entity = result.entities[i];
       const placementStrategy = result.placementStrategies?.[i] || 'unknown';
-      const id = await addEntity(graph, entity, `template:${template.id}`, placementStrategy);
+      const id = await graphView.addEntity(entity, `template:${template.id}`, placementStrategy);
       newIds.push(id);
-      const ref = graph.getEntity(id);
+      const ref = graphView.getEntity(id);
       if (ref) {
         createdEntities.push(ref);
       }
     }
 
     for (const entity of createdEntities) {
-      initializeCatalystSmart(entity, graph);
+      initializeCatalystSmart(entity);
     }
 
     result.relationships.forEach(rel => {
@@ -173,12 +172,12 @@ export function createGrowthSystem(
         : rel.dst;
 
       if (srcId && dstId) {
-        addRelationship(graph, rel.kind, srcId, dstId, rel.strength);
+        graphView.createRelationship(rel.kind, srcId, dstId, rel.strength);
       }
     });
 
     for (const entity of createdEntities) {
-      const coverageCheck = deps.contractEnforcer.enforceTagCoverage(entity, graph);
+      const coverageCheck = deps.contractEnforcer.enforceTagCoverage(entity, graphView);
       if (coverageCheck.needsAdjustment) {
         deps.emitter.log('debug', coverageCheck.suggestion || '', { entity: entity.id });
       }
@@ -188,8 +187,8 @@ export function createGrowthSystem(
       }
     }
 
-    graph.history.push({
-      tick: graph.tick,
+    graphView.addHistoryEvent({
+      tick: graphView.tick,
       era: era.id,
       type: 'growth',
       description: result.description,
@@ -216,7 +215,7 @@ export function createGrowthSystem(
     }));
 
     deps.emitter.templateApplication({
-      tick: graph.tick,
+      tick: graphView.tick,
       epoch: deps.getCurrentEpoch(),
       templateId: template.id,
       targetEntityId: target.id,
@@ -257,7 +256,7 @@ export function createGrowthSystem(
   }
 
   function buildApplicableTemplates(
-    graphView: TemplateGraphView,
+    graphView: WorldRuntime,
     rejectionReasons: Map<string, string>
   ): GrowthTemplate[] {
     return deps.runtimeTemplates.filter(t => {
@@ -319,7 +318,7 @@ export function createGrowthSystem(
       state.yieldSamples = [];
     },
 
-    apply: async (graphView: TemplateGraphView, modifier: number) => {
+    apply: async (graphView: WorldRuntime, modifier: number) => {
       const era = graphView.currentEra;
 
       if (state.epoch !== deps.getCurrentEpoch()) {
@@ -350,7 +349,7 @@ export function createGrowthSystem(
         };
       }
 
-      deps.populationTracker.update(graphView.getInternalGraph());
+      deps.populationTracker.update(graphView);
       const metrics = deps.populationTracker.getMetrics();
 
       const tickInEpoch = graphView.tick % deps.engineConfig.ticksPerEpoch;

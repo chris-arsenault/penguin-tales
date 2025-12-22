@@ -6,7 +6,7 @@
  */
 
 import { HardState } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 
 /**
  * Interface for resolving entity references in selection filters.
@@ -16,7 +16,7 @@ export interface EntityResolver {
   resolveEntity(ref: string): HardState | undefined;
 
   /** Get the graph view for relationship queries */
-  getGraphView(): TemplateGraphView;
+  getGraphView(): WorldRuntime;
 
   /** Store intermediate path results (for graph_path filter) */
   setPathSet(name: string, ids: Set<string>): void;
@@ -33,7 +33,7 @@ export class ActionEntityResolver implements EntityResolver {
   private pathSets: Map<string, Set<string>> = new Map();
 
   constructor(
-    private graphView: TemplateGraphView,
+    private graphView: WorldRuntime,
     private bindings: Record<string, HardState | undefined>
   ) {}
 
@@ -53,7 +53,7 @@ export class ActionEntityResolver implements EntityResolver {
     return this.bindings[varName];
   }
 
-  getGraphView(): TemplateGraphView {
+  getGraphView(): WorldRuntime {
     return this.graphView;
   }
 
@@ -73,7 +73,7 @@ export class ActionEntityResolver implements EntityResolver {
 export class SimpleEntityResolver implements EntityResolver {
   private pathSets: Map<string, Set<string>> = new Map();
 
-  constructor(private graphView: TemplateGraphView) {}
+  constructor(private graphView: WorldRuntime) {}
 
   resolveEntity(ref: string): HardState | undefined {
     if (ref.startsWith('$')) {
@@ -82,7 +82,7 @@ export class SimpleEntityResolver implements EntityResolver {
     return this.graphView.getEntity(ref);
   }
 
-  getGraphView(): TemplateGraphView {
+  getGraphView(): WorldRuntime {
     return this.graphView;
   }
 

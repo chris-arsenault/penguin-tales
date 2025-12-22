@@ -8,7 +8,22 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useProjectStorage } from './storage/useProjectStorage';
 import { loadUiState, saveUiState } from './storage/uiState';
-import { loadSimulationRun, saveSimulationRun } from './storage/simulationStore';
+import {
+  loadWorldStore,
+  saveSimulationData,
+  loadSimulationData,
+  loadWorldData,
+  saveWorldData,
+  loadDomainContext,
+  saveDomainContext,
+  getSlots,
+  getActiveSlotIndex,
+  saveToSlot,
+  loadSlot,
+  clearSlot,
+  updateSlotTitle,
+  generateSlotTitle,
+} from './storage/worldStore';
 import ProjectManager from './components/ProjectManager';
 import Navigation from './components/Navigation';
 import SchemaEditor from './components/SchemaEditor';
@@ -20,6 +35,7 @@ import NameForgeHost from './remotes/NameForgeHost';
 import CosmographerHost from './remotes/CosmographerHost';
 import CoherenceEngineHost from './remotes/CoherenceEngineHost';
 import LoreWeaveHost from './remotes/LoreWeaveHost';
+import IlluminatorHost from './remotes/IlluminatorHost';
 import ArchivistHost from './remotes/ArchivistHost';
 import { colors, typography, spacing } from './theme';
 
@@ -63,6 +79,7 @@ const VALID_TABS = [
   'cosmography',
   'coherence',
   'simulation',
+  'illuminator',
   'archivist',
 ];
 
@@ -92,8 +109,11 @@ export default function App() {
   const [showHome, setShowHome] = useState(initialUiState.showHome);
   const [helpModalOpen, setHelpModalOpen] = useState(initialUiState.helpModalOpen);
   const [archivistData, setArchivistData] = useState(null);
+  const [domainContext, setDomainContext] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationState, setSimulationState] = useState(null);
+  const [slots, setSlots] = useState({});
+  const [activeSlotIndex, setActiveSlotIndex] = useState(0);
   const simulationOwnerRef = useRef(null);
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
 
@@ -153,44 +173,63 @@ export default function App() {
       simulationOwnerRef.current = null;
       setSimulationResults(null);
       setSimulationState(null);
+      setArchivistData(null);
+      setSlots({});
+      setActiveSlotIndex(0);
       return undefined;
     }
 
     simulationOwnerRef.current = null;
     setSimulationResults(null);
     setSimulationState(null);
-    loadSimulationRun(currentProject.id).then((run) => {
+    setArchivistData(null);
+    setDomainContext(null);
+    setSlots({});
+    setActiveSlotIndex(0);
+
+    // Load full world store (includes slots)
+    loadWorldStore(currentProject.id).then((store) => {
       if (cancelled) return;
       simulationOwnerRef.current = currentProject.id;
-      setSimulationResults(run?.simulationResults || null);
-      setSimulationState(run?.simulationState || null);
+
+      // Set slots and active index
+      const loadedSlots = store?.slots || {};
+      const loadedActiveIndex = store?.activeSlotIndex ?? 0;
+      setSlots(loadedSlots);
+      setActiveSlotIndex(loadedActiveIndex);
+
+      // Load data from active slot
+      const activeSlot = loadedSlots[loadedActiveIndex];
+      if (activeSlot) {
+        setSimulationResults(activeSlot.simulationResults || null);
+        setSimulationState(activeSlot.simulationState || null);
+        if (activeSlot.worldData) {
+          setArchivistData({ worldData: activeSlot.worldData, loreData: null, imageData: null });
+        }
+      }
+
+      // Load shared data (domain context)
+      if (store?.domainContext) {
+        setDomainContext(store.domainContext);
+      }
     });
+
     return () => {
       cancelled = true;
     };
   }, [currentProject?.id]);
 
-  useEffect(() => {
-    if (!currentProject?.id) return;
-    if (simulationOwnerRef.current !== currentProject.id) return;
-    if (!simulationResults && !simulationState) return;
-    const status = simulationState?.status;
-    if (status && status !== 'complete' && status !== 'error') return;
-    saveSimulationRun(currentProject.id, {
-      simulationResults,
-      simulationState,
-    });
-  }, [currentProject?.id, simulationResults, simulationState]);
+  // Transform simulation results to worldData format for Archivist/Illuminator
+  const transformToWorldData = useCallback((simResults) => {
+    if (!simResults?.hardState) return null;
+    if (simResults?.uiSchema) return simResults;
+    if (!currentProject) return null;
 
-  // Handle viewing simulation results in Archivist
-  const handleViewInArchivist = useCallback((simulationResults) => {
     // Build per-kind map configs from semantic plane data
     const perKindMaps = {};
-
-    currentProject?.entityKinds?.forEach(ek => {
+    currentProject.entityKinds?.forEach(ek => {
       if (ek.semanticPlane) {
         const sp = ek.semanticPlane;
-        // Build map config with axis labels
         perKindMaps[ek.kind] = {
           entityKind: ek.kind,
           name: `${ek.description || ek.kind} Semantic Map`,
@@ -205,14 +244,11 @@ export default function App() {
       }
     });
 
-    // Build per-kind regions from coordinateState (includes both seed and emergent regions)
-    // coordinateState is the authoritative source - it contains all regions after simulation
+    // Build per-kind regions from coordinateState
     const perKindRegions = {};
-    const coordRegions = simulationResults.coordinateState?.regions;
-
-    // Build culture color lookup for emergent regions that don't have explicit colors
+    const coordRegions = simResults.coordinateState?.regions;
     const cultureColors = {};
-    currentProject?.cultures?.forEach(c => {
+    currentProject.cultures?.forEach(c => {
       if (c.id && c.color) {
         cultureColors[c.id] = c.color;
       }
@@ -227,7 +263,6 @@ export default function App() {
             description: r.description,
             bounds: r.bounds,
             metadata: {
-              // Use region's color, or look up culture's color
               color: r.color || (r.culture && cultureColors[r.culture]),
               culture: r.culture,
               tags: r.tags,
@@ -243,12 +278,12 @@ export default function App() {
 
     // Build uiSchema for Archivist
     const uiSchema = {
-      worldName: currentProject?.name || 'Simulation Results',
-      worldIcon: '🌍',
-      entityKinds: currentProject?.entityKinds || [],
-      relationshipKinds: currentProject?.relationshipKinds || [],
+      worldName: currentProject.name || 'Simulation Results',
+      worldIcon: '',
+      entityKinds: currentProject.entityKinds || [],
+      relationshipKinds: currentProject.relationshipKinds || [],
       prominenceLevels: ['forgotten', 'marginal', 'recognized', 'renowned', 'mythic'],
-      cultures: currentProject?.cultures?.map(c => ({
+      cultures: currentProject.cultures?.map(c => ({
         id: c.id,
         name: c.name,
         description: c.description,
@@ -258,23 +293,92 @@ export default function App() {
       perKindRegions,
     };
 
-    // Transform simulation results to archivist WorldState format
-    const worldData = {
+    return {
       metadata: {
-        ...simulationResults.metadata,
+        ...simResults.metadata,
         enrichmentTriggers: {},
       },
-      hardState: simulationResults.hardState || [],
-      relationships: simulationResults.relationships || [],
-      pressures: simulationResults.pressures || {},
-      history: simulationResults.history || [],
+      hardState: simResults.hardState || [],
+      relationships: simResults.relationships || [],
+      pressures: simResults.pressures || {},
+      history: simResults.history || [],
+      distributionMetrics: simResults.distributionMetrics,
+      coordinateState: simResults.coordinateState,
       uiSchema,
     };
-    setArchivistData({ worldData, loreData: null, imageData: null });
-    setActiveTab('archivist');
-    setActiveSectionForTab('archivist', 'explorer');
-    setShowHome(false);
-  }, [currentProject, setActiveSectionForTab]);
+  }, [currentProject]);
+
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (simulationOwnerRef.current !== currentProject.id) return;
+    if (!simulationResults && !simulationState) return;
+    const status = simulationState?.status;
+    if (status && status !== 'complete' && status !== 'error') return;
+
+    // Generate a title for the run based on simulation results
+    let runTitle = 'Scratch';
+    if (simulationResults?.hardState) {
+      const entityCount = simulationResults.hardState.length;
+      const date = new Date();
+      const timeStr = date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      runTitle = `Run - ${timeStr} (${entityCount} entities)`;
+    }
+
+    // Transform simulation results to worldData for Archivist/Illuminator
+    const worldData = transformToWorldData(simulationResults);
+
+    // Save to scratch slot (slot 0) and update local slots state
+    saveSimulationData(currentProject.id, {
+      simulationResults,
+      simulationState,
+    }).then(() => {
+      // Also save worldData to the slot
+      if (worldData) {
+        saveWorldData(currentProject.id, worldData);
+      }
+
+      // Update local slots state to reflect save
+      setSlots((prev) => ({
+        ...prev,
+        0: {
+          ...prev[0],
+          simulationResults,
+          simulationState,
+          worldData,
+          title: runTitle,
+          createdAt: Date.now(),
+        },
+      }));
+
+      // Update archivistData for immediate use
+      if (worldData) {
+        setArchivistData({ worldData, loreData: null, imageData: null });
+      }
+
+      // Ensure we're viewing scratch after new simulation
+      setActiveSlotIndex(0);
+    });
+  }, [currentProject?.id, simulationResults, simulationState, transformToWorldData]);
+
+  // Persist world data when it changes (for Archivist/Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!archivistData?.worldData) return;
+    saveWorldData(currentProject.id, archivistData.worldData);
+  }, [currentProject?.id, archivistData]);
+
+  // Persist domain context when it changes (for Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!domainContext) return;
+    saveDomainContext(currentProject.id, domainContext);
+  }, [currentProject?.id, domainContext]);
 
   // Update functions that auto-save
   const updateEntityKinds = useCallback(
@@ -365,6 +469,111 @@ export default function App() {
     },
     [currentProject, save]
   );
+
+  // ==========================================================================
+  // Slot operations
+  // ==========================================================================
+
+  // Load a slot (switch active slot)
+  const handleLoadSlot = useCallback(async (slotIndex) => {
+    if (!currentProject?.id) return;
+
+    try {
+      await loadSlot(currentProject.id, slotIndex);
+      setActiveSlotIndex(slotIndex);
+
+      // Load data from storage to ensure we have the latest
+      const store = await loadWorldStore(currentProject.id);
+      const storedSlot = store?.slots?.[slotIndex];
+
+      // Update local slots state with data from storage
+      if (store?.slots) {
+        setSlots(store.slots);
+      }
+
+      // Set simulation state from stored slot
+      if (storedSlot) {
+        setSimulationResults(storedSlot.simulationResults || null);
+        setSimulationState(storedSlot.simulationState || null);
+        if (storedSlot.worldData) {
+          setArchivistData({ worldData: storedSlot.worldData, loreData: null, imageData: null });
+        } else {
+          setArchivistData(null);
+        }
+      } else {
+        setSimulationResults(null);
+        setSimulationState(null);
+        setArchivistData(null);
+      }
+    } catch (err) {
+      console.error('Failed to load slot:', err);
+    }
+  }, [currentProject?.id]);
+
+  // Save scratch to a slot (move data)
+  const handleSaveToSlot = useCallback(async (targetSlotIndex) => {
+    if (!currentProject?.id) return;
+
+    try {
+      await saveToSlot(currentProject.id, targetSlotIndex);
+
+      // Reload slots from storage to ensure consistency
+      const store = await loadWorldStore(currentProject.id);
+      if (store?.slots) {
+        setSlots(store.slots);
+      }
+      setActiveSlotIndex(targetSlotIndex);
+    } catch (err) {
+      console.error('Failed to save to slot:', err);
+      alert(err.message || 'Failed to save to slot');
+    }
+  }, [currentProject?.id]);
+
+  // Update slot title
+  const handleUpdateSlotTitle = useCallback(async (slotIndex, title) => {
+    if (!currentProject?.id) return;
+
+    try {
+      await updateSlotTitle(currentProject.id, slotIndex, title);
+      setSlots((prev) => ({
+        ...prev,
+        [slotIndex]: { ...prev[slotIndex], title },
+      }));
+    } catch (err) {
+      console.error('Failed to update slot title:', err);
+    }
+  }, [currentProject?.id]);
+
+  // Clear a slot
+  const handleClearSlot = useCallback(async (slotIndex) => {
+    if (!currentProject?.id) return;
+
+    try {
+      await clearSlot(currentProject.id, slotIndex);
+
+      // Reload slots from storage
+      const store = await loadWorldStore(currentProject.id);
+      if (store?.slots) {
+        setSlots(store.slots);
+      }
+
+      // If we cleared the active slot, reset state
+      if (slotIndex === activeSlotIndex) {
+        setSimulationResults(null);
+        setSimulationState(null);
+        setArchivistData(null);
+        // Switch to scratch if we were on a different slot
+        if (slotIndex !== 0) {
+          setActiveSlotIndex(0);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to clear slot:', err);
+    }
+  }, [currentProject?.id, activeSlotIndex]);
+
+  // Check if scratch has data
+  const hasDataInScratch = Boolean(slots[0]?.simulationResults);
 
   // Extract naming data for Name Forge (keyed by culture ID)
   const namingData = useMemo(() => {
@@ -627,9 +836,10 @@ export default function App() {
         );
 
       case 'simulation':
+      case 'illuminator':
       case 'archivist':
-        // Keep both LoreWeaveHost and ArchivistHost mounted so simulation state persists
-        // when exporting to Archivist and navigating back
+        // Keep LoreWeaveHost, IlluminatorHost, and ArchivistHost mounted so state persists
+        // when navigating between them
         return (
           <>
             <div style={{ display: activeTab === 'simulation' ? 'contents' : 'none' }}>
@@ -647,11 +857,25 @@ export default function App() {
                 onDistributionTargetsChange={updateDistributionTargets}
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
-                onViewInArchivist={handleViewInArchivist}
                 simulationResults={simulationResults}
                 onSimulationResultsChange={setSimulationResults}
                 simulationState={simulationState}
                 onSimulationStateChange={setSimulationState}
+              />
+            </div>
+            <div style={{ display: activeTab === 'illuminator' ? 'contents' : 'none' }}>
+              <IlluminatorHost
+                projectId={currentProject?.id}
+                schema={schema}
+                worldData={archivistData?.worldData}
+                onWorldDataChange={(enrichedWorld) => {
+                  setArchivistData((prev) => ({ ...prev, worldData: enrichedWorld }));
+                }}
+                domainContext={domainContext}
+                onDomainContextChange={setDomainContext}
+                activeSection={activeSection}
+                onSectionChange={setActiveSection}
+                activeSlotIndex={activeSlotIndex}
               />
             </div>
             <div style={{ display: activeTab === 'archivist' ? 'contents' : 'none' }}>
@@ -695,6 +919,13 @@ export default function App() {
         onRemoveProperty={handleRemoveProperty}
         simulationState={simulationState}
         systems={currentProject?.systems || []}
+        slots={slots}
+        activeSlotIndex={activeSlotIndex}
+        onLoadSlot={handleLoadSlot}
+        onSaveToSlot={handleSaveToSlot}
+        onClearSlot={handleClearSlot}
+        onUpdateSlotTitle={handleUpdateSlotTitle}
+        hasDataInScratch={hasDataInScratch}
       />
       {currentProject && !showHome && (
         <Navigation

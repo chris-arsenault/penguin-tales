@@ -1,7 +1,7 @@
-import { Graph, MetaEntityConfig, Cluster } from '../engine/types';
+import { MetaEntityConfig, Cluster } from '../engine/types';
 import { HardState, Relationship } from '../core/worldTypes';
-import { TemplateGraphView } from './templateGraphView';
-import { generateId, addEntity, addRelationship, archiveRelationship, hasTag } from '../utils';
+import { WorldRuntime } from '../runtime/worldRuntime';
+import { hasTag } from '../utils';
 
 /**
  * Meta-Entity Formation Service
@@ -29,7 +29,7 @@ export class MetaEntityFormation {
    * Uses greedy clustering algorithm: entities are sorted by creation time,
    * then grouped based on similarity scores
    */
-  detectClusters(graphView: TemplateGraphView, sourceKind: string): Cluster[] {
+  detectClusters(graphView: WorldRuntime, sourceKind: string): Cluster[] {
     const config = this.configs.get(sourceKind);
     if (!config) return [];
 
@@ -104,23 +104,23 @@ export class MetaEntityFormation {
   /**
    * Form a meta-entity from a cluster
    */
-  async formMetaEntity(graph: Graph, cluster: HardState[], config: MetaEntityConfig): Promise<HardState> {
+  async formMetaEntity(graphView: WorldRuntime, cluster: HardState[], config: MetaEntityConfig): Promise<HardState> {
     // Call factory to create meta-entity
-    const metaEntityPartial = config.factory(cluster, graph);
+    const metaEntityPartial = config.factory(cluster, graphView);
 
     // Add meta-entity to graph
-    const metaId = await addEntity(graph, metaEntityPartial);
-    const metaEntity = graph.getEntity(metaId)!;
+    const metaId = await graphView.addEntity(metaEntityPartial);
+    const metaEntity = graphView.getEntity(metaId)!;
 
     // Transfer relationships FIRST (before archiving)
     if (config.transformation.transferRelationships) {
-      this.transferRelationships(graph, cluster, metaId);
+      this.transferRelationships(graphView, cluster, metaId);
     }
 
     // Create part_of relationships from cluster members to meta-entity
     if (config.transformation.preserveOriginalLinks) {
       cluster.forEach(entity => {
-        addRelationship(graph, 'part_of', entity.id, metaId);
+        graphView.createRelationship('part_of', entity.id, metaId);
       });
     }
 
@@ -128,17 +128,17 @@ export class MetaEntityFormation {
     if (config.transformation.markOriginalsHistorical) {
       cluster.forEach(entity => {
         // Mark the entity itself as historical
-        entity.status = 'historical';
+        graphView.updateEntity(entity.id, { status: 'historical' });
 
         // Archive all relationships of the original entity
-        const entityRelationships = graph.getRelationships().filter(r =>
+        const entityRelationships = graphView.getAllRelationships().filter(r =>
           (r.src === entity.id || r.dst === entity.id) &&
           r.status !== 'historical' &&
           r.kind !== 'part_of'  // Don't archive part_of (we just created it)
         );
 
         entityRelationships.forEach(rel => {
-          archiveRelationship(graph, rel.src, rel.dst, rel.kind);
+          graphView.archiveRelationship(rel.src, rel.dst, rel.kind);
         });
       });
     }
@@ -149,11 +149,11 @@ export class MetaEntityFormation {
   /**
    * Transfer relationships from cluster members to meta-entity
    */
-  private transferRelationships(graph: Graph, cluster: HardState[], metaId: string): void {
+  private transferRelationships(graphView: WorldRuntime, cluster: HardState[], metaId: string): void {
     const clusterIds = new Set(cluster.map(e => e.id));
 
     // Find all relationships involving cluster entities
-    const toTransfer = graph.getRelationships().filter(r =>
+    const toTransfer = graphView.getAllRelationships().filter(r =>
       (clusterIds.has(r.src) || clusterIds.has(r.dst)) &&
       r.status !== 'historical' &&
       r.kind !== 'part_of'  // Don't transfer part_of relationships
@@ -182,7 +182,7 @@ export class MetaEntityFormation {
       if (transferred.has(key)) return;
 
       // Create new relationship with updated endpoints
-      addRelationship(graph, rel.kind, newSrc, newDst);
+      graphView.createRelationship(rel.kind, newSrc, newDst);
       transferred.add(key);
     });
   }
@@ -194,7 +194,7 @@ export class MetaEntityFormation {
     e1: HardState,
     e2: HardState,
     criteria: MetaEntityConfig['clustering']['criteria'],
-    graphView: TemplateGraphView
+    graphView: WorldRuntime
   ): number {
     let score = 0;
 

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { ReferenceDropdown, NumberInput } from './index';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 import { MUTATION_TYPE_META, MUTATION_TYPE_ORDER } from '../actions/constants';
 
 export const DEFAULT_MUTATION_TYPES = [

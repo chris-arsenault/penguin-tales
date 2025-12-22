@@ -77,7 +77,7 @@ export type {
 // SERVICES - For domain templates and systems
 // =============================================================================
 
-export { TemplateGraphView } from './graph/templateGraphView';
+export { WorldRuntime } from './runtime/worldRuntime';
 export { TargetSelector } from './selection/targetSelector';
 export type { SelectionBias, SelectionResult } from './selection/targetSelector';
 

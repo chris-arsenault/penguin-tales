@@ -46,7 +46,6 @@ export default function LoreWeaveRemote({
   onDistributionTargetsChange,
   activeSection,
   onSectionChange,
-  onViewInArchivist,
   simulationResults: externalSimulationResults,
   onSimulationResultsChange,
   simulationState: externalSimulationState,
@@ -184,7 +183,6 @@ export default function LoreWeaveRemote({
             setIsRunning={setIsRunning}
             onComplete={handleSimulationComplete}
             onViewResults={() => setActiveTab('results')}
-            onViewInArchivist={onViewInArchivist}
             externalSimulationState={externalSimulationState}
             onSimulationStateChange={onSimulationStateChange}
             simulationWorker={simulationWorker}
@@ -196,7 +194,6 @@ export default function LoreWeaveRemote({
             results={simulationResults}
             schema={schema}
             onNewRun={() => setActiveTab('run')}
-            onViewInArchivist={onViewInArchivist}
           />
         );
       default:

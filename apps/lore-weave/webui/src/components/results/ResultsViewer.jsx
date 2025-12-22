@@ -10,7 +10,7 @@
 
 import React, { useState, useMemo } from 'react';
 
-export default function ResultsViewer({ results, schema, onNewRun, onViewInArchivist }) {
+export default function ResultsViewer({ results, schema, onNewRun }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Process results for display
@@ -99,14 +99,6 @@ export default function ResultsViewer({ results, schema, onNewRun, onViewInArchi
         <button className="lw-btn lw-btn-secondary" onClick={exportConfig}>
           Export Config
         </button>
-        {onViewInArchivist && (
-          <button
-            className="lw-btn lw-btn-primary"
-            onClick={() => onViewInArchivist(results)}
-          >
-            View in Archivist
-          </button>
-        )}
         <button className="lw-btn lw-btn-secondary" onClick={onNewRun}>
           Run New Simulation
         </button>

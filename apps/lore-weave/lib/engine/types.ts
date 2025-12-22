@@ -131,7 +131,7 @@ export interface Era {
   templateWeights: Record<string, number>;  // 0 = disabled, 2 = double chance
   systemModifiers: Record<string, number>;  // multipliers for system effects
   pressureModifiers?: Record<string, number>;
-  specialRules?: (graph: Graph) => void;
+  specialRules?: (runtime: import('../runtime/worldRuntime').WorldRuntime) => void;
 
   // Criteria for this era to END (all must be met)
   exitConditions?: TransitionCondition[];
@@ -158,7 +158,7 @@ export interface CreateEntitySettings {
   subtype: string;
   coordinates: import('../coordinates/types').Point;  // REQUIRED - simple 2D+z coordinates
   tags?: EntityTags;  // Optional - defaults to {}
-  name?: string;  // Optional - auto-generated from tags if not provided
+  name?: string;  // Optional - runtime may auto-generate if not provided
   description?: string;
   status?: string;
   prominence?: import('../core/worldTypes').Prominence;
@@ -168,11 +168,10 @@ export interface CreateEntitySettings {
   placementStrategy?: string;  // Optional - for debugging (e.g., 'near_entity', 'in_culture_region')
 }
 
-// Graph representation with controlled access
-// Entity and relationship data is private - access only through methods
+// Graph data representation (world state + mutations)
 export interface Graph {
   // =============================================================================
-  // ENTITY READ METHODS (return clones to prevent external modification)
+  // ENTITY READ METHODS
   // =============================================================================
   getEntity(id: string): HardState | undefined;
   hasEntity(id: string): boolean;
@@ -247,13 +246,12 @@ export interface Graph {
   _setRelationships(relationships: Relationship[]): void;
 
   // =============================================================================
-  // OTHER GRAPH STATE (non-private, direct access ok)
+  // OTHER GRAPH STATE (world state)
   // =============================================================================
   tick: number;
   currentEra: Era;
   pressures: Map<string, number>;
   history: HistoryEvent[];
-  config: EngineConfig;
   relationshipCooldowns: Map<string, Map<string, number>>;
   // LLM-related fields moved to @illuminator
   // loreIndex?: LoreIndex;
@@ -312,17 +310,17 @@ export interface GrowthTemplate {
   requiredEra?: string[];  // optional era restrictions
 
   // Check if template can be applied
-  // Uses TemplateGraphView for safe, restricted graph access
-  canApply: (graphView: import('../graph/templateGraphView').TemplateGraphView) => boolean;
+  // Uses WorldRuntime for safe, restricted graph access
+  canApply: (graphView: import('../runtime/worldRuntime').WorldRuntime) => boolean;
 
   // Find valid targets for this template
-  // Uses TemplateGraphView for safe, restricted graph access
-  findTargets: (graphView: import('../graph/templateGraphView').TemplateGraphView) => HardState[];
+  // Uses WorldRuntime for safe, restricted graph access
+  findTargets: (graphView: import('../runtime/worldRuntime').WorldRuntime) => HardState[];
 
   // Execute the template on a target
-  // Uses TemplateGraphView which includes targetSelector for entity selection
+  // Uses WorldRuntime which includes targetSelector for entity selection
   // Returns Promise to support async operations (e.g., name generation)
-  expand: (graphView: import('../graph/templateGraphView').TemplateGraphView, target?: HardState) => Promise<TemplateResult> | TemplateResult;
+  expand: (graphView: import('../runtime/worldRuntime').WorldRuntime, target?: HardState) => Promise<TemplateResult> | TemplateResult;
 }
 
 /** Placement debug info for a single entity */
@@ -367,7 +365,7 @@ export interface SimulationSystem<TState = unknown> {
   // Run one tick of this system
   // graphView provides access to graph queries AND coordinate context
   // Returns Promise to support async operations (e.g., name generation)
-  apply: (graphView: import('../graph/templateGraphView').TemplateGraphView, modifier: number) => Promise<SystemResult> | SystemResult;
+  apply: (graphView: import('../runtime/worldRuntime').WorldRuntime, modifier: number) => Promise<SystemResult> | SystemResult;
 }
 
 export interface SystemResult {
@@ -482,7 +480,7 @@ export interface EntityOperatorRegistry {
   // Lineage function (called after any creator)
   lineage: {
     relationshipKind: string;  // e.g., 'derived_from', 'related_to'
-    findAncestor: (graphView: import('../graph/templateGraphView').TemplateGraphView, newEntity: HardState) => HardState | undefined;
+    findAncestor: (graphView: import('../runtime/worldRuntime').WorldRuntime, newEntity: HardState) => HardState | undefined;
     distanceRange: { min: number; max: number };
   };
 
@@ -577,7 +575,7 @@ export interface EngineConfig {
   coordinateContextConfig: CoordinateContextConfig;
 
   // Seed relationships (optional - loaded alongside initial entities)
-  // Populates entity.links at load time
+  // Populates relationships at load time
   seedRelationships?: Relationship[];
 
   // Simulation event emitter (REQUIRED - no fallback)
@@ -610,11 +608,11 @@ export interface MetaEntityConfig {
     markOriginalsHistorical: boolean;       // Archive original entities' relationships
     transferRelationships: boolean;          // Transfer relationships to meta-entity
     redirectFutureRelationships: boolean;    // Future relationships go to meta-entity
-    preserveOriginalLinks: boolean;          // Keep part_of links to originals
+    preserveOriginalLinks: boolean;          // Keep part_of relationships to originals
   };
 
   // Factory function to create meta-entity from cluster
-  factory: (cluster: HardState[], graph: Graph) => Partial<HardState>;
+  factory: (cluster: HardState[], runtime: import('../runtime/worldRuntime').WorldRuntime) => Partial<HardState>;
 }
 
 export interface Cluster {
@@ -684,7 +682,6 @@ export interface TagHealthReport {
  * Uses JavaScript private fields (#) for compile-time AND runtime enforcement.
  * External code cannot access #entities or #relationships directly.
  *
- * All read methods return clones to prevent external modification of internal state.
  * All mutations must go through designated methods.
  */
 export class GraphStore implements Graph {
@@ -697,7 +694,6 @@ export class GraphStore implements Graph {
   currentEra!: Era;
   pressures: Map<string, number> = new Map();
   history: HistoryEvent[] = [];
-  config!: EngineConfig;
   relationshipCooldowns: Map<string, Map<string, number>> = new Map();
   // LLM fields moved to @illuminator
   // loreIndex?: LoreIndex;
@@ -718,35 +714,11 @@ export class GraphStore implements Graph {
   }>;
 
   // ===========================================================================
-  // DEBUG HELPERS
-  // ===========================================================================
-
-  /**
-   * Emit a categorized debug message.
-   * Only emits if debug is enabled and the category is in the enabled list.
-   */
-  private debug(category: DebugCategory, message: string, context?: Record<string, unknown>): void {
-    const debugConfig = this.config?.debugConfig ?? DEFAULT_DEBUG_CONFIG;
-
-    // If debug is disabled globally, skip
-    if (!debugConfig.enabled) return;
-
-    // If no categories specified, emit all; otherwise check if category is enabled
-    if (debugConfig.enabledCategories.length > 0 && !debugConfig.enabledCategories.includes(category)) {
-      return;
-    }
-
-    // Emit with category prefix
-    this.config?.emitter?.log('debug', `[${category.toUpperCase()}] ${message}`, context);
-  }
-
-  // ===========================================================================
   // ENTITY READ METHODS
   // ===========================================================================
 
   getEntity(id: string): HardState | undefined {
-    const entity = this.#entities.get(id);
-    return entity ? { ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] } : undefined;
+    return this.#entities.get(id);
   }
 
   hasEntity(id: string): boolean {
@@ -768,7 +740,7 @@ export class GraphStore implements Graph {
     const results: HardState[] = [];
     for (const e of this.#entities.values()) {
       if (!options?.includeHistorical && e.status === FRAMEWORK_STATUS.HISTORICAL) continue;
-      results.push({ ...e, tags: { ...e.tags }, links: [...(e.links || [])] });
+      results.push(e);
     }
     return results;
   }
@@ -787,8 +759,7 @@ export class GraphStore implements Graph {
   forEachEntity(callback: (entity: HardState, id: string) => void, options?: { includeHistorical?: boolean }): void {
     this.#entities.forEach((entity, id) => {
       if (!options?.includeHistorical && entity.status === FRAMEWORK_STATUS.HISTORICAL) return;
-      // Pass clone to callback
-      callback({ ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] }, id);
+      callback(entity, id);
     });
   }
 
@@ -804,7 +775,7 @@ export class GraphStore implements Graph {
       if (criteria.prominence && entity.prominence !== criteria.prominence) continue;
       if (criteria.culture && entity.culture !== criteria.culture) continue;
       if (criteria.tag && !(criteria.tag in entity.tags)) continue;
-      results.push({ ...entity, tags: { ...entity.tags }, links: [...(entity.links || [])] });
+      results.push(entity);
     }
     return results;
   }
@@ -856,33 +827,18 @@ export class GraphStore implements Graph {
     // Tags default to empty object - IMPORTANT: clone to avoid mutating source
     const tags: EntityTags = { ...(settings.tags || {}) };
 
-    // Auto-generate name if not provided (uses tags, so tags must be set first)
-    let name = settings.name;
+    const name = settings.name;
     if (!name) {
-      const nameForge = this.config?.nameForgeService;
-      if (!nameForge) {
-        throw new Error(
-          `createEntity: name not provided and no NameForgeService configured. ` +
-          `Either provide a name or configure nameForgeService in EngineConfig.`
-        );
-      }
-      // Convert KVP tags to array for name-forge compatibility
-      const tagArray = Object.keys(tags);
-
-      name = await nameForge.generate(
-        settings.kind,
-        settings.subtype,
-        settings.prominence || 'marginal',
-        tagArray,
-        settings.culture || 'world'
+      throw new Error(
+        `createEntity: name is required for GraphStore. ` +
+        `Runtime should generate names before calling createEntity. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
       );
     }
 
     // Validate culture - must not be a variable reference
     const culture = settings.culture || 'world';
-    if (culture.startsWith('$')) {
-      console.error(`[createEntity] BUG: culture value is an unresolved variable reference: ${culture}. Entity: ${settings.kind}/${settings.subtype}. Using 'world' fallback.`);
-    }
+    const normalizedCulture = culture.startsWith('$') ? 'world' : culture;
 
     // Build the full entity
     const entity: HardState = {
@@ -893,38 +849,13 @@ export class GraphStore implements Graph {
       description: settings.description || '',
       status: settings.status || 'active',
       prominence: settings.prominence || 'marginal',
-      culture: culture.startsWith('$') ? 'world' : culture,
+      culture: normalizedCulture,
       tags,
-      links: [],
       coordinates: settings.coordinates,
       temporal: settings.temporal,
       createdAt: this.tick,
       updatedAt: this.tick
     };
-
-    // Check for coordinate overlap with existing entities of the same kind
-    const overlapThreshold = 1.0;  // Entities within this distance are "overlapping"
-    const newCoords = settings.coordinates;
-    for (const existing of this.#entities.values()) {
-      if (existing.kind !== settings.kind) continue;
-      if (!existing.coordinates) continue;
-
-      const dx = existing.coordinates.x - newCoords.x;
-      const dy = existing.coordinates.y - newCoords.y;
-      const dz = (existing.coordinates.z ?? 50) - (newCoords.z ?? 50);
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-      if (distance < overlapThreshold) {
-        this.config.emitter?.log(
-          'warn',
-          `Coordinate overlap: ${settings.kind}:${settings.subtype} "${name}" ` +
-          `placed at (${newCoords.x.toFixed(1)}, ${newCoords.y.toFixed(1)}, ${(newCoords.z ?? 50).toFixed(1)}) ` +
-          `overlaps with existing "${existing.name}" at ` +
-          `(${existing.coordinates.x.toFixed(1)}, ${existing.coordinates.y.toFixed(1)}, ${(existing.coordinates.z ?? 50).toFixed(1)}) ` +
-          `[distance: ${distance.toFixed(2)}]`
-        );
-      }
-    }
 
     this.#entities.set(id, entity);
 
@@ -956,8 +887,7 @@ export class GraphStore implements Graph {
 
   getRelationships(options?: { includeHistorical?: boolean }): Relationship[] {
     return this.#relationships
-      .filter(r => options?.includeHistorical || r.status !== FRAMEWORK_STATUS.HISTORICAL)
-      .map(r => ({ ...r }));
+      .filter(r => options?.includeHistorical || r.status !== FRAMEWORK_STATUS.HISTORICAL);
   }
 
   getAllRelationships(options?: { includeHistorical?: boolean }): Relationship[] {
@@ -981,7 +911,7 @@ export class GraphStore implements Graph {
       if (criteria.category && rel.category !== criteria.category) return false;
       if (criteria.minStrength !== undefined && (rel.strength ?? 0) < criteria.minStrength) return false;
       return true;
-    }).map(r => ({ ...r }));
+    });
   }
 
   getEntityRelationships(entityId: string, direction: 'src' | 'dst' | 'both' = 'both', options?: { includeHistorical?: boolean }): Relationship[] {
@@ -991,7 +921,7 @@ export class GraphStore implements Graph {
       if (direction === 'src') return rel.src === entityId;
       if (direction === 'dst') return rel.dst === entityId;
       return rel.src === entityId || rel.dst === entityId;
-    }).map(r => ({ ...r }));
+    });
   }
 
   hasRelationship(srcId: string, dstId: string, kind?: string): boolean {
@@ -1017,12 +947,7 @@ export class GraphStore implements Graph {
     const srcEntity = this.#entities.get(srcId);
     const dstEntity = this.#entities.get(dstId);
 
-    if (!srcEntity) {
-      this.config.emitter?.log('warn', `addRelationship: source entity ${srcId} does not exist`);
-      return false;
-    }
-    if (!dstEntity) {
-      this.config.emitter?.log('warn', `addRelationship: destination entity ${dstId} does not exist`);
+    if (!srcEntity || !dstEntity) {
       return false;
     }
 
@@ -1056,8 +981,6 @@ export class GraphStore implements Graph {
 
     this.#relationships.push(relationship);
 
-    // Update entity links (denormalized cache)
-    srcEntity.links.push({ ...relationship });
     srcEntity.updatedAt = this.tick;
     dstEntity.updatedAt = this.tick;
 
@@ -1071,40 +994,30 @@ export class GraphStore implements Graph {
     if (index === -1) return false;
     this.#relationships.splice(index, 1);
 
-    // Also remove from entity links
     const srcEntity = this.#entities.get(srcId);
-    if (srcEntity) {
-      srcEntity.links = srcEntity.links.filter(
-        l => !(l.src === srcId && l.dst === dstId && l.kind === kind)
-      );
-      srcEntity.updatedAt = this.tick;
-    }
     const dstEntity = this.#entities.get(dstId);
-    if (dstEntity) {
-      dstEntity.updatedAt = this.tick;
-    }
+    if (srcEntity) srcEntity.updatedAt = this.tick;
+    if (dstEntity) dstEntity.updatedAt = this.tick;
     return true;
   }
 
   /**
    * Bulk replace relationships (used by culling system)
-   * @internal Should only be used by framework systems, not templates
+   * @internal Should only be used by framework systems
    */
   _setRelationships(relationships: Relationship[]): void {
     this.#relationships = relationships;
-    // Note: This doesn't update entity links - caller should rebuild if needed
   }
 
   /**
    * Create a new GraphStore with initial configuration
    */
-  static create(config: EngineConfig, initialEra: Era): GraphStore {
+  static create(initialEra: Era, pressures: Array<{ id: string; initialValue?: number }>): GraphStore {
     const store = new GraphStore();
-    store.config = config;
     store.currentEra = initialEra;
 
-    // Initialize pressures from config (declarative format uses initialValue)
-    for (const pressure of config.pressures) {
+    // Initialize pressures from declarative pressure list
+    for (const pressure of pressures) {
       if (typeof (pressure as any).initialValue !== 'number') {
         throw new Error(`Pressure '${(pressure as any).id}' is missing initialValue.`);
       }

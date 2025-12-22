@@ -15,9 +15,7 @@ export default function RunControls({
   onRunToCompletion,
   onAbort,
   onReset,
-  onExportToArchivist,
   onViewResults,
-  showArchivist,
 }) {
   if (isRunning && !isPaused) {
     // Running state - show stop button
@@ -47,15 +45,6 @@ export default function RunControls({
           >
             ▶ Continue
           </button>
-          {showArchivist && onExportToArchivist && (
-            <button
-              className="lw-btn lw-btn-archivist"
-              onClick={onExportToArchivist}
-              title="Export current state to Archivist"
-            >
-              📖 Export to Archivist
-            </button>
-          )}
           <button className="lw-btn lw-btn-reset" onClick={onReset}>
             ↻ Reset
           </button>

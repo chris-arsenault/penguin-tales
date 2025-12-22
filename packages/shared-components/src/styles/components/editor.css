@@ -801,3 +801,188 @@
   gap: var(--spacing-md);
   margin-top: var(--spacing-xl);
 }
+
+/* ==========================================================================
+   Slot selector dropdown (for run slots)
+   ========================================================================== */
+
+.slot-selector {
+  position: relative;
+}
+
+.slot-selector-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  min-width: 160px;
+  justify-content: space-between;
+}
+
+.slot-selector-trigger:hover {
+  border-color: var(--color-accent);
+}
+
+.slot-selector-name {
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-selector-chevron {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.slot-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--spacing-xs);
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  min-width: 280px;
+  max-height: 350px;
+  overflow-y: auto;
+  z-index: var(--z-dropdown);
+  box-shadow: var(--shadow-lg);
+}
+
+.slot-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.slot-dropdown-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slot-list {
+  padding: var(--spacing-sm);
+}
+
+.slot-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xs);
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.slot-item:last-child {
+  margin-bottom: 0;
+}
+
+.slot-item:hover {
+  background-color: var(--color-bg);
+}
+
+.slot-item-active {
+  background-color: var(--color-bg-dark);
+}
+
+.slot-item-empty {
+  opacity: 0.7;
+}
+
+.slot-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-item-name {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-item-empty .slot-item-name {
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+
+.slot-active-indicator {
+  color: var(--color-accent);
+  margin-right: var(--spacing-xs);
+}
+
+.slot-item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.slot-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-left: var(--spacing-md);
+}
+
+.slot-status {
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.slot-title-input {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-bg-dark);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  outline: none;
+}
+
+.slot-empty-hint {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--color-text-dim);
+  font-size: var(--font-size-sm);
+}
+
+.btn-xs-primary {
+  background: var(--gradient-accent);
+  color: var(--color-bg-dark);
+}
+
+.btn-xs-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-xs-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.btn-xs-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}

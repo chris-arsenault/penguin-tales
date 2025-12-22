@@ -33,6 +33,7 @@ export const colors = {
   accentCosmographer: '#60a5fa',  // Frost blue
   accentCoherence: '#f59e0b',     // Amber (warm contrast)
   accentSimulation: '#a78bfa',    // Purple (cool contrast)
+  accentIlluminator: '#a855f7',   // Purple/Magenta (enrichment/magic)
   accentArchivist: '#3b82f6',     // Arctic blue (primary)
 
   // Secondary accent shades (for gradients)
@@ -41,6 +42,7 @@ export const colors = {
   accentCosmographerLight: '#93c5fd',
   accentCoherenceLight: '#fbbf24',
   accentSimulationLight: '#c4b5fd',
+  accentIlluminatorLight: '#c084fc',
   accentArchivistLight: '#60a5fa',
 
   // Feature highlight colors
@@ -230,6 +232,7 @@ export function getAccentColor(appId) {
     case 'cosmography': return colors.accentCosmographer;
     case 'coherence': return colors.accentCoherence;
     case 'simulation': return colors.accentSimulation;
+    case 'illuminator': return colors.accentIlluminator;
     case 'archivist': return colors.accentArchivist;
     default: return colors.accent;
   }
@@ -248,6 +251,8 @@ export function getAccentGradient(appId) {
       return `linear-gradient(135deg, ${colors.accentCoherence} 0%, ${colors.accentCoherenceLight} 100%)`;
     case 'simulation':
       return `linear-gradient(135deg, ${colors.accentSimulation} 0%, ${colors.accentSimulationLight} 100%)`;
+    case 'illuminator':
+      return `linear-gradient(135deg, ${colors.accentIlluminator} 0%, ${colors.accentIlluminatorLight} 100%)`;
     case 'archivist':
       return `linear-gradient(135deg, ${colors.accentArchivist} 0%, ${colors.accentArchivistLight} 100%)`;
     default:
@@ -263,6 +268,7 @@ export function getHoverBg(appId) {
     case 'cosmography': return 'rgba(96, 165, 250, 0.15)';
     case 'coherence': return 'rgba(245, 158, 11, 0.15)';
     case 'simulation': return 'rgba(167, 139, 250, 0.15)';
+    case 'illuminator': return 'rgba(168, 85, 247, 0.15)';
     case 'archivist': return 'rgba(59, 130, 246, 0.15)';
     default: return colors.hoverBg;
   }

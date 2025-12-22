@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { METRIC_TYPES, DIRECTIONS } from '../constants';
 import { ReferenceDropdown, NumberInput } from '../../shared';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
  * RuleCard - Expandable card for rule configuration

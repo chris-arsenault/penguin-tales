@@ -1,4 +1,4 @@
-import { Graph } from '../engine/types';
+import { EngineConfig, Graph } from '../engine/types';
 import { HardState } from '../core/worldTypes';
 
 /**
@@ -27,11 +27,8 @@ export interface ValidationReport {
  */
 export function validateConnectedEntities(graph: Graph): ValidationResult {
   const unconnected = graph.getEntities().filter(entity => {
-    // Check for outgoing relationships (in entity.links)
-    const hasOutgoing = entity.links.length > 0;
-
-    // Check for incoming relationships (where entity is dst)
-    const hasIncoming = graph.getRelationships().some(r => r.dst === entity.id);
+    const hasOutgoing = graph.getEntityRelationships(entity.id, 'src').length > 0;
+    const hasIncoming = graph.getEntityRelationships(entity.id, 'dst').length > 0;
 
     return !hasOutgoing && !hasIncoming;
   });
@@ -74,18 +71,18 @@ export function validateConnectedEntities(graph: Graph): ValidationResult {
  * Validate that entities have required structural relationships
  * Uses domain schema to determine requirements (no hardcoded entity kinds!)
  */
-export function validateNPCStructure(graph: Graph): ValidationResult {
+export function validateNPCStructure(graph: Graph, config: EngineConfig): ValidationResult {
   const invalidEntities: HardState[] = [];
   const missingByKindSubtype = new Map<string, Map<string, number>>();
 
   // Check all entities against domain schema requirements
   for (const entity of graph.getEntities()) {
-    if (!graph.config.domain.validateEntityStructure) {
+    if (!config.domain.validateEntityStructure) {
       // Domain doesn't provide validation - skip
       continue;
     }
 
-    const validation = graph.config.domain.validateEntityStructure(entity);
+    const validation = config.domain.validateEntityStructure(entity, graph);
 
     if (!validation.valid) {
       invalidEntities.push(entity);
@@ -170,59 +167,16 @@ export function validateRelationshipIntegrity(graph: Graph): ValidationResult {
   };
 }
 
-/**
- * Validate that entity links match actual relationships
- */
-export function validateLinkSync(graph: Graph): ValidationResult {
-  const mismatchedEntities: string[] = [];
-
-  graph.forEachEntity(entity => {
-    // Count relationships where this entity is src
-    const actualRels = graph.getRelationships().filter(r => r.src === entity.id);
-    const linkCount = entity.links.length;
-    const actualCount = actualRels.length;
-
-    if (linkCount !== actualCount) {
-      mismatchedEntities.push(
-        `${entity.name}: ${linkCount} in links array, ${actualCount} in relationships`
-      );
-    }
-  });
-
-  const passed = mismatchedEntities.length === 0;
-
-  let details = passed
-    ? 'All entity links match relationships'
-    : `${mismatchedEntities.length} entities with mismatched links:\n`;
-
-  if (!passed) {
-    mismatchedEntities.slice(0, 10).forEach(msg => {
-      details += `  - ${msg}\n`;
-    });
-    if (mismatchedEntities.length > 10) {
-      details += `  ... and ${mismatchedEntities.length - 10} more\n`;
-    }
-  }
-
-  return {
-    name: 'Link Synchronization',
-    passed,
-    failureCount: mismatchedEntities.length,
-    details
-  };
-}
-
 // validateLorePresence moved to @illuminator
 
 /**
  * Run all validators and generate a complete report
  */
-export function validateWorld(graph: Graph): ValidationReport {
+export function validateWorld(graph: Graph, config: EngineConfig): ValidationReport {
   const results: ValidationResult[] = [
     validateConnectedEntities(graph),
-    validateNPCStructure(graph),
-    validateRelationshipIntegrity(graph),
-    validateLinkSync(graph)
+    validateNPCStructure(graph, config),
+    validateRelationshipIntegrity(graph)
     // validateLorePresence moved to @illuminator
   ];
 

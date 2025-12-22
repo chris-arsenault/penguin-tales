@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 import { ReferenceDropdown, LevelSelector, PROMINENCE_LEVELS, ChipSelect, NumberInput } from '../../shared';
 
 /**

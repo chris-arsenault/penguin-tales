@@ -34,7 +34,6 @@ export interface HardState {
     prominence: Prominence;
     culture: string;  // Domain-defined cultural affiliation (e.g., 'highland', 'coastal', 'nomadic', 'world')
     tags: EntityTags;        // Key-value pairs for semantic tagging
-    links: Relationship[];
     createdAt: number;       // tick or epoch index
     updatedAt: number;
 

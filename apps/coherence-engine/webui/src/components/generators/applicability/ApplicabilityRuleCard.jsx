@@ -8,7 +8,7 @@ import { ReferenceDropdown, ChipSelect, NumberInput, PROMINENCE_LEVELS } from '.
 import { AddRuleButton } from './AddRuleButton';
 import { createNewRule } from './createNewRule';
 import { GraphPathEditor } from '../filters/GraphPathEditor';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
  * @param {Object} props

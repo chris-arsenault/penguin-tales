@@ -7,7 +7,7 @@
  */
 
 import { HardState, EntityTags } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
 import { hasTag } from '../utils';
 
@@ -54,7 +54,7 @@ export interface ClusterCriterion {
   direction?: 'src' | 'dst';
 
   /** For 'custom': custom predicate function */
-  predicate?: (e1: HardState, e2: HardState, graphView: TemplateGraphView) => boolean;
+  predicate?: (e1: HardState, e2: HardState, graphView: WorldRuntime) => boolean;
 }
 
 /**
@@ -84,7 +84,7 @@ export function calculateSimilarity(
   e1: HardState,
   e2: HardState,
   criteria: ClusterCriterion[],
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): { score: number; matchedCriteria: string[] } {
   let score = 0;
   const matchedCriteria: string[] = [];
@@ -164,7 +164,7 @@ export function calculateSimilarity(
 export function detectClusters(
   entities: HardState[],
   config: ClusterConfig,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): Cluster[] {
   if (entities.length < config.minSize) {
     return [];
@@ -266,7 +266,7 @@ export function findBestClusterMatch(
   entity: HardState,
   clusters: Cluster[],
   criteria: ClusterCriterion[],
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   minimumScore: number
 ): Cluster | undefined {
   let bestCluster: Cluster | undefined;

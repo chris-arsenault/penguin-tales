@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { FILTER_TYPES } from '../constants';
 import { ReferenceDropdown, ChipSelect, PROMINENCE_LEVELS } from '../../shared';
 import { GraphPathEditor } from './GraphPathEditor';
-import TagSelector from '@lore-weave/shared-components/TagSelector';
+import TagSelector from '@penguin-tales/shared-components/TagSelector';
 
 /**
  * @param {Object} props

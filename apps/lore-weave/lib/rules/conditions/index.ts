@@ -311,8 +311,7 @@ function evaluateRelationshipCount(
   const direction = normalizeDirection(condition.direction);
   let count = 0;
 
-  // Use graph.getAllRelationships() for compatibility with test setups
-  // where entity.links may not be synchronized
+  // Use graph relationships as the single source of truth
   const allRelationships = ctx.graph.getAllRelationships();
   for (const link of allRelationships) {
     if (condition.relationshipKind && link.kind !== condition.relationshipKind) {
@@ -369,8 +368,7 @@ function evaluateRelationshipExists(
     withEntityId = withEntity?.id;
   }
 
-  // Use graph.getAllRelationships() for compatibility with test setups
-  // where entity.links may not be synchronized
+  // Use graph relationships as the single source of truth
   const allRelationships = ctx.graph.getAllRelationships();
   const passed = allRelationships.some((link) => {
     if (link.kind !== condition.relationshipKind) return false;
@@ -694,14 +692,15 @@ function evaluateEntityHasRelationship(
   }
 
   const direction = normalizeDirection(condition.direction);
-  const passed = entity.links.some((link) => {
+  const passed = ctx.graph.getAllRelationships().some((link) => {
     if (link.kind !== condition.relationshipKind) return false;
-
-    return (
-      direction === 'both' ||
-      (direction === 'src' && link.src === entity.id) ||
-      (direction === 'dst' && link.dst === entity.id)
-    );
+    if (direction === 'both') {
+      return link.src === entity.id || link.dst === entity.id;
+    }
+    if (direction === 'src') {
+      return link.src === entity.id;
+    }
+    return link.dst === entity.id;
   });
 
   return {

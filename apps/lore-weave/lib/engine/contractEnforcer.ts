@@ -1,5 +1,5 @@
-import { Graph, GrowthTemplate, EngineConfig, TagMetadata } from '../engine/types';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { GrowthTemplate, EngineConfig, TagMetadata } from '../engine/types';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { HardState, EntityTags } from '../core/worldTypes';
 import { TagHealthAnalyzer } from '../statistics/tagHealthAnalyzer';
 import { getTagMetadata } from '../statistics/tagRegistryHelpers';
@@ -48,7 +48,7 @@ export class ContractEnforcer {
    * Uses tag registry to determine expected counts per tag.
    */
   public checkTagSaturation(
-    graph: Graph,
+    graph: WorldRuntime,
     tagsToAdd: string[]
   ): { saturated: boolean; oversaturatedTags: string[]; reason?: string } {
     // Count current tag usage
@@ -116,7 +116,7 @@ export class ContractEnforcer {
    */
   public enforceTagCoverage(
     entity: HardState,
-    graph: Graph
+    graph: WorldRuntime
   ): { needsAdjustment: boolean; suggestion: string; tagsToAdd?: string[]; tagsToRemove?: string[] } {
     const currentCount = getTagKeyCount(entity.tags);
 
@@ -173,7 +173,7 @@ export class ContractEnforcer {
    */
   public getDiagnostic(
     template: GrowthTemplate,
-    graphView: TemplateGraphView
+    graphView: WorldRuntime
   ): string {
     const parts: string[] = [];
 

@@ -8,7 +8,6 @@ import { loadActions } from './actionInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
   generateId,
-  addEntity,
   addRelationship,
   modifyRelationshipStrength,
   updateEntity,
@@ -27,7 +26,7 @@ import { StatisticsCollector } from '../statistics/statisticsCollector';
 import { PopulationTracker, PopulationMetrics } from '../statistics/populationTracker';
 import { DynamicWeightCalculator } from '../selection/dynamicWeightCalculator';
 import { TargetSelector } from '../selection/targetSelector';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import { CoordinateContext } from '../coordinates/coordinateContext';
 import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
@@ -35,7 +34,15 @@ import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
 import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS } from '../core/frameworkPrimitives';
 import { createEraEntity } from '../systems/eraSpawner';
-import type { ISimulationEmitter, PressureChangeDetail, DiscretePressureModification, PressureModificationSource } from '../observer/types';
+import type {
+  ISimulationEmitter,
+  PressureChangeDetail,
+  DiscretePressureModification,
+  PressureModificationSource,
+  WorldUiSchema,
+  EntityKindMapConfig,
+  RegionSchema
+} from '../observer/types';
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
 import { createGrowthSystem, GrowthSystem, GrowthEpochSummary } from '../systems/growthSystem';
@@ -54,6 +61,7 @@ export class WorldEngine {
   private growthSystem?: GrowthSystem;  // Distributed growth system (framework-managed)
   private templateInterpreter: TemplateInterpreter;  // Interprets declarative templates
   private graph: Graph;
+  private runtime!: WorldRuntime;
   private currentEpoch: number;
   private startTime: number = 0;  // Track simulation duration
   private templateSelector?: TemplateSelector;  // Optional statistical template selector
@@ -377,7 +385,7 @@ export class WorldEngine {
     // These systems run at epoch end and use the clustering/archival utilities
 
     // Initialize graph from initial state using GraphStore
-    this.graph = GraphStore.create(config, config.eras[0]);
+    this.graph = GraphStore.create(config.eras[0], config.pressures);
     // LLM loreIndex moved to @illuminator
     // Override rate limit state defaults
     this.graph.rateLimitState = {
@@ -385,6 +393,8 @@ export class WorldEngine {
       lastCreationTick: -999,  // Start far in past so first creation can happen
       creationsThisEpoch: 0
     };
+
+    this.runtime = new WorldRuntime(this.graph, this.targetSelector, this.coordinateContext, this.config);
     
     // Load initial entities and initialize catalysts
     initialState.forEach(entity => {
@@ -422,7 +432,7 @@ export class WorldEngine {
 
       // Initialize catalyst properties for prominent entities
       // Pass graph for domain-specific action domain mapping
-      initializeCatalystSmart(loadedEntity, this.graph);
+      initializeCatalystSmart(loadedEntity);
 
       this.graph._loadEntity(id, loadedEntity);
     });
@@ -672,12 +682,14 @@ export class WorldEngine {
     coordinateStats.reset();
 
     // Recreate graph from initial state
-    this.graph = GraphStore.create(this.config, this.config.eras[0]);
+    this.graph = GraphStore.create(this.config.eras[0], this.config.pressures);
     this.graph.rateLimitState = {
       currentThreshold: 0.3,
       lastCreationTick: -999,
       creationsThisEpoch: 0
     };
+
+    this.runtime = new WorldRuntime(this.graph, this.targetSelector, this.coordinateContext, this.config);
 
     // Reload initial entities
     initialState.forEach(entity => {
@@ -710,7 +722,7 @@ export class WorldEngine {
         updatedAt: 0
       };
 
-      initializeCatalystSmart(loadedEntity, this.graph);
+      initializeCatalystSmart(loadedEntity);
       this.graph._loadEntity(id, loadedEntity);
     });
 
@@ -916,7 +928,7 @@ export class WorldEngine {
 
     // Apply era special rules if any
     if (era.specialRules) {
-      era.specialRules(this.graph);
+      era.specialRules(this.runtime);
     }
 
     // Meta-entity formation is now handled by SimulationSystems (run at epoch end)
@@ -1038,7 +1050,7 @@ export class WorldEngine {
     const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
 
     const unusedTemplates = this.runtimeTemplates.filter(t => !this.templateRunCounts.has(t.id));
-    const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+    const diagnosticView = this.runtime;
 
     this.emitter.templateUsage({
       totalApplications: totalRuns,
@@ -1279,7 +1291,7 @@ export class WorldEngine {
     const totalRuns = sortedTemplates.reduce((sum, [_, count]) => sum + count, 0);
 
     const unusedTemplates = this.runtimeTemplates.filter(t => !this.templateRunCounts.has(t.id));
-    const diagnosticView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+    const diagnosticView = this.runtime;
 
     this.emitter.templateUsage({
       totalApplications: totalRuns,
@@ -1353,6 +1365,8 @@ export class WorldEngine {
    */
   private emitCompleteEvent(): void {
     const durationMs = Date.now() - this.startTime;
+    const coordinateState = this.coordinateContext.export();
+    const uiSchema = this.buildUiSchema(coordinateState);
 
     this.emitter.complete({
       metadata: {
@@ -1362,7 +1376,8 @@ export class WorldEngine {
         entityCount: this.graph.getEntityCount(),
         relationshipCount: this.graph.getRelationshipCount(),
         historyEventCount: this.graph.history.length,
-        durationMs
+        durationMs,
+        enrichmentTriggers: {}
       },
       hardState: this.graph.getEntities(),
       relationships: this.graph.getRelationships(),
@@ -1374,16 +1389,20 @@ export class WorldEngine {
         return {
           entityKindRatios: state.entityKindRatios,
           prominenceRatios: state.prominenceRatios,
+          relationshipTypeRatios: state.relationshipTypeRatios,
+          graphMetrics: state.graphMetrics,
           deviation: {
             overall: deviation.overall,
             entityKind: deviation.entityKind.score,
             prominence: deviation.prominence.score,
             relationship: deviation.relationship.score,
             connectivity: deviation.connectivity.score
-          }
+          },
+          targets: this.config.distributionTargets?.global
         };
       })() : undefined,
-      coordinateState: this.coordinateContext.export()
+      coordinateState,
+      uiSchema
     });
   }
   // Meta-entity formation is now handled by SimulationSystems:
@@ -1523,7 +1542,7 @@ export class WorldEngine {
       const modifier = distributionModifiers[system.id] ?? baseModifier;
 
       try {
-        const systemGraphView = new TemplateGraphView(this.graph, this.targetSelector, this.coordinateContext);
+        const systemGraphView = this.runtime;
         const relationshipsBefore = this.graph.getRelationshipCount();
         const result = await system.apply(systemGraphView, modifier);
 
@@ -1905,6 +1924,148 @@ export class WorldEngine {
     // Enrichment moved to @illuminator - this is now a no-op
   }
 
+  private buildUiSchema(
+    coordinateState: ReturnType<CoordinateContext['export']>
+  ): WorldUiSchema {
+    const domain = this.config.domain;
+    const uiConfig = domain.uiConfig || {};
+    const prominenceLevels = uiConfig.prominenceLevels || [
+      'forgotten',
+      'marginal',
+      'recognized',
+      'renowned',
+      'mythic'
+    ];
+
+    const entityKinds = (domain.entityKinds || []).map((kind) => {
+      if (typeof kind === 'string') {
+        return { kind, description: kind, subtypes: [], statuses: [] } as any;
+      }
+      return {
+        ...kind,
+        kind: (kind as any).kind || (kind as any).id
+      };
+    });
+
+    const relationshipKinds = (domain.relationshipKinds || []).map((rel) => {
+      if (typeof rel === 'string') {
+        return {
+          id: rel,
+          name: rel,
+          description: rel,
+          srcKinds: [],
+          dstKinds: []
+        };
+      }
+      return {
+        id: (rel as any).id || rel.kind,
+        name: (rel as any).name || rel.description || rel.kind,
+        description: rel.description,
+        srcKinds: rel.srcKinds || [],
+        dstKinds: rel.dstKinds || [],
+        symmetric: (rel as any).symmetric,
+        category: (rel as any).category
+      };
+    });
+
+    const cultures = (domain.cultures || []).map((culture) => {
+      if (typeof culture === 'string') {
+        return { id: culture, name: culture } as any;
+      }
+      return {
+        ...culture,
+        id: (culture as any).id || String(culture)
+      };
+    });
+
+    const cultureColors: Record<string, string> = {};
+    cultures.forEach((culture) => {
+      const color = (culture as any).color;
+      if (culture.id && color) {
+        cultureColors[culture.id] = color;
+      }
+    });
+
+    const perKindMaps: Record<string, EntityKindMapConfig> = {};
+    const perKindRegions: Record<string, RegionSchema[]> = {};
+
+    const semanticPlaneByKind = new Map<string, any>();
+    const contextKinds = this.config.coordinateContextConfig?.entityKinds || [];
+    contextKinds.forEach((kindConfig) => {
+      if (kindConfig.semanticPlane) {
+        semanticPlaneByKind.set(kindConfig.id, kindConfig.semanticPlane);
+      }
+    });
+
+    entityKinds.forEach((kind) => {
+      const kindId = (kind as any).kind || (kind as any).id;
+      if (!kindId) return;
+      const semanticPlane = (kind as any).semanticPlane || semanticPlaneByKind.get(kindId);
+      if (!semanticPlane) return;
+      const axes = semanticPlane.axes || {};
+      perKindMaps[kindId] = {
+        entityKind: kindId,
+        name: `${kind.description || kindId} Semantic Map`,
+        description: `Coordinate space for ${kind.description || kindId}`,
+        bounds: { min: 0, max: 100 },
+        hasZAxis: !!axes.z,
+        zAxisLabel: axes.z?.name,
+        xAxis: axes.x,
+        yAxis: axes.y,
+        zAxis: axes.z
+      };
+    });
+
+    if (coordinateState?.regions) {
+      Object.entries(coordinateState.regions).forEach(([entityKind, regions]) => {
+        if (!regions || regions.length === 0) return;
+        perKindRegions[entityKind] = regions.map((region) => {
+          const metadataColor =
+            region.color ||
+            (region.metadata?.color as string | undefined) ||
+            (region.culture ? cultureColors[region.culture] : undefined);
+          return {
+            id: region.id,
+            label: region.label,
+            description: region.description || '',
+            bounds: region.bounds,
+            zRange: region.zRange,
+            parentRegion: region.parentRegion,
+            metadata: {
+              ...(region.metadata || {}),
+              color: metadataColor,
+              culture: region.culture,
+              tags: region.tags,
+              subtype: region.culture ? 'colony' : 'default',
+              emergent: region.emergent,
+              createdAt: region.createdAt,
+              createdBy: region.createdBy
+            }
+          };
+        });
+      });
+    }
+
+    const schema: WorldUiSchema = {
+      worldName: domain.name || 'Simulation Results',
+      worldIcon: uiConfig.worldIcon || '',
+      entityKinds,
+      relationshipKinds,
+      prominenceLevels,
+      cultures
+    };
+
+    if (Object.keys(perKindMaps).length > 0) {
+      schema.perKindMaps = perKindMaps;
+    }
+
+    if (Object.keys(perKindRegions).length > 0) {
+      schema.perKindRegions = perKindRegions;
+    }
+
+    return schema;
+  }
+
   public exportState(): any {
     const entities = this.graph.getEntities();
 
@@ -1916,6 +2077,9 @@ export class WorldEngine {
 
     // Extract meta-entities for visibility
     const metaEntities = entities.filter(e => hasTag(e.tags, 'meta-entity'));
+
+    const coordinateState = this.coordinateContext.export();
+    const uiSchema = this.buildUiSchema(coordinateState);
 
     const exportData: any = {
       metadata: {
@@ -1931,13 +2095,15 @@ export class WorldEngine {
           totalFormed: this.metaEntitiesFormed.length,
           formations: this.metaEntitiesFormed,
           comment: 'Meta-entities are abilities/rules that emerged from clustering, marked with meta-entity tag'
-        }
+        },
+        enrichmentTriggers: {}
       },
       hardState: entities,
       relationships: activeRelationships,  // Only active relationships for day 0 game state
       historicalRelationships: historicalRelationships,  // Historical relationships for lore generation
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history  // Export ALL events, not just last 50
+      history: this.graph.history,  // Export ALL events, not just last 50
+      uiSchema
       // loreRecords moved to @illuminator
     };
 
@@ -1963,7 +2129,7 @@ export class WorldEngine {
     }
 
     // Export coordinate context state (emergent regions, etc.)
-    exportData.coordinateState = this.coordinateContext.export();
+    exportData.coordinateState = coordinateState;
 
     return exportData;
   }

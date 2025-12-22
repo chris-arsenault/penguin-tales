@@ -48,16 +48,6 @@ export function archiveRelationship(
 
   const srcEntity = graph.getEntity(src);
   if (srcEntity) {
-    const link = srcEntity.links.find(l =>
-      l.src === src &&
-      l.dst === dst &&
-      l.kind === kind &&
-      l.status !== 'historical'
-    );
-    if (link) {
-      link.status = 'historical';
-      link.archivedAt = graph.tick;
-    }
     srcEntity.updatedAt = graph.tick;
   }
 
@@ -90,10 +80,6 @@ export function modifyRelationshipStrength(
   const dstEntity = graph.getEntity(dstId);
 
   if (srcEntity) {
-    const link = srcEntity.links.find(l =>
-      l.kind === kind && l.src === srcId && l.dst === dstId
-    );
-    if (link) link.strength = rel.strength;
     srcEntity.updatedAt = graph.tick;
   }
 

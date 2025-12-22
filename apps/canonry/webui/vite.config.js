@@ -34,6 +34,12 @@ export default defineConfig({
           entry: '/lore-weave/remoteEntry.js',
           entryGlobalName: 'loreWeave',
         },
+        illuminator: {
+          type: 'module',
+          name: 'illuminator',
+          entry: '/illuminator/remoteEntry.js',
+          entryGlobalName: 'illuminator',
+        },
         archivist: {
           type: 'module',
           name: 'archivist',

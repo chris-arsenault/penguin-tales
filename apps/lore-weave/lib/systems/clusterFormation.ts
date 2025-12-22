@@ -13,7 +13,7 @@
 
 import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/types';
 import { HardState, Relationship, Prominence } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import {
   ClusterConfig,
   ClusterCriterion,
@@ -187,7 +187,7 @@ function getProminence(
 async function createMetaEntity(
   cluster: HardState[],
   config: MetaEntityConfig,
-  graphView: TemplateGraphView
+  graphView: WorldRuntime
 ): Promise<Partial<HardState>> {
   // Determine subtype
   let subtype: string;
@@ -269,7 +269,7 @@ async function createMetaEntity(
  * Create a governance faction for a legal code
  */
 async function createGovernanceFaction(
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   metaEntityId: string,
   metaEntity: HardState,
   config: PostProcessConfig
@@ -380,7 +380,7 @@ export function createClusterFormationSystem(
     id: config.id,
     name: config.name,
 
-    apply: async (graphView: TemplateGraphView, modifier: number = 1.0): Promise<SystemResult> => {
+    apply: async (graphView: WorldRuntime, modifier: number = 1.0): Promise<SystemResult> => {
       // Check epoch end if required
       if (config.runAtEpochEnd) {
         const ticksPerEpoch = graphView.config.ticksPerEpoch || 15;

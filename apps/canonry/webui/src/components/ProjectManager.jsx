@@ -1,10 +1,11 @@
 /**
- * ProjectManager - Header bar with project dropdown
+ * ProjectManager - Header bar with project and slot dropdowns
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import ValidationPopover from './ValidationPopover';
 import TracePopover from './TracePopover';
+import SlotSelector from './SlotSelector';
 
 export default function ProjectManager({
   projects,
@@ -21,6 +22,14 @@ export default function ProjectManager({
   onRemoveProperty,
   simulationState,
   systems = [],
+  // Slot management props
+  slots = {},
+  activeSlotIndex = 0,
+  onLoadSlot,
+  onSaveToSlot,
+  onClearSlot,
+  onUpdateSlotTitle,
+  hasDataInScratch = false,
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -189,6 +198,18 @@ export default function ProjectManager({
             </div>
           )}
         </div>
+
+        {currentProject && onLoadSlot && (
+          <SlotSelector
+            slots={slots}
+            activeSlotIndex={activeSlotIndex}
+            onLoadSlot={onLoadSlot}
+            onSaveToSlot={onSaveToSlot}
+            onClearSlot={onClearSlot}
+            onUpdateTitle={onUpdateSlotTitle}
+            hasDataInScratch={hasDataInScratch}
+          />
+        )}
       </div>
 
       <div className="app-header-right">

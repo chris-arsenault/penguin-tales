@@ -13,6 +13,7 @@
     "apps/canonry/webui",
     "apps/cosmographer/webui",
     "apps/coherence-engine/webui",
+    "apps/illuminator/webui",
     "apps/archivist/webui",
     "packages/world-schema",
     "packages/shared-components"
@@ -26,13 +27,10 @@
     "ui": "cd apps/lore-weave/webui && npm run dev",
     "ui:build": "cd apps/lore-weave/webui && npm run build",
     "ui:preview": "cd apps/lore-weave/webui && npm run preview",
-    "canonry": "npx concurrently -n proxy,canonry,name-forge,cosmographer,coherence,lore-weave,archivist -c white,blue,yellow,magenta,cyan,green,red \"node scripts/dev-proxy.js\" \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\" \"cd apps/archivist/webui && npm run dev\"",
+    "canonry": "npx concurrently -n proxy,canonry,name-forge,cosmographer,coherence,lore-weave,illuminator,archivist -c white,blue,yellow,magenta,cyan,green,red \"node scripts/dev-proxy.js\" \"cd apps/canonry/webui && npm run dev\" \"cd apps/name-forge/webui && npm run dev\" \"cd apps/cosmographer/webui && npm run dev\" \"cd apps/coherence-engine/webui && npm run dev\" \"cd apps/lore-weave/webui && npm run dev\" \"cd apps/illuminator/webui && npm run dev\" \"cd apps/archivist/webui && npm run dev\"",
     "test": "node -e \"console.log('Tests archived; no tests to run.');\"",
     "test:framework": "node -e \"console.log('Tests archived; no tests to run.');\"",
-    "clean": "npm run clean:framework",
-    "clean:framework": "cd apps/lore-weave && npm run clean",
-    "install:all": "npm install && cd apps/lore-weave && npm install && cd ../name-forge && npm install && cd ../../apps/lore-weave/webui && npm install",
-    "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../coherence-engine/webui && npm install && cd ../../lore-weave/webui && npm install && cd ../../archivist/webui && npm install && cd ../../../packages/world-schema && npm install"
+    "install:canonry": "cd apps/canonry/webui && npm install && cd ../../name-forge/webui && npm install && cd ../../cosmographer/webui && npm install && cd ../../coherence-engine/webui && npm install && cd ../../lore-weave/webui && npm install && cd ../../archivist/webui && npm install && cd ../../illuminator/webui && npm install && cd ../../../packages/world-schema && npm install"
   },
   "keywords": [
     "procedural-generation",

@@ -82,9 +82,8 @@ export function getCatalyzedEvents(
 
   // Find entities catalyzed by this entity (e.g., occurrences triggered by NPCs)
   graph.forEachEntity(entity => {
-    const triggeredByRel = entity.links.find(
-      link => link.kind === 'triggered_by' && link.dst === entityId
-    );
+    const triggeredByRel = graph.getEntityRelationships(entity.id, 'src')
+      .find(rel => rel.kind === 'triggered_by' && rel.dst === entityId);
     if (triggeredByRel) {
       results.push(entity);
     }
@@ -136,24 +135,12 @@ export function addCatalyzedEvent(
  * @returns True if relationship exists
  */
 export function hasRelationship(
-  entity: HardState,
+  graph: Graph,
+  entityId: string,
   relationshipKind: string,
   direction: 'src' | 'dst' | 'both' = 'both'
 ): boolean {
-  return entity.links.some(link => {
-    if (link.kind !== relationshipKind) {
-      return false;
-    }
-
-    if (direction === 'both') {
-      return true;
-    }
-
-    // For 'src', entity is the source (link shows dst)
-    // For 'dst', entity is the destination (link shows src)
-    // This depends on how links are stored - assuming bidirectional
-    return true; // Simplified for now
-  });
+  return graph.getEntityRelationships(entityId, direction).some(link => link.kind === relationshipKind);
 }
 
 /**
@@ -200,7 +187,7 @@ export function initializeCatalyst(
  * @param entity - The entity to initialize
  * @param graph - Graph (used for context)
  */
-export function initializeCatalystSmart(entity: HardState, graph: Graph): void {
+export function initializeCatalystSmart(entity: HardState): void {
   // Only prominent entities can act
   if (!['recognized', 'renowned', 'mythic'].includes(entity.prominence)) {
     return;

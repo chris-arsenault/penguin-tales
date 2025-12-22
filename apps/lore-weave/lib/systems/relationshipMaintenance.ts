@@ -1,6 +1,6 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
 import { Relationship } from '../core/worldTypes';
-import { TemplateGraphView } from '../graph/templateGraphView';
+import { WorldRuntime } from '../runtime/worldRuntime';
 import type { DecayRate, RelationshipKindDefinition } from '../domainInterface/domainSchema';
 import type { RelationshipMaintenanceConfig } from '../engine/systemInterpreter';
 import { createSystemContext, evaluateMetric } from '../rules';
@@ -32,7 +32,7 @@ function getDecayAmount(rate: DecayRate, ctx: ReturnType<typeof createSystemCont
 
 /** Get relationship kind definition from domain schema */
 function getRelationshipKindDef(
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   kind: string
 ): RelationshipKindDefinition | undefined {
   const relationshipKinds = graphView.config?.domain?.relationshipKinds;
@@ -41,7 +41,7 @@ function getRelationshipKindDef(
 }
 
 /** Check if a relationship kind is cullable */
-function isCullable(graphView: TemplateGraphView, kind: string): boolean {
+function isCullable(graphView: WorldRuntime, kind: string): boolean {
   // Framework relationships are NEVER cullable - they are structural
   if (isFrameworkRelationshipKind(kind)) {
     return false;
@@ -52,8 +52,8 @@ function isCullable(graphView: TemplateGraphView, kind: string): boolean {
 }
 
 /** Get decay rate for a relationship kind */
-function getDecayRate(graphView: TemplateGraphView, kind: string): DecayRate {
-  // Framework relationships NEVER decay - they are permanent structural links
+function getDecayRate(graphView: WorldRuntime, kind: string): DecayRate {
+  // Framework relationships NEVER decay - they are permanent structural relationships
   if (isFrameworkRelationshipKind(kind)) {
     return 'none';
   }
@@ -68,7 +68,7 @@ function getDecayRate(graphView: TemplateGraphView, kind: string): DecayRate {
  * pointing to the same destination entity.
  */
 function areInProximity(
-  graphView: TemplateGraphView,
+  graphView: WorldRuntime,
   srcId: string,
   dstId: string,
   proximityRelationshipKinds: string[]
@@ -81,16 +81,19 @@ function areInProximity(
 
   // Get destinations for src entity via proximity relationship kinds
   const srcDestinations = new Set(
-    (srcEntity.links || [])
-      .filter(l => proximityRelationshipKinds.includes(l.kind))
-      .map(l => l.dst)
+    graphView.getAllRelationships()
+      .filter(rel => rel.src === srcId && proximityRelationshipKinds.includes(rel.kind))
+      .map(rel => rel.dst)
   );
 
   if (srcDestinations.size === 0) return false;
 
   // Check if dst entity shares any destination
-  return (dstEntity.links || []).some(
-    l => proximityRelationshipKinds.includes(l.kind) && srcDestinations.has(l.dst)
+  return graphView.getAllRelationships().some(
+    rel =>
+      rel.src === dstId &&
+      proximityRelationshipKinds.includes(rel.kind) &&
+      srcDestinations.has(rel.dst)
   );
 }
 
@@ -114,7 +117,7 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
     id: config.id || 'relationship_maintenance',
     name: config.name || 'Relationship Maintenance',
 
-    apply: (graphView: TemplateGraphView, modifier: number = 1.0): SystemResult => {
+    apply: (graphView: WorldRuntime, modifier: number = 1.0): SystemResult => {
       // Only run every N ticks
       if (graphView.tick % maintenanceFrequency !== 0) {
         return {
@@ -183,11 +186,7 @@ export function createRelationshipMaintenanceSystem(config: RelationshipMaintena
         if (!isYoung && cullable && strength < cullThreshold) {
           culled++;
 
-          // Update entity links
           if (srcEntity) {
-            srcEntity.links = srcEntity.links.filter(l =>
-              !(l.kind === rel.kind && l.src === rel.src && l.dst === rel.dst)
-            );
             srcEntity.updatedAt = graphView.tick;
             modifiedEntityIds.add(srcEntity.id);
           }

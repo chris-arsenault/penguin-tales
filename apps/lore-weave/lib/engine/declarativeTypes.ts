@@ -409,7 +409,7 @@ export interface VariantEffects {
  * Context for template execution.
  */
 export interface ExecutionContext {
-  graphView: import('../graph/templateGraphView').TemplateGraphView;
+  graphView: import('../runtime/worldRuntime').WorldRuntime;
   variables: Map<string, import('../core/worldTypes').HardState | import('../core/worldTypes').HardState[] | undefined>;
   target?: import('../core/worldTypes').HardState;
   // Stores for graph path traversal (e.g., "$controlled" -> set of entity IDs)
