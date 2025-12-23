@@ -24,17 +24,6 @@
             }
           }
         ]
-      },
-      "instigator": {
-        "from": {
-          "relatedTo": "$actor",
-          "relationship": "leader_of",
-          "direction": "dst"
-        },
-        "kinds": [
-          "npc"
-        ],
-        "required": true
       }
     },
     "targeting": {
@@ -59,21 +48,13 @@
           "strength": 0.8
         },
         {
-          "type": "adjust_relationship_strength",
-          "kind": "leader_of",
-          "src": "$instigator",
-          "dst": "$actor",
-          "delta": 0.1
-        },
-        {
           "type": "modify_pressure",
           "pressureId": "security",
           "delta": -2
         }
       ],
       "descriptionTemplate": "{actor.name} seized control of {target.name}",
-      "applyProminenceToActor": true,
-      "applyProminenceToInstigator": true
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.3,
@@ -99,17 +80,6 @@
       "selection": {
         "strategy": "by_kind",
         "kind": "faction"
-      },
-      "instigator": {
-        "from": {
-          "relatedTo": "$actor",
-          "relationship": "leader_of",
-          "direction": "dst"
-        },
-        "kinds": [
-          "npc"
-        ],
-        "required": true
       }
     },
     "targeting": {
@@ -121,6 +91,16 @@
           "entities": [
             "$actor"
           ]
+        },
+        {
+          "type": "lacks_relationship",
+          "kind": "allied_with",
+          "with": "$actor"
+        },
+        {
+          "type": "lacks_relationship",
+          "kind": "at_war_with",
+          "with": "$actor"
         }
       ]
     },
@@ -140,11 +120,22 @@
           "delta": 2
         }
       ],
-      "descriptionTemplate": "forged alliance with {target.name}"
+      "descriptionTemplate": "forged alliance with {target.name}",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 0.8
+      "baseWeight": 0.8,
+      "pressureModifiers": [
+        {
+          "pressure": "harmony",
+          "multiplier": -0.6
+        },
+        {
+          "pressure": "security",
+          "multiplier": -0.3
+        }
+      ]
     },
     "enabled": true
   },
@@ -188,22 +179,23 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -10
+          "delta": -6
         }
       ],
-      "descriptionTemplate": "declared war on {target.name}"
+      "descriptionTemplate": "declared war on {target.name}",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.6,
-      "baseWeight": 0.5,
+      "baseWeight": 0.3,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": -1
+          "multiplier": -0.4
         },
         {
           "pressure": "security",
-          "multiplier": -1
+          "multiplier": -0.3
         }
       ]
     },
@@ -243,22 +235,23 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -5
+          "delta": -3
         }
       ],
-      "descriptionTemplate": "raided {target.name}"
+      "descriptionTemplate": "raided {target.name}",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.35,
-      "baseWeight": 1,
+      "baseWeight": 0.5,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": -1
+          "multiplier": 0.6
         },
         {
           "pressure": "security",
-          "multiplier": -1
+          "multiplier": 0.4
         }
       ]
     },
@@ -271,10 +264,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kinds": [
-          "npc",
-          "faction"
-        ]
+        "kind": "faction"
       }
     },
     "targeting": {
@@ -285,6 +275,13 @@
       ],
       "maxResults": 2,
       "filters": [
+        {
+          "type": "has_any_tag",
+          "tags": [
+            "trade",
+            "resource"
+          ]
+        },
         {
           "type": "lacks_relationship",
           "kind": "trades_with"
@@ -307,19 +304,20 @@
           "delta": 5
         }
       ],
-      "descriptionTemplate": "established trade route between {target.name} and {target2.name}"
+      "descriptionTemplate": "established trade route between {target.name} and {target2.name}",
+      "applyProminenceToActor": true
     },
     "probability": {
-      "baseSuccessChance": 0.5,
-      "baseWeight": 1.2,
+      "baseSuccessChance": 0.6,
+      "baseWeight": 0.6,
       "pressureModifiers": [
         {
           "pressure": "resource_availibility",
-          "multiplier": 1
+          "multiplier": -0.6
         },
         {
           "pressure": "security",
-          "multiplier": 1
+          "multiplier": 0.2
         }
       ]
     },
@@ -341,7 +339,7 @@
         {
           "type": "pressure",
           "pressureId": "magical_stability",
-          "max": -50
+          "max": 10
         }
       ],
       "instigator": {
@@ -385,11 +383,11 @@
     },
     "probability": {
       "baseSuccessChance": 0.25,
-      "baseWeight": 0.8,
+      "baseWeight": 0.6,
       "pressureModifiers": [
         {
           "pressure": "magical_stability",
-          "multiplier": -1
+          "multiplier": 0.6
         }
       ]
     },
@@ -444,7 +442,13 @@
     },
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1
+      "baseWeight": 0.6,
+      "pressureModifiers": [
+        {
+          "pressure": "magical_stability",
+          "multiplier": 0.6
+        }
+      ]
     },
     "enabled": true
   },
@@ -463,11 +467,16 @@
     },
     "targeting": {
       "strategy": "by_kind",
-      "kind": "npc",
-      "statuses": [
-        "alive"
-      ],
+      "kind": "faction",
       "filters": [
+        {
+          "type": "has_any_tag",
+          "tags": [
+            "organized",
+            "trade",
+            "resource"
+          ]
+        },
         {
           "type": "lacks_relationship",
           "kind": "practitioner_of",
@@ -486,23 +495,20 @@
         },
         {
           "type": "modify_pressure",
-          "pressureId": "magical_stability",
-          "delta": 2
+          "pressureId": "resource_availibility",
+          "delta": 3
         }
       ],
-      "descriptionTemplate": "spread to {target.name}"
+      "descriptionTemplate": "spread to {target.name}",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 1,
+      "baseWeight": 0.6,
       "pressureModifiers": [
         {
           "pressure": "resource_availibility",
-          "multiplier": -1
-        },
-        {
-          "pressure": "magical_stability",
-          "multiplier": 1
+          "multiplier": -0.6
         }
       ]
     },
@@ -515,7 +521,34 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules"
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "has_any_tag",
+            "tags": [
+              "organized",
+              "trade",
+              "mystical",
+              "political"
+            ]
+          }
+        ]
+      },
+      "instigator": {
+        "from": "graph",
+        "kind": "rules",
+        "subtypes": [
+          "ideology",
+          "law"
+        ],
+        "filters": [
+          {
+            "type": "matches_culture",
+            "with": "$actor"
+          }
+        ],
+        "pickStrategy": "random",
+        "required": true
       }
     },
     "targeting": {
@@ -524,8 +557,14 @@
       "filters": [
         {
           "type": "lacks_relationship",
-          "kind": "related_to",
-          "with": "$actor"
+          "kind": "believer_of",
+          "with": "$instigator"
+        },
+        {
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
         }
       ]
     },
@@ -533,35 +572,37 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "related_to",
+          "kind": "believer_of",
           "src": "$target",
-          "dst": "$actor",
+          "dst": "$instigator",
           "strength": 0.7
         },
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": 5
+          "delta": 3
         },
         {
           "type": "modify_pressure",
           "pressureId": "security",
-          "delta": 3
+          "delta": 2
         }
       ],
-      "descriptionTemplate": "converted {target.name} to {actor.name}"
+      "descriptionTemplate": "converted {target.name} to {instigator.name}",
+      "applyProminenceToActor": true,
+      "applyProminenceToInstigator": true
     },
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1,
+      "baseWeight": 0.6,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": 1
+          "multiplier": 0.6
         },
         {
           "pressure": "security",
-          "multiplier": 1
+          "multiplier": 0.4
         }
       ]
     },
@@ -603,22 +644,23 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -8
+          "delta": -5
         }
       ],
-      "descriptionTemplate": "drew {target.name} into the war"
+      "descriptionTemplate": "drew {target.name} into the war",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.3,
-      "baseWeight": 1.5,
+      "baseWeight": 0.9,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": -1
+          "multiplier": 0.6
         },
         {
           "pressure": "security",
-          "multiplier": -1
+          "multiplier": 0.4
         }
       ]
     },
@@ -661,22 +703,23 @@
         {
           "type": "modify_pressure",
           "pressureId": "harmony",
-          "delta": -5
+          "delta": -3
         }
       ],
-      "descriptionTemplate": "escalated in intensity"
+      "descriptionTemplate": "escalated in intensity",
+      "applyProminenceToActor": true
     },
     "probability": {
       "baseSuccessChance": 0.4,
-      "baseWeight": 1,
+      "baseWeight": 0.7,
       "pressureModifiers": [
         {
           "pressure": "harmony",
-          "multiplier": -1
+          "multiplier": 0.6
         },
         {
           "pressure": "security",
-          "multiplier": -1
+          "multiplier": 0.4
         }
       ]
     },
@@ -692,18 +735,12 @@
         "kind": "location",
         "filters": [
           {
-            "type": "graph_path",
-            "assert": {
-              "check": "exists",
-              "path": [
-                {
-                  "via": "manifests_at",
-                  "direction": "in",
-                  "targetKind": "occurrence",
-                  "targetSubtype": "magical_disaster"
-                }
-              ]
-            }
+            "type": "has_any_tag",
+            "tags": [
+              "mystical",
+              "anomaly",
+              "dangerous"
+            ]
           }
         ]
       }
@@ -737,7 +774,7 @@
         {
           "type": "modify_pressure",
           "pressureId": "magical_stability",
-          "delta": -10
+          "delta": -8
         }
       ],
       "descriptionTemplate": "spread corruption to {target.name}",
@@ -746,11 +783,11 @@
     },
     "probability": {
       "baseSuccessChance": 0.35,
-      "baseWeight": 1.2,
+      "baseWeight": 0.5,
       "pressureModifiers": [
         {
           "pressure": "magical_stability",
-          "multiplier": -1
+          "multiplier": 0.6
         }
       ]
     },
@@ -766,7 +803,8 @@
         "kind": "npc",
         "subtypes": [
           "hero"
-        ]
+        ],
+        "statusFilter": "alive"
       }
     },
     "targeting": {
@@ -786,7 +824,8 @@
       ],
       "subtypes": [
         "orca"
-      ]
+      ],
+      "statusFilter": "alive"
     },
     "outcome": {
       "descriptionTemplate": "killed {target.name}",
@@ -794,7 +833,12 @@
         {
           "type": "change_status",
           "entity": "$target",
-          "newStatus": "Dead"
+          "newStatus": "dead"
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 1
         }
       ],
       "applyProminenceToActor": true,
@@ -802,7 +846,7 @@
     },
     "probability": {
       "baseSuccessChance": 0.5,
-      "baseWeight": 1,
+      "baseWeight": 0.6,
       "pressureModifiers": []
     },
     "enabled": true

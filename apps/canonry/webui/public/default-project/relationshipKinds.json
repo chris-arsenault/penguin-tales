@@ -278,7 +278,8 @@
     "kind": "believer_of",
     "description": "Believer Of",
     "srcKinds": [
-      "npc"
+      "npc",
+      "faction"
     ],
     "dstKinds": [
       "rules",
@@ -323,5 +324,77 @@
     "cullable": true,
     "decayRate": "medium",
     "_key": "rel_1766399521193"
+  },
+  {
+    "kind": "supersedes",
+    "description": "Supersedes",
+    "srcKinds": [
+      "era"
+    ],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "part_of",
+    "description": "Part Of",
+    "srcKinds": [],
+    "dstKinds": [],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "active_during",
+    "description": "Active During",
+    "srcKinds": [],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "created_during",
+    "description": "Created During",
+    "srcKinds": [],
+    "dstKinds": [
+      "era"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "participant_in",
+    "description": "Participant In",
+    "srcKinds": [],
+    "dstKinds": [
+      "occurrence"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "epicenter_of",
+    "description": "Epicenter Of",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [
+      "location"
+    ],
+    "cullable": false,
+    "decayRate": "none"
+  },
+  {
+    "kind": "triggered_by",
+    "description": "Triggered By",
+    "srcKinds": [
+      "occurrence"
+    ],
+    "dstKinds": [],
+    "cullable": false,
+    "decayRate": "none"
   }
 ]

@@ -2,13 +2,13 @@
   {
     "id": "resource_availibility",
     "name": "Resource Availibility",
-    "initialValue": -40,
-    "homeostasis": 0.2,
+    "initialValue": -10,
+    "homeostasis": 0.25,
     "growth": {
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 0.6,
+          "coefficient": 1,
           "kind": "location",
           "subtype": "resource_node"
         }
@@ -16,7 +16,7 @@
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 1,
+          "coefficient": 0.5,
           "kind": "location",
           "subtype": "colony"
         },
@@ -39,13 +39,13 @@
   {
     "id": "magical_stability",
     "name": "Magical Stability",
-    "initialValue": 40,
-    "homeostasis": 0.2,
+    "initialValue": 30,
+    "homeostasis": 0.25,
     "growth": {
       "positiveFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 2,
+          "coefficient": 3,
           "kind": "abilities",
           "subtype": "magic"
         }
@@ -53,13 +53,13 @@
       "negativeFeedback": [
         {
           "type": "entity_count",
-          "coefficient": 1,
+          "coefficient": 0.6,
           "kind": "faction",
           "subtype": "cult"
         },
         {
           "type": "tag_count",
-          "coefficient": 0.4,
+          "coefficient": 0.15,
           "tags": [
             "wild",
             "mystical",
@@ -74,7 +74,7 @@
     "id": "security",
     "name": "Iceberg Security",
     "initialValue": 0,
-    "homeostasis": 0.2,
+    "homeostasis": 0.25,
     "growth": {
       "positiveFeedback": [
         {
@@ -84,17 +84,18 @@
           "subtype": "hero"
         }
       ],
-      "negativeFeedback": [
-        {
-          "type": "tag_count",
-          "coefficient": 0.5,
-          "tags": [
-            "hostile",
-            "raider",
-            "orca"
-          ]
-        }
-      ]
+            "negativeFeedback": [
+              {
+                "type": "tag_count",
+                "coefficient": 0.7,
+                "tags": [
+                  "hostile",
+                  "raider",
+                  "orca",
+                  "external"
+                ]
+              }
+            ]
     },
     "description": "How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)"
   },
@@ -102,28 +103,49 @@
     "id": "harmony",
     "name": "Cultural Harmony",
     "initialValue": 0,
-    "homeostasis": 0.2,
+    "homeostasis": 0.25,
     "growth": {
       "positiveFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 1,
+          "coefficient": 1.1,
           "tags": [
             "libertarian",
             "follower",
             "organized"
           ]
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": [
+            "allied_with"
+          ],
+          "coefficient": 0.1
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": [
+            "trades_with"
+          ],
+          "coefficient": 0.05
         }
       ],
       "negativeFeedback": [
         {
           "type": "tag_count",
-          "coefficient": 1,
+          "coefficient": 0.8,
           "tags": [
             "splinter",
             "leader",
             "authoritarian"
           ]
+        },
+        {
+          "type": "relationship_count",
+          "relationshipKinds": [
+            "at_war_with"
+          ],
+          "coefficient": 0.1
         }
       ]
     },

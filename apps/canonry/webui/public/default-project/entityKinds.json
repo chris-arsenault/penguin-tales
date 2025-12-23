@@ -28,6 +28,11 @@
         "isTerminal": true
       },
       {
+        "id": "historical",
+        "name": "Historical",
+        "isTerminal": true
+      },
+      {
         "id": "secret",
         "name": "Secret",
         "isTerminal": false
@@ -83,7 +88,7 @@
               "x": 79,
               "y": 49
             },
-            "radius": 15
+            "radius": 20
           }
         },
         {

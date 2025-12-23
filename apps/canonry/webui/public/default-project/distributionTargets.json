@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "global": {
     "totalEntities": {
-      "target": 150,
+      "target": 120,
       "tolerance": 0.1,
       "comment": "Target total entities with 10% tolerance"
     },
@@ -11,11 +11,11 @@
       "type": "uniform",
       "comment": "Distribution of entity kinds - should sum to 1.0",
       "targets": {
-        "npc": 0.2,
-        "location": 0.3,
-        "faction": 0.2,
-        "rules": 0.15,
-        "abilities": 0.15
+        "npc": 0.17,
+        "location": 0.26,
+        "faction": 0.24,
+        "rules": 0.17,
+        "abilities": 0.16
       },
       "tolerance": 0.05
     },
@@ -26,10 +26,10 @@
       "stdDev": 1,
       "targets": {
         "forgotten": 0.1,
-        "marginal": 0.25,
-        "recognized": 0.3,
-        "renowned": 0.25,
-        "mythic": 0.1
+        "marginal": 0.22,
+        "recognized": 0.28,
+        "renowned": 0.24,
+        "mythic": 0.16
       },
       "perKind": {
         "enabled": true,
@@ -80,9 +80,9 @@
     "The Great Thaw": {
       "comment": "Expansion era - more locations, explorers",
       "entityKindDistribution": {
-        "location": 0.35,
-        "npc": 0.28,
-        "faction": 0.15
+        "location": 0.38,
+        "npc": 0.22,
+        "faction": 0.18
       },
       "prominenceDistribution": {
         "marginal": 0.35,
@@ -91,9 +91,9 @@
       },
       "relationshipDistribution": {
         "preferredTypes": [
-          "located_at",
           "discovered_by",
-          "founded_by"
+          "originated_in",
+          "resident_of"
         ],
         "preferredRatio": 0.3
       }
@@ -101,8 +101,8 @@
     "The Faction Wars": {
       "comment": "Conflict era - more prominent NPCs, rivalries",
       "entityKindDistribution": {
-        "npc": 0.35,
-        "faction": 0.25
+        "npc": 0.25,
+        "faction": 0.32
       },
       "prominenceDistribution": {
         "renowned": 0.3,
@@ -112,9 +112,9 @@
       "relationshipDistribution": {
         "preferredTypes": [
           "enemy_of",
-          "enemy_of",
-          "ally_of",
-          "fought_against"
+          "at_war_with",
+          "allied_with",
+          "splinter_of"
         ],
         "preferredRatio": 0.35
       }
@@ -122,15 +122,15 @@
     "The Clever Ice Age": {
       "comment": "Innovation era - more abilities, rules",
       "entityKindDistribution": {
-        "abilities": 0.18,
-        "rules": 0.22,
-        "npc": 0.28
+        "abilities": 0.22,
+        "rules": 0.24,
+        "npc": 0.2
       },
       "relationshipDistribution": {
         "preferredTypes": [
-          "discovered_by",
-          "mastered_by",
-          "teaches"
+          "derived_from",
+          "practitioner_of",
+          "taught_by"
         ],
         "preferredRatio": 0.25
       }
@@ -138,8 +138,8 @@
     "The Orca Incursion": {
       "comment": "Invasion era - alliances, unified response",
       "entityKindDistribution": {
-        "faction": 0.28,
-        "npc": 0.32
+        "faction": 0.34,
+        "npc": 0.22
       },
       "prominenceDistribution": {
         "renowned": 0.35,
@@ -148,8 +148,8 @@
       },
       "relationshipDistribution": {
         "preferredTypes": [
-          "ally_of",
-          "defended_by",
+          "allied_with",
+          "at_war_with",
           "member_of"
         ],
         "preferredRatio": 0.3
@@ -185,37 +185,41 @@
       "comment": "Per-subtype entity targets for homeostatic population control. Total ~150 entities.",
       "npc": {
         "hero": {
-          "target": 20,
-          "comment": "Heroes that emerge during conflict (reduced from unbounded)"
+          "target": 8,
+          "comment": "Heroes that emerge during conflict"
         },
         "merchant": {
-          "target": 10,
+          "target": 2,
           "comment": "Trade network NPCs"
         },
         "mayor": {
-          "target": 5,
+          "target": 2,
           "comment": "Colony leaders (1 per colony + succession)"
         },
         "orca": {
-          "target": 5,
-          "comment": "External threat NPCs (reduced from unbounded)"
+          "target": 4,
+          "comment": "External threat NPCs"
         },
         "outlaw": {
-          "target": 5,
+          "target": 4,
           "comment": "Criminal faction members"
         }
       },
       "location": {
         "colony": {
-          "target": 5,
-          "comment": "Major settlements (2 initial + 3 founded)"
+          "target": 6,
+          "comment": "Major settlements (2 initial + growth)"
         },
-        "geographic_feature": {
-          "target": 15,
+        "resource_node": {
+          "target": 10,
           "comment": "Resource locations (krill blooms, hunting grounds)"
         },
+        "point_of_interest": {
+          "target": 10,
+          "comment": "Strategic or notable sites"
+        },
         "anomaly": {
-          "target": 8,
+          "target": 6,
           "comment": "Magical locations (enables cult/magic creation)"
         }
       },
@@ -225,40 +229,48 @@
           "comment": "Major political factions (including splinters)"
         },
         "company": {
-          "target": 5,
-          "comment": "FIXED: Was merchant_guild, templates create company subtype"
+          "target": 7,
+          "comment": "Trade organizations and guilds"
         },
         "criminal": {
-          "target": 3,
+          "target": 4,
           "comment": "Criminal syndicates"
         },
         "cult": {
-          "target": 10,
-          "comment": "Mystical factions (reduced from unbounded, hard cap 15 in template)"
+          "target": 8,
+          "comment": "Mystical factions"
         }
       },
       "rules": {
         "social": {
-          "target": 12,
+          "target": 6,
           "comment": "Cultural norms and ideologies"
         },
-        "edict": {
-          "target": 8,
-          "comment": "FIXED: Was economic, templates create edict subtype"
+        "law": {
+          "target": 6,
+          "comment": "Civic laws and emergency measures"
         },
-        "taboo": {
-          "target": 5,
-          "comment": "FIXED: Added, templates create taboo subtype"
+        "ideology": {
+          "target": 4,
+          "comment": "Ideological movements"
+        },
+        "memorial": {
+          "target": 4,
+          "comment": "Legends and commemorations"
         }
       },
       "abilities": {
         "magic": {
-          "target": 15,
-          "comment": "Mystical techniques (reduced from unbounded)"
+          "target": 7,
+          "comment": "Mystical techniques"
         },
         "technology": {
-          "target": 15,
+          "target": 7,
           "comment": "Practical innovations"
+        },
+        "combat": {
+          "target": 6,
+          "comment": "Combat techniques"
         }
       }
     }
@@ -281,37 +293,38 @@
   "relationshipCategories": {
     "comment": "Categorization for diversity metrics",
     "social": [
-      "friend_of",
       "enemy_of",
-      "family_of",
-      "mentor_of",
-      "student_of"
+      "allied_with",
+      "taught_by",
+      "related_to"
     ],
     "political": [
-      "ally_of",
-      "enemy_of",
       "member_of",
       "leader_of",
-      "believer_of"
+      "splinter_of",
+      "at_war_with",
+      "participant_in"
     ],
     "economic": [
       "trades_with",
-      "employs",
-      "patron_of",
-      "owes_debt_to"
+      "controls",
+      "occupies"
     ],
     "spatial": [
       "resident_of",
-      "located_at",
-      "discovered_by",
-      "founded_by"
+      "adjacent_to",
+      "contains",
+      "contained_by",
+      "originated_in"
     ],
     "cultural": [
-      "worships_at",
-      "practices",
-      "teaches",
-      "learned_from",
-      "respects"
+      "believer_of",
+      "commemorates",
+      "celebrated_by",
+      "derived_from",
+      "manifests_at",
+      "discovered_by",
+      "explorer_of"
     ]
   }
 }

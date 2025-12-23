@@ -5,7 +5,7 @@
       "id": "era_spawner",
       "name": "Era Initialization",
       "description": "Creates era entities at simulation start. Establishes the timeline structure with supersedes relationships between consecutive eras.",
-      "ticksPerEra": 30
+      "ticksPerEra": 25
     },
     "enabled": true
   },
@@ -24,12 +24,12 @@
       "id": "universal_catalyst",
       "name": "Agent Actions",
       "description": "Enables agents (NPCs, factions) to perform domain-defined actions. Manages action selection, success/failure, and influence tracking.",
-      "actionAttemptRate": 0.3,
+      "actionAttemptRate": 0.18,
       "influenceGain": 0.1,
       "influenceLoss": 0.05,
-      "pressureMultiplier": 1.5,
-      "prominenceUpChanceOnSuccess": 0.1,
-      "prominenceDownChanceOnFailure": 0.2
+      "pressureMultiplier": 1.1,
+      "prominenceUpChanceOnSuccess": 0.04,
+      "prominenceDownChanceOnFailure": 0.4
     },
     "enabled": true
   },
@@ -55,41 +55,41 @@
       "description": "Spreads conflicts through alliance networks - allies of enemies become enemies",
       "contagion": {
         "type": "relationship",
-        "relationshipKind": "enemy_of"
+        "relationshipKind": "at_war_with"
       },
       "vectors": [
         {
           "relationshipKind": "allied_with",
           "direction": "both",
-          "minStrength": 0.5
+          "minStrength": 0.3
         },
         {
-          "relationshipKind": "member_of",
+          "relationshipKind": "splinter_of",
           "direction": "both",
-          "minStrength": 0.5
+          "minStrength": 0.3
         }
       ],
       "transmission": {
-        "baseRate": 0.15,
-        "contactMultiplier": 0.05,
-        "maxProbability": 0.5
+        "baseRate": 0.25,
+        "contactMultiplier": 0.1,
+        "maxProbability": 0.7
       },
       "infectionAction": {
         "type": "create_relationship",
-        "kind": "enemy_of",
+        "kind": "at_war_with",
         "src": "$self",
         "dst": "$source",
         "strength": 0.4,
         "bidirectional": true
       },
-      "throttleChance": 0.2,
-      "cooldown": 8,
+      "throttleChance": 0.1,
+      "cooldown": 4,
       "pressureChanges": {
-        "harmony": -5
+        "harmony": -3
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "npc"
+        "kind": "faction"
       }
     },
     "enabled": true
@@ -102,7 +102,7 @@
       "description": "Factions with shared enemies may form alliances",
       "metric": {
         "type": "shared_relationship",
-        "sharedRelationshipKind": "enemy_of",
+        "sharedRelationshipKind": "at_war_with",
         "sharedDirection": "src"
       },
       "rules": [
@@ -111,7 +111,7 @@
             "operator": ">=",
             "threshold": 1
           },
-          "probability": 0.15,
+          "probability": 0.3,
           "action": {
             "type": "create_relationship",
             "kind": "allied_with",
@@ -123,9 +123,9 @@
           "betweenMatching": true
         }
       ],
-      "throttleChance": 0.3,
+      "throttleChance": 0.15,
       "pressureChanges": {
-        "harmony": 3
+        "harmony": 5
       },
       "selection": {
         "strategy": "by_kind",
@@ -139,7 +139,7 @@
     "config": {
       "id": "prominence_evolution",
       "name": "Prominence Evolution",
-      "description": "NPCs with many connections gain prominence over time",
+      "description": "Entities with many connections gain prominence; isolated entities fade",
       "metric": {
         "type": "connection_count",
         "direction": "both"
@@ -148,22 +148,33 @@
         {
           "condition": {
             "operator": ">=",
-            "threshold": 5,
+            "threshold": 9,
             "multiplier": 6
           },
-          "probability": 0.4,
+          "probability": 0.18,
           "action": {
             "type": "adjust_prominence",
             "direction": "up",
             "entity": "$self"
           }
+        },
+        {
+          "condition": {
+            "operator": "<=",
+            "threshold": 3
+          },
+          "probability": 0.55,
+          "action": {
+            "type": "adjust_prominence",
+            "direction": "down",
+            "entity": "$self"
+          }
         }
       ],
-      "throttleChance": 0.2,
+      "throttleChance": 0.3,
       "selection": {
         "strategy": "by_kind",
-        "kind": "any",
-        "statusFilter": "alive"
+        "kind": "any"
       }
     },
     "enabled": true
@@ -186,28 +197,27 @@
         {
           "type": "set_tag",
           "tag": "conflict",
-          "valueFrom": "cluster_id",
+          "value": true,
           "entity": "$self"
         },
         {
           "type": "set_tag",
           "tag": "hostile",
-          "valueFrom": "cluster_id",
+          "value": true,
           "entity": "$self"
         }
       ],
       "clusterMode": "by_relationship",
       "clusterRelationshipKind": "at_war_with",
       "minClusterSize": 2,
-      "throttleChance": 0.3,
+      "throttleChance": 0.4,
       "cooldownTag": "conflict_cooldown",
       "pressureChanges": {
-        "harmony": -5
+        "harmony": -3
       },
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active",
         "filters": [
           {
             "type": "lacks_tag",
@@ -226,11 +236,22 @@
       "description": "Detects factions with dead leaders and marks them in crisis",
       "conditions": [
         {
-          "type": "relationship_exists",
-          "relationshipKind": "leader_of",
-          "direction": "dst",
-          "targetKind": "npc",
-          "targetStatus": "dead"
+          "type": "or",
+          "conditions": [
+            {
+              "type": "relationship_exists",
+              "relationshipKind": "leader_of",
+              "direction": "dst",
+              "targetKind": "npc",
+              "targetStatus": "dead"
+            },
+            {
+              "type": "relationship_count",
+              "relationshipKind": "leader_of",
+              "direction": "dst",
+              "max": 0
+            }
+          ]
         }
       ],
       "actions": [
@@ -254,15 +275,14 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.2,
+      "throttleChance": 0.35,
       "pressureChanges": {
-        "security": -15,
-        "harmony": -10
+        "security": -8,
+        "harmony": -5
       },
       "selection": {
         "strategy": "by_kind",
         "kind": "faction",
-        "statusFilter": "active",
         "filters": [
           {
             "type": "lacks_tag",
@@ -300,7 +320,7 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.2,
+      "throttleChance": 0.35,
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
@@ -356,7 +376,8 @@
         "prominenceFromSize": {
           "marginal": 3,
           "recognized": 4,
-          "renowned": 6
+          "renowned": 6,
+          "mythic": 9
         },
         "additionalTags": [],
         "descriptionTemplate": "A unified tradition encompassing {names}. Formed from {count} related abilities practiced by multiple penguins."
@@ -417,7 +438,8 @@
         "prominenceFromSize": {
           "marginal": 3,
           "recognized": 4,
-          "renowned": 6
+          "renowned": 6,
+          "mythic": 9
         },
         "additionalTags": [
           "combat-style"
@@ -468,7 +490,8 @@
         "prominenceFromSize": {
           "marginal": 4,
           "recognized": 5,
-          "renowned": 7
+          "renowned": 7,
+          "mythic": 10
         },
         "additionalTags": [],
         "descriptionTemplate": "A unified legal system encompassing {names}. Codified from {count} related rules."
@@ -508,14 +531,29 @@
           "minStrength": 0.3
         },
         {
-          "relationshipKind": "member_of",
-          "direction": "src",
+          "relationshipKind": "allied_with",
+          "direction": "both",
+          "minStrength": 0.3
+        },
+        {
+          "relationshipKind": "trades_with",
+          "direction": "both",
+          "minStrength": 0.3
+        },
+        {
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "minStrength": 0.3
+        },
+        {
+          "relationshipKind": "splinter_of",
+          "direction": "both",
           "minStrength": 0.3
         }
       ],
       "transmission": {
-        "baseRate": 0.15,
-        "contactMultiplier": 0.05,
+        "baseRate": 0.25,
+        "contactMultiplier": 0.1,
         "maxProbability": 0.95
       },
       "infectionAction": {
@@ -526,33 +564,33 @@
         "strength": 0.5
       },
       "recovery": {
-        "baseRate": 0.03,
+        "baseRate": 0.02,
         "recoveryBonusTraits": [
           {
-            "tag": "traditional",
-            "bonus": 0.15
+            "tag": "organized",
+            "bonus": 0.12
           },
           {
-            "tag": "conservative",
-            "bonus": 0.15
+            "tag": "leader",
+            "bonus": 0.12
           }
         ]
       },
       "susceptibilityModifiers": [
         {
-          "tag": "traditional",
+          "tag": "follower",
           "modifier": 0.3
         },
         {
-          "tag": "conservative",
-          "modifier": 0.3
+          "tag": "mystical",
+          "modifier": 0.2
         },
         {
-          "tag": "radical",
+          "tag": "organized",
           "modifier": -0.2
         },
         {
-          "tag": "innovator",
+          "tag": "leader",
           "modifier": -0.2
         }
       ],
@@ -571,7 +609,7 @@
       "multiSource": {
         "immunityTagPrefix": "immune",
         "lowAdoptionThreshold": 0.05,
-        "lowAdoptionStatus": "forgotten",
+        "lowAdoptionStatus": "contested",
         "sourceSelection": {
           "strategy": "by_kind",
           "kind": "rules",
@@ -584,8 +622,7 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "npc",
-        "statusFilter": "alive"
+        "kind": "faction"
       }
     },
     "enabled": true
@@ -603,6 +640,8 @@
           "trade",
           "friendly",
           "central",
+          "organized",
+          "resource",
           "thriving"
         ],
         "minConnections": 1,
@@ -642,25 +681,27 @@
       "description": "Heat spreads from anomaly sources, making locations dangerous or safe",
       "sources": {
         "tagFilter": "anomaly",
-        "defaultStrength": 1
+        "defaultStrength": 60
       },
       "sinks": {
         "tagFilter": "central",
-        "defaultStrength": 0.5
+        "defaultStrength": 12
       },
       "diffusion": {
-        "rate": 0.1,
-        "falloffType": "inverse_square"
+        "rate": 0.2,
+        "falloffType": "none",
+        "iterationsPerTick": 30,
+        "sourceRadius": 3,
+        "decayRate": 0
       },
       "outputTags": [
         {
           "tag": "safe",
-          "minValue": 0.7
+          "maxValue": 0.15
         },
         {
           "tag": "dangerous",
-          "minValue": 0.3,
-          "maxValue": 0.7
+          "minValue": 0.25
         }
       ],
       "valueTag": "temperature",
@@ -811,7 +852,7 @@
       "description": "Prosperity spreads from resource-rich and trade locations",
       "sources": {
         "tagFilter": "resource",
-        "defaultStrength": 100
+        "defaultStrength": 80
       },
       "diffusion": {
         "rate": 0.3,
@@ -823,19 +864,19 @@
       "outputTags": [
         {
           "tag": "thriving",
-          "minValue": 60,
+          "minValue": 15,
           "maxValue": 100
         },
         {
           "tag": "stressed",
-          "maxValue": -60,
+          "maxValue": 40,
           "minValue": -100
         }
       ],
       "valueTag": "sys_resource_value",
       "sinks": {
         "tagFilter": "conflict",
-        "defaultStrength": 10
+        "defaultStrength": 25
       },
       "selection": {
         "strategy": "by_kind",
@@ -855,7 +896,7 @@
           "type": "relationship_count",
           "relationshipKind": "resident_of",
           "direction": "dst",
-          "min": 3
+          "min": 2
         }
       ],
       "actions": [
@@ -946,11 +987,8 @@
         "subtypes": [
           "colony"
         ],
+        "statusFilter": "thriving",
         "filters": [
-          {
-            "type": "has_tag",
-            "tag": "thriving"
-          },
           {
             "type": "lacks_tag",
             "tag": "stressed"
@@ -979,10 +1017,22 @@
             "operator": ">=",
             "threshold": 1
           },
-          "probability": 0.2,
+          "probability": 0.12,
           "action": {
             "type": "adjust_prominence",
             "direction": "up",
+            "entity": "$self"
+          }
+        },
+        {
+          "condition": {
+            "operator": "<=",
+            "threshold": 0
+          },
+          "probability": 0.4,
+          "action": {
+            "type": "adjust_prominence",
+            "direction": "down",
             "entity": "$self"
           }
         }
@@ -1007,7 +1057,7 @@
       "conditions": [
         {
           "type": "relationship_count",
-          "relationshipKind": "controls",
+          "relationshipKind": "originated_in",
           "direction": "src",
           "min": 1
         }
@@ -1120,11 +1170,12 @@
       "clusterMode": "individual",
       "throttleChance": 0.1,
       "pressureChanges": {
-        "security": -10
+        "security": -20
       },
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
+        "statusFilter": "alive",
         "filters": [
           {
             "type": "has_tag",

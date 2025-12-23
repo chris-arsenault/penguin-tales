@@ -74,7 +74,7 @@ export default function ParameterForm({ params, onParamChange }) {
           min={5}
           max={500}
           value={params.targetEntitiesPerKind}
-          onChange={(v) => onParamChange('targetEntitiesPerKind', v ?? 30)}
+          onChange={(v) => onParamChange('targetEntitiesPerKind', v ?? 20)}
           className="lw-input"
           integer
         />

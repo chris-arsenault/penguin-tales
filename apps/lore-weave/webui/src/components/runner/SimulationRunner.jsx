@@ -60,7 +60,7 @@ export default function SimulationRunner({
     pressureDeltaSmoothing: 10,
     ticksPerEpoch: 15,
     maxEpochs: 10,
-    targetEntitiesPerKind: 30,
+    targetEntitiesPerKind: 20,
     maxTicks: 500,
   });
 

@@ -97,162 +97,169 @@ export function createGrowthSystem(
     graphView: WorldRuntime,
     era: Era
   ): Promise<number> {
-    // Check applicability
-    if (!template.canApply(graphView)) {
-      const declTemplate = deps.declarativeTemplates.get(template.id);
-      if (declTemplate) {
-        const diag = deps.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
-        if (!diag.applicabilityPassed) {
-          graphView.debug('templates', `${template.id} rejected: ${diag.failedRules.join('; ')}`);
-        } else if (diag.selectionCount === 0) {
-          graphView.debug('templates', `${template.id} selection(${diag.selectionStrategy}) returned 0 targets`);
+    try {
+      // Check applicability
+      if (!template.canApply(graphView)) {
+        const declTemplate = deps.declarativeTemplates.get(template.id);
+        if (declTemplate) {
+          const diag = deps.templateInterpreter.diagnoseCanApply(declTemplate, graphView);
+          if (!diag.applicabilityPassed) {
+            graphView.debug('templates', `${template.id} rejected: ${diag.failedRules.join('; ')}`);
+          } else if (diag.selectionCount === 0) {
+            graphView.debug('templates', `${template.id} selection(${diag.selectionStrategy}) returned 0 targets`);
+          }
+        }
+        return 0;
+      }
+
+      const templateTargets = template.findTargets(graphView);
+      if (templateTargets.length === 0) {
+        graphView.debug('selection', `${template.id} found no targets via findTargets()`);
+        return 0;
+      }
+
+      const target = pickRandom(templateTargets);
+
+      const pressureModsBefore = deps.getPendingPressureModifications().length;
+      graphView.setPressureModificationCallback((pressureId, delta, source) => {
+        deps.trackPressureModification(pressureId, delta, source);
+      });
+      graphView.setCurrentSource({ type: 'template', templateId: template.id });
+
+      const result = await template.expand(graphView, target);
+      graphView.clearCurrentSource();
+
+      // Contract enforcement warnings
+      const allTagsSet = new Set<string>();
+      for (const entity of result.entities) {
+        Object.keys(entity.tags || {}).forEach(tag => allTagsSet.add(tag));
+      }
+      const allTagsToAdd = Array.from(allTagsSet);
+      const tagSaturationCheck = deps.contractEnforcer.checkTagSaturation(graphView, allTagsToAdd);
+      if (tagSaturationCheck.saturated) {
+        deps.emitter.log('warn', `Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
+      }
+      const orphanCheck = deps.contractEnforcer.checkTagOrphans(allTagsToAdd);
+      if (orphanCheck.hasOrphans && orphanCheck.orphanTags.length >= 3) {
+        deps.emitter.log('debug', `Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
+      }
+
+      deps.statisticsCollector.recordTemplateApplication(template.id);
+
+      const createdEntities: HardState[] = [];
+      const newIds: string[] = [];
+
+      for (let i = 0; i < result.entities.length; i++) {
+        const entity = result.entities[i];
+        const placementStrategy = result.placementStrategies?.[i] || 'unknown';
+        const id = await graphView.addEntity(entity, `template:${template.id}`, placementStrategy);
+        newIds.push(id);
+        const ref = graphView.getEntity(id);
+        if (ref) {
+          createdEntities.push(ref);
         }
       }
-      return 0;
-    }
 
-    const templateTargets = template.findTargets(graphView);
-    if (templateTargets.length === 0) {
-      graphView.debug('selection', `${template.id} found no targets via findTargets()`);
-      return 0;
-    }
-
-    const target = pickRandom(templateTargets);
-
-    const pressureModsBefore = deps.getPendingPressureModifications().length;
-    graphView.setPressureModificationCallback((pressureId, delta, source) => {
-      deps.trackPressureModification(pressureId, delta, source);
-    });
-    graphView.setCurrentSource({ type: 'template', templateId: template.id });
-
-    const result = await template.expand(graphView, target);
-    graphView.clearCurrentSource();
-
-    // Contract enforcement warnings
-    const allTagsSet = new Set<string>();
-    for (const entity of result.entities) {
-      Object.keys(entity.tags || {}).forEach(tag => allTagsSet.add(tag));
-    }
-    const allTagsToAdd = Array.from(allTagsSet);
-    const tagSaturationCheck = deps.contractEnforcer.checkTagSaturation(graphView, allTagsToAdd);
-    if (tagSaturationCheck.saturated) {
-      deps.emitter.log('warn', `Template ${template.id} would oversaturate tags: ${tagSaturationCheck.oversaturatedTags.join(', ')}`);
-    }
-    const orphanCheck = deps.contractEnforcer.checkTagOrphans(allTagsToAdd);
-    if (orphanCheck.hasOrphans && orphanCheck.orphanTags.length >= 3) {
-      deps.emitter.log('debug', `Template ${template.id} creates unregistered tags: ${orphanCheck.orphanTags.slice(0, 5).join(', ')}`);
-    }
-
-    deps.statisticsCollector.recordTemplateApplication(template.id);
-
-    const createdEntities: HardState[] = [];
-    const newIds: string[] = [];
-
-    for (let i = 0; i < result.entities.length; i++) {
-      const entity = result.entities[i];
-      const placementStrategy = result.placementStrategies?.[i] || 'unknown';
-      const id = await graphView.addEntity(entity, `template:${template.id}`, placementStrategy);
-      newIds.push(id);
-      const ref = graphView.getEntity(id);
-      if (ref) {
-        createdEntities.push(ref);
+      for (const entity of createdEntities) {
+        initializeCatalystSmart(entity);
       }
-    }
 
-    for (const entity of createdEntities) {
-      initializeCatalystSmart(entity);
-    }
+      result.relationships.forEach(rel => {
+        const srcId = rel.src.startsWith('will-be-assigned-')
+          ? newIds[parseInt(rel.src.split('-')[3])]
+          : rel.src;
+        const dstId = rel.dst.startsWith('will-be-assigned-')
+          ? newIds[parseInt(rel.dst.split('-')[3])]
+          : rel.dst;
 
-    result.relationships.forEach(rel => {
-      const srcId = rel.src.startsWith('will-be-assigned-')
-        ? newIds[parseInt(rel.src.split('-')[3])]
-        : rel.src;
-      const dstId = rel.dst.startsWith('will-be-assigned-')
-        ? newIds[parseInt(rel.dst.split('-')[3])]
-        : rel.dst;
+        if (srcId && dstId) {
+          graphView.createRelationship(rel.kind, srcId, dstId, rel.strength);
+        }
+      });
 
-      if (srcId && dstId) {
-        graphView.createRelationship(rel.kind, srcId, dstId, rel.strength);
+      for (const entity of createdEntities) {
+        const coverageCheck = deps.contractEnforcer.enforceTagCoverage(entity, graphView);
+        if (coverageCheck.needsAdjustment) {
+          deps.emitter.log('debug', coverageCheck.suggestion || '', { entity: entity.id });
+        }
+        const taxonomyCheck = deps.contractEnforcer.validateTagTaxonomy(entity);
+        if (!taxonomyCheck.valid) {
+          deps.emitter.log('warn', `Entity ${entity.name} has conflicting tags`, { conflicts: taxonomyCheck.conflicts });
+        }
       }
-    });
 
-    for (const entity of createdEntities) {
-      const coverageCheck = deps.contractEnforcer.enforceTagCoverage(entity, graphView);
-      if (coverageCheck.needsAdjustment) {
-        deps.emitter.log('debug', coverageCheck.suggestion || '', { entity: entity.id });
+      graphView.addHistoryEvent({
+        tick: graphView.tick,
+        era: era.id,
+        type: 'growth',
+        description: result.description,
+        entitiesCreated: newIds,
+        relationshipsCreated: result.relationships as Relationship[],
+        entitiesModified: []
+      });
+
+      const templatePressureMods = deps.getPendingPressureModifications().slice(pressureModsBefore);
+      const pressureChanges: Record<string, number> = {};
+      for (const mod of templatePressureMods) {
+        pressureChanges[mod.pressureId] = (pressureChanges[mod.pressureId] || 0) + mod.delta;
       }
-      const taxonomyCheck = deps.contractEnforcer.validateTagTaxonomy(entity);
-      if (!taxonomyCheck.valid) {
-        deps.emitter.log('warn', `Entity ${entity.name} has conflicting tags`, { conflicts: taxonomyCheck.conflicts });
-      }
+
+      const resolvedRelationships = result.relationships.map(rel => ({
+        kind: rel.kind,
+        srcId: rel.src.startsWith('will-be-assigned-')
+          ? newIds[parseInt(rel.src.split('-')[3])]
+          : rel.src,
+        dstId: rel.dst.startsWith('will-be-assigned-')
+          ? newIds[parseInt(rel.dst.split('-')[3])]
+          : rel.dst,
+        strength: rel.strength
+      }));
+
+      deps.emitter.templateApplication({
+        tick: graphView.tick,
+        epoch: deps.getCurrentEpoch(),
+        templateId: template.id,
+        targetEntityId: target.id,
+        targetEntityName: target.name,
+        targetEntityKind: target.kind,
+        description: result.description,
+        entitiesCreated: createdEntities.map((e, i) => {
+          const placementDebug = result.placementDebugList?.[i];
+          const strategy = result.placementStrategies?.[i] || 'unknown';
+          return {
+            id: e.id,
+            name: e.name,
+            kind: e.kind,
+            subtype: e.subtype,
+            culture: e.culture,
+            prominence: e.prominence,
+            tags: e.tags,
+            placementStrategy: strategy,
+            coordinates: e.coordinates,
+            regionId: placementDebug?.regionId ?? e.regionId,
+            allRegionIds: placementDebug?.allRegionIds ?? e.allRegionIds,
+            derivedTags: result.derivedTagsList?.[i],
+            placement: placementDebug ? {
+              anchorType: placementDebug.anchorType,
+              anchorEntity: placementDebug.anchorEntity,
+              anchorCulture: placementDebug.anchorCulture,
+              resolvedVia: placementDebug.resolvedVia,
+              seedRegionsAvailable: placementDebug.seedRegionsAvailable,
+              emergentRegionCreated: placementDebug.emergentRegionCreated
+            } : undefined
+          };
+        }),
+        relationshipsCreated: resolvedRelationships,
+        pressureChanges
+      });
+
+      return result.entities.length;
+    } catch (error) {
+      graphView.clearCurrentSource();
+      const message = error instanceof Error ? error.message : String(error);
+      const templateLabel = template.name ? `${template.name} (${template.id})` : template.id;
+      throw new Error(`Template ${templateLabel} failed: ${message}`);
     }
-
-    graphView.addHistoryEvent({
-      tick: graphView.tick,
-      era: era.id,
-      type: 'growth',
-      description: result.description,
-      entitiesCreated: newIds,
-      relationshipsCreated: result.relationships as Relationship[],
-      entitiesModified: []
-    });
-
-    const templatePressureMods = deps.getPendingPressureModifications().slice(pressureModsBefore);
-    const pressureChanges: Record<string, number> = {};
-    for (const mod of templatePressureMods) {
-      pressureChanges[mod.pressureId] = (pressureChanges[mod.pressureId] || 0) + mod.delta;
-    }
-
-    const resolvedRelationships = result.relationships.map(rel => ({
-      kind: rel.kind,
-      srcId: rel.src.startsWith('will-be-assigned-')
-        ? newIds[parseInt(rel.src.split('-')[3])]
-        : rel.src,
-      dstId: rel.dst.startsWith('will-be-assigned-')
-        ? newIds[parseInt(rel.dst.split('-')[3])]
-        : rel.dst,
-      strength: rel.strength
-    }));
-
-    deps.emitter.templateApplication({
-      tick: graphView.tick,
-      epoch: deps.getCurrentEpoch(),
-      templateId: template.id,
-      targetEntityId: target.id,
-      targetEntityName: target.name,
-      targetEntityKind: target.kind,
-      description: result.description,
-      entitiesCreated: createdEntities.map((e, i) => {
-        const placementDebug = result.placementDebugList?.[i];
-        const strategy = result.placementStrategies?.[i] || 'unknown';
-        return {
-          id: e.id,
-          name: e.name,
-          kind: e.kind,
-          subtype: e.subtype,
-          culture: e.culture,
-          prominence: e.prominence,
-          tags: e.tags,
-          placementStrategy: strategy,
-          coordinates: e.coordinates,
-          regionId: placementDebug?.regionId ?? e.regionId,
-          allRegionIds: placementDebug?.allRegionIds ?? e.allRegionIds,
-          derivedTags: result.derivedTagsList?.[i],
-          placement: placementDebug ? {
-            anchorType: placementDebug.anchorType,
-            anchorEntity: placementDebug.anchorEntity,
-            anchorCulture: placementDebug.anchorCulture,
-            resolvedVia: placementDebug.resolvedVia,
-            seedRegionsAvailable: placementDebug.seedRegionsAvailable,
-            emergentRegionCreated: placementDebug.emergentRegionCreated
-          } : undefined
-        };
-      }),
-      relationshipsCreated: resolvedRelationships,
-      pressureChanges
-    });
-
-    return result.entities.length;
   }
 
   function buildApplicableTemplates(
