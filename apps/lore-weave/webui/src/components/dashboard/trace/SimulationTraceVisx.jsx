@@ -178,9 +178,11 @@ function transformEventData(templateApplications, actionApplications, systemActi
   }
 
   // Process system actions (including era transitions)
-  // Filter out framework_growth - it's already shown via template applications
+  // Filter out framework-growth (shown via template applications) and universal-catalyst (shown via action markers)
   if (systemActions?.length) {
-    const filteredActions = systemActions.filter(a => a.systemId !== 'framework-growth');
+    const filteredActions = systemActions.filter(a =>
+      a.systemId !== 'framework-growth' && a.systemId !== 'universal-catalyst'
+    );
 
     // Group by tick for stacking
     const byTick = new Map();
@@ -213,10 +215,13 @@ function transformEventData(templateApplications, actionApplications, systemActi
   }
 
   // Process action applications (agent actions from universalCatalyst)
+  // Only show successful actions
   if (actionApplications?.length) {
+    const successfulActions = actionApplications.filter(app => app.outcome?.status === 'success');
+
     // Group actions by tick for horizontal stacking
     const byTick = new Map();
-    for (const app of actionApplications) {
+    for (const app of successfulActions) {
       if (!byTick.has(app.tick)) {
         byTick.set(app.tick, []);
       }
@@ -1562,7 +1567,7 @@ function TraceVisualization({
           {visibleEvents.action.map((event) => {
             // Position at tick + 0.5 to differentiate from pressure hover
             const cx = xScale(event.tick + 0.5);
-            // Position at y=-60 on pressure scale, stack horizontally if multiple at same tick
+            // Position at y=-60 on pressure scale, stack upward if multiple at same tick
             const baseY = yScale(-60);
             const cy = baseY - (event.stackIndex * MARKER_STACK_OFFSET);
             const isHovered = event.uniqueId === hoveredEventId;

@@ -20,6 +20,7 @@ import EntityBrowser from './components/EntityBrowser';
 import NarrativesPanel from './components/NarrativesPanel';
 import WorldContextEditor from './components/WorldContextEditor';
 import PromptTemplateEditor from './components/PromptTemplateEditor';
+import VisualIdentityPanel from './components/VisualIdentityPanel';
 import ActivityPanel from './components/ActivityPanel';
 import ConfigPanel from './components/ConfigPanel';
 import CostsPanel from './components/CostsPanel';
@@ -42,12 +43,13 @@ const TABS = [
   { id: 'configure', label: 'Configure' },   // 1. Set API keys and models
   { id: 'context', label: 'Context' },       // 2. Define world context
   { id: 'templates', label: 'Templates' },   // 3. Customize prompts
-  { id: 'styles', label: 'Styles' },         // 4. Manage style library
-  { id: 'entities', label: 'Entities' },     // 5. Main enrichment work
-  { id: 'narratives', label: 'Narratives' }, // 6. Era/relationship narratives
-  { id: 'activity', label: 'Activity' },     // 7. Monitor queue
-  { id: 'costs', label: 'Costs' },           // 8. Track spending
-  { id: 'storage', label: 'Storage' },       // 9. Manage images
+  { id: 'identity', label: 'Identity' },     // 4. Visual identity per culture
+  { id: 'styles', label: 'Styles' },         // 5. Manage style library
+  { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
+  { id: 'narratives', label: 'Narratives' }, // 7. Era/relationship narratives
+  { id: 'activity', label: 'Activity' },     // 8. Monitor queue
+  { id: 'costs', label: 'Costs' },           // 9. Track spending
+  { id: 'storage', label: 'Storage' },       // 10. Manage images
 ];
 
 // Default image prompt template for Claude formatting
@@ -133,6 +135,10 @@ export default function IlluminatorRemote({
   onWorldContextChange,
   promptTemplates: externalPromptTemplates,
   onPromptTemplatesChange,
+  enrichmentConfig: externalEnrichmentConfig,
+  onEnrichmentConfigChange,
+  styleSelection: externalStyleSelection,
+  onStyleSelectionChange,
   activeSection,
   onSectionChange,
   activeSlotIndex = 0,
@@ -184,8 +190,12 @@ export default function IlluminatorRemote({
     } catch {}
   }, [persistApiKeys, anthropicApiKey, openaiApiKey]);
 
-  // Enrichment config - persisted to localStorage
-  const [config, setConfig] = useState(() => {
+  // Enrichment config - use external prop if provided, else localStorage fallback
+  const [localConfig, setLocalConfig] = useState(() => {
+    // Prefer external config, fall back to localStorage
+    if (externalEnrichmentConfig) {
+      return { ...DEFAULT_CONFIG, ...externalEnrichmentConfig };
+    }
     try {
       const saved = localStorage.getItem('illuminator:config');
       if (saved) {
@@ -195,30 +205,75 @@ export default function IlluminatorRemote({
     return DEFAULT_CONFIG;
   });
 
-  // Persist config changes to localStorage
+  // Sync from external config when it changes
   useEffect(() => {
-    try {
-      localStorage.setItem('illuminator:config', JSON.stringify(config));
-    } catch {}
-  }, [config]);
+    if (externalEnrichmentConfig) {
+      setLocalConfig({ ...DEFAULT_CONFIG, ...externalEnrichmentConfig });
+    }
+  }, [externalEnrichmentConfig]);
 
-  // Style selection - persisted to localStorage per session
-  const [styleSelection, setStyleSelection] = useState(() => {
+  // Use the local config as the active config
+  const config = localConfig;
+
+  // Wrapper to update config and sync to parent
+  const setConfig = useCallback((updater) => {
+    setLocalConfig((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // Sync to parent if callback provided
+      if (onEnrichmentConfigChange) {
+        onEnrichmentConfigChange(next);
+      } else {
+        // Fallback to localStorage if no parent callback
+        try {
+          localStorage.setItem('illuminator:config', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  }, [onEnrichmentConfigChange]);
+
+  // Style selection - use external prop if provided, else localStorage fallback
+  const DEFAULT_STYLE_SELECTION = { artisticStyleId: null, compositionStyleId: null };
+  const [localStyleSelection, setLocalStyleSelection] = useState(() => {
+    // Prefer external style selection, fall back to localStorage
+    if (externalStyleSelection) {
+      return externalStyleSelection;
+    }
     try {
       const saved = localStorage.getItem('illuminator:styleSelection');
       if (saved) {
         return JSON.parse(saved);
       }
     } catch {}
-    return { artisticStyleId: null, compositionStyleId: null };
+    return DEFAULT_STYLE_SELECTION;
   });
 
-  // Persist style selection changes to localStorage
+  // Sync from external style selection when it changes
   useEffect(() => {
-    try {
-      localStorage.setItem('illuminator:styleSelection', JSON.stringify(styleSelection));
-    } catch {}
-  }, [styleSelection]);
+    if (externalStyleSelection) {
+      setLocalStyleSelection(externalStyleSelection);
+    }
+  }, [externalStyleSelection]);
+
+  // Use the local style selection as the active one
+  const styleSelection = localStyleSelection;
+
+  // Wrapper to update style selection and sync to parent
+  const setStyleSelection = useCallback((updater) => {
+    setLocalStyleSelection((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      // Sync to parent if callback provided
+      if (onStyleSelectionChange) {
+        onStyleSelectionChange(next);
+      } else {
+        // Fallback to localStorage if no parent callback
+        try {
+          localStorage.setItem('illuminator:styleSelection', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  }, [onStyleSelectionChange]);
 
   // Style library - loaded from IndexedDB or defaults from world-schema
   const {
@@ -260,6 +315,7 @@ export default function IlluminatorRemote({
   const promptTemplatesSyncTimeoutRef = useRef(null);
   const promptTemplatesDirtyRef = useRef(false);
   const pendingPromptTemplatesRef = useRef(localPromptTemplates);
+  const lastWorldDataRef = useRef(null);
 
   useEffect(() => {
     if (externalPromptTemplates === undefined) return;
@@ -281,24 +337,18 @@ export default function IlluminatorRemote({
   const [relationshipNarratives, setRelationshipNarratives] = useState({});
 
   // Initialize entities from worldData
+  // NOTE: We do NOT carry over enrichment from previous state based on ID matching.
+  // Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
+  // If entities have same IDs but come from different simulation runs, they should
+  // NOT share enrichment - the enrichment belongs to the specific simulation.
   useEffect(() => {
     if (!worldData?.hardState) {
       setEntities([]);
       return;
     }
 
-    // Merge existing enrichment with incoming entities
-    setEntities((prev) => {
-      if (worldData.hardState === prev) return prev;
-      const prevMap = new Map(prev.map((e) => [e.id, e]));
-      return worldData.hardState.map((entity) => {
-        const existing = prevMap.get(entity.id);
-        return {
-          ...entity,
-          enrichment: existing?.enrichment || entity.enrichment || undefined,
-        };
-      });
-    });
+    // Use entities directly from worldData - enrichment is persisted there
+    setEntities(worldData.hardState);
   }, [worldData]);
 
   const entityById = useMemo(() => buildEntityIndex(entities), [entities]);
@@ -416,6 +466,10 @@ export default function IlluminatorRemote({
   // Save enriched entities to IndexedDB when they change
   useEffect(() => {
     if (!worldData?.hardState?.length || !onEnrichmentComplete) return;
+    if (worldData !== lastWorldDataRef.current) {
+      lastWorldDataRef.current = worldData;
+      return;
+    }
 
     let didChange = false;
     const enrichedHardState = worldData.hardState.map((entity) => {
@@ -512,7 +566,22 @@ export default function IlluminatorRemote({
 
       if (type === 'description') {
         const template = getEffectiveTemplate(templates, entity.kind, 'description');
-        return buildDescriptionPrompt(template, context);
+
+        // Get descriptive identity for this entity's culture, filtered by entity kind's keys
+        const cultureDescriptiveIdentity = templates.cultureDescriptiveIdentities?.[entity.culture] || {};
+        const allowedDescriptiveKeys = templates.descriptiveIdentityKeysByKind?.[entity.kind] || [];
+        const filteredDescriptiveIdentity = {};
+        for (const key of allowedDescriptiveKeys) {
+          if (cultureDescriptiveIdentity[key]) {
+            filteredDescriptiveIdentity[key] = cultureDescriptiveIdentity[key];
+          }
+        }
+
+        const descriptiveInfo = {
+          descriptiveIdentity: Object.keys(filteredDescriptiveIdentity).length > 0 ? filteredDescriptiveIdentity : undefined,
+        };
+
+        return buildDescriptionPrompt(template, context, descriptiveInfo);
       } else if (type === 'image') {
         const template = getEffectiveTemplate(templates, entity.kind, 'image');
         // Include enriched description if available (for multishot prompting)
@@ -530,11 +599,22 @@ export default function IlluminatorRemote({
           styleLibrary,
         });
 
+        // Get visual identity for this entity's culture, filtered by entity kind's keys
+        const cultureVisualIdentity = templates.cultureVisualIdentities?.[entity.culture] || {};
+        const allowedKeys = templates.visualIdentityKeysByKind?.[entity.kind] || [];
+        const filteredVisualIdentity = {};
+        for (const key of allowedKeys) {
+          if (cultureVisualIdentity[key]) {
+            filteredVisualIdentity[key] = cultureVisualIdentity[key];
+          }
+        }
+
         // Build style info for the prompt
         const styleInfo = {
           artisticPromptFragment: resolvedStyle.artisticStyle?.promptFragment,
           compositionPromptFragment: resolvedStyle.compositionStyle?.promptFragment,
           cultureKeywords: resolvedStyle.cultureKeywords,
+          visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
         };
 
         return buildImagePrompt(template, context, styleInfo);
@@ -818,6 +898,17 @@ export default function IlluminatorRemote({
               worldData={worldData}
               worldSchema={worldSchema}
               simulationMetadata={simulationMetadata}
+            />
+          </div>
+        )}
+
+        {activeTab === 'identity' && (
+          <div className="illuminator-content">
+            <VisualIdentityPanel
+              cultures={worldSchema?.cultures || []}
+              entityKinds={worldSchema?.entityKinds || []}
+              templates={promptTemplates}
+              onTemplatesChange={updatePromptTemplates}
             />
           </div>
         )}

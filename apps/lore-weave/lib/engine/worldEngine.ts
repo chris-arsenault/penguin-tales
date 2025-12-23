@@ -952,13 +952,13 @@ export class WorldEngine {
     const byKind: Record<string, number> = {};
     this.graph.forEachEntity((entity) => {
       byKind[entity.kind] = (byKind[entity.kind] || 0) + 1;
-    });
+    }, { includeHistorical: true });
 
     this.emitter.epochStats({
       epoch: this.currentEpoch,
       era: era.name,
       entitiesByKind: byKind,
-      relationshipCount: this.graph.getRelationshipCount(),
+      relationshipCount: this.graph.getRelationshipCount({ includeHistorical: true }),
       pressures: Object.fromEntries(this.graph.pressures),
       entitiesCreated,
       relationshipsCreated,
@@ -1348,10 +1348,8 @@ export class WorldEngine {
   private emitCompleteEvent(): void {
     const durationMs = Date.now() - this.startTime;
     const coordinateState = this.coordinateContext.export();
-    const entities = this.graph.getEntities();
-    const allRelationships = this.graph.getRelationships({ includeHistorical: true });
-    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
-    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
+    const entities = this.graph.getEntities({ includeHistorical: true });
+    const relationships = this.graph.getRelationships({ includeHistorical: true });
 
     this.emitter.complete({
       schema: this.config.schema,
@@ -1360,15 +1358,13 @@ export class WorldEngine {
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
         entityCount: entities.length,
-        relationshipCount: activeRelationships.length,
-        historicalRelationshipCount: historicalRelationships.length,
+        relationshipCount: relationships.length,
         historyEventCount: this.graph.history.length,
         durationMs,
         enrichmentTriggers: {}
       },
       hardState: entities,
-      relationships: activeRelationships,
-      historicalRelationships,
+      relationships,
       history: this.graph.history,
       pressures: Object.fromEntries(this.graph.pressures),
       distributionMetrics: this.templateSelector ? (() => {
@@ -1912,13 +1908,8 @@ export class WorldEngine {
   }
 
   public exportState(): any {
-    const entities = this.graph.getEntities();
-
-    // Filter historical relationships for day 0 coherence
-    // Exported state represents the current moment, not accumulated history
-    const allRelationships = this.graph.getRelationships({ includeHistorical: true });
-    const activeRelationships = allRelationships.filter(r => r.status !== 'historical');
-    const historicalRelationships = allRelationships.filter(r => r.status === 'historical');
+    const entities = this.graph.getEntities({ includeHistorical: true });
+    const relationships = this.graph.getRelationships({ includeHistorical: true });
 
     // Extract meta-entities for visibility
     const metaEntities = entities.filter(e => hasTag(e.tags, FRAMEWORK_TAGS.META_ENTITY));
@@ -1932,8 +1923,7 @@ export class WorldEngine {
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
         entityCount: entities.length,
-        relationshipCount: activeRelationships.length,
-        historicalRelationshipCount: historicalRelationships.length,
+        relationshipCount: relationships.length,
         historyEventCount: this.graph.history.length,
         metaEntityCount: metaEntities.length,
         metaEntityFormation: {
@@ -1944,8 +1934,7 @@ export class WorldEngine {
         enrichmentTriggers: {}
       },
       hardState: entities,
-      relationships: activeRelationships,  // Only active relationships for day 0 game state
-      historicalRelationships: historicalRelationships,  // Historical relationships for lore generation
+      relationships,
       pressures: Object.fromEntries(this.graph.pressures),
       history: this.graph.history  // Export ALL events, not just last 50
       // loreRecords moved to @illuminator

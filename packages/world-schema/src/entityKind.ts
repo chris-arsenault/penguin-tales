@@ -148,4 +148,11 @@ export interface EntityKindDefinition {
   style?: EntityKindStyle;
   /** Semantic placement configuration (Cosmographer) */
   semanticPlane?: SemanticPlane;
+
+  // === Illuminator: Visual Identity ===
+  /**
+   * Which visual identity keys from culture.visualIdentity to include in image prompts.
+   * e.g., ["ATTIRE", "SPECIES"] for NPCs, ["ARCHITECTURE", "SPECIES"] for locations.
+   */
+  visualIdentityKeys?: string[];
 }

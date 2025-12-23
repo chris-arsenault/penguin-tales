@@ -86,8 +86,7 @@ export interface EnrichmentContext {
     era: string;
     pressures?: Record<string, number>;
     entities: ReadonlyMap<string, HardState>;  // Read-only snapshot for enrichment
-    relationships: readonly Relationship[];  // Active relationships (current state)
-    historicalRelationships?: readonly Relationship[];  // Archived relationships (past state for lore)
+    relationships: readonly Relationship[];  // Full relationships (historical included)
   };
   nearbyEntities?: HardState[];
   relatedHistory?: string[];

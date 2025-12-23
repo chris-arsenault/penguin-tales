@@ -92,7 +92,7 @@
         "kind": "npc"
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -132,7 +132,7 @@
         "kind": "faction"
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -216,7 +216,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -271,7 +271,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -313,7 +313,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "clusterFormation",
@@ -368,7 +368,10 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities"
+        "kind": "abilities",
+        "subtypes": [
+          "magic"
+        ]
       }
     },
     "enabled": true
@@ -428,7 +431,10 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "abilities"
+        "kind": "abilities",
+        "subtypes": [
+          "combat"
+        ]
       }
     },
     "enabled": true
@@ -477,7 +483,10 @@
       },
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules"
+        "kind": "rules",
+        "subtypes": [
+          "law"
+        ]
       }
     },
     "enabled": true
@@ -579,7 +588,7 @@
         "statusFilter": "alive"
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "tagDiffusion",
@@ -623,7 +632,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "planeDiffusion",
@@ -660,7 +669,7 @@
         "kind": "location"
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -700,7 +709,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -745,7 +754,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -792,7 +801,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "planeDiffusion",
@@ -825,8 +834,8 @@
       ],
       "valueTag": "sys_resource_value",
       "sinks": {
-        "tagFilter": "colony",
-        "defaultStrength": 1
+        "tagFilter": "conflict",
+        "defaultStrength": 10
       },
       "selection": {
         "strategy": "by_kind",
@@ -884,7 +893,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -949,7 +958,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "connectionEvolution",
@@ -987,7 +996,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -1033,7 +1042,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -1079,7 +1088,7 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "systemType": "thresholdTrigger",
@@ -1128,6 +1137,6 @@
         ]
       }
     },
-    "enabled": false
+    "enabled": true
   }
 ]

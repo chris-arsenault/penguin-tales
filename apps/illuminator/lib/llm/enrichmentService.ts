@@ -79,13 +79,10 @@ export class EnrichmentService {
 
         context.graphSnapshot.relationships
           .filter(rel => rel.src === e.id || rel.dst === e.id)
-          .forEach(rel => addRelationship(rel, relationships));
-
-        if (context.graphSnapshot.historicalRelationships) {
-          context.graphSnapshot.historicalRelationships
-            .filter(rel => rel.src === e.id || rel.dst === e.id)
-            .forEach(rel => addRelationship(rel, historicalRelationships));
-        }
+          .forEach(rel => {
+            const targetMap = rel.status === 'historical' ? historicalRelationships : relationships;
+            addRelationship(rel, targetMap);
+          });
 
         // Add catalyst information (Phase 3)
         const catalystInfo: any = {};
@@ -100,7 +97,7 @@ export class EnrichmentService {
         if (isMetaEntity) {
           // Find part_of relationships (components of this meta-entity)
           const components = context.graphSnapshot.relationships
-            .filter(rel => rel.kind === 'part_of' && rel.dst === e.id)
+            .filter(rel => rel.kind === 'part_of' && rel.dst === e.id && rel.status !== 'historical')
             .map(rel => context.graphSnapshot.entities.get(rel.src))
             .filter((ent): ent is HardState => !!ent);
           clusterInfo.isMetaEntity = true;
@@ -483,13 +480,13 @@ export class EnrichmentService {
 
     // Get participants
     const participants = context.graphSnapshot.relationships
-      .filter(r => r.kind === 'participant_in' && r.dst === occurrence.id)
+      .filter(r => r.kind === 'participant_in' && r.dst === occurrence.id && r.status !== 'historical')
       .map(r => context.graphSnapshot.entities.get(r.src)?.name)
       .filter(Boolean);
 
     // Get epicenter
     const epicenterRel = context.graphSnapshot.relationships
-      .find(r => r.kind === 'epicenter_of' && r.src === occurrence.id);
+      .find(r => r.kind === 'epicenter_of' && r.src === occurrence.id && r.status !== 'historical');
     const epicenter = epicenterRel
       ? context.graphSnapshot.entities.get(epicenterRel.dst)?.name
       : null;
@@ -556,7 +553,10 @@ export class EnrichmentService {
     const eraOccurrences = Array.from(context.graphSnapshot.entities.values())
       .filter(e => e.kind === FRAMEWORK_ENTITY_KINDS.OCCURRENCE &&
         context.graphSnapshot.relationships.some(r =>
-          r.kind === FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING && r.src === e.id && r.dst === era.id
+          r.kind === FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING &&
+          r.src === e.id &&
+          r.dst === era.id &&
+          r.status !== 'historical'
         ))
       .map(e => e.name);
 

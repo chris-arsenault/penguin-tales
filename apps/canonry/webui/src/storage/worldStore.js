@@ -375,8 +375,6 @@ export async function saveSimulationData(projectId, { simulationResults, simulat
     ...existingSlot,
     simulationResults,
     simulationState,
-    title: existingSlot.title || 'Scratch',
-    createdAt: existingSlot.createdAt || Date.now(),
   };
   const slots = { ...store.slots, 0: updatedSlot };
   await saveWorldStore(projectId, { slots, activeSlotIndex: 0 });
@@ -451,5 +449,20 @@ export async function savePromptTemplates(projectId, promptTemplates) {
 export async function loadPromptTemplates(projectId) {
   const store = await loadWorldStore(projectId);
   return store?.promptTemplates || null;
+}
+
+/**
+ * Save Illuminator style selection (shared across slots)
+ */
+export async function saveStyleSelection(projectId, styleSelection) {
+  await saveWorldStore(projectId, { styleSelection });
+}
+
+/**
+ * Load Illuminator style selection
+ */
+export async function loadStyleSelection(projectId) {
+  const store = await loadWorldStore(projectId);
+  return store?.styleSelection || null;
 }
 

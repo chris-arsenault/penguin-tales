@@ -12,6 +12,7 @@ import {
   createEmptyProject,
 } from './db.js';
 import { loadLastProjectId, saveLastProjectId } from './uiState.js';
+import { loadWorldStore, saveWorldStore } from './worldStore.js';
 
 /**
  * Project file names for individual domain files
@@ -83,10 +84,12 @@ async function fetchDefaultProject() {
 /**
  * Create a zip file from project data using JSZip-like structure
  * Returns a Blob containing the zip file
+ *
+ * @param {Object} project - The project data
+ * @param {Object} options - Optional config
+ * @param {Object} options.illuminatorConfig - Illuminator settings to include
  */
-async function createProjectZip(project) {
-  // We'll use the browser's native compression API or a simple implementation
-  // For now, use a custom zip implementation that works in browsers
+async function createProjectZip(project, options = {}) {
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
 
@@ -144,12 +147,18 @@ async function createProjectZip(project) {
     zip.file('distributionTargets.json', JSON.stringify(project.distributionTargets, null, 2));
   }
 
+  // Add Illuminator configuration if provided
+  const { illuminatorConfig } = options;
+  if (illuminatorConfig) {
+    zip.file('illuminatorConfig.json', JSON.stringify(illuminatorConfig, null, 2));
+  }
+
   return zip.generateAsync({ type: 'blob' });
 }
 
 /**
  * Extract project data from a zip file
- * Returns the assembled project object
+ * Returns { project, illuminatorConfig }
  */
 async function extractProjectZip(zipBlob) {
   const { default: JSZip } = await import('jszip');
@@ -198,7 +207,14 @@ async function extractProjectZip(zipBlob) {
     }
   }
 
-  return project;
+  // Load Illuminator config if present
+  let illuminatorConfig = null;
+  const illuminatorFile = zip.file('illuminatorConfig.json');
+  if (illuminatorFile) {
+    illuminatorConfig = JSON.parse(await illuminatorFile.async('string'));
+  }
+
+  return { project, illuminatorConfig };
 }
 
 export function useProjectStorage() {
@@ -380,11 +396,29 @@ export function useProjectStorage() {
   );
 
   // Export project as a zip file (Blob)
+  // Includes Illuminator configuration from worldStore
   const exportProject = useCallback(
     async (project = currentProject) => {
       if (!project) return null;
       try {
-        const zipBlob = await createProjectZip(project);
+        // Load Illuminator config from worldStore
+        let illuminatorConfig = null;
+        const worldStore = await loadWorldStore(project.id);
+        if (worldStore) {
+          illuminatorConfig = {
+            worldContext: worldStore.worldContext || null,
+            promptTemplates: worldStore.promptTemplates || null,
+            enrichmentConfig: worldStore.enrichmentConfig || null,
+            styleSelection: worldStore.styleSelection || null,
+          };
+          // Only include if there's actual data
+          const hasData = Object.values(illuminatorConfig).some(v => v !== null);
+          if (!hasData) {
+            illuminatorConfig = null;
+          }
+        }
+
+        const zipBlob = await createProjectZip(project, { illuminatorConfig });
         return zipBlob;
       } catch (err) {
         setError(err.message);
@@ -395,17 +429,20 @@ export function useProjectStorage() {
   );
 
   // Import project from zip file (Blob or File)
+  // Restores Illuminator configuration to worldStore
   const importProject = useCallback(
     async (input) => {
       try {
-        let data;
+        let extractedData;
 
         // Check if input is a Blob/File (zip)
         if (input instanceof Blob) {
-          data = await extractProjectZip(input);
+          extractedData = await extractProjectZip(input);
         } else {
           throw new Error('Invalid import format: expected zip file');
         }
+
+        const { project: data, illuminatorConfig } = extractedData;
 
         // Generate new ID to avoid conflicts
         let project = {
@@ -416,6 +453,28 @@ export function useProjectStorage() {
         };
 
         await saveProject(project);
+
+        // Restore Illuminator configuration to worldStore
+        if (illuminatorConfig) {
+          const worldStoreData = {
+            slots: {},
+            activeSlotIndex: 0,
+          };
+          if (illuminatorConfig.worldContext) {
+            worldStoreData.worldContext = illuminatorConfig.worldContext;
+          }
+          if (illuminatorConfig.promptTemplates) {
+            worldStoreData.promptTemplates = illuminatorConfig.promptTemplates;
+          }
+          if (illuminatorConfig.enrichmentConfig) {
+            worldStoreData.enrichmentConfig = illuminatorConfig.enrichmentConfig;
+          }
+          if (illuminatorConfig.styleSelection) {
+            worldStoreData.styleSelection = illuminatorConfig.styleSelection;
+          }
+          await saveWorldStore(project.id, worldStoreData);
+        }
+
         await refreshList();
         setCurrentProject(project);
         return project;

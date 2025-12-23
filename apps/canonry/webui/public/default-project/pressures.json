@@ -3,7 +3,7 @@
     "id": "resource_availibility",
     "name": "Resource Availibility",
     "initialValue": -40,
-    "homeostasis": 0.05,
+    "homeostasis": 0.2,
     "growth": {
       "positiveFeedback": [
         {
@@ -40,7 +40,7 @@
     "id": "magical_stability",
     "name": "Magical Stability",
     "initialValue": 40,
-    "homeostasis": 0.06,
+    "homeostasis": 0.2,
     "growth": {
       "positiveFeedback": [
         {
@@ -74,7 +74,7 @@
     "id": "security",
     "name": "Iceberg Security",
     "initialValue": 0,
-    "homeostasis": 0.06,
+    "homeostasis": 0.2,
     "growth": {
       "positiveFeedback": [
         {
@@ -102,7 +102,7 @@
     "id": "harmony",
     "name": "Cultural Harmony",
     "initialValue": 0,
-    "homeostasis": 0.15,
+    "homeostasis": 0.2,
     "growth": {
       "positiveFeedback": [
         {

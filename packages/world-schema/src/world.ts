@@ -149,7 +149,6 @@ export interface WorldMetadata {
   isComplete?: boolean;
   entityCount?: number;
   relationshipCount?: number;
-  historicalRelationshipCount?: number;
   metaEntityCount?: number;
   enriched?: boolean;
   enrichedAt?: number;
@@ -169,7 +168,6 @@ export interface WorldOutput {
   metadata: WorldMetadata;
   hardState: WorldEntity[];
   relationships: WorldRelationship[];
-  historicalRelationships?: WorldRelationship[];
   pressures: Record<string, number>;
   history: HistoryEvent[];
   distributionMetrics?: DistributionMetrics;

@@ -416,7 +416,7 @@ export class TemplateInterpreter {
     const placementDebugList: PlacementDebug[] = [];  // Detailed placement debug info
 
     for (const rule of template.creation) {
-      const created = await this.executeCreation(rule, context, entities.length);
+      const created = await this.executeCreation(rule, context, entities.length, template.name);
       entities.push(...created.entities);
       entityRefs.set(rule.entityRef, created.placeholders);
       placementStrategies.push(...created.placementStrategies);
@@ -509,7 +509,8 @@ export class TemplateInterpreter {
   private async executeCreation(
     rule: CreationRule,
     context: ExecutionContext,
-    startIndex: number
+    startIndex: number,
+    templateName: string
   ): Promise<{
     entities: Partial<HardState>[];
     placeholders: string[];
@@ -556,7 +557,15 @@ export class TemplateInterpreter {
       const description = this.resolveDescription(rule.description, context);
 
       // Resolve placement
-      const placementResult = await this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
+      let placementResult;
+      try {
+        placementResult = await this.resolvePlacement(rule.placement, context, culture, placeholder, rule.kind);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `${message} (template "${templateName}", entityRef "${rule.entityRef}", kind "${rule.kind}")`
+        );
+      }
 
       // Merge template tags with derived tags from placement (derived tags take precedence)
       const derivedTags = placementResult.derivedTags || {};

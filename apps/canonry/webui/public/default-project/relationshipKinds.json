@@ -181,38 +181,6 @@
     "decayRate": "slow"
   },
   {
-    "kind": "active_during",
-    "description": "Active During",
-    "srcKinds": [
-      "occurrence",
-      "npc",
-      "faction"
-    ],
-    "dstKinds": [
-      "occurrence"
-    ],
-    "cullable": false,
-    "decayRate": "none"
-  },
-  {
-    "kind": "participant_in",
-    "description": "Participant In",
-    "srcKinds": [
-      "npc",
-      "faction",
-      "occurrence",
-      "rules"
-    ],
-    "dstKinds": [
-      "occurrence",
-      "npc",
-      "faction",
-      "location"
-    ],
-    "cullable": false,
-    "decayRate": "none"
-  },
-  {
     "kind": "commemorates",
     "description": "Commemorates",
     "srcKinds": [
@@ -346,5 +314,14 @@
     "cullable": true,
     "decayRate": "medium",
     "_key": "rel_1765395010690"
+  },
+  {
+    "kind": "contains",
+    "description": "Contais",
+    "srcKinds": [],
+    "dstKinds": [],
+    "cullable": true,
+    "decayRate": "medium",
+    "_key": "rel_1766399521193"
   }
 ]

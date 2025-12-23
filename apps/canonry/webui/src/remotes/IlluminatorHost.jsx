@@ -47,6 +47,10 @@ export default function IlluminatorHost({
   onWorldContextChange,
   promptTemplates,
   onPromptTemplatesChange,
+  enrichmentConfig,
+  onEnrichmentConfigChange,
+  styleSelection,
+  onStyleSelectionChange,
   activeSection,
   onSectionChange,
   activeSlotIndex,
@@ -63,6 +67,10 @@ export default function IlluminatorHost({
           onWorldContextChange={onWorldContextChange}
           promptTemplates={promptTemplates}
           onPromptTemplatesChange={onPromptTemplatesChange}
+          enrichmentConfig={enrichmentConfig}
+          onEnrichmentConfigChange={onEnrichmentConfigChange}
+          styleSelection={styleSelection}
+          onStyleSelectionChange={onStyleSelectionChange}
           activeSection={activeSection}
           onSectionChange={onSectionChange}
           activeSlotIndex={activeSlotIndex}

@@ -21,6 +21,22 @@ export interface StyleInfo {
   compositionPromptFragment?: string;
   /** Additional culture-specific style keywords */
   cultureKeywords?: string[];
+  /**
+   * Visual identity entries from culture, filtered by entity kind's visualIdentityKeys.
+   * e.g., { "ATTIRE": "fur parkas with bone jewelry", "SPECIES": "emperor penguins" }
+   */
+  visualIdentity?: Record<string, string>;
+}
+
+/**
+ * Descriptive information for text generation
+ */
+export interface DescriptiveInfo {
+  /**
+   * Descriptive identity entries from culture, filtered by entity kind's descriptiveIdentityKeys.
+   * e.g., { "CUSTOMS": "elaborate greeting rituals", "SPEECH": "formal, archaic dialect" }
+   */
+  descriptiveIdentity?: Record<string, string>;
 }
 
 /**
@@ -99,10 +115,11 @@ export interface DescriptionTemplate {
 }
 
 export interface ImageTemplate {
-  style: string;
-  composition: string;
+  /** Mood guidance based on entity status and relationships */
   mood: string;
+  /** Elements to avoid in the image */
   avoidElements: string;
+  /** Advanced mode: full template override */
   fullTemplate?: string;
 }
 
@@ -118,6 +135,36 @@ export interface PromptTemplates {
       description?: Partial<DescriptionTemplate>;
       image?: Partial<ImageTemplate>;
     };
+  };
+  /**
+   * Which visual identity keys to include in image prompts, per entity kind.
+   * Keys come from cultureVisualIdentities (e.g., "ATTIRE", "SPECIES", "ARCHITECTURE").
+   */
+  visualIdentityKeysByKind?: {
+    [entityKind: string]: string[];
+  };
+  /**
+   * Visual identity KVPs for each culture (used in image prompts).
+   * Keys are category names (e.g., "ATTIRE", "SPECIES", "ARCHITECTURE").
+   * Values are descriptive text for image generation.
+   */
+  cultureVisualIdentities?: {
+    [cultureId: string]: Record<string, string>;
+  };
+  /**
+   * Which descriptive identity keys to include in text prompts, per entity kind.
+   * Keys come from cultureDescriptiveIdentities (e.g., "CUSTOMS", "SPEECH", "VALUES").
+   */
+  descriptiveIdentityKeysByKind?: {
+    [entityKind: string]: string[];
+  };
+  /**
+   * Descriptive identity KVPs for each culture (used in text prompts).
+   * Keys are category names (e.g., "CUSTOMS", "SPEECH", "VALUES").
+   * Values are descriptive text for description generation.
+   */
+  cultureDescriptiveIdentities?: {
+    [cultureId: string]: Record<string, string>;
   };
 }
 
@@ -148,10 +195,6 @@ Don't invent major relationships not implied by the data - the relationships pro
 };
 
 export const DEFAULT_IMAGE_TEMPLATE: ImageTemplate = {
-  style: `Art style appropriate for {{world.tone}} - adapt to the world's aesthetic. Rich detail on elements that reveal character or status. The entity's prominence ({{entity.prominence}}) should influence visual treatment: mythic entities are iconic, marginal ones intimate.`,
-
-  composition: `For {{entity.kind}}: Characters get portraits showing personality; locations get establishing shots; events get dynamic moments; factions get symbolic representation.`,
-
   mood: `Reflect the entity's current status ({{entity.status}}) and relationships. If they have rivals, perhaps tension in posture. If allied with a powerful faction, confidence. If ancient, gravitas.`,
 
   avoidElements: `Generic fantasy tropes unless they fit {{world.name}}. No modern elements. No contradicting the entity's established cultural identity.`,
@@ -206,9 +249,6 @@ Show personality through specifics - how they move, speak, what they care about.
 
 {{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}`,
     },
-    image: {
-      composition: `Character portrait showing personality and status. Include visual hints of their {{entity.subtype}} role and {{entity.culture}} identity. Relationships might influence attire or bearing (faction symbols, alliance tokens, etc).`,
-    },
   },
 
   location: {
@@ -221,9 +261,6 @@ What entities are connected to this location?
 {{/relationships}}
 
 Consider: What activities happen here? Who controls or claims it? What's the atmosphere - welcoming, dangerous, sacred, mundane? The {{entity.prominence}} level suggests how well-known or hidden it is.`,
-    },
-    image: {
-      composition: `Establishing shot showing scale and atmosphere. Include environmental storytelling - signs of the entities that inhabit or use this place. Weather/lighting should match the mood.`,
     },
   },
 
@@ -240,9 +277,6 @@ What unites members? What do outsiders think of them? Their {{entity.prominence}
 
 {{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}`,
     },
-    image: {
-      composition: `Symbolic representation or group scene. Show distinguishing visual elements - banners, uniforms, meeting places, iconography. Should feel like a collective, not an individual.`,
-    },
   },
 
   occurrence: {
@@ -257,7 +291,6 @@ Entities involved:
 What happened? Who was changed by it? The {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?`,
     },
     image: {
-      composition: `Dynamic scene capturing the key moment. Multiple figures if relevant. Dramatic lighting and composition conveying emotional weight.`,
       mood: `Match the nature of the event - triumphant, tragic, mysterious, transformative. The viewer should feel like they're witnessing history.`,
     },
   },
@@ -273,10 +306,6 @@ Key elements of this era:
 - {{kind}}: {{targetName}}
 {{/relationships}}`,
     },
-    image: {
-      style: `Symbolic or allegorical representation. May use visual metaphor - a rising sun, crumbling walls, gathering storm. Should feel like looking at a historical period, not a moment.`,
-      composition: `Panoramic or symbolic. Multiple vignettes acceptable. Convey the era's dominant mood and themes.`,
-    },
   },
 
   artifact: {
@@ -289,10 +318,6 @@ Who or what is connected to this artifact?
 {{/relationships}}
 
 What does it look like? How does it feel to encounter? What's its history, purpose, cost? The {{entity.prominence}} suggests how famous or obscure it is.`,
-    },
-    image: {
-      composition: `Object study with dramatic lighting. Show scale through context. Include details hinting at age, use, significance.`,
-      style: `Rich detail on materials and craftsmanship. Lighting should emphasize the object's nature.`,
     },
   },
 };
@@ -356,52 +381,88 @@ function getNestedValue(obj: unknown, path: string): unknown {
 }
 
 /**
+ * Format entity tags for prompt inclusion
+ */
+function formatTags(tags: Record<string, string | number | boolean> | undefined): string {
+  if (!tags || Object.keys(tags).length === 0) {
+    return '';
+  }
+  const lines = Object.entries(tags).map(([key, value]) => `- ${key}: ${value}`);
+  return `TAGS:\n${lines.join('\n')}`;
+}
+
+/**
+ * Build the descriptive identity section from culture's descriptiveIdentity
+ */
+function buildDescriptiveIdentitySection(descriptiveIdentity: Record<string, string> | undefined, culture: string): string {
+  if (!descriptiveIdentity || Object.keys(descriptiveIdentity).length === 0) {
+    return '';
+  }
+
+  const lines = Object.entries(descriptiveIdentity).map(([key, value]) => `- ${key}: ${value}`);
+  return `CULTURAL IDENTITY (${culture}):\n${lines.join('\n')}`;
+}
+
+/**
  * Build a description prompt from template + context
  */
 export function buildDescriptionPrompt(
   template: DescriptionTemplate,
-  context: PromptContext
+  context: PromptContext,
+  descriptiveInfo?: DescriptiveInfo
 ): string {
   if (template.fullTemplate) {
     return expandTemplate(template.fullTemplate, context);
   }
 
-  const prompt = `Write a description for ${context.entity.entity.name}, a ${context.entity.entity.subtype} ${context.entity.entity.kind} in ${context.world.name}.
+  const e = context.entity.entity;
+  const tagsSection = formatTags(e.tags);
+  const descriptiveIdentitySection = buildDescriptiveIdentitySection(
+    descriptiveInfo?.descriptiveIdentity,
+    e.culture
+  );
 
-WORLD: ${context.world.description}
+  const parts = [
+    `Write a description for ${e.name}, a ${e.subtype} ${e.kind} in ${context.world.name}.`,
+    '',
+    `WORLD: ${context.world.description}`,
+    '',
+    'ENTITY:',
+    `- Kind: ${e.kind}`,
+    `- Subtype: ${e.subtype}`,
+    `- Prominence: ${e.prominence}`,
+    `- Status: ${e.status}`,
+    `- Culture: ${e.culture || 'unaffiliated'}`,
+    `- Age in world: ${context.entity.entityAge}`,
+    e.description ? `- Existing description: ${e.description}` : '',
+    '',
+    tagsSection,
+    descriptiveIdentitySection,
+    '',
+    'RELATIONSHIPS:',
+    formatRelationships(context.entity.relationships),
+    '',
+    context.entity.culturalPeers?.length ? `CULTURAL PEERS: ${context.entity.culturalPeers.join(', ')}` : '',
+    context.entity.factionMembers?.length ? `FACTION MEMBERS: ${context.entity.factionMembers.join(', ')}` : '',
+    '',
+    `ERA: ${context.entity.era.name}${context.entity.era.description ? ` - ${context.entity.era.description}` : ''}`,
+    '',
+    '---',
+    '',
+    'INSTRUCTIONS:',
+    expandTemplate(template.instructions, context),
+    '',
+    'TONE:',
+    expandTemplate(template.tone, context),
+    '',
+    'CONSTRAINTS:',
+    expandTemplate(template.constraints, context),
+    '',
+    'FORMAT:',
+    expandTemplate(template.outputFormat, context),
+  ];
 
-ENTITY:
-- Kind: ${context.entity.entity.kind}
-- Subtype: ${context.entity.entity.subtype}
-- Prominence: ${context.entity.entity.prominence}
-- Status: ${context.entity.entity.status}
-- Culture: ${context.entity.entity.culture || 'unaffiliated'}
-- Age in world: ${context.entity.entityAge}
-${context.entity.entity.description ? `- Existing description: ${context.entity.entity.description}` : ''}
-
-RELATIONSHIPS:
-${formatRelationships(context.entity.relationships)}
-
-${context.entity.culturalPeers?.length ? `CULTURAL PEERS: ${context.entity.culturalPeers.join(', ')}` : ''}
-${context.entity.factionMembers?.length ? `FACTION MEMBERS: ${context.entity.factionMembers.join(', ')}` : ''}
-
-ERA: ${context.entity.era.name}${context.entity.era.description ? ` - ${context.entity.era.description}` : ''}
-
----
-
-INSTRUCTIONS:
-${expandTemplate(template.instructions, context)}
-
-TONE:
-${expandTemplate(template.tone, context)}
-
-CONSTRAINTS:
-${expandTemplate(template.constraints, context)}
-
-FORMAT:
-${expandTemplate(template.outputFormat, context)}`;
-
-  return prompt;
+  return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
@@ -421,40 +482,53 @@ export function buildImagePrompt(
   const enrichedDesc = (context.entity as { enrichedDescription?: string }).enrichedDescription;
   const descriptionText = enrichedDesc || e.description;
 
-  // Build style section if style info is provided
-  const styleSection = buildStyleSection(styleInfo, template, context);
+  // Build sections
+  const styleSection = styleInfo?.artisticPromptFragment
+    ? `STYLE: ${styleInfo.artisticPromptFragment}`
+    : '';
 
-  return `${styleSection}
-SUBJECT: ${e.name}, a ${e.subtype} ${e.kind}
-${descriptionText ? `DESCRIPTION: ${descriptionText}` : ''}
+  const compositionSection = styleInfo?.compositionPromptFragment
+    ? `COMPOSITION: ${styleInfo.compositionPromptFragment}`
+    : '';
 
-WORLD: ${context.world.name} - ${context.world.description}
-${context.world.tone ? `TONE: ${context.world.tone}` : ''}
+  const visualIdentitySection = buildVisualIdentitySection(styleInfo?.visualIdentity, e.culture);
+  const tagsSection = formatTags(e.tags);
 
-${styleInfo?.cultureKeywords?.length ? `CULTURAL NOTES: ${styleInfo.cultureKeywords.join(', ')}\n` : ''}STATUS: ${e.status} | PROMINENCE: ${e.prominence}
-${context.entity.relationships.length ? `KEY RELATIONSHIPS: ${context.entity.relationships.slice(0, 3).map(r => `${r.kind} ${r.targetName}`).join(', ')}` : ''}
+  const parts = [
+    styleSection,
+    '',
+    `SUBJECT: ${e.name}, a ${e.subtype} ${e.kind}`,
+    descriptionText ? `DESCRIPTION: ${descriptionText}` : '',
+    '',
+    `WORLD: ${context.world.name} - ${context.world.description}`,
+    context.world.tone ? `TONE: ${context.world.tone}` : '',
+    '',
+    visualIdentitySection,
+    tagsSection,
+    styleInfo?.cultureKeywords?.length ? `CULTURAL NOTES: ${styleInfo.cultureKeywords.join(', ')}` : '',
+    `STATUS: ${e.status} | PROMINENCE: ${e.prominence}`,
+    context.entity.relationships.length ? `KEY RELATIONSHIPS: ${context.entity.relationships.slice(0, 3).map(r => `${r.kind} ${r.targetName}`).join(', ')}` : '',
+    '',
+    compositionSection,
+    '',
+    `MOOD: ${expandTemplate(template.mood, context)}`,
+    '',
+    `AVOID: ${expandTemplate(template.avoidElements, context)}`,
+  ];
 
-COMPOSITION: ${styleInfo?.compositionPromptFragment || expandTemplate(template.composition, context)}
-
-MOOD: ${expandTemplate(template.mood, context)}
-
-AVOID: ${expandTemplate(template.avoidElements, context)}`;
+  return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
- * Build the style section of an image prompt
+ * Build the visual identity section from culture's visualIdentity
  */
-function buildStyleSection(styleInfo: StyleInfo | undefined, template: ImageTemplate, context: PromptContext): string {
-  const parts: string[] = [];
-
-  // If artistic style is provided, use it; otherwise fall back to template
-  if (styleInfo?.artisticPromptFragment) {
-    parts.push(`STYLE: ${styleInfo.artisticPromptFragment}`);
-  } else {
-    parts.push(expandTemplate(template.style, context));
+function buildVisualIdentitySection(visualIdentity: Record<string, string> | undefined, culture: string): string {
+  if (!visualIdentity || Object.keys(visualIdentity).length === 0) {
+    return '';
   }
 
-  return parts.join('\n\n');
+  const lines = Object.entries(visualIdentity).map(([key, value]) => `- ${key}: ${value}`);
+  return `VISUAL IDENTITY (${culture}):\n${lines.join('\n')}`;
 }
 
 function formatRelationships(relationships: ResolvedRelationship[]): string {
@@ -473,7 +547,9 @@ function formatRelationships(relationships: ResolvedRelationship[]): string {
 }
 
 /**
- * Get effective template for an entity kind
+ * Get effective template for an entity kind and culture
+ * Merge order: defaults → kind override → culture override
+ * (culture overrides are most specific)
  */
 export function getEffectiveTemplate(
   templates: PromptTemplates,
@@ -482,10 +558,6 @@ export function getEffectiveTemplate(
 ): DescriptionTemplate | ImageTemplate {
   const defaultTemplate = templates.defaults[taskType];
   const kindOverride = templates.byKind[kind]?.[taskType];
-
-  if (!kindOverride) {
-    return defaultTemplate;
-  }
 
   return {
     ...defaultTemplate,
@@ -505,6 +577,10 @@ export function createDefaultPromptTemplates(): PromptTemplates {
       eraNarrative: DEFAULT_ERA_NARRATIVE_TEMPLATE,
     },
     byKind: { ...DEFAULT_KIND_OVERRIDES },
+    visualIdentityKeysByKind: {},
+    cultureVisualIdentities: {},
+    descriptiveIdentityKeysByKind: {},
+    cultureDescriptiveIdentities: {},
   };
 }
 
@@ -530,6 +606,18 @@ export function mergeWithDefaults(
     byKind: {
       ...defaults.byKind,
       ...saved.byKind,
+    },
+    visualIdentityKeysByKind: {
+      ...saved.visualIdentityKeysByKind,
+    },
+    cultureVisualIdentities: {
+      ...saved.cultureVisualIdentities,
+    },
+    descriptiveIdentityKeysByKind: {
+      ...saved.descriptiveIdentityKeysByKind,
+    },
+    cultureDescriptiveIdentities: {
+      ...saved.cultureDescriptiveIdentities,
     },
   };
 }

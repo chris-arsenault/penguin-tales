@@ -62,4 +62,13 @@ export interface CultureDefinition {
   defaultCompositionStyles?: Record<string, string>;
   /** Additional style keywords specific to this culture (appended to image prompts) */
   styleKeywords?: string[];
+
+  // === Illuminator: In-Universe Visual Identity ===
+  /**
+   * Arbitrary key-value pairs describing in-universe visual characteristics.
+   * Keys are category names (e.g., "ATTIRE", "SPECIES", "ARCHITECTURE").
+   * Values are descriptive text for image generation.
+   * Which keys are used depends on the entity kind's visualIdentityKeys setting.
+   */
+  visualIdentity?: Record<string, string>;
 }

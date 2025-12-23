@@ -33,9 +33,8 @@ const DESCRIPTION_SECTIONS = [
   { key: 'outputFormat', label: 'Output Format', description: 'Length and format guidance' },
 ];
 
+// Note: Style and Composition are now controlled by the Style Library
 const IMAGE_SECTIONS = [
-  { key: 'style', label: 'Art Style', description: 'Visual style and aesthetic' },
-  { key: 'composition', label: 'Composition', description: 'Shot type, framing, layout' },
   { key: 'mood', label: 'Mood', description: 'Emotional tone based on prominence' },
   { key: 'avoidElements', label: 'Avoid', description: 'What NOT to include' },
 ];
@@ -191,6 +190,7 @@ function KindSelector({ kinds, selectedKind, onSelectKind }) {
   );
 }
 
+
 export default function PromptTemplateEditor({
   templates: externalTemplates,
   onTemplatesChange,
@@ -260,6 +260,7 @@ export default function PromptTemplateEditor({
   }, [selectedEntity, entityById, relationshipsByEntity]);
 
   // Get current template being edited
+  // When editing kind override, show kind-specific template
   const currentTemplate = useMemo(() => {
     if (selectedType === 'relationship') {
       return templates.defaults.relationship;
@@ -268,18 +269,16 @@ export default function PromptTemplateEditor({
       return templates.defaults.eraNarrative;
     }
 
-    // For description/image, get effective template for selected kind
     const taskType = selectedType === 'description' ? 'description' : 'image';
 
-    if (selectedKind === null) {
-      return templates.defaults[taskType];
+    // If editing a kind override
+    if (selectedKind !== null) {
+      const kindOverride = templates.byKind[selectedKind]?.[taskType];
+      if (kindOverride) {
+        return { ...templates.defaults[taskType], ...kindOverride };
+      }
     }
 
-    // Get kind override or default
-    const kindOverride = templates.byKind[selectedKind]?.[taskType];
-    if (kindOverride) {
-      return { ...templates.defaults[taskType], ...kindOverride };
-    }
     return templates.defaults[taskType];
   }, [templates, selectedType, selectedKind]);
 
@@ -311,12 +310,47 @@ export default function PromptTemplateEditor({
     }
 
     const taskType = selectedType === 'description' ? 'description' : 'image';
-    const effectiveTemplate = getEffectiveTemplate(templates, selectedEntity?.kind || selectedKind || 'npc', taskType);
+    const effectiveTemplate = getEffectiveTemplate(
+      templates,
+      selectedEntity?.kind || selectedKind || 'npc',
+      taskType
+    );
+
+    const entityCulture = selectedEntity?.culture;
+    const entityKind = selectedEntity?.kind || selectedKind || 'npc';
 
     if (taskType === 'description') {
-      return buildDescriptionPrompt(effectiveTemplate, context);
+      // Build descriptive identity for preview
+      const cultureDescriptiveIdentity = templates.cultureDescriptiveIdentities?.[entityCulture] || {};
+      const allowedDescriptiveKeys = templates.descriptiveIdentityKeysByKind?.[entityKind] || [];
+      const filteredDescriptiveIdentity = {};
+      for (const key of allowedDescriptiveKeys) {
+        if (cultureDescriptiveIdentity[key]) {
+          filteredDescriptiveIdentity[key] = cultureDescriptiveIdentity[key];
+        }
+      }
+
+      const descriptiveInfo = {
+        descriptiveIdentity: Object.keys(filteredDescriptiveIdentity).length > 0 ? filteredDescriptiveIdentity : undefined,
+      };
+
+      return buildDescriptionPrompt(effectiveTemplate, context, descriptiveInfo);
     } else {
-      return buildImagePrompt(effectiveTemplate, context);
+      // Build visual identity for preview
+      const cultureVisualIdentity = templates.cultureVisualIdentities?.[entityCulture] || {};
+      const allowedKeys = templates.visualIdentityKeysByKind?.[entityKind] || [];
+      const filteredVisualIdentity = {};
+      for (const key of allowedKeys) {
+        if (cultureVisualIdentity[key]) {
+          filteredVisualIdentity[key] = cultureVisualIdentity[key];
+        }
+      }
+
+      const styleInfo = {
+        visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
+      };
+
+      return buildImagePrompt(effectiveTemplate, context, styleInfo);
     }
   }, [
     templates,
@@ -342,16 +376,7 @@ export default function PromptTemplateEditor({
         newTemplates.defaults = { ...newTemplates.defaults, relationship: value };
       } else if (selectedType === 'era_narrative') {
         newTemplates.defaults = { ...newTemplates.defaults, eraNarrative: value };
-      } else if (selectedKind === null) {
-        // Editing default
-        newTemplates.defaults = {
-          ...newTemplates.defaults,
-          [taskType]: {
-            ...newTemplates.defaults[taskType],
-            [sectionKey]: value,
-          },
-        };
-      } else {
+      } else if (selectedKind !== null) {
         // Editing kind override
         newTemplates.byKind = {
           ...newTemplates.byKind,
@@ -361,6 +386,15 @@ export default function PromptTemplateEditor({
               ...newTemplates.byKind[selectedKind]?.[taskType],
               [sectionKey]: value,
             },
+          },
+        };
+      } else {
+        // Editing default
+        newTemplates.defaults = {
+          ...newTemplates.defaults,
+          [taskType]: {
+            ...newTemplates.defaults[taskType],
+            [sectionKey]: value,
           },
         };
       }
@@ -414,6 +448,7 @@ export default function PromptTemplateEditor({
     };
     onTemplatesChange(newTemplates);
   }, [templates, selectedType, selectedKind, onTemplatesChange]);
+
 
   const sections = selectedType === 'description' ? DESCRIPTION_SECTIONS : IMAGE_SECTIONS;
   const showKindSelector = selectedType === 'description' || selectedType === 'image';

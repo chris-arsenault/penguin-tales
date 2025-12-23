@@ -155,22 +155,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "faction",
-        "filters": [
-          {
-            "type": "graph_path",
-            "assert": {
-              "check": "exists",
-              "path": [
-                {
-                  "via": "leader_of",
-                  "direction": "in",
-                  "targetKind": "npc"
-                }
-              ]
-            }
-          }
-        ]
+        "kind": "faction"
       }
     },
     "targeting": {
@@ -222,7 +207,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "raid",
@@ -277,7 +262,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "establish_trade",
@@ -338,7 +323,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "corrupt_location",
@@ -408,7 +393,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "manifest_magic",
@@ -521,7 +506,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "convert_faction",
@@ -530,22 +515,7 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "rules",
-        "filters": [
-          {
-            "type": "graph_path",
-            "assert": {
-              "check": "exists",
-              "path": [
-                {
-                  "via": "believer_of",
-                  "direction": "in",
-                  "targetKind": "npc"
-                }
-              ]
-            }
-          }
-        ]
+        "kind": "rules"
       }
     },
     "targeting": {
@@ -595,7 +565,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "draw_in_faction",
@@ -652,7 +622,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "escalate_war",
@@ -710,7 +680,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "spread_corruption",
@@ -770,7 +740,9 @@
           "delta": -10
         }
       ],
-      "descriptionTemplate": "spread corruption to {target.name}"
+      "descriptionTemplate": "spread corruption to {target.name}",
+      "applyProminenceToActor": true,
+      "applyProminenceToInstigator": true
     },
     "probability": {
       "baseSuccessChance": 0.35,
@@ -782,7 +754,7 @@
         }
       ]
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "kill_orca",
@@ -791,7 +763,10 @@
     "actor": {
       "selection": {
         "strategy": "by_kind",
-        "kind": "npc"
+        "kind": "npc",
+        "subtypes": [
+          "hero"
+        ]
       }
     },
     "targeting": {
@@ -808,16 +783,28 @@
           "type": "has_tag",
           "tag": "orca"
         }
+      ],
+      "subtypes": [
+        "orca"
       ]
     },
     "outcome": {
-      "descriptionTemplate": "killed {target.name}"
+      "descriptionTemplate": "killed {target.name}",
+      "mutations": [
+        {
+          "type": "change_status",
+          "entity": "$target",
+          "newStatus": "Dead"
+        }
+      ],
+      "applyProminenceToActor": true,
+      "applyProminenceToInstigator": true
     },
     "probability": {
       "baseSuccessChance": 0.5,
       "baseWeight": 1,
       "pressureModifiers": []
     },
-    "enabled": false
+    "enabled": true
   }
 ]

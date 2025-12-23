@@ -10,7 +10,6 @@ import { useProjectStorage } from './storage/useProjectStorage';
 import { loadUiState, saveUiState } from './storage/uiState';
 import {
   loadWorldStore,
-  saveSimulationData,
   loadSimulationData,
   loadWorldData,
   saveWorldData,
@@ -18,8 +17,11 @@ import {
   saveWorldContext,
   loadPromptTemplates,
   savePromptTemplates,
+  saveEnrichmentConfig,
+  saveStyleSelection,
   getSlots,
   getActiveSlotIndex,
+  setActiveSlotIndex as persistActiveSlotIndex,
   saveSlot,
   saveToSlot,
   loadSlot,
@@ -138,6 +140,8 @@ export default function App() {
   const [archivistData, setArchivistData] = useState(null);
   const [worldContext, setWorldContext] = useState(null);
   const [promptTemplates, setPromptTemplates] = useState(null);
+  const [enrichmentConfig, setEnrichmentConfig] = useState(null);
+  const [styleSelection, setStyleSelection] = useState(null);
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulationState, setSimulationState] = useState(null);
   const [slots, setSlots] = useState({});
@@ -145,8 +149,8 @@ export default function App() {
   const simulationOwnerRef = useRef(null);
   // Track whether we're loading from a saved slot (to skip auto-save to scratch)
   const isLoadingSlotRef = useRef(false);
-  // Track the last saved simulation results ID to detect new simulations
-  const lastSavedSimIdRef = useRef(null);
+  // Track the last saved simulation results object to detect new simulations
+  const lastSavedResultsRef = useRef(null);
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
 
   const handleIlluminatorWorldDataChange = useCallback((enrichedWorld) => {
@@ -223,12 +227,14 @@ export default function App() {
 
     simulationOwnerRef.current = null;
     isLoadingSlotRef.current = false;
-    lastSavedSimIdRef.current = null;
+    lastSavedResultsRef.current = null;
     setSimulationResults(null);
     setSimulationState(null);
     setArchivistData(null);
     setWorldContext(null);
     setPromptTemplates(null);
+    setEnrichmentConfig(null);
+    setStyleSelection(null);
     setSlots({});
     setActiveSlotIndex(0);
 
@@ -252,10 +258,8 @@ export default function App() {
         activeSlot?.worldData
       );
       if (activeSlot) {
-        // Track the loaded simulation ID to prevent re-saving as "new"
-        if (activeSlot.simulationResults?.hardState) {
-          lastSavedSimIdRef.current = `${activeSlot.simulationResults.hardState.length}-${activeSlot.simulationResults.hardState[0]?.id || 'none'}`;
-        }
+        // Track the loaded simulation results to prevent re-saving as "new"
+        lastSavedResultsRef.current = activeSlot.simulationResults || null;
         setSimulationResults(activeSlot.simulationResults || null);
         setSimulationState(activeSlot.simulationState || null);
         if (activeSlot.worldData) {
@@ -263,12 +267,18 @@ export default function App() {
         }
       }
 
-      // Load shared data (world context and prompt templates)
+      // Load shared data (world context, prompt templates, and Illuminator config)
       if (store?.worldContext) {
         setWorldContext(store.worldContext);
       }
       if (store?.promptTemplates) {
         setPromptTemplates(store.promptTemplates);
+      }
+      if (store?.enrichmentConfig) {
+        setEnrichmentConfig(store.enrichmentConfig);
+      }
+      if (store?.styleSelection) {
+        setStyleSelection(store.styleSelection);
       }
     });
 
@@ -290,64 +300,53 @@ export default function App() {
       return;
     }
 
-    // Generate a unique ID for this simulation result to detect new vs repeated saves
-    const simId = simulationResults?.hardState ?
-      `${simulationResults.hardState.length}-${simulationResults.hardState[0]?.id || 'none'}` :
-      null;
-
-    // Check if this is a genuinely new simulation (different from last saved)
-    const isNewSimulation = simId && simId !== lastSavedSimIdRef.current;
+    // Check if this is a genuinely new simulation (different results object)
+    const isNewSimulation = Boolean(simulationResults && simulationResults !== lastSavedResultsRef.current);
 
     const worldData = simulationResults ?? null;
     const now = Date.now();
+    let cancelled = false;
 
-    // Save to scratch slot (slot 0) and update local slots state
-    saveSimulationData(currentProject.id, {
-      simulationResults,
-      simulationState,
-    }).then(() => {
-      // Also save worldData to the slot
-      if (worldData) {
-        saveWorldData(currentProject.id, worldData);
+    const persist = async () => {
+      const store = await loadWorldStore(currentProject.id);
+      if (cancelled) return;
+
+      const existingSlot = store?.slots?.[0] ?? {};
+      let title = existingSlot.title || 'Scratch';
+      let createdAt = existingSlot.createdAt || now;
+
+      // Only generate new title for genuinely new simulations
+      if (isNewSimulation && simulationResults?.hardState) {
+        const entityCount = simulationResults.hardState.length;
+        const date = new Date(now);
+        const timeStr = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+        title = `Run - ${timeStr} (${entityCount} entities)`;
+        createdAt = now;
       }
 
-      // Update local slots state to reflect save
-      // Only update title/createdAt for NEW simulations, preserve existing for re-saves
-      setSlots((prev) => {
-        const existingSlot = prev[0] || {};
-        let title = existingSlot.title || 'Scratch';
-        let createdAt = existingSlot.createdAt || now;
+      const slotData = {
+        ...existingSlot,
+        simulationResults,
+        simulationState,
+        worldData,
+        title,
+        createdAt,
+      };
 
-        // Only generate new title for genuinely new simulations
-        if (isNewSimulation && simulationResults?.hardState) {
-          const entityCount = simulationResults.hardState.length;
-          const date = new Date(now);
-          const timeStr = date.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          });
-          title = `Run - ${timeStr} (${entityCount} entities)`;
-          createdAt = now;
-        }
+      await saveSlot(currentProject.id, 0, slotData);
+      await persistActiveSlotIndex(currentProject.id, 0);
+      if (cancelled) return;
 
-        return {
-          ...prev,
-          0: {
-            ...existingSlot,
-            simulationResults,
-            simulationState,
-            worldData,
-            title,
-            createdAt,
-          },
-        };
-      });
+      setSlots((prev) => ({ ...prev, 0: slotData }));
 
       // Track this simulation as saved
-      lastSavedSimIdRef.current = simId;
+      lastSavedResultsRef.current = simulationResults || null;
 
       // Update archivistData for immediate use
       if (worldData) {
@@ -356,7 +355,15 @@ export default function App() {
 
       // Ensure we're viewing scratch after new simulation
       setActiveSlotIndex(0);
+    };
+
+    persist().catch((err) => {
+      console.error('Failed to save simulation results:', err);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentProject?.id, simulationResults, simulationState]);
 
   // Persist world data when it changes (for Archivist/Illuminator)
@@ -385,6 +392,26 @@ export default function App() {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [currentProject?.id, promptTemplates]);
+
+  // Persist enrichment config when it changes (for Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!enrichmentConfig) return;
+    const timeoutId = setTimeout(() => {
+      saveEnrichmentConfig(currentProject.id, enrichmentConfig);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentProject?.id, enrichmentConfig]);
+
+  // Persist style selection when it changes (for Illuminator)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    if (!styleSelection) return;
+    const timeoutId = setTimeout(() => {
+      saveStyleSelection(currentProject.id, styleSelection);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [currentProject?.id, styleSelection]);
 
   const mergeFrameworkOverrides = (items, existingItems, frameworkKeys, keyField) => {
     const filtered = (items || []).filter((item) => !item?.isFramework);
@@ -546,10 +573,8 @@ export default function App() {
 
       // Set simulation state from stored slot
       if (storedSlot) {
-        // Track the loaded simulation ID to prevent re-saving as "new"
-        if (storedSlot.simulationResults?.hardState) {
-          lastSavedSimIdRef.current = `${storedSlot.simulationResults.hardState.length}-${storedSlot.simulationResults.hardState[0]?.id || 'none'}`;
-        }
+        // Track the loaded simulation results to prevent re-saving as "new"
+        lastSavedResultsRef.current = storedSlot.simulationResults || null;
         setSimulationResults(storedSlot.simulationResults || null);
         setSimulationState(storedSlot.simulationState || null);
         if (storedSlot.worldData) {
@@ -558,7 +583,7 @@ export default function App() {
           setArchivistData(null);
         }
       } else {
-        lastSavedSimIdRef.current = null;
+        lastSavedResultsRef.current = null;
         setSimulationResults(null);
         setSimulationState(null);
         setArchivistData(null);
@@ -584,9 +609,7 @@ export default function App() {
 
       // Update the ref to match the saved slot's data (now in targetSlotIndex)
       const savedSlot = store?.slots?.[targetSlotIndex];
-      if (savedSlot?.simulationResults?.hardState) {
-        lastSavedSimIdRef.current = `${savedSlot.simulationResults.hardState.length}-${savedSlot.simulationResults.hardState[0]?.id || 'none'}`;
-      }
+      lastSavedResultsRef.current = savedSlot?.simulationResults || null;
     } catch (err) {
       console.error('Failed to save to slot:', err);
       alert(err.message || 'Failed to save to slot');
@@ -624,7 +647,7 @@ export default function App() {
       if (slotIndex === activeSlotIndex) {
         // Mark as loading to prevent auto-save effect from triggering
         isLoadingSlotRef.current = true;
-        lastSavedSimIdRef.current = null;
+        lastSavedResultsRef.current = null;
         setSimulationResults(null);
         setSimulationState(null);
         setArchivistData(null);
@@ -1096,6 +1119,10 @@ export default function App() {
                 onWorldContextChange={setWorldContext}
                 promptTemplates={promptTemplates}
                 onPromptTemplatesChange={setPromptTemplates}
+                enrichmentConfig={enrichmentConfig}
+                onEnrichmentConfigChange={setEnrichmentConfig}
+                styleSelection={styleSelection}
+                onStyleSelectionChange={setStyleSelection}
                 activeSection={activeSection}
                 onSectionChange={setActiveSection}
                 activeSlotIndex={activeSlotIndex}

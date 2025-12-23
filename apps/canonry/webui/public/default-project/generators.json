@@ -401,7 +401,7 @@
       {
         "type": "modify_pressure",
         "pressureId": "security",
-        "delta": -10
+        "delta": -5
       }
     ],
     "variables": {
@@ -618,7 +618,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "guild_establishment",
@@ -1039,6 +1039,13 @@
           "type": "has_tag",
           "tag": "thriving"
         }
+      ],
+      "saturationLimits": [
+        {
+          "relationshipKind": "splinter_of",
+          "maxCount": 1,
+          "fromKind": "location"
+        }
       ]
     },
     "creation": [
@@ -1140,13 +1147,7 @@
         "strength": 0.8
       }
     ],
-    "stateUpdates": [
-      {
-        "type": "remove_tag",
-        "entity": "$colony",
-        "tag": "thriving"
-      }
-    ],
+    "stateUpdates": [],
     "variables": {},
     "enabled": true
   },
@@ -1273,6 +1274,11 @@
             ],
             "subtype": {
               "$location": "anomaly"
+            },
+            "tags": {
+              "$location": {
+                "anomaly": true
+              }
             }
           }
         },
@@ -1519,15 +1525,9 @@
     "relationships": [
       {
         "kind": "participant_in",
-        "src": "$war",
-        "dst": "$target",
-        "strength": 1
-      },
-      {
-        "kind": "participant_in",
         "src": "$target",
         "dst": "$war",
-        "strength": 0.9
+        "strength": 1
       },
       {
         "kind": "participant_in",
@@ -1567,7 +1567,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "succession_crisis",
@@ -1623,15 +1623,9 @@
     "relationships": [
       {
         "kind": "participant_in",
-        "src": "$crisis",
-        "dst": "$target",
+        "src": "$target",
+        "dst": "$crisis",
         "strength": 1
-      },
-      {
-        "kind": "participant_in",
-        "src": "$crisis",
-        "dst": "$target",
-        "strength": 0.9
       }
     ],
     "stateUpdates": [
@@ -1657,7 +1651,7 @@
       }
     ],
     "variables": {},
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "legend_crystallization",
@@ -1776,7 +1770,7 @@
         }
       }
     },
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "crisis_legislation",
@@ -2595,7 +2589,7 @@
         "tag": "thriving"
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "thermal_colony_recovery",
@@ -2636,7 +2630,7 @@
         "tag": "stressed"
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "thermal_migration",
@@ -2709,7 +2703,7 @@
         "value": true
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "ice_memory_thaw",
@@ -2768,7 +2762,7 @@
         "tag": "hidden"
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "economic_colony_decline",
@@ -2809,7 +2803,7 @@
         "tag": "thriving"
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "economic_colony_recovery",
@@ -2853,7 +2847,7 @@
         "tag": "stressed"
       }
     ],
-    "enabled": false
+    "enabled": true
   },
   {
     "id": "wild_magic_discover",

@@ -65,7 +65,6 @@ export {
   createDefaultStyleLibrary,
   findArtisticStyle,
   findCompositionStyle,
-  getCompositionStylesForKind,
 } from './style.js';
 
 // Seed data types
