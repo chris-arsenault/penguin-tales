@@ -231,6 +231,217 @@
   {
     "systemType": "thresholdTrigger",
     "config": {
+      "id": "war_casualties",
+      "name": "War Casualties",
+      "description": "NPCs serving factions at war can fall in battle",
+      "conditions": [
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "exists",
+            "path": [
+              {
+                "via": "member_of",
+                "direction": "out",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              },
+              {
+                "via": "at_war_with",
+                "direction": "any",
+                "targetKind": "faction",
+                "targetSubtype": "any"
+              }
+            ]
+          }
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.12
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "entity": "$self",
+          "newStatus": "dead"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive",
+        "excludeSubtypes": [
+          "hero"
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "heroic_sacrifice",
+      "name": "Heroic Sacrifice",
+      "description": "Heroes caught in wars occasionally fall, seeding legends",
+      "conditions": [
+        {
+          "type": "or",
+          "conditions": [
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "exists",
+                "path": [
+                  {
+                    "via": "member_of",
+                    "direction": "out",
+                    "targetKind": "faction",
+                    "targetSubtype": "any"
+                  },
+                  {
+                    "via": "at_war_with",
+                    "direction": "any",
+                    "targetKind": "faction",
+                    "targetSubtype": "any"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "graph_path",
+              "assert": {
+                "check": "exists",
+                "path": [
+                  {
+                    "via": "leader_of",
+                    "direction": "out",
+                    "targetKind": "faction",
+                    "targetSubtype": "any"
+                  },
+                  {
+                    "via": "at_war_with",
+                    "direction": "any",
+                    "targetKind": "faction",
+                    "targetSubtype": "any"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.06
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "entity": "$self",
+          "newStatus": "dead"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive",
+        "subtypes": [
+          "hero"
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "old_age_mortality",
+      "name": "Old Age Mortality",
+      "description": "Aging NPCs occasionally pass away, keeping the legend pipeline active",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 60,
+          "since": "created"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.04
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "entity": "$self",
+          "newStatus": "dead"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.3,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "post_war_recovery",
+      "name": "Post-War Recovery",
+      "description": "Factions without active wars shed conflict tags",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "max": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "remove_tag",
+          "tag": "conflict",
+          "entity": "$self"
+        },
+        {
+          "type": "remove_tag",
+          "tag": "hostile",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "pressureChanges": {
+        "harmony": 3,
+        "security": 2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction",
+        "filters": [
+          {
+            "type": "has_any_tag",
+            "tags": [
+              "conflict",
+              "hostile"
+            ]
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
       "id": "power_vacuum_detector",
       "name": "Leadership Crisis",
       "description": "Detects factions with dead leaders and marks them in crisis",

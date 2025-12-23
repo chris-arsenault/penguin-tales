@@ -230,6 +230,19 @@
     "decayRate": "slow"
   },
   {
+    "kind": "corrupted_by",
+    "description": "Corrupted By",
+    "srcKinds": [
+      "location"
+    ],
+    "dstKinds": [
+      "location",
+      "abilities"
+    ],
+    "cullable": true,
+    "decayRate": "slow"
+  },
+  {
     "kind": "celebrated_by",
     "description": "Celebrated By",
     "srcKinds": [

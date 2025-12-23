@@ -202,6 +202,84 @@
     "enabled": true
   },
   {
+    "id": "sue_for_peace",
+    "name": "Sue for Peace",
+    "description": "End a war through negotiation",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "min": 1
+        }
+      ]
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "faction",
+      "filters": [
+        {
+          "type": "exclude",
+          "entities": [
+            "$actor"
+          ]
+        },
+        {
+          "type": "has_relationship",
+          "kind": "at_war_with",
+          "with": "$actor",
+          "direction": "both"
+        }
+      ]
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "archive_relationship",
+          "entity": "$actor",
+          "relationshipKind": "at_war_with",
+          "with": "$target"
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "harmony",
+          "delta": 6
+        },
+        {
+          "type": "modify_pressure",
+          "pressureId": "security",
+          "delta": 3
+        }
+      ],
+      "descriptionTemplate": "negotiated peace with {target.name}",
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 0.25,
+      "pressureModifiers": [
+        {
+          "pressure": "harmony",
+          "multiplier": -0.3
+        },
+        {
+          "pressure": "security",
+          "multiplier": -0.2
+        },
+        {
+          "pressure": "resource_availibility",
+          "multiplier": -0.2
+        }
+      ]
+    },
+    "enabled": true
+  },
+  {
     "id": "raid",
     "name": "Raid",
     "description": "Attack an enemy faction",
@@ -360,7 +438,7 @@
       "filters": [
         {
           "type": "lacks_relationship",
-          "kind": "related_to"
+          "kind": "corrupted_by"
         }
       ]
     },
@@ -368,7 +446,7 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "related_to",
+          "kind": "corrupted_by",
           "src": "$target",
           "dst": "$actor",
           "strength": 0.7
@@ -757,7 +835,7 @@
         },
         {
           "type": "lacks_relationship",
-          "kind": "related_to",
+          "kind": "corrupted_by",
           "with": "$actor"
         }
       ]
@@ -766,7 +844,7 @@
       "mutations": [
         {
           "type": "create_relationship",
-          "kind": "related_to",
+          "kind": "corrupted_by",
           "src": "$target",
           "dst": "$actor",
           "strength": 0.8

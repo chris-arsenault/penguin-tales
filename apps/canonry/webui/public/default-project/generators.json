@@ -1240,10 +1240,10 @@
         "bidirectional": true
       },
       {
-        "kind": "allied_with",
+        "kind": "adjacent_to",
         "src": "$colony",
         "dst": "$target",
-        "strength": 1,
+        "strength": 0.7,
         "bidirectional": true
       },
       {
