@@ -2,6 +2,7 @@ import { SimulationSystem, SystemResult, ComponentPurpose } from '../engine/type
 import { HardState, Relationship } from '../core/worldTypes';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import { rollProbability, hasTag } from '../utils';
+import { FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
 import {
   createSystemContext,
   selectEntities,
@@ -743,12 +744,18 @@ function applyMultiSourceContagion(
 
   // Convert tag modifications to entity modifications
   for (const [entityId, tags] of modifiedTags) {
-    // Keep only the most recent tags (limit to 10)
+    // Keep only the most recent tags (limit to 10), but preserve framework tags if possible
     const tagKeys = Object.keys(tags);
     if (tagKeys.length > 10) {
       const excessCount = tagKeys.length - 10;
+      const frameworkTags = new Set(FRAMEWORK_TAG_VALUES);
+      const removable = tagKeys.filter(tag => !frameworkTags.has(tag));
+      const protectedTags = tagKeys.filter(tag => frameworkTags.has(tag));
+      const removalOrder = removable.length >= excessCount
+        ? removable
+        : removable.concat(protectedTags);
       for (let i = 0; i < excessCount; i++) {
-        delete tags[tagKeys[i]];
+        delete tags[removalOrder[i]];
       }
     }
     modifications.push({

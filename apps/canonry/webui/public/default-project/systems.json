@@ -14,7 +14,11 @@
     "config": {
       "id": "era_transition",
       "name": "Era Progression",
-      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical."
+      "description": "Handles transitions between eras based on world state and per-era exitConditions. Updates era status from future → current → historical.",
+      "prominenceSnapshot": {
+        "enabled": true,
+        "minProminence": "renowned"
+      }
     },
     "enabled": true
   },
@@ -512,6 +516,56 @@
             ]
           }
         ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "war_tie_cleanup",
+      "name": "War Tie Cleanup",
+      "description": "Archives stale war ties when no active war occurrence remains",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "at_war_with",
+          "direction": "both",
+          "min": 1
+        },
+        {
+          "type": "graph_path",
+          "assert": {
+            "check": "not_exists",
+            "path": [
+              {
+                "via": "participant_in",
+                "direction": "out",
+                "targetKind": "occurrence",
+                "targetSubtype": "war",
+                "targetStatus": "active"
+              }
+            ]
+          }
+        }
+      ],
+      "actions": [
+        {
+          "type": "archive_relationship",
+          "entity": "$self",
+          "relationshipKind": "at_war_with",
+          "direction": "both"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.6,
+      "pressureChanges": {
+        "harmony": 2,
+        "security": 2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "faction"
       }
     },
     "enabled": true

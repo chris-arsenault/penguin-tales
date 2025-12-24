@@ -93,6 +93,7 @@ export const FRAMEWORK_TAGS = {
   TEMPORAL: 'temporal',
   ERA: 'era',
   ERA_ID: 'eraId',
+  PROMINENCE_LOCKED: 'prominence_locked',
 } as const;
 
 export type FrameworkTag = typeof FRAMEWORK_TAGS[keyof typeof FRAMEWORK_TAGS];
@@ -320,6 +321,13 @@ export const FRAMEWORK_TAG_DEFINITIONS: TagDefinition[] = [
     category: 'system',
     rarity: 'common',
     description: 'Stores the era identifier for era entities.',
+    isFramework: true,
+  },
+  {
+    tag: FRAMEWORK_TAGS.PROMINENCE_LOCKED,
+    category: 'system',
+    rarity: 'common',
+    description: 'Prevents prominence changes for entities locked at era transition.',
     isFramework: true,
   },
 ];

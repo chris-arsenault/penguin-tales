@@ -1963,6 +1963,12 @@
       },
       {
         "type": "archive_relationship",
+        "entity": "$target",
+        "relationshipKind": "participant_in",
+        "direction": "dst"
+      },
+      {
+        "type": "archive_relationship",
         "entity": "$faction1",
         "relationshipKind": "at_war_with",
         "with": "$faction2"

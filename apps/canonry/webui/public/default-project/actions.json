@@ -210,6 +210,20 @@
         "strategy": "by_kind",
         "kind": "faction"
       },
+      "instigator": {
+        "from": {
+          "relatedTo": "$actor",
+          "relationship": "participant_in",
+          "direction": "src"
+        },
+        "kind": "occurrence",
+        "subtypes": [
+          "war"
+        ],
+        "statusFilter": "active",
+        "pickStrategy": "random",
+        "required": true
+      },
       "conditions": [
         {
           "type": "relationship_count",
@@ -244,6 +258,17 @@
           "entity": "$actor",
           "relationshipKind": "at_war_with",
           "with": "$target"
+        },
+        {
+          "type": "change_status",
+          "entity": "$instigator",
+          "newStatus": "historical"
+        },
+        {
+          "type": "archive_relationship",
+          "entity": "$instigator",
+          "relationshipKind": "participant_in",
+          "direction": "dst"
         },
         {
           "type": "modify_pressure",

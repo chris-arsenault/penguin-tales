@@ -8,13 +8,16 @@ import { HardState } from '../core/worldTypes';
 import {
   FRAMEWORK_ENTITY_KINDS,
   FRAMEWORK_STATUS,
-  FRAMEWORK_RELATIONSHIP_KINDS
+  FRAMEWORK_RELATIONSHIP_KINDS,
+  FRAMEWORK_TAGS
 } from '@canonry/world-schema';
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraTransitionConfig } from '../engine/systemInterpreter';
 import { createEraEntity } from './eraSpawner';
 import { createSystemContext, evaluateCondition, prepareMutation } from '../rules';
 import type { ConditionResult } from '../rules';
+import { PROMINENCE_ORDER } from '../rules/types';
+import { hasTag } from '../utils';
 
 /**
  * Era Transition System
@@ -222,6 +225,29 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
         });
       });
 
+      const snapshotConfig = config.prominenceSnapshot;
+      const snapshotModifications: Array<{ id: string; changes: Partial<HardState> }> = [];
+      let snapshotLockedCount = 0;
+
+      if (snapshotConfig?.enabled) {
+        const minProminence = snapshotConfig.minProminence ?? 'renowned';
+        const minIndex = PROMINENCE_ORDER.indexOf(minProminence);
+        if (minIndex >= 0) {
+          const entitiesToLock = graphView.getEntities().filter(e =>
+            e.kind !== FRAMEWORK_ENTITY_KINDS.ERA &&
+            PROMINENCE_ORDER.indexOf(e.prominence as typeof PROMINENCE_ORDER[number]) >= minIndex &&
+            !hasTag(e.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
+          );
+
+          entitiesToLock.forEach(entity => {
+            entity.tags = { ...(entity.tags ?? {}), [FRAMEWORK_TAGS.PROMINENCE_LOCKED]: currentEraConfig.id };
+            entity.updatedAt = graphView.tick;
+            snapshotModifications.push({ id: entity.id, changes: { tags: entity.tags } });
+          });
+          snapshotLockedCount = entitiesToLock.length;
+        }
+      }
+
       // Create history event
       graphView.addHistoryEvent({
         tick: graphView.tick,
@@ -236,10 +262,11 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       return {
         relationshipsAdded,
         entitiesModified: [
-          { id: currentEraEntity.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEraEntity.temporal } }
+          { id: currentEraEntity.id, changes: { status: FRAMEWORK_STATUS.HISTORICAL, temporal: currentEraEntity.temporal } },
+          ...snapshotModifications
         ],
         pressureChanges,
-        description: `Era transition: ${currentEraEntity.name} → ${nextEraEntity.name} (${prominentEntities.length} entities linked)`,
+        description: `Era transition: ${currentEraEntity.name} → ${nextEraEntity.name} (${prominentEntities.length} entities linked, ${snapshotLockedCount} prominence locked)`,
         details: {
           eraTransition: {
             fromEra: currentEraEntity.name,
@@ -252,6 +279,7 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
               ...r.details
             })),
             prominentEntitiesLinked: prominentEntities.length,
+            prominenceLocked: snapshotLockedCount,
             pressureEffects: pressureChanges
           }
         }

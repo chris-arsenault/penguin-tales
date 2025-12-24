@@ -32,7 +32,7 @@ import { coordinateStats } from '../coordinates/coordinateStatistics';
 import { SimulationStatistics, ValidationStats } from '../statistics/types';
 import { FrameworkValidator } from './frameworkValidator';
 import { ContractEnforcer } from './contractEnforcer';
-import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS } from '@canonry/world-schema';
+import { FRAMEWORK_ENTITY_KINDS, FRAMEWORK_STATUS, FRAMEWORK_TAGS, FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
 import { createEraEntity } from '../systems/eraSpawner';
 import type {
   ISimulationEmitter,
@@ -46,6 +46,8 @@ import { createGrowthSystem, GrowthSystem, GrowthEpochSummary } from '../systems
 
 // Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
 // EntitySnapshot interface and detect*Changes functions available there
+
+const LORE_WEAVE_VERSION = '2025-12-23.1';
 
 export class WorldEngine {
   private config: EngineConfig;
@@ -236,6 +238,7 @@ export class WorldEngine {
       throw new Error(`Framework validation failed with ${validationResult.errors.length} error(s):\n  - ${errorDetails}`);
     }
 
+    this.emitter.log('info', `Lore Weave version ${LORE_WEAVE_VERSION}`);
     this.emitter.log('info', 'Framework validation passed');
 
     // Initialize statistical distribution system if targets are provided
@@ -1585,7 +1588,24 @@ export class WorldEngine {
 
         // Apply modifications
         result.entitiesModified.forEach(mod => {
-          updateEntity(this.graph, mod.id, mod.changes);
+          const changes = { ...mod.changes };
+          if (changes.tags) {
+            const entity = this.graph.getEntity(mod.id);
+            if (entity?.tags) {
+              for (const tag of FRAMEWORK_TAG_VALUES) {
+                if (!(tag in changes.tags) && tag in entity.tags) {
+                  changes.tags[tag] = entity.tags[tag];
+                }
+              }
+            }
+            if ('undefined' in changes.tags) {
+              delete changes.tags['undefined'];
+            }
+            if ('' in changes.tags) {
+              delete changes.tags[''];
+            }
+          }
+          updateEntity(this.graph, mod.id, changes);
           modifiedEntityIds.push(mod.id);
         });
 

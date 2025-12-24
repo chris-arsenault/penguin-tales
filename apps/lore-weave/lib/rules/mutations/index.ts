@@ -12,6 +12,7 @@
  */
 
 import { HardState } from '../../core/worldTypes';
+import { FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { PROMINENCE_ORDER, normalizeDirection } from '../types';
 import type { RuleContext } from '../context';
 import type {
@@ -28,6 +29,7 @@ import type {
   AdjustProminenceMutation,
   ModifyPressureMutation,
 } from './types';
+import { hasTag } from '../../utils';
 
 // Re-export types
 export * from './types';
@@ -202,6 +204,11 @@ function prepareSetTag(
   ctx: RuleContext,
   result: MutationResult
 ): MutationResult {
+  if (!mutation.tag || mutation.tag.trim() === '' || mutation.tag === 'undefined') {
+    result.applied = false;
+    result.diagnostic = 'set_tag missing tag';
+    return result;
+  }
   const entity = resolveEntityRef(mutation.entity, ctx);
   if (!entity) {
     result.applied = false;
@@ -437,6 +444,11 @@ function prepareAdjustProminence(
   if (!entity) {
     result.applied = false;
     result.diagnostic = `entity ${mutation.entity} not found`;
+    return result;
+  }
+
+  if (hasTag(entity.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)) {
+    result.diagnostic = `${entity.name} prominence locked`;
     return result;
   }
 

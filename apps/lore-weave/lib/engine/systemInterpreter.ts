@@ -14,6 +14,7 @@
  */
 
 import { SimulationSystem } from './types';
+import type { Prominence } from '../core/worldTypes';
 import { createConnectionEvolutionSystem, ConnectionEvolutionConfig } from '../systems/connectionEvolution';
 import { createGraphContagionSystem, GraphContagionConfig } from '../systems/graphContagion';
 import { createThresholdTriggerSystem, ThresholdTriggerConfig } from '../systems/thresholdTrigger';
@@ -116,6 +117,10 @@ export interface EraSpawnerConfig extends FrameworkSystemConfig {
  * See Era type in engine/types.ts for details.
  */
 export interface EraTransitionConfig extends FrameworkSystemConfig {
+  prominenceSnapshot?: {
+    enabled?: boolean;
+    minProminence?: Prominence;
+  };
 }
 
 /**

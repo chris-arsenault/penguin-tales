@@ -27,6 +27,7 @@ import { WorldRuntime } from '../runtime/worldRuntime';
 import { hasTag, getTagValue } from '../utils';
 import { createSystemContext, evaluateMetric, selectEntities } from '../rules';
 import type { Metric, SelectionRule } from '../rules';
+import { FRAMEWORK_TAG_VALUES } from '@canonry/world-schema';
 
 // =============================================================================
 // CONSTANTS
@@ -514,11 +515,9 @@ export function createPlaneDiffusionSystem(
           }
         }
         if (config.valueTag) {
-          for (const key of Object.keys(newTags)) {
-            if (key.startsWith(`${config.valueTag}:`)) {
-              delete newTags[key];
-              tagsChanged = true;
-            }
+          if (config.valueTag in newTags) {
+            delete newTags[config.valueTag];
+            tagsChanged = true;
           }
         }
 
@@ -541,17 +540,23 @@ export function createPlaneDiffusionSystem(
 
         // Optionally add raw value tag (clamped)
         if (config.valueTag) {
-          newTags[`${config.valueTag}:${fieldValue.toFixed(1)}`] = true;
+          newTags[config.valueTag] = fieldValue.toFixed(1);
           tagsChanged = true;
         }
 
         if (tagsChanged) {
-          // Enforce max tags limit
+          // Enforce max tags limit, but preserve framework tags if possible
           const tagKeys = Object.keys(newTags);
           if (tagKeys.length > 10) {
             const excessCount = tagKeys.length - 10;
+            const frameworkTags = new Set(FRAMEWORK_TAG_VALUES);
+            const removable = tagKeys.filter(tag => !frameworkTags.has(tag));
+            const protectedTags = tagKeys.filter(tag => frameworkTags.has(tag));
+            const removalOrder = removable.length >= excessCount
+              ? removable
+              : removable.concat(protectedTags);
             for (let i = 0; i < excessCount; i++) {
-              delete newTags[tagKeys[i]];
+              delete newTags[removalOrder[i]];
             }
           }
 

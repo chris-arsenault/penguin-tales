@@ -432,7 +432,7 @@
                     }
                   }
                 },
-                "valueTag": { "type": "string", "description": "Optional: store clamped field value as a tag (e.g., 'field_value' → 'field_value:25.5')" },
+                "valueTag": { "type": "string", "description": "Optional: store clamped field value as tag value (e.g., 'field_value' → { field_value: '25.5' })" },
                 "throttleChance": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probability of running this system each tick (0-1). Default: 1.0 (every tick)." },
                 "pressureChanges": { "$ref": "#/$defs/PressureChanges" }
               }
@@ -472,7 +472,23 @@
             {
               "type": "object",
               "properties": {
-                "minTicksBeforeTransition": { "type": "number" }
+                "minTicksBeforeTransition": { "type": "number" },
+                "prominenceSnapshot": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": { "type": "boolean" },
+                    "minProminence": {
+                      "enum": [
+                        "forgotten",
+                        "marginal",
+                        "recognized",
+                        "renowned",
+                        "mythic"
+                      ]
+                    }
+                  }
+                }
               }
             }
           ]

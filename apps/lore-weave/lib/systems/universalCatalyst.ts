@@ -1,4 +1,5 @@
 import { SimulationSystem, SystemResult } from '../engine/types';
+import { FRAMEWORK_TAGS } from '@canonry/world-schema';
 import { HardState, Relationship, Prominence } from '../core/worldTypes';
 import {
   calculateAttemptChance,
@@ -8,7 +9,7 @@ import { WorldRuntime } from '../runtime/worldRuntime';
 import type { UniversalCatalystConfig } from '../engine/systemInterpreter';
 import type { ExecutableAction } from '../engine/actionInterpreter';
 import { matchesActorConfig, getProminenceMultiplierValue } from '../rules';
-import { adjustProminence } from '../utils';
+import { adjustProminence, hasTag } from '../utils';
 import type { ActionApplicationPayload } from '../observer/types';
 
 // =============================================================================
@@ -192,7 +193,11 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
           historyModifiedIds.add(agent.id);
 
           // Apply prominence increase on success (if action opts in)
-          if (selectedAction.applyProminenceToActor && Math.random() < prominenceUpChance) {
+          if (
+            selectedAction.applyProminenceToActor &&
+            Math.random() < prominenceUpChance &&
+            !hasTag(agent.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
+          ) {
             agent.prominence = adjustProminence(agent.prominence, 1);
             entitiesModified.push({
               id: agent.id,
@@ -201,9 +206,13 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
             prominenceChanges.push({ entityId: agent.id, entityName: agent.name, direction: 'up' });
             historyModifiedIds.add(agent.id);
           }
-          if (selectedAction.applyProminenceToInstigator && outcome.instigatorId && Math.random() < prominenceUpChance) {
+          if (
+            selectedAction.applyProminenceToInstigator &&
+            outcome.instigatorId &&
+            Math.random() < prominenceUpChance
+          ) {
             const instigator = graphView.getEntity(outcome.instigatorId);
-            if (instigator) {
+            if (instigator && !hasTag(instigator.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)) {
               instigator.prominence = adjustProminence(instigator.prominence, 1);
               entitiesModified.push({
                 id: instigator.id,
@@ -226,7 +235,11 @@ export function createUniversalCatalystSystem(config: UniversalCatalystConfig): 
           });
         } else {
           // Apply prominence decrease on failure (if action opts in)
-          if (selectedAction.applyProminenceToActor && Math.random() < prominenceDownChance) {
+          if (
+            selectedAction.applyProminenceToActor &&
+            Math.random() < prominenceDownChance &&
+            !hasTag(agent.tags, FRAMEWORK_TAGS.PROMINENCE_LOCKED)
+          ) {
             agent.prominence = adjustProminence(agent.prominence, -1);
             entitiesModified.push({
               id: agent.id,
