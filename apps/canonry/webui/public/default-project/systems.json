@@ -148,10 +148,10 @@
         {
           "condition": {
             "operator": ">=",
-            "threshold": 9,
+            "threshold": 11,
             "multiplier": 6
           },
-          "probability": 0.18,
+          "probability": 0.12,
           "action": {
             "type": "adjust_prominence",
             "direction": "up",
@@ -257,7 +257,7 @@
         },
         {
           "type": "random_chance",
-          "chance": 0.12
+          "chance": 0.08
         }
       ],
       "actions": [
@@ -274,7 +274,8 @@
         "kind": "npc",
         "statusFilter": "alive",
         "excludeSubtypes": [
-          "hero"
+          "hero",
+          "mayor"
         ]
       }
     },
@@ -334,7 +335,7 @@
         },
         {
           "type": "random_chance",
-          "chance": 0.06
+          "chance": 0.04
         }
       ],
       "actions": [
@@ -366,12 +367,12 @@
       "conditions": [
         {
           "type": "time_elapsed",
-          "minTicks": 60,
+          "minTicks": 80,
           "since": "created"
         },
         {
           "type": "random_chance",
-          "chance": 0.04
+          "chance": 0.02
         }
       ],
       "actions": [
@@ -382,11 +383,87 @@
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3,
+      "throttleChance": 0.25,
       "selection": {
         "strategy": "by_kind",
         "kind": "npc",
         "statusFilter": "alive"
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "war_fatigue_detector",
+      "name": "War Fatigue",
+      "description": "Long-running wars become weary and ready to resolve",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 15,
+          "since": "created"
+        }
+      ],
+      "actions": [
+        {
+          "type": "set_tag",
+          "tag": "war_weary",
+          "value": true,
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.5,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "subtypes": [
+          "war"
+        ],
+        "statusFilter": "active",
+        "filters": [
+          {
+            "type": "lacks_tag",
+            "tag": "war_weary"
+          }
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "occurrence_resolution",
+      "name": "Occurrence Resolution",
+      "description": "Active events settle into history over time",
+      "conditions": [
+        {
+          "type": "time_elapsed",
+          "minTicks": 12,
+          "since": "created"
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_status",
+          "entity": "$self",
+          "newStatus": "historical"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.6,
+      "pressureChanges": {
+        "harmony": 2
+      },
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "occurrence",
+        "statusFilter": "active",
+        "excludeSubtypes": [
+          "war"
+        ]
       }
     },
     "enabled": true
@@ -1263,43 +1340,41 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "guild_trade_expansion",
-      "name": "Guild Trade Expansion",
-      "description": "Guild factions gain trade tag when controlling trade locations",
+      "name": "Tradition Amplification",
+      "description": "Abilities with many practitioners become renowned traditions",
       "conditions": [
         {
           "type": "relationship_count",
-          "relationshipKind": "originated_in",
-          "direction": "src",
-          "min": 1
+          "relationshipKind": "practitioner_of",
+          "direction": "dst",
+          "min": 3
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 15,
+          "since": "created"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.2
         }
       ],
       "actions": [
         {
-          "type": "set_tag",
-          "tag": "trade",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "influential",
-          "value": true,
+          "type": "adjust_prominence",
+          "direction": "up",
           "entity": "$self"
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3,
+      "throttleChance": 0.25,
       "selection": {
         "strategy": "by_kind",
-        "kind": "faction",
-        "subtypes": [
-          "company"
-        ],
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "trade"
-          }
+        "kind": "abilities",
+        "statuses": [
+          "active",
+          "discovered",
+          "emergent"
         ]
       }
     },
@@ -1309,43 +1384,90 @@
     "systemType": "thresholdTrigger",
     "config": {
       "id": "cult_mystical_influence",
-      "name": "Cult Mystical Influence",
-      "description": "Cult factions near anomalies gain mystical influence",
+      "name": "Mythic Resonance",
+      "description": "Abilities tied to major events resonate into myth",
       "conditions": [
         {
           "type": "relationship_count",
-          "relationshipKind": "controls",
+          "relationshipKind": "derived_from",
           "direction": "src",
-          "min": 1
+          "min": 2
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 20,
+          "since": "created"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.2
         }
       ],
       "actions": [
         {
-          "type": "set_tag",
-          "tag": "mystical",
-          "value": true,
-          "entity": "$self"
-        },
-        {
-          "type": "set_tag",
-          "tag": "influential",
-          "value": true,
+          "type": "adjust_prominence",
+          "direction": "up",
           "entity": "$self"
         }
       ],
       "clusterMode": "individual",
-      "throttleChance": 0.3,
+      "throttleChance": 0.25,
       "selection": {
         "strategy": "by_kind",
-        "kind": "faction",
+        "kind": "abilities",
         "subtypes": [
-          "cult"
+          "magic",
+          "combat",
+          "technology"
         ],
-        "filters": [
-          {
-            "type": "lacks_tag",
-            "tag": "influential"
-          }
+        "statuses": [
+          "active",
+          "discovered",
+          "emergent"
+        ]
+      }
+    },
+    "enabled": true
+  },
+  {
+    "systemType": "thresholdTrigger",
+    "config": {
+      "id": "ability_fade",
+      "name": "Ability Fade",
+      "description": "Abilities without practitioners gradually lose prominence",
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "practitioner_of",
+          "direction": "dst",
+          "max": 0
+        },
+        {
+          "type": "time_elapsed",
+          "minTicks": 25,
+          "since": "created"
+        },
+        {
+          "type": "random_chance",
+          "chance": 0.35
+        }
+      ],
+      "actions": [
+        {
+          "type": "adjust_prominence",
+          "direction": "down",
+          "entity": "$self"
+        }
+      ],
+      "clusterMode": "individual",
+      "throttleChance": 0.4,
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "abilities",
+        "statuses": [
+          "active",
+          "discovered",
+          "emergent"
         ]
       }
     },

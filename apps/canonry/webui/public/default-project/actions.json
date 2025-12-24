@@ -928,5 +928,153 @@
       "pressureModifiers": []
     },
     "enabled": true
+  },
+  {
+    "id": "master_ability",
+    "name": "Master Ability",
+    "description": "An NPC studies and masters a notable ability",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "npc",
+        "statusFilter": "alive",
+        "subtypes": [
+          "hero",
+          "mayor",
+          "merchant",
+          "outlaw"
+        ]
+      }
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "abilities",
+      "statuses": [
+        "active",
+        "discovered",
+        "emergent"
+      ],
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "practitioner_of",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "practitioner_of",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.7
+        }
+      ],
+      "descriptionTemplate": "mastered the art of {target.name}",
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.5,
+      "baseWeight": 0.35,
+      "pressureModifiers": [
+        {
+          "pressure": "magical_stability",
+          "multiplier": 0.4
+        },
+        {
+          "pressure": "security",
+          "multiplier": 0.2
+        }
+      ]
+    },
+    "enabled": true
+  },
+  {
+    "id": "echo_occurrence",
+    "name": "Echo Occurrence",
+    "description": "An ability resonates with a major event and becomes legend",
+    "actor": {
+      "selection": {
+        "strategy": "by_kind",
+        "kind": "abilities",
+        "subtypes": [
+          "magic",
+          "combat",
+          "technology"
+        ],
+        "statuses": [
+          "active",
+          "discovered",
+          "emergent"
+        ]
+      },
+      "conditions": [
+        {
+          "type": "relationship_count",
+          "relationshipKind": "practitioner_of",
+          "direction": "dst",
+          "min": 1
+        },
+        {
+          "type": "prominence",
+          "max": "renowned"
+        }
+      ]
+    },
+    "targeting": {
+      "strategy": "by_kind",
+      "kind": "occurrence",
+      "statusFilter": "active",
+      "subtypes": [
+        "war",
+        "disaster",
+        "celebration",
+        "succession_crisis"
+      ],
+      "filters": [
+        {
+          "type": "lacks_relationship",
+          "kind": "derived_from",
+          "with": "$actor"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "outcome": {
+      "mutations": [
+        {
+          "type": "create_relationship",
+          "kind": "derived_from",
+          "src": "$actor",
+          "dst": "$target",
+          "strength": 0.8
+        },
+        {
+          "type": "adjust_prominence",
+          "direction": "up",
+          "entity": "$actor"
+        }
+      ],
+      "descriptionTemplate": "echoed through the event of {target.name}",
+      "applyProminenceToActor": true
+    },
+    "probability": {
+      "baseSuccessChance": 0.35,
+      "baseWeight": 0.25,
+      "pressureModifiers": [
+        {
+          "pressure": "harmony",
+          "multiplier": -0.2
+        },
+        {
+          "pressure": "magical_stability",
+          "multiplier": 0.3
+        }
+      ]
+    },
+    "enabled": true
   }
 ]

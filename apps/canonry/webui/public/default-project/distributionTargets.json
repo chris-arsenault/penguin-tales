@@ -11,9 +11,9 @@
       "type": "uniform",
       "comment": "Distribution of entity kinds - should sum to 1.0",
       "targets": {
-        "npc": 0.17,
+        "npc": 0.19,
         "location": 0.26,
-        "faction": 0.24,
+        "faction": 0.22,
         "rules": 0.17,
         "abilities": 0.16
       },
@@ -189,11 +189,11 @@
           "comment": "Heroes that emerge during conflict"
         },
         "merchant": {
-          "target": 2,
+          "target": 3,
           "comment": "Trade network NPCs"
         },
         "mayor": {
-          "target": 2,
+          "target": 3,
           "comment": "Colony leaders (1 per colony + succession)"
         },
         "orca": {
@@ -207,15 +207,15 @@
       },
       "location": {
         "colony": {
-          "target": 6,
-          "comment": "Major settlements (2 initial + growth)"
+          "target": 4,
+          "comment": "Major settlements (2 initial + limited growth)"
         },
         "resource_node": {
-          "target": 10,
+          "target": 12,
           "comment": "Resource locations (krill blooms, hunting grounds)"
         },
         "point_of_interest": {
-          "target": 10,
+          "target": 12,
           "comment": "Strategic or notable sites"
         },
         "anomaly": {

@@ -450,6 +450,20 @@
     ]
   },
   {
+    "tag": "war_weary",
+    "category": "status",
+    "rarity": "rare",
+    "description": "Exhausted by prolonged conflict and ready to resolve",
+    "entityKinds": [
+      "occurrence"
+    ],
+    "conflictingTags": [],
+    "relatedTags": [
+      "conflict",
+      "crisis"
+    ]
+  },
+  {
     "tag": "crisis",
     "category": "status",
     "rarity": "rare",

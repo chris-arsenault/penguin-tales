@@ -60,7 +60,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "steps": [
             "anchor_region",
@@ -537,9 +537,24 @@
         "max": 30
       },
       {
-        "type": "pressure",
-        "pressureId": "harmony",
-        "max": -10
+        "type": "or",
+        "conditions": [
+          {
+            "type": "pressure",
+            "pressureId": "harmony",
+            "max": -10
+          },
+          {
+            "type": "pressure",
+            "pressureId": "security",
+            "max": -5
+          },
+          {
+            "type": "pressure",
+            "pressureId": "resource_availibility",
+            "max": -5
+          }
+        ]
       }
     ],
     "selection": {
@@ -886,9 +901,24 @@
     "name": "Cult Awakening",
     "applicability": [
       {
-        "type": "pressure",
-        "pressureId": "magical_stability",
-        "max": 10
+        "type": "or",
+        "conditions": [
+          {
+            "type": "pressure",
+            "pressureId": "magical_stability",
+            "max": 25
+          },
+          {
+            "type": "pressure",
+            "pressureId": "security",
+            "max": -5
+          },
+          {
+            "type": "pressure",
+            "pressureId": "harmony",
+            "max": 10
+          }
+        ]
       },
       {
         "type": "entity_count",
@@ -906,6 +936,14 @@
       ],
       "pickStrategy": "random",
       "filters": [
+        {
+          "type": "has_any_tag",
+          "tags": [
+            "mystical",
+            "secretive",
+            "dangerous"
+          ]
+        },
         {
           "type": "graph_path",
           "assert": {
@@ -1130,6 +1168,12 @@
           "harmony"
         ],
         "threshold": 0
+      },
+      {
+        "type": "entity_count",
+        "kind": "location",
+        "subtype": "colony",
+        "max": 4
       }
     ],
     "selection": {
@@ -1175,7 +1219,7 @@
             "preferPeriphery": true
           },
           "spacing": {
-            "minDistance": 20,
+            "minDistance": 12,
             "avoidRefs": [
               "$target"
             ]
@@ -1185,6 +1229,45 @@
             "createRegion": true
           },
           "steps": [
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$outpost",
+        "kind": "location",
+        "subtype": "point_of_interest",
+        "status": "unspoiled",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A satellite outpost founded near {colonyName}",
+          "replacements": {
+            "colonyName": "$colony.name"
+          }
+        },
+        "tags": {
+          "emergent": true,
+          "trade": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "entity",
+            "ref": "$colony",
+            "stickToRegion": true
+          },
+          "spacing": {
+            "minDistance": 2
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "anchor_region",
+            "seed_region",
             "sparse",
             "random"
           ]
@@ -1243,6 +1326,13 @@
         "kind": "adjacent_to",
         "src": "$colony",
         "dst": "$target",
+        "strength": 0.7,
+        "bidirectional": true
+      },
+      {
+        "kind": "adjacent_to",
+        "src": "$outpost",
+        "dst": "$colony",
         "strength": 0.7,
         "bidirectional": true
       },
@@ -1350,6 +1440,12 @@
           "kind": "location",
           "pickStrategy": "random",
           "from": "graph",
+          "preferFilters": [
+            {
+              "type": "has_tag",
+              "tag": "colony"
+            }
+          ],
           "filters": [
             {
               "type": "matches_culture",
@@ -1644,7 +1740,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -1682,6 +1778,16 @@
         "condition": {
           "type": "entity_exists",
           "entity": "$warzone"
+        }
+      },
+      {
+        "kind": "derived_from",
+        "src": "$battle_style",
+        "dst": "$war",
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$battle_style"
         }
       },
       {
@@ -1743,6 +1849,185 @@
           "kind": "location",
           "pickStrategy": "random"
         }
+      },
+      "$battle_style": {
+        "select": {
+          "from": "graph",
+          "kind": "abilities",
+          "subtypes": [
+            "combat",
+            "magic"
+          ],
+          "pickStrategy": "random"
+        }
+      }
+    },
+    "enabled": true
+  },
+  {
+    "id": "war_apocalypse_resolution",
+    "name": "Apocalyptic War Resolution",
+    "applicability": [],
+    "selection": {
+      "strategy": "by_kind",
+      "kind": "occurrence",
+      "subtypes": [
+        "war"
+      ],
+      "statusFilter": "active",
+      "filters": [
+        {
+          "type": "has_tag",
+          "tag": "war_weary"
+        }
+      ],
+      "pickStrategy": "random"
+    },
+    "creation": [
+      {
+        "entityRef": "$cataclysm",
+        "kind": "abilities",
+        "subtype": "magic",
+        "status": "active",
+        "prominence": "mythic",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A cataclysmic spell born from the war known as {warName}",
+          "replacements": {
+            "warName": "$target.name"
+          }
+        },
+        "tags": {
+          "mystical": true,
+          "conflict": true,
+          "cultural": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "culture",
+            "id": "$target.culture"
+          },
+          "regionPolicy": {
+            "allowEmergent": true,
+            "preferSparse": true
+          },
+          "steps": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "kind": "derived_from",
+        "src": "$cataclysm",
+        "dst": "$target",
+        "strength": 1
+      },
+      {
+        "kind": "manifests_at",
+        "src": "$cataclysm",
+        "dst": "$warzone",
+        "strength": 0.8,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$warzone"
+        }
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$faction1",
+        "dst": "$cataclysm",
+        "strength": 0.8
+      },
+      {
+        "kind": "practitioner_of",
+        "src": "$faction2",
+        "dst": "$cataclysm",
+        "strength": 0.7,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction2"
+        }
+      }
+    ],
+    "stateUpdates": [
+      {
+        "type": "change_status",
+        "entity": "$target",
+        "newStatus": "historical"
+      },
+      {
+        "type": "archive_relationship",
+        "entity": "$faction1",
+        "relationshipKind": "at_war_with",
+        "with": "$faction2"
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "harmony",
+        "delta": 12
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "security",
+        "delta": 10
+      },
+      {
+        "type": "modify_pressure",
+        "pressureId": "magical_stability",
+        "delta": -8
+      }
+    ],
+    "variables": {
+      "$faction1": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "participant_in",
+            "direction": "dst"
+          },
+          "kind": "faction",
+          "pickStrategy": "random"
+        },
+        "required": true
+      },
+      "$faction2": {
+        "select": {
+          "from": "graph",
+          "kind": "faction",
+          "pickStrategy": "random",
+          "filters": [
+            {
+              "type": "has_relationship",
+              "kind": "participant_in",
+              "with": "$target",
+              "direction": "src"
+            },
+            {
+              "type": "exclude",
+              "entities": [
+                "$faction1"
+              ]
+            }
+          ]
+        },
+        "required": true
+      },
+      "$warzone": {
+        "select": {
+          "from": {
+            "relatedTo": "$target",
+            "relationship": "epicenter_of",
+            "direction": "src"
+          },
+          "kind": "location",
+          "pickStrategy": "random"
+        }
       }
     },
     "enabled": true
@@ -1796,7 +2081,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -1912,7 +2197,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -2031,7 +2316,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -2169,7 +2454,42 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
+          },
+          "regionPolicy": {
+            "allowEmergent": true
+          },
+          "steps": [
+            "seed_region",
+            "sparse",
+            "random"
+          ]
+        }
+      },
+      {
+        "entityRef": "$herald",
+        "kind": "npc",
+        "subtype": "merchant",
+        "status": "alive",
+        "prominence": "marginal",
+        "culture": {
+          "inherit": "$target"
+        },
+        "description": {
+          "template": "A festival herald who organizes the gathering at {colonyName}",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
+        },
+        "tags": {
+          "cultural": true,
+          "trade": true,
+          "emergent": true
+        },
+        "placement": {
+          "anchor": {
+            "type": "culture",
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -2210,6 +2530,28 @@
         }
       },
       {
+        "kind": "celebrated_by",
+        "src": "$festival",
+        "dst": "$herald",
+        "strength": 0.7
+      },
+      {
+        "kind": "resident_of",
+        "src": "$herald",
+        "dst": "$target",
+        "strength": 0.8
+      },
+      {
+        "kind": "member_of",
+        "src": "$herald",
+        "dst": "$faction2",
+        "strength": 0.6,
+        "condition": {
+          "type": "entity_exists",
+          "entity": "$faction2"
+        }
+      },
+      {
         "kind": "allied_with",
         "src": "$faction1",
         "dst": "$faction2",
@@ -2234,10 +2576,15 @@
           "from": "graph",
           "kind": "faction",
           "pickStrategy": "random",
-          "filters": [
+          "preferFilters": [
             {
-              "type": "has_tag",
-              "tag": "mystical"
+              "type": "has_any_tag",
+              "tags": [
+                "cultural",
+                "trade",
+                "organized",
+                "mystical"
+              ]
             }
           ]
         },
@@ -2255,7 +2602,17 @@
               ]
             }
           ],
-          "pickStrategy": "random"
+          "pickStrategy": "random",
+          "preferFilters": [
+            {
+              "type": "has_any_tag",
+              "tags": [
+                "cultural",
+                "trade",
+                "organized"
+              ]
+            }
+          ]
         },
         "required": true
       }
@@ -2442,7 +2799,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "steps": [
             "anchor_region",
@@ -2582,7 +2939,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "preferSparse": true,
@@ -2710,7 +3067,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true,
@@ -2833,19 +3190,26 @@
   },
   {
     "id": "thermal_colony_decline",
-    "name": "Colony Thermal Decline",
+    "name": "Thermal Decline",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
       "subtypes": [
-        "colony"
+        "colony",
+        "point_of_interest",
+        "resource_node",
+        "anomaly"
       ],
       "statusFilter": "thriving",
       "filters": [
         {
-          "type": "has_tag",
-          "tag": "dangerous"
+          "type": "has_any_tag",
+          "tags": [
+            "dangerous",
+            "stressed",
+            "crisis"
+          ]
         }
       ],
       "pickStrategy": "random"
@@ -2861,9 +3225,9 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "A thermal calamity grips {colonyName}, forcing evacuations and rationing",
+          "template": "A thermal calamity grips {locationName}, forcing evacuations and rationing",
           "replacements": {
-            "colonyName": "$target.name"
+            "locationName": "$target.name"
           }
         },
         "tags": {
@@ -2873,7 +3237,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -2923,13 +3287,16 @@
   },
   {
     "id": "thermal_colony_recovery",
-    "name": "Colony Thermal Recovery",
+    "name": "Thermal Recovery",
     "applicability": [],
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
       "subtypes": [
-        "colony"
+        "colony",
+        "point_of_interest",
+        "resource_node",
+        "anomaly"
       ],
       "statusFilter": "waning",
       "filters": [
@@ -2951,9 +3318,9 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "A thaw celebration marks {colonyName}'s recovery from harsh conditions",
+          "template": "A thaw celebration marks {locationName}'s recovery from harsh conditions",
           "replacements": {
-            "colonyName": "$target.name"
+            "locationName": "$target.name"
           }
         },
         "tags": {
@@ -2963,7 +3330,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -3011,7 +3378,7 @@
     "applicability": [
       {
         "type": "random_chance",
-        "chance": 0.35
+        "chance": 0.55
       }
     ],
     "selection": {
@@ -3022,7 +3389,10 @@
           "type": "has_any_tag",
           "tags": [
             "fire",
-            "ice"
+            "ice",
+            "dangerous",
+            "stressed",
+            "crisis"
           ]
         },
         {
@@ -3319,7 +3689,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
@@ -3412,7 +3782,7 @@
         "placement": {
           "anchor": {
             "type": "culture",
-            "id": "$target"
+            "id": "$target.culture"
           },
           "regionPolicy": {
             "allowEmergent": true
