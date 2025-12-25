@@ -6,14 +6,14 @@
  * on page navigation.
  */
 
-import type { StoryPlan, CohesionReport, ChronicleStatus } from './chronicleTypes';
+import type { ChroniclePlan, CohesionReport, ChronicleStatus } from './chronicleTypes';
 
 // ============================================================================
 // Database Configuration
 // ============================================================================
 
 const STORY_DB_NAME = 'canonry-stories';
-const STORY_DB_VERSION = 3;  // Bumped again to force re-upgrade for simulationRunId index
+const STORY_DB_VERSION = 4;
 const STORY_STORE_NAME = 'stories';
 
 // ============================================================================
@@ -34,12 +34,12 @@ export interface StoryRecord {
   status: ChronicleStatus;
 
   // Step 1: Plan
-  plan?: StoryPlan;
+  plan?: ChroniclePlan;
   planGeneratedAt?: number;
 
-  // Step 2: Scene content (stored in plan.scenes[].generatedContent but also tracked here)
-  scenesCompleted: number;
-  scenesTotal: number;
+  // Step 2: Section content (stored in plan.sections[].generatedContent but also tracked here)
+  sectionsCompleted: number;
+  sectionsTotal: number;
 
   // Step 3: Assembled content
   assembledContent?: string;
@@ -78,26 +78,19 @@ function openStoryDb(): Promise<IDBDatabase> {
   storyDbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(STORY_DB_NAME, STORY_DB_VERSION);
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = () => {
       const db = request.result;
-      const oldVersion = event.oldVersion;
 
-      if (!db.objectStoreNames.contains(STORY_STORE_NAME)) {
-        // Fresh install - create store with all indexes
-        const store = db.createObjectStore(STORY_STORE_NAME, { keyPath: 'storyId' });
-        store.createIndex('projectId', 'projectId', { unique: false });
-        store.createIndex('entityId', 'entityId', { unique: false });
-        store.createIndex('status', 'status', { unique: false });
-        store.createIndex('createdAt', 'createdAt', { unique: false });
-        store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
-      } else if (oldVersion < 3) {
-        // Upgrade from v1 or v2 - ensure simulationRunId index exists
-        const tx = (event.target as IDBOpenDBRequest).transaction!;
-        const store = tx.objectStore(STORY_STORE_NAME);
-        if (!store.indexNames.contains('simulationRunId')) {
-          store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
-        }
+      if (db.objectStoreNames.contains(STORY_STORE_NAME)) {
+        db.deleteObjectStore(STORY_STORE_NAME);
       }
+
+      const store = db.createObjectStore(STORY_STORE_NAME, { keyPath: 'storyId' });
+      store.createIndex('projectId', 'projectId', { unique: false });
+      store.createIndex('entityId', 'entityId', { unique: false });
+      store.createIndex('status', 'status', { unique: false });
+      store.createIndex('createdAt', 'createdAt', { unique: false });
+      store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
     };
 
     request.onsuccess = () => resolve(request.result);
@@ -136,8 +129,8 @@ export async function createStory(
     storyId,
     ...metadata,
     status: 'planning',
-    scenesCompleted: 0,
-    scenesTotal: 0,
+    sectionsCompleted: 0,
+    sectionsTotal: 0,
     totalEstimatedCost: 0,
     totalActualCost: 0,
     totalInputTokens: 0,
@@ -159,7 +152,7 @@ export async function createStory(
  */
 export async function updateStoryPlan(
   storyId: string,
-  plan: StoryPlan,
+  plan: ChroniclePlan,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number }
 ): Promise<void> {
   const db = await openStoryDb();
@@ -179,7 +172,7 @@ export async function updateStoryPlan(
       record.plan = plan;
       record.planGeneratedAt = Date.now();
       record.status = 'plan_ready';
-      record.scenesTotal = plan.scenes.length;
+      record.sectionsTotal = plan.sections.length;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
       record.totalInputTokens += cost.inputTokens;
@@ -195,12 +188,12 @@ export async function updateStoryPlan(
 }
 
 /**
- * Update story with scene content (Step 2 progress)
+ * Update story with section content (Step 2 progress)
  */
-export async function updateStoryScene(
+export async function updateStorySection(
   storyId: string,
-  sceneIndex: number,
-  sceneContent: string,
+  sectionIndex: number,
+  sectionContent: string,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number }
 ): Promise<void> {
   const db = await openStoryDb();
@@ -217,13 +210,13 @@ export async function updateStoryScene(
         return;
       }
 
-      if (sceneIndex < 0 || sceneIndex >= record.plan.scenes.length) {
-        reject(new Error(`Invalid scene index ${sceneIndex}`));
+      if (sectionIndex < 0 || sectionIndex >= record.plan.sections.length) {
+        reject(new Error(`Invalid section index ${sectionIndex}`));
         return;
       }
 
-      record.plan.scenes[sceneIndex].generatedContent = sceneContent;
-      record.scenesCompleted = sceneIndex + 1;
+      record.plan.sections[sectionIndex].generatedContent = sectionContent;
+      record.sectionsCompleted = sectionIndex + 1;
       record.status = 'expanding';
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
@@ -235,7 +228,7 @@ export async function updateStoryScene(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story scene'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update story section'));
   });
 }
 
@@ -383,24 +376,10 @@ export async function getStoriesForSimulation(simulationRunId: string): Promise<
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORY_STORE_NAME, 'readonly');
     const store = tx.objectStore(STORY_STORE_NAME);
-
-    // Check if index exists (may not exist if DB wasn't upgraded properly)
-    if (store.indexNames.contains('simulationRunId')) {
-      const index = store.index('simulationRunId');
-      const req = index.getAll(simulationRunId);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error || new Error('Failed to get stories for simulation'));
-    } else {
-      // Fallback: scan all records and filter
-      console.warn('[chronicleStorage] simulationRunId index not found, using fallback scan');
-      const req = store.getAll();
-      req.onsuccess = () => {
-        const all = req.result as StoryRecord[];
-        const filtered = all.filter((s) => s.simulationRunId === simulationRunId);
-        resolve(filtered);
-      };
-      req.onerror = () => reject(req.error || new Error('Failed to get stories for simulation'));
-    }
+    const index = store.index('simulationRunId');
+    const req = index.getAll(simulationRunId);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Failed to get stories for simulation'));
   });
 }
 
@@ -468,9 +447,9 @@ export async function getLatestStoryForEntity(entityId: string): Promise<StoryRe
 }
 
 /**
- * Mark all scenes as complete (Step 2 done, awaiting user review)
+ * Mark all sections as complete (Step 2 done, awaiting user review)
  */
-export async function markScenesComplete(storyId: string): Promise<void> {
+export async function markSectionsComplete(storyId: string): Promise<void> {
   const db = await openStoryDb();
 
   return new Promise((resolve, reject) => {
@@ -485,19 +464,19 @@ export async function markScenesComplete(storyId: string): Promise<void> {
         return;
       }
 
-      record.status = 'scenes_ready';
+      record.status = 'sections_ready';
       record.updatedAt = Date.now();
 
       store.put(record);
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to mark scenes complete'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to mark sections complete'));
   });
 }
 
 /**
- * Start assembly step (user approved scenes)
+ * Start assembly step (user approved sections)
  */
 export async function startAssemblyStep(storyId: string): Promise<void> {
   const db = await openStoryDb();

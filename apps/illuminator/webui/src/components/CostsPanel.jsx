@@ -201,7 +201,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
             label={`  \u2514 ${simCategorized.image.count} images`}
             value={simCategorized.image.actual}
           />
-          <CostRow label="Story generations" value={simCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={simCategorized.story.actual} />
           <CostRow
             label={`  \u2514 ${simCategorized.story.count} steps`}
             value={simCategorized.story.actual}
@@ -222,7 +222,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={queueCosts.textEstimated} isEstimated />
           <CostRow label="Image generations" value={queueCosts.imageEstimated} isEstimated />
-          <CostRow label="Story generations" value={queueCosts.storyEstimated} isEstimated />
+          <CostRow label="Chronicle generations" value={queueCosts.storyEstimated} isEstimated />
           <CostRow label="Queue Total" value={queueCosts.total} isTotal isEstimated />
         </CostCard>
       )}
@@ -249,7 +249,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={projCategorized.text.actual} />
           <CostRow label="Image generations" value={projCategorized.image.actual} />
-          <CostRow label="Story generations" value={projCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={projCategorized.story.actual} />
           <CostRow
             label="Project Total"
             value={projectCosts.totalActual}
@@ -266,7 +266,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={allCategorized.text.actual} />
           <CostRow label="Image generations" value={allCategorized.image.actual} />
-          <CostRow label="Story generations" value={allCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={allCategorized.story.actual} />
           <CostRow
             label="All Time Total"
             value={allTimeCosts.totalActual}

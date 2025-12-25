@@ -95,24 +95,28 @@ export interface QueueItem {
   // Cost tracking
   estimatedCost?: number;
   // For entityStory tasks
-  storyContext?: SerializableStoryContext;
+  chronicleContext?: SerializableChronicleContext;
   chronicleStep?: ChronicleStep;
   storyId?: string;
 }
 
 /**
- * Serializable story context (for entityStory tasks)
+ * Serializable chronicle context (for entityStory tasks)
  * Maps are converted to Record objects for serialization
  */
-export interface SerializableStoryContext {
+export interface SerializableChronicleContext {
   // World context
   worldName: string;
   worldDescription: string;
   canonFacts: string[];
   tone: string;
 
-  // Target entity
-  entity: {
+  // Target metadata
+  targetType: 'eraChronicle' | 'entityStory';
+  targetId: string;
+
+  // Target entity (for entity stories)
+  entity?: {
     id: string;
     name: string;
     kind: string;
@@ -166,11 +170,8 @@ export interface SerializableStoryContext {
     narrativeTags?: string[];
   }>;
 
-  // Previously generated content (as Record instead of Map)
-  existingDescriptions: Record<string, string>;
-
-  // Optional narrative style for chronicle generation
-  narrativeStyle?: NarrativeStyle;
+  // Narrative style for chronicle generation
+  narrativeStyle: NarrativeStyle;
 }
 
 /**
@@ -194,7 +195,7 @@ export interface WorkerTask {
   type: EnrichmentType;
   prompt: string;
   // For entityStory tasks only
-  storyContext?: SerializableStoryContext;
+  chronicleContext?: SerializableChronicleContext;
   // Which step to run (for entityStory tasks)
   chronicleStep?: ChronicleStep;
   // Story ID (for continuing existing story)

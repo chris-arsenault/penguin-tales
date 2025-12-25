@@ -75,7 +75,7 @@ function ScoreGauge({ score }) {
   );
 }
 
-function CheckItem({ label, check, isScene = false }) {
+function CheckItem({ label, check, isSection = false }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -111,7 +111,7 @@ function CheckItem({ label, check, isScene = false }) {
           >
             {check.pass ? '✓' : '✕'}
           </span>
-          <span style={{ fontSize: '13px', fontWeight: isScene ? 400 : 500 }}>
+          <span style={{ fontSize: '13px', fontWeight: isSection ? 400 : 500 }}>
             {label}
           </span>
         </div>
@@ -138,7 +138,7 @@ function CheckItem({ label, check, isScene = false }) {
   );
 }
 
-function IssueCard({ issue, sceneTitle }) {
+function IssueCard({ issue, sectionTitle }) {
   const isCritical = issue.severity === 'critical';
 
   return (
@@ -167,7 +167,7 @@ function IssueCard({ issue, sceneTitle }) {
         </span>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           {issue.checkType}
-          {sceneTitle && ` • ${sceneTitle}`}
+          {sectionTitle && ` • ${sectionTitle}`}
         </span>
       </div>
       <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '8px' }}>
@@ -196,7 +196,6 @@ export default function CohesionReportViewer({
   plan,
   onAccept,
   onRegenerate,
-  onRegenerateScene,
   isGenerating = false,
 }) {
   const [activeTab, setActiveTab] = useState('summary');
@@ -209,13 +208,13 @@ export default function CohesionReportViewer({
     const minorIssues = report.issues.filter((i) => i.severity === 'minor');
 
     const failedChecks = [];
-    if (!report.checks.plotStructure.pass) failedChecks.push('Plot Structure');
-    if (!report.checks.characterConsistency.pass) failedChecks.push('Character Consistency');
+    if (!report.checks.plotStructure.pass) failedChecks.push('Structure');
+    if (!report.checks.entityConsistency.pass) failedChecks.push('Entity Consistency');
     if (!report.checks.resolution.pass) failedChecks.push('Resolution');
     if (!report.checks.factualAccuracy.pass) failedChecks.push('Factual Accuracy');
     if (!report.checks.themeExpression.pass) failedChecks.push('Theme Expression');
 
-    const failedSceneGoals = report.checks.sceneGoals.filter((sg) => !sg.pass);
+    const failedSectionGoals = report.checks.sectionGoals.filter((sg) => !sg.pass);
 
     let status;
     if (report.overallScore >= 90) status = 'excellent';
@@ -228,7 +227,7 @@ export default function CohesionReportViewer({
       criticalIssueCount: criticalIssues.length,
       minorIssueCount: minorIssues.length,
       failedChecks,
-      failedSceneGoals,
+      failedSectionGoals,
     };
   }, [report]);
 
@@ -242,8 +241,7 @@ export default function CohesionReportViewer({
 
   const statusStyle = STATUS_STYLES[assessment?.status || 'needs_revision'];
 
-  // Build scene title map
-  const sceneIdToTitle = new Map(plan?.scenes?.map((s) => [s.id, s.title]) || []);
+  const sectionIdToName = new Map(plan?.sections?.map((s) => [s.id, s.name]) || []);
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -321,7 +319,7 @@ export default function CohesionReportViewer({
               fontWeight: 500,
             }}
           >
-            {report.overallScore >= 60 ? 'Accept Story ✓' : 'Accept with Issues ⚠'}
+            {report.overallScore >= 60 ? 'Accept Chronicle ✓' : 'Accept with Issues ⚠'}
           </button>
         </div>
       </div>
@@ -393,7 +391,7 @@ export default function CohesionReportViewer({
               <div style={{ fontSize: '24px', fontWeight: 700, color: report.checks.plotStructure.pass ? '#10b981' : '#ef4444' }}>
                 {report.checks.plotStructure.pass ? '✓' : '✕'}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Plot Structure</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Structure</div>
             </div>
             <div
               style={{
@@ -403,10 +401,10 @@ export default function CohesionReportViewer({
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: '24px', fontWeight: 700, color: report.checks.characterConsistency.pass ? '#10b981' : '#ef4444' }}>
-                {report.checks.characterConsistency.pass ? '✓' : '✕'}
+              <div style={{ fontSize: '24px', fontWeight: 700, color: report.checks.entityConsistency.pass ? '#10b981' : '#ef4444' }}>
+                {report.checks.entityConsistency.pass ? '✓' : '✕'}
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Character Consistency</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Entity Consistency</div>
             </div>
             <div
               style={{
@@ -425,7 +423,7 @@ export default function CohesionReportViewer({
 
           {report.checks.plotStructure.notes && (
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Plot Structure Notes:</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Structure Notes:</div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 {report.checks.plotStructure.notes}
               </div>
@@ -452,41 +450,28 @@ export default function CohesionReportViewer({
             overflow: 'hidden',
           }}
         >
-          <CheckItem label="Plot Structure" check={report.checks.plotStructure} />
-          <CheckItem label="Character Consistency" check={report.checks.characterConsistency} />
+          <CheckItem label="Structure" check={report.checks.plotStructure} />
+          <CheckItem label="Entity Consistency" check={report.checks.entityConsistency} />
           <CheckItem label="Resolution" check={report.checks.resolution} />
           <CheckItem label="Factual Accuracy" check={report.checks.factualAccuracy} />
           <CheckItem label="Theme Expression" check={report.checks.themeExpression} />
 
           <div style={{ padding: '12px', background: 'var(--bg-tertiary)', fontWeight: 500, fontSize: '13px' }}>
-            Scene Goals ({report.checks.sceneGoals.filter((sg) => sg.pass).length}/{report.checks.sceneGoals.length} passed)
+            Section Goals ({report.checks.sectionGoals.filter((sg) => sg.pass).length}/{report.checks.sectionGoals.length} passed)
           </div>
-          {report.checks.sceneGoals.map((sg) => (
-            <div key={sg.sceneId} style={{ display: 'flex', alignItems: 'center' }}>
+          {report.checks.sectionGoals.map((sg) => (
+            <div key={sg.sectionId} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
                 <CheckItem
-                  label={sceneIdToTitle.get(sg.sceneId) || sg.sceneId}
+                  label={sectionIdToName.get(sg.sectionId) || sg.sectionId}
                   check={sg}
-                  isScene
+                  isSection
                 />
               </div>
-              {!sg.pass && onRegenerateScene && (
-                <button
-                  onClick={() => onRegenerateScene(sg.sceneId)}
-                  disabled={isGenerating}
-                  style={{
-                    marginRight: '12px',
-                    padding: '6px 12px',
-                    fontSize: '11px',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '4px',
-                    cursor: isGenerating ? 'not-allowed' : 'pointer',
-                    opacity: isGenerating ? 0.6 : 1,
-                  }}
-                >
-                  Regenerate
-                </button>
+              {!sg.pass && (
+                <span style={{ marginRight: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Needs revision
+                </span>
               )}
             </div>
           ))}
@@ -522,7 +507,7 @@ export default function CohesionReportViewer({
                       <IssueCard
                         key={idx}
                         issue={issue}
-                        sceneTitle={issue.sceneId ? sceneIdToTitle.get(issue.sceneId) : undefined}
+                        sectionTitle={issue.sectionId ? sectionIdToName.get(issue.sectionId) : undefined}
                       />
                     ))}
                 </div>
@@ -540,7 +525,7 @@ export default function CohesionReportViewer({
                       <IssueCard
                         key={idx}
                         issue={issue}
-                        sceneTitle={issue.sceneId ? sceneIdToTitle.get(issue.sceneId) : undefined}
+                        sectionTitle={issue.sectionId ? sectionIdToName.get(issue.sectionId) : undefined}
                       />
                     ))}
                 </div>

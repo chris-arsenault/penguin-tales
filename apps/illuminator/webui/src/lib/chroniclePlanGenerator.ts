@@ -1,23 +1,18 @@
 /**
  * Chronicle Plan Generator
  *
- * Step 1 of the pipeline: Generate a story plan from world data.
- * Produces structured StoryPlan with characters, plot, and scenes.
+ * Step 1 of the pipeline: Generate a chronicle plan from world data.
+ * Produces structured ChroniclePlan with entity roles, plot, and sections.
  *
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
 
 import type {
-  StoryPlan,
-  StoryScene,
+  ChroniclePlan,
   ChronicleGenerationContext,
-  PlanGenerationResult,
   PlotBeat,
-  PlotStructure,
-  ThreeActPlotStructure,
-  FlexiblePlotStructure,
+  ChroniclePlot,
 } from './chronicleTypes';
-import { isThreeActPlot, isFlexiblePlot } from './chronicleTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 import {
   type StyledChronicleContext,
@@ -29,41 +24,40 @@ import {
 } from './narrativeStyleTransform';
 
 /**
- * Build the prompt for story plan generation (legacy, no style)
- */
-export function buildPlanPromptLegacy(context: ChronicleGenerationContext): string {
-  return buildPlanPromptCore(context, undefined);
-}
-
-/**
- * Build the prompt for story plan generation with narrative style
+ * Build the prompt for chronicle plan generation with narrative style
  */
 export function buildPlanPrompt(
   context: ChronicleGenerationContext,
-  style?: NarrativeStyle
+  style: NarrativeStyle
 ): string {
   return buildPlanPromptCore(context, style);
 }
 
 /**
- * Core prompt builder that handles both styled and unstyled generation
+ * Core prompt builder that handles narrative style generation
  */
 function buildPlanPromptCore(
   context: ChronicleGenerationContext,
-  style?: NarrativeStyle
+  style: NarrativeStyle
 ): string {
+  if (!style) {
+    throw new Error('Narrative style is required for plan generation');
+  }
   // Check if this is a document-format style
-  if (style?.format === 'document' && style.documentConfig) {
+  if (style.format === 'document') {
+    if (!style.documentConfig) {
+      throw new Error('Document narrative styles must include documentConfig');
+    }
     return buildDocumentPlanPrompt(context, style);
+  }
+  if (!style.plotStructure || !style.entityRules || !style.eventRules || !style.sceneTemplates || !style.pacing || !style.proseDirectives) {
+    throw new Error(`Narrative style "${style.name}" is missing required narrative configuration`);
   }
 
   const sections: string[] = [];
 
-  // Apply style transformations if provided
-  let styledContext: StyledChronicleContext | undefined;
-  if (style) {
-    styledContext = applyNarrativeStyle(context, style);
-  }
+  // Apply style transformations
+  const styledContext: StyledChronicleContext = applyNarrativeStyle(context, style);
 
   // World context
   sections.push(`# World Context
@@ -73,14 +67,12 @@ ${context.tone ? `Tone: ${context.tone}` : ''}
 ${context.canonFacts.length > 0 ? `Canon Facts:\n${context.canonFacts.map((f) => `- ${f}`).join('\n')}` : ''}
 `);
 
-  // Narrative style overview (if using styled generation)
-  if (style) {
-    sections.push(`# Narrative Style: ${style.name}
+  // Narrative style overview
+  sections.push(`# Narrative Style: ${style.name}
 ${style.description}
 
 ${buildProseDirectivesSection(style)}
 `);
-  }
 
   // Target-specific context
   if (context.targetType === 'eraChronicle' && context.era) {
@@ -102,28 +94,13 @@ Base Description: ${context.entity.description || '(none)'}
 ${context.entity.enrichedDescription ? `Enriched Description: ${context.entity.enrichedDescription}` : ''}
 Note: This entity must appear, but the narrative should involve multiple entities interacting; no single protagonist is required.
 `);
-  } else if (context.targetType === 'relationshipTale' && context.relationship) {
-    sections.push(`# Relationship to Feature
-Type: ${context.relationship.kind}
-Between: ${context.relationship.sourceName} (ID: ${context.relationship.src}) and ${context.relationship.targetName} (ID: ${context.relationship.dst})
-${context.relationship.strength ? `Strength: ${context.relationship.strength}` : ''}
-${context.relationship.backstory ? `Backstory: ${context.relationship.backstory}` : ''}
-`);
   }
 
-  // Entities section - use filtered entities if styled, otherwise prominent
-  const entitiesToShow = styledContext
-    ? styledContext.filteredEntities.slice(0, 15)
-    : context.entities
-        .filter((e) => e.prominence === 'mythic' || e.prominence === 'renowned')
-        .slice(0, 15);
+  // Entities section - filtered by style rules
+  const entitiesToShow = styledContext.filteredEntities.slice(0, 15);
 
   if (entitiesToShow.length > 0) {
-    const entitySectionTitle = styledContext
-      ? '# Available Entities (filtered by style rules)'
-      : '# Prominent Entities';
-
-    sections.push(`${entitySectionTitle}
+    sections.push(`# Available Entities (filtered by style rules)
 ${entitiesToShow
   .map(
     (e) => `## ${e.name}
@@ -140,7 +117,7 @@ ${e.enrichedDescription ? `- Description: ${e.enrichedDescription}` : e.descript
   }
 
   // Suggested cast (if styled)
-  if (styledContext && styledContext.suggestedCast.length > 0) {
+  if (styledContext.suggestedCast.length > 0) {
     sections.push(`# Suggested Cast Assignments
 Based on the style rules, here are suggested role assignments (you may adjust):
 ${styledContext.suggestedCast
@@ -150,9 +127,7 @@ ${styledContext.suggestedCast
   }
 
   // Character roles (if styled)
-  if (style) {
-    sections.push(buildRolesSection(style));
-  }
+  sections.push(buildRolesSection(style));
 
   // Key relationships
   const keyRelationships = context.relationships.slice(0, 20);
@@ -164,17 +139,13 @@ ${keyRelationships
 `);
   }
 
-  // Events section - use filtered events if styled, otherwise significant
-  const eventsToShow = styledContext
-    ? styledContext.filteredEvents
-    : context.events.filter((e) => e.significance >= 0.5).slice(0, 15);
+  // Events section - filtered by style rules
+  const eventsToShow = styledContext.filteredEvents;
 
   if (eventsToShow.length > 0) {
-    const eventSectionTitle = styledContext
-      ? `# Available Events (filtered by style: significance ${style!.eventRules.significanceRange.min}-${style!.eventRules.significanceRange.max})`
-      : '# Significant Events (from simulation)';
+    const eventSectionTitle = `# Available Events (filtered by style: significance ${style.eventRules.significanceRange.min}-${style.eventRules.significanceRange.max})`;
 
-    const eventUsageNote = style?.eventRules.usageInstructions || '';
+    const eventUsageNote = style.eventRules.usageInstructions;
 
     sections.push(`${eventSectionTitle}
 ${eventUsageNote ? `Note: ${eventUsageNote}\n` : ''}
@@ -194,19 +165,15 @@ ${e.narrativeTags?.length ? `- Tags: ${e.narrativeTags.join(', ')}` : ''}`
 `);
   }
 
-  // World data focus sections (if styled)
-  if (style) {
-    const worldDataSections = buildWorldDataFocusSections(context, style);
-    sections.push(...worldDataSections);
-  }
+  // World data focus sections
+  const worldDataSections = buildWorldDataFocusSections(context, style);
+  sections.push(...worldDataSections);
 
-  // Scene templates (if styled)
-  if (style) {
-    sections.push(buildSceneTemplatesSection(style));
-  }
+  // Scene templates
+  sections.push(buildSceneTemplatesSection(style));
 
   // Build instructions section
-  sections.push(buildInstructionsSection(context, style, styledContext));
+  sections.push(buildInstructionsSection(context, style));
 
   return sections.join('\n');
 }
@@ -216,25 +183,28 @@ ${e.narrativeTags?.length ? `- Tags: ${e.narrativeTags.join(', ')}` : ''}`
  */
 function buildInstructionsSection(
   context: ChronicleGenerationContext,
-  style?: NarrativeStyle,
-  styledContext?: StyledChronicleContext
+  style: NarrativeStyle
 ): string {
-  // Word count targets based on style or defaults
-  const wordCountRange = style?.pacing?.totalWordCount || {
-    min: context.targetType === 'eraChronicle'
-      ? 1500
-      : context.targetType === 'entityStory'
-        ? 1000
-        : 800,
-    max: context.targetType === 'eraChronicle'
-      ? 2500
-      : context.targetType === 'entityStory'
-        ? 1500
-        : 1200,
-  };
+  if (!style.pacing?.totalWordCount || !style.pacing?.sceneCount) {
+    throw new Error(`Narrative style "${style.name}" is missing pacing configuration`);
+  }
+  if (!style.plotStructure) {
+    throw new Error(`Narrative style "${style.name}" is missing plot structure`);
+  }
+  if (!style.entityRules) {
+    throw new Error(`Narrative style "${style.name}" is missing entity rules`);
+  }
+  if (!style.sceneTemplates || style.sceneTemplates.length === 0) {
+    throw new Error(`Narrative style "${style.name}" must define scene templates`);
+  }
+  if (!style.proseDirectives) {
+    throw new Error(`Narrative style "${style.name}" is missing prose directives`);
+  }
 
-  const sceneCountRange = style?.pacing?.sceneCount || { min: 3, max: 5 };
-  const templateCount = style?.sceneTemplates?.length || 0;
+  // Word count targets based on style configuration
+  const wordCountRange = style.pacing.totalWordCount;
+  const sceneCountRange = style.pacing.sceneCount;
+  const templateCount = style.sceneTemplates.length;
   const minScenes = Math.max(sceneCountRange.min, templateCount);
   const maxScenes = Math.max(sceneCountRange.max, minScenes);
 
@@ -242,161 +212,129 @@ function buildInstructionsSection(
   const typeDescriptions = {
     eraChronicle: 'a narrative chronicle of this era that foregrounds interactions among key entities and events',
     entityStory: 'a multi-entity narrative anchored on the entry point entity, emphasizing interactions and shared stakes',
-    relationshipTale: 'a narrative about this relationship and its broader context, showing how it shapes the entities involved',
   };
 
-  // Plot schema - use style's schema or default three-act
-  let plotSchema: string;
-  let plotInstructions: string;
+  // Plot schema - use style's schema
+  const plotSchema = style.plotStructure.schemaDescription;
+  const plotInstructions = style.plotStructure.instructions;
 
-  if (style) {
-    plotSchema = style.plotStructure.schemaDescription;
-    plotInstructions = style.plotStructure.instructions;
-  } else {
-    plotSchema = `{
-    "incitingIncident": {
-      "description": "What triggers the story",
-      "eventIds": ["event IDs from the data that relate to this"]
-    },
-    "risingAction": [
-      {
-        "description": "A beat of rising tension",
-        "eventIds": ["related event IDs"]
-      }
-    ],
-    "climax": {
-      "description": "The peak moment of conflict/revelation",
-      "eventIds": ["related event IDs"]
-    },
-    "resolution": {
-      "description": "How the story concludes",
-      "eventIds": ["related event IDs"]
-    }
-  }`;
-    plotInstructions = 'Follow the classic three-act structure with rising tension leading to a climactic moment.';
-  }
-
-  // Story elements schema - includes all entity types, not just characters
+  // Entity role schema - includes all entity types, not just characters
   // Roles should be appropriate to entity kind
-  let storyElementsSchema: string;
-
-  if (style) {
-    const roleExamples = style.entityRules.roles
-      .slice(0, 4)
-      .map((r) => `"${r.role}"`)
-      .join(' | ');
-    storyElementsSchema = `{
+  const roleExamples = style.entityRules.roles
+    .slice(0, 4)
+    .map((r) => `"${r.role}"`)
+    .join(' | ');
+  const entityRolesSchema = `{
       "entityId": "exact entity ID from the data above",
       "role": ${roleExamples} | or kind-appropriate role (see below),
-      "arc": "Brief description of this entity's narrative function in the story"
+      "contribution": "How this entity functions in the narrative or document"
     }`;
-  } else {
-    storyElementsSchema = `{
-      "entityId": "exact entity ID from the data above",
-      "role": "kind-appropriate role (see ROLE GUIDANCE below)",
-      "arc": "Brief description of this entity's narrative function in the story"
-    }`;
-  }
 
   // Always include role guidance - this is critical for non-character entities
   const roleGuidance = `
-ROLE GUIDANCE - Assign roles based on the entity's KIND (shown in the entity data):
-- person/npc: "protagonist", "antagonist", "mentor", "ally", "rival", "observer", "catalyst"
-- location/settlement: "setting", "destination", "sanctuary", "battleground", "origin", "backdrop"
-- faction/organization: "power-broker", "opposition", "ally-faction", "background-force", "authority"
-- artifact/item: "macguffin", "tool", "symbol", "catalyst", "prize", "heirloom"
-- ability/power: "gift", "curse", "mystery", "weapon", "heritage", "burden"
-- event/occurrence: "inciting-incident", "turning-point", "backdrop", "consequence"
+ROLE GUIDANCE - Assign roles based on the entity's KIND (shown in the entity data).
+Use kind-appropriate roles (e.g., actor, group, institution, artifact, place, force, event) and keep roles descriptive.
+Avoid forcing a single protagonist; multiple entities can share influence.`;
 
-IMPORTANT: Do NOT use character-centric roles like "protagonist", "companion", "supporting" for non-person entities.
-A faction should be "power-broker" or "opposition", not "companion".
-An ability should be "gift" or "burden", not "supporting".
-Roles are descriptive only; a single protagonist is not required.`;
-
-  // Scene schema with emotional beats from style or defaults
-  let emotionalBeats: string;
-  if (style && (style.sceneTemplates?.length || 0) > 0) {
-    emotionalBeats = style.sceneTemplates.map((t) => `"${t.emotionalArc}"`).join(' | ');
-  } else {
-    emotionalBeats = '"tension" | "revelation" | "relief" | "confrontation" | "intimacy" | "loss" | "triumph" | etc.';
-  }
+  // Section schema with emotional arcs from style templates
+  const emotionalArcs = style.sceneTemplates.map((t) => `"${t.emotionalArc}"`).join(' | ');
 
   // Build guidelines based on style
-  let guidelines: string[] = [
+  const guidelines: string[] = [
     'Use ONLY entity IDs and event IDs from the data provided above',
-    `Create ${minScenes}-${maxScenes} scenes`,
-    'Each scene should have a clear purpose (goal) and emotional direction',
+    `Create ${minScenes}-${maxScenes} sections`,
+    'Each section should have a clear purpose and emotional direction',
     'Incorporate the simulation events as plot drivers - they are what actually happened',
     'Entities should stay true to their described traits and prominence',
     'Include multiple distinct entities and show direct interaction between them',
-    'The story should feel like a complete narrative arc, not an encyclopedia entry',
+    'The narrative should feel like a complete arc, not an encyclopedia entry',
   ];
   if (context.targetType === 'entityStory' && context.entity) {
-    guidelines.push(`Ensure the entry point entity (${context.entity.name}) appears in storyElements and at least one scene`);
+    guidelines.push(`Ensure the entry point entity (${context.entity.name}) appears in entityRoles and at least one section`);
   }
 
-  if (style) {
-    const templateGuidelines = (style.sceneTemplates?.length || 0) > 0
+  const templateGuidelines = [
+    'Use the templates provided above as the outline for your sections',
+    'Section ids must match the template ids; use bridge_* ids only if you must add sections to reach the target count',
+  ];
+  const dialogueRatio = style.pacing.dialogueRatio;
+  const styledGuidelines = [
+    `Follow the ${style.plotStructure.type} plot structure`,
+    ...templateGuidelines,
+    ...guidelines,
+    `Target word count: ${wordCountRange.min}-${wordCountRange.max} words`,
+    ...(dialogueRatio
       ? [
-        'Use the scene templates provided above as the outline for your scenes',
-        'Create one scene per template; add bridging scenes only if needed to reach the target count',
+        `Dialogue ratio: ${(dialogueRatio.min * 100).toFixed(0)}%-${(dialogueRatio.max * 100).toFixed(0)}% of content`,
       ]
-      : [];
-    const dialogueRatio = style.pacing?.dialogueRatio;
-    guidelines = [
-      `Follow the ${style.plotStructure.type} plot structure`,
-      ...templateGuidelines,
-      ...guidelines,
-      `Target word count: ${wordCountRange.min}-${wordCountRange.max} words`,
-      ...(dialogueRatio
-        ? [
-          `Dialogue ratio: ${(dialogueRatio.min * 100).toFixed(0)}%-${(dialogueRatio.max * 100).toFixed(0)}% of content`,
-        ]
-        : []),
-      ...(style.proseDirectives?.avoid || []).map((a) => `Avoid: ${a}`),
-    ];
-  }
+      : []),
+    ...style.proseDirectives.avoid.map((a) => `Avoid: ${a}`),
+  ];
 
   return `# Your Task
 
 Create ${typeDescriptions[context.targetType]} (${wordCountRange.min}-${wordCountRange.max} words total).
 
-${style ? `Style: ${style.name}\n${plotInstructions}` : ''}
+Style: ${style.name}
+${plotInstructions}
 ${roleGuidance}
 
 You must output a JSON object with this structure:
 
 \`\`\`json
 {
-  "title": "Story title",
-  "storyElements": [
-    ${storyElementsSchema}
+  "title": "Chronicle title",
+  "format": "story",
+  "entityRoles": [
+    ${entityRolesSchema}
   ],
-  "setting": {
-    "eraId": "era ID if applicable",
-    "locations": ["Location names"],
-    "timespan": "How long the story spans (e.g., 'Three days', 'A single night')"
-  },
   "plot": ${plotSchema},
-  "scenes": [
+  "scope": {
+    "timeframe": "Optional timeframe if relevant to the narrative",
+    "notes": "Optional scope notes"
+  },
+  "focus": {
+    "actorIds": ["entity IDs for primary actors if relevant"],
+    "groupIds": ["entity IDs for groups or institutions if relevant"],
+    "conceptIds": ["entity IDs for key concepts if relevant"],
+    "powerIds": ["entity IDs for powers/forces if relevant"],
+    "eventIds": ["event IDs central to this chronicle"],
+    "notes": "Optional focus notes"
+  },
+  "scope": {
+    "timeframe": "Optional timeframe if the document is tied to a period",
+    "notes": "Optional scope notes"
+  },
+  "focus": {
+    "actorIds": ["entity IDs for primary actors if relevant"],
+    "groupIds": ["entity IDs for groups or institutions if relevant"],
+    "conceptIds": ["entity IDs for key concepts if relevant"],
+    "powerIds": ["entity IDs for powers/forces if relevant"],
+    "eventIds": ["event IDs central to this document"],
+    "notes": "Optional focus notes"
+  },
+  "sections": [
     {
-      "id": "scene_1",
-      "title": "Scene title",
-      "goal": "What this scene MUST accomplish narratively",
-      "entityIds": ["entity IDs of entities in scene"],
-      "eventIds": ["event IDs incorporated in scene"],
-      "setting": "Where this scene takes place",
-      "emotionalBeat": ${emotionalBeats}
+      "id": "template_id_or_bridge_1",
+      "name": "Section name (use template name or an explicit bridge name)",
+      "purpose": "Template purpose from the outline",
+      "goal": "What this section MUST accomplish for this chronicle",
+      "requiredElements": ["Elements from the template that must appear"],
+      "emotionalArc": ${emotionalArcs},
+      "wordCountTarget": 400,
+      "proseNotes": "Prose guidance from the template",
+      "entityIds": ["entity IDs of entities in section"],
+      "eventIds": ["event IDs incorporated in section"]
     }
   ],
-  "theme": "The central theme or message",
-  "tone": "The emotional/stylistic tone",
-  "keyEventIds": ["All event IDs used in the story"]
+  "theme": "Optional theme (omit if not meaningful)",
+  "tone": "Optional tone (omit if not meaningful)",
+  "keyEventIds": ["All event IDs used in the narrative"]
 }
 \`\`\`
 
 Guidelines:
-${guidelines.map((g) => `- ${g}`).join('\n')}
+${styledGuidelines.map((g) => `- ${g}`).join('\n')}
 
 Output ONLY the JSON, no other text.`;
 }
@@ -454,12 +392,6 @@ Tags: ${Object.entries(context.entity.tags).map(([k, v]) => `${k}=${v}`).join(',
 Base Description: ${context.entity.description || '(none)'}
 ${context.entity.enrichedDescription ? `Enriched Description: ${context.entity.enrichedDescription}` : ''}
 `);
-  } else if (context.targetType === 'relationshipTale' && context.relationship) {
-    sections.push(`# Subject: Relationship
-Type: ${context.relationship.kind}
-Between: ${context.relationship.sourceName} and ${context.relationship.targetName}
-${context.relationship.backstory ? `Backstory: ${context.relationship.backstory}` : ''}
-`);
   }
 
   // Relevant entities
@@ -470,7 +402,11 @@ ${context.relationship.backstory ? `Backstory: ${context.relationship.backstory}
   if (entitiesToShow.length > 0) {
     sections.push(`# Available Entities (for reference)
 ${entitiesToShow
-  .map((e) => `- ${e.name} (${e.kind}): ${e.enrichedDescription || e.description || 'No description'}`.slice(0, 200))
+  .map(
+    (e) =>
+      `- ${e.name} (ID: ${e.id}, ${e.kind}): ${e.enrichedDescription || e.description || 'No description'}`
+        .slice(0, 200)
+  )
   .join('\n')}
 `);
   }
@@ -480,17 +416,23 @@ ${entitiesToShow
   if (eventsToShow.length > 0) {
     sections.push(`# Available Events (for reference)
 ${eventsToShow
-  .map((e) => `- [${e.eventKind}] ${e.headline} (significance: ${(e.significance * 100).toFixed(0)}%)`)
+  .map(
+    (e) =>
+      `- [${e.eventKind}] ${e.headline} (ID: ${e.id}, significance: ${(e.significance * 100).toFixed(0)}%)`
+  )
   .join('\n')}
 `);
   }
 
   // Document sections specification
-  const sectionsList = docConfig.sections.map((s, i) =>
-    `${i + 1}. **${s.name}** (${s.wordCountTarget || 100} words${s.optional ? ', optional' : ''})
+  const sectionsList = docConfig.sections
+    .map(
+      (s, i) =>
+        `${i + 1}. **${s.name}** (id: ${s.id}, ${s.wordCountTarget || 100} words${s.optional ? ', optional' : ''})
    Purpose: ${s.purpose}
    Guidance: ${s.contentGuidance}`
-  ).join('\n');
+    )
+    .join('\n');
 
   sections.push(`# Document Sections
 ${sectionsList}
@@ -505,56 +447,49 @@ ${docConfig.entityUsage ? `Entity Usage: ${docConfig.entityUsage}` : ''}
 ${docConfig.eventUsage ? `Event Usage: ${docConfig.eventUsage}` : ''}
 `);
 
-  // Output instructions - generate a plan that maps to our StoryPlan structure
-  // We represent document sections as "scenes" for compatibility with existing pipeline
+  // Output instructions - generate a plan that aligns with the document schema
+  const sectionIdList = docConfig.sections.map((s) => s.id).join(', ');
+
   sections.push(`# Your Task
 
 Create a structured plan for a ${docConfig.documentType} (${docConfig.wordCount.min}-${docConfig.wordCount.max} words total).
+
+Allowed section ids (use EXACT ids, no prefixes): ${sectionIdList}
 
 You must output a JSON object with this structure:
 
 \`\`\`json
 {
   "title": "Document title",
-  "storyElements": [
+  "format": "document",
+  "entityRoles": [
     {
       "entityId": "entity ID from the data if referenced",
       "role": "subject | source | mentioned | authority",
-      "arc": "How this entity is used in the document"
+      "contribution": "How this entity is used in the document"
     }
   ],
-  "setting": {
-    "eraId": "era ID if applicable",
-    "locations": ["Location names referenced"],
-    "timespan": "When this document was written or what period it covers"
-  },
-  "plot": {
-    "documentPurpose": "What this document aims to accomplish",
-    "keyPoints": ["Main points to convey"],
-    "eventIds": ["Event IDs to incorporate"]
-  },
-  "scenes": [
+  "sections": [
     {
-      "id": "section_1",
-      "title": "Section heading (from the sections list above)",
-      "goal": "What this section must accomplish",
+      "id": "section_id_from_outline",
+      "name": "Section heading (must match the sections list above)",
+      "purpose": "Purpose from the outline",
+      "goal": "What this section must accomplish for this document",
+      "contentGuidance": "Guidance from the outline",
+      "wordCountTarget": 150,
+      "optional": false,
       "entityIds": ["entity IDs mentioned in this section"],
-      "eventIds": ["event IDs mentioned in this section"],
-      "setting": "",
-      "emotionalBeat": "informative | persuasive | cautionary | celebratory | analytical"
+      "eventIds": ["event IDs mentioned in this section"]
     }
   ],
-  "theme": "The central message or purpose",
-  "tone": "${docConfig.toneKeywords[0] || 'formal'}",
   "keyEventIds": ["All event IDs used in the document"]
 }
 \`\`\`
 
 Guidelines:
-- Create one "scene" for each required section (${docConfig.sections.filter(s => !s.optional).length} required sections)
-- Each scene represents a document section, not a narrative scene
+- Create one section for each required section (${docConfig.sections.filter(s => !s.optional).length} required sections)
+- Each section must use the section id and name from the outline above
 - Use entity and event IDs from the data provided
-- The plot object describes the document's purpose, not a story arc
 - Match the tone and style requirements exactly
 
 Output ONLY the JSON, no other text.`);
@@ -562,15 +497,76 @@ Output ONLY the JSON, no other text.`);
   return sections.join('\n');
 }
 
+function stripReferenceDecorators(value: string): string {
+  return value.replace(/[\[\]]/g, '');
+}
+
+function normalizeId(value: string): string {
+  return stripReferenceDecorators(value).trim().toLowerCase();
+}
+
+function normalizeName(value: string): string {
+  return stripReferenceDecorators(value)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+type ReferenceLookup = {
+  ids: Map<string, string>;
+  names: Map<string, string | null>;
+};
+
+function buildReferenceLookup<T>(
+  items: T[],
+  getId: (item: T) => string,
+  getName: (item: T) => string | undefined
+): ReferenceLookup {
+  const ids = new Map<string, string>();
+  const names = new Map<string, string | null>();
+
+  for (const item of items) {
+    const id = getId(item);
+    if (id) {
+      ids.set(normalizeId(id), id);
+    }
+    const name = getName(item);
+    if (!name) continue;
+    const normalized = normalizeName(name);
+    if (!names.has(normalized)) {
+      names.set(normalized, id);
+    } else if (names.get(normalized) !== id) {
+      names.set(normalized, null);
+    }
+  }
+
+  return { ids, names };
+}
+
+function resolveReference(value: string, lookup: ReferenceLookup): string {
+  const rawValue = String(value);
+  const directMatch = lookup.ids.get(normalizeId(rawValue));
+  if (directMatch) {
+    return directMatch;
+  }
+  const nameMatch = lookup.names.get(normalizeName(rawValue));
+  return nameMatch || rawValue;
+}
+
 /**
- * Parse LLM response into StoryPlan
- * Handles both legacy three-act plots and style-based flexible plots
+ * Parse LLM response into ChroniclePlan
+ * Handles three-act plots and style-based flexible plots
  */
 export function parsePlanResponse(
   response: string,
   context: ChronicleGenerationContext,
-  style?: NarrativeStyle
-): StoryPlan {
+  style: NarrativeStyle
+): ChroniclePlan {
+  if (!style) {
+    throw new Error('Narrative style is required to parse a plan');
+  }
   // Extract JSON from response (handle markdown code blocks)
   let jsonStr = response.trim();
 
@@ -696,78 +692,326 @@ export function parsePlanResponse(
     }
   }
 
-  // Parse plot structure based on whether we have a narrative style
-  const plot = parsePlotStructure(parsed.plot, style);
+  if (!parsed.title || typeof parsed.title !== 'string') {
+    throw new Error('Plan response missing required field: title');
+  }
+  if (!parsed.format || typeof parsed.format !== 'string') {
+    throw new Error('Plan response missing required field: format');
+  }
+  if (parsed.format !== style.format) {
+    throw new Error(`Plan format "${parsed.format}" does not match narrative style format "${style.format}"`);
+  }
+  if (!Array.isArray(parsed.entityRoles)) {
+    throw new Error('Plan response missing required field: entityRoles');
+  }
+  if (!Array.isArray(parsed.sections)) {
+    throw new Error('Plan response missing required field: sections');
+  }
+  if (parsed.keyEventIds !== undefined && !Array.isArray(parsed.keyEventIds)) {
+    throw new Error('Plan keyEventIds must be an array if provided');
+  }
+
+  const entityRoles = parsed.entityRoles as Array<Record<string, unknown>>;
+  const sections = parsed.sections as Array<Record<string, unknown>>;
+  const keyEventIds = (parsed.keyEventIds as string[]) || [];
+
+  const theme = typeof parsed.theme === 'string' ? parsed.theme : undefined;
+  const tone = typeof parsed.tone === 'string' ? parsed.tone : undefined;
+
+  const scopeRaw = parsed.scope as Record<string, unknown> | undefined;
+  if (scopeRaw !== undefined && (typeof scopeRaw !== 'object' || scopeRaw === null)) {
+    throw new Error('Plan scope must be an object if provided');
+  }
+  const focusRaw = parsed.focus as Record<string, unknown> | undefined;
+  if (focusRaw !== undefined && (typeof focusRaw !== 'object' || focusRaw === null)) {
+    throw new Error('Plan focus must be an object if provided');
+  }
+
+  let plot: ChroniclePlot | undefined;
+  if (parsed.plot && typeof parsed.plot === 'object') {
+    plot = parsePlotStructure(parsed.plot as Record<string, unknown>, style);
+  } else if (style.format === 'story') {
+    throw new Error('Story plans must include plot');
+  }
+
+  for (const [index, element] of entityRoles.entries()) {
+    if (!element.entityId || !element.role || !element.contribution) {
+      throw new Error(`Entity role ${index + 1} is missing entityId, role, or contribution`);
+    }
+  }
+
+  for (const [index, section] of sections.entries()) {
+    if (!section.id || !section.name || !section.purpose || !section.goal) {
+      throw new Error(`Section ${index + 1} is missing required fields`);
+    }
+    if (!Array.isArray(section.entityIds) || !Array.isArray(section.eventIds)) {
+      throw new Error(`Section ${index + 1} must include entityIds and eventIds arrays`);
+    }
+    if (style.format === 'story') {
+      if (!Array.isArray(section.requiredElements)) {
+        throw new Error(`Section ${index + 1} must include requiredElements`);
+      }
+      if (!section.emotionalArc || typeof section.emotionalArc !== 'string') {
+        throw new Error(`Section ${index + 1} must include emotionalArc`);
+      }
+      if (typeof section.wordCountTarget !== 'number') {
+        throw new Error(`Section ${index + 1} must include wordCountTarget`);
+      }
+      if (!section.proseNotes || typeof section.proseNotes !== 'string') {
+        throw new Error(`Section ${index + 1} must include proseNotes`);
+      }
+    }
+    if (style.format === 'document') {
+      if (!section.contentGuidance || typeof section.contentGuidance !== 'string') {
+        throw new Error(`Section ${index + 1} must include contentGuidance`);
+      }
+      if (typeof section.wordCountTarget !== 'number') {
+        throw new Error(`Section ${index + 1} must include wordCountTarget`);
+      }
+      if (section.optional !== undefined && typeof section.optional !== 'boolean') {
+        throw new Error(`Section ${index + 1} optional must be a boolean`);
+      }
+    }
+  }
 
   // Validate and transform
-  const plan: StoryPlan = {
+  const plan: ChroniclePlan = {
     id: `plan_${context.targetId}_${Date.now()}`,
-    title: parsed.title || 'Untitled',
+    title: parsed.title,
+    format: parsed.format as 'story' | 'document',
 
-    characters: (parsed.storyElements || []).map((c: Record<string, string>) => ({
-      entityId: c.entityId,
-      role: c.role || 'element',
-      arc: c.arc || '',
+    entityRoles: entityRoles.map((c) => ({
+      entityId: c.entityId as string,
+      role: c.role as string,
+      contribution: c.contribution as string,
     })),
 
-    setting: {
-      eraId: parsed.setting?.eraId || context.era?.id || '',
-      locations: parsed.setting?.locations || [],
-      timespan: parsed.setting?.timespan || '',
-    },
-
-    plot,
-
-    scenes: (parsed.scenes || []).map(
-      (s: Record<string, unknown>, i: number) => ({
-        id: (s.id as string) || `scene_${i + 1}`,
-        title: (s.title as string) || `Scene ${i + 1}`,
-        goal: (s.goal as string) || '',
-        characterIds: (s.entityIds as string[]) || [],
-        eventIds: (s.eventIds as string[]) || [],
-        setting: (s.setting as string) || '',
-        emotionalBeat: (s.emotionalBeat as string) || '',
+    sections: sections.map(
+      (s) => ({
+        id: s.id as string,
+        name: s.name as string,
+        purpose: s.purpose as string,
+        goal: s.goal as string,
+        entityIds: s.entityIds as string[],
+        eventIds: s.eventIds as string[],
+        wordCountTarget: s.wordCountTarget as number,
+        requiredElements: (s.requiredElements as string[]) || undefined,
+        emotionalArc: (s.emotionalArc as string) || undefined,
+        proseNotes: (s.proseNotes as string) || undefined,
+        contentGuidance: (s.contentGuidance as string) || undefined,
+        optional: s.optional as boolean | undefined,
       })
     ),
 
-    theme: parsed.theme || '',
-    tone: parsed.tone || '',
-    keyEventIds: parsed.keyEventIds || [],
+    scope: scopeRaw
+      ? {
+        timeframe: typeof scopeRaw.timeframe === 'string' ? (scopeRaw.timeframe as string) : undefined,
+        notes: typeof scopeRaw.notes === 'string' ? (scopeRaw.notes as string) : undefined,
+      }
+      : undefined,
+    focus: focusRaw
+      ? {
+        actorIds: Array.isArray(focusRaw.actorIds) ? (focusRaw.actorIds as string[]) : undefined,
+        groupIds: Array.isArray(focusRaw.groupIds) ? (focusRaw.groupIds as string[]) : undefined,
+        conceptIds: Array.isArray(focusRaw.conceptIds) ? (focusRaw.conceptIds as string[]) : undefined,
+        powerIds: Array.isArray(focusRaw.powerIds) ? (focusRaw.powerIds as string[]) : undefined,
+        eventIds: Array.isArray(focusRaw.eventIds) ? (focusRaw.eventIds as string[]) : undefined,
+        notes: typeof focusRaw.notes === 'string' ? (focusRaw.notes as string) : undefined,
+      }
+      : undefined,
+    plot,
+    theme,
+    tone,
+    keyEventIds,
 
     generatedAt: Date.now(),
   };
 
+  const entityLookup = buildReferenceLookup(
+    context.entities,
+    (entity) => entity.id,
+    (entity) => entity.name
+  );
+  const eventLookup = buildReferenceLookup(
+    context.events,
+    (event) => event.id,
+    (event) => event.headline
+  );
+  const resolveEntityId = (value: string) => resolveReference(value, entityLookup);
+  const resolveEventId = (value: string) => resolveReference(value, eventLookup);
+
+  plan.entityRoles = plan.entityRoles.map((role) => ({
+    ...role,
+    entityId: resolveEntityId(role.entityId),
+  }));
+  plan.sections = plan.sections.map((section) => ({
+    ...section,
+    entityIds: section.entityIds.map(resolveEntityId),
+    eventIds: section.eventIds.map(resolveEventId),
+  }));
+  if (plan.focus) {
+    plan.focus = {
+      ...plan.focus,
+      actorIds: plan.focus.actorIds?.map(resolveEntityId),
+      groupIds: plan.focus.groupIds?.map(resolveEntityId),
+      conceptIds: plan.focus.conceptIds?.map(resolveEntityId),
+      powerIds: plan.focus.powerIds?.map(resolveEntityId),
+      eventIds: plan.focus.eventIds?.map(resolveEventId),
+    };
+  }
+  plan.keyEventIds = plan.keyEventIds.map(resolveEventId);
+  if (plan.plot) {
+    resolvePlotEventIds(plan.plot, resolveEventId);
+  }
+
+  const contextEntityIds = new Set(context.entities.map((e) => e.id));
+  const contextEventIds = new Set(context.events.map((e) => e.id));
+
+  if (plan.sections.length === 0) {
+    throw new Error('Plan contains no sections');
+  }
+  if (plan.entityRoles.length === 0) {
+    throw new Error('Plan contains no entity roles');
+  }
+
+  for (const role of plan.entityRoles) {
+    if (!contextEntityIds.has(role.entityId)) {
+      throw new Error(`Plan references unknown entity: ${role.entityId}`);
+    }
+  }
+
+  for (const section of plan.sections) {
+    for (const entityId of section.entityIds) {
+      if (!contextEntityIds.has(entityId)) {
+        throw new Error(`Section "${section.name}" references unknown entity: ${entityId}`);
+      }
+    }
+    for (const evtId of section.eventIds) {
+      if (!contextEventIds.has(evtId)) {
+        throw new Error(`Section "${section.name}" references unknown event: ${evtId}`);
+      }
+    }
+  }
+
+  if (style.format === 'document') {
+    if (!style.documentConfig) {
+      throw new Error('Document narrative styles must include documentConfig');
+    }
+    const outline = style.documentConfig.sections;
+    const outlineById = new Map(outline.map((s) => [s.id, s]));
+    const requiredIds = outline.filter((s) => !s.optional).map((s) => s.id);
+
+    for (const section of plan.sections) {
+      const outlineSection = outlineById.get(section.id);
+      if (!outlineSection) {
+        throw new Error(`Section "${section.id}" is not defined in the document outline`);
+      }
+      if (section.name !== outlineSection.name) {
+        console.warn(
+          `[Chronicle] Section "${section.id}" name "${section.name}" did not match outline "${outlineSection.name}". Aligning to outline.`
+        );
+        section.name = outlineSection.name;
+      }
+      if (section.purpose !== outlineSection.purpose) {
+        section.purpose = outlineSection.purpose;
+      }
+      if (section.contentGuidance !== outlineSection.contentGuidance) {
+        section.contentGuidance = outlineSection.contentGuidance;
+      }
+      if (outlineSection.wordCountTarget) {
+        section.wordCountTarget = outlineSection.wordCountTarget;
+      }
+      section.optional = outlineSection.optional;
+    }
+    for (const requiredId of requiredIds) {
+      if (!plan.sections.some((section) => section.id === requiredId)) {
+        throw new Error(`Plan is missing required section: ${requiredId}`);
+      }
+    }
+  }
+
+  if (style.format === 'story') {
+    const templateIds = style.sceneTemplates.map((t) => t.id);
+    const sectionIds = new Set(plan.sections.map((section) => section.id));
+    for (const templateId of templateIds) {
+      if (!sectionIds.has(templateId)) {
+        throw new Error(`Plan is missing required section template: ${templateId}`);
+      }
+    }
+    const minSections = Math.max(style.pacing.sceneCount.min, style.sceneTemplates.length);
+    const maxSections = Math.max(style.pacing.sceneCount.max, minSections);
+    if (plan.sections.length < minSections || plan.sections.length > maxSections) {
+      throw new Error(`Plan must include ${minSections}-${maxSections} sections`);
+    }
+  }
+
+  if (context.targetType === 'entityStory' && context.entity) {
+    const uniqueEntities = new Set(plan.entityRoles.map((c) => c.entityId));
+    if (!uniqueEntities.has(context.entity.id)) {
+      throw new Error('Plan does not include the entry point entity');
+    }
+    if (uniqueEntities.size < 2) {
+      throw new Error('Plan must include at least two distinct entities');
+    }
+    const hasInteractionSection = plan.sections.some((section) => section.entityIds.length >= 2);
+    if (!hasInteractionSection) {
+      throw new Error('Plan must include at least one section with multiple entities interacting');
+    }
+  }
+
   return plan;
 }
 
+function resolvePlotEventIds(
+  plot: ChroniclePlot,
+  resolveEventId: (value: string) => string
+): void {
+  plot.normalizedBeats = plot.normalizedBeats.map((beat) => ({
+    ...beat,
+    eventIds: beat.eventIds.map(resolveEventId),
+  }));
+
+  if (plot.type === 'document') {
+    const raw = plot.raw as Record<string, unknown>;
+    if (Array.isArray(raw.eventIds)) {
+      raw.eventIds = raw.eventIds.map(resolveEventId);
+    }
+    return;
+  }
+
+  if (plot.type === 'three-act') {
+    const raw = plot.raw as Record<string, unknown>;
+    const inciting = raw.incitingIncident as Record<string, unknown> | undefined;
+    const rising = raw.risingAction as Array<Record<string, unknown>> | undefined;
+    const climax = raw.climax as Record<string, unknown> | undefined;
+    const resolution = raw.resolution as Record<string, unknown> | undefined;
+
+    if (inciting && Array.isArray(inciting.eventIds)) {
+      inciting.eventIds = inciting.eventIds.map(resolveEventId);
+    }
+    if (Array.isArray(rising)) {
+      raw.risingAction = rising.map((beat) => ({
+        ...beat,
+        eventIds: Array.isArray(beat.eventIds) ? beat.eventIds.map(resolveEventId) : [],
+      }));
+    }
+    if (climax && Array.isArray(climax.eventIds)) {
+      climax.eventIds = climax.eventIds.map(resolveEventId);
+    }
+    if (resolution && Array.isArray(resolution.eventIds)) {
+      resolution.eventIds = resolution.eventIds.map(resolveEventId);
+    }
+  }
+}
+
 /**
- * Parse plot structure, handling legacy three-act, flexible styles, and documents
+ * Parse plot structure based on the active narrative style
  */
 function parsePlotStructure(
-  rawPlot: Record<string, unknown> | undefined,
-  style?: NarrativeStyle
-): PlotStructure {
-  if (!rawPlot) {
-    // Return empty three-act structure as fallback
-    return {
-      incitingIncident: { description: '', eventIds: [] },
-      risingAction: [],
-      climax: { description: '', eventIds: [] },
-      resolution: { description: '', eventIds: [] },
-    };
-  }
-
-  // Check if this is a legacy three-act structure
-  if (
-    'incitingIncident' in rawPlot &&
-    'climax' in rawPlot &&
-    'resolution' in rawPlot
-  ) {
-    return parseThreeActPlot(rawPlot);
-  }
-
-  // Check if this is a document structure (has documentPurpose)
-  if ('documentPurpose' in rawPlot || style?.format === 'document') {
+  rawPlot: Record<string, unknown>,
+  style: NarrativeStyle
+): ChroniclePlot {
+  if (style.format === 'document') {
     return {
       type: 'document',
       raw: rawPlot,
@@ -775,8 +1019,14 @@ function parsePlotStructure(
     };
   }
 
-  // Otherwise, it's a flexible style-based structure
-  const plotType = style?.plotStructure?.type || 'unknown';
+  if (!style.plotStructure) {
+    throw new Error(`Narrative style "${style.name}" is missing plot structure`);
+  }
+
+  const plotType = style.plotStructure.type;
+  if (plotType === 'three-act') {
+    validateThreeActPlot(rawPlot);
+  }
   const normalizedBeats = extractNormalizedBeats(rawPlot, plotType);
 
   return {
@@ -787,32 +1037,44 @@ function parsePlotStructure(
 }
 
 /**
- * Parse legacy three-act plot structure
+ * Parse three-act plot structure
  */
-function parseThreeActPlot(rawPlot: Record<string, unknown>): ThreeActPlotStructure {
+function validateThreeActPlot(rawPlot: Record<string, unknown>): void {
   const inciting = rawPlot.incitingIncident as Record<string, unknown> | undefined;
   const rising = rawPlot.risingAction as Array<Record<string, unknown>> | undefined;
   const climax = rawPlot.climax as Record<string, unknown> | undefined;
   const resolution = rawPlot.resolution as Record<string, unknown> | undefined;
 
-  return {
-    incitingIncident: {
-      description: (inciting?.description as string) || '',
-      eventIds: (inciting?.eventIds as string[]) || [],
-    },
-    risingAction: (rising || []).map((ra) => ({
-      description: (ra.description as string) || '',
-      eventIds: (ra.eventIds as string[]) || [],
-    })),
-    climax: {
-      description: (climax?.description as string) || '',
-      eventIds: (climax?.eventIds as string[]) || [],
-    },
-    resolution: {
-      description: (resolution?.description as string) || '',
-      eventIds: (resolution?.eventIds as string[]) || [],
-    },
+  if (!inciting || !climax || !resolution) {
+    throw new Error('Three-act plot is missing required sections');
+  }
+
+  const validateBeat = (beat: Record<string, unknown>, label: string) => {
+    if (typeof beat.description !== 'string') {
+      throw new Error(`Three-act plot ${label} is missing description`);
+    }
+    if (!Array.isArray(beat.eventIds)) {
+      throw new Error(`Three-act plot ${label} is missing eventIds`);
+    }
   };
+
+  validateBeat(inciting, 'incitingIncident');
+  validateBeat(climax, 'climax');
+  validateBeat(resolution, 'resolution');
+
+  if (rising && !Array.isArray(rising)) {
+    throw new Error('Three-act plot risingAction must be an array');
+  }
+  if (Array.isArray(rising)) {
+    rising.forEach((beat, index) => {
+      if (typeof beat.description !== 'string') {
+        throw new Error(`Three-act plot risingAction[${index}] is missing description`);
+      }
+      if (!Array.isArray(beat.eventIds)) {
+        throw new Error(`Three-act plot risingAction[${index}] is missing eventIds`);
+      }
+    });
+  }
 }
 
 /**
@@ -822,22 +1084,27 @@ function extractDocumentBeats(rawPlot: Record<string, unknown>): PlotBeat[] {
   const beats: PlotBeat[] = [];
 
   // Document purpose as first beat
-  const docPurpose = rawPlot.documentPurpose as string | undefined;
-  if (docPurpose) {
-    beats.push({ description: `Purpose: ${docPurpose}`, eventIds: [] });
+  const docPurpose = rawPlot.documentPurpose as string;
+  if (!docPurpose) {
+    throw new Error('Document plot is missing documentPurpose');
   }
+  beats.push({ description: `Purpose: ${docPurpose}`, eventIds: [] });
 
   // Key points as beats
-  const keyPoints = rawPlot.keyPoints as string[] | undefined;
-  if (keyPoints && Array.isArray(keyPoints)) {
-    for (const point of keyPoints) {
-      beats.push({ description: point, eventIds: [] });
-    }
+  const keyPoints = rawPlot.keyPoints as string[];
+  if (!Array.isArray(keyPoints)) {
+    throw new Error('Document plot is missing keyPoints');
+  }
+  for (const point of keyPoints) {
+    beats.push({ description: point, eventIds: [] });
   }
 
   // Event IDs
-  const eventIds = rawPlot.eventIds as string[] | undefined;
-  if (eventIds && eventIds.length > 0 && beats.length > 0) {
+  const eventIds = rawPlot.eventIds as string[];
+  if (!Array.isArray(eventIds)) {
+    throw new Error('Document plot is missing eventIds');
+  }
+  if (eventIds.length > 0 && beats.length > 0) {
     beats[0].eventIds = eventIds;
   }
 
@@ -846,7 +1113,7 @@ function extractDocumentBeats(rawPlot: Record<string, unknown>): PlotBeat[] {
 
 /**
  * Extract normalized beats from any plot structure type
- * This allows scene expansion to work with any plot format
+ * This allows section expansion to work with any plot format
  */
 function extractNormalizedBeats(
   rawPlot: Record<string, unknown>,
@@ -994,155 +1261,3 @@ function addBeatsFromArray(
   }
 }
 
-/**
- * Validate a story plan against context
- */
-export function validatePlan(
-  plan: StoryPlan,
-  context: ChronicleGenerationContext
-): { valid: boolean; issues: string[] } {
-  const issues: string[] = [];
-  const entityIds = new Set(context.entities.map((e) => e.id));
-  const eventIds = new Set(context.events.map((e) => e.id));
-
-  // Check characters reference valid entities
-  for (const char of plan.characters) {
-    if (!entityIds.has(char.entityId)) {
-      issues.push(`Character references unknown entity: ${char.entityId}`);
-    }
-  }
-
-  // Check scenes reference valid entities and events
-  for (const scene of plan.scenes) {
-    for (const charId of scene.characterIds) {
-      if (!entityIds.has(charId)) {
-        issues.push(
-          `Scene "${scene.title}" references unknown entity: ${charId}`
-        );
-      }
-    }
-    for (const evtId of scene.eventIds) {
-      if (!eventIds.has(evtId)) {
-        issues.push(
-          `Scene "${scene.title}" references unknown event: ${evtId}`
-        );
-      }
-    }
-  }
-
-  // Basic structural checks
-  if (plan.scenes.length === 0) {
-    issues.push('Plan has no scenes');
-  }
-  if (plan.characters.length === 0) {
-    issues.push('Plan has no characters');
-  }
-
-  // Check for plot content based on structure type
-  if (isThreeActPlot(plan.plot)) {
-    if (!plan.plot.climax.description) {
-      issues.push('Plan has no climax');
-    }
-  } else if (isFlexiblePlot(plan.plot)) {
-    if (plan.plot.normalizedBeats.length === 0) {
-      issues.push('Plan has no plot beats');
-    }
-  }
-
-  if (context.targetType === 'entityStory' && context.entity) {
-    const uniqueEntities = new Set(plan.characters.map((c) => c.entityId));
-    if (!uniqueEntities.has(context.entity.id)) {
-      issues.push('Plan does not include the entry point entity');
-    }
-    if (uniqueEntities.size < 2) {
-      issues.push('Plan includes fewer than 2 distinct entities');
-    }
-    const hasInteractionScene = plan.scenes.some(
-      (scene) => (scene.characterIds || []).length >= 2
-    );
-    if (!hasInteractionScene) {
-      issues.push('Plan has no scene with multiple entities interacting');
-    }
-  }
-
-  return {
-    valid: issues.length === 0,
-    issues,
-  };
-}
-
-/**
- * Generate story plan (to be called by worker or direct API call)
- */
-export async function generatePlan(
-  context: ChronicleGenerationContext,
-  callLLM: (prompt: string) => Promise<string>,
-  style?: NarrativeStyle
-): Promise<PlanGenerationResult> {
-  try {
-    const prompt = buildPlanPrompt(context, style);
-    const response = await callLLM(prompt);
-    const plan = parsePlanResponse(response, context, style);
-    const validation = validatePlan(plan, context);
-
-    if (!validation.valid) {
-      console.warn('Plan validation issues:', validation.issues);
-      // Still return plan, but with warnings
-    }
-
-    return {
-      success: true,
-      plan,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * Get a summary of the plan for display
- */
-export function summarizePlan(plan: StoryPlan): {
-  title: string;
-  characterCount: number;
-  sceneCount: number;
-  protagonistName?: string;
-  plotSummary: string;
-  plotType?: string;
-} {
-  // Find protagonist-like role (various styles use different role names)
-  const protagonistRoles = ['protagonist', 'hero', 'tragic-hero', 'focal-character', 'investigator', 'lover-a', 'schemer'];
-  const protagonist = plan.characters.find((c) => protagonistRoles.includes(c.role));
-
-  // Get plot summary based on structure type
-  let plotSummary: string;
-  let plotType: string | undefined;
-
-  if (isThreeActPlot(plan.plot)) {
-    plotSummary = plan.plot.climax.description.slice(0, 100) +
-      (plan.plot.climax.description.length > 100 ? '...' : '');
-    plotType = 'three-act';
-  } else if (isFlexiblePlot(plan.plot)) {
-    // Use the last major beat as summary (often the climax/resolution)
-    const beats = plan.plot.normalizedBeats;
-    const lastBeat = beats[beats.length - 1];
-    plotSummary = lastBeat
-      ? lastBeat.description.slice(0, 100) + (lastBeat.description.length > 100 ? '...' : '')
-      : 'No plot beats';
-    plotType = plan.plot.type;
-  } else {
-    plotSummary = 'Unknown plot structure';
-  }
-
-  return {
-    title: plan.title,
-    characterCount: plan.characters.length,
-    sceneCount: plan.scenes.length,
-    protagonistName: protagonist?.entityId,
-    plotSummary,
-    plotType,
-  };
-}

@@ -21,7 +21,7 @@ import type {
   WorkerResult,
   EntityEnrichment,
   EnrichmentResult,
-  SerializableStoryContext,
+  SerializableChronicleContext,
   ChronicleStep,
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
@@ -218,7 +218,7 @@ export function useEnrichmentQueue(
         simulationRunId: simulationRunIdRef.current || 'unknown',
         type: nextItem.type,
         prompt: nextItem.prompt,
-        storyContext: nextItem.storyContext,
+        chronicleContext: nextItem.chronicleContext,
         chronicleStep: nextItem.chronicleStep,
         storyId: nextItem.storyId,
       };
@@ -378,7 +378,7 @@ export function useEnrichmentQueue(
 
   // Enqueue items - distribute to workers based on estimated workload
   const enqueue = useCallback(
-    (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string; storyContext?: SerializableStoryContext; chronicleStep?: ChronicleStep; storyId?: string }>) => {
+    (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string; chronicleContext?: SerializableChronicleContext; chronicleStep?: ChronicleStep; storyId?: string }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
 
@@ -393,7 +393,7 @@ export function useEnrichmentQueue(
           prompt: item.prompt,
           status: 'queued' as const,
           queuedAt: Date.now(),
-          storyContext: item.storyContext,
+          chronicleContext: item.chronicleContext,
           chronicleStep: item.chronicleStep,
           storyId: item.storyId,
         };

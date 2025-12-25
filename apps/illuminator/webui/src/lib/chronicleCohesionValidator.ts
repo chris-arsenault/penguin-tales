@@ -1,54 +1,43 @@
 /**
  * Chronicle Cohesion Validator
  *
- * Step 4 of the pipeline: Validate assembled story against plan and context.
- * Checks for plot structure, character consistency, scene goals, and more.
+ * Step 4 of the pipeline: Validate assembled chronicle against plan and context.
+ * Checks for plot structure, entity consistency, section goals, and more.
  *
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
 
 import type {
-  StoryPlan,
+  ChroniclePlan,
   ChronicleGenerationContext,
   CohesionReport,
   CohesionCheck,
-  SceneGoalCheck,
+  SectionGoalCheck,
   CohesionIssue,
-  ValidationResult,
 } from './chronicleTypes';
-import { isThreeActPlot, isFlexiblePlot } from './chronicleTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 
 /**
  * Format plot structure for the validation prompt
  */
-function formatPlotStructure(plan: StoryPlan): string {
-  if (isThreeActPlot(plan.plot)) {
-    return `Inciting Incident: ${plan.plot.incitingIncident?.description || '(not specified)'}
-Rising Action:
-${(plan.plot.risingAction || []).map((ra, i) => `  ${i + 1}. ${ra.description}`).join('\n') || '  (none)'}
-Climax: ${plan.plot.climax?.description || '(not specified)'}
-Resolution: ${plan.plot.resolution?.description || '(not specified)'}`;
-  }
-
-  if (isFlexiblePlot(plan.plot)) {
-    const beats = plan.plot.normalizedBeats || [];
-    if (plan.plot.type === 'document') {
-      // Document format - show purpose and key points
-      const raw = plan.plot.raw as Record<string, unknown>;
-      const purpose = raw?.documentPurpose || '(not specified)';
-      const keyPoints = Array.isArray(raw?.keyPoints) ? raw.keyPoints : [];
-      return `Document Purpose: ${purpose}
+function formatPlotStructure(plan: ChroniclePlan): string {
+  if (plan.plot.type === 'document') {
+    // Document format - show purpose and key points
+    const raw = plan.plot.raw as Record<string, unknown>;
+    const purpose = raw.documentPurpose as string;
+    const keyPoints = raw.keyPoints as string[];
+    if (!purpose || !Array.isArray(keyPoints)) {
+      throw new Error('Document plot is missing documentPurpose or keyPoints');
+    }
+    return `Document Purpose: ${purpose}
 Key Points:
 ${keyPoints.length > 0 ? keyPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n') : '  (none)'}`;
-    }
-    // Other flexible plot types
-    return `Plot Type: ${plan.plot.type}
-Beats:
-${beats.length > 0 ? beats.map((b, i) => `  ${i + 1}. ${b.description}`).join('\n') : '  (none)'}`;
   }
 
-  return '(unknown plot structure)';
+  const beats = plan.plot.normalizedBeats || [];
+  return `Plot Type: ${plan.plot.type}
+Beats:
+${beats.length > 0 ? beats.map((b, i) => `  ${i + 1}. ${b.description}`).join('\n') : '  (none)'}`;
 }
 
 /**
@@ -56,43 +45,54 @@ ${beats.length > 0 ? beats.map((b, i) => `  ${i + 1}. ${b.description}`).join('\
  */
 export function buildValidationPrompt(
   assembledContent: string,
-  plan: StoryPlan,
+  plan: ChroniclePlan,
   context: ChronicleGenerationContext,
-  style?: NarrativeStyle
+  style: NarrativeStyle
 ): string {
+  if (!style) {
+    throw new Error('Narrative style is required for cohesion validation');
+  }
   const sections: string[] = [];
 
-  // Story plan summary
-  sections.push(`# Original Story Plan
+  // Chronicle plan summary
+  sections.push(`# Original Chronicle Plan
 
 Title: "${plan.title}"
 Theme: ${plan.theme}
 Tone: ${plan.tone}
 
 ## Entities
-${plan.characters
-  .map((c) => {
-    const entity = context.entities.find((e) => e.id === c.entityId);
-    return `- ${entity?.name || c.entityId} (${c.role}): ${c.arc}`;
+${plan.entityRoles
+  .map((role) => {
+    const entity = context.entities.find((e) => e.id === role.entityId);
+    return `- ${entity?.name || role.entityId} (${role.role}): ${role.contribution}`;
   })
   .join('\n')}
 
 ## Plot Structure
 ${formatPlotStructure(plan)}
 
-## Scene Goals
-${plan.scenes.map((s, i) => `${i + 1}. "${s.title}" - Goal: ${s.goal} (${s.emotionalBeat})`).join('\n')}`);
+## Section Goals
+${plan.sections
+  .map((s, i) => `${i + 1}. "${s.name}" - Goal: ${s.goal}${s.emotionalArc ? ` (${s.emotionalArc})` : ''}`)
+  .join('\n')}`);
 
-  if (style && style.format !== 'document' && style.proseDirectives) {
+  if (style.format !== 'document') {
+    if (!style.proseDirectives) {
+      throw new Error(`Narrative style "${style.name}" is missing prose directives`);
+    }
     sections.push(`# Style Expectations
-Tone: ${style.proseDirectives.toneKeywords.join(', ')}
-Dialogue: ${style.proseDirectives.dialogueStyle}
-Description: ${style.proseDirectives.descriptionStyle}
-Pacing: ${style.proseDirectives.pacingNotes}
-${style.proseDirectives.avoid.length > 0 ? `Avoid: ${style.proseDirectives.avoid.join('; ')}` : ''}`);
-  } else if (style?.format === 'document' && style.documentConfig) {
+    Tone: ${style.proseDirectives.toneKeywords.join(', ')}
+    Dialogue: ${style.proseDirectives.dialogueStyle}
+    Description: ${style.proseDirectives.descriptionStyle}
+    Pacing: ${style.proseDirectives.pacingNotes}
+    ${style.proseDirectives.avoid.length > 0 ? `Avoid: ${style.proseDirectives.avoid.join('; ')}` : ''}`);
+  } else if (style.format === 'document') {
+    if (!style.documentConfig) {
+      throw new Error('Document narrative styles must include documentConfig');
+    }
     sections.push(`# Document Expectations
-Type: ${style.documentConfig.documentType}
+    Type: ${style.documentConfig.documentType}
 Tone: ${style.documentConfig.toneKeywords.join(', ')}
 Include: ${style.documentConfig.include.join(', ')}
 Avoid: ${style.documentConfig.avoid.join(', ')}
@@ -106,7 +106,7 @@ ${context.entity.name} (ID: ${context.entity.id}) must appear in the narrative a
 
   // Entity facts for accuracy checking
   const relevantEntities = context.entities.filter((e) =>
-    plan.characters.some((c) => c.entityId === e.id)
+    plan.entityRoles.some((role) => role.entityId === e.id)
   );
 
   if (relevantEntities.length > 0) {
@@ -124,36 +124,36 @@ ${e.description ? `- Description: ${e.description}` : ''}`
   .join('\n\n')}`);
   }
 
-  // The assembled story
-  sections.push(`# Assembled Story
+  // The assembled content
+  sections.push(`# Assembled Content
 ${assembledContent}`);
 
   // Validation instructions - adapt based on format
-  const isDocument = isFlexiblePlot(plan.plot) && plan.plot.type === 'document';
+  const isDocument = plan.format === 'document';
 
   const plotCheckDesc = isDocument
     ? 'Does the document follow its planned structure and cover all key points?'
-    : 'Does the story have a clear narrative arc as planned (inciting incident, rising action, climax, resolution)?';
+    : 'Does the narrative follow the planned structure and beats?';
 
   const resolutionCheckDesc = isDocument
     ? 'Does the document conclude effectively and fulfill its stated purpose?'
-    : 'Is the ending satisfying? Does it tie up the main conflict?';
+    : 'Does the narrative conclude effectively and tie off the main arc?';
 
-  const characterCheckDesc = isDocument
+  const entityCheckDesc = isDocument
     ? 'Are entities referenced accurately and appropriately for their roles in the document?'
     : 'Do entities act according to their described traits, culture, and prominence? Are their roles coherent, and do multiple entities interact directly (not just appear)?';
 
   sections.push(`# Your Task
 
-Evaluate the assembled ${isDocument ? 'document' : 'story'} against the original plan and entity facts. Output a JSON cohesion report.
+Evaluate the assembled ${isDocument ? 'document' : 'chronicle'} against the original plan and entity facts. Output a JSON cohesion report.
 
 Check each of the following:
 
 1. **Plot Structure**: ${plotCheckDesc}
 
-2. **Character Consistency**: ${characterCheckDesc}
+2. **Entity Consistency**: ${entityCheckDesc}
 
-3. **Scene Goals**: For each ${isDocument ? 'section' : 'scene'}, was its stated goal achieved?
+3. **Section Goals**: For each section, was its stated goal achieved?
 
 4. **Resolution**: ${resolutionCheckDesc}
 
@@ -168,10 +168,10 @@ Output this exact JSON structure:
   "overallScore": 85,
   "checks": {
     "plotStructure": { "pass": true, "notes": "Clear narrative arc..." },
-    "characterConsistency": { "pass": true, "notes": "Characters stay true to traits..." },
-    "sceneGoals": [
-      { "sceneId": "scene_1", "pass": true, "notes": "Goal achieved..." },
-      { "sceneId": "scene_2", "pass": false, "notes": "Missing key element..." }
+    "entityConsistency": { "pass": true, "notes": "Entities stay true to traits..." },
+    "sectionGoals": [
+      { "sectionId": "section_1", "pass": true, "notes": "Goal achieved..." },
+      { "sectionId": "section_2", "pass": false, "notes": "Missing key element..." }
     ],
     "resolution": { "pass": true, "notes": "Satisfying conclusion..." },
     "factualAccuracy": { "pass": true, "notes": "Entity facts consistent..." },
@@ -180,16 +180,16 @@ Output this exact JSON structure:
   "issues": [
     {
       "severity": "critical",
-      "sceneId": "scene_2",
-      "checkType": "sceneGoals",
-      "description": "Scene goal not achieved: ...",
+      "sectionId": "section_2",
+      "checkType": "sectionGoals",
+      "description": "Section goal not achieved: ...",
       "suggestion": "Consider adding..."
     },
     {
       "severity": "minor",
-      "checkType": "characterConsistency",
-      "description": "Character X acts slightly out of character when...",
-      "suggestion": "Adjust dialogue to..."
+      "checkType": "entityConsistency",
+      "description": "Entity X behaves out of role when...",
+      "suggestion": "Adjust actions or framing to match the plan..."
     }
   ]
 }
@@ -211,7 +211,7 @@ Output ONLY the JSON, no other text.`);
  */
 export function parseValidationResponse(
   response: string,
-  plan: StoryPlan
+  plan: ChroniclePlan
 ): CohesionReport {
   // Extract JSON from response
   let jsonStr = response;
@@ -228,8 +228,8 @@ export function parseValidationResponse(
 
     checks: {
       plotStructure: normalizeCheck(parsed.checks?.plotStructure),
-      characterConsistency: normalizeCheck(parsed.checks?.characterConsistency),
-      sceneGoals: normalizeSceneGoals(parsed.checks?.sceneGoals, plan.scenes),
+      entityConsistency: normalizeCheck(parsed.checks?.entityConsistency),
+      sectionGoals: normalizeSectionGoals(parsed.checks?.sectionGoals, plan.sections),
       resolution: normalizeCheck(parsed.checks?.resolution),
       factualAccuracy: normalizeCheck(parsed.checks?.factualAccuracy),
       themeExpression: normalizeCheck(parsed.checks?.themeExpression),
@@ -254,14 +254,14 @@ function normalizeCheck(check: unknown): CohesionCheck {
   };
 }
 
-function normalizeSceneGoals(
+function normalizeSectionGoals(
   goals: unknown,
-  scenes: { id: string }[]
-): SceneGoalCheck[] {
+  sections: { id: string }[]
+): SectionGoalCheck[] {
   if (!Array.isArray(goals)) {
-    // Return placeholder checks for all scenes
-    return scenes.map((s) => ({
-      sceneId: s.id,
+    // Return placeholder checks for all sections
+    return sections.map((section) => ({
+      sectionId: section.id,
       pass: false,
       notes: 'Not evaluated',
     }));
@@ -269,11 +269,11 @@ function normalizeSceneGoals(
 
   return goals.map((g: unknown) => {
     if (!g || typeof g !== 'object') {
-      return { sceneId: 'unknown', pass: false, notes: 'Invalid' };
+      return { sectionId: 'unknown', pass: false, notes: 'Invalid' };
     }
     const obj = g as Record<string, unknown>;
     return {
-      sceneId: String(obj.sceneId || 'unknown'),
+      sectionId: String(obj.sectionId || 'unknown'),
       pass: Boolean(obj.pass),
       notes: String(obj.notes || ''),
     };
@@ -292,108 +292,10 @@ function normalizeIssue(issue: unknown): CohesionIssue {
   const obj = issue as Record<string, unknown>;
   return {
     severity: obj.severity === 'critical' ? 'critical' : 'minor',
-    sceneId: obj.sceneId ? String(obj.sceneId) : undefined,
+    sectionId: obj.sectionId ? String(obj.sectionId) : undefined,
     checkType: String(obj.checkType || 'unknown'),
     description: String(obj.description || ''),
     suggestion: String(obj.suggestion || ''),
   };
 }
 
-/**
- * Run cohesion validation
- */
-export async function validateCohesion(
-  assembledContent: string,
-  plan: StoryPlan,
-  context: ChronicleGenerationContext,
-  callLLM: (prompt: string) => Promise<string>
-): Promise<ValidationResult> {
-  try {
-    const prompt = buildValidationPrompt(assembledContent, plan, context);
-    const response = await callLLM(prompt);
-    const report = parseValidationResponse(response, plan);
-
-    return {
-      success: true,
-      report,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
-
-/**
- * Get a quick assessment from the report
- */
-export function assessReport(report: CohesionReport): {
-  status: 'excellent' | 'good' | 'acceptable' | 'needs_revision';
-  criticalIssueCount: number;
-  minorIssueCount: number;
-  failedChecks: string[];
-} {
-  const criticalIssues = report.issues.filter((i) => i.severity === 'critical');
-  const minorIssues = report.issues.filter((i) => i.severity === 'minor');
-
-  const failedChecks: string[] = [];
-  if (!report.checks.plotStructure.pass) failedChecks.push('Plot Structure');
-  if (!report.checks.characterConsistency.pass) failedChecks.push('Character Consistency');
-  if (!report.checks.resolution.pass) failedChecks.push('Resolution');
-  if (!report.checks.factualAccuracy.pass) failedChecks.push('Factual Accuracy');
-  if (!report.checks.themeExpression.pass) failedChecks.push('Theme Expression');
-
-  const failedSceneGoals = report.checks.sceneGoals.filter((sg) => !sg.pass);
-  if (failedSceneGoals.length > 0) {
-    failedChecks.push(`Scene Goals (${failedSceneGoals.length})`);
-  }
-
-  let status: 'excellent' | 'good' | 'acceptable' | 'needs_revision';
-  if (report.overallScore >= 90) {
-    status = 'excellent';
-  } else if (report.overallScore >= 75) {
-    status = 'good';
-  } else if (report.overallScore >= 60) {
-    status = 'acceptable';
-  } else {
-    status = 'needs_revision';
-  }
-
-  return {
-    status,
-    criticalIssueCount: criticalIssues.length,
-    minorIssueCount: minorIssues.length,
-    failedChecks,
-  };
-}
-
-/**
- * Generate suggestions for addressing issues
- */
-export function generateRevisionSuggestions(report: CohesionReport): string[] {
-  const suggestions: string[] = [];
-
-  // Critical issues first
-  for (const issue of report.issues.filter((i) => i.severity === 'critical')) {
-    if (issue.suggestion) {
-      suggestions.push(`[Critical] ${issue.suggestion}`);
-    } else {
-      suggestions.push(`[Critical] Fix: ${issue.description}`);
-    }
-  }
-
-  // Then minor issues
-  for (const issue of report.issues.filter((i) => i.severity === 'minor')) {
-    if (issue.suggestion) {
-      suggestions.push(`[Minor] ${issue.suggestion}`);
-    }
-  }
-
-  // Failed scene goals
-  for (const sg of report.checks.sceneGoals.filter((sg) => !sg.pass)) {
-    suggestions.push(`[Scene] Review ${sg.sceneId}: ${sg.notes}`);
-  }
-
-  return suggestions;
-}

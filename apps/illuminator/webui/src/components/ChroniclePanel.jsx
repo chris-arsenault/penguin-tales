@@ -2,16 +2,16 @@
  * ChroniclePanel - Multi-step narrative generation pipeline
  *
  * Orchestrates the 4-step chronicle generation process:
- * 1. Story Planning - Generate structured plan with characters, plot, scenes
- * 2. Scene Expansion - Expand each scene into narrative prose
- * 3. Assembly - Combine scenes with transitions and wiki links
- * 4. Cohesion Validation - Check output against stated goals
+ * 1. Plan - Generate structured plan with entities, plot, sections
+ * 2. Expand - Expand each section into narrative prose
+ * 3. Assemble - Combine sections with transitions and wiki links
+ * 4. Validate - Check output against stated goals
  *
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import StoryPlanEditor from './StoryPlanEditor';
+import ChroniclePlanEditor from './ChroniclePlanEditor';
 import CohesionReportViewer from './CohesionReportViewer';
 import EventsPanel from './EventsPanel';
 import {
@@ -33,7 +33,7 @@ const STAGES = [
 // Content type definitions
 const CONTENT_TYPES = [
   { id: 'eraChronicle', label: 'Era Chronicles', description: 'Coming soon (not yet implemented)' },
-  { id: 'entityStory', label: 'Entity Stories', description: 'Multi-entity narratives anchored on an entrypoint' },
+  { id: 'entityStory', label: 'Entity Stories', description: 'Multi-entity narratives anchored on an entrypoint (no primary required)' },
   { id: 'events', label: 'Events', description: 'View narrative events from simulation' },
 ];
 
@@ -152,13 +152,6 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
     if (item.type === 'entityStory') {
       return entity?.name || item.targetId;
     }
-    if (item.type === 'relationshipTale') {
-      const srcEntity = entityMap?.get(item.srcId);
-      const dstEntity = entityMap?.get(item.dstId);
-      const srcName = srcEntity?.name || item.srcId;
-      const dstName = dstEntity?.name || item.dstId;
-      return `${srcName} ↔ ${dstName}`;
-    }
     return item.targetId;
   };
 
@@ -172,8 +165,12 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
         return { label: 'Plan Ready', color: '#f59e0b' };
       case 'expanding':
         return { label: 'Expanding...', color: '#3b82f6' };
+      case 'sections_ready':
+        return { label: 'Sections Ready', color: '#f59e0b' };
       case 'assembling':
         return { label: 'Assembling...', color: '#3b82f6' };
+      case 'assembly_ready':
+        return { label: 'Assembly Ready', color: '#f59e0b' };
       case 'validating':
         return { label: 'Validating...', color: '#3b82f6' };
       case 'validation_ready':
@@ -249,23 +246,6 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
         </div>
       )}
 
-      {/* Relationship-specific badges */}
-      {item.type === 'relationshipTale' && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: badges.length > 0 ? '4px' : '8px' }}>
-          <EntityBadge label={item.relKind} type="kind" />
-          {(() => {
-            const srcEntity = entityMap?.get(item.srcId);
-            const dstEntity = entityMap?.get(item.dstId);
-            const badges = [];
-            if (srcEntity?.kind) badges.push({ label: srcEntity.kind, type: 'subtype' });
-            if (dstEntity?.kind && dstEntity.kind !== srcEntity?.kind) {
-              badges.push({ label: dstEntity.kind, type: 'subtype' });
-            }
-            return badges.map((b, i) => <EntityBadge key={i} label={b.label} type={b.type} />);
-          })()}
-        </div>
-      )}
-
       {item.status !== 'not_started' && item.status !== 'complete' && (
         <div style={{ marginTop: '8px' }}>
           <StageIndicator
@@ -273,9 +253,9 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
             currentStage={
               item.status === 'planning' || item.status === 'plan_ready'
                 ? 'plan'
-                : item.status === 'expanding'
+                : item.status === 'expanding' || item.status === 'sections_ready'
                 ? 'expand'
-                : item.status === 'assembling'
+                : item.status === 'assembling' || item.status === 'assembly_ready'
                 ? 'assemble'
                 : 'validate'
             }
@@ -325,7 +305,7 @@ function PrerequisiteWarning({ missing, onGeneratePrereqs }) {
   );
 }
 
-function SceneProgressList({ scenes, onSceneClick }) {
+function SectionProgressList({ sections, onSectionClick }) {
   return (
     <div
       style={{
@@ -343,26 +323,26 @@ function SceneProgressList({ scenes, onSceneClick }) {
           fontSize: '14px',
         }}
       >
-        Scene Progress
+        Section Progress
       </div>
-      {scenes.map((scene, i) => (
+      {sections.map((section, i) => (
         <div
-          key={scene.id}
-          onClick={() => onSceneClick?.(scene.id)}
+          key={section.id}
+          onClick={() => onSectionClick?.(section.id)}
           style={{
             padding: '12px 16px',
             borderTop: '1px solid var(--border-color)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            cursor: scene.generatedContent ? 'pointer' : 'default',
+            cursor: section.generatedContent ? 'pointer' : 'default',
           }}
         >
           <div>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '8px' }}>
               {i + 1}.
             </span>
-            <span style={{ fontSize: '13px' }}>{scene.title}</span>
+            <span style={{ fontSize: '13px' }}>{section.name}</span>
           </div>
           <span
             style={{
@@ -373,11 +353,11 @@ function SceneProgressList({ scenes, onSceneClick }) {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '10px',
-              background: scene.generatedContent ? '#10b981' : 'var(--bg-tertiary)',
-              color: scene.generatedContent ? 'white' : 'var(--text-muted)',
+              background: section.generatedContent ? '#10b981' : 'var(--bg-tertiary)',
+              color: section.generatedContent ? 'white' : 'var(--text-muted)',
             }}
           >
-            {scene.generatedContent ? '✓' : '○'}
+            {section.generatedContent ? '✓' : '○'}
           </span>
         </div>
       ))}
@@ -533,7 +513,7 @@ export default function ChroniclePanel({
   const { styleLibrary, loading: stylesLoading } = useStyleLibrary();
 
   // Use the chronicle generation hook
-  // Returns stories Map<entityId, StoryRecord> loaded from IndexedDB
+  // Returns chronicle records Map<entityId, StoryRecord> loaded from IndexedDB
   const {
     stories,
     generateStory,
@@ -555,6 +535,11 @@ export default function ChroniclePanel({
     if (!entities) return new Map();
     return new Map(entities.map((e) => [e.id, e]));
   }, [entities]);
+
+  const eventMap = useMemo(() => {
+    if (!worldData?.narrativeHistory) return new Map();
+    return new Map(worldData.narrativeHistory.map((e) => [e.id, e]));
+  }, [worldData]);
 
   // Helper to get status considering both IndexedDB and queue state
   const getEffectiveStatus = useCallback((entityId, story) => {
@@ -601,8 +586,8 @@ export default function ChroniclePanel({
           // Include full story record if exists
           storyId: story?.storyId,
           plan: story?.plan,
-          scenesCompleted: story?.scenesCompleted,
-          scenesTotal: story?.scenesTotal,
+          sectionsCompleted: story?.sectionsCompleted,
+          sectionsTotal: story?.sectionsTotal,
           assembledContent: story?.assembledContent,
           cohesionReport: story?.cohesionReport,
           wikiLinks: story?.wikiLinks,
@@ -624,8 +609,8 @@ export default function ChroniclePanel({
           // Include full story record if exists
           storyId: story?.storyId,
           plan: story?.plan,
-          scenesCompleted: story?.scenesCompleted,
-          scenesTotal: story?.scenesTotal,
+          sectionsCompleted: story?.sectionsCompleted,
+          sectionsTotal: story?.sectionsTotal,
           assembledContent: story?.assembledContent,
           cohesionReport: story?.cohesionReport,
           wikiLinks: story?.wikiLinks,
@@ -680,16 +665,17 @@ export default function ChroniclePanel({
     return checkPrerequisites(generationContext);
   }, [generationContext, isEraUnimplemented]);
 
-  // Handle story generation (runs all 4 steps in worker)
-  const handleGenerateStory = useCallback(() => {
+  // Handle chronicle generation (runs all 4 steps in worker)
+  const handleGenerateChronicle = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     if (selectedItem.type === 'eraChronicle') return;
+    if (!selectedNarrativeStyle) return;
     // Pass the selected narrative style to the generation
     generateStory(selectedItem.id, generationContext, selectedNarrativeStyle);
   }, [selectedItem, generationContext, generateStory, selectedNarrativeStyle]);
 
-  // Handle accept story
-  const handleAcceptStory = useCallback(() => {
+  // Handle accept chronicle
+  const handleAcceptChronicle = useCallback(() => {
     if (!selectedItem) return;
     acceptStory(selectedItem.id);
   }, [selectedItem, acceptStory]);
@@ -702,7 +688,7 @@ export default function ChroniclePanel({
     setShowRestartModal(true);
   }, [selectedItem]);
 
-  // Handle restart with confirmation modal (for completed stories)
+  // Handle restart with confirmation modal (for completed chronicles)
   const handleRestartClick = useCallback((entityId) => {
     setPendingRestartEntityId(entityId);
     setShowRestartModal(true);
@@ -728,7 +714,7 @@ export default function ChroniclePanel({
       planning: 0,
       plan_ready: 0,
       expanding: 0,
-      scenes_ready: 0,
+      sections_ready: 0,
       assembling: 0,
       assembly_ready: 0,
       validating: 0,
@@ -740,6 +726,12 @@ export default function ChroniclePanel({
     }
     return byStatus;
   }, [chronicleItems]);
+
+  const activeTypeLabel = useMemo(() => {
+    if (activeType === 'eraChronicle') return 'era chronicle';
+    if (activeType === 'entityStory') return 'entity chronicle';
+    return 'chronicle';
+  }, [activeType]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -911,7 +903,7 @@ export default function ChroniclePanel({
                         Ready to Generate
                       </h3>
                       <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-                        Start by creating a story plan for this {activeType.replace('Chronicle', ' chronicle').replace('Story', ' story').replace('Tale', ' tale')}.
+                        Start by creating a plan for this {activeTypeLabel}.
                       </p>
 
                       {/* Narrative Style Selector */}
@@ -975,7 +967,7 @@ export default function ChroniclePanel({
                               >
                                 {selectedNarrativeStyle.format === 'document'
                                   ? selectedNarrativeStyle.documentConfig?.documentType || 'document'
-                                  : selectedNarrativeStyle.plotStructure?.type || 'story'}
+                                  : selectedNarrativeStyle.plotStructure?.type || 'narrative'}
                               </span>
                               {/* Word count badge */}
                               <span
@@ -1003,7 +995,7 @@ export default function ChroniclePanel({
                               >
                                 {selectedNarrativeStyle.format === 'document'
                                   ? `${selectedNarrativeStyle.documentConfig?.sections?.length || 0} sections`
-                                  : `${selectedNarrativeStyle.pacing?.sceneCount?.min || 3}-${selectedNarrativeStyle.pacing?.sceneCount?.max || 5} scenes`}
+                                  : `${selectedNarrativeStyle.pacing?.sceneCount?.min || 3}-${selectedNarrativeStyle.pacing?.sceneCount?.max || 5} sections`}
                               </span>
                             </div>
                             {selectedNarrativeStyle.tags && selectedNarrativeStyle.tags.length > 0 && (
@@ -1029,16 +1021,16 @@ export default function ChroniclePanel({
                       </div>
 
                       <button
-                        onClick={handleGenerateStory}
-                        disabled={!prerequisites.ready || stylesLoading || isEraUnimplemented}
+                        onClick={handleGenerateChronicle}
+                        disabled={!prerequisites.ready || stylesLoading || !selectedNarrativeStyle || isEraUnimplemented}
                         className="illuminator-button illuminator-button-primary"
                         style={{
                           padding: '12px 24px',
                           fontSize: '14px',
-                          opacity: prerequisites.ready && !stylesLoading && !isEraUnimplemented ? 1 : 0.5,
+                          opacity: prerequisites.ready && !stylesLoading && selectedNarrativeStyle && !isEraUnimplemented ? 1 : 0.5,
                         }}
                       >
-                        Generate Story
+                        Generate Chronicle
                       </button>
                     </div>
                   )}
@@ -1061,14 +1053,14 @@ export default function ChroniclePanel({
                     }}
                   />
                   <h3 style={{ margin: '0 0 8px 0' }}>
-                    {selectedItem.status === 'planning' && 'Generating Story Plan...'}
-                    {selectedItem.status === 'expanding' && `Expanding Scenes (${selectedItem.scenesCompleted || 0}/${selectedItem.scenesTotal || '?'})...`}
-                    {selectedItem.status === 'assembling' && 'Assembling Story...'}
+                    {selectedItem.status === 'planning' && 'Generating Plan...'}
+                    {selectedItem.status === 'expanding' && `Expanding Sections (${selectedItem.sectionsCompleted || 0}/${selectedItem.sectionsTotal || '?'})...`}
+                    {selectedItem.status === 'assembling' && 'Assembling Content...'}
                     {selectedItem.status === 'validating' && 'Validating Cohesion...'}
                   </h3>
                   <div style={{ color: 'var(--text-muted)' }}>
                     {selectedItem.plan && selectedItem.status === 'expanding' && (
-                      <SceneProgressList scenes={selectedItem.plan.scenes} />
+                      <SectionProgressList sections={selectedItem.plan.sections} />
                     )}
                     {!selectedItem.plan && <p>This may take a moment. Progress is saved automatically.</p>}
                   </div>
@@ -1078,14 +1070,14 @@ export default function ChroniclePanel({
               {/* Plan ready - show plan for review */}
               {selectedItem.status === 'plan_ready' && selectedItem.plan && (
                 <div>
-                  <h3 style={{ margin: '0 0 16px 0' }}>Story Plan Ready for Review</h3>
-                  <StoryPlanEditor
+                  <h3 style={{ margin: '0 0 16px 0' }}>Plan Ready for Review</h3>
+                  <ChroniclePlanEditor
                     plan={selectedItem.plan}
                     entityMap={entityMap}
-                    onPlanChange={() => {}}
+                    eventMap={eventMap}
                     onRegenerate={handleRegenerate}
                     onApprove={() => {
-                      if (generationContext) {
+                      if (generationContext && selectedNarrativeStyle) {
                         continueStory(selectedItem.targetId, generationContext, selectedNarrativeStyle);
                       }
                     }}
@@ -1094,26 +1086,26 @@ export default function ChroniclePanel({
                 </div>
               )}
 
-              {/* Scenes ready - show expanded scenes for review */}
-              {selectedItem.status === 'scenes_ready' && selectedItem.plan && (
+              {/* Sections ready - show expanded sections for review */}
+              {selectedItem.status === 'sections_ready' && selectedItem.plan && (
                 <div>
-                  <h3 style={{ margin: '0 0 16px 0' }}>Scenes Expanded - Ready for Review</h3>
+                  <h3 style={{ margin: '0 0 16px 0' }}>Sections Expanded - Ready for Review</h3>
                   <div style={{ marginBottom: '24px' }}>
-                    {selectedItem.plan.scenes.map((scene, idx) => (
-                      <div key={scene.id} style={{ marginBottom: '16px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
-                        <h4 style={{ margin: '0 0 8px 0' }}>Scene {idx + 1}: {scene.title}</h4>
-                        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{scene.generatedContent || 'No content'}</p>
+                    {selectedItem.plan.sections.map((section, idx) => (
+                      <div key={section.id} style={{ marginBottom: '16px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 8px 0' }}>Section {idx + 1}: {section.name}</h4>
+                        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{section.generatedContent || 'No content'}</p>
                       </div>
                     ))}
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <button
                       onClick={() => {
-                        if (generationContext) {
+                        if (generationContext && selectedNarrativeStyle) {
                           continueStory(selectedItem.targetId, generationContext, selectedNarrativeStyle);
                         }
                       }}
-                      disabled={isGenerating || !generationContext}
+                      disabled={isGenerating || !generationContext || !selectedNarrativeStyle}
                       className="illuminator-button illuminator-button-primary"
                       style={{ padding: '12px 24px', fontSize: '14px' }}
                     >
@@ -1123,10 +1115,10 @@ export default function ChroniclePanel({
                 </div>
               )}
 
-              {/* Assembly ready - show assembled story for review */}
+              {/* Assembly ready - show assembled content for review */}
               {selectedItem.status === 'assembly_ready' && selectedItem.assembledContent && (
                 <div>
-                  <h3 style={{ margin: '0 0 16px 0' }}>Story Assembled - Ready for Validation</h3>
+                  <h3 style={{ margin: '0 0 16px 0' }}>Content Assembled - Ready for Validation</h3>
                   <AssembledContentViewer
                     content={selectedItem.assembledContent}
                     wordCount={selectedItem.assembledContent.split(/\s+/).filter(Boolean).length}
@@ -1136,11 +1128,11 @@ export default function ChroniclePanel({
                   <div style={{ marginTop: '24px', textAlign: 'center' }}>
                     <button
                       onClick={() => {
-                        if (generationContext) {
+                        if (generationContext && selectedNarrativeStyle) {
                           continueStory(selectedItem.targetId, generationContext, selectedNarrativeStyle);
                         }
                       }}
-                      disabled={isGenerating || !generationContext}
+                      disabled={isGenerating || !generationContext || !selectedNarrativeStyle}
                       className="illuminator-button illuminator-button-primary"
                       style={{ padding: '12px 24px', fontSize: '14px' }}
                     >
@@ -1156,7 +1148,7 @@ export default function ChroniclePanel({
                     <CohesionReportViewer
                       report={selectedItem.cohesionReport}
                       plan={selectedItem.plan}
-                      onAccept={handleAcceptStory}
+                      onAccept={handleAcceptChronicle}
                       onRegenerate={handleRegenerate}
                       isGenerating={isGenerating}
                     />
@@ -1178,7 +1170,7 @@ export default function ChroniclePanel({
               {selectedItem.status === 'complete' && selectedItem.finalContent && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, fontSize: '16px' }}>Completed Story</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>Completed Chronicle</h3>
                     <button
                       onClick={() => handleRestartClick(selectedItem.id)}
                       style={{
@@ -1202,11 +1194,13 @@ export default function ChroniclePanel({
                   />
                 </div>
               )}
+                </>
+              )}
             </>
           )}
         </div>
-          </>
-        )}
+      </>
+    )}
       </div>
 
       {/* Restart confirmation modal */}
@@ -1237,9 +1231,9 @@ export default function ChroniclePanel({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px' }}>Restart Story?</h3>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px' }}>Restart Chronicle?</h3>
             <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-              This will permanently delete the generated story content and start over from the beginning.
+              This will permanently delete the generated chronicle content and start over from the beginning.
               This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

@@ -15,8 +15,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ChronicleGenerationContext, StoryPlan, CohesionReport } from '../lib/chronicleTypes';
-import type { SerializableStoryContext, QueueItem, EnrichmentType, ChronicleStep } from '../lib/enrichmentTypes';
+import type { ChronicleGenerationContext, CohesionReport } from '../lib/chronicleTypes';
+import type { SerializableChronicleContext, QueueItem, EnrichmentType, ChronicleStep } from '../lib/enrichmentTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 import {
   getStoriesForSimulation,
@@ -49,8 +49,8 @@ export function deriveStatus(record: StoryRecord | undefined): string {
   if (record.finalContent || record.status === 'complete') return 'complete';
   if (record.cohesionReport) return 'validation_ready';
   if (record.assembledContent) return 'assembly_ready';
-  if (record.plan && record.scenesCompleted >= record.scenesTotal && record.scenesTotal > 0) {
-    return 'scenes_ready';
+  if (record.plan && record.sectionsCompleted >= record.sectionsTotal && record.sectionsTotal > 0) {
+    return 'sections_ready';
   }
   if (record.plan) return 'plan_ready';
 
@@ -62,8 +62,8 @@ export interface UseChronicleGenerationReturn {
   stories: Map<string, StoryRecord>;
 
   // Actions
-  generateStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle?: NarrativeStyle) => void;
-  continueStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle?: NarrativeStyle) => void;
+  generateStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  continueStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   acceptStory: (entityId: string) => Promise<void>;
   restartStory: (entityId: string) => Promise<void>;
 
@@ -80,28 +80,33 @@ export interface UseChronicleGenerationReturn {
 
 function serializeContext(
   context: ChronicleGenerationContext,
-  narrativeStyle?: NarrativeStyle
-): SerializableStoryContext {
-  const serialized: SerializableStoryContext = {
+  narrativeStyle: NarrativeStyle
+): SerializableChronicleContext {
+  const serialized: SerializableChronicleContext = {
     worldName: context.worldName,
     worldDescription: context.worldDescription,
     canonFacts: context.canonFacts,
     tone: context.tone,
 
-    entity: {
-      id: context.entity!.id,
-      name: context.entity!.name,
-      kind: context.entity!.kind,
-      subtype: context.entity!.subtype,
-      prominence: context.entity!.prominence,
-      culture: context.entity!.culture,
-      status: context.entity!.status,
-      tags: context.entity!.tags,
-      description: context.entity!.description,
-      enrichedDescription: context.entity!.enrichedDescription,
-      createdAt: context.entity!.createdAt,
-      updatedAt: context.entity!.updatedAt,
-    },
+    targetType: context.targetType,
+    targetId: context.targetId,
+
+    entity: context.entity
+      ? {
+        id: context.entity.id,
+        name: context.entity.name,
+        kind: context.entity.kind,
+        subtype: context.entity.subtype,
+        prominence: context.entity.prominence,
+        culture: context.entity.culture,
+        status: context.entity.status,
+        tags: context.entity.tags,
+        description: context.entity.description,
+        enrichedDescription: context.entity.enrichedDescription,
+        createdAt: context.entity.createdAt,
+        updatedAt: context.entity.updatedAt,
+      }
+      : undefined,
 
     entities: context.entities.map((e) => ({
       id: e.id,
@@ -139,11 +144,8 @@ function serializeContext(
       narrativeTags: e.narrativeTags,
     })),
 
-    existingDescriptions: Object.fromEntries(context.existingDescriptions),
+    narrativeStyle,
   };
-  if (narrativeStyle) {
-    serialized.narrativeStyle = narrativeStyle;
-  }
   return serialized;
 }
 
@@ -159,7 +161,7 @@ export function useChronicleGeneration(
     entity: { id: string; name: string; kind: string; subtype: string; prominence: string; culture: string; status: string; description: string; tags: Record<string, unknown> };
     type: EnrichmentType;
     prompt: string;
-    storyContext?: SerializableStoryContext;
+    chronicleContext?: SerializableChronicleContext;
     chronicleStep?: ChronicleStep;
     storyId?: string;
   }>) => void
@@ -255,7 +257,7 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const generateStory = useCallback(
-    (entityId: string, context: ChronicleGenerationContext, narrativeStyle?: NarrativeStyle) => {
+    (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
       if (!context.entity) {
         console.error('[Chronicle] Entity context required');
         return;
@@ -263,7 +265,11 @@ export function useChronicleGeneration(
 
       console.log(`[Chronicle] Starting story generation for ${entityId}`);
 
-      const storyContext = serializeContext(context, narrativeStyle);
+      if (!narrativeStyle) {
+        console.error('[Chronicle] Narrative style required for generation');
+        return;
+      }
+      const chronicleContext = serializeContext(context, narrativeStyle);
 
       const entity = {
         id: context.entity.id,
@@ -281,7 +287,7 @@ export function useChronicleGeneration(
         entity,
         type: 'entityStory' as EnrichmentType,
         prompt: '',
-        storyContext,
+        chronicleContext,
         chronicleStep: 'plan',
       }]);
     },
@@ -293,7 +299,7 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const continueStory = useCallback(
-    (entityId: string, context: ChronicleGenerationContext, narrativeStyle?: NarrativeStyle) => {
+    (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
       const story = stories.get(entityId);
       if (!story?.storyId) {
         console.error('[Chronicle] No story found for entity', entityId);
@@ -307,7 +313,7 @@ export function useChronicleGeneration(
         case 'plan_ready':
           nextStep = 'expand';
           break;
-        case 'scenes_ready':
+        case 'sections_ready':
           nextStep = 'assemble';
           break;
         case 'assembly_ready':
@@ -320,7 +326,11 @@ export function useChronicleGeneration(
 
       console.log(`[Chronicle] Continuing story ${story.storyId} to step=${nextStep}`);
 
-      const storyContext = serializeContext(context, narrativeStyle);
+      if (!narrativeStyle) {
+        console.error('[Chronicle] Narrative style required to continue generation');
+        return;
+      }
+      const chronicleContext = serializeContext(context, narrativeStyle);
       const entity = {
         id: context.entity!.id,
         name: context.entity!.name,
@@ -337,7 +347,7 @@ export function useChronicleGeneration(
         entity,
         type: 'entityStory' as EnrichmentType,
         prompt: '',
-        storyContext,
+        chronicleContext,
         chronicleStep: nextStep,
         storyId: story.storyId,
       }]);

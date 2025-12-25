@@ -6,19 +6,26 @@
  */
 
 // =============================================================================
-// Story Plan - Output of Step 1
+// Chronicle Plan - Output of Step 1
 // =============================================================================
 
-export interface StoryCharacter {
+export type ChronicleFormat = 'story' | 'document';
+
+export interface ChronicleEntityRole {
   entityId: string;
   role: string; // Flexible role based on narrative style (e.g., 'protagonist', 'hero', 'lover-a')
-  arc: string; // What change does this character undergo?
+  contribution: string; // How this entity functions in the narrative or document
 }
 
-export interface StorySetting {
-  eraId: string;
-  locations: string[];
-  timespan: string; // e.g., "Three days", "A single night"
+export interface ChronicleScope {
+  timeframe?: string; // e.g., "Three days", "A single night"
+  notes?: string;
+}
+
+export interface ChronicleFocus {
+  eventIds?: string[];
+  entityIds?: string[];
+  notes?: string;
 }
 
 export interface PlotBeat {
@@ -27,71 +34,61 @@ export interface PlotBeat {
 }
 
 /**
- * Legacy plot structure (three-act)
+ * Plot structure for any narrative style.
+ * Raw contains the LLM-generated structure matching the style's schema.
  */
-export interface ThreeActPlotStructure {
-  incitingIncident: PlotBeat;
-  risingAction: PlotBeat[];
-  climax: PlotBeat;
-  resolution: PlotBeat;
-}
-
-/**
- * Flexible plot structure that can hold any plot type
- * The raw field contains the LLM-generated structure matching the style's schema
- */
-export interface FlexiblePlotStructure {
-  /** Plot structure type from NarrativeStyle */
+export interface ChroniclePlot {
+  /** Plot structure type from NarrativeStyle (e.g., 'three-act', 'episodic', 'document') */
   type: string;
   /** Raw plot data as returned by LLM (varies by plot type) */
   raw: Record<string, unknown>;
-  /** Normalized beats extracted from any plot type for scene expansion */
+  /** Normalized beats extracted from any plot type for section expansion */
   normalizedBeats: PlotBeat[];
 }
 
-/** Either legacy three-act or flexible style-based plot */
-export type PlotStructure = ThreeActPlotStructure | FlexiblePlotStructure;
-
-/** Type guard for flexible plot structure */
-export function isFlexiblePlot(plot: PlotStructure): plot is FlexiblePlotStructure {
-  return 'type' in plot && 'raw' in plot;
-}
-
-/** Type guard for three-act plot structure */
-export function isThreeActPlot(plot: PlotStructure): plot is ThreeActPlotStructure {
-  return 'incitingIncident' in plot && 'climax' in plot;
-}
-
-export interface StoryScene {
+export interface ChronicleSection {
   id: string;
-  title: string;
-  goal: string; // What this scene MUST accomplish
-  characterIds: string[]; // Entity IDs involved
+  name: string;
+  purpose: string; // Style-defined purpose of this section
+  goal: string; // Plan-specific objective for this section
+  entityIds: string[]; // Entity IDs involved
   eventIds: string[]; // NarrativeEvent IDs to incorporate
-  setting: string;
-  emotionalBeat: string; // tension, relief, revelation, etc.
-  generatedContent?: string; // Filled in Step 2
+  wordCountTarget?: number;
+  // Story format fields
+  requiredElements?: string[];
+  emotionalArc?: string; // tension, relief, revelation, etc.
+  proseNotes?: string;
+  setting?: string;
+  // Document format fields
+  contentGuidance?: string;
+  optional?: boolean;
+  // Filled in Step 2
+  generatedContent?: string;
 }
 
-export interface StoryPlan {
+export interface ChroniclePlan {
   id: string;
   title: string;
+  format: ChronicleFormat;
 
-  // Characters with full entity references
-  characters: StoryCharacter[];
+  // Entity roles with narrative/document contribution
+  entityRoles: ChronicleEntityRole[];
 
-  // Setting
-  setting: StorySetting;
+  // Scope/context
+  scope?: ChronicleScope;
 
-  // Plot structure
-  plot: PlotStructure;
+  // Focus hints derived from the knowledge graph
+  focus?: ChronicleFocus;
 
-  // Scene breakdown
-  scenes: StoryScene[];
+  // Plot structure (story formats)
+  plot?: ChroniclePlot;
+
+  // Section breakdown
+  sections: ChronicleSection[];
 
   // Thematic elements
-  theme: string;
-  tone: string;
+  theme?: string;
+  tone?: string;
 
   // All NarrativeEvents selected for this story
   keyEventIds: string[];
@@ -110,15 +107,15 @@ export interface CohesionCheck {
   notes: string;
 }
 
-export interface SceneGoalCheck {
-  sceneId: string;
+export interface SectionGoalCheck {
+  sectionId: string;
   pass: boolean;
   notes: string;
 }
 
 export interface CohesionIssue {
   severity: 'critical' | 'minor';
-  sceneId?: string;
+  sectionId?: string;
   checkType: string;
   description: string;
   suggestion: string;
@@ -129,8 +126,8 @@ export interface CohesionReport {
 
   checks: {
     plotStructure: CohesionCheck;
-    characterConsistency: CohesionCheck;
-    sceneGoals: SceneGoalCheck[];
+    entityConsistency: CohesionCheck;
+    sectionGoals: SectionGoalCheck[];
     resolution: CohesionCheck;
     factualAccuracy: CohesionCheck;
     themeExpression: CohesionCheck;
@@ -152,14 +149,14 @@ export type ChronicleStatus =
   | 'planning' // Step 1 in progress
   | 'plan_ready' // Step 1 complete, awaiting user review
   | 'expanding' // Step 2 in progress
-  | 'scenes_ready' // Step 2 complete, awaiting user review
+  | 'sections_ready' // Step 2 complete, awaiting user review
   | 'assembling' // Step 3 in progress
   | 'assembly_ready' // Step 3 complete, awaiting user review
   | 'validating' // Step 4 in progress
   | 'validation_ready' // Step 4 complete, issues may exist
   | 'complete'; // All steps done, accepted
 
-export type ChronicleType = 'eraChronicle' | 'entityStory' | 'relationshipTale';
+export type ChronicleType = 'eraChronicle' | 'entityStory';
 
 export interface ChronicleContent {
   id: string;
@@ -169,11 +166,11 @@ export interface ChronicleContent {
   status: ChronicleStatus;
 
   // Step 1 output
-  plan?: StoryPlan;
+  plan?: ChroniclePlan;
 
-  // Step 2 output (scene content stored in plan.scenes[].generatedContent)
-  scenesCompleted?: number;
-  scenesTotal?: number;
+  // Step 2 output (section content stored in plan.sections[].generatedContent)
+  sectionsCompleted?: number;
+  sectionsTotal?: number;
 
   // Step 3 output
   assembledContent?: string;
@@ -266,9 +263,6 @@ export interface ChronicleGenerationContext {
   canonFacts: string[];
   tone: string;
 
-  // Narrative style for this generation
-  narrativeStyleId?: string;
-
   // Target of generation
   targetType: ChronicleType;
   targetId: string;
@@ -279,9 +273,6 @@ export interface ChronicleGenerationContext {
   // For entity stories
   entity?: EntityContext;
 
-  // For relationship tales
-  relationship?: RelationshipContext;
-
   // All entities (for cross-referencing)
   entities: EntityContext[];
 
@@ -291,37 +282,15 @@ export interface ChronicleGenerationContext {
   // NarrativeEvents (filtered by relevance)
   events: NarrativeEventContext[];
 
-  // Previously generated content for context
-  existingDescriptions: Map<string, string>;
-  existingBackstories: Map<string, string>;
 }
 
 // =============================================================================
 // Pipeline Step Results
 // =============================================================================
 
-export interface PlanGenerationResult {
-  success: boolean;
-  plan?: StoryPlan;
-  error?: string;
-}
-
-export interface SceneExpansionResult {
-  success: boolean;
-  sceneId: string;
-  content?: string;
-  error?: string;
-}
-
 export interface AssemblyResult {
   success: boolean;
   content?: string;
   wikiLinks: { entityId: string; name: string; count: number }[];
-  error?: string;
-}
-
-export interface ValidationResult {
-  success: boolean;
-  report?: CohesionReport;
   error?: string;
 }

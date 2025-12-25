@@ -9,7 +9,6 @@
 
 import type {
   ChronicleGenerationContext,
-  ChronicleType,
   EntityContext,
   RelationshipContext,
   EraContext,
@@ -180,15 +179,6 @@ export function buildEraChronicleContext(
     .sort((a, b) => b.significance - a.significance)
     .map(buildEventContext);
 
-  // Build description map for cross-referencing
-  const existingDescriptions = new Map<string, string>();
-  for (const entity of worldData.hardState) {
-    const desc = entity.enrichment?.description?.text;
-    if (desc) {
-      existingDescriptions.set(entity.id, desc);
-    }
-  }
-
   return {
     worldName: worldContext.name || 'The World',
     worldDescription: worldContext.description || '',
@@ -202,9 +192,6 @@ export function buildEraChronicleContext(
     entities,
     relationships,
     events,
-
-    existingDescriptions,
-    existingBackstories: new Map(), // TODO: Add when backstories are tracked
   };
 }
 
@@ -258,15 +245,6 @@ export function buildEntityStoryContext(
   );
   const era = activeEraRel ? entityMap.get(activeEraRel.dst) : undefined;
 
-  // Build description map
-  const existingDescriptions = new Map<string, string>();
-  for (const e of worldData.hardState) {
-    const desc = e.enrichment?.description?.text;
-    if (desc) {
-      existingDescriptions.set(e.id, desc);
-    }
-  }
-
   return {
     worldName: worldContext.name || 'The World',
     worldDescription: worldContext.description || '',
@@ -281,86 +259,6 @@ export function buildEntityStoryContext(
     entities,
     relationships,
     events,
-
-    existingDescriptions,
-    existingBackstories: new Map(),
-  };
-}
-
-/**
- * Build generation context for a relationship tale
- */
-export function buildRelationshipTaleContext(
-  srcId: string,
-  dstId: string,
-  worldData: WorldData,
-  worldContext: WorldContext
-): ChronicleGenerationContext {
-  const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
-  const srcEntity = entityMap.get(srcId);
-  const dstEntity = entityMap.get(dstId);
-
-  if (!srcEntity || !dstEntity) {
-    throw new Error(`Entities not found: ${srcId}, ${dstId}`);
-  }
-
-  const rel = worldData.relationships.find(
-    (r) =>
-      (r.src === srcId && r.dst === dstId) ||
-      (r.src === dstId && r.dst === srcId)
-  );
-
-  if (!rel) {
-    throw new Error(`Relationship not found between ${srcId} and ${dstId}`);
-  }
-
-  // Get all entities
-  const entities = worldData.hardState
-    .filter((e) => e.kind !== 'era')
-    .map(buildEntityContext);
-
-  // Get all relationships for context
-  const relationships = worldData.relationships.map((r) =>
-    buildRelationshipContext(r, entityMap)
-  );
-
-  // Get events involving either entity
-  const events = (worldData.narrativeHistory || [])
-    .filter(
-      (e) =>
-        e.subject?.id === srcId ||
-        e.subject?.id === dstId ||
-        e.object?.id === srcId ||
-        e.object?.id === dstId
-    )
-    .sort((a, b) => b.significance - a.significance)
-    .map(buildEventContext);
-
-  // Build description map
-  const existingDescriptions = new Map<string, string>();
-  for (const e of worldData.hardState) {
-    const desc = e.enrichment?.description?.text;
-    if (desc) {
-      existingDescriptions.set(e.id, desc);
-    }
-  }
-
-  return {
-    worldName: worldContext.name || 'The World',
-    worldDescription: worldContext.description || '',
-    canonFacts: worldContext.canonFacts || [],
-    tone: worldContext.tone || '',
-
-    targetType: 'relationshipTale',
-    targetId: `${srcId}-${dstId}`,
-
-    relationship: buildRelationshipContext(rel, entityMap),
-    entities,
-    relationships,
-    events,
-
-    existingDescriptions,
-    existingBackstories: new Map(),
   };
 }
 
@@ -371,7 +269,7 @@ export function buildRelationshipTaleContext(
 export interface PrerequisiteCheck {
   ready: boolean;
   missing: {
-    type: 'entityDescription' | 'eraSummary' | 'relationshipBackstory';
+    type: 'entityDescription' | 'eraSummary';
     id: string;
     name: string;
   }[];
@@ -414,32 +312,6 @@ export function checkPrerequisites(
         id: context.entity.id,
         name: context.entity.name,
       });
-    }
-  }
-
-  // For relationship tales, we need both entities' descriptions
-  if (context.targetType === 'relationshipTale') {
-    const srcId = context.relationship?.src;
-    const dstId = context.relationship?.dst;
-    if (srcId) {
-      const src = context.entities.find((e) => e.id === srcId);
-      if (src && !src.enrichedDescription) {
-        missing.push({
-          type: 'entityDescription',
-          id: srcId,
-          name: src.name,
-        });
-      }
-    }
-    if (dstId) {
-      const dst = context.entities.find((e) => e.id === dstId);
-      if (dst && !dst.enrichedDescription) {
-        missing.push({
-          type: 'entityDescription',
-          id: dstId,
-          name: dst.name,
-        });
-      }
     }
   }
 
