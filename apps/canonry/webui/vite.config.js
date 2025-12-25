@@ -46,6 +46,12 @@ export default defineConfig({
           entry: '/archivist/remoteEntry.js',
           entryGlobalName: 'archivist',
         },
+        chronicler: {
+          type: 'module',
+          name: 'chronicler',
+          entry: '/chronicler/remoteEntry.js',
+          entryGlobalName: 'chronicler',
+        },
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },

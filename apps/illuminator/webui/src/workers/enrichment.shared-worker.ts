@@ -18,6 +18,7 @@ import {
   createClients,
   executeImageTask,
   executeTextTask,
+  executeEntityStoryTask,
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
@@ -50,37 +51,30 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
   port.postMessage({ type: 'started', taskId: task.id });
 
   try {
+    let result;
+
     if (task.type === 'image') {
-      const result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      port.postMessage({
-        type: 'complete',
-        result: {
-          id: task.id,
-          entityId: task.entityId,
-          type: task.type,
-          success: true,
-          result: result.result,
-        },
-      });
+      result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
+    } else if (task.type === 'entityStory') {
+      result = await executeEntityStoryTask(task, config!, llmClient!, checkAborted);
     } else {
-      const result = await executeTextTask(task, config!, llmClient!, checkAborted);
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      port.postMessage({
-        type: 'complete',
-        result: {
-          id: task.id,
-          entityId: task.entityId,
-          type: task.type,
-          success: true,
-          result: result.result,
-        },
-      });
+      result = await executeTextTask(task, config!, llmClient!, checkAborted);
     }
+
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    port.postMessage({
+      type: 'complete',
+      result: {
+        id: task.id,
+        entityId: task.entityId,
+        type: task.type,
+        success: true,
+        result: result.result,
+      },
+    });
   } catch (error) {
     port.postMessage({
       type: 'error',

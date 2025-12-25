@@ -43,6 +43,7 @@ import type {
 import { NameForgeService } from '../naming/nameForgeService';
 import type { NameGenerationService } from './types';
 import { createGrowthSystem, GrowthSystem, GrowthEpochSummary } from '../systems/growthSystem';
+import { StateChangeTracker, createDefaultNarrativeConfig, NarrativeEventBuilder } from '../narrative/index.js';
 
 // Change detection functions moved to @illuminator/lib/engine/changeDetection.ts
 // EntitySnapshot interface and detect*Changes functions available there
@@ -63,6 +64,7 @@ export class WorldEngine {
   private runtime!: WorldRuntime;
   private currentEpoch: number;
   private startTime: number = 0;  // Track simulation duration
+  private simulationRunId: string = '';  // Unique ID for this simulation run
   private templateSelector?: TemplateSelector;  // Optional statistical template selector
   private systemSelector?: SystemSelector;      // Optional statistical system weighting
   private distributionTracker?: DistributionTracker;  // Distribution measurement
@@ -122,7 +124,10 @@ export class WorldEngine {
 
   // Starting pressure values for each tick (captured before any modifications)
   private tickStartPressures: Map<string, number> = new Map();
-  
+
+  // Narrative event tracking (captures state changes for story generation)
+  private stateChangeTracker: StateChangeTracker;
+
   constructor(
     config: EngineConfig,
     initialState: HardState[]
@@ -271,6 +276,16 @@ export class WorldEngine {
     // Initialize target selector (prevents super-hub formation)
     this.targetSelector = new TargetSelector();
     this.emitter.log('info', 'Intelligent target selection enabled (anti-super-hub)');
+
+    // Initialize narrative event tracking
+    const narrativeConfig = config.narrativeConfig || createDefaultNarrativeConfig();
+    this.stateChangeTracker = new StateChangeTracker(narrativeConfig);
+    if (narrativeConfig.enabled) {
+      this.emitter.log('info', 'Narrative event tracking enabled', {
+        minSignificance: narrativeConfig.minSignificance,
+        trackRelationships: narrativeConfig.trackRelationships ?? false
+      });
+    }
 
     // Initialize NameForgeService from schema cultures that have naming config
     // Must be done before CoordinateContext since it requires nameForgeService
@@ -499,9 +514,10 @@ export class WorldEngine {
     if (this.simulationStarted) return;
 
     this.startTime = Date.now();
+    this.simulationRunId = `run_${this.startTime}_${Math.random().toString(36).slice(2, 9)}`;
     this.simulationStarted = true;
 
-    this.emitter.log('info', 'Starting world generation...');
+    this.emitter.log('info', `Starting world generation (runId: ${this.simulationRunId})...`);
     this.emitter.log('info', `Initial state: ${this.graph.getEntityCount()} entities`);
 
     // Ensure first era entity exists BEFORE any growth phase runs
@@ -1357,6 +1373,7 @@ export class WorldEngine {
     this.emitter.complete({
       schema: this.config.schema,
       metadata: {
+        simulationRunId: this.simulationRunId,
         tick: this.graph.tick,
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
@@ -1369,6 +1386,7 @@ export class WorldEngine {
       hardState: entities,
       relationships,
       history: this.graph.history,
+      narrativeHistory: this.graph.narrativeHistory.length > 0 ? this.graph.narrativeHistory : undefined,
       pressures: Object.fromEntries(this.graph.pressures),
       distributionMetrics: this.templateSelector ? (() => {
         const state = this.templateSelector.getState(this.graph);
@@ -1511,6 +1529,9 @@ export class WorldEngine {
     const relationshipsThisTick: Relationship[] = [];
     const modifiedEntityIds: string[] = [];
 
+    // Initialize narrative tracking for this tick
+    this.stateChangeTracker.startTick(this.graph, this.graph.tick, era.id);
+
     // Budget enforcement
     const budget = this.config.relationshipBudget?.maxPerSimulationTick || Infinity;
     let relationshipsAddedThisTick = 0;
@@ -1605,6 +1626,16 @@ export class WorldEngine {
               delete changes.tags[''];
             }
           }
+
+          // Track state changes for narrative events
+          const entity = this.graph.getEntity(mod.id);
+          if (entity) {
+            this.stateChangeTracker.recordEntityChange(entity, changes, {
+              entityId: system.id,
+              actionType: system.name,
+            });
+          }
+
           updateEntity(this.graph, mod.id, changes);
           modifiedEntityIds.push(mod.id);
         });
@@ -1614,6 +1645,41 @@ export class WorldEngine {
           const current = this.graph.pressures.get(pressure) || 0;
           this.graph.pressures.set(pressure, Math.max(-100, Math.min(100, current + delta)));
           this.trackPressureModification(pressure, delta, { type: 'system', systemId: system.id });
+        }
+
+        // Check for era transition and generate narrative event
+        if (result.details?.eraTransition && this.stateChangeTracker.isEnabled()) {
+          const eraTransition = result.details.eraTransition as {
+            fromEra: string;
+            fromEraId: string;
+            toEra: string;
+            toEraId: string;
+          };
+          const oldEra = this.graph.getEntity(
+            this.graph.getEntities({ includeHistorical: true })
+              .find(e => e.kind === 'era' && e.name === eraTransition.fromEra)?.id || ''
+          );
+          const newEra = this.graph.getEntity(
+            this.graph.getEntities({ includeHistorical: true })
+              .find(e => e.kind === 'era' && e.name === eraTransition.toEra)?.id || ''
+          );
+          if (oldEra && newEra) {
+            const narrativeContext = {
+              tick: this.graph.tick,
+              eraId: eraTransition.toEraId,
+              getEntity: (id: string) => this.graph.getEntity(id),
+              getEntityRelationships: (id: string) => this.graph.getEntityRelationships(id).map(r => ({
+                kind: r.kind, src: r.src, dst: r.dst
+              }))
+            };
+            const eventBuilder = new NarrativeEventBuilder(narrativeContext);
+            const eraEvent = eventBuilder.buildEraTransitionEvent(
+              oldEra,
+              newEra,
+              `The ${oldEra.name} has run its course`
+            );
+            this.graph.narrativeHistory.push(eraEvent);
+          }
         }
 
         // Emit systemAction event if meaningful work was done
@@ -1667,6 +1733,12 @@ export class WorldEngine {
         relationshipsCreated: relationshipsThisTick,
         entitiesModified: modifiedEntityIds
       });
+    }
+
+    // Flush narrative events and add to history
+    const narrativeEvents = this.stateChangeTracker.flush();
+    if (narrativeEvents.length > 0) {
+      this.graph.narrativeHistory.push(...narrativeEvents);
     }
 
     // Monitor relationship growth rate
@@ -1939,6 +2011,7 @@ export class WorldEngine {
     const exportData: any = {
       schema: this.config.schema,
       metadata: {
+        simulationRunId: this.simulationRunId,
         tick: this.graph.tick,
         epoch: this.currentEpoch,
         era: this.graph.currentEra.name,
@@ -1956,7 +2029,8 @@ export class WorldEngine {
       hardState: entities,
       relationships,
       pressures: Object.fromEntries(this.graph.pressures),
-      history: this.graph.history  // Export ALL events, not just last 50
+      history: this.graph.history,  // Export ALL events, not just last 50
+      narrativeHistory: this.graph.narrativeHistory.length > 0 ? this.graph.narrativeHistory : undefined
       // loreRecords moved to @illuminator
     };
 

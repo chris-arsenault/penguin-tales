@@ -178,6 +178,14 @@ export class WorldRuntime implements Graph {
     this.graph.history = value;
   }
 
+  /** Narrative events for story generation (mutable) */
+  get narrativeHistory(): import('@canonry/world-schema').NarrativeEvent[] {
+    return this.graph.narrativeHistory;
+  }
+  set narrativeHistory(value: import('@canonry/world-schema').NarrativeEvent[]) {
+    this.graph.narrativeHistory = value;
+  }
+
   /** Relationship cooldowns (mutable) */
   get relationshipCooldowns(): Map<string, Map<string, number>> {
     return this.graph.relationshipCooldowns;

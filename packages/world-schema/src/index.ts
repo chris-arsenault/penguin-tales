@@ -55,6 +55,19 @@ export type { DomainUIConfig } from './ui.js';
 export type {
   ArtisticStyle,
   CompositionStyle,
+  NarrativeStyle,
+  NarrativeFormat,
+  PlotStructureType,
+  PlotStructure,
+  RoleDefinition,
+  EntitySelectionRules,
+  EventSelectionRules,
+  SceneTemplate,
+  WorldDataFocus,
+  ProseDirectives,
+  PacingConfig,
+  DocumentSection,
+  DocumentConfig,
   StyleLibrary,
   StyleSelection,
 } from './style.js';
@@ -62,9 +75,12 @@ export type {
 export {
   DEFAULT_ARTISTIC_STYLES,
   DEFAULT_COMPOSITION_STYLES,
+  DEFAULT_NARRATIVE_STYLES,
+  DEFAULT_DOCUMENT_STYLES,
   createDefaultStyleLibrary,
   findArtisticStyle,
   findCompositionStyle,
+  findNarrativeStyle,
 } from './style.js';
 
 // Seed data types
@@ -82,6 +98,10 @@ export type {
   WorldEntity,
   WorldRelationship,
   HistoryEvent,
+  NarrativeEvent,
+  NarrativeEventKind,
+  NarrativeEntityRef,
+  NarrativeStateChange,
   CoordinateState,
   DistributionMetrics,
   GraphMetrics,

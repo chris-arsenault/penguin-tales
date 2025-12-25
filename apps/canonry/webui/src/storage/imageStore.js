@@ -11,7 +11,7 @@
  */
 
 const DB_NAME = 'canonry-images';
-const DB_VERSION = 1;
+const DB_VERSION = 2;  // Bumped for additional indexes
 const STORE_NAME = 'images';
 
 let dbPromise = null;
@@ -24,13 +24,32 @@ function openDb() {
       return;
     }
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = event.oldVersion;
+
       if (!db.objectStoreNames.contains(STORE_NAME)) {
+        // Fresh install - create store with all indexes
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'imageId' });
         store.createIndex('projectId', 'projectId', { unique: false });
         store.createIndex('entityId', 'entityId', { unique: false });
         store.createIndex('generatedAt', 'generatedAt', { unique: false });
+        store.createIndex('entityKind', 'entityKind', { unique: false });
+        store.createIndex('entityCulture', 'entityCulture', { unique: false });
+        store.createIndex('model', 'model', { unique: false });
+      } else if (oldVersion < 2) {
+        // Upgrade from v1 - add new indexes for global library search
+        const tx = event.target.transaction;
+        const store = tx.objectStore(STORE_NAME);
+        if (!store.indexNames.contains('entityKind')) {
+          store.createIndex('entityKind', 'entityKind', { unique: false });
+        }
+        if (!store.indexNames.contains('entityCulture')) {
+          store.createIndex('entityCulture', 'entityCulture', { unique: false });
+        }
+        if (!store.indexNames.contains('model')) {
+          store.createIndex('model', 'model', { unique: false });
+        }
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -249,6 +268,131 @@ export async function getImagesByProject(projectId) {
       resolve(images);
     };
     request.onerror = () => reject(request.error || new Error('Failed to get project images'));
+  });
+}
+
+/**
+ * Search images with filters (global library search)
+ * All filters are optional - returns all images if no filters provided
+ *
+ * @param {Object} filters
+ * @param {string} [filters.projectId] - Filter by project
+ * @param {string} [filters.entityKind] - Filter by entity kind (e.g., 'person', 'place')
+ * @param {string} [filters.entityCulture] - Filter by culture
+ * @param {string} [filters.model] - Filter by generation model
+ * @param {string} [filters.searchText] - Search in entityName, prompts
+ * @param {number} [filters.limit] - Max results to return
+ * @returns {Promise<Array>} Array of image metadata (no blobs)
+ */
+export async function searchImages(filters = {}) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+
+    // Use the most selective index if available
+    let request;
+    if (filters.entityKind && store.indexNames.contains('entityKind')) {
+      request = store.index('entityKind').getAll(IDBKeyRange.only(filters.entityKind));
+    } else if (filters.entityCulture && store.indexNames.contains('entityCulture')) {
+      request = store.index('entityCulture').getAll(IDBKeyRange.only(filters.entityCulture));
+    } else if (filters.projectId) {
+      request = store.index('projectId').getAll(IDBKeyRange.only(filters.projectId));
+    } else if (filters.model && store.indexNames.contains('model')) {
+      request = store.index('model').getAll(IDBKeyRange.only(filters.model));
+    } else {
+      request = store.getAll();
+    }
+
+    request.onsuccess = () => {
+      let images = (request.result || []).map(({ blob, ...metadata }) => ({
+        ...metadata,
+        hasBlob: Boolean(blob),
+      }));
+
+      // Apply remaining filters in memory
+      if (filters.projectId && !request.source?.name?.includes('projectId')) {
+        images = images.filter((img) => img.projectId === filters.projectId);
+      }
+      if (filters.entityKind && request.source?.name !== 'entityKind') {
+        images = images.filter((img) => img.entityKind === filters.entityKind);
+      }
+      if (filters.entityCulture && request.source?.name !== 'entityCulture') {
+        images = images.filter((img) => img.entityCulture === filters.entityCulture);
+      }
+      if (filters.model && request.source?.name !== 'model') {
+        images = images.filter((img) => img.model === filters.model);
+      }
+
+      // Text search in name and prompts
+      if (filters.searchText) {
+        const search = filters.searchText.toLowerCase();
+        images = images.filter((img) =>
+          (img.entityName?.toLowerCase().includes(search)) ||
+          (img.originalPrompt?.toLowerCase().includes(search)) ||
+          (img.finalPrompt?.toLowerCase().includes(search)) ||
+          (img.revisedPrompt?.toLowerCase().includes(search))
+        );
+      }
+
+      // Sort by generatedAt descending (newest first)
+      images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
+
+      // Apply limit
+      if (filters.limit && filters.limit > 0) {
+        images = images.slice(0, filters.limit);
+      }
+
+      resolve(images);
+    };
+    request.onerror = () => reject(request.error || new Error('Failed to search images'));
+  });
+}
+
+/**
+ * Get unique values for a metadata field (for building filter dropdowns)
+ * @param {string} field - Field name: 'entityKind', 'entityCulture', 'model', 'projectId'
+ * @returns {Promise<Array<string>>} Unique values sorted alphabetically
+ */
+export async function getImageFilterOptions(field) {
+  const validFields = ['entityKind', 'entityCulture', 'model', 'projectId'];
+  if (!validFields.includes(field)) {
+    throw new Error(`Invalid field: ${field}. Must be one of: ${validFields.join(', ')}`);
+  }
+
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+
+    // Use index if available for efficiency
+    if (store.indexNames.contains(field)) {
+      const values = new Set();
+      const index = store.index(field);
+      const request = index.openKeyCursor();
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor) {
+          if (cursor.key) values.add(cursor.key);
+          cursor.continue();
+        } else {
+          resolve([...values].filter(Boolean).sort());
+        }
+      };
+      request.onerror = () => reject(request.error);
+    } else {
+      // Fallback: scan all records
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const values = new Set();
+        for (const record of request.result || []) {
+          if (record[field]) values.add(record[field]);
+        }
+        resolve([...values].sort());
+      };
+      request.onerror = () => reject(request.error);
+    }
   });
 }
 

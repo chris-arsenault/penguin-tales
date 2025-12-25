@@ -5,9 +5,10 @@
  * Shows all images in the library with filtering by entity kind and culture.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  getAllImages,
+  searchImages,
+  getImageFilterOptions,
   loadImage,
   formatBytes,
 } from '../../../../canonry/webui/src/storage/imageStore';
@@ -39,20 +40,51 @@ export default function ImagePickerModal({
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [filterKind, setFilterKind] = useState('all');
   const [filterCulture, setFilterCulture] = useState('all');
+  const [filterModel, setFilterModel] = useState('all');
+  const [searchText, setSearchText] = useState('');
   const [expandedPrompt, setExpandedPrompt] = useState(null);
+  const [filterOptions, setFilterOptions] = useState({ kinds: [], cultures: [], models: [] });
 
-  // Load images when modal opens
+  // Load filter options when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function loadFilterOptions() {
+      try {
+        const [kinds, cultures, models] = await Promise.all([
+          getImageFilterOptions('entityKind'),
+          getImageFilterOptions('entityCulture'),
+          getImageFilterOptions('model'),
+        ]);
+        setFilterOptions({ kinds, cultures, models });
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    }
+
+    loadFilterOptions();
+    // Reset filters on open
+    setFilterKind('all');
+    setFilterCulture('all');
+    setFilterModel('all');
+    setSearchText('');
+  }, [isOpen]);
+
+  // Load images when filters change
   useEffect(() => {
     if (!isOpen) return;
 
     async function loadData() {
       setLoading(true);
       try {
-        const allImages = await getAllImages();
-        setImages(allImages);
-        // Reset filters to show all - let user filter manually
-        setFilterKind('all');
-        setFilterCulture('all');
+        const filters = {};
+        if (filterKind !== 'all') filters.entityKind = filterKind;
+        if (filterCulture !== 'all') filters.entityCulture = filterCulture;
+        if (filterModel !== 'all') filters.model = filterModel;
+        if (searchText.trim()) filters.searchText = searchText.trim();
+
+        const results = await searchImages(filters);
+        setImages(results);
       } catch (err) {
         console.error('Failed to load images:', err);
       } finally {
@@ -61,7 +93,7 @@ export default function ImagePickerModal({
     }
 
     loadData();
-  }, [isOpen]);
+  }, [isOpen, filterKind, filterCulture, filterModel, searchText]);
 
   // Load thumbnail URLs for visible images
   useEffect(() => {
@@ -100,28 +132,6 @@ export default function ImagePickerModal({
     };
   }, [isOpen, images]);
 
-  // Get unique kinds and cultures for filtering
-  const filterOptions = useMemo(() => {
-    const kinds = new Set();
-    const cultures = new Set();
-    for (const img of images) {
-      if (img.entityKind) kinds.add(img.entityKind);
-      if (img.entityCulture) cultures.add(img.entityCulture);
-    }
-    return {
-      kinds: Array.from(kinds).sort(),
-      cultures: Array.from(cultures).sort(),
-    };
-  }, [images]);
-
-  // Filter images
-  const filteredImages = useMemo(() => {
-    return images.filter((img) => {
-      if (filterKind !== 'all' && img.entityKind !== filterKind) return false;
-      if (filterCulture !== 'all' && img.entityCulture !== filterCulture) return false;
-      return true;
-    });
-  }, [images, filterKind, filterCulture]);
 
   // Handle selection
   const handleSelect = useCallback(() => {
@@ -177,11 +187,26 @@ export default function ImagePickerModal({
           {/* Filters */}
           <div style={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '12px',
             padding: '16px',
             borderBottom: '1px solid var(--border-color)',
             background: 'var(--bg-tertiary)',
           }}>
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Search
+              </label>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Name or prompt..."
+                className="illuminator-input"
+                style={{ width: '160px' }}
+              />
+            </div>
+
             <div>
               <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
                 Entity Kind
@@ -216,9 +241,26 @@ export default function ImagePickerModal({
               </select>
             </div>
 
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Model
+              </label>
+              <select
+                value={filterModel}
+                onChange={(e) => setFilterModel(e.target.value)}
+                className="illuminator-select"
+                style={{ width: 'auto', minWidth: '120px' }}
+              >
+                <option value="all">All Models</option>
+                {filterOptions.models.map((model) => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+            </div>
+
             <div style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {filteredImages.length} images
+                {images.length} images
               </span>
             </div>
           </div>
@@ -229,7 +271,7 @@ export default function ImagePickerModal({
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 Loading images...
               </div>
-            ) : filteredImages.length === 0 ? (
+            ) : images.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No images found. Try adjusting the filters or generate some images first.
               </div>
@@ -241,7 +283,7 @@ export default function ImagePickerModal({
                   gap: '12px',
                 }}
               >
-                {filteredImages.map((img) => {
+                {images.map((img) => {
                   const isSelected = selectedImageId === img.imageId;
                   const isCurrent = currentImageId === img.imageId;
 

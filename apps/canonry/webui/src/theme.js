@@ -35,6 +35,7 @@ export const colors = {
   accentSimulation: '#a78bfa',    // Purple (cool contrast)
   accentIlluminator: '#a855f7',   // Purple/Magenta (enrichment/magic)
   accentArchivist: '#3b82f6',     // Arctic blue (primary)
+  accentChronicler: '#10b981',    // Emerald (knowledge/writing)
 
   // Secondary accent shades (for gradients)
   accentEnumeristLight: '#60a5fa',
@@ -44,6 +45,7 @@ export const colors = {
   accentSimulationLight: '#c4b5fd',
   accentIlluminatorLight: '#c084fc',
   accentArchivistLight: '#60a5fa',
+  accentChroniclerLight: '#34d399',
 
   // Feature highlight colors
   highlightBlue: '#3b82f6',
@@ -234,6 +236,7 @@ export function getAccentColor(appId) {
     case 'simulation': return colors.accentSimulation;
     case 'illuminator': return colors.accentIlluminator;
     case 'archivist': return colors.accentArchivist;
+    case 'chronicler': return colors.accentChronicler;
     default: return colors.accent;
   }
 }
@@ -255,6 +258,8 @@ export function getAccentGradient(appId) {
       return `linear-gradient(135deg, ${colors.accentIlluminator} 0%, ${colors.accentIlluminatorLight} 100%)`;
     case 'archivist':
       return `linear-gradient(135deg, ${colors.accentArchivist} 0%, ${colors.accentArchivistLight} 100%)`;
+    case 'chronicler':
+      return `linear-gradient(135deg, ${colors.accentChronicler} 0%, ${colors.accentChroniclerLight} 100%)`;
     default:
       return `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentLight} 100%)`;
   }
@@ -270,6 +275,7 @@ export function getHoverBg(appId) {
     case 'simulation': return 'rgba(167, 139, 250, 0.15)';
     case 'illuminator': return 'rgba(168, 85, 247, 0.15)';
     case 'archivist': return 'rgba(59, 130, 246, 0.15)';
+    case 'chronicler': return 'rgba(16, 185, 129, 0.15)';
     default: return colors.hoverBg;
   }
 }

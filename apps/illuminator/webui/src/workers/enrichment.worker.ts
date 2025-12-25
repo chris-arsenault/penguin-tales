@@ -25,6 +25,7 @@ import {
   createClients,
   executeImageTask,
   executeTextTask,
+  executeEntityStoryTask,
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
@@ -63,43 +64,33 @@ async function executeTask(task: WorkerTask): Promise<WorkerResult> {
   const checkAborted = () => isAborted;
 
   try {
+    let result;
+
     if (task.type === 'image') {
-      const result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
-      if (!result.success) {
-        return {
-          id: task.id,
-          entityId: task.entityId,
-          type: task.type,
-          success: false,
-          error: result.error,
-        };
-      }
-      return {
-        id: task.id,
-        entityId: task.entityId,
-        type: task.type,
-        success: true,
-        result: result.result,
-      };
+      result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
+    } else if (task.type === 'entityStory') {
+      result = await executeEntityStoryTask(task, config!, llmClient!, checkAborted);
     } else {
-      const result = await executeTextTask(task, config!, llmClient!, checkAborted);
-      if (!result.success) {
-        return {
-          id: task.id,
-          entityId: task.entityId,
-          type: task.type,
-          success: false,
-          error: result.error,
-        };
-      }
+      result = await executeTextTask(task, config!, llmClient!, checkAborted);
+    }
+
+    if (!result.success) {
       return {
         id: task.id,
         entityId: task.entityId,
         type: task.type,
-        success: true,
-        result: result.result,
+        success: false,
+        error: result.error,
       };
     }
+
+    return {
+      id: task.id,
+      entityId: task.entityId,
+      type: task.type,
+      success: true,
+      result: result.result,
+    };
   } catch (error) {
     return {
       id: task.id,

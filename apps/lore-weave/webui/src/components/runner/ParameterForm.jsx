@@ -90,6 +90,52 @@ export default function ParameterForm({ params, onParamChange }) {
           integer
         />
       </div>
+
+      {/* Narrative Events Section */}
+      <div className="lw-form-group" style={{ gridColumn: '1 / -1', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <label className="lw-label" style={{ margin: 0 }}>Narrative Events</label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+            <input
+              type="checkbox"
+              checked={params.narrativeEnabled ?? false}
+              onChange={(e) => onParamChange('narrativeEnabled', e.target.checked)}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            Enable event tracking
+          </label>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0' }}>
+          Captures significant world changes (status, prominence, relationships) as narrative events for story generation.
+        </p>
+        {params.narrativeEnabled && (
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <div className="lw-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
+              <label className="lw-label">Min Significance</label>
+              <NumberInput
+                min={0}
+                max={1}
+                step={0.1}
+                value={params.narrativeMinSignificance ?? 0.3}
+                onChange={(v) => onParamChange('narrativeMinSignificance', v ?? 0.3)}
+                className="lw-input"
+                title="Minimum significance threshold (0-1). Higher = fewer, more important events."
+              />
+            </div>
+            <div className="lw-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', marginTop: '24px' }}>
+                <input
+                  type="checkbox"
+                  checked={params.narrativeTrackRelationships ?? false}
+                  onChange={(e) => onParamChange('narrativeTrackRelationships', e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                Track relationships
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

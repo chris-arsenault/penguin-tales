@@ -21,6 +21,8 @@ import type {
   WorkerResult,
   EntityEnrichment,
   EnrichmentResult,
+  SerializableStoryContext,
+  ChronicleStep,
 } from '../lib/enrichmentTypes';
 import { applyEnrichmentResult } from '../lib/enrichmentTypes';
 import type { WorkerConfig, WorkerOutbound } from '../workers/enrichment.worker';
@@ -130,7 +132,8 @@ function findLeastBusyWorker(workers: WorkerState[], queue: QueueItem[]): Worker
 
 export function useEnrichmentQueue(
   onEntityUpdate: (entityId: string, enrichment: EntityEnrichment) => void,
-  projectId?: string
+  projectId?: string,
+  simulationRunId?: string
 ): UseEnrichmentQueueReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isWorkerReady, setIsWorkerReady] = useState(false);
@@ -138,11 +141,17 @@ export function useEnrichmentQueue(
   const configRef = useRef<WorkerConfig | null>(null);
   const numWorkersRef = useRef<number>(4);
   const projectIdRef = useRef<string | undefined>(projectId);
+  const simulationRunIdRef = useRef<string | undefined>(simulationRunId);
 
   // Keep projectId ref in sync
   useEffect(() => {
     projectIdRef.current = projectId;
   }, [projectId]);
+
+  // Keep simulationRunId ref in sync
+  useEffect(() => {
+    simulationRunIdRef.current = simulationRunId;
+  }, [simulationRunId]);
 
   // Track which tasks are assigned to which worker
   const taskWorkerMapRef = useRef<Map<string, number>>(new Map());
@@ -206,8 +215,12 @@ export function useEnrichmentQueue(
         entityKind: nextItem.entityKind,
         entityCulture: nextItem.entityCulture,
         projectId: projectIdRef.current || 'unknown',
+        simulationRunId: simulationRunIdRef.current || 'unknown',
         type: nextItem.type,
         prompt: nextItem.prompt,
+        storyContext: nextItem.storyContext,
+        chronicleStep: nextItem.chronicleStep,
+        storyId: nextItem.storyId,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -365,7 +378,7 @@ export function useEnrichmentQueue(
 
   // Enqueue items - distribute to workers based on estimated workload
   const enqueue = useCallback(
-    (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string }>) => {
+    (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string; storyContext?: SerializableStoryContext; chronicleStep?: ChronicleStep; storyId?: string }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
 
@@ -380,6 +393,9 @@ export function useEnrichmentQueue(
           prompt: item.prompt,
           status: 'queued' as const,
           queuedAt: Date.now(),
+          storyContext: item.storyContext,
+          chronicleStep: item.chronicleStep,
+          storyId: item.storyId,
         };
 
         // Find the least busy worker and assign this task

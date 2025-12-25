@@ -29,6 +29,7 @@ const routes = [
   { prefix: '/lore-weave', target: 'http://localhost:5004' },
   { prefix: '/archivist', target: 'http://localhost:5005' },
   { prefix: '/illuminator', target: 'http://localhost:5006' },
+  { prefix: '/chronicler', target: 'http://localhost:5007' },
   { prefix: '/', target: 'http://localhost:5000' },
 ];
 
@@ -89,6 +90,7 @@ server.listen(PROXY_PORT, () => {
 ║    /lore-weave/*        → loreWeave (5004)                ║
 ║    /archivist/*         → archivist (5005)                ║
 ║    /illuminator/*       → illuminator (5006)              ║
+║    /chronicler/*        → chronicler (5007)               ║
 ║                                                           ║
 ║  Make sure to run 'npm run canonry' first!                ║
 ╚═══════════════════════════════════════════════════════════╝

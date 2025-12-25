@@ -72,6 +72,7 @@ const TABS = [
   { id: 'simulation', label: 'Lore Weave', enabled: true },
   { id: 'illuminator', label: 'Illuminator', enabled: true },
   { id: 'archivist', label: 'Archivist', enabled: true },
+  { id: 'chronicler', label: 'Chronicler', enabled: true },
 ];
 
 export default function Navigation({ activeTab, onTabChange, onHelpClick }) {

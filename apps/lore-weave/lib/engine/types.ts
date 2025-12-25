@@ -4,7 +4,7 @@ import { DistributionTargets } from '../statistics/types';
 import type { ISimulationEmitter } from '../observer/types';
 import type { Condition } from '../rules/conditions/types';
 import type { ModifyPressureMutation } from '../rules/mutations/types';
-import type { CanonrySchemaSlice, HistoryEvent as CanonryHistoryEvent } from '@canonry/world-schema';
+import type { CanonrySchemaSlice, HistoryEvent as CanonryHistoryEvent, NarrativeEvent } from '@canonry/world-schema';
 
 export type HistoryEvent = CanonryHistoryEvent;
 
@@ -252,6 +252,8 @@ export interface Graph {
   currentEra: Era;
   pressures: Map<string, number>;
   history: HistoryEvent[];
+  /** Narrative events for story generation (optional, enabled via config) */
+  narrativeHistory: NarrativeEvent[];
   relationshipCooldowns: Map<string, Map<string, number>>;
   // LLM-related fields moved to @illuminator
   // loreIndex?: LoreIndex;
@@ -563,6 +565,23 @@ export interface EngineConfig {
 
   // Debug configuration (optional - defaults to all debug disabled)
   debugConfig?: DebugConfig;
+
+  // Narrative event tracking configuration (optional - defaults to disabled)
+  narrativeConfig?: NarrativeConfig;
+}
+
+/**
+ * Configuration for narrative event tracking.
+ * When enabled, the engine captures semantically meaningful state changes
+ * and generates NarrativeEvents for story generation.
+ */
+export interface NarrativeConfig {
+  /** Enable narrative event tracking (default: false) */
+  enabled: boolean;
+  /** Minimum significance score to include event (default: 0.3) */
+  minSignificance: number;
+  /** Track relationship changes in addition to entity changes */
+  trackRelationships?: boolean;
 }
 
 // Tag Taxonomy System
@@ -638,6 +657,7 @@ export class GraphStore implements Graph {
   currentEra!: Era;
   pressures: Map<string, number> = new Map();
   history: HistoryEvent[] = [];
+  narrativeHistory: NarrativeEvent[] = [];
   relationshipCooldowns: Map<string, Map<string, number>> = new Map();
   // LLM fields moved to @illuminator
   // loreIndex?: LoreIndex;

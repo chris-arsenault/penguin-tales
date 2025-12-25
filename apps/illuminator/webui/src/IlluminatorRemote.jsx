@@ -18,6 +18,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import './App.css';
 import EntityBrowser from './components/EntityBrowser';
 import NarrativesPanel from './components/NarrativesPanel';
+import ChroniclePanel from './components/ChroniclePanel';
 import WorldContextEditor from './components/WorldContextEditor';
 import PromptTemplateEditor from './components/PromptTemplateEditor';
 import VisualIdentityPanel from './components/VisualIdentityPanel';
@@ -47,9 +48,10 @@ const TABS = [
   { id: 'styles', label: 'Styles' },         // 5. Manage style library
   { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
   { id: 'narratives', label: 'Narratives' }, // 7. Era/relationship narratives
-  { id: 'activity', label: 'Activity' },     // 8. Monitor queue
-  { id: 'costs', label: 'Costs' },           // 9. Track spending
-  { id: 'storage', label: 'Storage' },       // 10. Manage images
+  { id: 'chronicle', label: 'Chronicle' },   // 8. Wiki-ready long-form content
+  { id: 'activity', label: 'Activity' },     // 9. Monitor queue
+  { id: 'costs', label: 'Costs' },           // 10. Track spending
+  { id: 'storage', label: 'Storage' },       // 11. Manage images
 ];
 
 // Default image prompt template for Claude formatting
@@ -61,6 +63,7 @@ Original prompt:
 // Default enrichment config
 const DEFAULT_CONFIG = {
   textModel: 'claude-sonnet-4-5-20250929',
+  chronicleModel: 'claude-sonnet-4-5-20250929',  // Model for entity stories
   imageModel: 'gpt-image-1.5',
   imageSize: 'auto',
   imageQuality: 'auto',
@@ -288,6 +291,9 @@ export default function IlluminatorRemote({
     addCompositionStyle,
     updateCompositionStyle,
     deleteCompositionStyle,
+    addNarrativeStyle,
+    updateNarrativeStyle,
+    deleteNarrativeStyle,
   } = useStyleLibrary();
 
   // World context - edit locally and debounce sync to shell to avoid re-rendering MFEs on each keypress
@@ -433,6 +439,9 @@ export default function IlluminatorRemote({
     );
   }, [entities]);
 
+  // Extract simulationRunId from worldData for content association
+  const simulationRunId = worldData?.metadata?.simulationRunId;
+
   // Queue management
   const {
     queue,
@@ -444,7 +453,7 @@ export default function IlluminatorRemote({
     cancelAll,
     retry,
     clearCompleted,
-  } = useEnrichmentQueue(handleEntityUpdate, projectId);
+  } = useEnrichmentQueue(handleEntityUpdate, projectId, simulationRunId);
 
   // Initialize worker when API keys change
   useEffect(() => {
@@ -453,6 +462,7 @@ export default function IlluminatorRemote({
         anthropicApiKey,
         openaiApiKey,
         textModel: config.textModel,
+        chronicleModel: config.chronicleModel,
         imageModel: config.imageModel,
         imageSize: config.imageSize,
         imageQuality: config.imageQuality,
@@ -880,6 +890,22 @@ export default function IlluminatorRemote({
           </div>
         )}
 
+        {activeTab === 'chronicle' && (
+          <div className="illuminator-content">
+            <ChroniclePanel
+              worldData={worldData}
+              entities={entities}
+              queue={queue}
+              onEnqueue={enqueue}
+              onCancel={cancel}
+              worldContext={worldContext}
+              projectId={projectId}
+              simulationRunId={simulationRunId}
+              buildPrompt={buildPrompt}
+            />
+          </div>
+        )}
+
         {activeTab === 'context' && (
           <div className="illuminator-content">
             <WorldContextEditor
@@ -925,6 +951,9 @@ export default function IlluminatorRemote({
               onAddCompositionStyle={addCompositionStyle}
               onUpdateCompositionStyle={updateCompositionStyle}
               onDeleteCompositionStyle={deleteCompositionStyle}
+              onAddNarrativeStyle={addNarrativeStyle}
+              onUpdateNarrativeStyle={updateNarrativeStyle}
+              onDeleteNarrativeStyle={deleteNarrativeStyle}
               onReset={resetStyleLibrary}
               entityKinds={(worldSchema?.entityKinds || []).map((k) => k.id)}
             />
@@ -947,7 +976,7 @@ export default function IlluminatorRemote({
 
         {activeTab === 'costs' && (
           <div className="illuminator-content">
-            <CostsPanel entities={entities} queue={queue} projectId={projectId} activeSlotIndex={activeSlotIndex} />
+            <CostsPanel queue={queue} projectId={projectId} simulationRunId={simulationRunId} />
           </div>
         )}
 

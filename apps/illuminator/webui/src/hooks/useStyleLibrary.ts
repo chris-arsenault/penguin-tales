@@ -7,12 +7,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createDefaultStyleLibrary } from '@canonry/world-schema';
-import type { StyleLibrary, ArtisticStyle, CompositionStyle } from '@canonry/world-schema';
+import type { StyleLibrary, ArtisticStyle, CompositionStyle, NarrativeStyle } from '@canonry/world-schema';
 import {
   loadStyleLibrary,
   saveStyleLibrary,
   resetStyleLibrary,
-  hasCustomStyleLibrary,
 } from '../lib/styleLibraryStorage';
 
 export interface UseStyleLibraryReturn {
@@ -38,6 +37,12 @@ export interface UseStyleLibraryReturn {
   updateCompositionStyle: (id: string, updates: Partial<CompositionStyle>) => Promise<void>;
   /** Delete a composition style */
   deleteCompositionStyle: (id: string) => Promise<void>;
+  /** Add a new narrative style */
+  addNarrativeStyle: (style: NarrativeStyle) => Promise<void>;
+  /** Update a narrative style */
+  updateNarrativeStyle: (id: string, updates: Partial<NarrativeStyle>) => Promise<void>;
+  /** Delete a narrative style */
+  deleteNarrativeStyle: (id: string) => Promise<void>;
 }
 
 export function useStyleLibrary(): UseStyleLibraryReturn {
@@ -51,7 +56,15 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
       try {
         const stored = await loadStyleLibrary();
         if (stored) {
-          setStyleLibrary(stored);
+          // Migrate: if stored library lacks narrativeStyles, add defaults
+          const defaults = createDefaultStyleLibrary();
+          const migrated: StyleLibrary = {
+            ...stored,
+            narrativeStyles: stored.narrativeStyles?.length
+              ? stored.narrativeStyles
+              : defaults.narrativeStyles,
+          };
+          setStyleLibrary(migrated);
           setIsCustom(true);
         } else {
           setStyleLibrary(createDefaultStyleLibrary());
@@ -140,6 +153,35 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
     await save(updated);
   }, [styleLibrary, save]);
 
+  // Add narrative style
+  const addNarrativeStyle = useCallback(async (style: NarrativeStyle) => {
+    const updated: StyleLibrary = {
+      ...styleLibrary,
+      narrativeStyles: [...(styleLibrary.narrativeStyles || []), style],
+    };
+    await save(updated);
+  }, [styleLibrary, save]);
+
+  // Update narrative style
+  const updateNarrativeStyle = useCallback(async (id: string, updates: Partial<NarrativeStyle>) => {
+    const updated: StyleLibrary = {
+      ...styleLibrary,
+      narrativeStyles: (styleLibrary.narrativeStyles || []).map((s) =>
+        s.id === id ? { ...s, ...updates } : s
+      ),
+    };
+    await save(updated);
+  }, [styleLibrary, save]);
+
+  // Delete narrative style
+  const deleteNarrativeStyle = useCallback(async (id: string) => {
+    const updated: StyleLibrary = {
+      ...styleLibrary,
+      narrativeStyles: (styleLibrary.narrativeStyles || []).filter((s) => s.id !== id),
+    };
+    await save(updated);
+  }, [styleLibrary, save]);
+
   return {
     styleLibrary,
     loading,
@@ -152,5 +194,8 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
     addCompositionStyle,
     updateCompositionStyle,
     deleteCompositionStyle,
+    addNarrativeStyle,
+    updateNarrativeStyle,
+    deleteNarrativeStyle,
   };
 }

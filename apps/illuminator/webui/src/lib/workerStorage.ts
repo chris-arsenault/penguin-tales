@@ -11,7 +11,7 @@
 // ============================================================================
 
 const IMAGE_DB_NAME = 'canonry-images';
-const IMAGE_DB_VERSION = 1;
+const IMAGE_DB_VERSION = 2;  // Bumped for additional indexes (must match imageStore.js)
 const IMAGE_STORE_NAME = 'images';
 
 // ============================================================================
@@ -26,13 +26,32 @@ function openImageDb(): Promise<IDBDatabase> {
   imageDbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(IMAGE_DB_NAME, IMAGE_DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = (event as IDBVersionChangeEvent).oldVersion;
+
       if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+        // Fresh install - create store with all indexes
         const store = db.createObjectStore(IMAGE_STORE_NAME, { keyPath: 'imageId' });
         store.createIndex('projectId', 'projectId', { unique: false });
         store.createIndex('entityId', 'entityId', { unique: false });
         store.createIndex('generatedAt', 'generatedAt', { unique: false });
+        store.createIndex('entityKind', 'entityKind', { unique: false });
+        store.createIndex('entityCulture', 'entityCulture', { unique: false });
+        store.createIndex('model', 'model', { unique: false });
+      } else if (oldVersion < 2) {
+        // Upgrade from v1 - add new indexes for global library search
+        const tx = (event.target as IDBOpenDBRequest).transaction!;
+        const store = tx.objectStore(IMAGE_STORE_NAME);
+        if (!store.indexNames.contains('entityKind')) {
+          store.createIndex('entityKind', 'entityKind', { unique: false });
+        }
+        if (!store.indexNames.contains('entityCulture')) {
+          store.createIndex('entityCulture', 'entityCulture', { unique: false });
+        }
+        if (!store.indexNames.contains('model')) {
+          store.createIndex('model', 'model', { unique: false });
+        }
       }
     };
 

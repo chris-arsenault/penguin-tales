@@ -50,7 +50,103 @@ import CoherenceEngineHost from './remotes/CoherenceEngineHost';
 import LoreWeaveHost from './remotes/LoreWeaveHost';
 import IlluminatorHost from './remotes/IlluminatorHost';
 import ArchivistHost from './remotes/ArchivistHost';
+import ChroniclerHost from './remotes/ChroniclerHost';
+import { getImagesByProject, loadImage } from './storage/imageStore';
 import { colors, typography, spacing } from './theme';
+
+/**
+ * Extract loreData from enriched entities
+ * Converts entity.enrichment into LoreRecord format for Chronicler
+ */
+function extractLoreDataFromEntities(worldData) {
+  if (!worldData?.hardState) return null;
+
+  const records = [];
+  for (const entity of worldData.hardState) {
+    const enrichment = entity.enrichment;
+    if (!enrichment) continue;
+
+    // Extract description as LoreRecord
+    if (enrichment.description?.text) {
+      records.push({
+        id: `desc_${entity.id}`,
+        type: 'description',
+        targetId: entity.id,
+        text: enrichment.description.text,
+        metadata: {
+          generatedAt: enrichment.description.generatedAt,
+          model: enrichment.description.model,
+        },
+      });
+    }
+
+    // Extract era narrative as LoreRecord
+    if (enrichment.eraNarrative?.text) {
+      records.push({
+        id: `era_${entity.id}`,
+        type: entity.kind === 'era' ? 'era_chapter' : 'entity_story',
+        targetId: entity.id,
+        text: enrichment.eraNarrative.text,
+        metadata: {
+          generatedAt: enrichment.eraNarrative.generatedAt,
+          model: enrichment.eraNarrative.model,
+        },
+      });
+    }
+  }
+
+  if (records.length === 0) return null;
+
+  return {
+    llmEnabled: true,
+    model: 'mixed',
+    records,
+  };
+}
+
+/**
+ * Load images from IndexedDB and format for Chronicler
+ * Returns ImageMetadata with object URLs for display
+ */
+async function loadImageDataForProject(projectId, worldData) {
+  if (!projectId || !worldData?.hardState) return null;
+
+  try {
+    const images = await getImagesByProject(projectId);
+    if (!images || images.length === 0) return null;
+
+    // Build entity lookup for names/kinds
+    const entityMap = new Map(worldData.hardState.map(e => [e.id, e]));
+
+    // Load each image to get object URLs
+    const results = [];
+    for (const img of images) {
+      const imageData = await loadImage(img.imageId);
+      if (!imageData?.url) continue;
+
+      const entity = entityMap.get(img.entityId);
+      results.push({
+        entityId: img.entityId,
+        entityName: entity?.name || img.entityName || 'Unknown',
+        entityKind: entity?.kind || img.entityKind || 'unknown',
+        prompt: img.originalPrompt || img.finalPrompt || '',
+        localPath: imageData.url, // Object URL for display
+        imageId: img.imageId,
+      });
+    }
+
+    if (results.length === 0) return null;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      totalImages: results.length,
+      results,
+    };
+  } catch (err) {
+    console.error('Failed to load images for project:', err);
+    return null;
+  }
+}
 
 const styles = {
   app: {
@@ -94,6 +190,7 @@ const VALID_TABS = [
   'simulation',
   'illuminator',
   'archivist',
+  'chronicler',
 ];
 
 const SLOT_EXPORT_FORMAT = 'canonry-slot-export';
@@ -153,16 +250,6 @@ export default function App() {
   const lastSavedResultsRef = useRef(null);
   const activeSection = activeTab ? (activeSectionByTab?.[activeTab] ?? null) : null;
 
-  const handleIlluminatorWorldDataChange = useCallback((enrichedWorld) => {
-    setArchivistData((prev) => {
-      if (prev?.worldData === enrichedWorld) return prev;
-      return {
-        ...(prev || { loreData: null, imageData: null }),
-        worldData: enrichedWorld,
-      };
-    });
-  }, []);
-
   const setActiveSection = useCallback((section) => {
     if (!activeTab) return;
     setActiveSectionByTab((prev) => ({ ...prev, [activeTab]: section }));
@@ -212,6 +299,23 @@ export default function App() {
     exportProject,
     importProject,
   } = useProjectStorage();
+
+  const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
+    // Extract loreData from enriched entities
+    const loreData = extractLoreDataFromEntities(enrichedWorld);
+
+    // Load imageData from IndexedDB
+    const imageData = await loadImageDataForProject(currentProject?.id, enrichedWorld);
+
+    setArchivistData((prev) => {
+      if (prev?.worldData === enrichedWorld && prev?.loreData === loreData) return prev;
+      return {
+        worldData: enrichedWorld,
+        loreData,
+        imageData,
+      };
+    });
+  }, [currentProject?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,7 +367,12 @@ export default function App() {
         setSimulationResults(activeSlot.simulationResults || null);
         setSimulationState(activeSlot.simulationState || null);
         if (activeSlot.worldData) {
-          setArchivistData({ worldData: activeSlot.worldData, loreData: null, imageData: null });
+          // Extract loreData from enriched entities and load images
+          const loreData = extractLoreDataFromEntities(activeSlot.worldData);
+          loadImageDataForProject(currentProject.id, activeSlot.worldData).then((imageData) => {
+            if (cancelled) return;
+            setArchivistData({ worldData: activeSlot.worldData, loreData, imageData });
+          });
         }
       }
 
@@ -350,7 +459,11 @@ export default function App() {
 
       // Update archivistData for immediate use
       if (worldData) {
-        setArchivistData({ worldData, loreData: null, imageData: null });
+        const loreData = extractLoreDataFromEntities(worldData);
+        loadImageDataForProject(currentProject.id, worldData).then((imageData) => {
+          if (cancelled) return;
+          setArchivistData({ worldData, loreData, imageData });
+        });
       }
 
       // Ensure we're viewing scratch after new simulation
@@ -578,7 +691,10 @@ export default function App() {
         setSimulationResults(storedSlot.simulationResults || null);
         setSimulationState(storedSlot.simulationState || null);
         if (storedSlot.worldData) {
-          setArchivistData({ worldData: storedSlot.worldData, loreData: null, imageData: null });
+          // Extract loreData and load images
+          const loreData = extractLoreDataFromEntities(storedSlot.worldData);
+          const imageData = await loadImageDataForProject(currentProject.id, storedSlot.worldData);
+          setArchivistData({ worldData: storedSlot.worldData, loreData, imageData });
         } else {
           setArchivistData(null);
         }
@@ -1084,7 +1200,8 @@ export default function App() {
       case 'simulation':
       case 'illuminator':
       case 'archivist':
-        // Keep LoreWeaveHost, IlluminatorHost, and ArchivistHost mounted so state persists
+      case 'chronicler':
+        // Keep LoreWeaveHost, IlluminatorHost, ArchivistHost, and ChroniclerHost mounted so state persists
         // when navigating between them
         return (
           <>
@@ -1130,6 +1247,13 @@ export default function App() {
             </div>
             <div style={{ display: activeTab === 'archivist' ? 'contents' : 'none' }}>
               <ArchivistHost
+                worldData={archivistData?.worldData}
+                loreData={archivistData?.loreData}
+                imageData={archivistData?.imageData}
+              />
+            </div>
+            <div style={{ display: activeTab === 'chronicler' ? 'contents' : 'none' }}>
+              <ChroniclerHost
                 worldData={archivistData?.worldData}
                 loreData={archivistData?.loreData}
                 imageData={archivistData?.imageData}

@@ -87,6 +87,74 @@ export interface HistoryEvent {
 }
 
 /**
+ * Narrative event types for story generation
+ */
+export type NarrativeEventKind =
+  | 'state_change'        // Entity status/prominence changed
+  | 'relationship_change' // Relationship formed/dissolved/changed
+  | 'entity_lifecycle'    // Birth, death, formation, dissolution
+  | 'era_transition'      // Era ended/began
+  | 'conflict'            // War, battle, rivalry
+  | 'alliance'            // Alliances, mergers, cooperation
+  | 'discovery'           // New knowledge, abilities, locations
+  | 'achievement';        // Prominence gains, milestones
+
+/**
+ * Entity reference for narrative events
+ */
+export interface NarrativeEntityRef {
+  id: string;
+  name: string;
+  kind: string;
+  subtype: string;
+}
+
+/**
+ * State change captured during simulation
+ */
+export interface NarrativeStateChange {
+  entityId: string;
+  entityName: string;
+  entityKind: string;
+  field: string;
+  previousValue: unknown;
+  newValue: unknown;
+  reason?: string;
+}
+
+/**
+ * Narrative event for story generation
+ *
+ * Captures semantically meaningful world changes with causality
+ * for feeding into long-form narrative generation.
+ */
+export interface NarrativeEvent {
+  id: string;
+  tick: number;
+  era: string;
+  eventKind: NarrativeEventKind;
+  /** Significance score 0.0-1.0 (higher = more narratively important) */
+  significance: number;
+  subject: NarrativeEntityRef;
+  action: string;
+  object?: NarrativeEntityRef;
+  /** Short description: "King Aldric dies in battle" */
+  headline: string;
+  /** Longer narrative description */
+  description: string;
+  stateChanges: NarrativeStateChange[];
+  causedBy?: {
+    eventId?: string;
+    entityId?: string;
+    actionType?: string;
+  };
+  /** Child event IDs (populated by downstream events) */
+  consequences?: string[];
+  /** Tags for filtering: ['death', 'war', 'royal'] */
+  narrativeTags: string[];
+}
+
+/**
  * Emergent region state only (seed regions live in schema)
  */
 export interface CoordinateState {
@@ -141,6 +209,8 @@ export interface DistributionMetrics {
  * World metadata
  */
 export interface WorldMetadata {
+  /** Unique identifier for this simulation run - used to associate enrichment content */
+  simulationRunId: string;
   tick: number;
   epoch: number;
   era: string;
@@ -170,6 +240,8 @@ export interface WorldOutput {
   relationships: WorldRelationship[];
   pressures: Record<string, number>;
   history: HistoryEvent[];
+  /** Narrative events for story generation (optional, enabled via config) */
+  narrativeHistory?: NarrativeEvent[];
   distributionMetrics?: DistributionMetrics;
   coordinateState?: CoordinateState;
   validation?: Validation;

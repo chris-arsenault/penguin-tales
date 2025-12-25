@@ -12,6 +12,12 @@ const TEXT_MODELS = [
   { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (faster)' },
 ];
 
+const CHRONICLE_MODELS = [
+  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5 (highest quality)' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5 (recommended)' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (faster/cheaper)' },
+];
+
 const IMAGE_MODELS = [
   { value: 'gpt-image-1.5', label: 'GPT Image 1.5' },
   { value: 'gpt-image-1', label: 'GPT Image 1' },
@@ -123,6 +129,30 @@ export default function ConfigPanel({ config, onConfigChange }) {
           </select>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             Used for entity descriptions, era narratives, and relationship stories.
+          </p>
+        </div>
+      </div>
+
+      <div className="illuminator-card">
+        <div className="illuminator-card-header">
+          <h2 className="illuminator-card-title">Chronicle Generation</h2>
+        </div>
+
+        <div className="illuminator-form-group">
+          <label className="illuminator-label">Model (Anthropic)</label>
+          <select
+            value={config.chronicleModel || 'claude-sonnet-4-5-20250929'}
+            onChange={(e) => onConfigChange({ chronicleModel: e.target.value })}
+            className="illuminator-select"
+          >
+            {CHRONICLE_MODELS.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Used for entity stories in the Chronicle tab. Long-form narrative generation benefits from higher-quality models.
           </p>
         </div>
       </div>

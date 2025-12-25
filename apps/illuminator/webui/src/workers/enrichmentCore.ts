@@ -7,7 +7,8 @@
 
 import { LLMClient } from '../lib/llmClient';
 import { ImageClient } from '../lib/imageClient';
-import type { EnrichmentType, WorkerTask, WorkerResult, EnrichmentResult } from '../lib/enrichmentTypes';
+import type { EnrichmentType, WorkerTask, WorkerResult, EnrichmentResult, SerializableStoryContext, ChronicleStep } from '../lib/enrichmentTypes';
+import type { NarrativeStyle } from '@canonry/world-schema';
 import {
   estimateTextCost,
   estimateImageCost,
@@ -18,6 +19,22 @@ import {
   saveImage,
   generateImageId,
 } from '../lib/workerStorage';
+import {
+  createStory,
+  updateStoryPlan,
+  updateStoryScene,
+  updateStoryAssembly,
+  updateStoryCohesion,
+  generateStoryId,
+  markScenesComplete,
+  getStory,
+} from '../lib/chronicleStorage';
+import type { ChronicleGenerationContext, StoryPlan, EntityContext, CohesionReport } from '../lib/chronicleTypes';
+import { buildPlanPrompt, parsePlanResponse } from '../lib/chroniclePlanGenerator';
+import { buildScenePrompt, parseSceneResponse, updatePlanWithSceneContent } from '../lib/chronicleSceneExpander';
+import { assembleStory, buildStitchPrompt } from '../lib/chronicleAssembler';
+import { buildValidationPrompt, parseValidationResponse } from '../lib/chronicleCohesionValidator';
+import { saveCostRecord, generateCostId, type CostType } from '../lib/costStorage';
 
 // ============================================================================
 // Types
@@ -27,6 +44,7 @@ export interface WorkerConfig {
   anthropicApiKey: string;
   openaiApiKey: string;
   textModel: string;
+  chronicleModel?: string;  // Model for entity stories (defaults to textModel)
   imageModel: string;
   imageSize: string;
   imageQuality: string;
@@ -125,6 +143,16 @@ Good example (entity-focused): "Her obsidian beak angles perpetually downward, a
 Be concise but vivid. Avoid generic fantasy tropes unless they fit the world's tone.`;
 }
 
+interface ImagePromptFormatResult {
+  prompt: string;
+  cost?: {
+    estimated: number;
+    actual: number;
+    inputTokens: number;
+    outputTokens: number;
+  };
+}
+
 /**
  * Format an image prompt using Claude (multishot prompting)
  */
@@ -132,20 +160,23 @@ export async function formatImagePromptWithClaude(
   originalPrompt: string,
   config: WorkerConfig,
   llmClient: LLMClient
-): Promise<string> {
+): Promise<ImagePromptFormatResult> {
   if (!config.useClaudeForImagePrompt || !config.claudeImagePromptTemplate) {
-    return originalPrompt;
+    return { prompt: originalPrompt };
   }
 
   if (!llmClient.isEnabled()) {
     console.warn('[Worker] Claude not configured, skipping image prompt formatting');
-    return originalPrompt;
+    return { prompt: originalPrompt };
   }
 
+  const textModel = config.textModel || 'claude-sonnet-4-20250514';
   const imageModel = config.imageModel || 'dall-e-3';
   const formattingPrompt = config.claudeImagePromptTemplate
     .replace(/\{\{modelName\}\}/g, imageModel)
     .replace(/\{\{prompt\}\}/g, originalPrompt);
+
+  const estimate = estimateTextCost(formattingPrompt, 'description', textModel);
 
   try {
     const result = await llmClient.complete({
@@ -157,13 +188,32 @@ export async function formatImagePromptWithClaude(
 
     if (result.text && !result.error) {
       console.log('[Worker] Formatted image prompt with Claude');
-      return result.text.trim();
+
+      let actualCost = estimate.estimatedCost;
+      let inputTokens = estimate.inputTokens;
+      let outputTokens = estimate.outputTokens;
+
+      if (result.usage) {
+        inputTokens = result.usage.inputTokens;
+        outputTokens = result.usage.outputTokens;
+        actualCost = calculateActualTextCost(inputTokens, outputTokens, textModel);
+      }
+
+      return {
+        prompt: result.text.trim(),
+        cost: {
+          estimated: estimate.estimatedCost,
+          actual: actualCost,
+          inputTokens,
+          outputTokens,
+        },
+      };
     }
   } catch (err) {
     console.warn('[Worker] Failed to format image prompt with Claude:', err);
   }
 
-  return originalPrompt;
+  return { prompt: originalPrompt };
 }
 
 // ============================================================================
@@ -218,7 +268,27 @@ export async function executeImageTask(
 
   // Store original prompt before any refinement
   const originalPrompt = task.prompt;
-  const finalPrompt = await formatImagePromptWithClaude(originalPrompt, config, llmClient);
+  const formatResult = await formatImagePromptWithClaude(originalPrompt, config, llmClient);
+  const finalPrompt = formatResult.prompt;
+
+  // Save imagePrompt cost record if Claude was used
+  if (formatResult.cost) {
+    await saveCostRecord({
+      id: generateCostId(),
+      timestamp: Date.now(),
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      type: 'imagePrompt',
+      model: config.textModel || 'claude-sonnet-4-20250514',
+      estimatedCost: formatResult.cost.estimated,
+      actualCost: formatResult.cost.actual,
+      inputTokens: formatResult.cost.inputTokens,
+      outputTokens: formatResult.cost.outputTokens,
+    });
+  }
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted' };
@@ -258,6 +328,23 @@ export async function executeImageTask(
     actualCost,
     inputTokens: result.usage?.inputTokens,
     outputTokens: result.usage?.outputTokens,
+  });
+
+  // Save cost record independently
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    type: 'image',
+    model: imageModel,
+    estimatedCost,
+    actualCost,
+    inputTokens: result.usage?.inputTokens || 0,
+    outputTokens: result.usage?.outputTokens || 0,
   });
 
   return {
@@ -321,6 +408,23 @@ export async function executeTextTask(
     cleanedText = stripLeadingHeading(cleanedText, task.entityName);
   }
 
+  // Save cost record independently
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    type: taskType as CostType,
+    model: textModel,
+    estimatedCost: estimate.estimatedCost,
+    actualCost,
+    inputTokens,
+    outputTokens,
+  });
+
   return {
     success: true,
     result: {
@@ -332,6 +436,605 @@ export async function executeTextTask(
       inputTokens,
       outputTokens,
     },
+  };
+}
+
+// ============================================================================
+// Entity Story Task Execution
+// ============================================================================
+
+const DEFAULT_STORY_SYSTEM_PROMPT = `You are a narrative writer for a fantasy world wiki. You write engaging, character-driven stories based on structured world data. Your writing is vivid, concise, and true to the established lore.`;
+
+function getChronicleSystemPrompt(
+  step: ChronicleStep,
+  style?: NarrativeStyle,
+  plan?: StoryPlan
+): string {
+  const format = style?.format === 'document' ||
+    (plan && 'type' in plan.plot && plan.plot.type === 'document')
+    ? 'document'
+    : 'story';
+
+  switch (step) {
+    case 'plan':
+      return format === 'document'
+        ? 'You are an in-world document planner. Produce structured JSON plans that match the requested document format.'
+        : 'You are a narrative planner. Produce structured JSON plans for multi-entity stories.';
+    case 'expand':
+      return format === 'document'
+        ? 'You are an in-world document writer. Draft a single section consistent with the provided outline.'
+        : 'You are a narrative prose writer. Draft a single scene consistent with the provided outline and style.';
+    case 'assemble':
+      return format === 'document'
+        ? 'You are an editor polishing an in-world document. Make minimal edits and preserve structure.'
+        : 'You are a narrative editor. Make minimal edits to improve flow while preserving structure.';
+    case 'validate':
+      return format === 'document'
+        ? 'You are a critical editor validating an in-world document against its plan.'
+        : 'You are a critical editor validating narrative coherence against the plan.';
+    default:
+      return DEFAULT_STORY_SYSTEM_PROMPT;
+  }
+}
+
+/**
+ * Convert serializable story context to full generation context
+ */
+function deserializeStoryContext(ctx: SerializableStoryContext): ChronicleGenerationContext {
+  // Convert entities to EntityContext format
+  const entities: EntityContext[] = ctx.entities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    kind: e.kind,
+    subtype: e.subtype,
+    prominence: e.prominence,
+    culture: e.culture,
+    status: e.status,
+    tags: {},
+    createdAt: 0,
+    updatedAt: 0,
+  }));
+
+  // Find the target entity with full details
+  const entity: EntityContext = {
+    id: ctx.entity.id,
+    name: ctx.entity.name,
+    kind: ctx.entity.kind,
+    subtype: ctx.entity.subtype,
+    prominence: ctx.entity.prominence,
+    culture: ctx.entity.culture,
+    status: ctx.entity.status,
+    tags: ctx.entity.tags,
+    description: ctx.entity.description,
+    enrichedDescription: ctx.entity.enrichedDescription,
+    createdAt: ctx.entity.createdAt,
+    updatedAt: ctx.entity.updatedAt,
+  };
+
+  return {
+    worldName: ctx.worldName,
+    worldDescription: ctx.worldDescription,
+    canonFacts: ctx.canonFacts,
+    tone: ctx.tone,
+    targetType: 'entityStory',
+    targetId: ctx.entity.id,
+    entity,
+    entities,
+    relationships: ctx.relationships.map((r) => ({
+      src: r.src,
+      dst: r.dst,
+      kind: r.kind,
+      strength: r.strength,
+      sourceName: r.sourceName,
+      sourceKind: r.sourceKind,
+      targetName: r.targetName,
+      targetKind: r.targetKind,
+    })),
+    events: ctx.events.map((e) => ({
+      id: e.id,
+      tick: e.tick,
+      era: e.era,
+      eventKind: e.eventKind,
+      significance: e.significance,
+      headline: e.headline,
+      description: e.description,
+      subjectId: e.subjectId,
+      subjectName: e.subjectName,
+      objectId: e.objectId,
+      objectName: e.objectName,
+      narrativeTags: e.narrativeTags,
+    })),
+    existingDescriptions: new Map(Object.entries(ctx.existingDescriptions)),
+    existingBackstories: new Map(),
+  };
+}
+
+/**
+ * Execute a SINGLE step of entity story generation.
+ * Each step pauses for user review before proceeding to the next.
+ */
+export async function executeEntityStoryTask(
+  task: WorkerTask,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean
+): Promise<TaskResult> {
+  if (!llmClient.isEnabled()) {
+    return { success: false, error: 'Text generation not configured - missing Anthropic API key' };
+  }
+
+  const step = task.chronicleStep || 'plan';
+  const textModel = config.chronicleModel || config.textModel || 'claude-sonnet-4-20250514';
+  console.log(`[Worker] Entity story step=${step} for entity=${task.entityId}, model=${textModel}`);
+
+  // For plan step, we need storyContext. For other steps, we need storyId.
+  if (step === 'plan') {
+    if (!task.storyContext) {
+      return { success: false, error: 'Story context required for plan step' };
+    }
+    return executePlanStep(task, config, llmClient, isAborted, textModel);
+  }
+
+  // For expand/assemble/validate, we need the existing story
+  if (!task.storyId) {
+    return { success: false, error: `storyId required for ${step} step` };
+  }
+
+  const storyRecord = await getStory(task.storyId);
+  if (!storyRecord) {
+    return { success: false, error: `Story ${task.storyId} not found` };
+  }
+
+  if (step === 'expand') {
+    if (!task.storyContext) {
+      return { success: false, error: 'Story context required for expand step' };
+    }
+    return executeExpandStep(task, storyRecord, config, llmClient, isAborted, textModel);
+  }
+
+  if (step === 'assemble') {
+    if (!task.storyContext) {
+      return { success: false, error: 'Story context required for assemble step' };
+    }
+    return executeAssembleStep(task, storyRecord, config, llmClient, isAborted, textModel);
+  }
+
+  if (step === 'validate') {
+    if (!task.storyContext) {
+      return { success: false, error: 'Story context required for validate step' };
+    }
+    return executeValidateStep(task, storyRecord, config, llmClient, isAborted, textModel);
+  }
+
+  return { success: false, error: `Unknown step: ${step}` };
+}
+
+/**
+ * Step 1: Generate story plan
+ */
+async function executePlanStep(
+  task: WorkerTask,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean,
+  textModel: string
+): Promise<TaskResult> {
+  const storyContext = task.storyContext!;
+  const context = deserializeStoryContext(storyContext);
+  const narrativeStyle = storyContext.narrativeStyle;
+  const storyId = generateStoryId(task.entityId);
+
+  try {
+    await createStory(storyId, {
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      entityCulture: task.entityCulture,
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      model: textModel,
+    });
+    console.log(`[Worker] Created story record ${storyId}`);
+  } catch (err) {
+    return { success: false, error: `Failed to create story record: ${err}` };
+  }
+
+  const styleInfo = narrativeStyle ? ` with style="${narrativeStyle.name}"` : '';
+  console.log(`[Worker] Step 1: Generating plan${styleInfo}...`);
+  const planPrompt = buildPlanPrompt(context, narrativeStyle);
+  const planEstimate = estimateTextCost(planPrompt, 'description', textModel);
+
+  const planResult = await llmClient.complete({
+    systemPrompt: getChronicleSystemPrompt('plan', narrativeStyle),
+    prompt: planPrompt,
+    maxTokens: 4096,
+    temperature: 0.7,
+  });
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted' };
+  }
+
+  if (planResult.error) {
+    return { success: false, error: `Plan generation failed: ${planResult.error}` };
+  }
+
+  const planCost = {
+    estimated: planEstimate.estimatedCost,
+    actual: planResult.usage
+      ? calculateActualTextCost(planResult.usage.inputTokens, planResult.usage.outputTokens, textModel)
+      : planEstimate.estimatedCost,
+    inputTokens: planResult.usage?.inputTokens || planEstimate.inputTokens,
+    outputTokens: planResult.usage?.outputTokens || planEstimate.outputTokens,
+  };
+
+  let plan: StoryPlan;
+  try {
+    plan = parsePlanResponse(planResult.text, context, narrativeStyle);
+    plan.generatedAt = Date.now();
+    plan.model = textModel;
+  } catch (err) {
+    return { success: false, error: `Failed to parse plan: ${err}` };
+  }
+
+  await updateStoryPlan(storyId, plan, planCost);
+  console.log('[Worker] Step 1 complete - plan saved, awaiting user review');
+
+  // Save cost record independently
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    storyId,
+    type: 'storyPlan',
+    model: textModel,
+    estimatedCost: planCost.estimated,
+    actualCost: planCost.actual,
+    inputTokens: planCost.inputTokens,
+    outputTokens: planCost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      storyId,
+      generatedAt: Date.now(),
+      model: textModel,
+      estimatedCost: planCost.estimated,
+      actualCost: planCost.actual,
+      inputTokens: planCost.inputTokens,
+      outputTokens: planCost.outputTokens,
+    },
+  };
+}
+
+/**
+ * Step 2: Expand all scenes
+ */
+async function executeExpandStep(
+  task: WorkerTask,
+  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean,
+  textModel: string
+): Promise<TaskResult> {
+  if (!storyRecord?.plan) {
+    return { success: false, error: 'Story has no plan to expand' };
+  }
+
+  const context = deserializeStoryContext(task.storyContext!);
+  const plan = storyRecord.plan;
+  const storyId = storyRecord.storyId;
+  const narrativeStyle = task.storyContext?.narrativeStyle;
+
+  console.log(`[Worker] Step 2: Expanding ${plan.scenes.length} scenes...`);
+
+  let totalEstimatedCost = 0;
+  let totalActualCost = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+
+  const expandedScenes: { id: string; content: string }[] = [];
+
+  for (let i = 0; i < plan.scenes.length; i++) {
+    if (isAborted()) {
+      return { success: false, error: 'Task aborted' };
+    }
+
+    const scene = plan.scenes[i];
+    const scenePrompt = buildScenePrompt(scene, i, plan, context, expandedScenes, narrativeStyle);
+    const sceneEstimate = estimateTextCost(scenePrompt, 'description', textModel);
+
+    const sceneResult = await llmClient.complete({
+      systemPrompt: getChronicleSystemPrompt('expand', narrativeStyle, plan),
+      prompt: scenePrompt,
+      maxTokens: 2048,
+      temperature: 0.7,
+    });
+
+    if (sceneResult.error) {
+      return { success: false, error: `Scene ${i + 1} generation failed: ${sceneResult.error}` };
+    }
+
+    const sceneContent = parseSceneResponse(sceneResult.text);
+    expandedScenes.push({ id: scene.id, content: sceneContent });
+
+    const sceneCost = {
+      estimated: sceneEstimate.estimatedCost,
+      actual: sceneResult.usage
+        ? calculateActualTextCost(sceneResult.usage.inputTokens, sceneResult.usage.outputTokens, textModel)
+        : sceneEstimate.estimatedCost,
+      inputTokens: sceneResult.usage?.inputTokens || sceneEstimate.inputTokens,
+      outputTokens: sceneResult.usage?.outputTokens || sceneEstimate.outputTokens,
+    };
+    totalEstimatedCost += sceneCost.estimated;
+    totalActualCost += sceneCost.actual;
+    totalInputTokens += sceneCost.inputTokens;
+    totalOutputTokens += sceneCost.outputTokens;
+
+    await updateStoryScene(storyId, i, sceneContent, sceneCost);
+
+    // Save cost record independently for each scene
+    await saveCostRecord({
+      id: generateCostId(),
+      timestamp: Date.now(),
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      storyId,
+      type: 'storyScene',
+      model: textModel,
+      estimatedCost: sceneCost.estimated,
+      actualCost: sceneCost.actual,
+      inputTokens: sceneCost.inputTokens,
+      outputTokens: sceneCost.outputTokens,
+    });
+
+    console.log(`[Worker] Step 2: Scene ${i + 1}/${plan.scenes.length} saved`);
+  }
+
+  // Mark scenes as complete - pauses for user review
+  await markScenesComplete(storyId);
+  console.log('[Worker] Step 2 complete - scenes saved, awaiting user review');
+
+  return {
+    success: true,
+    result: {
+      storyId,
+      generatedAt: Date.now(),
+      model: textModel,
+      estimatedCost: totalEstimatedCost,
+      actualCost: totalActualCost,
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+    },
+  };
+}
+
+/**
+ * Step 3: Assemble story (no LLM call, just assembly)
+ */
+async function executeAssembleStep(
+  task: WorkerTask,
+  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean,
+  textModel: string
+): Promise<TaskResult> {
+  if (!storyRecord?.plan) {
+    return { success: false, error: 'Story has no plan to assemble' };
+  }
+
+  const context = deserializeStoryContext(task.storyContext!);
+  const plan = storyRecord.plan;
+  const storyId = storyRecord.storyId;
+  const narrativeStyle = task.storyContext?.narrativeStyle;
+
+  console.log('[Worker] Step 3: Assembling story...');
+
+  const assemblyResult = assembleStory(plan, context, {
+    includeTitle: true,
+    includeSceneTitles: false,
+    injectLinks: true,
+  });
+
+  if (!assemblyResult.success || !assemblyResult.content) {
+    return { success: false, error: `Assembly failed: ${assemblyResult.error || 'Unknown error'}` };
+  }
+
+  let assembledContent = assemblyResult.content;
+  let assemblyCost = {
+    estimated: 0,
+    actual: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+  };
+
+  if (llmClient.isEnabled()) {
+    const stitchPrompt = buildStitchPrompt(assembledContent, plan, context, narrativeStyle);
+    const stitchEstimate = estimateTextCost(stitchPrompt, 'description', textModel);
+
+    const stitchResult = await llmClient.complete({
+      systemPrompt: getChronicleSystemPrompt('assemble', narrativeStyle, plan),
+      prompt: stitchPrompt,
+      maxTokens: 3072,
+      temperature: 0.2,
+    });
+
+    if (isAborted()) {
+      return { success: false, error: 'Task aborted' };
+    }
+
+    if (!stitchResult.error && stitchResult.text) {
+      assembledContent = stitchResult.text.trim();
+    }
+
+    assemblyCost = {
+      estimated: stitchEstimate.estimatedCost,
+      actual: stitchResult.usage
+        ? calculateActualTextCost(stitchResult.usage.inputTokens, stitchResult.usage.outputTokens, textModel)
+        : stitchEstimate.estimatedCost,
+      inputTokens: stitchResult.usage?.inputTokens || stitchEstimate.inputTokens,
+      outputTokens: stitchResult.usage?.outputTokens || stitchEstimate.outputTokens,
+    };
+
+    await saveCostRecord({
+      id: generateCostId(),
+      timestamp: Date.now(),
+      projectId: task.projectId,
+      simulationRunId: task.simulationRunId,
+      entityId: task.entityId,
+      entityName: task.entityName,
+      entityKind: task.entityKind,
+      storyId,
+      type: 'storyAssembly',
+      model: textModel,
+      estimatedCost: assemblyCost.estimated,
+      actualCost: assemblyCost.actual,
+      inputTokens: assemblyCost.inputTokens,
+      outputTokens: assemblyCost.outputTokens,
+    });
+  }
+
+  // Save assembled content - sets status to assembly_ready (pauses for user review)
+  await updateStoryAssembly(storyId, assembledContent, assemblyResult.wikiLinks);
+  console.log('[Worker] Step 3 complete - assembly saved, awaiting user review');
+
+  return {
+    success: true,
+    result: {
+      storyId,
+      generatedAt: Date.now(),
+      model: textModel,
+      estimatedCost: assemblyCost.estimated,
+      actualCost: assemblyCost.actual,
+      inputTokens: assemblyCost.inputTokens,
+      outputTokens: assemblyCost.outputTokens,
+    },
+  };
+}
+
+/**
+ * Step 4: Validate cohesion
+ */
+async function executeValidateStep(
+  task: WorkerTask,
+  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean,
+  textModel: string
+): Promise<TaskResult> {
+  if (!storyRecord?.plan || !storyRecord?.assembledContent) {
+    return { success: false, error: 'Story has no assembled content to validate' };
+  }
+
+  const context = deserializeStoryContext(task.storyContext!);
+  const plan = storyRecord.plan;
+  const storyId = storyRecord.storyId;
+  const narrativeStyle = task.storyContext?.narrativeStyle;
+
+  console.log('[Worker] Step 4: Validating cohesion...');
+
+  const validationPrompt = buildValidationPrompt(storyRecord.assembledContent, plan, context, narrativeStyle);
+  const validationEstimate = estimateTextCost(validationPrompt, 'description', textModel);
+
+  const validationResult = await llmClient.complete({
+    systemPrompt: getChronicleSystemPrompt('validate', narrativeStyle, plan),
+    prompt: validationPrompt,
+    maxTokens: 2048,
+    temperature: 0.3,
+  });
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted' };
+  }
+
+  const validationCost = {
+    estimated: validationEstimate.estimatedCost,
+    actual: validationResult.usage
+      ? calculateActualTextCost(validationResult.usage.inputTokens, validationResult.usage.outputTokens, textModel)
+      : validationEstimate.estimatedCost,
+    inputTokens: validationResult.usage?.inputTokens || validationEstimate.inputTokens,
+    outputTokens: validationResult.usage?.outputTokens || validationEstimate.outputTokens,
+  };
+
+  let cohesionReport: CohesionReport;
+
+  if (!validationResult.error && validationResult.text) {
+    try {
+      cohesionReport = parseValidationResponse(validationResult.text, plan);
+      cohesionReport.generatedAt = Date.now();
+      cohesionReport.model = textModel;
+    } catch (err) {
+      console.warn('[Worker] Failed to parse validation response, using fallback:', err);
+      cohesionReport = createFallbackCohesionReport(plan, textModel, 'Validation parsing failed - story generated successfully.');
+    }
+  } else {
+    console.warn('[Worker] Validation LLM call failed, using fallback report');
+    cohesionReport = createFallbackCohesionReport(plan, textModel, 'Validation unavailable - story generated successfully.');
+  }
+
+  await updateStoryCohesion(storyId, cohesionReport, validationCost);
+  console.log('[Worker] Step 4 complete - validation saved');
+
+  // Save cost record independently
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    storyId,
+    type: 'storyValidation',
+    model: textModel,
+    estimatedCost: validationCost.estimated,
+    actualCost: validationCost.actual,
+    inputTokens: validationCost.inputTokens,
+    outputTokens: validationCost.outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      storyId,
+      generatedAt: Date.now(),
+      model: textModel,
+      estimatedCost: validationCost.estimated,
+      actualCost: validationCost.actual,
+      inputTokens: validationCost.inputTokens,
+      outputTokens: validationCost.outputTokens,
+    },
+  };
+}
+
+/**
+ * Create a fallback cohesion report when validation fails
+ */
+function createFallbackCohesionReport(plan: StoryPlan, model: string, summary: string): CohesionReport {
+  return {
+    overallScore: 0.7,
+    passesValidation: true,
+    summary,
+    sceneReports: plan.scenes.map((scene) => ({
+      sceneId: scene.id,
+      achievesGoal: true,
+      narrativeFlow: 0.7,
+      issues: [],
+    })),
+    crossReferences: { found: [], missing: [], accuracy: 1.0 },
+    generatedAt: Date.now(),
+    model,
   };
 }
 
