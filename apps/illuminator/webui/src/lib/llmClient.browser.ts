@@ -18,6 +18,7 @@ export interface LLMConfig {
 export interface LLMRequest {
   systemPrompt: string;
   prompt: string;
+  model?: string;
   maxTokens?: number;
   temperature?: number;
 }
@@ -81,7 +82,8 @@ export class LLMClient {
       return { text: '', cached: false, skipped: true };
     }
 
-    const cacheKey = await this.createCacheKey(request);
+    const resolvedModel = (request.model || this.config.model).trim();
+    const cacheKey = await this.createCacheKey(request, resolvedModel);
     const cached = this.cache.get(cacheKey);
     if (cached) {
       return { text: cached, cached: true };
@@ -98,9 +100,9 @@ export class LLMClient {
     while (attempt < maxAttempts) {
       attempt++;
       try {
-        const logEntry = this.logRequest(request, attempt, callNumber);
+        const logEntry = this.logRequest(request, attempt, callNumber, resolvedModel);
         const requestBody = {
-          model: this.config.model,
+          model: resolvedModel,
           max_tokens: request.maxTokens || this.config.maxTokens || 256,
           temperature: request.temperature ?? this.config.temperature ?? 0.4,
           system: request.systemPrompt,
@@ -171,8 +173,8 @@ export class LLMClient {
     return { text: '', cached: false, skipped: true };
   }
 
-  private async createCacheKey(request: LLMRequest): Promise<string> {
-    const payload = `${request.systemPrompt}|${request.prompt}|${request.maxTokens}|${request.temperature}`;
+  private async createCacheKey(request: LLMRequest, model: string): Promise<string> {
+    const payload = `${model}|${request.systemPrompt}|${request.prompt}|${request.maxTokens}|${request.temperature}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(payload);
     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
@@ -180,13 +182,13 @@ export class LLMClient {
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  private logRequest(request: LLMRequest, attempt: number, callNumber: number): CallLogEntry {
+  private logRequest(request: LLMRequest, attempt: number, callNumber: number, model: string): CallLogEntry {
     const entry: CallLogEntry = {
       callNumber,
       timestamp: new Date().toISOString(),
       attempt,
       request: {
-        model: this.config.model,
+        model,
         maxTokens: request.maxTokens || this.config.maxTokens || 256,
         temperature: request.temperature ?? this.config.temperature ?? 0.4,
         systemPrompt: request.systemPrompt,

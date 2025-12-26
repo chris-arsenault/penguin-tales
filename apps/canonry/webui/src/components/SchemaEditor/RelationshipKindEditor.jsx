@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState } from '@penguin-tales/shared-components';
+import { ExpandableCard, FormGroup, SectionHeader, EmptyState } from '@penguin-tales/shared-components';
 import { ToolUsageBadges as UsageBadges, getRelationshipKindUsageSummary } from '@penguin-tales/shared-components';
 
 export default function RelationshipKindEditor({
@@ -124,7 +124,7 @@ export default function RelationshipKindEditor({
                 }
               >
                 {/* Display Name and Kind ID */}
-                <FormRow>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                   <FormGroup label="Display Name">
                     <input
                       className="input"
@@ -148,21 +148,21 @@ export default function RelationshipKindEditor({
                       placeholder="relationship_kind_id"
                     />
                   </FormGroup>
-                </FormRow>
+                </div>
 
                 {/* Entity Kind Constraints */}
-                <div className="nested-section">
-                  <div className="section-title">Entity Kind Constraints</div>
+                <div className="nested-section-compact">
+                  <div className="label" style={{ marginBottom: '8px' }}>Entity Kind Constraints</div>
                   {entityKinds.length === 0 ? (
                     <div className="text-muted text-small">Define entity kinds first to set constraints.</div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ flex: 1 }}>
-                        <div className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Source Kinds</span>
-                          {rel.srcKinds?.length === 0 && <span className="text-muted text-small">accepts any</span>}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="text-small text-muted">Source</span>
+                          {rel.srcKinds?.length === 0 && <span className="text-muted text-small">any</span>}
                         </div>
-                        <div className="chip-list">
+                        <div className="chip-list" style={{ marginBottom: 0 }}>
                           {entityKinds.map((ek) => (
                             <div
                               key={ek.kind}
@@ -175,13 +175,13 @@ export default function RelationshipKindEditor({
                           ))}
                         </div>
                       </div>
-                      <div className="text-dim" style={{ fontSize: '24px' }}>→</div>
+                      <div className="text-dim" style={{ fontSize: '16px' }}>→</div>
                       <div style={{ flex: 1 }}>
-                        <div className="label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Destination Kinds</span>
-                          {rel.dstKinds?.length === 0 && <span className="text-muted text-small">accepts any</span>}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span className="text-small text-muted">Destination</span>
+                          {rel.dstKinds?.length === 0 && <span className="text-muted text-small">any</span>}
                         </div>
-                        <div className="chip-list">
+                        <div className="chip-list" style={{ marginBottom: 0 }}>
                           {entityKinds.map((ek) => (
                             <div
                               key={ek.kind}
@@ -199,47 +199,50 @@ export default function RelationshipKindEditor({
                 </div>
 
                 {/* Maintenance Settings */}
-                <div className="nested-section">
-                  <div className="section-title">Maintenance Settings</div>
-                  <FormRow>
-                    <FormGroup label="Decay Rate">
+                <div className="nested-section-compact">
+                  <div className="label" style={{ marginBottom: '8px' }}>Maintenance Settings</div>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="text-small text-muted">Decay</span>
                       <select
                         className="input"
+                        style={{ width: 'auto', padding: '6px 10px' }}
                         value={rel.decayRate || 'medium'}
                         disabled={isFramework}
                         onChange={(e) => updateRel(rel.kind, { decayRate: e.target.value })}
                       >
-                        <option value="none">None (permanent)</option>
+                        <option value="none">None</option>
                         <option value="slow">Slow</option>
                         <option value="medium">Medium</option>
                         <option value="fast">Fast</option>
                       </select>
-                    </FormGroup>
-                    <FormGroup label="Polarity">
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="text-small text-muted">Polarity</span>
                       <select
                         className="input"
+                        style={{ width: 'auto', padding: '6px 10px' }}
                         value={rel.polarity || 'neutral'}
                         disabled={isFramework}
                         onChange={(e) => updateRel(rel.kind, { polarity: e.target.value })}
-                        title="Relationship polarity (affects narrative event types)"
+                        title="Affects narrative event types"
                       >
-                        <option value="positive">Positive (alliance, membership)</option>
+                        <option value="positive">Positive</option>
                         <option value="neutral">Neutral</option>
-                        <option value="negative">Negative (enmity, conflict)</option>
+                        <option value="negative">Negative</option>
                       </select>
-                    </FormGroup>
-                    <FormGroup>
-                      <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          checked={rel.cullable !== false}
-                          disabled={isFramework}
-                          onChange={(e) => updateRel(rel.kind, { cullable: e.target.checked })}
-                        />
-                        Cullable (can be removed when weak)
-                      </label>
-                    </FormGroup>
-                  </FormRow>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={rel.cullable !== false}
+                        disabled={isFramework}
+                        onChange={(e) => updateRel(rel.kind, { cullable: e.target.checked })}
+                        style={{ width: '14px', height: '14px' }}
+                      />
+                      <span className="text-small">Cullable</span>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Delete */}

@@ -11,7 +11,7 @@
 // ============================================================================
 
 const IMAGE_DB_NAME = 'canonry-images';
-const IMAGE_DB_VERSION = 2;  // Bumped for additional indexes (must match imageStore.js)
+const IMAGE_DB_VERSION = 3;  // Bumped for chronicle image support (must match imageStore.js)
 const IMAGE_STORE_NAME = 'images';
 
 // ============================================================================
@@ -39,6 +39,9 @@ function openImageDb(): Promise<IDBDatabase> {
         store.createIndex('entityKind', 'entityKind', { unique: false });
         store.createIndex('entityCulture', 'entityCulture', { unique: false });
         store.createIndex('model', 'model', { unique: false });
+        // Chronicle image indexes (v3)
+        store.createIndex('storyId', 'storyId', { unique: false });
+        store.createIndex('imageType', 'imageType', { unique: false });
       } else if (oldVersion < 2) {
         // Upgrade from v1 - add new indexes for global library search
         const tx = (event.target as IDBOpenDBRequest).transaction!;
@@ -53,6 +56,18 @@ function openImageDb(): Promise<IDBDatabase> {
           store.createIndex('model', 'model', { unique: false });
         }
       }
+
+      if (oldVersion < 3) {
+        // Upgrade to v3 - add chronicle image indexes
+        const tx = (event.target as IDBOpenDBRequest).transaction!;
+        const store = tx.objectStore(IMAGE_STORE_NAME);
+        if (!store.indexNames.contains('storyId')) {
+          store.createIndex('storyId', 'storyId', { unique: false });
+        }
+        if (!store.indexNames.contains('imageType')) {
+          store.createIndex('imageType', 'imageType', { unique: false });
+        }
+      }
     };
 
     request.onsuccess = () => resolve(request.result);
@@ -65,6 +80,9 @@ function openImageDb(): Promise<IDBDatabase> {
 // ============================================================================
 // Image Storage (compatible with canonry imageStore)
 // ============================================================================
+
+/** Type of image: entity (default) or chronicle (scene/illustration) */
+export type ImageType = 'entity' | 'chronicle';
 
 export interface ImageMetadata {
   entityId: string;
@@ -84,6 +102,16 @@ export interface ImageMetadata {
   actualCost?: number;
   inputTokens?: number;
   outputTokens?: number;
+
+  // Chronicle image fields (optional, present when imageType === 'chronicle')
+  /** Type of image: 'entity' (default) or 'chronicle' */
+  imageType?: ImageType;
+  /** For chronicle images: the story this belongs to */
+  storyId?: string;
+  /** For chronicle images: the image ref ID from ChronicleImageRefs */
+  imageRefId?: string;
+  /** For chronicle images: the scene description from the LLM */
+  sceneDescription?: string;
 }
 
 export interface ImageRecord extends ImageMetadata {

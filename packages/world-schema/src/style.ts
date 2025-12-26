@@ -401,6 +401,24 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     promptFragment: 'wide establishing shot, environmental storytelling, sense of scale, cinematic',
   },
   {
+    id: 'logo-mark',
+    name: 'Logo Mark',
+    description: 'Iconic emblem or brand mark for factions and organizations',
+    promptFragment: 'logo design, iconic emblem, clean geometric shapes, centered composition, flat colors, negative space, scalable vector style, brand identity, minimal',
+  },
+  {
+    id: 'badge-crest',
+    name: 'Badge Crest',
+    description: 'Heraldic crest or insignia in a badge form',
+    promptFragment: 'heraldic emblem, crest design, symmetrical composition, iconic symbol, shield or banner form, unified color palette, insignia',
+  },
+  {
+    id: 'chronicle-panorama',
+    name: 'Chronicle Panorama',
+    description: 'Panoramic scene for chronicle headings',
+    promptFragment: 'panoramic scene, sweeping vista, layered depth, cinematic horizon, spacious composition, chapter heading framing',
+  },
+  {
     id: 'interior',
     name: 'Interior View',
     description: 'Interior space with atmosphere',
@@ -429,6 +447,24 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
     name: 'Action Scene',
     description: 'Dynamic action moment',
     promptFragment: 'dynamic action pose, motion blur, dramatic angle, tension, movement',
+  },
+  {
+    id: 'action-duel',
+    name: 'Action: Duel',
+    description: 'Focused one-on-one combat or standoff',
+    promptFragment: 'dynamic duel, close-quarters combat, two figures in motion, dramatic tension, focused framing',
+  },
+  {
+    id: 'action-chase',
+    name: 'Action: Chase',
+    description: 'High-speed pursuit with strong motion',
+    promptFragment: 'high-speed chase, motion blur, strong leading lines, sense of pursuit, dynamic perspective',
+  },
+  {
+    id: 'action-battle',
+    name: 'Action: Battle',
+    description: 'Large-scale clash with multiple combatants',
+    promptFragment: 'chaotic battle scene, multiple figures, sweeping movement, dust and debris, wide dynamic composition',
   },
   {
     id: 'object-study',

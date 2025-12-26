@@ -8,13 +8,38 @@
  * - Page actions/info (right, optional)
  */
 
-import { useState, useMemo } from 'react';
-import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState } from '../types/world.ts';
-import { buildWikiPages, buildCategories } from '../lib/wikiBuilder.ts';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import type { WorldState, LoreData, ImageMetadata, WikiPage, WikiPageIndex, PageIndexEntry, HardState, ImageLoader } from '../types/world.ts';
+import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
+import { getCompletedStoriesForSimulation, type StoryRecord } from '../lib/storyStorage.ts';
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
+
+/**
+ * Parse page ID from URL hash
+ * Hash format: #/page/{pageId} or #/ for home
+ */
+function parseHashPageId(): string | null {
+  const hash = window.location.hash;
+  if (!hash || hash === '#/' || hash === '#') {
+    return null;
+  }
+  // Match #/page/{pageId}
+  const match = hash.match(/^#\/page\/(.+)$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Build hash URL for a page
+ */
+function buildPageHash(pageId: string | null): string {
+  if (!pageId) {
+    return '#/';
+  }
+  return `#/page/${encodeURIComponent(pageId)}`;
+}
 
 // Theme colors matching canonry arctic theme
 const colors = {
@@ -73,26 +98,113 @@ interface WikiExplorerProps {
   worldData: WorldState;
   loreData: LoreData | null;
   imageData: ImageMetadata | null;
+  /** Lazy image loader - loads images on-demand from IndexedDB */
+  imageLoader?: ImageLoader;
 }
 
-export default function WikiExplorer({ worldData, loreData, imageData }: WikiExplorerProps) {
-  const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+export default function WikiExplorer({ worldData, loreData, imageData, imageLoader }: WikiExplorerProps) {
+  // Initialize from hash on mount
+  const [currentPageId, setCurrentPageId] = useState<string | null>(() => parseHashPageId());
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Build wiki pages from world data
-  const { pages, categories, entityIndex } = useMemo(() => {
-    const pages = buildWikiPages(worldData, loreData, imageData);
-    const categories = buildCategories(worldData, pages);
+  // Chronicles loaded from IndexedDB
+  const [chronicles, setChronicles] = useState<StoryRecord[]>([]);
+  const simulationRunId = (worldData as { metadata?: { simulationRunId?: string } }).metadata?.simulationRunId;
+
+  // Load chronicles from IndexedDB when simulationRunId changes
+  useEffect(() => {
+    if (!simulationRunId) {
+      setChronicles([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadChronicles() {
+      try {
+        const stories = await getCompletedStoriesForSimulation(simulationRunId!);
+        if (!cancelled) {
+          setChronicles(stories);
+        }
+      } catch (err) {
+        console.error('[WikiExplorer] Failed to load chronicles:', err);
+        if (!cancelled) {
+          setChronicles([]);
+        }
+      }
+    }
+
+    loadChronicles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [simulationRunId]);
+
+  // Sync hash changes to state (for back/forward buttons)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const pageId = parseHashPageId();
+      setCurrentPageId(pageId);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Build lightweight page index (fast)
+  const { pageIndex, entityIndex } = useMemo(() => {
+    const pageIndex = buildPageIndex(worldData, loreData, chronicles);
     const entityIndex = new Map<string, HardState>();
     for (const entity of worldData.hardState) {
       entityIndex.set(entity.id, entity);
     }
-    return { pages, categories, entityIndex };
-  }, [worldData, loreData, imageData]);
+    return { pageIndex, entityIndex };
+  }, [worldData, loreData, chronicles]);
+
+  // Page cache - stores fully built pages by ID
+  const pageCacheRef = useRef<Map<string, WikiPage>>(new Map());
+
+  // Clear cache when data changes
+  useEffect(() => {
+    pageCacheRef.current.clear();
+  }, [worldData, loreData, imageData, chronicles]);
+
+  // Get a page from cache or build it on-demand
+  const getPage = useCallback((pageId: string): WikiPage | null => {
+    const cache = pageCacheRef.current;
+    if (cache.has(pageId)) {
+      return cache.get(pageId)!;
+    }
+
+    const page = buildPageById(pageId, worldData, loreData, imageData, pageIndex, chronicles);
+    if (page) {
+      cache.set(pageId, page);
+    }
+    return page;
+  }, [worldData, loreData, imageData, pageIndex, chronicles]);
+
+  // Convert index entries to minimal WikiPage objects for navigation components
+  const indexAsPages = useMemo(() => {
+    return pageIndex.entries.map(entry => ({
+      id: entry.id,
+      title: entry.title,
+      type: entry.type,
+      slug: entry.slug,
+      chronicle: entry.chronicle,
+      aliases: entry.aliases,
+      content: { sections: [], summary: entry.summary },
+      categories: entry.categories,
+      linkedEntities: entry.linkedEntities,
+      images: [],
+      lastUpdated: entry.lastUpdated,
+    })) as WikiPage[];
+  }, [pageIndex]);
 
   const chroniclePages = useMemo(
-    () => pages.filter((page) => page.type === 'chronicle' && page.chronicle),
-    [pages]
+    () => indexAsPages.filter((page) => page.type === 'chronicle' && page.chronicle),
+    [indexAsPages]
   );
 
   // Get current page
@@ -100,27 +212,31 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
     || currentPageId === 'chronicles-story'
     || currentPageId === 'chronicles-document';
 
+  // Build current page on-demand
   const currentPage = !isChronicleIndex && currentPageId
-    ? pages.find(p => p.id === currentPageId)
+    ? getPage(currentPageId)
     : null;
 
-  // Handle navigation
-  const handleNavigate = (pageId: string) => {
-    setCurrentPageId(pageId);
-    setSearchQuery('');
-  };
-
-  const handleNavigateToEntity = (entityId: string) => {
-    // Find the page for this entity
-    const page = pages.find(p => p.id === entityId || p.id === `entity-${entityId}`);
-    if (page) {
-      handleNavigate(page.id);
+  // Handle navigation - updates hash which triggers state update via hashchange
+  const handleNavigate = useCallback((pageId: string) => {
+    const newHash = buildPageHash(pageId);
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
     }
-  };
+  }, []);
 
-  const handleGoHome = () => {
-    setCurrentPageId(null);
-  };
+  const handleNavigateToEntity = useCallback((entityId: string) => {
+    // Check if entity ID exists in index
+    if (pageIndex.byId.has(entityId)) {
+      handleNavigate(entityId);
+    } else if (pageIndex.byId.has(`entity-${entityId}`)) {
+      handleNavigate(`entity-${entityId}`);
+    }
+  }, [pageIndex, handleNavigate]);
+
+  const handleGoHome = useCallback(() => {
+    window.location.hash = '#/';
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -128,15 +244,15 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
       <div style={styles.sidebar}>
         <div style={styles.searchContainer}>
           <WikiSearch
-            pages={pages}
+            pages={indexAsPages}
             query={searchQuery}
             onQueryChange={setSearchQuery}
             onSelect={handleNavigate}
           />
         </div>
         <WikiNav
-          categories={categories}
-          pages={pages}
+          categories={pageIndex.categories}
+          pages={indexAsPages}
           chronicles={chroniclePages}
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
@@ -163,17 +279,18 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
           ) : currentPage ? (
             <WikiPageView
               page={currentPage}
-              pages={pages}
+              pages={indexAsPages}
               entityIndex={entityIndex}
               imageData={imageData}
+              imageLoader={imageLoader}
               onNavigate={handleNavigate}
               onNavigateToEntity={handleNavigateToEntity}
             />
           ) : (
             <HomePage
               worldData={worldData}
-              pages={pages}
-              categories={categories}
+              pages={indexAsPages}
+              categories={pageIndex.categories}
               onNavigate={handleNavigate}
             />
           )}
@@ -242,6 +359,7 @@ function HomePage({ worldData, pages, categories, onNavigate }: HomePageProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {eras.map(era => {
               const page = pages.find(p => p.id === era.id);
+              const summary = page?.content.summary;
               return (
                 <button
                   key={era.id}
@@ -259,9 +377,9 @@ function HomePage({ worldData, pages, categories, onNavigate }: HomePageProps) {
                   }}
                 >
                   <span style={{ fontWeight: 500 }}>{era.name}</span>
-                  {era.description && (
+                  {summary && (
                     <span style={{ color: colors.textMuted, marginLeft: '12px' }}>
-                      {era.description.slice(0, 100)}...
+                      {summary.slice(0, 100)}...
                     </span>
                   )}
                 </button>

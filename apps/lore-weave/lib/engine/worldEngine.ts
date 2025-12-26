@@ -283,7 +283,6 @@ export class WorldEngine {
     if (narrativeConfig.enabled) {
       this.emitter.log('info', 'Narrative event tracking enabled', {
         minSignificance: narrativeConfig.minSignificance,
-        trackRelationships: narrativeConfig.trackRelationships ?? false
       });
     }
 

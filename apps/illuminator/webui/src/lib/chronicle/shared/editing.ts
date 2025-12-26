@@ -27,9 +27,6 @@ export function formatFocusSummary(
     plan.focus.supportingEntityIds?.length
       ? `Supporting: ${plan.focus.supportingEntityIds.map(nameForId).join(', ')}`
       : '',
-    plan.focus.requiredNeighborIds?.length
-      ? `Required Neighbors: ${plan.focus.requiredNeighborIds.map(nameForId).join(', ')}`
-      : '',
   ].filter(Boolean);
 
   return lines.join('\n');

@@ -90,6 +90,50 @@ export interface ImageMetadata {
   results: EntityImage[];
 }
 
+/**
+ * Lazy image loader function type
+ * Takes an imageId and returns a promise that resolves to the image URL (or null)
+ */
+export type ImageLoader = (imageId: string) => Promise<string | null>;
+
+/**
+ * Lightweight page index entry for navigation and search
+ * Contains only the minimal info needed without building full content
+ */
+export interface PageIndexEntry {
+  id: string;
+  title: string;
+  type: WikiPage['type'];
+  slug: string;
+  summary?: string;
+  aliases?: string[];
+  categories: string[];
+  chronicle?: {
+    format: 'story' | 'document';
+    entrypointId?: string;
+  };
+  // For entity pages
+  entityKind?: string;
+  entitySubtype?: string;
+  prominence?: string;
+  culture?: string;
+  // For link resolution
+  linkedEntities: string[];
+  lastUpdated: number;
+}
+
+/**
+ * Full page index with lookup maps
+ */
+export interface WikiPageIndex {
+  entries: PageIndexEntry[];
+  // Quick lookup maps
+  byId: Map<string, PageIndexEntry>;
+  byName: Map<string, string>; // lowercase name -> id
+  byAlias: Map<string, string>; // lowercase alias -> id
+  categories: WikiCategory[];
+}
+
 // Wiki-specific types
 export interface WikiPage {
   id: string;
@@ -100,6 +144,7 @@ export interface WikiPage {
     format: 'story' | 'document';
     entrypointId?: string;
   };
+  aliases?: string[];
   content: WikiContent;
   categories: string[];
   linkedEntities: string[];
@@ -109,7 +154,21 @@ export interface WikiPage {
 
 export interface WikiContent {
   sections: WikiSection[];
+  summary?: string;
   infobox?: WikiInfobox;
+}
+
+/** Image display size for chronicle inline images */
+export type WikiImageSize = 'small' | 'medium' | 'large' | 'full-width';
+
+/** Inline image within a wiki section */
+export interface WikiSectionImage {
+  refId: string;
+  type: 'entity_ref' | 'chronicle_image';
+  imageId: string;
+  anchorText: string;
+  size: WikiImageSize;
+  caption?: string;
 }
 
 export interface WikiSection {
@@ -117,6 +176,8 @@ export interface WikiSection {
   heading: string;
   level: 1 | 2 | 3;
   content: string;
+  /** Inline images for this section (chronicle pages) */
+  images?: WikiSectionImage[];
 }
 
 export interface WikiInfobox {

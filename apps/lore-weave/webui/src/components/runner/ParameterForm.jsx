@@ -116,22 +116,11 @@ export default function ParameterForm({ params, onParamChange }) {
                 min={0}
                 max={1}
                 step={0.1}
-                value={params.narrativeMinSignificance ?? 0.3}
-                onChange={(v) => onParamChange('narrativeMinSignificance', v ?? 0.3)}
+                value={params.narrativeMinSignificance ?? 0}
+                onChange={(v) => onParamChange('narrativeMinSignificance', v ?? 0)}
                 className="lw-input"
                 title="Minimum significance threshold (0-1). Higher = fewer, more important events."
               />
-            </div>
-            <div className="lw-form-group" style={{ flex: '1 1 150px', minWidth: '150px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', marginTop: '24px' }}>
-                <input
-                  type="checkbox"
-                  checked={params.narrativeTrackRelationships ?? false}
-                  onChange={(e) => onParamChange('narrativeTrackRelationships', e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                Track relationships
-              </label>
             </div>
           </div>
         )}

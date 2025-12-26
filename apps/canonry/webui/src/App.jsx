@@ -67,15 +67,17 @@ function extractLoreDataFromEntities(worldData) {
     if (!enrichment) continue;
 
     // Extract description as LoreRecord
-    if (enrichment.description?.text) {
+    if (enrichment.description?.summary && enrichment.description?.description) {
       records.push({
         id: `desc_${entity.id}`,
         type: 'description',
         targetId: entity.id,
-        text: enrichment.description.text,
+        text: enrichment.description.description,
         metadata: {
           generatedAt: enrichment.description.generatedAt,
           model: enrichment.description.model,
+          summary: enrichment.description.summary,
+          aliases: enrichment.description.aliases || [],
         },
       });
     }
@@ -94,30 +96,8 @@ function extractLoreDataFromEntities(worldData) {
       });
     }
 
-    if (Array.isArray(enrichment.chronicles)) {
-      enrichment.chronicles.forEach((chronicle, index) => {
-        if (!chronicle?.content) return;
-        const entrypointId = chronicle.entrypointId || entity.id;
-        const format = chronicle.format === 'document' ? 'document' : 'story';
-        const title = chronicle.title || `${entity.name} Chronicle`;
-        const chronicleId = chronicle.chronicleId || `${entity.id}_${index}`;
-        records.push({
-          id: `chronicle_${chronicleId}`,
-          type: 'chronicle',
-          targetId: entrypointId,
-          text: chronicle.content,
-          metadata: {
-            title,
-            format,
-            entrypointId,
-            entityIds: Array.isArray(chronicle.entityIds) ? chronicle.entityIds : [],
-            acceptedAt: chronicle.acceptedAt,
-            generatedAt: chronicle.generatedAt,
-            model: chronicle.model,
-          },
-        });
-      });
-    }
+    // Chronicles are now loaded directly from IndexedDB by Chronicler
+    // No longer stored in entity.enrichment.chronicles
   }
 
   if (records.length === 0) return null;
@@ -127,6 +107,17 @@ function extractLoreDataFromEntities(worldData) {
     model: 'mixed',
     records,
   };
+}
+
+/**
+ * Extract loreData from enriched entities
+ * Note: Chronicles are now loaded directly from IndexedDB by Chronicler,
+ * so this no longer needs to augment chronicle imageRefs.
+ */
+async function extractLoreDataWithCurrentImageRefs(worldData) {
+  // Just delegate to the synchronous function
+  // The async wrapper is kept for backwards compatibility with existing callers
+  return extractLoreDataFromEntities(worldData);
 }
 
 /**
@@ -142,9 +133,9 @@ async function loadImageDataForProject(projectId, worldData) {
 
     const imageById = new Map(images.map((img) => [img.imageId, img]));
     const imageCache = new Map();
+    const results = [];
 
     // Load images referenced by the current simulation entities
-    const results = [];
     for (const entity of worldData.hardState) {
       const imageId = entity?.enrichment?.image?.imageId;
       if (!imageId) continue;
@@ -170,6 +161,33 @@ async function loadImageDataForProject(projectId, worldData) {
         prompt: cached.prompt || imageRecord.originalPrompt || imageRecord.finalPrompt || '',
         localPath: cached.url, // Object URL for display
         imageId,
+      });
+    }
+
+    // Also load chronicle images (imageType === 'chronicle')
+    for (const imageRecord of images) {
+      if (imageRecord.imageType !== 'chronicle') continue;
+      if (imageCache.has(imageRecord.imageId)) continue; // Already loaded
+
+      const imageData = await loadImage(imageRecord.imageId);
+      if (!imageData?.url) continue;
+
+      imageCache.set(imageRecord.imageId, {
+        url: imageData.url,
+        prompt: imageData.originalPrompt || imageData.finalPrompt || imageData.revisedPrompt || '',
+      });
+
+      results.push({
+        entityId: imageRecord.entityId || 'chronicle',
+        entityName: imageRecord.entityName || 'Chronicle Image',
+        entityKind: imageRecord.entityKind || 'chronicle',
+        prompt: imageData.originalPrompt || imageData.finalPrompt || imageRecord.originalPrompt || '',
+        localPath: imageData.url,
+        imageId: imageRecord.imageId,
+        // Chronicle-specific metadata
+        imageType: 'chronicle',
+        storyId: imageRecord.storyId,
+        imageRefId: imageRecord.imageRefId,
       });
     }
 
@@ -339,8 +357,8 @@ export default function App() {
   } = useProjectStorage();
 
   const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
-    // Extract loreData from enriched entities
-    const loreData = extractLoreDataFromEntities(enrichedWorld);
+    // Extract loreData from enriched entities (with current imageRefs from StoryRecords)
+    const loreData = await extractLoreDataWithCurrentImageRefs(enrichedWorld);
 
     // Load imageData from IndexedDB
     const imageData = await loadImageDataForProject(currentProject?.id, enrichedWorld);
@@ -355,8 +373,38 @@ export default function App() {
     });
   }, [currentProject?.id]);
 
+  /**
+   * Lazy image loader for Chronicler - loads images on-demand from IndexedDB
+   * Uses an internal cache to avoid reloading the same image multiple times
+   */
+  const imageLoaderCacheRef = useRef(new Map());
+  const imageLoader = useCallback(async (imageId) => {
+    if (!imageId) return null;
+
+    // Check cache first
+    const cache = imageLoaderCacheRef.current;
+    if (cache.has(imageId)) {
+      return cache.get(imageId);
+    }
+
+    try {
+      const imageData = await loadImage(imageId);
+      const url = imageData?.url || null;
+      cache.set(imageId, url);
+      return url;
+    } catch (err) {
+      console.error('Failed to load image:', imageId, err);
+      cache.set(imageId, null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
+
+    // Clear image loader cache on project change
+    imageLoaderCacheRef.current.clear();
+
     if (!currentProject?.id) {
       simulationOwnerRef.current = null;
       setSimulationResults(null);
@@ -405,9 +453,11 @@ export default function App() {
         setSimulationResults(activeSlot.simulationResults || null);
         setSimulationState(activeSlot.simulationState || null);
         if (activeSlot.worldData) {
-          // Extract loreData from enriched entities and load images
-          const loreData = extractLoreDataFromEntities(activeSlot.worldData);
-          loadImageDataForProject(currentProject.id, activeSlot.worldData).then((imageData) => {
+          // Extract loreData from enriched entities (with current imageRefs) and load images
+          Promise.all([
+            extractLoreDataWithCurrentImageRefs(activeSlot.worldData),
+            loadImageDataForProject(currentProject.id, activeSlot.worldData),
+          ]).then(([loreData, imageData]) => {
             if (cancelled) return;
             setArchivistData({ worldData: activeSlot.worldData, loreData, imageData });
           });
@@ -497,8 +547,10 @@ export default function App() {
 
       // Update archivistData for immediate use
       if (worldData) {
-        const loreData = extractLoreDataFromEntities(worldData);
-        loadImageDataForProject(currentProject.id, worldData).then((imageData) => {
+        Promise.all([
+          extractLoreDataWithCurrentImageRefs(worldData),
+          loadImageDataForProject(currentProject.id, worldData),
+        ]).then(([loreData, imageData]) => {
           if (cancelled) return;
           setArchivistData({ worldData, loreData, imageData });
         });
@@ -729,9 +781,11 @@ export default function App() {
         setSimulationResults(storedSlot.simulationResults || null);
         setSimulationState(storedSlot.simulationState || null);
         if (storedSlot.worldData) {
-          // Extract loreData and load images
-          const loreData = extractLoreDataFromEntities(storedSlot.worldData);
-          const imageData = await loadImageDataForProject(currentProject.id, storedSlot.worldData);
+          // Extract loreData (with current imageRefs) and load images
+          const [loreData, imageData] = await Promise.all([
+            extractLoreDataWithCurrentImageRefs(storedSlot.worldData),
+            loadImageDataForProject(currentProject.id, storedSlot.worldData),
+          ]);
           setArchivistData({ worldData: storedSlot.worldData, loreData, imageData });
         } else {
           setArchivistData(null);
@@ -1295,6 +1349,7 @@ export default function App() {
                 worldData={archivistData?.worldData}
                 loreData={archivistData?.loreData}
                 imageData={archivistData?.imageData}
+                imageLoader={imageLoader}
               />
             </div>
           </>

@@ -221,6 +221,10 @@ export function useEnrichmentQueue(
         chronicleContext: nextItem.chronicleContext,
         chronicleStep: nextItem.chronicleStep,
         storyId: nextItem.storyId,
+        // Chronicle image fields
+        imageRefId: nextItem.imageRefId,
+        sceneDescription: nextItem.sceneDescription,
+        imageType: nextItem.imageType,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -274,10 +278,14 @@ export function useEnrichmentQueue(
             )
           );
 
-          // Notify parent to update entity
+          // Notify parent to update entity (skip for chronicle images - they have their own storage)
           if (result.result) {
-            const enrichment = applyEnrichmentResult({}, result.type, result.result);
-            onEntityUpdateRef.current(result.entityId, enrichment);
+            const queueItem = queueRef.current.find(item => item.id === result.id);
+            const isChronicleImage = queueItem?.imageType === 'chronicle';
+            if (!isChronicleImage) {
+              const enrichment = applyEnrichmentResult({}, result.type, result.result);
+              onEntityUpdateRef.current(result.entityId, enrichment);
+            }
           }
 
           // Process next task for this worker
@@ -380,7 +388,18 @@ export function useEnrichmentQueue(
 
   // Enqueue items - distribute to workers based on estimated workload
   const enqueue = useCallback(
-    (items: Array<{ entity: EnrichedEntity; type: EnrichmentType; prompt: string; chronicleContext?: SerializableChronicleContext; chronicleStep?: ChronicleStep; storyId?: string }>) => {
+    (items: Array<{
+      entity: EnrichedEntity;
+      type: EnrichmentType;
+      prompt: string;
+      chronicleContext?: SerializableChronicleContext;
+      chronicleStep?: ChronicleStep;
+      storyId?: string;
+      // Chronicle image fields
+      imageRefId?: string;
+      sceneDescription?: string;
+      imageType?: 'entity' | 'chronicle';
+    }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
 
@@ -398,6 +417,10 @@ export function useEnrichmentQueue(
           chronicleContext: item.chronicleContext,
           chronicleStep: item.chronicleStep,
           storyId: item.storyId,
+          // Chronicle image fields
+          imageRefId: item.imageRefId,
+          sceneDescription: item.sceneDescription,
+          imageType: item.imageType,
         };
 
         // Find the least busy worker and assign this task

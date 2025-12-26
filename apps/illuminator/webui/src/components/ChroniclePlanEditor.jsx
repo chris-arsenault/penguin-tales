@@ -115,11 +115,6 @@ function FocusSummary({ plan, entityMap }) {
           <strong>Supporting Entities:</strong> {formatEntityList(focus.supportingEntityIds, entityMap)}
         </div>
       )}
-      {focus.requiredNeighborIds?.length > 0 && (
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-          <strong>Required Neighbors:</strong> {formatEntityList(focus.requiredNeighborIds, entityMap)}
-        </div>
-      )}
       <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
         <strong>Selected Cast:</strong> {focus.selectedEntityIds.length} entities • {focus.selectedEventIds.length} events
       </div>

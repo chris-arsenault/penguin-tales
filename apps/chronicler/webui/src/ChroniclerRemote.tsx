@@ -8,18 +8,20 @@
  */
 
 import WikiExplorer from './components/WikiExplorer.tsx';
-import type { WorldState, LoreData, ImageMetadata } from './types/world.ts';
+import type { WorldState, LoreData, ImageMetadata, ImageLoader } from './types/world.ts';
 
 export interface ChroniclerRemoteProps {
   worldData?: WorldState | null;
   loreData?: LoreData | null;
   imageData?: ImageMetadata | null;
+  imageLoader?: ImageLoader;
 }
 
 export default function ChroniclerRemote({
   worldData = null,
   loreData = null,
   imageData = null,
+  imageLoader,
 }: ChroniclerRemoteProps) {
   if (!worldData) {
     return (
@@ -51,6 +53,7 @@ export default function ChroniclerRemote({
       worldData={worldData}
       loreData={loreData}
       imageData={imageData}
+      imageLoader={imageLoader}
     />
   );
 }

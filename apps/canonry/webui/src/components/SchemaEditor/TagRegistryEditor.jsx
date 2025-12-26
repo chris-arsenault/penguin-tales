@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState, NumberInput } from '@penguin-tales/shared-components';
+import { ExpandableCard, SectionHeader, EmptyState, NumberInput } from '@penguin-tales/shared-components';
 import { ToolUsageBadges as UsageBadges } from '@penguin-tales/shared-components';
 
 // Category colors (dynamic - keep as objects)
@@ -70,9 +70,6 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
-  const [newRelatedTag, setNewRelatedTag] = useState({});
-  const [newConflictingTag, setNewConflictingTag] = useState({});
-  const [newEntityKind, setNewEntityKind] = useState({});
 
   // Compute stats
   const stats = useMemo(() => {
@@ -136,18 +133,6 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   };
 
   // Related tags management
-  const addRelatedTag = (tagId) => {
-    const relatedTag = newRelatedTag[tagId]?.trim();
-    if (!relatedTag) return;
-    const tag = tagRegistry.find((t) => t.tag === tagId);
-    if (!tag) return;
-    const existingRelated = tag.relatedTags || [];
-    if (!existingRelated.includes(relatedTag)) {
-      updateTag(tagId, { relatedTags: [...existingRelated, relatedTag] });
-    }
-    setNewRelatedTag((prev) => ({ ...prev, [tagId]: '' }));
-  };
-
   const removeRelatedTag = (tagId, relatedTag) => {
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
@@ -155,41 +140,10 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
   };
 
   // Conflicting tags management
-  const addConflictingTag = (tagId) => {
-    const conflictingTag = newConflictingTag[tagId]?.trim();
-    if (!conflictingTag) return;
-    const tag = tagRegistry.find((t) => t.tag === tagId);
-    if (!tag) return;
-    const existingConflicts = tag.conflictingTags || [];
-    if (!existingConflicts.includes(conflictingTag)) {
-      updateTag(tagId, { conflictingTags: [...existingConflicts, conflictingTag] });
-    }
-    setNewConflictingTag((prev) => ({ ...prev, [tagId]: '' }));
-  };
-
   const removeConflictingTag = (tagId, conflictingTag) => {
     const tag = tagRegistry.find((t) => t.tag === tagId);
     if (!tag) return;
     updateTag(tagId, { conflictingTags: (tag.conflictingTags || []).filter((c) => c !== conflictingTag) });
-  };
-
-  // Entity kinds management
-  const addTagEntityKind = (tagId) => {
-    const entityKind = newEntityKind[tagId]?.trim();
-    if (!entityKind) return;
-    const tag = tagRegistry.find((t) => t.tag === tagId);
-    if (!tag) return;
-    const existingKinds = tag.entityKinds || [];
-    if (!existingKinds.includes(entityKind)) {
-      updateTag(tagId, { entityKinds: [...existingKinds, entityKind] });
-    }
-    setNewEntityKind((prev) => ({ ...prev, [tagId]: '' }));
-  };
-
-  const removeTagEntityKind = (tagId, entityKind) => {
-    const tag = tagRegistry.find((t) => t.tag === tagId);
-    if (!tag) return;
-    updateTag(tagId, { entityKinds: (tag.entityKinds || []).filter((k) => k !== entityKind) });
   };
 
   const allTagNames = useMemo(() => tagRegistry.map(t => t.tag), [tagRegistry]);
@@ -201,19 +155,24 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
         description="Define tags that categorize entities. Tags provide governance through usage limits, relationships, and conflicts."
       />
 
-      {/* Stats Bar */}
-      <div className="summary-stats-grid" style={{ marginBottom: '16px' }}>
-        <div className="summary-stat">
-          <span className="summary-stat-value">{stats.total}</span>
-          <span className="summary-stat-label">Total</span>
-        </div>
-        {CATEGORIES.map(cat => (
-          <div key={cat} className="summary-stat">
-            <span className="summary-stat-value" style={{ color: CATEGORY_COLORS[cat].color }}>
-              {stats.byCategory[cat] || 0}
-            </span>
-            <span className="summary-stat-label">{cat}</span>
-          </div>
+      {/* Stats Bar - Compact */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+        <span className="text-small" style={{ padding: '4px 8px', background: 'var(--color-bg-dark)', borderRadius: '4px' }}>
+          <strong>{stats.total}</strong> tags
+        </span>
+        {CATEGORIES.filter(cat => stats.byCategory[cat] > 0).map(cat => (
+          <span
+            key={cat}
+            className="text-small"
+            style={{
+              padding: '4px 8px',
+              background: CATEGORY_COLORS[cat].bg,
+              color: CATEGORY_COLORS[cat].color,
+              borderRadius: '4px'
+            }}
+          >
+            {stats.byCategory[cat]} {cat}
+          </span>
         ))}
       </div>
 
@@ -278,9 +237,10 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                   </>
                 }
               >
-                {/* Tag ID and Category/Rarity */}
-                <FormRow>
-                  <FormGroup label="Tag ID">
+                {/* Basic Info Row */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
+                  <div style={{ flex: '1 1 180px', minWidth: '120px' }}>
+                    <div className="label" style={{ marginBottom: '4px' }}>Tag ID</div>
                     <TagIdInput
                       value={tag.tag}
                       allTagIds={allTagNames.filter(t => t !== tag.tag)}
@@ -309,166 +269,203 @@ export default function TagRegistryEditor({ tagRegistry = [], entityKinds = [], 
                         onChange(updatedRegistry);
                       }}
                     />
-                  </FormGroup>
-                  <FormGroup label="Category">
-                    <select className="input" value={tag.category} onChange={(e) => updateTag(tag.tag, { category: e.target.value })} disabled={isFramework}>
+                  </div>
+                  <div>
+                    <div className="label" style={{ marginBottom: '4px' }}>Category</div>
+                    <select
+                      className="input"
+                      style={{ width: 'auto', padding: '6px 10px' }}
+                      value={tag.category}
+                      onChange={(e) => updateTag(tag.tag, { category: e.target.value })}
+                      disabled={isFramework}
+                    >
                       {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
-                  </FormGroup>
-                  <FormGroup label="Rarity">
-                    <select className="input" value={tag.rarity} onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })} disabled={isFramework}>
+                  </div>
+                  <div>
+                    <div className="label" style={{ marginBottom: '4px' }}>Rarity</div>
+                    <select
+                      className="input"
+                      style={{ width: 'auto', padding: '6px 10px' }}
+                      value={tag.rarity}
+                      onChange={(e) => updateTag(tag.tag, { rarity: e.target.value })}
+                      disabled={isFramework}
+                    >
                       {RARITIES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
-                  </FormGroup>
-                </FormRow>
-
-                <FormRow>
-                  <FormGroup label="Description" wide>
-                    <textarea
-                      className="input"
-                      style={{ minHeight: '60px', resize: 'vertical' }}
-                      value={tag.description || ''}
-                      disabled={isFramework}
-                      onChange={(e) => updateTag(tag.tag, { description: e.target.value })}
-                      placeholder="Describe what this tag represents..."
-                    />
-                  </FormGroup>
-                </FormRow>
-
-                {/* Axis Label */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={tag.isAxis || false}
-                      disabled={isFramework}
-                      onChange={(e) => updateTag(tag.tag, { isAxis: e.target.checked })}
-                    />
-                    <span style={{ fontWeight: 500 }}>Semantic Plane Axis Label</span>
-                    <span className="text-muted text-small">— Tag is used as a low/high endpoint on a semantic plane axis</span>
-                  </label>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={tag.isAxis || false}
+                        disabled={isFramework}
+                        onChange={(e) => updateTag(tag.tag, { isAxis: e.target.checked })}
+                        style={{ width: '14px', height: '14px' }}
+                      />
+                      <span className="text-small">Axis</span>
+                    </label>
+                  </div>
                 </div>
 
-                {/* Usage Limits */}
-                <FormRow>
-                  <FormGroup label="Min Usage" hint="Minimum entities with this tag">
+                {/* Description */}
+                <div style={{ marginBottom: '12px' }}>
+                  <textarea
+                    className="input"
+                    style={{ minHeight: '50px', resize: 'vertical', padding: '8px 10px' }}
+                    value={tag.description || ''}
+                    disabled={isFramework}
+                    onChange={(e) => updateTag(tag.tag, { description: e.target.value })}
+                    placeholder="Description..."
+                  />
+                </div>
+
+                {/* Usage Limits - Compact inline */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '12px' }}>
+                  <span className="text-small text-muted">Usage:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <NumberInput
                       className="input"
+                      style={{ width: '60px', padding: '4px 6px', textAlign: 'center' }}
                       min={0}
                       value={tag.minUsage || 0}
                       disabled={isFramework}
                       onChange={(v) => updateTag(tag.tag, { minUsage: v ?? 0 })}
                       integer
                     />
-                  </FormGroup>
-                  <FormGroup label="Max Usage" hint="Maximum entities with this tag">
+                    <span className="text-small text-muted">–</span>
                     <NumberInput
                       className="input"
+                      style={{ width: '60px', padding: '4px 6px', textAlign: 'center' }}
                       min={0}
                       value={tag.maxUsage || 50}
                       disabled={isFramework}
                       onChange={(v) => updateTag(tag.tag, { maxUsage: v ?? 50 })}
                       integer
                     />
-                  </FormGroup>
-                  <FormGroup label="Consolidate Into" hint="Suggest merging into this tag">
-                    <select
-                      className="input"
-                      value={tag.consolidateInto || ''}
-                      disabled={isFramework}
-                      onChange={(e) => updateTag(tag.tag, { consolidateInto: e.target.value || undefined })}
-                    >
-                      <option value="">-- None --</option>
-                      {allTagNames.filter(t => t !== tag.tag).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </FormGroup>
-                </FormRow>
-
-                {/* Entity Kinds */}
-                <div className="section">
-                  <div className="section-title">Applicable Entity Kinds</div>
-                  <div className="chip-list">
-                    {(tag.entityKinds || []).map((kind) => (
-                      <div key={kind} className="chip">
-                        <span>{kind}</span>
-                        <button className="chip-remove" onClick={() => removeTagEntityKind(tag.tag, kind)} disabled={isFramework}>×</button>
-                      </div>
-                    ))}
                   </div>
-                  <div className="chip-input-row">
-                    <select
-                      className="input"
-                      style={{ flex: 1, maxWidth: '300px' }}
-                      value={newEntityKind[tag.tag] || ''}
-                      disabled={isFramework}
-                      onChange={(e) => setNewEntityKind((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
-                    >
-                      <option value="">Select entity kind...</option>
-                      {entityKinds.filter(ek => !(tag.entityKinds || []).includes(ek.kind)).map(ek => (
-                        <option key={ek.kind} value={ek.kind}>{ek.description || ek.kind}</option>
-                      ))}
-                    </select>
-                    <button className="btn btn-secondary" onClick={() => addTagEntityKind(tag.tag)} disabled={isFramework}>Add</button>
-                  </div>
-                  <div className="hint">Which entity kinds can have this tag</div>
+                  <span className="text-small text-muted" style={{ marginLeft: '8px' }}>Merge →</span>
+                  <select
+                    className="input"
+                    style={{ width: 'auto', padding: '2px 6px', fontSize: '12px' }}
+                    value={tag.consolidateInto || ''}
+                    disabled={isFramework}
+                    onChange={(e) => updateTag(tag.tag, { consolidateInto: e.target.value || undefined })}
+                  >
+                    <option value="">none</option>
+                    {allTagNames.filter(t => t !== tag.tag).map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
 
-                {/* Related Tags */}
-                <div className="section">
-                  <div className="section-title">Related Tags</div>
-                  <div className="chip-list">
-                    {(tag.relatedTags || []).map((relatedTag) => (
-                      <div key={relatedTag} className="chip">
-                        <span>{relatedTag}</span>
-                        <button className="chip-remove" onClick={() => removeRelatedTag(tag.tag, relatedTag)} disabled={isFramework}>×</button>
+                {/* Consolidated Tag Relationships - 3 columns */}
+                <div className="nested-section-compact">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                    {/* Entity Kinds */}
+                    <div>
+                      <div className="label" style={{ marginBottom: '6px' }}>Applies to</div>
+                      <div className="chip-list" style={{ marginBottom: '4px' }}>
+                        {entityKinds.map((ek) => {
+                          const isSelected = (tag.entityKinds || []).includes(ek.kind);
+                          return (
+                            <div
+                              key={ek.kind}
+                              className={`chip chip-clickable ${isSelected ? 'chip-active' : ''}`}
+                              onClick={() => {
+                                if (isFramework) return;
+                                const current = tag.entityKinds || [];
+                                const updated = isSelected
+                                  ? current.filter(k => k !== ek.kind)
+                                  : [...current, ek.kind];
+                                updateTag(tag.tag, { entityKinds: updated });
+                              }}
+                              style={isFramework ? { pointerEvents: 'none', opacity: 0.6 } : { padding: '4px 8px', fontSize: '12px' }}
+                            >
+                              {ek.description || ek.kind}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                  <div className="chip-input-row">
-                    <select
-                      className="input"
-                      style={{ flex: 1, maxWidth: '300px' }}
-                      value={newRelatedTag[tag.tag] || ''}
-                      disabled={isFramework}
-                      onChange={(e) => setNewRelatedTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
-                    >
-                      <option value="">Select related tag...</option>
-                      {allTagNames.filter(t => t !== tag.tag && !(tag.relatedTags || []).includes(t)).map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                    <button className="btn btn-secondary" onClick={() => addRelatedTag(tag.tag)} disabled={isFramework}>Add</button>
-                  </div>
-                  <div className="hint">Tags that commonly appear together</div>
-                </div>
+                      {(tag.entityKinds || []).length === 0 && (
+                        <span className="text-small text-muted">all kinds</span>
+                      )}
+                    </div>
 
-                {/* Conflicting Tags */}
-                <div className="section">
-                  <div className="section-title">Conflicting Tags</div>
-                  <div className="chip-list">
-                    {(tag.conflictingTags || []).map((conflictingTag) => (
-                      <div key={conflictingTag} className="chip" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}>
-                        <span>{conflictingTag}</span>
-                        <button className="chip-remove" onClick={() => removeConflictingTag(tag.tag, conflictingTag)} disabled={isFramework}>×</button>
+                    {/* Related Tags */}
+                    <div>
+                      <div className="label" style={{ marginBottom: '6px' }}>Related</div>
+                      <div className="chip-list" style={{ marginBottom: '4px' }}>
+                        {(tag.relatedTags || []).map((relatedTag) => (
+                          <div key={relatedTag} className="chip" style={{ padding: '4px 8px', fontSize: '12px' }}>
+                            <span>{relatedTag}</span>
+                            <button
+                              className="chip-remove"
+                              onClick={() => removeRelatedTag(tag.tag, relatedTag)}
+                              disabled={isFramework}
+                              style={{ fontSize: '14px' }}
+                            >×</button>
+                          </div>
+                        ))}
+                        {!isFramework && (
+                          <select
+                            className="input"
+                            style={{ width: 'auto', padding: '2px 6px', fontSize: '12px', minWidth: '80px' }}
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const current = tag.relatedTags || [];
+                                if (!current.includes(e.target.value)) {
+                                  updateTag(tag.tag, { relatedTags: [...current, e.target.value] });
+                                }
+                              }
+                            }}
+                          >
+                            <option value="">+ add</option>
+                            {allTagNames.filter(t => t !== tag.tag && !(tag.relatedTags || []).includes(t)).map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Conflicting Tags */}
+                    <div>
+                      <div className="label" style={{ marginBottom: '6px', color: 'var(--color-danger)' }}>Conflicts</div>
+                      <div className="chip-list" style={{ marginBottom: '4px' }}>
+                        {(tag.conflictingTags || []).map((conflictingTag) => (
+                          <div key={conflictingTag} className="chip" style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: 'rgba(239, 68, 68, 0.2)' }}>
+                            <span>{conflictingTag}</span>
+                            <button
+                              className="chip-remove"
+                              onClick={() => removeConflictingTag(tag.tag, conflictingTag)}
+                              disabled={isFramework}
+                              style={{ fontSize: '14px' }}
+                            >×</button>
+                          </div>
+                        ))}
+                        {!isFramework && (
+                          <select
+                            className="input"
+                            style={{ width: 'auto', padding: '2px 6px', fontSize: '12px', minWidth: '80px' }}
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const current = tag.conflictingTags || [];
+                                if (!current.includes(e.target.value)) {
+                                  updateTag(tag.tag, { conflictingTags: [...current, e.target.value] });
+                                }
+                              }
+                            }}
+                          >
+                            <option value="">+ add</option>
+                            {allTagNames.filter(t => t !== tag.tag && !(tag.conflictingTags || []).includes(t)).map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="chip-input-row">
-                    <select
-                      className="input"
-                      style={{ flex: 1, maxWidth: '300px' }}
-                      value={newConflictingTag[tag.tag] || ''}
-                      disabled={isFramework}
-                      onChange={(e) => setNewConflictingTag((prev) => ({ ...prev, [tag.tag]: e.target.value }))}
-                    >
-                      <option value="">Select conflicting tag...</option>
-                      {allTagNames.filter(t => t !== tag.tag && !(tag.conflictingTags || []).includes(t)).map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                    <button className="btn btn-secondary" onClick={() => addConflictingTag(tag.tag)} disabled={isFramework}>Add</button>
-                  </div>
-                  <div className="hint">Tags that should never appear together</div>
                 </div>
 
                 {/* Delete */}

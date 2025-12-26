@@ -451,6 +451,14 @@
   margin-top: var(--spacing-lg);
 }
 
+.nested-section-compact {
+  background-color: var(--color-bg-dark);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
 .nested-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);

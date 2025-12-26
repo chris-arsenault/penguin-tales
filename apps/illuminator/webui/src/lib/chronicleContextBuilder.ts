@@ -9,6 +9,9 @@
 
 import type {
   ChronicleGenerationContext,
+  ChronicleRoleAssignment,
+  ChronicleFocus,
+  ChronicleFocusType,
   EntityContext,
   RelationshipContext,
   EraContext,
@@ -30,7 +33,11 @@ interface WorldData {
     createdAt: number;
     updatedAt: number;
     enrichment?: {
-      description?: { text: string };
+      description?: {
+        summary: string;
+        description: string;
+        aliases?: string[];
+      };
     };
   }>;
   relationships: Array<{
@@ -80,11 +87,12 @@ function buildEntityContext(entity: WorldData['hardState'][0]): EntityContext {
     culture: entity.culture,
     status: entity.status,
     tags: entity.tags || {},
-    description: entity.description,
+    summary: entity.enrichment?.description?.summary,
+    description: entity.enrichment?.description?.description,
+    aliases: entity.enrichment?.description?.aliases || [],
     coordinates: entity.coordinates,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
-    enrichedDescription: entity.enrichment?.description?.text,
   };
 }
 
@@ -119,7 +127,7 @@ function buildEraContext(entity: WorldData['hardState'][0]): EraContext {
   return {
     id: entity.id,
     name: entity.name,
-    description: entity.description,
+    description: entity.enrichment?.description?.description,
   };
 }
 
@@ -214,6 +222,163 @@ export function buildEntityStoryContext(
 }
 
 /**
+ * Chronicle selections from wizard (chronicle-first architecture)
+ */
+export interface ChronicleSelections {
+  /** Role assignments define the cast - primary identity */
+  roleAssignments: ChronicleRoleAssignment[];
+  /** Selected event IDs */
+  selectedEventIds: string[];
+  /** Selected relationship IDs (src:dst:kind format) */
+  selectedRelationshipIds: string[];
+  /** Entry point used for graph traversal (mechanical, not displayed) */
+  entrypointId?: string;
+}
+
+/**
+ * Derive focus type from role assignments
+ */
+function deriveFocusType(roleAssignments: ChronicleRoleAssignment[]): ChronicleFocusType {
+  const primaryCount = roleAssignments.filter(r => r.isPrimary).length;
+  if (primaryCount <= 1) return 'single';
+  return 'ensemble';
+}
+
+/**
+ * Build a ChronicleFocus from selections
+ */
+function buildFocus(
+  roleAssignments: ChronicleRoleAssignment[],
+  selectedEventIds: string[],
+  selectedRelationshipIds: string[]
+): ChronicleFocus {
+  const primaryEntityIds = roleAssignments
+    .filter(r => r.isPrimary)
+    .map(r => r.entityId);
+  const supportingEntityIds = roleAssignments
+    .filter(r => !r.isPrimary)
+    .map(r => r.entityId);
+  const selectedEntityIds = roleAssignments.map(r => r.entityId);
+
+  return {
+    type: deriveFocusType(roleAssignments),
+    roleAssignments,
+    primaryEntityIds,
+    supportingEntityIds,
+    selectedEntityIds,
+    selectedEventIds,
+    selectedRelationshipIds,
+  };
+}
+
+/**
+ * Build generation context from chronicle selections (chronicle-first architecture)
+ *
+ * This is the primary entry point for building generation context.
+ * Role assignments define the chronicle's identity, not a single entity.
+ */
+export function buildChronicleContext(
+  selections: ChronicleSelections,
+  worldData: WorldData,
+  worldContext: WorldContext
+): ChronicleGenerationContext {
+  const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
+
+  // Build focus from role assignments
+  const focus = buildFocus(
+    selections.roleAssignments,
+    selections.selectedEventIds,
+    selections.selectedRelationshipIds
+  );
+
+  // Get entities from role assignments
+  const entities = worldData.hardState
+    .filter((e) => focus.selectedEntityIds.includes(e.id))
+    .map(buildEntityContext);
+
+  // Parse relationship IDs (format: src:dst:kind) and get selected relationships
+  const relationships = selections.selectedRelationshipIds
+    .map(id => {
+      const [src, dst, kind] = id.split(':');
+      return worldData.relationships.find(
+        r => r.src === src && r.dst === dst && r.kind === kind
+      );
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== undefined)
+    .map((r) => buildRelationshipContext(r, entityMap));
+
+  // Get selected events
+  const eventIdSet = new Set(selections.selectedEventIds);
+  const events = (worldData.narrativeHistory || [])
+    .filter((e) => eventIdSet.has(e.id))
+    .sort((a, b) => b.significance - a.significance)
+    .map(buildEventContext);
+
+  // Find era from first primary entity
+  const primaryEntityId = focus.primaryEntityIds[0];
+  const activeEraRel = primaryEntityId
+    ? worldData.relationships.find(
+        (r) => r.src === primaryEntityId && r.kind === 'active_during'
+      )
+    : undefined;
+  const era = activeEraRel ? entityMap.get(activeEraRel.dst) : undefined;
+
+  return {
+    worldName: worldContext.name || 'The World',
+    worldDescription: worldContext.description || '',
+    canonFacts: worldContext.canonFacts || [],
+    tone: worldContext.tone || '',
+
+    // Chronicle focus (primary)
+    focus,
+
+    era: era ? buildEraContext(era) : undefined,
+    entities,
+    relationships,
+    events,
+
+    // Legacy fields for backwards compat
+    targetType: 'entityStory',
+    targetId: primaryEntityId || selections.entrypointId || '',
+    entity: primaryEntityId ? buildEntityContext(entityMap.get(primaryEntityId)!) : undefined,
+    roleAssignments: selections.roleAssignments,
+  };
+}
+
+/**
+ * Wizard selection data passed from the chronicle wizard
+ * @deprecated Use ChronicleSelections instead
+ */
+export interface WizardSelections {
+  entryPointId: string;
+  roleAssignments: ChronicleRoleAssignment[];
+  selectedEventIds: string[];
+  selectedRelationshipIds: string[];
+}
+
+/**
+ * Build generation context from wizard selections
+ * @deprecated Use buildChronicleContext instead
+ */
+export function buildWizardChronicleContext(
+  selections: WizardSelections,
+  worldData: WorldData,
+  worldContext: WorldContext
+): ChronicleGenerationContext {
+  // Convert old format to new format
+  return buildChronicleContext(
+    {
+      roleAssignments: selections.roleAssignments,
+      selectedEventIds: selections.selectedEventIds,
+      selectedRelationshipIds: selections.selectedRelationshipIds,
+      entrypointId: selections.entryPointId,
+    },
+    worldData,
+    worldContext
+  );
+}
+
+/**
  * Check prerequisites for chronicle generation
  * Returns list of missing items that should be generated first
  */
@@ -231,13 +396,27 @@ export function checkPrerequisites(
 ): PrerequisiteCheck {
   const missing: PrerequisiteCheck['missing'] = [];
 
-  // For entity stories, we need the entity's description
-  if (context.targetType === 'entityStory') {
-    if (context.entity && !context.entity.enrichedDescription) {
+  // Handle contexts without focus (legacy or incomplete)
+  if (!context.focus?.roleAssignments) {
+    // Fall back to checking the legacy entity field
+    if (context.entity && !(context.entity.summary && context.entity.description)) {
       missing.push({
         type: 'entityDescription',
         id: context.entity.id,
         name: context.entity.name,
+      });
+    }
+    return { ready: missing.length === 0, missing };
+  }
+
+  // Check that primary entities have descriptions
+  for (const role of context.focus.roleAssignments.filter(r => r.isPrimary)) {
+    const entity = context.entities.find(e => e.id === role.entityId);
+    if (entity && !(entity.summary && entity.description)) {
+      missing.push({
+        type: 'entityDescription',
+        id: entity.id,
+        name: entity.name,
       });
     }
   }

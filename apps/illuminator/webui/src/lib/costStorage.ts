@@ -18,7 +18,11 @@ export type CostType =
   | 'storyScene'
   | 'storyAssembly'    // No LLM cost, but tracked for completeness
   | 'storyValidation'
-  | 'storyRevision';
+  | 'storyRevision'
+  | 'storySummary'
+  | 'storyImageRefs'
+  | 'storyProseBlend'
+  | 'storyV2';         // Single-shot V2 pipeline generation
 
 export interface CostRecord {
   id: string;

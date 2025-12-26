@@ -11,7 +11,7 @@
  */
 
 const DB_NAME = 'canonry-images';
-const DB_VERSION = 2;  // Bumped for additional indexes
+const DB_VERSION = 3;  // Bumped for chronicle image support
 const STORE_NAME = 'images';
 
 let dbPromise = null;
@@ -37,6 +37,9 @@ function openDb() {
         store.createIndex('entityKind', 'entityKind', { unique: false });
         store.createIndex('entityCulture', 'entityCulture', { unique: false });
         store.createIndex('model', 'model', { unique: false });
+        // Chronicle image indexes (v3)
+        store.createIndex('storyId', 'storyId', { unique: false });
+        store.createIndex('imageType', 'imageType', { unique: false });
       } else if (oldVersion < 2) {
         // Upgrade from v1 - add new indexes for global library search
         const tx = event.target.transaction;
@@ -49,6 +52,18 @@ function openDb() {
         }
         if (!store.indexNames.contains('model')) {
           store.createIndex('model', 'model', { unique: false });
+        }
+      }
+
+      if (oldVersion < 3 && oldVersion >= 1) {
+        // Upgrade to v3 - add chronicle image indexes
+        const tx = event.target.transaction;
+        const store = tx.objectStore(STORE_NAME);
+        if (!store.indexNames.contains('storyId')) {
+          store.createIndex('storyId', 'storyId', { unique: false });
+        }
+        if (!store.indexNames.contains('imageType')) {
+          store.createIndex('imageType', 'imageType', { unique: false });
         }
       }
     };
@@ -122,6 +137,11 @@ export async function loadImage(imageId) {
         entityName: record.entityName,
         entityKind: record.entityKind,
         entityCulture: record.entityCulture,
+        // Chronicle image fields (v3)
+        imageType: record.imageType,
+        storyId: record.storyId,
+        imageRefId: record.imageRefId,
+        sceneDescription: record.sceneDescription,
       });
     };
     request.onerror = () => reject(request.error || new Error('Failed to load image'));
@@ -272,6 +292,47 @@ export async function getImagesByProject(projectId) {
 }
 
 /**
+ * Get images for a specific story (chronicle images)
+ */
+export async function getImagesByStory(storyId) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+
+    // Use storyId index if available
+    if (store.indexNames.contains('storyId')) {
+      const index = store.index('storyId');
+      const request = index.getAll(IDBKeyRange.only(storyId));
+
+      request.onsuccess = () => {
+        const images = (request.result || []).map(({ blob, ...metadata }) => ({
+          ...metadata,
+          hasBlob: Boolean(blob),
+        }));
+        images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
+        resolve(images);
+      };
+      request.onerror = () => reject(request.error || new Error('Failed to get story images'));
+    } else {
+      // Fallback: scan all and filter
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const images = (request.result || [])
+          .filter((img) => img.storyId === storyId)
+          .map(({ blob, ...metadata }) => ({
+            ...metadata,
+            hasBlob: Boolean(blob),
+          }));
+        images.sort((a, b) => (b.generatedAt || 0) - (a.generatedAt || 0));
+        resolve(images);
+      };
+      request.onerror = () => reject(request.error || new Error('Failed to get story images'));
+    }
+  });
+}
+
+/**
  * Search images with filters (global library search)
  * All filters are optional - returns all images if no filters provided
  *
@@ -280,6 +341,8 @@ export async function getImagesByProject(projectId) {
  * @param {string} [filters.entityKind] - Filter by entity kind (e.g., 'person', 'place')
  * @param {string} [filters.entityCulture] - Filter by culture
  * @param {string} [filters.model] - Filter by generation model
+ * @param {string} [filters.imageType] - Filter by image type ('entity' or 'chronicle')
+ * @param {string} [filters.storyId] - Filter by story ID (for chronicle images)
  * @param {string} [filters.searchText] - Search in entityName, prompts
  * @param {number} [filters.limit] - Max results to return
  * @returns {Promise<Array>} Array of image metadata (no blobs)
@@ -322,6 +385,13 @@ export async function searchImages(filters = {}) {
       }
       if (filters.model && request.source?.name !== 'model') {
         images = images.filter((img) => img.model === filters.model);
+      }
+      // Chronicle image filters (v3)
+      if (filters.imageType) {
+        images = images.filter((img) => img.imageType === filters.imageType);
+      }
+      if (filters.storyId) {
+        images = images.filter((img) => img.storyId === filters.storyId);
       }
 
       // Text search in name and prompts

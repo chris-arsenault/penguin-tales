@@ -132,7 +132,7 @@ function buildPromptContext(
         prominence: entity?.prominence || 'recognized',
         culture: entity?.culture || '',
         status: entity?.status || 'active',
-        description: entity?.description || '',
+        description: entity?.enrichment?.description?.description || '',
         tags: entity?.tags || {},
       },
       relationships,

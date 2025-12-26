@@ -60,9 +60,20 @@ function EntityResultCard({
         <div className="illuminator-entity-kind">
           {entity.kind}/{entity.subtype} - {entity.prominence}
         </div>
-        {descriptionTask?.result?.text && (
+        {(descriptionTask?.result?.summary || descriptionTask?.result?.description) && (
           <div className="illuminator-entity-description">
-            {descriptionTask.result.text}
+            {descriptionTask.result.summary && (
+              <>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Summary</div>
+                <div>{descriptionTask.result.summary}</div>
+              </>
+            )}
+            {descriptionTask.result.description && (
+              <>
+                <div style={{ fontWeight: 600, margin: '8px 0 4px' }}>Description</div>
+                <div>{descriptionTask.result.description}</div>
+              </>
+            )}
           </div>
         )}
         <div className="illuminator-entity-actions">

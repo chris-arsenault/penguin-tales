@@ -116,6 +116,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
   switch (message.type) {
     case 'init': {
       config = message.config;
+      console.log('[Worker] Init with chronicleModel:', config.chronicleModel || '(not set)', 'textModel:', config.textModel || '(not set)');
       const clients = createClients(config);
       llmClient = clients.llmClient;
       imageClient = clients.imageClient;

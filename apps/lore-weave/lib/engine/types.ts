@@ -577,12 +577,10 @@ export interface EngineConfig {
  * and generates NarrativeEvents for story generation.
  */
 export interface NarrativeConfig {
-  /** Enable narrative event tracking (default: false) */
+  /** Enable narrative event tracking (default: true) */
   enabled: boolean;
-  /** Minimum significance score to include event (default: 0.3) */
+  /** Minimum significance score to include event (default: 0) */
   minSignificance: number;
-  /** Track relationship changes in addition to entity changes */
-  trackRelationships?: boolean;
 }
 
 // Tag Taxonomy System

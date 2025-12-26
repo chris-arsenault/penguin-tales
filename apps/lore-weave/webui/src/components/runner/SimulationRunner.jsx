@@ -63,9 +63,8 @@ export default function SimulationRunner({
     targetEntitiesPerKind: 20,
     maxTicks: 500,
     // Narrative event tracking
-    narrativeEnabled: false,
-    narrativeMinSignificance: 0.3,
-    narrativeTrackRelationships: false,
+    narrativeEnabled: true,
+    narrativeMinSignificance: 0,
   });
 
   // Debug configuration
@@ -152,7 +151,6 @@ export default function SimulationRunner({
       narrativeConfig: {
         enabled: params.narrativeEnabled,
         minSignificance: params.narrativeMinSignificance,
-        trackRelationships: params.narrativeTrackRelationships,
       },
     };
   }, [schema, eras, pressures, generators, systems, actions, params, seedRelationships, debugConfig]);

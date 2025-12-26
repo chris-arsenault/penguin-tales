@@ -68,7 +68,16 @@ function categorizeCosts(summary) {
 
   const textTypes = ['description'];
   const imageTypes = ['image', 'imagePrompt'];
-  const storyTypes = ['storyPlan', 'storyScene', 'storyAssembly', 'storyValidation', 'storyRevision'];
+  const storyTypes = [
+    'storyPlan',
+    'storyScene',
+    'storyAssembly',
+    'storyValidation',
+    'storyRevision',
+    'storySummary',
+    'storyImageRefs',
+    'storyProseBlend',
+  ];
 
   for (const [type, data] of Object.entries(summary.byType)) {
     if (textTypes.includes(type)) {

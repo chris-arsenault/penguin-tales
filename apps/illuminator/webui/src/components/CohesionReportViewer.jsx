@@ -11,6 +11,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import ChronicleImagePanel from './ChronicleImagePanel';
 
 const STATUS_STYLES = {
   excellent: { bg: '#10b98120', color: '#10b981', label: 'Excellent' },
@@ -197,8 +198,23 @@ export default function CohesionReportViewer({
   onAccept,
   onRegenerate,
   onCorrectSuggestions,
+  onGenerateSummary,
+  onGenerateImageRefs,
+  onBlendProse,
+  onRevalidate,
+  refinements,
+  isValidationStale = false,
   editVersion = 0,
   isGenerating = false,
+  imageRefs = null,
+  entities = null,
+  onGenerateChronicleImage = null,
+  // Style library integration props
+  styleLibrary = null,
+  cultures = null,
+  promptTemplates = null,
+  worldContext = null,
+  chronicleTitle = null,
 }) {
   const [activeTab, setActiveTab] = useState('summary');
 
@@ -245,6 +261,10 @@ export default function CohesionReportViewer({
 
   const sectionIdToName = new Map(plan?.sections?.map((s) => [s.id, s.name]) || []);
   const hasIssues = report.issues.length > 0;
+  const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
+  const summaryState = refinements?.summary || {};
+  const imageRefsState = refinements?.imageRefs || {};
+  const proseBlendState = refinements?.proseBlend || {};
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -346,6 +366,220 @@ export default function CohesionReportViewer({
           >
             {report.overallScore >= 60 ? 'Accept Chronicle ✓' : 'Accept with Issues ⚠'}
           </button>
+        </div>
+      </div>
+
+      {isValidationStale && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '12px 16px',
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: '6px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            Validation is stale after prose blending. Revalidate to refresh the report.
+          </div>
+          {onRevalidate && (
+            <button
+              onClick={onRevalidate}
+              disabled={isGenerating}
+              style={{
+                padding: '8px 14px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                opacity: isGenerating ? 0.6 : 1,
+                fontSize: '12px',
+              }}
+            >
+              Revalidate
+            </button>
+          )}
+        </div>
+      )}
+
+      <div
+        style={{
+          marginBottom: '24px',
+          padding: '16px',
+          background: 'var(--bg-secondary)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+        }}
+      >
+        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
+          Optional Refinements
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* 1. Prose Blending - should run first as it rewrites content */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 500 }}>Prose Blending</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Rewrite into a more cohesive, freeform narrative.
+              </div>
+              {proseBlendState.generatedAt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Done - {formatTimestamp(proseBlendState.generatedAt)}
+                  {proseBlendState.model ? ` - ${proseBlendState.model}` : ''}
+                </div>
+              )}
+              {!proseBlendState.generatedAt && !proseBlendState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Not run yet
+                </div>
+              )}
+              {proseBlendState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Running...
+                </div>
+              )}
+            </div>
+            {onBlendProse && (
+              <button
+                onClick={onBlendProse}
+                disabled={isGenerating || proseBlendState.running}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating || proseBlendState.running ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating || proseBlendState.running ? 0.6 : 1,
+                  fontSize: '12px',
+                  height: '32px',
+                  alignSelf: 'center',
+                }}
+              >
+                {proseBlendState.generatedAt ? 'Re-run' : 'Run'}
+              </button>
+            )}
+          </div>
+
+          {/* 2. Summary */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 500 }}>Add Summary</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Generate a short summary for chronicle listings.
+              </div>
+              {summaryState.generatedAt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Done - {formatTimestamp(summaryState.generatedAt)}
+                  {summaryState.model ? ` - ${summaryState.model}` : ''}
+                </div>
+              )}
+              {!summaryState.generatedAt && !summaryState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Not run yet
+                </div>
+              )}
+              {summaryState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Running...
+                </div>
+              )}
+            </div>
+            {onGenerateSummary && (
+              <button
+                onClick={onGenerateSummary}
+                disabled={isGenerating || summaryState.running}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating || summaryState.running ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating || summaryState.running ? 0.6 : 1,
+                  fontSize: '12px',
+                  height: '32px',
+                  alignSelf: 'center',
+                }}
+              >
+                {summaryState.generatedAt ? 'Regenerate' : 'Generate'}
+              </button>
+            )}
+          </div>
+
+          {/* 3. Image Refs - should run after prose blending since it uses anchor text */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 500 }}>Add Image Refs</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Generate image placement suggestions for this chronicle.
+              </div>
+              {imageRefsState.generatedAt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Done - {formatTimestamp(imageRefsState.generatedAt)}
+                  {imageRefsState.model ? ` - ${imageRefsState.model}` : ''}
+                </div>
+              )}
+              {!imageRefsState.generatedAt && !imageRefsState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Not run yet
+                </div>
+              )}
+              {imageRefsState.running && (
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Running...
+                </div>
+              )}
+              {/* Warning if image refs exist but prose blend is newer */}
+              {imageRefsState.generatedAt && proseBlendState.generatedAt && proseBlendState.generatedAt > imageRefsState.generatedAt && (
+                <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
+                  Image refs are stale - regenerate after prose blending
+                </div>
+              )}
+            </div>
+            {onGenerateImageRefs && (
+              <button
+                onClick={onGenerateImageRefs}
+                disabled={isGenerating || imageRefsState.running}
+                style={{
+                  padding: '8px 14px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  color: 'var(--text-secondary)',
+                  cursor: isGenerating || imageRefsState.running ? 'not-allowed' : 'pointer',
+                  opacity: isGenerating || imageRefsState.running ? 0.6 : 1,
+                  fontSize: '12px',
+                  height: '32px',
+                  alignSelf: 'center',
+                }}
+              >
+                {imageRefsState.generatedAt ? 'Regenerate' : 'Generate'}
+              </button>
+            )}
+          </div>
+
+          {/* Show ChronicleImagePanel when imageRefs are available */}
+          {imageRefs && entities && (
+            <div style={{ marginTop: '4px' }}>
+              <ChronicleImagePanel
+                imageRefs={imageRefs}
+                entities={entities}
+                onGenerateImage={onGenerateChronicleImage}
+                isGenerating={isGenerating}
+                styleLibrary={styleLibrary}
+                cultures={cultures}
+                promptTemplates={promptTemplates}
+                worldContext={worldContext}
+                chronicleTitle={chronicleTitle}
+              />
+            </div>
+          )}
         </div>
       </div>
 

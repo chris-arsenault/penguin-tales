@@ -8,8 +8,8 @@
  * - Backlinks section
  */
 
-import { useMemo } from 'react';
-import type { WikiPage, HardState, ImageMetadata } from '../types/world.ts';
+import React, { useMemo, useState, useEffect } from 'react';
+import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader } from '../types/world.ts';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -36,6 +36,12 @@ const styles = {
     fontWeight: 600,
     color: colors.textPrimary,
     marginBottom: '8px',
+  },
+  summary: {
+    fontSize: '14px',
+    lineHeight: 1.6,
+    color: colors.textSecondary,
+    marginTop: '8px',
   },
   breadcrumbs: {
     fontSize: '12px',
@@ -220,13 +226,332 @@ const styles = {
     cursor: 'pointer',
     border: 'none',
   },
+  // Chronicle inline image styles - Wikipedia-style thumb frames
+  sectionWithImages: {
+    position: 'relative' as const,
+  },
+  // Wikipedia-style thumb: floated box with frame, border, caption
+  imageThumbRight: {
+    float: 'right' as const,
+    clear: 'right' as const,
+    margin: '4px 0 12px 16px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    backgroundColor: colors.bgSecondary,
+    padding: '4px',
+  },
+  imageThumbLeft: {
+    float: 'left' as const,
+    clear: 'left' as const,
+    margin: '4px 16px 12px 0',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    backgroundColor: colors.bgSecondary,
+    padding: '4px',
+  },
+  imageSmall: {
+    width: '150px',
+  },
+  imageMedium: {
+    width: '220px',
+  },
+  imageLarge: {
+    width: '350px',
+    margin: '16px auto',
+    display: 'block',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    backgroundColor: colors.bgSecondary,
+    padding: '4px',
+  },
+  imageFullWidth: {
+    width: '100%',
+    margin: '24px 0',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    backgroundColor: colors.bgSecondary,
+    padding: '4px',
+  },
+  figureImage: {
+    width: '100%',
+    display: 'block',
+    borderRadius: '2px',
+  },
+  imageCaption: {
+    fontSize: '11px',
+    lineHeight: 1.4,
+    color: colors.textMuted,
+    padding: '6px 4px 2px',
+    textAlign: 'center' as const,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '100px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: colors.textMuted,
+    fontSize: '11px',
+    backgroundColor: colors.bgTertiary,
+    borderRadius: '2px',
+  },
+  clearfix: {
+    clear: 'both' as const,
+  },
 };
+
+/**
+ * Check if image size is a float (small/medium) vs block (large/full-width)
+ */
+function isFloatImage(size: WikiSectionImage['size']): boolean {
+  return size === 'small' || size === 'medium';
+}
+
+/**
+ * Get the combined style for an image based on size
+ * Float images (small/medium): thumb frame + size width
+ * Block images (large/full-width): centered block style
+ */
+function getImageStyle(size: WikiSectionImage['size'], position: 'left' | 'right' = 'right'): React.CSSProperties {
+  const isFloat = isFloatImage(size);
+
+  if (isFloat) {
+    const thumbStyle = position === 'left' ? styles.imageThumbLeft : styles.imageThumbRight;
+    const sizeStyle = size === 'small' ? styles.imageSmall : styles.imageMedium;
+    return { ...thumbStyle, ...sizeStyle };
+  }
+
+  // Block images
+  return size === 'full-width' ? styles.imageFullWidth : styles.imageLarge;
+}
+
+/**
+ * ChronicleImage - Renders an inline chronicle image
+ * Uses imageLoader for on-demand loading, falls back to imageData if available
+ */
+function ChronicleImage({
+  image,
+  imageData,
+  imageLoader,
+}: {
+  image: WikiSectionImage;
+  imageData: ImageMetadata | null;
+  imageLoader?: ImageLoader;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadImage() {
+      // Prefer imageLoader (lazy loading from IndexedDB)
+      if (imageLoader) {
+        try {
+          const url = await imageLoader(image.imageId);
+          if (!cancelled) {
+            setImageUrl(url);
+            setLoading(false);
+          }
+        } catch (err) {
+          if (!cancelled) {
+            console.error('Failed to load image:', image.imageId, err);
+            setLoading(false);
+          }
+        }
+        return;
+      }
+
+      // Fallback to pre-loaded imageData
+      if (imageData?.results) {
+        const imageResult = imageData.results.find(r => r.imageId === image.imageId);
+        if (imageResult?.localPath) {
+          const path = imageResult.localPath;
+          const webPath = path.startsWith('blob:') || path.startsWith('data:')
+            ? path
+            : path.replace('output/images/', 'images/');
+          setImageUrl(webPath);
+        }
+      }
+      setLoading(false);
+    }
+
+    loadImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [image.imageId, imageData, imageLoader]);
+
+  const imageStyle = getImageStyle(image.size);
+
+  if (loading) {
+    return (
+      <figure style={imageStyle}>
+        <div style={styles.imagePlaceholder}>Loading...</div>
+      </figure>
+    );
+  }
+
+  if (error || !imageUrl) {
+    return null; // Don't render if image not found
+  }
+
+  return (
+    <figure style={imageStyle}>
+      <img
+        src={imageUrl}
+        alt={image.caption || 'Chronicle illustration'}
+        style={styles.figureImage}
+        onError={() => setError(true)}
+      />
+      {image.caption && (
+        <figcaption style={styles.imageCaption}>{image.caption}</figcaption>
+      )}
+    </figure>
+  );
+}
+
+/**
+ * SectionWithImages - Renders a section with Wikipedia-style image layout
+ *
+ * For text to properly wrap around floated images, we need:
+ * 1. Float images FIRST in the DOM, before the text they float with
+ * 2. Text in a single continuous block (not fragmented into separate divs)
+ * 3. Block images inserted at paragraph boundaries
+ *
+ * Wikipedia approach: float images at section start, text flows around them
+ */
+function SectionWithImages({
+  section,
+  imageData,
+  imageLoader,
+  renderContent,
+}: {
+  section: WikiSection;
+  imageData: ImageMetadata | null;
+  imageLoader?: ImageLoader;
+  renderContent: (text: string) => React.ReactNode;
+}) {
+  const images = section.images || [];
+  if (images.length === 0) {
+    return (
+      <div style={styles.paragraph}>
+        {renderContent(section.content)}
+      </div>
+    );
+  }
+
+  const content = section.content;
+
+  // Separate float images (small/medium) from block images (large/full-width)
+  const floatImages: WikiSectionImage[] = [];
+  const blockImages: Array<{ image: WikiSectionImage; position: number }> = [];
+
+  for (const img of images) {
+    if (isFloatImage(img.size)) {
+      floatImages.push(img);
+    } else {
+      // Find anchor position for block images to insert at paragraph boundaries
+      const anchorLower = img.anchorText.toLowerCase();
+      const contentLower = content.toLowerCase();
+      const position = contentLower.indexOf(anchorLower);
+      blockImages.push({ image: img, position: position >= 0 ? position : content.length });
+    }
+  }
+
+  // Sort block images by position
+  blockImages.sort((a, b) => a.position - b.position);
+
+  // If we have block images, we need to split content at paragraph boundaries
+  // Otherwise, render all text as one block with float images at the start
+  if (blockImages.length === 0) {
+    // Simple case: only float images - put them first, then all text
+    return (
+      <div style={styles.sectionWithImages}>
+        {floatImages.map((img, i) => (
+          <ChronicleImage key={`float-${img.refId}-${i}`} image={img} imageData={imageData} imageLoader={imageLoader} />
+        ))}
+        <div style={styles.paragraph}>
+          {renderContent(content)}
+        </div>
+        <div style={styles.clearfix} />
+      </div>
+    );
+  }
+
+  // Complex case: mix of float and block images
+  // Split content at paragraph boundaries where block images should be inserted
+  const fragments: Array<{ type: 'text'; content: string } | { type: 'block-image'; image: WikiSectionImage }> = [];
+  let lastIndex = 0;
+
+  for (const { image, position } of blockImages) {
+    // Find paragraph boundary after the anchor
+    const anchorEnd = position + image.anchorText.length;
+    const paragraphEnd = content.indexOf('\n\n', anchorEnd);
+    const insertPoint = paragraphEnd >= 0 ? paragraphEnd : content.length;
+
+    if (insertPoint > lastIndex) {
+      fragments.push({ type: 'text', content: content.slice(lastIndex, insertPoint) });
+    }
+    fragments.push({ type: 'block-image', image });
+    lastIndex = paragraphEnd >= 0 ? paragraphEnd + 2 : content.length;
+  }
+
+  // Add remaining content
+  if (lastIndex < content.length) {
+    fragments.push({ type: 'text', content: content.slice(lastIndex) });
+  }
+
+  // Render: float images first (they'll float right), then fragments
+  // The first text fragment will flow around the floats
+  let floatsRendered = false;
+
+  return (
+    <div style={styles.sectionWithImages}>
+      {fragments.map((fragment, i) => {
+        if (fragment.type === 'block-image') {
+          return (
+            <React.Fragment key={`block-${fragment.image.refId}-${i}`}>
+              <div style={styles.clearfix} />
+              <ChronicleImage image={fragment.image} imageData={imageData} imageLoader={imageLoader} />
+            </React.Fragment>
+          );
+        } else {
+          // For the first text fragment, prepend float images
+          if (!floatsRendered && floatImages.length > 0) {
+            floatsRendered = true;
+            return (
+              <React.Fragment key={`text-${i}`}>
+                {floatImages.map((img, j) => (
+                  <ChronicleImage key={`float-${img.refId}-${j}`} image={img} imageData={imageData} imageLoader={imageLoader} />
+                ))}
+                <div style={styles.paragraph}>
+                  {renderContent(fragment.content)}
+                </div>
+              </React.Fragment>
+            );
+          }
+          return (
+            <div key={`text-${i}`} style={styles.paragraph}>
+              {renderContent(fragment.content)}
+            </div>
+          );
+        }
+      })}
+      {/* Final clearfix to contain floats */}
+      <div style={styles.clearfix} />
+    </div>
+  );
+}
 
 interface WikiPageViewProps {
   page: WikiPage;
   pages: WikiPage[];
   entityIndex: Map<string, HardState>;
   imageData: ImageMetadata | null;
+  imageLoader?: ImageLoader;
   onNavigate: (pageId: string) => void;
   onNavigateToEntity: (entityId: string) => void;
 }
@@ -235,12 +560,11 @@ export default function WikiPageView({
   page,
   pages,
   entityIndex,
-  imageData: _imageData,
+  imageData,
+  imageLoader,
   onNavigate,
   onNavigateToEntity,
 }: WikiPageViewProps) {
-  // Note: _imageData is passed for future use in inline content images
-  void _imageData;
   // Compute backlinks
   const chronicleLinks = useMemo(() => {
     return pages.filter(p =>
@@ -268,6 +592,21 @@ export default function WikiPageView({
     return map;
   }, [entityIndex]);
 
+  const aliasMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const candidate of pages) {
+      if (candidate.type !== 'entity' || !candidate.aliases?.length) continue;
+      for (const alias of candidate.aliases) {
+        const normalized = alias.toLowerCase().trim();
+        if (!normalized || entityNameMap.has(normalized)) continue;
+        if (!map.has(normalized)) {
+          map.set(normalized, candidate.id);
+        }
+      }
+    }
+    return map;
+  }, [pages, entityNameMap]);
+
   // Parse content and resolve [[Entity Name]] links
   const parseContent = (text: string) => {
     const parts: (string | { type: 'link'; name: string; entityId: string })[] = [];
@@ -282,7 +621,8 @@ export default function WikiPageView({
       }
 
       const name = match[1];
-      const entityId = entityNameMap.get(name.toLowerCase());
+      const normalized = name.toLowerCase().trim();
+      const entityId = entityNameMap.get(normalized) || aliasMap.get(normalized);
 
       if (entityId) {
         parts.push({ type: 'link', name, entityId });
@@ -346,6 +686,9 @@ export default function WikiPageView({
           <span style={{ color: colors.textSecondary }}>{page.title}</span>
         </div>
         <h1 style={styles.title}>{page.title}</h1>
+        {page.content.summary && (
+          <div style={styles.summary}>{page.content.summary}</div>
+        )}
       </div>
 
       <div style={styles.content}>
@@ -377,9 +720,18 @@ export default function WikiPageView({
           {page.content.sections.map(section => (
             <div key={section.id} id={section.id} style={styles.section}>
               <h2 style={styles.sectionHeading}>{section.heading}</h2>
-              <div style={styles.paragraph}>
-                {renderContent(section.content)}
-              </div>
+              {section.images && section.images.length > 0 ? (
+                <SectionWithImages
+                  section={section}
+                  imageData={imageData}
+                  imageLoader={imageLoader}
+                  renderContent={renderContent}
+                />
+              ) : (
+                <div style={styles.paragraph}>
+                  {renderContent(section.content)}
+                </div>
+              )}
             </div>
           ))}
 

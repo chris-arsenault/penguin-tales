@@ -187,7 +187,7 @@ function EntityRow({
         {/* Content row: description and image side by side */}
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Description preview if exists */}
-          {enrichment.description?.text && (
+          {enrichment.description?.summary && (
             <div
               style={{
                 flex: 1,
@@ -200,7 +200,7 @@ function EntityRow({
                 overflow: 'hidden',
               }}
             >
-              {enrichment.description.text}
+              {enrichment.description.summary}
             </div>
           )}
 
@@ -424,7 +424,7 @@ export default function EntityBrowser({
       const enrichment = entity.enrichment;
       if (!enrichment) return 'missing';
 
-      if (type === 'description' && enrichment.description?.text) return 'complete';
+      if (type === 'description' && enrichment.description?.summary && enrichment.description?.description) return 'complete';
       if (type === 'image' && enrichment.image?.imageId) return 'complete';
 
       return 'missing';
@@ -539,7 +539,7 @@ export default function EntityBrowser({
         entity &&
         prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
         getStatus(entity, 'image') === 'missing' &&
-        (!config.requireDescription || entity.enrichment?.description?.text)
+        (!config.requireDescription || (entity.enrichment?.description?.summary && entity.enrichment?.description?.description))
       ) {
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
       }
@@ -605,7 +605,11 @@ export default function EntityBrowser({
         getStatus(entity, 'image') === 'missing'
       ) {
         // If requireDescription is enabled and entity lacks description, queue that first
-        if (config.requireDescription && !entity.enrichment?.description?.text && getStatus(entity, 'description') === 'missing') {
+        if (
+          config.requireDescription &&
+          !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
+          getStatus(entity, 'description') === 'missing'
+        ) {
           items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description') });
         }
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
@@ -644,7 +648,11 @@ export default function EntityBrowser({
         imgCount++;
         totalCost += imgCostPerUnit;
         // Count dependent descriptions that would be queued
-        if (config.requireDescription && !entity.enrichment?.description?.text && getStatus(entity, 'description') === 'missing') {
+        if (
+          config.requireDescription &&
+          !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
+          getStatus(entity, 'description') === 'missing'
+        ) {
           descCount++;
           const prompt = buildPrompt(entity, 'description');
           const estimate = estimateTextCost(prompt, 'description', config.textModel);
@@ -966,8 +974,16 @@ export default function EntityBrowser({
                   onCancelDesc={() => cancelItem(entity, 'description')}
                   onCancelImg={() => cancelItem(entity, 'image')}
                   onAssignImage={() => openImagePicker(entity)}
-                  canQueueImage={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && (!config.requireDescription || enrichment.description?.text)}
-                  needsDescription={prominenceAtLeast(entity.prominence, config.minProminenceForImage) && config.requireDescription && !enrichment.description?.text}
+                  canQueueImage={
+                    prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+                    (!config.requireDescription ||
+                      (enrichment.description?.summary && enrichment.description?.description))
+                  }
+                  needsDescription={
+                    prominenceAtLeast(entity.prominence, config.minProminenceForImage) &&
+                    config.requireDescription &&
+                    !(enrichment.description?.summary && enrichment.description?.description)
+                  }
                   onImageClick={openImageModal}
                   descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
                   imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}

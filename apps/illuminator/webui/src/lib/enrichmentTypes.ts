@@ -6,7 +6,7 @@
  */
 
 import type { NarrativeStyle } from '@canonry/world-schema';
-import type { ChronicleFormat } from './chronicleTypes';
+import type { ChronicleFormat, ChronicleImageRefs } from './chronicleTypes';
 
 export type EnrichmentType = 'description' | 'image' | 'entityStory';
 
@@ -18,7 +18,9 @@ export interface NetworkDebugInfo {
 export type EnrichmentStatus = 'missing' | 'queued' | 'running' | 'complete' | 'error';
 
 export interface EnrichmentResult {
-  text?: string;
+  summary?: string;
+  description?: string;
+  aliases?: string[];
   imageId?: string;  // Reference to stored image (worker saves directly to IndexedDB)
   storyId?: string;  // Reference to stored entity story in storyStore
   revisedPrompt?: string;
@@ -41,6 +43,8 @@ export interface AcceptedChronicle {
   title: string;
   format: ChronicleFormat;
   content: string;
+  summary?: string;
+  imageRefs?: ChronicleImageRefs;
   entrypointId: string;
   entityIds: string[];
   generatedAt?: number;
@@ -53,7 +57,9 @@ export interface AcceptedChronicle {
  */
 export interface EntityEnrichment {
   description?: {
-    text: string;
+    summary: string;
+    description: string;
+    aliases: string[];
     generatedAt: number;
     model: string;
     estimatedCost?: number;
@@ -109,6 +115,10 @@ export interface QueueItem {
   chronicleContext?: SerializableChronicleContext;
   chronicleStep?: ChronicleStep;
   storyId?: string;
+  // For chronicle image tasks
+  imageRefId?: string;
+  sceneDescription?: string;
+  imageType?: 'entity' | 'chronicle';
 }
 
 /**
@@ -122,9 +132,26 @@ export interface SerializableChronicleContext {
   canonFacts: string[];
   tone: string;
 
-  // Target metadata
-  targetType: 'entityStory';
-  targetId: string;
+  // Target metadata (legacy, kept for backwards compat)
+  targetType?: 'entityStory';
+  targetId?: string;
+
+  // Chronicle focus (primary identity - chronicle-first architecture)
+  focus?: {
+    type: 'single' | 'ensemble' | 'relationship' | 'event';
+    roleAssignments: Array<{
+      role: string;
+      entityId: string;
+      entityName: string;
+      entityKind: string;
+      isPrimary: boolean;
+    }>;
+    primaryEntityIds: string[];
+    supportingEntityIds: string[];
+    selectedEntityIds: string[];
+    selectedEventIds: string[];
+    selectedRelationshipIds: string[];
+  };
 
   // Optional era context (if available)
   era?: {
@@ -133,7 +160,7 @@ export interface SerializableChronicleContext {
     description?: string;
   };
 
-  // Target entity (for entity stories)
+  // Target entity (for entity stories - legacy, kept for backwards compat)
   entity?: {
     id: string;
     name: string;
@@ -143,8 +170,9 @@ export interface SerializableChronicleContext {
     culture?: string;
     status: string;
     tags: Record<string, string>;
+    summary?: string;
     description?: string;
-    enrichedDescription?: string;
+    aliases?: string[];
     createdAt: number;
     updatedAt: number;
   };
@@ -159,8 +187,9 @@ export interface SerializableChronicleContext {
     culture?: string;
     status: string;
     tags: Record<string, string>;
+    summary?: string;
     description?: string;
-    enrichedDescription?: string;
+    aliases?: string[];
     createdAt: number;
     updatedAt: number;
   }>;
@@ -200,7 +229,13 @@ export interface SerializableChronicleContext {
 /**
  * Which step to run for entityStory tasks
  */
-export type ChronicleStep = 'plan' | 'expand' | 'assemble' | 'validate' | 'edit';
+export type ChronicleStep =
+  | 'generate_v2'  // Single-shot generation
+  | 'validate'
+  | 'edit'
+  | 'summary'
+  | 'image_refs'
+  | 'prose_blend';
 
 /**
  * Worker task - what we send to the worker (single task)
@@ -221,8 +256,12 @@ export interface WorkerTask {
   chronicleContext?: SerializableChronicleContext;
   // Which step to run (for entityStory tasks)
   chronicleStep?: ChronicleStep;
-  // Story ID (for continuing existing story)
+  // Story ID (for continuing existing story, or for chronicle images)
   storyId?: string;
+  // For chronicle image tasks
+  imageRefId?: string;
+  sceneDescription?: string;
+  imageType?: 'entity' | 'chronicle';
 }
 
 /**
@@ -260,7 +299,7 @@ export function getEnrichmentStatus(
   const enrichment = entity.enrichment;
   if (!enrichment) return 'missing';
 
-  if (type === 'description' && enrichment.description?.text) return 'complete';
+  if (type === 'description' && enrichment.description?.summary && enrichment.description?.description) return 'complete';
   if (type === 'image' && enrichment.image?.imageId) return 'complete';
   if (type === 'entityStory' && enrichment.entityStory?.storyId) return 'complete';
 
@@ -277,7 +316,7 @@ export function needsEnrichment(
   const enrichment = entity.enrichment;
   if (!enrichment) return true;
 
-  if (type === 'description') return !enrichment.description?.text;
+  if (type === 'description') return !(enrichment.description?.summary && enrichment.description?.description);
   if (type === 'image') return !enrichment.image?.imageId;
   if (type === 'entityStory') return !enrichment.entityStory?.storyId;
 
@@ -294,11 +333,13 @@ export function applyEnrichmentResult(
 ): EntityEnrichment {
   const existing = entity.enrichment || {};
 
-  if (type === 'description' && result.text) {
+  if (type === 'description' && result.summary && result.description) {
     return {
       ...existing,
       description: {
-        text: result.text,
+        summary: result.summary,
+        description: result.description,
+        aliases: result.aliases || [],
         generatedAt: result.generatedAt,
         model: result.model,
         estimatedCost: result.estimatedCost,

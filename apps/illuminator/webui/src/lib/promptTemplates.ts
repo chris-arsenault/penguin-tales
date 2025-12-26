@@ -186,10 +186,15 @@ Consider their age in the world ({{entityAge}}) - ancient entities carry history
 
   constraints: `Never contradict these facts: {{world.canonFacts}}
 
-Work WITH the existing description if present, expanding rather than replacing.
 Don't invent major relationships not implied by the data - the relationships provided are canonical.`,
 
-  outputFormat: `2-3 sentences. Dense with meaning, grounded in specifics. Name at least one relationship or cultural detail when relevant.`,
+  outputFormat: `Return JSON only with keys summary, description, aliases.
+
+summary: 1-2 sentences, compressed and faithful to the description.
+description: 2-4 sentences, vivid and specific.
+aliases: array of alternate names or titles (can be empty).
+
+Summary and description must not contradict; the summary should not add new facts.`,
 };
 
 export const DEFAULT_IMAGE_TEMPLATE: ImageTemplate = {
@@ -379,8 +384,24 @@ export function buildDescriptionPrompt(
   context: PromptContext,
   descriptiveInfo?: DescriptiveInfo
 ): string {
+  const requiredOutput = `OUTPUT FORMAT (required):
+Return JSON only with keys summary, description, aliases.
+
+summary: 1-2 sentences, compressed and faithful to the description.
+description: 2-4 sentences, vivid and specific.
+aliases: array of alternate names or titles (can be empty).
+
+Summary and description must not contradict; the summary should not add new facts.`;
+
   if (template.fullTemplate) {
-    return expandTemplate(template.fullTemplate, context);
+    return [
+      expandTemplate(template.fullTemplate, context),
+      '',
+      requiredOutput,
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
   }
 
   const e = context.entity.entity;
@@ -402,7 +423,6 @@ export function buildDescriptionPrompt(
     `- Status: ${e.status}`,
     `- Culture: ${e.culture || 'unaffiliated'}`,
     `- Age in world: ${context.entity.entityAge}`,
-    e.description ? `- Existing description: ${e.description}` : '',
     '',
     tagsSection,
     descriptiveIdentitySection,
@@ -428,6 +448,8 @@ export function buildDescriptionPrompt(
     '',
     'FORMAT:',
     expandTemplate(template.outputFormat, context),
+    '',
+    requiredOutput,
   ];
 
   return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
@@ -446,9 +468,7 @@ export function buildImagePrompt(
   }
 
   const e = context.entity.entity;
-  // Use enriched description if available (from multishot prompting), fall back to original
-  const enrichedDesc = (context.entity as { enrichedDescription?: string }).enrichedDescription;
-  const descriptionText = enrichedDesc || e.description;
+  const descriptionText = e.description;
 
   // Build sections
   const styleSection = styleInfo?.artisticPromptFragment
@@ -482,6 +502,91 @@ export function buildImagePrompt(
     `MOOD: ${expandTemplate(template.mood, context)}`,
     '',
     `AVOID: ${expandTemplate(template.avoidElements, context)}`,
+  ];
+
+  return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Chronicle image size to composition hint mapping
+ */
+const SIZE_COMPOSITION_HINTS: Record<string, string> = {
+  small: 'compact vignette, focused detail shot, thumbnail-friendly',
+  medium: 'balanced composition, scene establishing shot',
+  large: 'dramatic wide shot, environmental storytelling',
+  'full-width': 'panoramic vista, epic landscape, sweeping scene',
+};
+
+/**
+ * Context for building chronicle image prompts
+ */
+export interface ChronicleImageContext {
+  /** LLM-generated scene description */
+  sceneDescription: string;
+  /** Size hint for composition */
+  size: 'small' | 'medium' | 'large' | 'full-width';
+  /** Chronicle title for context */
+  chronicleTitle?: string;
+  /** Primary culture for visual identity */
+  culture?: string;
+  /** World context */
+  world?: {
+    name: string;
+    description?: string;
+    tone?: string;
+  };
+}
+
+/**
+ * Build an image prompt for chronicle scene images
+ * Combines scene description with style library and cultural theming
+ */
+export function buildChronicleImagePrompt(
+  context: ChronicleImageContext,
+  styleInfo?: StyleInfo
+): string {
+  const { sceneDescription, size, chronicleTitle, culture, world } = context;
+
+  // Build style section from artistic style
+  const styleSection = styleInfo?.artisticPromptFragment
+    ? `STYLE: ${styleInfo.artisticPromptFragment}`
+    : '';
+
+  // Build composition section - prefer explicit style, fall back to size-based hint
+  const compositionHint = SIZE_COMPOSITION_HINTS[size] || SIZE_COMPOSITION_HINTS.medium;
+  const compositionSection = styleInfo?.compositionPromptFragment
+    ? `COMPOSITION: ${styleInfo.compositionPromptFragment}\nSIZE HINT: ${compositionHint}`
+    : `COMPOSITION: ${compositionHint}`;
+
+  // Visual identity from culture
+  const visualIdentitySection = culture
+    ? buildVisualIdentitySection(styleInfo?.visualIdentity, culture)
+    : '';
+
+  // Culture keywords
+  const cultureSection = styleInfo?.cultureKeywords?.length
+    ? `CULTURAL NOTES: ${styleInfo.cultureKeywords.join(', ')}`
+    : '';
+
+  // World context
+  const worldSection = world
+    ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}${world.tone ? `\nTONE: ${world.tone}` : ''}`
+    : '';
+
+  const parts = [
+    styleSection,
+    '',
+    `SCENE: ${sceneDescription}`,
+    chronicleTitle ? `FROM: "${chronicleTitle}"` : '',
+    '',
+    worldSection,
+    '',
+    visualIdentitySection,
+    cultureSection,
+    '',
+    compositionSection,
+    '',
+    'AVOID: Modern elements, anachronistic technology, text overlays, watermarks',
   ];
 
   return parts.filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim();

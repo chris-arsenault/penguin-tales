@@ -40,12 +40,12 @@ export function resolveEraInfo(
     (entity) =>
       entity.kind === FRAMEWORK_ENTITY_KINDS.ERA &&
       (entity.id === eraKey || entity.name === eraKey)
-  );
+  ) as (WorldEntity & { enrichment?: { description?: { description?: string } } }) | undefined;
 
   if (eraEntity) {
     return {
       name: eraEntity.name,
-      description: eraEntity.description || undefined,
+      description: eraEntity.enrichment?.description?.description,
     };
   }
 

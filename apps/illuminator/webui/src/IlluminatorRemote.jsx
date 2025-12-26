@@ -73,6 +73,43 @@ const DEFAULT_CONFIG = {
   claudeImagePromptTemplate: DEFAULT_IMAGE_PROMPT_TEMPLATE,
 };
 
+const normalizeEnrichmentConfig = (config) => {
+  if (!config) return null;
+  const normalized = { ...config };
+
+  if (!normalized.textModel && normalized.textModal) {
+    normalized.textModel = normalized.textModal;
+  }
+  if (!normalized.chronicleModel && normalized.chronicleModal) {
+    normalized.chronicleModel = normalized.chronicleModal;
+  }
+  if (normalized.textModal) {
+    delete normalized.textModal;
+  }
+  if (normalized.chronicleModal) {
+    delete normalized.chronicleModal;
+  }
+
+  if (!normalized.textModel) {
+    normalized.textModel = DEFAULT_CONFIG.textModel;
+  }
+  if (!normalized.chronicleModel) {
+    normalized.chronicleModel = normalized.textModel;
+  }
+
+  return { ...DEFAULT_CONFIG, ...normalized };
+};
+
+const needsConfigSync = (config) => {
+  if (!config) return false;
+  return (
+    !config.textModel ||
+    !config.chronicleModel ||
+    Boolean(config.textModal) ||
+    Boolean(config.chronicleModal)
+  );
+};
+
 // Default world context
 const DEFAULT_WORLD_CONTEXT = {
   name: '',
@@ -82,7 +119,9 @@ const DEFAULT_WORLD_CONTEXT = {
 };
 
 const DESCRIPTION_FIELDS = [
-  'text',
+  'summary',
+  'description',
+  'aliases',
   'generatedAt',
   'model',
   'estimatedCost',
@@ -112,7 +151,17 @@ const isSectionEqual = (left, right, fields) => {
   if (left === right) return true;
   if (!left || !right) return false;
   for (const field of fields) {
-    if (left[field] !== right[field]) return false;
+    const leftValue = left[field];
+    const rightValue = right[field];
+    if (Array.isArray(leftValue) || Array.isArray(rightValue)) {
+      if (!Array.isArray(leftValue) || !Array.isArray(rightValue)) return false;
+      if (leftValue.length !== rightValue.length) return false;
+      for (let i = 0; i < leftValue.length; i += 1) {
+        if (leftValue[i] !== rightValue[i]) return false;
+      }
+      continue;
+    }
+    if (leftValue !== rightValue) return false;
   }
   return true;
 };
@@ -129,6 +178,8 @@ const isChroniclesEqual = (left, right) => {
       title: entry.title,
       format: entry.format,
       content: entry.content,
+      summary: entry.summary,
+      imageRefs: entry.imageRefs,
       entrypointId: entry.entrypointId,
       acceptedAt: entry.acceptedAt,
       generatedAt: entry.generatedAt,
@@ -219,12 +270,12 @@ export default function IlluminatorRemote({
   const [localConfig, setLocalConfig] = useState(() => {
     // Prefer external config, fall back to localStorage
     if (externalEnrichmentConfig) {
-      return { ...DEFAULT_CONFIG, ...externalEnrichmentConfig };
+      return normalizeEnrichmentConfig(externalEnrichmentConfig) || DEFAULT_CONFIG;
     }
     try {
       const saved = localStorage.getItem('illuminator:config');
       if (saved) {
-        return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+        return normalizeEnrichmentConfig(JSON.parse(saved)) || DEFAULT_CONFIG;
       }
     } catch {}
     return DEFAULT_CONFIG;
@@ -233,9 +284,13 @@ export default function IlluminatorRemote({
   // Sync from external config when it changes
   useEffect(() => {
     if (externalEnrichmentConfig) {
-      setLocalConfig({ ...DEFAULT_CONFIG, ...externalEnrichmentConfig });
+      const normalized = normalizeEnrichmentConfig(externalEnrichmentConfig) || DEFAULT_CONFIG;
+      setLocalConfig(normalized);
+      if (onEnrichmentConfigChange && needsConfigSync(externalEnrichmentConfig)) {
+        onEnrichmentConfigChange(normalized);
+      }
     }
-  }, [externalEnrichmentConfig]);
+  }, [externalEnrichmentConfig, onEnrichmentConfigChange]);
 
   // Use the local config as the active config
   const config = localConfig;
@@ -437,28 +492,6 @@ export default function IlluminatorRemote({
     );
   }, []);
 
-  const handleChronicleAccepted = useCallback((entityId, chronicle) => {
-    setEntities((prev) =>
-      prev.map((entity) => {
-        if (entity.id !== entityId) return entity;
-        const existing = Array.isArray(entity.enrichment?.chronicles)
-          ? entity.enrichment.chronicles
-          : [];
-        const updated = [
-          ...existing.filter((entry) => entry.chronicleId !== chronicle.chronicleId),
-          chronicle,
-        ].sort((a, b) => (b.acceptedAt || 0) - (a.acceptedAt || 0));
-        return {
-          ...entity,
-          enrichment: {
-            ...entity.enrichment,
-            chronicles: updated,
-          },
-        };
-      })
-    );
-  }, []);
-
   // Extract simulationRunId from worldData for content association
   const simulationRunId = worldData?.metadata?.simulationRunId;
 
@@ -578,7 +611,7 @@ export default function IlluminatorRemote({
             prominence: entity.prominence,
             culture: entity.culture || '',
             status: entity.status || 'active',
-            description: entity.description || '',
+            description: entity.enrichment?.description?.description || '',
             tags: entity.tags || {},
           },
           relationships,
@@ -614,10 +647,10 @@ export default function IlluminatorRemote({
         return buildDescriptionPrompt(template, context, descriptiveInfo);
       } else if (type === 'image') {
         const template = getEffectiveTemplate(templates, entity.kind, 'image');
-        // Include enriched description if available (for multishot prompting)
-        const enrichedDescription = entity.enrichment?.description?.text;
+        // Use enriched description if available (for multishot prompting)
+        const enrichedDescription = entity.enrichment?.description?.description;
         if (enrichedDescription) {
-          context.entity.enrichedDescription = enrichedDescription;
+          context.entity.entity.description = enrichedDescription;
         }
 
         // Resolve style selection for this entity
@@ -907,7 +940,9 @@ export default function IlluminatorRemote({
               projectId={projectId}
               simulationRunId={simulationRunId}
               buildPrompt={buildPrompt}
-              onChronicleAccepted={handleChronicleAccepted}
+              styleLibrary={styleLibrary}
+              styleSelection={styleSelection}
+              promptTemplates={promptTemplates}
             />
           </div>
         )}

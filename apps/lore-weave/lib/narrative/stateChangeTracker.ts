@@ -658,12 +658,11 @@ export class StateChangeTracker {
 }
 
 /**
- * Create a default narrative config (disabled)
+ * Create a default narrative config (enabled)
  */
 export function createDefaultNarrativeConfig(): NarrativeConfig {
   return {
-    enabled: false,
-    minSignificance: 0.3,
-    trackRelationships: false,
+    enabled: true,
+    minSignificance: 0,
   };
 }

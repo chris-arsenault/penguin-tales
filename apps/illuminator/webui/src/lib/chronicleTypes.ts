@@ -24,7 +24,6 @@ export interface NarrativeFocus {
   entrypointId: string;
   primaryEntityIds: string[];
   supportingEntityIds: string[];
-  requiredNeighborIds: string[];
   selectedEntityIds: string[];
   selectedEventIds: string[];
   notes?: string;
@@ -165,19 +164,36 @@ export interface CohesionReport {
 
 export type ChronicleStatus =
   | 'not_started'
-  | 'planning' // Step 1 in progress
-  | 'plan_ready' // Step 1 complete, awaiting user review
-  | 'expanding' // Step 2 in progress
-  | 'sections_ready' // Step 2 complete, awaiting user review
-  | 'assembling' // Step 3 in progress
-  | 'assembly_ready' // Step 3 complete, awaiting user review
+  | 'generating' // Generation in progress
+  | 'assembly_ready' // Generation complete, awaiting user review
   | 'editing' // Revision in progress
-  | 'validating' // Step 4 in progress
-  | 'validation_ready' // Step 4 complete, issues may exist
+  | 'validating' // Validation in progress
+  | 'validation_ready' // Validation complete, issues may exist
   | 'failed' // Generation failed; requires regeneration
   | 'complete'; // All steps done, accepted
 
 export type ChronicleType = 'entityStory';
+
+// =============================================================================
+// Chronicle Wizard Types - Role assignments from wizard flow
+// =============================================================================
+
+/**
+ * A role assignment from the chronicle wizard.
+ * Maps an entity to a role defined in the NarrativeStyle's entityRules.roles.
+ */
+export interface ChronicleRoleAssignment {
+  /** Role ID from style's entityRules.roles (e.g., 'protagonist', 'antagonist') */
+  role: string;
+  /** Assigned entity ID */
+  entityId: string;
+  /** Entity name (denormalized for display) */
+  entityName: string;
+  /** Entity kind (denormalized for display) */
+  entityKind: string;
+  /** User toggle: primary emphasis vs supporting */
+  isPrimary: boolean;
+}
 
 // =============================================================================
 // Generation Context - Input to each generation step
@@ -193,13 +209,12 @@ export interface EntityContext {
   culture?: string;
   status: string;
   tags: Record<string, string>;
+  summary?: string;
   description?: string;
+  aliases?: string[];
   coordinates?: { x: number; y: number };
   createdAt: number;
   updatedAt: number;
-
-  // Enriched content (from Layer 1)
-  enrichedDescription?: string;
 }
 
 export interface RelationshipContext {
@@ -246,6 +261,35 @@ export interface NarrativeEventContext {
   narrativeTags?: string[];
 }
 
+// =============================================================================
+// Chronicle Focus - Defines what the chronicle is about (chronicle-first)
+// =============================================================================
+
+export type ChronicleFocusType = 'single' | 'ensemble' | 'relationship' | 'event';
+
+export interface ChronicleFocus {
+  /** What type of chronicle is this? */
+  type: ChronicleFocusType;
+
+  /** Role assignments define the cast - THIS IS THE PRIMARY IDENTITY */
+  roleAssignments: ChronicleRoleAssignment[];
+
+  /** Entity IDs of primary characters (derived from isPrimary=true) */
+  primaryEntityIds: string[];
+
+  /** Entity IDs of supporting characters (derived from isPrimary=false) */
+  supportingEntityIds: string[];
+
+  /** All selected entity IDs */
+  selectedEntityIds: string[];
+
+  /** All selected event IDs */
+  selectedEventIds: string[];
+
+  /** All selected relationship IDs */
+  selectedRelationshipIds: string[];
+}
+
 export interface ChronicleGenerationContext {
   // World context (user-defined)
   worldName: string;
@@ -253,25 +297,33 @@ export interface ChronicleGenerationContext {
   canonFacts: string[];
   tone: string;
 
-  // Target of generation
-  targetType: ChronicleType;
-  targetId: string;
+  // Chronicle focus (chronicle-first architecture)
+  focus: ChronicleFocus;
 
-  // Optional era context (derived from entrypoint activity)
+  // Optional era context
   era?: EraContext;
 
-  // For entity stories
-  entity?: EntityContext;
-
-  // All entities (for cross-referencing)
+  // All selected entities (full context)
   entities: EntityContext[];
 
-  // Relationships involving target
+  // Selected relationships
   relationships: RelationshipContext[];
 
-  // NarrativeEvents (filtered by relevance)
+  // Selected events
   events: NarrativeEventContext[];
 
+  // ==========================================================================
+  // Legacy fields (deprecated, kept for backwards compat during migration)
+  // ==========================================================================
+
+  /** @deprecated Use focus.type instead */
+  targetType?: ChronicleType;
+  /** @deprecated Use focus.primaryEntityIds[0] instead */
+  targetId?: string;
+  /** @deprecated Use focus.roleAssignments to find primary entity */
+  entity?: EntityContext;
+  /** @deprecated Use focus.roleAssignments instead */
+  roleAssignments?: ChronicleRoleAssignment[];
 }
 
 // =============================================================================
@@ -282,4 +334,55 @@ export interface AssemblyResult {
   success: boolean;
   content?: string;
   error?: string;
+}
+
+// =============================================================================
+// Chronicle Image References - Output of Image Refs Step
+// =============================================================================
+
+/** Display size hint for chronicle images */
+export type ChronicleImageSize = 'small' | 'medium' | 'large' | 'full-width';
+
+/** Base properties shared by all image reference types */
+interface BaseChronicleImageRef {
+  /** Unique ID for this image reference */
+  refId: string;
+  /** Section ID where image should appear */
+  sectionId: string;
+  /** Text phrase to anchor image near (for paragraph-level positioning) */
+  anchorText: string;
+  /** Display size hint */
+  size: ChronicleImageSize;
+  /** Optional caption for the image */
+  caption?: string;
+}
+
+/** Reference to an existing entity image */
+export interface EntityImageRef extends BaseChronicleImageRef {
+  type: 'entity_ref';
+  /** Entity ID whose image to use */
+  entityId: string;
+}
+
+/** Request for a new prompt-generated image */
+export interface PromptRequestRef extends BaseChronicleImageRef {
+  type: 'prompt_request';
+  /** LLM-generated scene description for image generation */
+  sceneDescription: string;
+  /** Generation state */
+  status: 'pending' | 'generating' | 'complete' | 'failed';
+  /** Generated imageId (after generation) */
+  generatedImageId?: string;
+  /** Error message if generation failed */
+  error?: string;
+}
+
+/** Union type for all chronicle image references */
+export type ChronicleImageRef = EntityImageRef | PromptRequestRef;
+
+/** Structured image refs stored in StoryRecord */
+export interface ChronicleImageRefs {
+  refs: ChronicleImageRef[];
+  generatedAt: number;
+  model: string;
 }
