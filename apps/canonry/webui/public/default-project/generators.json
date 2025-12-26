@@ -789,9 +789,8 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "A bustling trade hub chartered by {guildName} in {colonyName}",
+          "template": "A bustling trade hub in {colonyName}, serving as the commercial heart of the region",
           "replacements": {
-            "guildName": "$guild.name",
             "colonyName": "$target.name"
           }
         },
@@ -829,9 +828,8 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "The charter granting {guildName} authority over trade in {colonyName}",
+          "template": "A charter granting exclusive trading rights in {colonyName}",
           "replacements": {
-            "guildName": "$guild.name",
             "colonyName": "$target.name"
           }
         },
@@ -1244,9 +1242,9 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "A satellite outpost founded near {colonyName}",
+          "template": "A satellite outpost founded by settlers from {parentColony}",
           "replacements": {
-            "colonyName": "$colony.name"
+            "parentColony": "$target.name"
           }
         },
         "tags": {
@@ -1307,9 +1305,9 @@
           "influential": true
         },
         "description": {
-          "template": "A governing council chartered to lead {colonyName}",
+          "template": "A governing council formed by pioneers from {parentColony}",
           "replacements": {
-            "colonyName": "$colony.name"
+            "parentColony": "$target.name"
           }
         }
       }
@@ -1378,6 +1376,12 @@
         "prominence": "recognized",
         "culture": {
           "inherit": "$target"
+        },
+        "description": {
+          "template": "A resource-rich site discovered by {discovererName} during an expedition",
+          "replacements": {
+            "discovererName": "$target.name"
+          }
         },
         "tags": {
           "discovered": true,
@@ -1626,6 +1630,12 @@
         "subtype": "company",
         "culture": {
           "inherit": "$target"
+        },
+        "description": {
+          "template": "A harvesting company formed near {colonyName} to exploit the krill blooms",
+          "replacements": {
+            "colonyName": "$target.name"
+          }
         },
         "placement": {
           "anchor": {
@@ -3883,9 +3893,10 @@
           "inherit": "$target"
         },
         "description": {
-          "template": "Mystical ability discovered by {heroName}",
+          "template": "Wild magic manifesting at {locationName}, discovered by {discovererName}",
           "replacements": {
-            "heroName": "$target.name"
+            "locationName": "$target.name",
+            "discovererName": "$discoverer.name"
           }
         },
         "tags": {

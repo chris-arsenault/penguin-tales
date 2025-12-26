@@ -14,6 +14,7 @@ import {
 import { WorldRuntime } from '../runtime/worldRuntime';
 import type { EraTransitionConfig } from '../engine/systemInterpreter';
 import { createEraEntity } from './eraSpawner';
+import { generateEntityIdFromName } from '../utils';
 import { createSystemContext, evaluateCondition, prepareMutation } from '../rules';
 import type { ConditionResult } from '../rules';
 import { PROMINENCE_ORDER } from '../rules/types';
@@ -151,11 +152,17 @@ export function createEraTransitionSystem(config: EraTransitionConfig): Simulati
       );
 
       // LAZY SPAWNING: Create new era entity
+      const nextEraId = generateEntityIdFromName(
+        nextEraConfig.name,
+        candidate => graphView.hasEntity(candidate),
+        (message, context) => graphView.log('warn', message, context)
+      );
       const { entity: nextEraEntity } = createEraEntity(
         nextEraConfig,
         graphView.tick,
         FRAMEWORK_STATUS.CURRENT,
-        currentEraEntity
+        currentEraEntity,
+        nextEraId
       );
 
       // Add new era entity to graph

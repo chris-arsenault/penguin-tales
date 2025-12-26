@@ -76,6 +76,7 @@ export {
   hasRelationship,
   normalizeInitialState,
   slugifyName,
+  generateEntityIdFromName,
   archiveRelationship,
   modifyRelationshipStrength,
   // Tag utilities

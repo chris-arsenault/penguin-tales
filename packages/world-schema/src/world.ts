@@ -88,16 +88,28 @@ export interface HistoryEvent {
 
 /**
  * Narrative event types for story generation
+ *
+ * Domain-agnostic event kinds that can be detected from framework primitives
+ * and optional polarity metadata on relationships and statuses.
  */
 export type NarrativeEventKind =
-  | 'state_change'        // Entity status/prominence changed
-  | 'relationship_change' // Relationship formed/dissolved/changed
-  | 'entity_lifecycle'    // Birth, death, formation, dissolution
-  | 'era_transition'      // Era ended/began
-  | 'conflict'            // War, battle, rivalry
-  | 'alliance'            // Alliances, mergers, cooperation
-  | 'discovery'           // New knowledge, abilities, locations
-  | 'achievement';        // Prominence gains, milestones
+  // === Core events (no metadata required) ===
+  | 'state_change'           // Entity status/prominence changed
+  | 'relationship_dissolved' // Relationship ended (not creation - too noisy)
+  | 'entity_lifecycle'       // Birth, death, formation, dissolution
+  | 'era_transition'         // Era ended/began
+  | 'succession'             // Container entity ended, members reorganized
+  | 'coalescence'            // Multiple entities joined under one container via part_of
+  // === Polarity-based events (require relationship polarity metadata) ===
+  | 'betrayal'               // Positive relationship dissolved
+  | 'reconciliation'         // Negative relationship dissolved
+  | 'rivalry_formed'         // Negative relationship created between known entities
+  | 'alliance_formed'        // Multiple positive relationships formed in same tick
+  // === Status polarity events (require status polarity metadata) ===
+  | 'downfall'               // Status changed to negative polarity
+  | 'triumph'                // Status changed to positive polarity
+  // === Authority events (require isAuthority subtype metadata) ===
+  | 'power_vacuum';          // Authority entity ended with no clear successor
 
 /**
  * Entity reference for narrative events

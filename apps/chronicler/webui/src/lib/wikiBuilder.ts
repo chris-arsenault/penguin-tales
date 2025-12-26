@@ -27,13 +27,17 @@ export function buildWikiPages(
 ): WikiPage[] {
   const pages: WikiPage[] = [];
   const loreIndex = buildLoreIndex(loreData);
-  const imageIndex = buildImageIndex(imageData);
+  const imageIndex = buildImageIndex(worldData, imageData);
 
   // Build entity pages
   for (const entity of worldData.hardState) {
     const page = buildEntityPage(entity, worldData, loreIndex, imageIndex);
     pages.push(page);
   }
+
+  // Build chronicle pages
+  const chroniclePages = buildChroniclePages(worldData, loreData);
+  pages.push(...chroniclePages);
 
   // Build category pages
   const categories = buildCategories(worldData, pages);
@@ -42,6 +46,127 @@ export function buildWikiPages(
   }
 
   return pages;
+}
+
+function buildChroniclePages(
+  worldData: WorldState,
+  loreData: LoreData | null
+): WikiPage[] {
+  if (!loreData?.records) return [];
+
+  const chronicleRecords = loreData.records.filter(
+    (record) => record.type === 'chronicle' && record.text
+  );
+
+  return chronicleRecords.map((record) => {
+    const metadata = record.metadata || {};
+    const format = metadata.format === 'document' ? 'document' : 'story';
+    const entrypointId = typeof metadata.entrypointId === 'string'
+      ? metadata.entrypointId
+      : record.targetId;
+    const entityIds = Array.isArray(metadata.entityIds)
+      ? metadata.entityIds.filter((id) => typeof id === 'string')
+      : [];
+
+    const title = typeof metadata.title === 'string' && metadata.title.trim().length > 0
+      ? metadata.title.trim()
+      : deriveChronicleTitle(worldData, entrypointId, format);
+
+    const { sections } = buildChronicleSections(record.text);
+
+    const linkedEntities = entityIds.length > 0
+      ? entityIds
+      : extractLinkedEntities(sections, worldData);
+
+    if (entrypointId && !linkedEntities.includes(entrypointId)) {
+      linkedEntities.push(entrypointId);
+    }
+
+    const acceptedAt = typeof metadata.acceptedAt === 'number' ? metadata.acceptedAt : Date.now();
+
+    return {
+      id: record.id,
+      slug: `chronicle/${slugify(title)}`,
+      title,
+      type: 'chronicle',
+      chronicle: {
+        format,
+        entrypointId: entrypointId || undefined,
+      },
+      content: {
+        sections,
+      },
+      categories: [],
+      linkedEntities: Array.from(new Set(linkedEntities)),
+      images: [],
+      lastUpdated: acceptedAt,
+    };
+  });
+}
+
+function buildChronicleSections(content: string): { sections: WikiSection[] } {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return { sections: [] };
+  }
+
+  let body = trimmed;
+  if (body.startsWith('# ')) {
+    const lines = body.split('\n');
+    body = lines.slice(1).join('\n').trim();
+  }
+
+  const sections: WikiSection[] = [];
+  let currentHeading = 'Chronicle';
+  let buffer: string[] = [];
+  let sectionIndex = 0;
+
+  const flush = () => {
+    const sectionBody = buffer.join('\n').trim();
+    if (!sectionBody) return;
+    sections.push({
+      id: `chronicle-section-${sectionIndex++}`,
+      heading: currentHeading || 'Chronicle',
+      level: 2,
+      content: sectionBody,
+    });
+  };
+
+  for (const line of body.split('\n')) {
+    if (line.startsWith('## ')) {
+      flush();
+      currentHeading = line.replace(/^##\s+/, '').trim() || 'Chronicle';
+      buffer = [];
+      continue;
+    }
+    buffer.push(line);
+  }
+
+  flush();
+
+  if (sections.length === 0) {
+    sections.push({
+      id: 'chronicle-section-0',
+      heading: 'Chronicle',
+      level: 2,
+      content: body,
+    });
+  }
+
+  return { sections };
+}
+
+function deriveChronicleTitle(
+  worldData: WorldState,
+  entrypointId: string | undefined,
+  format: 'story' | 'document'
+): string {
+  const entrypoint = entrypointId
+    ? worldData.hardState.find((entity) => entity.id === entrypointId)
+    : undefined;
+  const base = entrypoint?.name || 'Untitled';
+  const suffix = format === 'document' ? 'Document' : 'Chronicle';
+  return `${base} ${suffix}`;
 }
 
 /**
@@ -153,26 +278,12 @@ function buildEntityPage(
   // Build categories for this entity
   const categories = buildEntityCategories(entity, worldData);
 
-  // Build summary - prefer enriched content
-  const summary = (() => {
-    // If we have an enhanced page with an overview section, use its first part
-    const overviewSection = sections.find(s => s.heading.toLowerCase() === 'overview');
-    if (overviewSection) {
-      // Take first 300 chars for summary
-      const text = overviewSection.content.slice(0, 300);
-      return text.length < overviewSection.content.length ? `${text}...` : text;
-    }
-    // Fall back to description text or entity description
-    return description?.text || entity.description || `${entity.name} is a ${entity.subtype || entity.kind}.`;
-  })();
-
   return {
     id: entity.id,
     slug: slugify(entity.name),
     title: entity.name,
     type: entity.kind === 'era' ? 'era' : 'entity',
     content: {
-      summary,
       sections,
       infobox,
     },
@@ -339,7 +450,6 @@ function buildCategoryPage(category: WikiCategory, pages: WikiPage[]): WikiPage 
     title: `Category: ${category.name}`,
     type: 'category',
     content: {
-      summary: `Pages in the ${category.name} category.`,
       sections: [
         {
           id: 'pages',
@@ -415,18 +525,29 @@ function buildLoreIndex(loreData: LoreData | null): Map<string, LoreRecord[]> {
  * Build index of entity images
  * Handles both file paths and object URLs
  */
-function buildImageIndex(imageData: ImageMetadata | null): Map<string, string> {
+function buildImageIndex(
+  worldData: WorldState,
+  imageData: ImageMetadata | null
+): Map<string, string> {
   const index = new Map<string, string>();
   if (!imageData) return index;
 
-  for (const img of imageData.results) {
+  const imageById = new Map(imageData.results.map((img) => [img.imageId, img]));
+
+  for (const entity of worldData.hardState) {
+    const imageId = entity?.enrichment?.image?.imageId;
+    if (!imageId) continue;
+
+    const img = imageById.get(imageId);
+    if (!img?.localPath) continue;
+
     // If it's already an object URL (blob:) or data URL, use it directly
     // Otherwise transform file path to web path
     const path = img.localPath;
     const webPath = path.startsWith('blob:') || path.startsWith('data:')
       ? path
       : path.replace('output/images/', 'images/');
-    index.set(img.entityId, webPath);
+    index.set(entity.id, webPath);
   }
 
   return index;

@@ -12,6 +12,7 @@ import { useState, useMemo } from 'react';
 import type { WorldState, LoreData, ImageMetadata, WikiPage, HardState } from '../types/world.ts';
 import { buildWikiPages, buildCategories } from '../lib/wikiBuilder.ts';
 import WikiNav from './WikiNav.tsx';
+import ChronicleIndex from './ChronicleIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
 import WikiSearch from './WikiSearch.tsx';
 
@@ -89,8 +90,17 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
     return { pages, categories, entityIndex };
   }, [worldData, loreData, imageData]);
 
+  const chroniclePages = useMemo(
+    () => pages.filter((page) => page.type === 'chronicle' && page.chronicle),
+    [pages]
+  );
+
   // Get current page
-  const currentPage = currentPageId
+  const isChronicleIndex = currentPageId === 'chronicles'
+    || currentPageId === 'chronicles-story'
+    || currentPageId === 'chronicles-document';
+
+  const currentPage = !isChronicleIndex && currentPageId
     ? pages.find(p => p.id === currentPageId)
     : null;
 
@@ -127,6 +137,7 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
         <WikiNav
           categories={categories}
           pages={pages}
+          chronicles={chroniclePages}
           currentPageId={currentPageId}
           onNavigate={handleNavigate}
           onGoHome={handleGoHome}
@@ -136,7 +147,20 @@ export default function WikiExplorer({ worldData, loreData, imageData }: WikiExp
       {/* Main Content */}
       <div style={styles.main}>
         <div style={styles.content}>
-          {currentPage ? (
+          {isChronicleIndex ? (
+            <ChronicleIndex
+              chronicles={chroniclePages}
+              filter={
+                currentPageId === 'chronicles-story'
+                  ? 'story'
+                  : currentPageId === 'chronicles-document'
+                  ? 'document'
+                  : 'all'
+              }
+              onNavigate={handleNavigate}
+              entityIndex={entityIndex}
+            />
+          ) : currentPage ? (
             <WikiPageView
               page={currentPage}
               pages={pages}

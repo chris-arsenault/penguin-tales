@@ -22,6 +22,21 @@ function resolveEvent(map, id) {
 }
 
 function PlanHeader({ plan }) {
+  const outline = plan.format === 'document' ? plan.documentOutline : plan.storyOutline;
+  const summaryItems = [];
+  if (plan.format === 'document' && outline?.purpose) {
+    summaryItems.push({ label: 'Purpose', value: outline.purpose });
+  }
+  if (plan.format === 'story' && outline?.theme) {
+    summaryItems.push({ label: 'Theme', value: outline.theme });
+  }
+  if (outline?.tone) {
+    summaryItems.push({ label: 'Tone', value: outline.tone });
+  }
+  if (outline?.era) {
+    summaryItems.push({ label: 'Era', value: outline.era });
+  }
+
   return (
     <div
       style={{
@@ -51,29 +66,29 @@ function PlanHeader({ plan }) {
           {plan.format}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-        {plan.theme && (
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <strong>Theme:</strong> {plan.theme}
-          </span>
-        )}
-        {plan.tone && (
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <strong>Tone:</strong> {plan.tone}
-          </span>
-        )}
-        {plan.scope?.timeframe && (
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <strong>Timeframe:</strong> {plan.scope.timeframe}
-          </span>
-        )}
-      </div>
+      {summaryItems.length > 0 && (
+        <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+          {summaryItems.map((item) => (
+            <span key={item.label} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <strong>{item.label}:</strong> {item.value}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function PlanScope({ plan }) {
-  if (!plan.scope?.notes && !plan.scope?.timeframe) return null;
+function formatEntityList(ids, entityMap, limit = 6) {
+  if (!ids || ids.length === 0) return '(none)';
+  const names = ids.map((id) => resolveName(entityMap, id));
+  if (names.length <= limit) return names.join(', ');
+  return `${names.slice(0, limit).join(', ')} +${names.length - limit} more`;
+}
+
+function FocusSummary({ plan, entityMap }) {
+  const focus = plan.focus;
+  if (!focus) return null;
 
   return (
     <div
@@ -85,15 +100,135 @@ function PlanScope({ plan }) {
         marginBottom: '16px',
       }}
     >
-      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Scope</div>
-      {plan.scope?.timeframe && (
+      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Focus</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Mode:</strong> {focus.mode}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Entrypoint:</strong> {resolveName(entityMap, focus.entrypointId)}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Primary Entities:</strong> {formatEntityList(focus.primaryEntityIds, entityMap)}
+      </div>
+      {focus.supportingEntityIds?.length > 0 && (
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-          <strong>Timeframe:</strong> {plan.scope.timeframe}
+          <strong>Supporting Entities:</strong> {formatEntityList(focus.supportingEntityIds, entityMap)}
         </div>
       )}
-      {plan.scope?.notes && (
+      {focus.requiredNeighborIds?.length > 0 && (
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <strong>Required Neighbors:</strong> {formatEntityList(focus.requiredNeighborIds, entityMap)}
+        </div>
+      )}
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+        <strong>Selected Cast:</strong> {focus.selectedEntityIds.length} entities • {focus.selectedEventIds.length} events
+      </div>
+    </div>
+  );
+}
+
+function OutlineSummary({ plan }) {
+  if (plan.format === 'document') {
+    const outline = plan.documentOutline;
+    if (!outline) return null;
+
+    const optionalMeta = [
+      outline.veracity ? `Veracity: ${outline.veracity}` : '',
+      outline.legitimacy ? `Legitimacy: ${outline.legitimacy}` : '',
+      outline.audience ? `Audience: ${outline.audience}` : '',
+      outline.authorProvenance ? `Provenance: ${outline.authorProvenance}` : '',
+      outline.biasAgenda ? `Bias/Agenda: ${outline.biasAgenda}` : '',
+      outline.intendedOutcome ? `Intended Outcome: ${outline.intendedOutcome}` : '',
+    ].filter(Boolean);
+
+    return (
+      <div
+        style={{
+          padding: '16px',
+          background: 'var(--bg-secondary)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          marginBottom: '16px',
+        }}
+      >
+        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Document Outline</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <strong>Purpose:</strong> {outline.purpose}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <strong>Era:</strong> {outline.era}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <strong>Tone:</strong> {outline.tone}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+          <strong>Key Points:</strong>
+          <ul style={{ margin: '6px 0 0 16px', fontSize: '12px' }}>
+            {outline.keyPoints.map((point, idx) => (
+              <li key={`${point}-${idx}`}>{point}</li>
+            ))}
+          </ul>
+        </div>
+        {optionalMeta.length > 0 && (
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <strong>Optional:</strong> {optionalMeta.join(' • ')}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const outline = plan.storyOutline;
+  if (!outline) return null;
+
+  const optionalMeta = [
+    outline.stakes ? `Stakes: ${outline.stakes}` : '',
+    outline.transformation ? `Transformation: ${outline.transformation}` : '',
+    outline.intendedImpact ? `Intended Impact: ${outline.intendedImpact}` : '',
+  ].filter(Boolean);
+
+  return (
+    <div
+      style={{
+        padding: '16px',
+        background: 'var(--bg-secondary)',
+        borderRadius: '8px',
+        border: '1px solid var(--border-color)',
+        marginBottom: '16px',
+      }}
+    >
+      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Story Outline</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Purpose:</strong> {outline.purpose}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Theme:</strong> {outline.theme}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Era:</strong> {outline.era}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Tone:</strong> {outline.tone}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Key Points:</strong>
+        <ul style={{ margin: '6px 0 0 16px', fontSize: '12px' }}>
+          {outline.keyPoints.map((point, idx) => (
+            <li key={`${point}-${idx}`}>{point}</li>
+          ))}
+        </ul>
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        <strong>Emotional Beats:</strong>
+        <ul style={{ margin: '6px 0 0 16px', fontSize: '12px' }}>
+          {outline.emotionalBeats.map((beat, idx) => (
+            <li key={`${beat}-${idx}`}>{beat}</li>
+          ))}
+        </ul>
+      </div>
+      {optionalMeta.length > 0 && (
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-          <strong>Notes:</strong> {plan.scope.notes}
+          <strong>Optional:</strong> {optionalMeta.join(' • ')}
         </div>
       )}
     </div>
@@ -293,7 +428,8 @@ export default function ChroniclePlanEditor({
   return (
     <div style={{ maxWidth: '900px' }}>
       <PlanHeader plan={plan} />
-      <PlanScope plan={plan} />
+      <OutlineSummary plan={plan} />
+      <FocusSummary plan={plan} entityMap={entityMap} />
       <PlotSummary plan={plan} />
       <EntityRoleList plan={plan} entityMap={entityMap} />
 

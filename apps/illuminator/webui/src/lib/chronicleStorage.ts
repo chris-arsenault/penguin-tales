@@ -7,6 +7,7 @@
  */
 
 import type { ChroniclePlan, CohesionReport, ChronicleStatus } from './chronicleTypes';
+import type { ChronicleStep } from './enrichmentTypes';
 
 // ============================================================================
 // Database Configuration
@@ -32,6 +33,9 @@ export interface StoryRecord {
 
   // Generation state
   status: ChronicleStatus;
+  failureStep?: ChronicleStep;
+  failureReason?: string;
+  failedAt?: number;
 
   // Step 1: Plan
   plan?: ChroniclePlan;
@@ -43,12 +47,15 @@ export interface StoryRecord {
 
   // Step 3: Assembled content
   assembledContent?: string;
-  wikiLinks?: { entityId: string; name: string; count: number }[];
   assembledAt?: number;
 
   // Step 4: Cohesion validation
   cohesionReport?: CohesionReport;
   validatedAt?: number;
+
+  // Revision tracking
+  editVersion: number;
+  editedAt?: number;
 
   // Final content
   finalContent?: string;
@@ -131,6 +138,7 @@ export async function createStory(
     status: 'planning',
     sectionsCompleted: 0,
     sectionsTotal: 0,
+    editVersion: 0,
     totalEstimatedCost: 0,
     totalActualCost: 0,
     totalInputTokens: 0,
@@ -172,6 +180,9 @@ export async function updateStoryPlan(
       record.plan = plan;
       record.planGeneratedAt = Date.now();
       record.status = 'plan_ready';
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
       record.sectionsTotal = plan.sections.length;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
@@ -218,6 +229,9 @@ export async function updateStorySection(
       record.plan.sections[sectionIndex].generatedContent = sectionContent;
       record.sectionsCompleted = sectionIndex + 1;
       record.status = 'expanding';
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
       record.totalInputTokens += cost.inputTokens;
@@ -237,8 +251,7 @@ export async function updateStorySection(
  */
 export async function updateStoryAssembly(
   storyId: string,
-  assembledContent: string,
-  wikiLinks: { entityId: string; name: string; count: number }[]
+  assembledContent: string
 ): Promise<void> {
   const db = await openStoryDb();
 
@@ -255,9 +268,11 @@ export async function updateStoryAssembly(
       }
 
       record.assembledContent = assembledContent;
-      record.wikiLinks = wikiLinks;
       record.assembledAt = Date.now();
       record.status = 'assembly_ready';  // Pause for user review before validation
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
       record.updatedAt = Date.now();
 
       store.put(record);
@@ -265,6 +280,90 @@ export async function updateStoryAssembly(
 
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('Failed to update story assembly'));
+  });
+}
+
+/**
+ * Update story with revised content (post-validation edits)
+ */
+export async function updateStoryEdit(
+  storyId: string,
+  assembledContent: string,
+  cost?: { estimated: number; actual: number; inputTokens: number; outputTokens: number }
+): Promise<void> {
+  const db = await openStoryDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORY_STORE_NAME);
+    const getReq = store.get(storyId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as StoryRecord | undefined;
+      if (!record) {
+        reject(new Error(`Story ${storyId} not found`));
+        return;
+      }
+
+      record.assembledContent = assembledContent;
+      record.assembledAt = Date.now();
+      record.editedAt = Date.now();
+      record.editVersion = (record.editVersion || 0) + 1;
+      record.cohesionReport = undefined;
+      record.validatedAt = undefined;
+      record.status = 'editing';
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
+      if (cost) {
+        record.totalEstimatedCost += cost.estimated;
+        record.totalActualCost += cost.actual;
+        record.totalInputTokens += cost.inputTokens;
+        record.totalOutputTokens += cost.outputTokens;
+      }
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update story edit'));
+  });
+}
+
+/**
+ * Mark story as failed (worker error)
+ */
+export async function updateStoryFailure(
+  storyId: string,
+  step: ChronicleStep,
+  reason: string
+): Promise<void> {
+  const db = await openStoryDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORY_STORE_NAME);
+    const getReq = store.get(storyId);
+
+    getReq.onsuccess = () => {
+      const record = getReq.result as StoryRecord | undefined;
+      if (!record) {
+        reject(new Error(`Story ${storyId} not found`));
+        return;
+      }
+
+      record.status = 'failed';
+      record.failureStep = step;
+      record.failureReason = reason;
+      record.failedAt = Date.now();
+      record.updatedAt = Date.now();
+
+      store.put(record);
+    };
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Failed to update story failure'));
   });
 }
 
@@ -293,6 +392,9 @@ export async function updateStoryCohesion(
       record.cohesionReport = cohesionReport;
       record.validatedAt = Date.now();
       record.status = 'validation_ready';
+      record.failureStep = undefined;
+      record.failureReason = undefined;
+      record.failedAt = undefined;
       record.totalEstimatedCost += cost.estimated;
       record.totalActualCost += cost.actual;
       record.totalInputTokens += cost.inputTokens;
@@ -310,7 +412,7 @@ export async function updateStoryCohesion(
 /**
  * Mark story as complete (user accepted)
  */
-export async function acceptStory(storyId: string): Promise<void> {
+export async function acceptStory(storyId: string, finalContent?: string): Promise<void> {
   const db = await openStoryDb();
 
   return new Promise((resolve, reject) => {
@@ -325,7 +427,7 @@ export async function acceptStory(storyId: string): Promise<void> {
         return;
       }
 
-      record.finalContent = record.assembledContent;
+      record.finalContent = finalContent ?? record.assembledContent;
       record.acceptedAt = Date.now();
       record.status = 'complete';
       record.updatedAt = Date.now();

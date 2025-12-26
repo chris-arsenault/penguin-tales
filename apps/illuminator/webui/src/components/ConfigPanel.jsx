@@ -128,7 +128,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
             ))}
           </select>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Used for entity descriptions, era narratives, and relationship stories.
+            Used for entity descriptions and other short-form text generation.
           </p>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
             ))}
           </select>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Used for entity stories in the Chronicle tab. Long-form narrative generation benefits from higher-quality models.
+            Used for Chronicle generation (stories and documents). Long-form narrative generation benefits from higher-quality models.
           </p>
         </div>
       </div>
@@ -293,7 +293,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
           Illuminator enriches your world simulation with LLM-generated content.
           Use the <strong>Entities</strong> tab to generate descriptions and images for entities.
-          Use the <strong>Narratives</strong> tab to generate era summaries and relationship stories.
+          Use the <strong>Chronicle</strong> tab to generate multi-entity narratives and in-world documents.
         </p>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, marginTop: '12px' }}>
           All enrichments are saved automatically to your current world slot.

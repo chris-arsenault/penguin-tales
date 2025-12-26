@@ -62,7 +62,13 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
     }
 
     if (!result.success) {
-      throw new Error(result.error);
+      port.postMessage({
+        type: 'error',
+        taskId: task.id,
+        error: result.error || 'Unknown error',
+        debug: result.debug,
+      });
+      return;
     }
 
     port.postMessage({
@@ -73,6 +79,7 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
         type: task.type,
         success: true,
         result: result.result,
+        debug: result.debug,
       },
     });
   } catch (error) {

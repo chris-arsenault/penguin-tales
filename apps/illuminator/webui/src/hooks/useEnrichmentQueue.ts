@@ -268,6 +268,7 @@ export function useEnrichmentQueue(
                     status: 'complete' as const,
                     completedAt: Date.now(),
                     result: result.result,
+                    debug: result.debug,
                   }
                 : item
             )
@@ -300,6 +301,7 @@ export function useEnrichmentQueue(
                     status: 'error' as const,
                     completedAt: Date.now(),
                     error: message.error,
+                    debug: message.debug,
                   }
                 : item
             )
@@ -479,7 +481,13 @@ export function useEnrichmentQueue(
 
       return prev.map((i) =>
         i.id === itemId
-          ? { ...i, status: 'queued' as const, error: undefined, queuedAt: Date.now() }
+          ? {
+              ...i,
+              status: 'queued' as const,
+              error: undefined,
+              debug: undefined,
+              queuedAt: Date.now(),
+            }
           : i
       );
     });

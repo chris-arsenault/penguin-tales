@@ -12,14 +12,13 @@
 
 export type CostType =
   | 'description'
-  | 'eraNarrative'
-  | 'relationship'
   | 'image'
   | 'imagePrompt'      // Claude call to format image prompt
   | 'storyPlan'
   | 'storyScene'
   | 'storyAssembly'    // No LLM cost, but tracked for completeness
-  | 'storyValidation';
+  | 'storyValidation'
+  | 'storyRevision';
 
 export interface CostRecord {
   id: string;

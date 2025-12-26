@@ -6,7 +6,6 @@
 
 import { Graph } from '../engine/types';
 import { HardState, EntityTags } from '../core/worldTypes';
-import { generateId } from '../core/idGeneration';
 import { arrayToTags } from '../utils/tagUtils';
 import {
   FRAMEWORK_ENTITY_KINDS,
@@ -27,10 +26,44 @@ export function slugifyName(name: string): string {
 }
 
 /**
+ * Generate a stable entity ID from a name, with optional collision handling.
+ */
+export function generateEntityIdFromName(
+  name: string,
+  hasEntity?: (id: string) => boolean,
+  log?: (message: string, context?: Record<string, unknown>) => void
+): string {
+  const baseId = slugifyName(name);
+  if (!hasEntity) return baseId;
+  if (!hasEntity(baseId)) return baseId;
+
+  let suffix = 2;
+  let candidate = `${baseId}-${suffix}`;
+  while (hasEntity(candidate)) {
+    suffix += 1;
+    candidate = `${baseId}-${suffix}`;
+  }
+
+  log?.(`Entity id collision for "${name}". Using "${candidate}".`, {
+    name,
+    baseId,
+    resolvedId: candidate
+  });
+
+  return candidate;
+}
+
+/**
  * Initial state normalization
  */
 export function normalizeInitialState(entities: any[]): HardState[] {
   return entities.map((entity, index) => {
+    if (!entity.id) {
+      throw new Error(
+        `normalizeInitialState: entity "${entity.name}" at index ${index} has no id. ` +
+        `Seed entities must include a stable id used by relationships.`
+      );
+    }
     if (!entity.name) {
       throw new Error(
         `normalizeInitialState: entity at index ${index} has no name. ` +
@@ -78,7 +111,7 @@ export function normalizeInitialState(entities: any[]): HardState[] {
     }
 
     return {
-      id: entity.id || entity.name || generateId(entity.kind),
+      id: entity.id,
       kind: entity.kind as HardState['kind'],
       subtype: entity.subtype,
       name: entity.name,
@@ -144,6 +177,8 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     );
   }
 
+  const entityId = generateEntityIdFromName(entity.name, id => graph.hasEntity(id));
+
   // Delegate to Graph.createEntity()
   // Use validated coords to satisfy TypeScript (already validated above)
   if (typeof coords.z !== 'number') {
@@ -155,7 +190,8 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
   }
   const validCoords = { x: coords.x, y: coords.y, z: coords.z };
 
-  const entityId = await graph.createEntity({
+  const createdId = await graph.createEntity({
+    id: entityId,
     kind: entity.kind,
     subtype: entity.subtype,
     coordinates: validCoords,
@@ -188,7 +224,7 @@ export async function addEntity(graph: Graph, entity: Partial<HardState>, source
     }
   }
 
-  return entityId;
+  return createdId;
 }
 
 /**

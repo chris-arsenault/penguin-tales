@@ -15,8 +15,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ChronicleGenerationContext, CohesionReport } from '../lib/chronicleTypes';
-import type { SerializableChronicleContext, QueueItem, EnrichmentType, ChronicleStep } from '../lib/enrichmentTypes';
+import type { ChronicleGenerationContext } from '../lib/chronicleTypes';
+import type { SerializableChronicleContext, QueueItem, EnrichmentType, ChronicleStep, AcceptedChronicle } from '../lib/enrichmentTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 import {
   getStoriesForSimulation,
@@ -24,6 +24,8 @@ import {
   acceptStory as acceptStoryInDb,
   type StoryRecord,
 } from '../lib/chronicleStorage';
+import type { WikiLinkEntity } from '../lib/wikiLinkService';
+import { applyWikiLinks } from '../lib/wikiLinkService';
 
 // ============================================================================
 // Types
@@ -36,12 +38,15 @@ import {
 export function deriveStatus(record: StoryRecord | undefined): string {
   if (!record) return 'not_started';
 
+  if (record.status === 'failed') return 'failed';
+
   // Check for in-progress states (worker is running)
   // These are set by the storage layer when worker starts a step
   if (record.status === 'planning' ||
       record.status === 'expanding' ||
       record.status === 'assembling' ||
-      record.status === 'validating') {
+      record.status === 'validating' ||
+      record.status === 'editing') {
     return record.status;
   }
 
@@ -64,7 +69,8 @@ export interface UseChronicleGenerationReturn {
   // Actions
   generateStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
   continueStory: (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  acceptStory: (entityId: string) => Promise<void>;
+  correctSuggestions: (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  acceptStory: (entityId: string, entities: WikiLinkEntity[]) => Promise<AcceptedChronicle | null>;
   restartStory: (entityId: string) => Promise<void>;
 
   // Status
@@ -91,6 +97,14 @@ function serializeContext(
     targetType: context.targetType,
     targetId: context.targetId,
 
+    era: context.era
+      ? {
+        id: context.era.id,
+        name: context.era.name,
+        description: context.era.description,
+      }
+      : undefined,
+
     entity: context.entity
       ? {
         id: context.entity.id,
@@ -116,6 +130,11 @@ function serializeContext(
       prominence: e.prominence,
       culture: e.culture,
       status: e.status,
+      tags: e.tags,
+      description: e.description,
+      enrichedDescription: e.enrichedDescription,
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
     })),
 
     relationships: context.relationships.map((r) => ({
@@ -356,18 +375,95 @@ export function useChronicleGeneration(
   );
 
   // -------------------------------------------------------------------------
+  // Correct suggestions (apply validation feedback)
+  // -------------------------------------------------------------------------
+
+  const correctSuggestions = useCallback(
+    (entityId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const story = stories.get(entityId);
+      if (!story?.storyId) {
+        console.error('[Chronicle] No story found for entity', entityId);
+        return;
+      }
+      if (!story.cohesionReport || !story.assembledContent) {
+        console.error('[Chronicle] No validation report or assembled content to revise');
+        return;
+      }
+
+      if (!narrativeStyle) {
+        console.error('[Chronicle] Narrative style required to correct suggestions');
+        return;
+      }
+      const chronicleContext = serializeContext(context, narrativeStyle);
+      const entity = {
+        id: context.entity!.id,
+        name: context.entity!.name,
+        kind: context.entity!.kind,
+        subtype: context.entity!.subtype || '',
+        prominence: context.entity!.prominence,
+        culture: context.entity!.culture || '',
+        status: context.entity!.status,
+        description: context.entity!.description || '',
+        tags: context.entity!.tags as Record<string, unknown>,
+      };
+
+      onEnqueue([{
+        entity,
+        type: 'entityStory' as EnrichmentType,
+        prompt: '',
+        chronicleContext,
+        chronicleStep: 'edit',
+        storyId: story.storyId,
+      }]);
+    },
+    [stories, onEnqueue]
+  );
+
+  // -------------------------------------------------------------------------
   // Accept story (mark complete)
   // -------------------------------------------------------------------------
 
-  const acceptStory = useCallback(async (entityId: string) => {
+  const acceptStory = useCallback(async (entityId: string, entities: WikiLinkEntity[]) => {
     const story = stories.get(entityId);
-    if (!story?.storyId) return;
+    if (!story?.storyId) return null;
+    if (!story.assembledContent) {
+      console.error('[Chronicle] Cannot accept without assembled content');
+      return null;
+    }
+    if (!entities || entities.length === 0) {
+      console.error('[Chronicle] Entity dictionary required to apply backrefs on accept');
+      return null;
+    }
 
     try {
-      await acceptStoryInDb(story.storyId);
+      const linkResult = applyWikiLinks(story.assembledContent, entities);
+      await acceptStoryInDb(story.storyId, linkResult.content);
       await loadStories(); // Reload to reflect change
+      const plan = story.plan;
+      const fallbackTitle = story.entityName
+        ? `${story.entityName} Chronicle`
+        : 'Untitled Chronicle';
+      const entrypointId = plan?.focus?.entrypointId || story.entityId;
+      const selectedEntities = plan?.focus?.selectedEntityIds?.length
+        ? plan.focus.selectedEntityIds
+        : [story.entityId];
+      const entityIds = selectedEntities.includes(entrypointId)
+        ? selectedEntities
+        : [...selectedEntities, entrypointId];
+      return {
+        chronicleId: story.storyId,
+        title: plan?.title || fallbackTitle,
+        format: plan?.format || 'story',
+        content: linkResult.content,
+        entrypointId,
+        entityIds,
+        generatedAt: plan?.generatedAt,
+        acceptedAt: Date.now(),
+        model: plan?.model || story.model,
+      };
     } catch (err) {
       console.error('[Chronicle] Failed to accept story:', err);
+      return null;
     }
   }, [stories, loadStories]);
 
@@ -407,6 +503,7 @@ export function useChronicleGeneration(
     stories,
     generateStory,
     continueStory,
+    correctSuggestions,
     acceptStory,
     restartStory,
     isGenerating,

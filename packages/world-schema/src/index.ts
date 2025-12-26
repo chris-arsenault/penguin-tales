@@ -21,7 +21,7 @@ export type {
 } from './entityKind.js';
 
 // Relationship types
-export type { RelationshipKindDefinition } from './relationship.js';
+export type { RelationshipKindDefinition, Polarity } from './relationship.js';
 
 // Culture types
 export type {
@@ -55,6 +55,9 @@ export type { DomainUIConfig } from './ui.js';
 export type {
   ArtisticStyle,
   CompositionStyle,
+  BaseNarrativeStyle,
+  StoryNarrativeStyle,
+  DocumentNarrativeStyle,
   NarrativeStyle,
   NarrativeFormat,
   PlotStructureType,

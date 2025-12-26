@@ -20,32 +20,38 @@
       {
         "id": "active",
         "name": "Active",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "lost",
         "name": "Lost",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "negative"
       },
       {
         "id": "historical",
         "name": "Historical",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "neutral"
       },
       {
         "id": "secret",
         "name": "Secret",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "discovered",
         "name": "Discovered",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "emergent",
         "name": "Emergent",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       }
     ],
     "semanticPlane": {
@@ -138,22 +144,26 @@
       {
         "id": "active",
         "name": "Active",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "historical",
         "name": "Historical",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "neutral"
       },
       {
         "id": "brewing",
         "name": "Brewing",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "legendary",
         "name": "Legendary",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       }
     ],
     "semanticPlane": {
@@ -200,27 +210,32 @@
       {
         "id": "active",
         "name": "Active",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "repealed",
         "name": "Repealed",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "negative"
       },
       {
         "id": "contested",
         "name": "Contested",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "enacted",
         "name": "Enacted",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "proposed",
         "name": "Proposed",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       }
     ],
     "semanticPlane": {
@@ -298,7 +313,8 @@
       },
       {
         "id": "mayor",
-        "name": "Mayor"
+        "name": "Mayor",
+        "isAuthority": true
       },
       {
         "id": "hero",
@@ -317,22 +333,26 @@
       {
         "id": "alive",
         "name": "Alive",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "dead",
         "name": "Dead",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "negative"
       },
       {
         "id": "fictional",
         "name": "Fictional",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "missing",
         "name": "Missing",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "negative"
       }
     ],
     "semanticPlane": {
@@ -436,22 +456,26 @@
       {
         "id": "thriving",
         "name": "Thriving",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "positive"
       },
       {
         "id": "waning",
         "name": "Waning",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "negative"
       },
       {
         "id": "abandoned",
         "name": "Abandoned",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "negative"
       },
       {
         "id": "unspoiled",
         "name": "Unspoiled",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       }
     ],
     "semanticPlane": {
@@ -556,27 +580,32 @@
       {
         "id": "active",
         "name": "Active",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "neutral"
       },
       {
         "id": "disbanded",
         "name": "Disbanded",
-        "isTerminal": true
+        "isTerminal": true,
+        "polarity": "negative"
       },
       {
         "id": "waning",
         "name": "Waning",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "negative"
       },
       {
         "id": "state_sanctioned",
         "name": "State Sanctioned",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "positive"
       },
       {
         "id": "illegal",
         "name": "Illegal",
-        "isTerminal": false
+        "isTerminal": false,
+        "polarity": "negative"
       }
     ],
     "semanticPlane": {

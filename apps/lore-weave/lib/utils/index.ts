@@ -43,6 +43,7 @@ export type { RelationshipQueryOptions } from '../graph/entityQueries';
 // Entity mutation (from graph/)
 export {
   slugifyName,
+  generateEntityIdFromName,
   normalizeInitialState,
   addEntity,
   updateEntity

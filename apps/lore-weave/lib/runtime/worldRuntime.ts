@@ -7,6 +7,7 @@ import { coordinateStats } from '../coordinates/coordinateStatistics';
 import {
   mergeTags,
   arrayToTags,
+  generateEntityIdFromName,
   addRelationship,
   modifyRelationshipStrength as modifyRelationshipStrengthUtil,
   getRelated as getRelatedUtil,
@@ -610,6 +611,12 @@ export class WorldRuntime implements Graph {
       );
     }
 
+    const resolvedId = generateEntityIdFromName(
+      name,
+      candidate => this.graph.hasEntity(candidate),
+      (message, context) => this.log('warn', message, context)
+    );
+
     // Warn on coordinate overlap with existing entities of the same kind
     const overlapThreshold = 1.0;
     for (const existing of this.graph.getEntities()) {
@@ -632,6 +639,7 @@ export class WorldRuntime implements Graph {
     }
 
     const entityId = await this.graph.createEntity({
+      id: resolvedId,
       kind: partial.kind,
       subtype: partial.subtype,
       coordinates: validCoords,

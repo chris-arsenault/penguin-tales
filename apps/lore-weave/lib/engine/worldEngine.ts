@@ -7,7 +7,7 @@ import { createSystemFromDeclarative, DeclarativeSystem, DeclarativeGrowthSystem
 import { loadActions } from './actionInterpreter';
 import { HardState, Relationship } from '../core/worldTypes';
 import {
-  generateId,
+  generateEntityIdFromName,
   addRelationship,
   modifyRelationshipStrength,
   updateEntity,
@@ -413,7 +413,13 @@ export class WorldEngine {
     
     // Load initial entities and initialize catalysts
     initialState.forEach(entity => {
-      const id = entity.id || generateId(entity.kind);
+      const id = entity.id;
+      if (!id) {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has no id. ` +
+          `Seed entities must include stable ids used by seed relationships.`
+        );
+      }
       const coordinates = entity.coordinates;
       if (!coordinates || typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number' || typeof coordinates.z !== 'number') {
         throw new Error(
@@ -554,10 +560,17 @@ export class WorldEngine {
 
     // Create the first era entity
     const firstEraConfig = configEras[0];
+    const firstEraId = generateEntityIdFromName(
+      firstEraConfig.name,
+      candidate => this.graph.hasEntity(candidate),
+      (message, context) => this.emitter.log('warn', message, context)
+    );
     const { entity: firstEra } = createEraEntity(
       firstEraConfig,
       this.graph.tick,
-      FRAMEWORK_STATUS.CURRENT
+      FRAMEWORK_STATUS.CURRENT,
+      undefined,
+      firstEraId
     );
 
     // Add era entity to graph directly (bypasses addEntity to avoid circular ORIGINATED_IN)
@@ -701,7 +714,13 @@ export class WorldEngine {
 
     // Reload initial entities
     initialState.forEach(entity => {
-      const id = entity.id || generateId(entity.kind);
+      const id = entity.id;
+      if (!id) {
+        throw new Error(
+          `WorldEngine: initial entity "${entity.name}" (${entity.kind}) has no id. ` +
+          `Seed entities must include stable ids used by seed relationships.`
+        );
+      }
       const coordinates = entity.coordinates;
       if (!coordinates || typeof coordinates.x !== 'number' || typeof coordinates.y !== 'number' || typeof coordinates.z !== 'number') {
         throw new Error(

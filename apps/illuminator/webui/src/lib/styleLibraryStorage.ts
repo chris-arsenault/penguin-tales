@@ -46,25 +46,20 @@ function openDb(): Promise<IDBDatabase> {
  * Returns null if no library has been saved yet
  */
 export async function loadStyleLibrary(): Promise<StyleLibrary | null> {
-  try {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const request = tx.objectStore(STORE_NAME).get(LIBRARY_KEY);
-      request.onsuccess = () => {
-        const result = request.result;
-        if (result?.library) {
-          resolve(result.library as StyleLibrary);
-        } else {
-          resolve(null);
-        }
-      };
-      request.onerror = () => reject(request.error || new Error('Failed to load style library'));
-    });
-  } catch (err) {
-    console.warn('[StyleLibraryStorage] Failed to load:', err);
-    return null;
-  }
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const request = tx.objectStore(STORE_NAME).get(LIBRARY_KEY);
+    request.onsuccess = () => {
+      const result = request.result;
+      if (result?.library) {
+        resolve(result.library as StyleLibrary);
+      } else {
+        resolve(null);
+      }
+    };
+    request.onerror = () => reject(request.error || new Error('Failed to load style library'));
+  });
 }
 
 /**

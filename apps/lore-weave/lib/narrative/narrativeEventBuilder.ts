@@ -64,18 +64,12 @@ export class NarrativeEventBuilder {
    */
   private determineEventKind(stateChanges: NarrativeStateChange[]): NarrativeEventKind {
     const hasStatusChange = stateChanges.some(c => c.field === 'status');
-    const hasProminenceChange = stateChanges.some(c => c.field === 'prominence');
     const isDeath = stateChanges.some(c =>
       c.field === 'status' &&
       (c.newValue === 'dead' || c.newValue === 'historical' || c.newValue === 'dissolved')
     );
-    const isWar = stateChanges.some(c =>
-      c.field === 'status' && (c.newValue === 'at_war' || c.previousValue === 'at_war')
-    );
 
     if (isDeath) return 'entity_lifecycle';
-    if (isWar) return 'conflict';
-    if (hasProminenceChange) return 'achievement';
     if (hasStatusChange) return 'state_change';
     return 'state_change';
   }
@@ -249,31 +243,223 @@ export class NarrativeEventBuilder {
   }
 
   /**
-   * Build a relationship change event
+   * Build a relationship dissolution event
+   * Only tracks dissolution - formation is too noisy
    */
-  buildRelationshipEvent(
+  buildRelationshipDissolutionEvent(
     sourceEntity: HardState,
     targetEntity: HardState,
     relationshipKind: string,
-    action: 'formed' | 'dissolved' | 'changed',
+    relationshipAge: number,
     catalyst?: { entityId: string; actionType: string }
   ): NarrativeEvent {
-    const eventKind: NarrativeEventKind = relationshipKind.includes('war') || relationshipKind.includes('enemy')
-      ? 'conflict'
-      : relationshipKind.includes('ally') || relationshipKind.includes('alliance')
-        ? 'alliance'
-        : 'relationship_change';
-
-    const actionVerbs = {
-      formed: 'established',
-      dissolved: 'broke',
-      changed: 'changed',
-    };
-
-    const headline = `${sourceEntity.name} ${actionVerbs[action]} ${relationshipKind} with ${targetEntity.name}`;
+    const headline = `${sourceEntity.name} breaks ${relationshipKind} with ${targetEntity.name}`;
 
     const significance = calculateSignificance(
-      eventKind,
+      'relationship_dissolved',
+      sourceEntity.id,
+      [],
+      this.context
+    );
+
+    // Boost significance for long-standing relationships
+    const ageBonus = Math.min(0.2, relationshipAge * 0.002); // +0.002 per tick, max +0.2
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'relationship_dissolved',
+      significance: Math.min(1.0, significance + ageBonus),
+      subject: this.buildEntityRef(sourceEntity),
+      action: `dissolved_${relationshipKind}`,
+      object: this.buildEntityRef(targetEntity),
+      headline,
+      description: `The ${relationshipKind} relationship between ${sourceEntity.name} and ${targetEntity.name} has ended after ${relationshipAge} ticks.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'relationship_dissolved',
+        this.buildEntityRef(sourceEntity),
+        this.buildEntityRef(targetEntity),
+        [],
+        'dissolved',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a succession event
+   * Triggered when an entity with inbound part_of relationships becomes historical
+   */
+  buildSuccessionEvent(
+    containerEntity: HardState,
+    memberEntities: HardState[],
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const memberNames = memberEntities.slice(0, 3).map(e => e.name).join(', ');
+    const moreCount = memberEntities.length > 3 ? ` and ${memberEntities.length - 3} others` : '';
+
+    const headline = `${containerEntity.name} ends, leaving ${memberNames}${moreCount}`;
+
+    const significance = calculateSignificance(
+      'succession',
+      containerEntity.id,
+      [],
+      this.context
+    );
+
+    // Boost significance based on number of members affected
+    const memberBonus = Math.min(0.3, memberEntities.length * 0.05);
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'succession',
+      significance: Math.min(1.0, significance + memberBonus),
+      subject: this.buildEntityRef(containerEntity),
+      action: 'succession_triggered',
+      headline,
+      description: `${containerEntity.name} has come to an end. Its ${memberEntities.length} member(s) must now forge their own path.`,
+      stateChanges: [{
+        entityId: containerEntity.id,
+        entityName: containerEntity.name,
+        entityKind: containerEntity.kind,
+        field: 'status',
+        previousValue: 'active',
+        newValue: 'historical',
+      }],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'succession',
+        this.buildEntityRef(containerEntity),
+        undefined,
+        [],
+        'succession',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a coalescence event
+   * Triggered when multiple entities join under a single container via part_of
+   */
+  buildCoalescenceEvent(
+    containerEntity: HardState,
+    newMemberEntities: HardState[],
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const memberNames = newMemberEntities.slice(0, 3).map(e => e.name).join(', ');
+    const moreCount = newMemberEntities.length > 3 ? ` and ${newMemberEntities.length - 3} others` : '';
+
+    const headline = `${memberNames}${moreCount} unite under ${containerEntity.name}`;
+
+    const significance = calculateSignificance(
+      'coalescence',
+      containerEntity.id,
+      [],
+      this.context
+    );
+
+    // Boost significance based on number of members joining
+    const memberBonus = Math.min(0.3, newMemberEntities.length * 0.05);
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'coalescence',
+      significance: Math.min(1.0, significance + memberBonus),
+      subject: this.buildEntityRef(containerEntity),
+      action: 'coalescence',
+      headline,
+      description: `${newMemberEntities.length} entities have united under ${containerEntity.name}, forming a larger collective.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'coalescence',
+        this.buildEntityRef(containerEntity),
+        undefined,
+        [],
+        'coalescence',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a betrayal event (positive relationship dissolved)
+   */
+  buildBetrayalEvent(
+    sourceEntity: HardState,
+    targetEntity: HardState,
+    relationshipKind: string,
+    relationshipAge: number,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = `${sourceEntity.name} betrays ${targetEntity.name}`;
+
+    const significance = calculateSignificance(
+      'betrayal',
+      sourceEntity.id,
+      [],
+      this.context
+    );
+
+    const ageBonus = Math.min(0.2, relationshipAge * 0.002);
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'betrayal',
+      significance: Math.min(1.0, significance + ageBonus),
+      subject: this.buildEntityRef(sourceEntity),
+      action: 'betrayed',
+      object: this.buildEntityRef(targetEntity),
+      headline,
+      description: `The ${relationshipKind} bond between ${sourceEntity.name} and ${targetEntity.name} has been broken after ${relationshipAge} ticks.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'betrayal',
+        this.buildEntityRef(sourceEntity),
+        this.buildEntityRef(targetEntity),
+        [],
+        'betrayed',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a reconciliation event (negative relationship dissolved)
+   */
+  buildReconciliationEvent(
+    sourceEntity: HardState,
+    targetEntity: HardState,
+    relationshipKind: string,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = `${sourceEntity.name} reconciles with ${targetEntity.name}`;
+
+    const significance = calculateSignificance(
+      'reconciliation',
       sourceEntity.id,
       [],
       this.context
@@ -283,24 +469,286 @@ export class NarrativeEventBuilder {
       id: this.generateId(),
       tick: this.context.tick,
       era: this.context.eraId,
-      eventKind,
-      significance: Math.min(1.0, significance + 0.1), // Relationship events get small boost
+      eventKind: 'reconciliation',
+      significance,
       subject: this.buildEntityRef(sourceEntity),
-      action: `${action}_${relationshipKind}`,
+      action: 'reconciled',
       object: this.buildEntityRef(targetEntity),
       headline,
-      description: `A ${relationshipKind} relationship was ${action} between ${sourceEntity.name} and ${targetEntity.name}.`,
+      description: `The ${relationshipKind} enmity between ${sourceEntity.name} and ${targetEntity.name} has ended.`,
       stateChanges: [],
       causedBy: catalyst ? {
         entityId: catalyst.entityId,
         actionType: catalyst.actionType,
       } : undefined,
       narrativeTags: generateNarrativeTags(
-        eventKind,
+        'reconciliation',
         this.buildEntityRef(sourceEntity),
         this.buildEntityRef(targetEntity),
         [],
-        action,
+        'reconciled',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a rivalry formed event (negative relationship created between known entities)
+   */
+  buildRivalryFormedEvent(
+    sourceEntity: HardState,
+    targetEntity: HardState,
+    relationshipKind: string,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = `${sourceEntity.name} becomes rivals with ${targetEntity.name}`;
+
+    const significance = calculateSignificance(
+      'rivalry_formed',
+      sourceEntity.id,
+      [],
+      this.context
+    );
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'rivalry_formed',
+      significance,
+      subject: this.buildEntityRef(sourceEntity),
+      action: 'became_rivals',
+      object: this.buildEntityRef(targetEntity),
+      headline,
+      description: `A ${relationshipKind} relationship has formed between ${sourceEntity.name} and ${targetEntity.name}.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'rivalry_formed',
+        this.buildEntityRef(sourceEntity),
+        this.buildEntityRef(targetEntity),
+        [],
+        'rivalry',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build an alliance formed event (multiple positive relationships in same tick)
+   */
+  buildAllianceFormedEvent(
+    entities: HardState[],
+    relationshipKind: string,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const names = entities.slice(0, 3).map(e => e.name).join(', ');
+    const moreCount = entities.length > 3 ? ` and ${entities.length - 3} others` : '';
+    const headline = `${names}${moreCount} form an alliance`;
+
+    const significance = calculateSignificance(
+      'alliance_formed',
+      entities[0].id,
+      [],
+      this.context
+    );
+
+    const memberBonus = Math.min(0.2, entities.length * 0.03);
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'alliance_formed',
+      significance: Math.min(1.0, significance + memberBonus),
+      subject: this.buildEntityRef(entities[0]),
+      action: 'formed_alliance',
+      headline,
+      description: `${entities.length} entities have formed ${relationshipKind} bonds, creating a new alliance.`,
+      stateChanges: [],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'alliance_formed',
+        this.buildEntityRef(entities[0]),
+        undefined,
+        [],
+        'alliance',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a downfall event (status changed to negative polarity)
+   */
+  buildDownfallEvent(
+    entity: HardState,
+    previousStatus: string,
+    newStatus: string,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = `${entity.name} falls to ${newStatus}`;
+
+    const significance = calculateSignificance(
+      'downfall',
+      entity.id,
+      [{
+        entityId: entity.id,
+        entityName: entity.name,
+        entityKind: entity.kind,
+        field: 'status',
+        previousValue: previousStatus,
+        newValue: newStatus,
+      }],
+      this.context
+    );
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'downfall',
+      significance,
+      subject: this.buildEntityRef(entity),
+      action: 'fell',
+      headline,
+      description: `${entity.name} has fallen from ${previousStatus} to ${newStatus}.`,
+      stateChanges: [{
+        entityId: entity.id,
+        entityName: entity.name,
+        entityKind: entity.kind,
+        field: 'status',
+        previousValue: previousStatus,
+        newValue: newStatus,
+      }],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'downfall',
+        this.buildEntityRef(entity),
+        undefined,
+        [],
+        'fell',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a triumph event (status changed to positive polarity)
+   */
+  buildTriumphEvent(
+    entity: HardState,
+    previousStatus: string,
+    newStatus: string,
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const headline = `${entity.name} rises to ${newStatus}`;
+
+    const significance = calculateSignificance(
+      'triumph',
+      entity.id,
+      [{
+        entityId: entity.id,
+        entityName: entity.name,
+        entityKind: entity.kind,
+        field: 'status',
+        previousValue: previousStatus,
+        newValue: newStatus,
+      }],
+      this.context
+    );
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'triumph',
+      significance,
+      subject: this.buildEntityRef(entity),
+      action: 'rose',
+      headline,
+      description: `${entity.name} has risen from ${previousStatus} to ${newStatus}.`,
+      stateChanges: [{
+        entityId: entity.id,
+        entityName: entity.name,
+        entityKind: entity.kind,
+        field: 'status',
+        previousValue: previousStatus,
+        newValue: newStatus,
+      }],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'triumph',
+        this.buildEntityRef(entity),
+        undefined,
+        [],
+        'rose',
+        { entityKinds: new Set() }
+      ),
+    };
+  }
+
+  /**
+   * Build a power vacuum event (authority entity ended with no successor)
+   */
+  buildPowerVacuumEvent(
+    authorityEntity: HardState,
+    affectedEntities: HardState[],
+    catalyst?: { entityId: string; actionType: string }
+  ): NarrativeEvent {
+    const affectedNames = affectedEntities.slice(0, 3).map(e => e.name).join(', ');
+    const moreCount = affectedEntities.length > 3 ? ` and ${affectedEntities.length - 3} others` : '';
+    const headline = `${authorityEntity.name} falls, leaving a power vacuum`;
+
+    const significance = calculateSignificance(
+      'power_vacuum',
+      authorityEntity.id,
+      [],
+      this.context
+    );
+
+    const affectedBonus = Math.min(0.2, affectedEntities.length * 0.03);
+
+    return {
+      id: this.generateId(),
+      tick: this.context.tick,
+      era: this.context.eraId,
+      eventKind: 'power_vacuum',
+      significance: Math.min(1.0, significance + affectedBonus),
+      subject: this.buildEntityRef(authorityEntity),
+      action: 'created_vacuum',
+      headline,
+      description: `${authorityEntity.name} has ended without a clear successor. ${affectedNames}${moreCount} are left without leadership.`,
+      stateChanges: [{
+        entityId: authorityEntity.id,
+        entityName: authorityEntity.name,
+        entityKind: authorityEntity.kind,
+        field: 'status',
+        previousValue: 'active',
+        newValue: 'historical',
+      }],
+      causedBy: catalyst ? {
+        entityId: catalyst.entityId,
+        actionType: catalyst.actionType,
+      } : undefined,
+      narrativeTags: generateNarrativeTags(
+        'power_vacuum',
+        this.buildEntityRef(authorityEntity),
+        undefined,
+        [],
+        'vacuum',
         { entityKinds: new Set() }
       ),
     };

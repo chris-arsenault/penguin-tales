@@ -14,3 +14,4 @@ export { generateNarrativeTags } from './narrativeTagGenerator.js';
 export type { TagContext } from './narrativeTagGenerator.js';
 
 export { StateChangeTracker, createDefaultNarrativeConfig } from './stateChangeTracker.js';
+export type { NarrativeSchemaSlice } from './stateChangeTracker.js';

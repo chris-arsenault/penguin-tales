@@ -44,7 +44,6 @@ function EntityTaskGroup({
   onToggleExpand,
 }) {
   const completedCount = tasks.filter((t) => t.status === 'complete').length;
-  const pendingCount = tasks.filter((t) => t.status === 'pending').length;
   const hasError = tasks.some((t) => t.status === 'error');
 
   return (
@@ -109,11 +108,10 @@ function EntityTaskGroup({
               <span style={{ flex: 1, fontSize: '12px' }}>
                 {task.type === 'description' && 'Description'}
                 {task.type === 'image' && 'Image'}
-                {task.type === 'era_narrative' && 'Era Narrative'}
-                {task.type === 'relationship' && 'Relationship'}
+                {task.type === 'entityStory' && 'Chronicle'}
               </span>
               <TaskStatusBadge status={task.status} />
-              {(task.status === 'pending' || task.status === 'error') && (
+              {(task.status === 'queued' || task.status === 'error') && (
                 <button
                   onClick={() => onRunTask(task.id)}
                   style={{

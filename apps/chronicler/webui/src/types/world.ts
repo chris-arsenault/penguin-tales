@@ -14,8 +14,16 @@ import type {
   WorldRelationship as CanonryWorldRelationship,
 } from '@canonry/world-schema';
 
-export type WorldState = CanonryWorldOutput;
-export type HardState = CanonryWorldEntity;
+export type HardState = CanonryWorldEntity & {
+  enrichment?: {
+    image?: {
+      imageId?: string;
+    };
+  };
+};
+export type WorldState = Omit<CanonryWorldOutput, 'hardState'> & {
+  hardState: HardState[];
+};
 export type Relationship = CanonryWorldRelationship;
 export type WorldMetadata = CanonryWorldMetadata;
 export type Prominence = CanonryProminence;
@@ -34,7 +42,8 @@ export type LoreType =
   | 'era_chapter'
   | 'entity_story'
   | 'enhanced_entity_page'
-  | 'relationship_narrative';
+  | 'relationship_narrative'
+  | 'chronicle';
 
 export interface LoreWikiSection {
   heading: string;
@@ -72,6 +81,7 @@ export interface EntityImage {
   entityKind: string;
   prompt: string;
   localPath: string;
+  imageId: string;
 }
 
 export interface ImageMetadata {
@@ -85,7 +95,11 @@ export interface WikiPage {
   id: string;
   slug: string;
   title: string;
-  type: 'entity' | 'era' | 'category' | 'relationship';
+  type: 'entity' | 'era' | 'category' | 'relationship' | 'chronicle';
+  chronicle?: {
+    format: 'story' | 'document';
+    entrypointId?: string;
+  };
   content: WikiContent;
   categories: string[];
   linkedEntities: string[];
@@ -94,7 +108,6 @@ export interface WikiPage {
 }
 
 export interface WikiContent {
-  summary: string;
   sections: WikiSection[];
   infobox?: WikiInfobox;
 }

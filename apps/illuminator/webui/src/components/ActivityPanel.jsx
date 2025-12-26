@@ -7,7 +7,7 @@
  * - Recent completed/errored tasks
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 function formatDuration(ms) {
   if (ms < 1000) return `${ms}ms`;
@@ -18,7 +18,7 @@ function formatTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString();
 }
 
-function TaskRow({ item, onCancel, onRetry }) {
+function TaskRow({ item, onCancel, onRetry, onViewDebug }) {
   const duration = item.startedAt
     ? item.completedAt
       ? item.completedAt - item.startedAt
@@ -38,6 +38,7 @@ function TaskRow({ item, onCancel, onRetry }) {
     complete: '✓',
     error: '✗',
   };
+  const hasDebug = Boolean(item.debug && (item.debug.request || item.debug.response));
 
   return (
     <div
@@ -56,7 +57,7 @@ function TaskRow({ item, onCancel, onRetry }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: '13px' }}>{item.entityName}</div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-          {item.type === 'description' ? 'Description' : item.type === 'image' ? 'Image' : 'Era Narrative'}
+          {item.type === 'description' ? 'Description' : item.type === 'image' ? 'Image' : 'Chronicle'}
           {item.entityKind && ` · ${item.entityKind}`}
         </div>
       </div>
@@ -96,6 +97,16 @@ function TaskRow({ item, onCancel, onRetry }) {
           Retry
         </button>
       )}
+
+      {hasDebug && onViewDebug && (
+        <button
+          onClick={() => onViewDebug(item)}
+          className="illuminator-button-link"
+          style={{ fontSize: '11px' }}
+        >
+          View Debug
+        </button>
+      )}
     </div>
   );
 }
@@ -109,6 +120,7 @@ export default function ActivityPanel({
   onClearCompleted,
   enrichmentTriggers,
 }) {
+  const [debugItem, setDebugItem] = useState(null);
   const triggerSummary = useMemo(() => {
     if (!enrichmentTriggers || typeof enrichmentTriggers !== 'object') return null;
     const total = typeof enrichmentTriggers.total === 'number' ? enrichmentTriggers.total : null;
@@ -135,6 +147,8 @@ export default function ActivityPanel({
 
     return { running, queued, completed, errored };
   }, [queue]);
+  const debugRequest = debugItem?.debug?.request || '';
+  const debugResponse = debugItem?.debug?.response || '';
 
   return (
     <div>
@@ -257,7 +271,7 @@ export default function ActivityPanel({
             Currently Running
           </div>
           {running.map((item) => (
-            <TaskRow key={item.id} item={item} onCancel={onCancel} />
+            <TaskRow key={item.id} item={item} onCancel={onCancel} onViewDebug={setDebugItem} />
           ))}
         </div>
       )}
@@ -277,7 +291,7 @@ export default function ActivityPanel({
             Queued ({queued.length})
           </div>
           {queued.slice(0, 10).map((item) => (
-            <TaskRow key={item.id} item={item} onCancel={onCancel} />
+            <TaskRow key={item.id} item={item} onCancel={onCancel} onViewDebug={setDebugItem} />
           ))}
           {queued.length > 10 && (
             <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -304,7 +318,7 @@ export default function ActivityPanel({
           </div>
           {errored.map((item) => (
             <div key={item.id}>
-              <TaskRow item={item} onRetry={onRetry} />
+              <TaskRow item={item} onRetry={onRetry} onViewDebug={setDebugItem} />
               {item.error && (
                 <div
                   style={{
@@ -337,7 +351,7 @@ export default function ActivityPanel({
             Recent Completed
           </div>
           {completed.map((item) => (
-            <TaskRow key={item.id} item={item} />
+            <TaskRow key={item.id} item={item} onViewDebug={setDebugItem} />
           ))}
         </div>
       )}
@@ -347,6 +361,67 @@ export default function ActivityPanel({
         <div className="illuminator-card">
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             No activity yet. Queue some enrichment tasks from the Entities tab.
+          </div>
+        </div>
+      )}
+
+      {debugItem && (
+        <div className="illuminator-modal-overlay" onClick={() => setDebugItem(null)}>
+          <div
+            className="illuminator-modal"
+            style={{ maxWidth: '900px', width: '90%', maxHeight: '85vh' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="illuminator-modal-header">
+              <h3>Network Debug</h3>
+              <button onClick={() => setDebugItem(null)} className="illuminator-modal-close">&times;</button>
+            </div>
+            <div className="illuminator-modal-body" style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {debugItem.entityName}
+                {debugItem.type === 'description'
+                  ? ' · Description'
+                  : debugItem.type === 'image'
+                    ? ' · Image'
+                    : ' · Chronicle'}
+              </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    display: 'block',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Request (raw)
+                </label>
+                <textarea
+                  className="illuminator-textarea"
+                  value={debugRequest}
+                  readOnly
+                  style={{ minHeight: '140px' }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    display: 'block',
+                    marginBottom: '6px',
+                  }}
+                >
+                  Response (raw)
+                </label>
+                <textarea
+                  className="illuminator-textarea"
+                  value={debugResponse}
+                  readOnly
+                  style={{ minHeight: '160px' }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}

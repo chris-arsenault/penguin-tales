@@ -15,15 +15,12 @@ import {
   getEffectiveTemplate,
   buildDescriptionPrompt,
   buildImagePrompt,
-  expandTemplate,
 } from '../lib/promptTemplates';
 import { buildEntityIndex, buildRelationshipIndex } from '../lib/worldData';
 
 const TASK_TYPES = [
   { id: 'description', label: 'Description', icon: '📝' },
   { id: 'image', label: 'Image', icon: '🖼️' },
-  { id: 'relationship', label: 'Relationship', icon: '🔗' },
-  { id: 'era_narrative', label: 'Era Narrative', icon: '📜' },
 ];
 
 const DESCRIPTION_SECTIONS = [
@@ -262,13 +259,6 @@ export default function PromptTemplateEditor({
   // Get current template being edited
   // When editing kind override, show kind-specific template
   const currentTemplate = useMemo(() => {
-    if (selectedType === 'relationship') {
-      return templates.defaults.relationship;
-    }
-    if (selectedType === 'era_narrative') {
-      return templates.defaults.eraNarrative;
-    }
-
     const taskType = selectedType === 'description' ? 'description' : 'image';
 
     // If editing a kind override
@@ -284,7 +274,7 @@ export default function PromptTemplateEditor({
 
   // Check if current kind has overrides
   const hasKindOverride = useMemo(() => {
-    if (selectedKind === null || selectedType === 'relationship' || selectedType === 'era_narrative') {
+    if (selectedKind === null) {
       return false;
     }
     const taskType = selectedType === 'description' ? 'description' : 'image';
@@ -301,13 +291,6 @@ export default function PromptTemplateEditor({
       relationshipsByEntity,
       simulationMetadata
     );
-
-    if (selectedType === 'relationship') {
-      return expandTemplate(templates.defaults.relationship, context);
-    }
-    if (selectedType === 'era_narrative') {
-      return expandTemplate(templates.defaults.eraNarrative, context);
-    }
 
     const taskType = selectedType === 'description' ? 'description' : 'image';
     const effectiveTemplate = getEffectiveTemplate(
@@ -372,11 +355,7 @@ export default function PromptTemplateEditor({
       const newTemplates = { ...templates };
       const taskType = selectedType === 'description' ? 'description' : 'image';
 
-      if (selectedType === 'relationship') {
-        newTemplates.defaults = { ...newTemplates.defaults, relationship: value };
-      } else if (selectedType === 'era_narrative') {
-        newTemplates.defaults = { ...newTemplates.defaults, eraNarrative: value };
-      } else if (selectedKind !== null) {
+      if (selectedKind !== null) {
         // Editing kind override
         newTemplates.byKind = {
           ...newTemplates.byKind,
@@ -451,8 +430,6 @@ export default function PromptTemplateEditor({
 
 
   const sections = selectedType === 'description' ? DESCRIPTION_SECTIONS : IMAGE_SECTIONS;
-  const showKindSelector = selectedType === 'description' || selectedType === 'image';
-  const showAdvancedToggle = selectedType === 'description' || selectedType === 'image';
 
   return (
     <div className="illuminator-template-editor">
@@ -482,7 +459,7 @@ export default function PromptTemplateEditor({
         </div>
 
         {/* Kind Selector (for description/image) */}
-        {showKindSelector && entityKinds.length > 0 && (
+        {entityKinds.length > 0 && (
           <div className="illuminator-template-kind-section">
             <div className="illuminator-template-kind-header">
               <label className="illuminator-label">Entity Kind</label>
@@ -524,22 +501,20 @@ export default function PromptTemplateEditor({
         )}
 
         {/* Mode Toggle */}
-        {showAdvancedToggle && (
-          <div className="illuminator-template-mode-toggle">
-            <button
-              onClick={() => setAdvancedMode(false)}
-              className={`illuminator-mode-button ${!advancedMode ? 'active' : ''}`}
-            >
-              Structured
-            </button>
-            <button
-              onClick={() => setAdvancedMode(true)}
-              className={`illuminator-mode-button ${advancedMode ? 'active' : ''}`}
-            >
-              Advanced
-            </button>
-          </div>
-        )}
+        <div className="illuminator-template-mode-toggle">
+          <button
+            onClick={() => setAdvancedMode(false)}
+            className={`illuminator-mode-button ${!advancedMode ? 'active' : ''}`}
+          >
+            Structured
+          </button>
+          <button
+            onClick={() => setAdvancedMode(true)}
+            className={`illuminator-mode-button ${advancedMode ? 'active' : ''}`}
+          >
+            Advanced
+          </button>
+        </div>
       </div>
 
       {/* Editor */}
@@ -553,29 +528,7 @@ export default function PromptTemplateEditor({
           )}
         </div>
 
-        {(selectedType === 'relationship' || selectedType === 'era_narrative') ? (
-          // Relationship and Era Narrative are single templates
-          <div className="illuminator-template-section">
-            <textarea
-              className="illuminator-template-textarea illuminator-template-textarea-large"
-              value={currentTemplate}
-              onChange={(e) => handleSectionChange(selectedType === 'relationship' ? 'relationship' : 'eraNarrative', e.target.value)}
-              rows={12}
-            />
-            <div className="illuminator-template-variables">
-              <span className="illuminator-label">Available variables:</span>
-              <code>{'{{entity.entity.name}}'}</code>
-              <code>{'{{entity.entity.kind}}'}</code>
-              <code>{'{{entity.entity.subtype}}'}</code>
-              <code>{'{{entity.entity.prominence}}'}</code>
-              <code>{'{{entity.entityAge}}'}</code>
-              <code>{'{{entity.relationships}}'}</code>
-              <code>{'{{entity.culturalPeers}}'}</code>
-              <code>{'{{world.name}}'}</code>
-              <code>{'{{world.tone}}'}</code>
-            </div>
-          </div>
-        ) : advancedMode ? (
+        {advancedMode ? (
           // Advanced mode - full template editing
           <div className="illuminator-template-section">
             <div className="illuminator-template-section-header">

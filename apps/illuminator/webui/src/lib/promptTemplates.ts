@@ -127,8 +127,6 @@ export interface PromptTemplates {
   defaults: {
     description: DescriptionTemplate;
     image: ImageTemplate;
-    relationship: string;
-    eraNarrative: string;
   };
   byKind: {
     [entityKind: string]: {
@@ -200,36 +198,6 @@ export const DEFAULT_IMAGE_TEMPLATE: ImageTemplate = {
   avoidElements: `Generic fantasy tropes unless they fit {{world.name}}. No modern elements. No contradicting the entity's established cultural identity.`,
 };
 
-export const DEFAULT_RELATIONSHIP_TEMPLATE = `Describe how {{entity.name}} relates to others in {{world.name}}.
-
-ENTITY: {{entity.name}} ({{entity.subtype}} {{entity.kind}})
-STATUS: {{entity.status}} | PROMINENCE: {{entity.prominence}}
-
-KNOWN CONNECTIONS:
-{{#relationships}}
-- {{kind}}: {{targetName}} ({{targetKind}}){{#strength}} [strength: {{strength}}]{{/strength}}
-{{/relationships}}
-{{^relationships}}
-(No established relationships yet)
-{{/relationships}}
-
-{{#culturalPeers.length}}
-CULTURAL PEERS ({{entity.culture}}): {{culturalPeers}}
-{{/culturalPeers.length}}
-
-Write 2-3 sentences about how these connections shape {{entity.name}}'s place in the world. Focus on dynamics that create story potential - alliances, tensions, dependencies.`;
-
-export const DEFAULT_ERA_NARRATIVE_TEMPLATE = `Write a narrative summary for this era/event in {{world.name}}.
-
-NAME: {{entity.name}}
-TYPE: {{entity.subtype}} {{entity.kind}}
-EXISTING DESCRIPTION: {{entity.description}}
-
-This {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.
-
-Canon facts: {{world.canonFacts}}
-
-Craft 2-3 sentences capturing the essence of this period - its defining tensions, what changed, why it matters. Reference specific entities or factions if relationships exist.`;
 
 // =============================================================================
 // Kind-Specific Overrides
@@ -573,8 +541,6 @@ export function createDefaultPromptTemplates(): PromptTemplates {
     defaults: {
       description: { ...DEFAULT_DESCRIPTION_TEMPLATE },
       image: { ...DEFAULT_IMAGE_TEMPLATE },
-      relationship: DEFAULT_RELATIONSHIP_TEMPLATE,
-      eraNarrative: DEFAULT_ERA_NARRATIVE_TEMPLATE,
     },
     byKind: { ...DEFAULT_KIND_OVERRIDES },
     visualIdentityKeysByKind: {},
@@ -600,8 +566,6 @@ export function mergeWithDefaults(
     defaults: {
       description: { ...defaults.defaults.description, ...saved.defaults?.description },
       image: { ...defaults.defaults.image, ...saved.defaults?.image },
-      relationship: saved.defaults?.relationship ?? defaults.defaults.relationship,
-      eraNarrative: saved.defaults?.eraNarrative ?? defaults.defaults.eraNarrative,
     },
     byKind: {
       ...defaults.byKind,

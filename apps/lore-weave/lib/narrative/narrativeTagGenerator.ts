@@ -28,6 +28,58 @@ export function generateNarrativeTags(
   // Event kind tag
   tags.add(eventKind);
 
+  // Event kind specific tags
+  if (eventKind === 'succession') {
+    tags.add('leadership');
+    tags.add('transition');
+  }
+  if (eventKind === 'coalescence') {
+    tags.add('unification');
+    tags.add('formation');
+  }
+  if (eventKind === 'relationship_dissolved') {
+    tags.add('dissolution');
+    tags.add('ended');
+  }
+  // Polarity-based relationship events
+  if (eventKind === 'betrayal') {
+    tags.add('treachery');
+    tags.add('broken_trust');
+    tags.add('dramatic');
+  }
+  if (eventKind === 'reconciliation') {
+    tags.add('peace');
+    tags.add('healing');
+    tags.add('resolution');
+  }
+  if (eventKind === 'rivalry_formed') {
+    tags.add('conflict');
+    tags.add('enmity');
+    tags.add('tension');
+  }
+  if (eventKind === 'alliance_formed') {
+    tags.add('cooperation');
+    tags.add('unity');
+    tags.add('pact');
+  }
+  // Status polarity events
+  if (eventKind === 'downfall') {
+    tags.add('tragedy');
+    tags.add('decline');
+    tags.add('loss');
+  }
+  if (eventKind === 'triumph') {
+    tags.add('victory');
+    tags.add('success');
+    tags.add('achievement');
+  }
+  // Authority events
+  if (eventKind === 'power_vacuum') {
+    tags.add('leadership');
+    tags.add('crisis');
+    tags.add('uncertainty');
+  }
+
   // State change tags
   for (const change of stateChanges) {
     if (change.field === 'status') {

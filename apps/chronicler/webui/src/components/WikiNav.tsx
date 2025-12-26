@@ -64,6 +64,7 @@ const styles = {
 interface WikiNavProps {
   categories: WikiCategory[];
   pages: WikiPage[];
+  chronicles: WikiPage[];
   currentPageId: string | null;
   onNavigate: (pageId: string) => void;
   onGoHome: () => void;
@@ -72,6 +73,7 @@ interface WikiNavProps {
 export default function WikiNav({
   categories,
   pages,
+  chronicles,
   currentPageId,
   onNavigate,
   onGoHome,
@@ -89,6 +91,10 @@ export default function WikiNav({
       onNavigate(entityPages[randomIndex].id);
     }
   };
+
+  const chroniclePages = chronicles.filter((page) => page.chronicle);
+  const storyChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'story');
+  const documentChronicles = chroniclePages.filter((page) => page.chronicle?.format === 'document');
 
   return (
     <nav style={styles.nav}>
@@ -160,6 +166,82 @@ export default function WikiNav({
               <span style={styles.badge}>({category.pageCount})</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {chroniclePages.length > 0 && (
+        <div style={styles.section}>
+          <div style={styles.sectionTitle}>Chronicles</div>
+          <button
+            style={{
+              ...styles.navItem,
+              ...(currentPageId === 'chronicles' ? styles.navItemActive : {}),
+            }}
+            onClick={() => onNavigate('chronicles')}
+            onMouseEnter={(e) => {
+              if (currentPageId !== 'chronicles') {
+                e.currentTarget.style.backgroundColor = colors.hoverBg;
+                e.currentTarget.style.color = colors.accent;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPageId !== 'chronicles') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = colors.textSecondary;
+              }
+            }}
+          >
+            All Chronicles
+            <span style={styles.badge}>({chroniclePages.length})</span>
+          </button>
+          {storyChronicles.length > 0 && (
+            <button
+              style={{
+                ...styles.navItem,
+                ...(currentPageId === 'chronicles-story' ? styles.navItemActive : {}),
+              }}
+              onClick={() => onNavigate('chronicles-story')}
+              onMouseEnter={(e) => {
+                if (currentPageId !== 'chronicles-story') {
+                  e.currentTarget.style.backgroundColor = colors.hoverBg;
+                  e.currentTarget.style.color = colors.accent;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPageId !== 'chronicles-story') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = colors.textSecondary;
+                }
+              }}
+            >
+              Stories
+              <span style={styles.badge}>({storyChronicles.length})</span>
+            </button>
+          )}
+          {documentChronicles.length > 0 && (
+            <button
+              style={{
+                ...styles.navItem,
+                ...(currentPageId === 'chronicles-document' ? styles.navItemActive : {}),
+              }}
+              onClick={() => onNavigate('chronicles-document')}
+              onMouseEnter={(e) => {
+                if (currentPageId !== 'chronicles-document') {
+                  e.currentTarget.style.backgroundColor = colors.hoverBg;
+                  e.currentTarget.style.color = colors.accent;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPageId !== 'chronicles-document') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = colors.textSecondary;
+                }
+              }}
+            >
+              Documents
+              <span style={styles.badge}>({documentChronicles.length})</span>
+            </button>
+          )}
         </div>
       )}
 

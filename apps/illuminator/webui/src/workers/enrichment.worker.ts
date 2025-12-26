@@ -81,6 +81,7 @@ async function executeTask(task: WorkerTask): Promise<WorkerResult> {
         type: task.type,
         success: false,
         error: result.error,
+        debug: result.debug,
       };
     }
 
@@ -90,6 +91,7 @@ async function executeTask(task: WorkerTask): Promise<WorkerResult> {
       type: task.type,
       success: true,
       result: result.result,
+      debug: result.debug,
     };
   } catch (error) {
     return {
@@ -140,6 +142,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
           type: 'error',
           taskId: result.id,
           error: result.error || 'Unknown error',
+          debug: result.debug,
         });
       }
       break;
@@ -161,4 +164,12 @@ ctx.onmessage = async (event: MessageEvent<WorkerInbound>) => {
 };
 
 // Re-export types for consumers
-export type { WorkerTask, WorkerResult, EnrichmentResult, EnrichmentType };
+export type {
+  WorkerTask,
+  WorkerResult,
+  EnrichmentResult,
+  EnrichmentType,
+  WorkerConfig,
+  WorkerInbound,
+  WorkerOutbound,
+};

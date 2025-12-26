@@ -1,11 +1,12 @@
 /**
  * ChroniclePanel - Multi-step narrative generation pipeline
  *
- * Orchestrates the 4-step chronicle generation process:
+ * Orchestrates the 5-stage chronicle generation process:
  * 1. Plan - Generate structured plan with entities, plot, sections
  * 2. Expand - Expand each section into narrative prose
- * 3. Assemble - Combine sections with transitions and wiki links
+ * 3. Assemble - Combine sections with transitions
  * 4. Validate - Check output against stated goals
+ * 5. Edit - Apply validation feedback and re-validate
  *
  * See CHRONICLE_DESIGN.md for architecture documentation.
  */
@@ -15,7 +16,6 @@ import ChroniclePlanEditor from './ChroniclePlanEditor';
 import CohesionReportViewer from './CohesionReportViewer';
 import EventsPanel from './EventsPanel';
 import {
-  buildEraChronicleContext,
   buildEntityStoryContext,
   checkPrerequisites,
 } from '../lib/chronicleContextBuilder';
@@ -28,12 +28,12 @@ const STAGES = [
   { id: 'expand', label: 'Expand', icon: '📝' },
   { id: 'assemble', label: 'Assemble', icon: '📖' },
   { id: 'validate', label: 'Validate', icon: '✓' },
+  { id: 'edit', label: 'Edit', icon: '✎' },
 ];
 
 // Content type definitions
 const CONTENT_TYPES = [
-  { id: 'eraChronicle', label: 'Era Chronicles', description: 'Coming soon (not yet implemented)' },
-  { id: 'entityStory', label: 'Entity Stories', description: 'Multi-entity narratives anchored on an entrypoint (no primary required)' },
+  { id: 'entityStory', label: 'Entity Chronicles', description: 'Multi-entity narratives and in-world documents anchored on an entrypoint' },
   { id: 'events', label: 'Events', description: 'View narrative events from simulation' },
 ];
 
@@ -146,9 +146,6 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
   const entity = entityMap?.get(item.targetId);
 
   const getTargetName = () => {
-    if (item.type === 'eraChronicle') {
-      return entity?.name || item.targetId;
-    }
     if (item.type === 'entityStory') {
       return entity?.name || item.targetId;
     }
@@ -171,10 +168,23 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
         return { label: 'Assembling...', color: '#3b82f6' };
       case 'assembly_ready':
         return { label: 'Assembly Ready', color: '#f59e0b' };
+      case 'editing':
+        return { label: 'Editing...', color: '#3b82f6' };
       case 'validating':
         return { label: 'Validating...', color: '#3b82f6' };
       case 'validation_ready':
         return { label: 'Review', color: '#f59e0b' };
+      case 'failed': {
+        const stepLabels = {
+          plan: 'Plan',
+          expand: 'Expand',
+          assemble: 'Assemble',
+          validate: 'Validate',
+          edit: 'Edit',
+        };
+        const stepLabel = stepLabels[item.failureStep] || 'Plan';
+        return { label: `${stepLabel} Failed`, color: '#ef4444' };
+      }
       case 'complete':
         return { label: 'Complete', color: '#10b981' };
       default:
@@ -257,6 +267,10 @@ function ChronicleItemCard({ item, isSelected, onClick, entityMap }) {
                 ? 'expand'
                 : item.status === 'assembling' || item.status === 'assembly_ready'
                 ? 'assemble'
+                : item.status === 'failed'
+                ? item.failureStep || 'plan'
+                : item.status === 'editing'
+                ? 'edit'
                 : 'validate'
             }
             status={item.status}
@@ -365,9 +379,7 @@ function SectionProgressList({ sections, onSectionClick }) {
   );
 }
 
-function AssembledContentViewer({ content, wordCount, wikiLinks, onCopy }) {
-  const [showLinks, setShowLinks] = useState(false);
-
+function AssembledContentViewer({ content, wordCount, onCopy }) {
   return (
     <div>
       <div
@@ -379,22 +391,9 @@ function AssembledContentViewer({ content, wordCount, wikiLinks, onCopy }) {
         }}
       >
         <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          {wordCount.toLocaleString()} words • {wikiLinks.length} entity links
+          {wordCount.toLocaleString()} words
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setShowLinks(!showLinks)}
-            style={{
-              padding: '6px 12px',
-              fontSize: '12px',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            {showLinks ? 'Hide Links' : 'Show Links'}
-          </button>
           <button
             onClick={onCopy}
             style={{
@@ -410,37 +409,6 @@ function AssembledContentViewer({ content, wordCount, wikiLinks, onCopy }) {
           </button>
         </div>
       </div>
-
-      {showLinks && wikiLinks.length > 0 && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            background: 'var(--bg-tertiary)',
-            borderRadius: '6px',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>
-            Wiki Links ({wikiLinks.length})
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {wikiLinks.map((link) => (
-              <span
-                key={link.entityId}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '4px',
-                }}
-              >
-                [[{link.name}]] {link.count > 1 && `×${link.count}`}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div
         style={{
@@ -471,6 +439,7 @@ export default function ChroniclePanel({
   projectId,
   simulationRunId,
   buildPrompt,
+  onChronicleAccepted,
 }) {
   // Load persisted state from localStorage
   const [activeType, setActiveType] = useState(() => {
@@ -518,6 +487,7 @@ export default function ChroniclePanel({
     stories,
     generateStory,
     continueStory,
+    correctSuggestions,
     acceptStory,
     restartStory,
     isGenerating,
@@ -556,11 +526,20 @@ export default function ChroniclePanel({
           case 'expand': return 'expanding';
           case 'assemble': return 'assembling';
           case 'validate': return 'validating';
+          case 'edit': return 'editing';
           default: return 'planning';
         }
       }
       if (queueTask.status === 'queued') {
-        return 'planning'; // Waiting to start
+        switch (queueTask.chronicleStep) {
+          case 'edit': return 'editing';
+          case 'validate': return 'validating';
+          case 'assemble': return 'assembling';
+          case 'expand': return 'expanding';
+          case 'plan':
+          default:
+            return 'planning';
+        }
       }
     }
 
@@ -574,27 +553,7 @@ export default function ChroniclePanel({
 
     const items = [];
 
-    if (activeType === 'eraChronicle') {
-      const eras = worldData.hardState.filter((e) => e.kind === 'era');
-      for (const era of eras) {
-        const story = stories.get(era.id);
-        items.push({
-          id: era.id,
-          type: 'eraChronicle',
-          targetId: era.id,
-          status: getEffectiveStatus(era.id, story),
-          // Include full story record if exists
-          storyId: story?.storyId,
-          plan: story?.plan,
-          sectionsCompleted: story?.sectionsCompleted,
-          sectionsTotal: story?.sectionsTotal,
-          assembledContent: story?.assembledContent,
-          cohesionReport: story?.cohesionReport,
-          wikiLinks: story?.wikiLinks,
-          finalContent: story?.finalContent,
-        });
-      }
-    } else if (activeType === 'entityStory') {
+    if (activeType === 'entityStory') {
       const prominentEntities = (entities || []).filter(
         (e) =>
           e.kind !== 'era' && (e.prominence === 'mythic' || e.prominence === 'renowned')
@@ -613,8 +572,10 @@ export default function ChroniclePanel({
           sectionsTotal: story?.sectionsTotal,
           assembledContent: story?.assembledContent,
           cohesionReport: story?.cohesionReport,
-          wikiLinks: story?.wikiLinks,
           finalContent: story?.finalContent,
+          failureStep: story?.failureStep,
+          failureReason: story?.failureReason,
+          editVersion: story?.editVersion ?? 0,
         });
       }
     }
@@ -647,9 +608,7 @@ export default function ChroniclePanel({
         tone: worldContext?.tone || '',
       };
 
-      if (selectedItem.type === 'eraChronicle') {
-        return buildEraChronicleContext(selectedItem.targetId, worldData, wc);
-      } else if (selectedItem.type === 'entityStory') {
+      if (selectedItem.type === 'entityStory') {
         return buildEntityStoryContext(selectedItem.targetId, worldData, wc);
       }
     } catch (e) {
@@ -658,27 +617,34 @@ export default function ChroniclePanel({
     return null;
   }, [selectedItem, worldData, worldContext]);
 
-  const isEraUnimplemented = selectedItem?.type === 'eraChronicle';
   // Check prerequisites
   const prerequisites = useMemo(() => {
-    if (!generationContext || isEraUnimplemented) return { ready: true, missing: [] };
+    if (!generationContext) return { ready: true, missing: [] };
     return checkPrerequisites(generationContext);
-  }, [generationContext, isEraUnimplemented]);
+  }, [generationContext]);
 
   // Handle chronicle generation (runs all 4 steps in worker)
   const handleGenerateChronicle = useCallback(() => {
     if (!selectedItem || !generationContext) return;
-    if (selectedItem.type === 'eraChronicle') return;
     if (!selectedNarrativeStyle) return;
     // Pass the selected narrative style to the generation
     generateStory(selectedItem.id, generationContext, selectedNarrativeStyle);
   }, [selectedItem, generationContext, generateStory, selectedNarrativeStyle]);
 
   // Handle accept chronicle
-  const handleAcceptChronicle = useCallback(() => {
-    if (!selectedItem) return;
-    acceptStory(selectedItem.id);
-  }, [selectedItem, acceptStory]);
+  const handleAcceptChronicle = useCallback(async () => {
+    if (!selectedItem || !entities || entities.length === 0) return;
+    const accepted = await acceptStory(selectedItem.targetId, entities);
+    if (accepted && onChronicleAccepted) {
+      onChronicleAccepted(selectedItem.targetId, accepted);
+    }
+  }, [selectedItem, entities, acceptStory, onChronicleAccepted]);
+
+  const handleCorrectSuggestions = useCallback(() => {
+    if (!selectedItem || !generationContext) return;
+    if (!selectedNarrativeStyle) return;
+    correctSuggestions(selectedItem.targetId, generationContext, selectedNarrativeStyle);
+  }, [selectedItem, generationContext, selectedNarrativeStyle, correctSuggestions]);
 
   // Handle regenerate (delete and go back to start screen) - uses restart modal
   const handleRegenerate = useCallback(() => {
@@ -717,8 +683,10 @@ export default function ChroniclePanel({
       sections_ready: 0,
       assembling: 0,
       assembly_ready: 0,
+      editing: 0,
       validating: 0,
       validation_ready: 0,
+      failed: 0,
       complete: 0,
     };
     for (const item of chronicleItems) {
@@ -728,7 +696,6 @@ export default function ChroniclePanel({
   }, [chronicleItems]);
 
   const activeTypeLabel = useMemo(() => {
-    if (activeType === 'eraChronicle') return 'era chronicle';
     if (activeType === 'entityStory') return 'entity chronicle';
     return 'chronicle';
   }, [activeType]);
@@ -747,7 +714,7 @@ export default function ChroniclePanel({
           <div>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Chronicle Pipeline</h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-              Generate long-form narrative content in 4 steps: Plan → Expand → Assemble → Validate
+              Generate long-form narrative content in 5 stages: Plan → Expand → Assemble → Validate → Edit
             </p>
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -844,22 +811,6 @@ export default function ChroniclePanel({
             </div>
           ) : (
             <>
-              {isEraUnimplemented && (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    background: 'rgba(234, 179, 8, 0.12)',
-                    border: '1px solid rgba(234, 179, 8, 0.3)',
-                    borderRadius: '8px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '13px',
-                    marginBottom: '16px',
-                  }}
-                >
-                  Era chronicles are not implemented yet. This tab remains as a placeholder for future work.
-                </div>
-              )}
-
               {/* Prerequisites check */}
               {!prerequisites.ready && (
                 <PrerequisiteWarning
@@ -885,10 +836,8 @@ export default function ChroniclePanel({
                 />
               )}
 
-              {!isEraUnimplemented && (
-                <>
-                  {/* Pipeline stage content */}
-                  {selectedItem.status === 'not_started' && (
+              {/* Pipeline stage content */}
+              {selectedItem.status === 'not_started' && (
                     <div
                       style={{
                         textAlign: 'center',
@@ -923,7 +872,6 @@ export default function ChroniclePanel({
                         <select
                           value={selectedNarrativeStyleId}
                           onChange={(e) => setSelectedNarrativeStyleId(e.target.value)}
-                          disabled={isEraUnimplemented}
                           style={{
                             width: '100%',
                             padding: '10px 12px',
@@ -1022,12 +970,12 @@ export default function ChroniclePanel({
 
                       <button
                         onClick={handleGenerateChronicle}
-                        disabled={!prerequisites.ready || stylesLoading || !selectedNarrativeStyle || isEraUnimplemented}
+                        disabled={!prerequisites.ready || stylesLoading || !selectedNarrativeStyle}
                         className="illuminator-button illuminator-button-primary"
                         style={{
                           padding: '12px 24px',
                           fontSize: '14px',
-                          opacity: prerequisites.ready && !stylesLoading && selectedNarrativeStyle && !isEraUnimplemented ? 1 : 0.5,
+                          opacity: prerequisites.ready && !stylesLoading && selectedNarrativeStyle ? 1 : 0.5,
                         }}
                       >
                         Generate Chronicle
@@ -1039,7 +987,8 @@ export default function ChroniclePanel({
               {(selectedItem.status === 'planning' ||
                 selectedItem.status === 'expanding' ||
                 selectedItem.status === 'assembling' ||
-                selectedItem.status === 'validating') && (
+                selectedItem.status === 'validating' ||
+                selectedItem.status === 'editing') && (
                 <div style={{ textAlign: 'center', padding: '48px' }}>
                   <div
                     style={{
@@ -1057,6 +1006,7 @@ export default function ChroniclePanel({
                     {selectedItem.status === 'expanding' && `Expanding Sections (${selectedItem.sectionsCompleted || 0}/${selectedItem.sectionsTotal || '?'})...`}
                     {selectedItem.status === 'assembling' && 'Assembling Content...'}
                     {selectedItem.status === 'validating' && 'Validating Cohesion...'}
+                    {selectedItem.status === 'editing' && 'Applying Suggestions...'}
                   </h3>
                   <div style={{ color: 'var(--text-muted)' }}>
                     {selectedItem.plan && selectedItem.status === 'expanding' && (
@@ -1064,6 +1014,24 @@ export default function ChroniclePanel({
                     )}
                     {!selectedItem.plan && <p>This may take a moment. Progress is saved automatically.</p>}
                   </div>
+                </div>
+              )}
+
+              {selectedItem.status === 'failed' && (
+                <div style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', color: '#ef4444' }}>
+                    {(selectedItem.failureStep ? `${selectedItem.failureStep.charAt(0).toUpperCase()}${selectedItem.failureStep.slice(1)}` : 'Plan')} Failed
+                  </h3>
+                  <p style={{ margin: '0 0 16px 0', color: 'var(--text-secondary)' }}>
+                    {selectedItem.failureReason || 'Chronicle generation failed. Please regenerate to try again.'}
+                  </p>
+                  <button
+                    onClick={handleRegenerate}
+                    className="illuminator-button illuminator-button-primary"
+                    style={{ padding: '10px 18px', fontSize: '13px' }}
+                  >
+                    Regenerate
+                  </button>
                 </div>
               )}
 
@@ -1122,7 +1090,6 @@ export default function ChroniclePanel({
                   <AssembledContentViewer
                     content={selectedItem.assembledContent}
                     wordCount={selectedItem.assembledContent.split(/\s+/).filter(Boolean).length}
-                    wikiLinks={selectedItem.wikiLinks || []}
                     onCopy={() => navigator.clipboard.writeText(selectedItem.assembledContent)}
                   />
                   <div style={{ marginTop: '24px', textAlign: 'center' }}>
@@ -1150,6 +1117,8 @@ export default function ChroniclePanel({
                       plan={selectedItem.plan}
                       onAccept={handleAcceptChronicle}
                       onRegenerate={handleRegenerate}
+                      onCorrectSuggestions={handleCorrectSuggestions}
+                      editVersion={selectedItem.editVersion}
                       isGenerating={isGenerating}
                     />
                   )}
@@ -1159,7 +1128,6 @@ export default function ChroniclePanel({
                       <AssembledContentViewer
                         content={selectedItem.assembledContent}
                         wordCount={selectedItem.assembledContent.split(/\s+/).filter(Boolean).length}
-                        wikiLinks={selectedItem.wikiLinks || []}
                         onCopy={() => navigator.clipboard.writeText(selectedItem.assembledContent)}
                       />
                     </div>
@@ -1189,12 +1157,9 @@ export default function ChroniclePanel({
                   <AssembledContentViewer
                     content={selectedItem.finalContent}
                     wordCount={selectedItem.finalContent.split(/\s+/).filter(Boolean).length}
-                    wikiLinks={selectedItem.wikiLinks || []}
                     onCopy={() => navigator.clipboard.writeText(selectedItem.finalContent)}
                   />
                 </div>
-              )}
-                </>
               )}
             </>
           )}

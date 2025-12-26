@@ -170,6 +170,9 @@ class ExecutionContext implements IExecutionContext, EntityResolver {
         const entity = varPart === 'target' ? this.target : this.resolveEntity('$' + varPart);
         if (entity && propPart in entity) {
           result = result.replace(m, String((entity as unknown as Record<string, unknown>)[propPart]));
+        } else {
+          // Warn about unresolved variable references
+          console.warn(`[resolveString] Unresolved variable reference: ${m}. Entity ${varPart} is ${entity ? 'missing property ' + propPart : 'undefined'}.`);
         }
       }
       return result;

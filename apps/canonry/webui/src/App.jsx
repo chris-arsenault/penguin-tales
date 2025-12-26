@@ -93,6 +93,31 @@ function extractLoreDataFromEntities(worldData) {
         },
       });
     }
+
+    if (Array.isArray(enrichment.chronicles)) {
+      enrichment.chronicles.forEach((chronicle, index) => {
+        if (!chronicle?.content) return;
+        const entrypointId = chronicle.entrypointId || entity.id;
+        const format = chronicle.format === 'document' ? 'document' : 'story';
+        const title = chronicle.title || `${entity.name} Chronicle`;
+        const chronicleId = chronicle.chronicleId || `${entity.id}_${index}`;
+        records.push({
+          id: `chronicle_${chronicleId}`,
+          type: 'chronicle',
+          targetId: entrypointId,
+          text: chronicle.content,
+          metadata: {
+            title,
+            format,
+            entrypointId,
+            entityIds: Array.isArray(chronicle.entityIds) ? chronicle.entityIds : [],
+            acceptedAt: chronicle.acceptedAt,
+            generatedAt: chronicle.generatedAt,
+            model: chronicle.model,
+          },
+        });
+      });
+    }
   }
 
   if (records.length === 0) return null;
@@ -115,23 +140,36 @@ async function loadImageDataForProject(projectId, worldData) {
     const images = await getImagesByProject(projectId);
     if (!images || images.length === 0) return null;
 
-    // Build entity lookup for names/kinds
-    const entityMap = new Map(worldData.hardState.map(e => [e.id, e]));
+    const imageById = new Map(images.map((img) => [img.imageId, img]));
+    const imageCache = new Map();
 
-    // Load each image to get object URLs
+    // Load images referenced by the current simulation entities
     const results = [];
-    for (const img of images) {
-      const imageData = await loadImage(img.imageId);
-      if (!imageData?.url) continue;
+    for (const entity of worldData.hardState) {
+      const imageId = entity?.enrichment?.image?.imageId;
+      if (!imageId) continue;
 
-      const entity = entityMap.get(img.entityId);
+      const imageRecord = imageById.get(imageId);
+      if (!imageRecord) continue;
+
+      let cached = imageCache.get(imageId);
+      if (!cached) {
+        const imageData = await loadImage(imageId);
+        if (!imageData?.url) continue;
+        cached = {
+          url: imageData.url,
+          prompt: imageData.originalPrompt || imageData.finalPrompt || imageData.revisedPrompt || '',
+        };
+        imageCache.set(imageId, cached);
+      }
+
       results.push({
-        entityId: img.entityId,
-        entityName: entity?.name || img.entityName || 'Unknown',
-        entityKind: entity?.kind || img.entityKind || 'unknown',
-        prompt: img.originalPrompt || img.finalPrompt || '',
-        localPath: imageData.url, // Object URL for display
-        imageId: img.imageId,
+        entityId: entity.id,
+        entityName: entity?.name || imageRecord.entityName || 'Unknown',
+        entityKind: entity?.kind || imageRecord.entityKind || 'unknown',
+        prompt: cached.prompt || imageRecord.originalPrompt || imageRecord.finalPrompt || '',
+        localPath: cached.url, // Object URL for display
+        imageId,
       });
     }
 

@@ -4,12 +4,19 @@
  * Defines the structure and constraints for entity types in a world.
  */
 
+import type { Polarity } from './relationship.js';
+
 /**
  * A subtype within an entity kind (e.g., "merchant" for NPC kind)
  */
 export interface Subtype {
   id: string;
   name: string;
+  /**
+   * If true, this subtype represents an authority/leadership position.
+   * Used by the narrative system to detect succession and power vacuum events.
+   */
+  isAuthority?: boolean;
 }
 
 /**
@@ -20,6 +27,14 @@ export interface Status {
   name: string;
   /** If true, entities with this status are considered "ended" and won't be modified */
   isTerminal: boolean;
+  /**
+   * Narrative polarity of this status.
+   * Used by the narrative system to detect triumphs vs downfalls.
+   * - positive: crowned, promoted, victorious
+   * - neutral: active, idle, traveling
+   * - negative: exiled, imprisoned, dying
+   */
+  polarity?: Polarity;
 }
 
 /**

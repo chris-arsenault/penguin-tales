@@ -154,7 +154,20 @@ const styles = {
     borderRadius: '6px',
     border: `1px solid ${colors.border}`,
   },
+  chronicles: {
+    marginTop: '32px',
+    padding: '16px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: '6px',
+    border: `1px solid ${colors.border}`,
+  },
   backlinksTitle: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: colors.textMuted,
+    marginBottom: '12px',
+  },
+  chroniclesTitle: {
     fontSize: '14px',
     fontWeight: 600,
     color: colors.textMuted,
@@ -169,6 +182,22 @@ const styles = {
     border: 'none',
     backgroundColor: 'transparent',
     textAlign: 'left' as const,
+  },
+  chronicleItem: {
+    fontSize: '13px',
+    color: colors.accent,
+    cursor: 'pointer',
+    padding: '4px 0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    textAlign: 'left' as const,
+  },
+  chronicleMeta: {
+    fontSize: '11px',
+    color: colors.textMuted,
   },
   categories: {
     marginTop: '24px',
@@ -213,9 +242,20 @@ export default function WikiPageView({
   // Note: _imageData is passed for future use in inline content images
   void _imageData;
   // Compute backlinks
+  const chronicleLinks = useMemo(() => {
+    return pages.filter(p =>
+      p.type === 'chronicle' &&
+      p.chronicle &&
+      p.id !== page.id &&
+      p.linkedEntities.includes(page.id)
+    );
+  }, [pages, page.id]);
+
   const backlinks = useMemo(() => {
     return pages.filter(p =>
-      p.id !== page.id && p.linkedEntities.includes(page.id)
+      p.id !== page.id &&
+      p.type !== 'chronicle' &&
+      p.linkedEntities.includes(page.id)
     );
   }, [pages, page.id]);
 
@@ -295,7 +335,13 @@ export default function WikiPageView({
             Home
           </span>
           {' / '}
-          <span>{page.type === 'category' ? 'Categories' : page.type}</span>
+          <span>
+            {page.type === 'category'
+              ? 'Categories'
+              : page.type === 'chronicle'
+              ? 'Chronicles'
+              : page.type}
+          </span>
           {' / '}
           <span style={{ color: colors.textSecondary }}>{page.title}</span>
         </div>
@@ -327,11 +373,6 @@ export default function WikiPageView({
             </div>
           )}
 
-          {/* Summary */}
-          <p style={styles.paragraph}>
-            {renderContent(page.content.summary)}
-          </p>
-
           {/* Sections */}
           {page.content.sections.map(section => (
             <div key={section.id} id={section.id} style={styles.section}>
@@ -341,6 +382,34 @@ export default function WikiPageView({
               </div>
             </div>
           ))}
+
+          {/* Chronicles */}
+          {chronicleLinks.length > 0 && (
+            <div style={styles.chronicles}>
+              <div style={styles.chroniclesTitle}>
+                Chronicles ({chronicleLinks.length})
+              </div>
+              {chronicleLinks.slice(0, 20).map(link => (
+                <button
+                  key={link.id}
+                  style={styles.chronicleItem}
+                  onClick={() => onNavigate(link.id)}
+                >
+                  <span>{link.title}</span>
+                  {link.chronicle?.format && (
+                    <span style={styles.chronicleMeta}>
+                      {link.chronicle.format === 'document' ? 'Document' : 'Story'}
+                    </span>
+                  )}
+                </button>
+              ))}
+              {chronicleLinks.length > 20 && (
+                <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '8px' }}>
+                  ...and {chronicleLinks.length - 20} more
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Backlinks */}
           {backlinks.length > 0 && (

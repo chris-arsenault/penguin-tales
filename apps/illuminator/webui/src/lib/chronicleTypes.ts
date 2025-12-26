@@ -13,19 +13,46 @@ export type ChronicleFormat = 'story' | 'document';
 
 export interface ChronicleEntityRole {
   entityId: string;
-  role: string; // Flexible role based on narrative style (e.g., 'protagonist', 'hero', 'lover-a')
+  role: string; // Flexible role based on narrative style (e.g., 'protagonist', 'scribe', 'authority')
   contribution: string; // How this entity functions in the narrative or document
 }
 
-export interface ChronicleScope {
-  timeframe?: string; // e.g., "Three days", "A single night"
+export type FocusMode = 'single' | 'ensemble';
+
+export interface NarrativeFocus {
+  mode: FocusMode;
+  entrypointId: string;
+  primaryEntityIds: string[];
+  supportingEntityIds: string[];
+  requiredNeighborIds: string[];
+  selectedEntityIds: string[];
+  selectedEventIds: string[];
   notes?: string;
 }
 
-export interface ChronicleFocus {
-  eventIds?: string[];
-  entityIds?: string[];
-  notes?: string;
+export interface DocumentOutline {
+  purpose: string;
+  keyPoints: string[];
+  era: string;
+  tone: string;
+  veracity?: string;
+  legitimacy?: string;
+  audience?: string;
+  authorProvenance?: string;
+  biasAgenda?: string;
+  intendedOutcome?: string;
+}
+
+export interface StoryOutline {
+  purpose: string;
+  keyPoints: string[];
+  era: string;
+  tone: string;
+  theme: string;
+  emotionalBeats: string[];
+  stakes?: string;
+  transformation?: string;
+  intendedImpact?: string;
 }
 
 export interface PlotBeat {
@@ -74,24 +101,20 @@ export interface ChroniclePlan {
   // Entity roles with narrative/document contribution
   entityRoles: ChronicleEntityRole[];
 
-  // Scope/context
-  scope?: ChronicleScope;
-
-  // Focus hints derived from the knowledge graph
-  focus?: ChronicleFocus;
+  // Focus decision and selected cast/event set
+  focus: NarrativeFocus;
 
   // Plot structure (story formats)
   plot?: ChroniclePlot;
 
+  // Document outline (document formats)
+  documentOutline?: DocumentOutline;
+
+  // Story outline (story formats)
+  storyOutline?: StoryOutline;
+
   // Section breakdown
   sections: ChronicleSection[];
-
-  // Thematic elements
-  theme?: string;
-  tone?: string;
-
-  // All NarrativeEvents selected for this story
-  keyEventIds: string[];
 
   // Generation metadata
   generatedAt?: number;
@@ -140,10 +163,6 @@ export interface CohesionReport {
   model?: string;
 }
 
-// =============================================================================
-// Chronicle Content - Full pipeline state for an item
-// =============================================================================
-
 export type ChronicleStatus =
   | 'not_started'
   | 'planning' // Step 1 in progress
@@ -152,39 +171,13 @@ export type ChronicleStatus =
   | 'sections_ready' // Step 2 complete, awaiting user review
   | 'assembling' // Step 3 in progress
   | 'assembly_ready' // Step 3 complete, awaiting user review
+  | 'editing' // Revision in progress
   | 'validating' // Step 4 in progress
   | 'validation_ready' // Step 4 complete, issues may exist
+  | 'failed' // Generation failed; requires regeneration
   | 'complete'; // All steps done, accepted
 
-export type ChronicleType = 'eraChronicle' | 'entityStory';
-
-export interface ChronicleContent {
-  id: string;
-  type: ChronicleType;
-  targetId: string; // era ID, entity ID, or "srcId-dstId" for relationships
-
-  status: ChronicleStatus;
-
-  // Step 1 output
-  plan?: ChroniclePlan;
-
-  // Step 2 output (section content stored in plan.sections[].generatedContent)
-  sectionsCompleted?: number;
-  sectionsTotal?: number;
-
-  // Step 3 output
-  assembledContent?: string;
-
-  // Step 4 output
-  cohesionReport?: CohesionReport;
-
-  // Final accepted content
-  finalContent?: string;
-
-  // Metadata
-  generatedAt?: number;
-  lastUpdatedAt?: number;
-}
+export type ChronicleType = 'entityStory';
 
 // =============================================================================
 // Generation Context - Input to each generation step
@@ -229,9 +222,6 @@ export interface EraContext {
   id: string;
   name: string;
   description?: string;
-
-  // Enriched content (from Layer 2)
-  summary?: string;
 }
 
 export interface NarrativeEventContext {
@@ -267,7 +257,7 @@ export interface ChronicleGenerationContext {
   targetType: ChronicleType;
   targetId: string;
 
-  // For era chronicles
+  // Optional era context (derived from entrypoint activity)
   era?: EraContext;
 
   // For entity stories
@@ -291,6 +281,5 @@ export interface ChronicleGenerationContext {
 export interface AssemblyResult {
   success: boolean;
   content?: string;
-  wikiLinks: { entityId: string; name: string; count: number }[];
   error?: string;
 }

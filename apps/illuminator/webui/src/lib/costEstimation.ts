@@ -110,8 +110,6 @@ const TOKENS_PER_WORD = 1.3;
 // Expected output tokens for different task types
 const EXPECTED_OUTPUT_TOKENS: Record<string, number> = {
   description: 300, // ~230 words
-  eraNarrative: 400, // ~300 words
-  relationship: 350, // ~270 words
 };
 
 /**
@@ -127,7 +125,7 @@ export function estimateTokens(text: string): number {
  */
 export function estimateTextCost(
   prompt: string,
-  type: 'description' | 'eraNarrative' | 'relationship',
+  type: 'description',
   model: string
 ): { inputTokens: number; outputTokens: number; estimatedCost: number } {
   const rates = TEXT_MODEL_RATES[model] || TEXT_MODEL_RATES['claude-sonnet-4-20250514'];

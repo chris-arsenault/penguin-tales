@@ -7,8 +7,15 @@
 
 import { LLMClient } from '../lib/llmClient';
 import { ImageClient } from '../lib/imageClient';
-import type { EnrichmentType, WorkerTask, WorkerResult, EnrichmentResult, SerializableChronicleContext, ChronicleStep } from '../lib/enrichmentTypes';
-import type { NarrativeStyle } from '@canonry/world-schema';
+import type {
+  EnrichmentType,
+  WorkerTask,
+  WorkerResult,
+  EnrichmentResult,
+  SerializableChronicleContext,
+  ChronicleStep,
+  NetworkDebugInfo,
+} from '../lib/enrichmentTypes';
 import {
   estimateTextCost,
   estimateImageCost,
@@ -25,15 +32,16 @@ import {
   updateStorySection,
   updateStoryAssembly,
   updateStoryCohesion,
+  updateStoryEdit,
+  updateStoryFailure,
   generateStoryId,
   markSectionsComplete,
   getStory,
 } from '../lib/chronicleStorage';
 import type { ChronicleGenerationContext, ChroniclePlan, EntityContext, CohesionReport } from '../lib/chronicleTypes';
-import { buildPlanPrompt, parsePlanResponse } from '../lib/chroniclePlanGenerator';
-import { buildSectionPrompt, parseSectionResponse } from '../lib/chronicleSectionExpander';
-import { assembleStory, buildStitchPrompt } from '../lib/chronicleAssembler';
-import { buildValidationPrompt, parseValidationResponse } from '../lib/chronicleCohesionValidator';
+import { buildSelectionContext } from '../lib/chronicle/selection';
+import { getPipeline } from '../lib/chronicle/pipelineRegistry';
+import { applyFocusToContext } from '../lib/chronicle/focus';
 import { saveCostRecord, generateCostId, type CostType } from '../lib/costStorage';
 
 // ============================================================================
@@ -62,7 +70,7 @@ export type WorkerOutbound =
   | { type: 'ready' }
   | { type: 'started'; taskId: string }
   | { type: 'complete'; result: WorkerResult }
-  | { type: 'error'; taskId: string; error: string };
+  | { type: 'error'; taskId: string; error: string; debug?: NetworkDebugInfo };
 
 // ============================================================================
 // Helpers
@@ -128,6 +136,31 @@ export function stripLeadingHeading(text: string, entityName?: string): string {
   }
 
   return result;
+}
+
+function stripLeadingWrapper(text: string): string {
+  if (!text) return text;
+  let result = text.trim();
+
+  const fenced = result.match(/```(?:markdown|md)?\s*([\s\S]*?)```/);
+  if (fenced) {
+    result = fenced[1].trim();
+  }
+
+  result = result.replace(/^(Here\s+is|Here's|Below\s+is)[^\n]*\n+/i, '');
+  return result.trim();
+}
+
+async function markStoryFailure(
+  storyId: string,
+  step: ChronicleStep,
+  error: string
+): Promise<void> {
+  try {
+    await updateStoryFailure(storyId, step, error);
+  } catch (err) {
+    console.error('[Worker] Failed to record story failure:', err);
+  }
 }
 
 export function buildSystemPrompt(): string {
@@ -245,9 +278,11 @@ export function createClients(config: WorkerConfig): { llmClient: LLMClient; ima
 export type TaskResult = {
   success: true;
   result: EnrichmentResult;
+  debug?: NetworkDebugInfo;
 } | {
   success: false;
   error: string;
+  debug?: NetworkDebugInfo;
 };
 
 export async function executeImageTask(
@@ -295,13 +330,14 @@ export async function executeImageTask(
   }
 
   const result = await imageClient.generate({ prompt: finalPrompt });
+  const debug = result.debug;
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted' };
   }
 
   if (result.error) {
-    return { success: false, error: result.error };
+    return { success: false, error: result.error, debug };
   }
 
   if (!result.imageBlob) {
@@ -359,6 +395,7 @@ export async function executeImageTask(
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     },
+    debug,
   };
 }
 
@@ -373,9 +410,8 @@ export async function executeTextTask(
   }
 
   const textModel = config.textModel || 'claude-sonnet-4-20250514';
-  const taskType = task.type === 'eraNarrative' ? 'eraNarrative' :
-                   task.type === 'relationship' ? 'relationship' : 'description';
-  const estimate = estimateTextCost(task.prompt, taskType, textModel);
+  const taskType: CostType = 'description';
+  const estimate = estimateTextCost(task.prompt, 'description', textModel);
 
   const result = await llmClient.complete({
     systemPrompt: buildSystemPrompt(),
@@ -383,13 +419,14 @@ export async function executeTextTask(
     maxTokens: 512,
     temperature: 0.7,
   });
+  const debug = result.debug;
 
   if (isAborted()) {
     return { success: false, error: 'Task aborted' };
   }
 
   if (result.error) {
-    return { success: false, error: result.error };
+    return { success: false, error: result.error, debug };
   }
 
   let actualCost = estimate.estimatedCost;
@@ -436,41 +473,13 @@ export async function executeTextTask(
       inputTokens,
       outputTokens,
     },
+    debug,
   };
 }
 
 // ============================================================================
 // Entity Story Task Execution
 // ============================================================================
-
-function getChronicleSystemPrompt(
-  step: ChronicleStep,
-  style: NarrativeStyle,
-  plan?: ChroniclePlan
-): string {
-  const format = plan?.format || style.format;
-
-  switch (step) {
-    case 'plan':
-      return format === 'document'
-        ? 'You are an in-world document planner. Produce structured JSON plans that match the requested document format.'
-        : 'You are a narrative planner. Produce structured JSON plans for multi-entity stories.';
-    case 'expand':
-      return format === 'document'
-        ? 'You are an in-world document writer. Draft a single section consistent with the provided outline.'
-        : 'You are a narrative prose writer. Draft a single section consistent with the provided outline and style.';
-    case 'assemble':
-      return format === 'document'
-        ? 'You are an editor polishing an in-world document. Make minimal edits and preserve structure.'
-        : 'You are a narrative editor. Make minimal edits to improve flow while preserving structure.';
-    case 'validate':
-      return format === 'document'
-        ? 'You are a critical editor validating an in-world document against its plan.'
-        : 'You are a critical editor validating narrative coherence against the plan.';
-    default:
-      throw new Error(`Unsupported chronicle step: ${step}`);
-  }
-}
 
 /**
  * Convert serializable chronicle context to full generation context
@@ -485,9 +494,11 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
     prominence: e.prominence,
     culture: e.culture,
     status: e.status,
-    tags: {},
-    createdAt: 0,
-    updatedAt: 0,
+    tags: e.tags || {},
+    description: e.description,
+    enrichedDescription: e.enrichedDescription,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
   }));
 
   const entity: EntityContext | undefined = ctx.entity
@@ -514,6 +525,13 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
     tone: ctx.tone,
     targetType: ctx.targetType,
     targetId: ctx.targetId,
+    era: ctx.era
+      ? {
+        id: ctx.era.id,
+        name: ctx.era.name,
+        description: ctx.era.description,
+      }
+      : undefined,
     entity,
     entities,
     relationships: ctx.relationships.map((r) => ({
@@ -593,6 +611,13 @@ export async function executeEntityStoryTask(
     return executeAssembleStep(task, storyRecord, config, llmClient, isAborted, textModel);
   }
 
+  if (step === 'edit') {
+    if (!task.chronicleContext) {
+      return { success: false, error: 'Chronicle context required for edit step' };
+    }
+    return executeEditStep(task, storyRecord, config, llmClient, isAborted, textModel);
+  }
+
   if (step === 'validate') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for validate step' };
@@ -635,25 +660,32 @@ async function executePlanStep(
   } catch (err) {
     return { success: false, error: `Failed to create story record: ${err}` };
   }
+  const failPlan = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
+    await markStoryFailure(storyId, 'plan', message);
+    return { success: false, error: message, debug };
+  };
 
   const styleInfo = narrativeStyle ? ` with style="${narrativeStyle.name}"` : '';
   console.log(`[Worker] Step 1: Generating plan${styleInfo}...`);
-  const planPrompt = buildPlanPrompt(context, narrativeStyle);
+  const pipeline = getPipeline(narrativeStyle.format);
+  const selection = buildSelectionContext(context, narrativeStyle);
+  const planPrompt = pipeline.buildPlanPrompt(context, narrativeStyle, selection);
   const planEstimate = estimateTextCost(planPrompt, 'description', textModel);
 
   const planResult = await llmClient.complete({
-    systemPrompt: getChronicleSystemPrompt('plan', narrativeStyle),
+    systemPrompt: pipeline.getSystemPrompt('plan', narrativeStyle),
     prompt: planPrompt,
     maxTokens: 4096,
     temperature: 0.7,
   });
+  const debug = planResult.debug;
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted' };
+    return failPlan('Task aborted', debug);
   }
 
   if (planResult.error) {
-    return { success: false, error: `Plan generation failed: ${planResult.error}` };
+    return failPlan(`Plan generation failed: ${planResult.error}`, debug);
   }
 
   const planCost = {
@@ -667,11 +699,11 @@ async function executePlanStep(
 
   let plan: ChroniclePlan;
   try {
-    plan = parsePlanResponse(planResult.text, context, narrativeStyle);
+    plan = pipeline.parsePlanResponse(planResult.text, context, narrativeStyle, selection);
     plan.generatedAt = Date.now();
     plan.model = textModel;
   } catch (err) {
-    return { success: false, error: `Failed to parse plan: ${err}` };
+    return failPlan(`Failed to parse plan: ${err}`, debug);
   }
 
   await updateStoryPlan(storyId, plan, planCost);
@@ -706,6 +738,7 @@ async function executePlanStep(
       inputTokens: planCost.inputTokens,
       outputTokens: planCost.outputTokens,
     },
+    debug,
   };
 }
 
@@ -720,17 +753,31 @@ async function executeExpandStep(
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord?.plan) {
-    return { success: false, error: 'Chronicle has no plan to expand' };
+  if (!storyRecord) {
+    return { success: false, error: 'Story record missing for expansion' };
+  }
+
+  const storyId = storyRecord.storyId;
+  const failExpand = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
+    await markStoryFailure(storyId, 'expand', message);
+    return { success: false, error: message, debug };
+  };
+
+  if (!storyRecord.plan) {
+    return failExpand('Chronicle has no plan to expand');
   }
 
   const context = deserializeChronicleContext(task.chronicleContext!);
   const plan = storyRecord.plan;
-  const storyId = storyRecord.storyId;
   const narrativeStyle = task.chronicleContext!.narrativeStyle;
   if (!narrativeStyle) {
-    return { success: false, error: 'Narrative style is required for section expansion' };
+    return failExpand('Narrative style is required for section expansion');
   }
+  if (plan.format !== narrativeStyle.format) {
+    return failExpand('Narrative style format does not match plan format');
+  }
+  const pipeline = getPipeline(plan.format);
+  const focusedContext = applyFocusToContext(context, plan.focus);
 
   console.log(`[Worker] Step 2: Expanding ${plan.sections.length} sections...`);
 
@@ -738,30 +785,49 @@ async function executeExpandStep(
   let totalActualCost = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let lastDebug: NetworkDebugInfo | undefined;
 
   const expandedSections: { id: string; content: string }[] = [];
 
   for (let i = 0; i < plan.sections.length; i++) {
     if (isAborted()) {
-      return { success: false, error: 'Task aborted' };
+      return failExpand('Task aborted');
     }
 
     const section = plan.sections[i];
-    const sectionPrompt = buildSectionPrompt(section, i, plan, context, expandedSections, narrativeStyle);
+    const sectionPrompt = pipeline.buildSectionPrompt(
+      section,
+      i,
+      plan,
+      focusedContext,
+      expandedSections,
+      narrativeStyle
+    );
     const sectionEstimate = estimateTextCost(sectionPrompt, 'description', textModel);
 
     const sectionResult = await llmClient.complete({
-      systemPrompt: getChronicleSystemPrompt('expand', narrativeStyle, plan),
+      systemPrompt: pipeline.getSystemPrompt('expand', narrativeStyle, plan),
       prompt: sectionPrompt,
       maxTokens: 2048,
       temperature: 0.7,
     });
+    const debug = sectionResult.debug;
+    lastDebug = debug;
 
-    if (sectionResult.error) {
-      return { success: false, error: `Section ${i + 1} generation failed: ${sectionResult.error}` };
+    if (isAborted()) {
+      return failExpand('Task aborted', debug);
     }
 
-    const sectionContent = parseSectionResponse(sectionResult.text);
+    if (sectionResult.error) {
+      return failExpand(`Section ${i + 1} generation failed: ${sectionResult.error}`, debug);
+    }
+
+    let sectionContent = '';
+    try {
+      sectionContent = pipeline.parseSectionResponse(sectionResult.text);
+    } catch (err) {
+      return failExpand(`Failed to parse section ${i + 1}: ${err}`, debug);
+    }
     expandedSections.push({ id: section.id, content: sectionContent });
 
     const sectionCost = {
@@ -815,6 +881,7 @@ async function executeExpandStep(
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
     },
+    debug: lastDebug,
   };
 }
 
@@ -829,28 +896,38 @@ async function executeAssembleStep(
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord?.plan) {
-    return { success: false, error: 'Chronicle has no plan to assemble' };
+  if (!storyRecord) {
+    return { success: false, error: 'Story record missing for assembly' };
+  }
+
+  const storyId = storyRecord.storyId;
+  const failAssemble = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
+    await markStoryFailure(storyId, 'assemble', message);
+    return { success: false, error: message, debug };
+  };
+
+  if (!storyRecord.plan) {
+    return failAssemble('Chronicle has no plan to assemble');
   }
 
   const context = deserializeChronicleContext(task.chronicleContext!);
   const plan = storyRecord.plan;
-  const storyId = storyRecord.storyId;
   const narrativeStyle = task.chronicleContext!.narrativeStyle;
   if (!narrativeStyle) {
-    return { success: false, error: 'Narrative style is required for assembly' };
+    return failAssemble('Narrative style is required for assembly');
   }
+  if (plan.format !== narrativeStyle.format) {
+    return failAssemble('Narrative style format does not match plan format');
+  }
+  const pipeline = getPipeline(plan.format);
+  const focusedContext = applyFocusToContext(context, plan.focus);
 
   console.log('[Worker] Step 3: Assembling chronicle...');
 
-  const assemblyResult = assembleStory(plan, context, {
-    includeTitle: true,
-    includeSectionTitles: false,
-    injectLinks: true,
-  });
+  const assemblyResult = pipeline.assemble(plan, focusedContext);
 
   if (!assemblyResult.success || !assemblyResult.content) {
-    return { success: false, error: `Assembly failed: ${assemblyResult.error || 'Unknown error'}` };
+    return failAssemble(`Assembly failed: ${assemblyResult.error || 'Unknown error'}`);
   }
 
   let assembledContent = assemblyResult.content;
@@ -861,22 +938,23 @@ async function executeAssembleStep(
     outputTokens: 0,
   };
 
-  const stitchPrompt = buildStitchPrompt(assembledContent, plan, context, narrativeStyle);
+  const stitchPrompt = pipeline.buildStitchPrompt(assembledContent, plan, focusedContext, narrativeStyle);
   const stitchEstimate = estimateTextCost(stitchPrompt, 'description', textModel);
 
   const stitchResult = await llmClient.complete({
-    systemPrompt: getChronicleSystemPrompt('assemble', narrativeStyle, plan),
+    systemPrompt: pipeline.getSystemPrompt('assemble', narrativeStyle, plan),
     prompt: stitchPrompt,
     maxTokens: 3072,
     temperature: 0.2,
   });
+  const debug = stitchResult.debug;
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted' };
+    return failAssemble('Task aborted', debug);
   }
 
   if (stitchResult.error || !stitchResult.text) {
-    return { success: false, error: `Assembly stitching failed: ${stitchResult.error || 'Empty response'}` };
+    return failAssemble(`Assembly stitching failed: ${stitchResult.error || 'Empty response'}`, debug);
   }
 
   assembledContent = stitchResult.text.trim();
@@ -908,7 +986,7 @@ async function executeAssembleStep(
   });
 
   // Save assembled content - sets status to assembly_ready (pauses for user review)
-  await updateStoryAssembly(storyId, assembledContent, assemblyResult.wikiLinks);
+  await updateStoryAssembly(storyId, assembledContent);
   console.log('[Worker] Step 3 complete - assembly saved, awaiting user review');
 
   return {
@@ -922,6 +1000,137 @@ async function executeAssembleStep(
       inputTokens: assemblyCost.inputTokens,
       outputTokens: assemblyCost.outputTokens,
     },
+    debug,
+  };
+}
+
+/**
+ * Step 3.5: Edit chronicle based on validation suggestions, then re-validate
+ */
+async function executeEditStep(
+  task: WorkerTask,
+  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean,
+  textModel: string
+): Promise<TaskResult> {
+  if (!storyRecord) {
+    return { success: false, error: 'Story record missing for editing' };
+  }
+
+  const storyId = storyRecord.storyId;
+  const failEdit = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
+    await markStoryFailure(storyId, 'edit', message);
+    return { success: false, error: message, debug };
+  };
+
+  if (!storyRecord.plan || !storyRecord.assembledContent) {
+    return failEdit('Chronicle has no assembled content to edit');
+  }
+  if (!storyRecord.cohesionReport) {
+    return failEdit('Chronicle has no validation report to edit against');
+  }
+
+  const context = deserializeChronicleContext(task.chronicleContext!);
+  const plan = storyRecord.plan;
+  const narrativeStyle = task.chronicleContext!.narrativeStyle;
+  if (!narrativeStyle) {
+    return failEdit('Narrative style is required for editing');
+  }
+  if (plan.format !== narrativeStyle.format) {
+    return failEdit('Narrative style format does not match plan format');
+  }
+  const pipeline = getPipeline(plan.format);
+
+  console.log('[Worker] Step 3.5: Editing chronicle based on validation feedback...');
+
+  const editPrompt = pipeline.buildEditPrompt(
+    storyRecord.assembledContent,
+    plan,
+    context,
+    narrativeStyle,
+    storyRecord.cohesionReport
+  );
+  const editEstimate = estimateTextCost(editPrompt, 'description', textModel);
+
+  const editResult = await llmClient.complete({
+    systemPrompt: pipeline.getSystemPrompt('edit', narrativeStyle, plan),
+    prompt: editPrompt,
+    maxTokens: 4096,
+    temperature: 0.3,
+  });
+  const debug = editResult.debug;
+
+  if (isAborted()) {
+    return failEdit('Task aborted', debug);
+  }
+
+  if (editResult.error || !editResult.text) {
+    return failEdit(`Edit failed: ${editResult.error || 'Empty response'}`, debug);
+  }
+
+  const actualCost = editResult.usage
+    ? calculateActualTextCost(editResult.usage.inputTokens, editResult.usage.outputTokens, textModel)
+    : editEstimate.estimatedCost;
+  const editCost = {
+    estimated: editEstimate.estimatedCost,
+    actual: actualCost,
+    inputTokens: editResult.usage?.inputTokens || editEstimate.inputTokens,
+    outputTokens: editResult.usage?.outputTokens || editEstimate.outputTokens,
+  };
+
+  const cleanedContent = stripLeadingWrapper(editResult.text);
+
+  await updateStoryEdit(storyId, cleanedContent, editCost);
+
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    entityId: task.entityId,
+    entityName: task.entityName,
+    entityKind: task.entityKind,
+    storyId,
+    type: 'storyRevision',
+    model: textModel,
+    estimatedCost: editCost.estimated,
+    actualCost: editCost.actual,
+    inputTokens: editCost.inputTokens,
+    outputTokens: editCost.outputTokens,
+  });
+
+  if (isAborted()) {
+    return failEdit('Task aborted', debug);
+  }
+
+  const updatedStoryRecord = {
+    ...storyRecord,
+    assembledContent: cleanedContent,
+  };
+
+  const validationResult = await executeValidateStep(
+    task,
+    updatedStoryRecord,
+    config,
+    llmClient,
+    isAborted,
+    textModel
+  );
+
+  if (!validationResult.success) {
+    return {
+      success: false,
+      error: validationResult.error || 'Validation failed after edit',
+      debug: validationResult.debug || debug,
+    };
+  }
+
+  return {
+    success: true,
+    result: validationResult.result,
+    debug: validationResult.debug || debug,
   };
 }
 
@@ -936,32 +1145,52 @@ async function executeValidateStep(
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord?.plan || !storyRecord?.assembledContent) {
-    return { success: false, error: 'Chronicle has no assembled content to validate' };
+  if (!storyRecord) {
+    return { success: false, error: 'Story record missing for validation' };
+  }
+
+  const storyId = storyRecord.storyId;
+  const failValidate = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
+    await markStoryFailure(storyId, 'validate', message);
+    return { success: false, error: message, debug };
+  };
+
+  if (!storyRecord.plan || !storyRecord.assembledContent) {
+    return failValidate('Chronicle has no assembled content to validate');
   }
 
   const context = deserializeChronicleContext(task.chronicleContext!);
   const plan = storyRecord.plan;
-  const storyId = storyRecord.storyId;
   const narrativeStyle = task.chronicleContext!.narrativeStyle;
   if (!narrativeStyle) {
-    return { success: false, error: 'Narrative style is required for validation' };
+    return failValidate('Narrative style is required for validation');
   }
+  if (plan.format !== narrativeStyle.format) {
+    return failValidate('Narrative style format does not match plan format');
+  }
+  const pipeline = getPipeline(plan.format);
+  const focusedContext = applyFocusToContext(context, plan.focus);
 
   console.log('[Worker] Step 4: Validating cohesion...');
 
-  const validationPrompt = buildValidationPrompt(storyRecord.assembledContent, plan, context, narrativeStyle);
+  const validationPrompt = pipeline.buildValidationPrompt(
+    storyRecord.assembledContent,
+    plan,
+    focusedContext,
+    narrativeStyle
+  );
   const validationEstimate = estimateTextCost(validationPrompt, 'description', textModel);
 
   const validationResult = await llmClient.complete({
-    systemPrompt: getChronicleSystemPrompt('validate', narrativeStyle, plan),
+    systemPrompt: pipeline.getSystemPrompt('validate', narrativeStyle, plan),
     prompt: validationPrompt,
     maxTokens: 2048,
     temperature: 0.3,
   });
+  const debug = validationResult.debug;
 
   if (isAborted()) {
-    return { success: false, error: 'Task aborted' };
+    return failValidate('Task aborted', debug);
   }
 
   const validationCost = {
@@ -974,16 +1203,16 @@ async function executeValidateStep(
   };
 
   if (validationResult.error || !validationResult.text) {
-    return { success: false, error: `Validation failed: ${validationResult.error || 'Empty response'}` };
+    return failValidate(`Validation failed: ${validationResult.error || 'Empty response'}`, debug);
   }
 
   let cohesionReport: CohesionReport;
   try {
-    cohesionReport = parseValidationResponse(validationResult.text, plan);
+    cohesionReport = pipeline.parseValidationResponse(validationResult.text, plan);
     cohesionReport.generatedAt = Date.now();
     cohesionReport.model = textModel;
   } catch (err) {
-    return { success: false, error: `Failed to parse validation response: ${err}` };
+    return failValidate(`Failed to parse validation response: ${err}`, debug);
   }
 
   await updateStoryCohesion(storyId, cohesionReport, validationCost);
@@ -1018,6 +1247,7 @@ async function executeValidateStep(
       inputTokens: validationCost.inputTokens,
       outputTokens: validationCost.outputTokens,
     },
+    debug,
   };
 }
 

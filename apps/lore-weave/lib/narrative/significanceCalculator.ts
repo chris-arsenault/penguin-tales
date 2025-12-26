@@ -40,14 +40,23 @@ export function calculateSignificance(
 
   // Base scores by event kind
   const kindScores: Record<NarrativeEventKind, number> = {
-    entity_lifecycle: 0.5,    // Deaths, births are significant
-    era_transition: 0.9,      // Era changes are very significant
-    conflict: 0.6,            // Wars matter
-    alliance: 0.4,
-    state_change: 0.3,        // Base for state changes
-    relationship_change: 0.2,
-    discovery: 0.4,
-    achievement: 0.3,
+    // Core events
+    entity_lifecycle: 0.5,         // Deaths, births are significant
+    era_transition: 0.9,           // Era changes are very significant
+    state_change: 0.3,             // Base for state changes
+    relationship_dissolved: 0.4,   // Breaking ties is notable
+    succession: 0.6,               // Leadership transitions are significant
+    coalescence: 0.5,              // Multiple entities uniting is notable
+    // Polarity-based relationship events
+    betrayal: 0.7,                 // Breaking positive bonds is dramatic
+    reconciliation: 0.5,           // Ending enmity is notable
+    rivalry_formed: 0.5,           // New conflicts are significant
+    alliance_formed: 0.4,          // New alliances matter
+    // Status polarity events
+    downfall: 0.6,                 // Negative status transitions are significant
+    triumph: 0.5,                  // Positive status transitions are notable
+    // Authority events
+    power_vacuum: 0.7,             // Leadership gaps are dramatic
   };
   score += kindScores[eventKind] || 0.2;
 

@@ -9,7 +9,8 @@
       "location"
     ],
     "cullable": false,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "neutral"
   },
   {
     "kind": "member_of",
@@ -21,7 +22,8 @@
       "faction"
     ],
     "cullable": false,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "positive"
   },
   {
     "kind": "leader_of",
@@ -34,7 +36,8 @@
       "location"
     ],
     "cullable": false,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "positive"
   },
   {
     "kind": "enemy_of",
@@ -48,7 +51,8 @@
       "faction"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "negative"
   },
   {
     "kind": "allied_with",
@@ -62,7 +66,8 @@
       "npc"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "positive"
   },
   {
     "kind": "at_war_with",
@@ -74,7 +79,8 @@
       "faction"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "negative"
   },
   {
     "kind": "controls",
@@ -86,7 +92,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "neutral"
   },
   {
     "kind": "adjacent_to",
@@ -98,7 +105,8 @@
       "location"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "practitioner_of",
@@ -111,7 +119,8 @@
       "abilities"
     ],
     "cullable": false,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "neutral"
   },
   {
     "kind": "occupies",
@@ -124,7 +133,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "neutral"
   },
   {
     "kind": "trades_with",
@@ -140,7 +150,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "positive"
   },
   {
     "kind": "contained_by",
@@ -152,7 +163,8 @@
       "location"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "discovered_by",
@@ -166,7 +178,8 @@
       "faction"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "explorer_of",
@@ -178,7 +191,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "neutral"
   },
   {
     "kind": "commemorates",
@@ -192,7 +206,8 @@
       "occurrence"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "originated_in",
@@ -207,7 +222,8 @@
       "faction"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "related_to",
@@ -227,7 +243,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "neutral"
   },
   {
     "kind": "corrupted_by",
@@ -240,7 +257,8 @@
       "abilities"
     ],
     "cullable": true,
-    "decayRate": "slow"
+    "decayRate": "slow",
+    "polarity": "negative"
   },
   {
     "kind": "celebrated_by",
@@ -255,7 +273,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "positive"
   },
   {
     "kind": "derived_from",
@@ -272,7 +291,8 @@
       "occurrence"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "manifests_at",
@@ -285,7 +305,8 @@
       "location"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "neutral"
   },
   {
     "kind": "believer_of",
@@ -300,7 +321,8 @@
       "npc"
     ],
     "cullable": true,
-    "decayRate": "medium"
+    "decayRate": "medium",
+    "polarity": "positive"
   },
   {
     "kind": "splinter_of",
@@ -312,7 +334,8 @@
       "faction"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "taught_by",
@@ -327,16 +350,16 @@
     ],
     "cullable": true,
     "decayRate": "medium",
-    "_key": "rel_1765395010690"
+    "polarity": "positive"
   },
   {
     "kind": "contains",
-    "description": "Contais",
+    "description": "Contains",
     "srcKinds": [],
     "dstKinds": [],
     "cullable": true,
     "decayRate": "medium",
-    "_key": "rel_1766399521193"
+    "polarity": "neutral"
   },
   {
     "kind": "supersedes",
@@ -348,7 +371,8 @@
       "era"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "part_of",
@@ -356,7 +380,8 @@
     "srcKinds": [],
     "dstKinds": [],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "positive"
   },
   {
     "kind": "active_during",
@@ -366,7 +391,8 @@
       "era"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "created_during",
@@ -376,7 +402,8 @@
       "era"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "participant_in",
@@ -386,7 +413,8 @@
       "occurrence"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "epicenter_of",
@@ -398,7 +426,8 @@
       "location"
     ],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   },
   {
     "kind": "triggered_by",
@@ -408,6 +437,7 @@
     ],
     "dstKinds": [],
     "cullable": false,
-    "decayRate": "none"
+    "decayRate": "none",
+    "polarity": "neutral"
   }
 ]

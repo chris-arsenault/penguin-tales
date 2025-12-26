@@ -95,7 +95,8 @@ export default function WikiSearch({
     return new Fuse(pages, {
       keys: [
         { name: 'title', weight: 2 },
-        { name: 'content.summary', weight: 1 },
+        { name: 'content.sections.heading', weight: 0.5 },
+        { name: 'content.sections.content', weight: 1 },
       ],
       threshold: 0.3,
       includeScore: true,

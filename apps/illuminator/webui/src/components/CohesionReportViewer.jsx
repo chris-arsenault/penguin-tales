@@ -196,6 +196,8 @@ export default function CohesionReportViewer({
   plan,
   onAccept,
   onRegenerate,
+  onCorrectSuggestions,
+  editVersion = 0,
   isGenerating = false,
 }) {
   const [activeTab, setActiveTab] = useState('summary');
@@ -242,6 +244,7 @@ export default function CohesionReportViewer({
   const statusStyle = STATUS_STYLES[assessment?.status || 'needs_revision'];
 
   const sectionIdToName = new Map(plan?.sections?.map((s) => [s.id, s.name]) || []);
+  const hasIssues = report.issues.length > 0;
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -279,6 +282,9 @@ export default function CohesionReportViewer({
               {assessment?.criticalIssueCount || 0} critical issues •{' '}
               {assessment?.minorIssueCount || 0} minor issues
             </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Edit version: {editVersion}
+            </div>
             {assessment?.failedChecks.length > 0 && (
               <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
                 Failed: {assessment.failedChecks.join(', ')}
@@ -288,6 +294,25 @@ export default function CohesionReportViewer({
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
+          {onCorrectSuggestions && (
+            <button
+              onClick={onCorrectSuggestions}
+              disabled={isGenerating || !hasIssues}
+              style={{
+                padding: '10px 20px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: isGenerating || !hasIssues ? 'not-allowed' : 'pointer',
+                opacity: isGenerating || !hasIssues ? 0.6 : 1,
+                fontSize: '13px',
+              }}
+              title={!hasIssues ? 'No issues to correct' : 'Apply remediation suggestions'}
+            >
+              ✎ Correct Suggestions
+            </button>
+          )}
           <button
             onClick={onRegenerate}
             disabled={isGenerating}

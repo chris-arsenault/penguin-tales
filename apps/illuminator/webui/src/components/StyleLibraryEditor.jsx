@@ -501,11 +501,15 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    const roles = getDefaultRolesForPlotType(formData.plotType);
+    const maxCastSize = roles.reduce((sum, role) => sum + role.count.max, 0);
+
     const result = {
       id: isNew ? `narrative-${Date.now().toString(36)}` : formData.id,
       name: formData.name.trim(),
       description: formData.description.trim(),
       tags: parseCommaSeparated(formData.tags),
+      format: 'story',
 
       plotStructure: {
         type: formData.plotType,
@@ -522,7 +526,8 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
           include: parseCommaSeparated(formData.kindInclude),
           exclude: parseCommaSeparated(formData.kindExclude),
         },
-        roles: getDefaultRolesForPlotType(formData.plotType),
+        roles,
+        maxCastSize,
       },
 
       eventRules: {
@@ -1354,7 +1359,7 @@ export default function StyleLibraryEditor({
           <h2 className="illuminator-card-title">
             Narrative Styles
             <span style={{ fontWeight: 400, fontSize: '14px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-              ({styleLibrary.narrativeStyles?.length || 0})
+              ({styleLibrary.narrativeStyles.length})
             </span>
           </h2>
           <button onClick={handleAddNarrative} className="illuminator-btn illuminator-btn-primary" style={{ fontSize: '12px' }}>
@@ -1366,7 +1371,7 @@ export default function StyleLibraryEditor({
         </p>
 
         <div className="illuminator-style-grid">
-          {(styleLibrary.narrativeStyles || []).map((style) => (
+          {styleLibrary.narrativeStyles.map((style) => (
             <NarrativeStyleCard
               key={style.id}
               style={style}
@@ -1376,7 +1381,7 @@ export default function StyleLibraryEditor({
           ))}
         </div>
 
-        {(!styleLibrary.narrativeStyles || styleLibrary.narrativeStyles.length === 0) && (
+        {styleLibrary.narrativeStyles.length === 0 && (
           <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
             No narrative styles defined. Add one to get started.
           </p>

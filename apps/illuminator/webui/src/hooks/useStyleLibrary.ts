@@ -56,15 +56,7 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
       try {
         const stored = await loadStyleLibrary();
         if (stored) {
-          // Migrate: if stored library lacks narrativeStyles, add defaults
-          const defaults = createDefaultStyleLibrary();
-          const migrated: StyleLibrary = {
-            ...stored,
-            narrativeStyles: stored.narrativeStyles?.length
-              ? stored.narrativeStyles
-              : defaults.narrativeStyles,
-          };
-          setStyleLibrary(migrated);
+          setStyleLibrary(stored);
           setIsCustom(true);
         } else {
           setStyleLibrary(createDefaultStyleLibrary());
@@ -72,8 +64,6 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
         }
       } catch (err) {
         console.error('[useStyleLibrary] Failed to load:', err);
-        setStyleLibrary(createDefaultStyleLibrary());
-        setIsCustom(false);
       } finally {
         setLoading(false);
       }
@@ -157,7 +147,7 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
   const addNarrativeStyle = useCallback(async (style: NarrativeStyle) => {
     const updated: StyleLibrary = {
       ...styleLibrary,
-      narrativeStyles: [...(styleLibrary.narrativeStyles || []), style],
+      narrativeStyles: [...styleLibrary.narrativeStyles, style],
     };
     await save(updated);
   }, [styleLibrary, save]);
@@ -166,7 +156,7 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
   const updateNarrativeStyle = useCallback(async (id: string, updates: Partial<NarrativeStyle>) => {
     const updated: StyleLibrary = {
       ...styleLibrary,
-      narrativeStyles: (styleLibrary.narrativeStyles || []).map((s) =>
+      narrativeStyles: styleLibrary.narrativeStyles.map((s) =>
         s.id === id ? { ...s, ...updates } : s
       ),
     };
@@ -177,7 +167,7 @@ export function useStyleLibrary(): UseStyleLibraryReturn {
   const deleteNarrativeStyle = useCallback(async (id: string) => {
     const updated: StyleLibrary = {
       ...styleLibrary,
-      narrativeStyles: (styleLibrary.narrativeStyles || []).filter((s) => s.id !== id),
+      narrativeStyles: styleLibrary.narrativeStyles.filter((s) => s.id !== id),
     };
     await save(updated);
   }, [styleLibrary, save]);

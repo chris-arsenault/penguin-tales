@@ -173,7 +173,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
     if (!name) return;
     const ek = entityKinds.find((k) => k.kind === kindKey);
     if (!ek) return;
-    const status = { id: generateId(name), name, isTerminal: false };
+    const status = { id: generateId(name), name, isTerminal: false, polarity: 'neutral' };
     updateKind(kindKey, { statuses: [...ek.statuses, status] });
     setNewStatus((prev) => ({ ...prev, [kindKey]: '' }));
   };
@@ -192,6 +192,28 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
     updateKind(kindKey, {
       statuses: ek.statuses.map((s) =>
         s.id === statusId ? { ...s, isTerminal: !s.isTerminal } : s
+      ),
+    });
+  };
+
+  const updateStatusPolarity = (kindKey, statusId, polarity) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      statuses: ek.statuses.map((s) =>
+        s.id === statusId ? { ...s, polarity } : s
+      ),
+    });
+  };
+
+  const toggleSubtypeAuthority = (kindKey, subtypeId) => {
+    if (entityKinds.find((k) => k.kind === kindKey)?.isFramework) return;
+    const ek = entityKinds.find((k) => k.kind === kindKey);
+    if (!ek) return;
+    updateKind(kindKey, {
+      subtypes: ek.subtypes.map((s) =>
+        s.id === subtypeId ? { ...s, isAuthority: !s.isAuthority } : s
       ),
     });
   };
@@ -309,8 +331,16 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                           className={`chip ${isUnused ? 'chip-unused' : ''}`}
                           title={tooltip}
                         >
+                          <input
+                            type="checkbox"
+                            checked={subtype.isAuthority || false}
+                            disabled={isFramework}
+                            onChange={() => toggleSubtypeAuthority(ek.kind, subtype.id)}
+                            title="Authority subtype (for leadership/succession events)"
+                          />
                           <span className="chip-content">
                             {subtype.name}
+                            {subtype.isAuthority && <span className="badge badge-warning" style={{ marginLeft: '4px', fontSize: '9px' }}>👑</span>}
                             {usage.total > 0 && (
                               <span className="chip-usage-indicators">
                                 {usage.generators > 0 && <span className="usage-dot generator" title={`${usage.generators} generator${usage.generators !== 1 ? 's' : ''}`}>G</span>}
@@ -351,7 +381,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                   <div className="section-title">Statuses</div>
                   <div className="chip-list">
                     {ek.statuses.map((status) => (
-                      <div key={status.id} className="chip">
+                      <div key={status.id} className="chip" style={{ alignItems: 'center' }}>
                         <input
                           type="checkbox"
                           checked={status.isTerminal}
@@ -365,6 +395,18 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                         }}>
                           {status.name}
                         </span>
+                        <select
+                          className="input input-micro"
+                          value={status.polarity || 'neutral'}
+                          disabled={isFramework}
+                          onChange={(e) => updateStatusPolarity(ek.kind, status.id, e.target.value)}
+                          title="Status polarity (for narrative events)"
+                          style={{ marginLeft: '4px', padding: '2px 4px', fontSize: '10px', width: '70px' }}
+                        >
+                          <option value="positive">+</option>
+                          <option value="neutral">○</option>
+                          <option value="negative">−</option>
+                        </select>
                         <button
                           className="chip-remove"
                           onClick={() => removeStatus(ek.kind, status.id)}
@@ -388,7 +430,7 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                       Add
                     </button>
                   </div>
-                  <div className="hint">Check the box to mark as terminal (entity "ends" in this status)</div>
+                  <div className="hint">☑ = terminal (entity ends), + = positive, ○ = neutral, − = negative polarity</div>
                 </div>
 
                 {/* Default Status */}

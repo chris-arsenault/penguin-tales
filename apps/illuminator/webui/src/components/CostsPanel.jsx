@@ -66,9 +66,9 @@ function categorizeCosts(summary) {
     count: 0,
   };
 
-  const textTypes = ['description', 'eraNarrative', 'relationship'];
+  const textTypes = ['description'];
   const imageTypes = ['image', 'imagePrompt'];
-  const storyTypes = ['storyPlan', 'storyScene', 'storyAssembly', 'storyValidation'];
+  const storyTypes = ['storyPlan', 'storyScene', 'storyAssembly', 'storyValidation', 'storyRevision'];
 
   for (const [type, data] of Object.entries(summary.byType)) {
     if (textTypes.includes(type)) {

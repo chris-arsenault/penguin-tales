@@ -31,7 +31,6 @@ interface WorldData {
     updatedAt: number;
     enrichment?: {
       description?: { text: string };
-      eraNarrative?: { text: string };
     };
   }>;
   relationships: Array<{
@@ -121,7 +120,6 @@ function buildEraContext(entity: WorldData['hardState'][0]): EraContext {
     id: entity.id,
     name: entity.name,
     description: entity.description,
-    summary: entity.enrichment?.eraNarrative?.text,
   };
 }
 
@@ -145,53 +143,6 @@ function buildEventContext(
     objectName: event.object?.name,
     stateChanges: event.stateChanges,
     narrativeTags: event.narrativeTags,
-  };
-}
-
-/**
- * Build generation context for an era chronicle
- */
-export function buildEraChronicleContext(
-  eraId: string,
-  worldData: WorldData,
-  worldContext: WorldContext
-): ChronicleGenerationContext {
-  const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
-  const era = entityMap.get(eraId);
-
-  if (!era || era.kind !== 'era') {
-    throw new Error(`Era not found: ${eraId}`);
-  }
-
-  // Get all non-era entities
-  const entities = worldData.hardState
-    .filter((e) => e.kind !== 'era')
-    .map(buildEntityContext);
-
-  // Get all relationships
-  const relationships = worldData.relationships.map((r) =>
-    buildRelationshipContext(r, entityMap)
-  );
-
-  // Get events for this era, sorted by significance
-  const events = (worldData.narrativeHistory || [])
-    .filter((e) => e.era === eraId)
-    .sort((a, b) => b.significance - a.significance)
-    .map(buildEventContext);
-
-  return {
-    worldName: worldContext.name || 'The World',
-    worldDescription: worldContext.description || '',
-    canonFacts: worldContext.canonFacts || [],
-    tone: worldContext.tone || '',
-
-    targetType: 'eraChronicle',
-    targetId: eraId,
-
-    era: buildEraContext(era),
-    entities,
-    relationships,
-    events,
   };
 }
 
@@ -269,7 +220,7 @@ export function buildEntityStoryContext(
 export interface PrerequisiteCheck {
   ready: boolean;
   missing: {
-    type: 'entityDescription' | 'eraSummary';
+    type: 'entityDescription';
     id: string;
     name: string;
   }[];
@@ -279,30 +230,6 @@ export function checkPrerequisites(
   context: ChronicleGenerationContext
 ): PrerequisiteCheck {
   const missing: PrerequisiteCheck['missing'] = [];
-
-  // For era chronicles, we need entity descriptions for prominent entities
-  if (context.targetType === 'eraChronicle') {
-    const prominentEntities = context.entities.filter(
-      (e) => e.prominence === 'mythic' || e.prominence === 'renowned'
-    );
-    for (const entity of prominentEntities) {
-      if (!entity.enrichedDescription) {
-        missing.push({
-          type: 'entityDescription',
-          id: entity.id,
-          name: entity.name,
-        });
-      }
-    }
-    // Era should have a summary
-    if (context.era && !context.era.summary) {
-      missing.push({
-        type: 'eraSummary',
-        id: context.era.id,
-        name: context.era.name,
-      });
-    }
-  }
 
   // For entity stories, we need the entity's description
   if (context.targetType === 'entityStory') {

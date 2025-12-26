@@ -5,6 +5,14 @@
  */
 
 /**
+ * Polarity indicates the nature of a relationship or status for narrative purposes.
+ * - positive: cooperative, beneficial (allies, friends, promoted)
+ * - neutral: neither beneficial nor harmful (trades_with, knows)
+ * - negative: hostile, harmful (rivals, enemies, exiled)
+ */
+export type Polarity = 'positive' | 'neutral' | 'negative';
+
+/**
  * Definition of a relationship kind
  */
 export interface RelationshipKindDefinition {
@@ -28,4 +36,12 @@ export interface RelationshipKindDefinition {
   cullable?: boolean;
   /** Decay rate used by simulation systems */
   decayRate?: 'none' | 'slow' | 'medium' | 'fast';
+  /**
+   * Narrative polarity of this relationship kind.
+   * Used by the narrative system to detect betrayals, alliances, rivalries.
+   * - positive: allies, friends, supporters
+   * - neutral: trades_with, knows, neighbor_of
+   * - negative: rivals, enemies, opposes
+   */
+  polarity?: Polarity;
 }

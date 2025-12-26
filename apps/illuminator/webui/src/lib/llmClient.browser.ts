@@ -22,11 +22,17 @@ export interface LLMRequest {
   temperature?: number;
 }
 
+export interface NetworkDebugInfo {
+  request: string;
+  response?: string;
+}
+
 export interface LLMResult {
   text: string;
   cached: boolean;
   skipped?: boolean;
   error?: string;
+  debug?: NetworkDebugInfo;
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -87,11 +93,21 @@ export class LLMClient {
     let attempt = 0;
     const maxAttempts = 3;
     const backoffMs = 1000;
+    let lastDebug: NetworkDebugInfo | undefined;
 
     while (attempt < maxAttempts) {
       attempt++;
       try {
         const logEntry = this.logRequest(request, attempt, callNumber);
+        const requestBody = {
+          model: this.config.model,
+          max_tokens: request.maxTokens || this.config.maxTokens || 256,
+          temperature: request.temperature ?? this.config.temperature ?? 0.4,
+          system: request.systemPrompt,
+          messages: [{ role: 'user', content: request.prompt }],
+        };
+        const rawRequest = JSON.stringify(requestBody);
+        lastDebug = { request: rawRequest };
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -101,21 +117,22 @@ export class LLMClient {
             'anthropic-version': '2023-06-01',
             'anthropic-dangerous-direct-browser-access': 'true',
           },
-          body: JSON.stringify({
-            model: this.config.model,
-            max_tokens: request.maxTokens || this.config.maxTokens || 256,
-            temperature: request.temperature ?? this.config.temperature ?? 0.4,
-            system: request.systemPrompt,
-            messages: [{ role: 'user', content: request.prompt }],
-          }),
+          body: rawRequest,
         });
 
+        const responseText = await response.text();
+        lastDebug = { request: rawRequest, response: responseText };
+
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`API error ${response.status}: ${errorText}`);
+          throw new Error(`API error ${response.status}: ${responseText}`);
         }
 
-        const data = await response.json();
+        let data: any;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          throw new Error(`Failed to parse response JSON: ${parseError}`);
+        }
         let text = '';
         for (const part of data.content) {
           if (part.type === 'text') {
@@ -136,14 +153,14 @@ export class LLMClient {
         }
 
         this.callsCompleted++;
-        return { text, cached: false, usage };
+        return { text, cached: false, usage, debug: lastDebug };
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[LLM] Call ${callNumber}, Attempt ${attempt}/${maxAttempts}: ${message}`);
 
         if (attempt >= maxAttempts) {
           this.callsCompleted++;
-          return { text: '', cached: false, skipped: true, error: message };
+          return { text: '', cached: false, skipped: true, error: message, debug: lastDebug };
         }
 
         // Exponential backoff
@@ -226,6 +243,7 @@ export interface ImageResult {
   revisedPrompt?: string;
   skipped?: boolean;
   error?: string;
+  debug?: NetworkDebugInfo;
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -253,6 +271,8 @@ export class ImageGenerationClient {
     if (!this.isEnabled()) {
       return { imageUrl: null, skipped: true };
     }
+
+    let debug: NetworkDebugInfo | undefined;
 
     try {
       const model = this.config.model || 'dall-e-3';
@@ -288,21 +308,29 @@ export class ImageGenerationClient {
         requestBody.response_format = 'b64_json';
       }
 
+      const rawRequest = JSON.stringify(requestBody);
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.config.apiKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: rawRequest,
       });
 
+      const responseText = await response.text();
+      debug = { request: rawRequest, response: responseText };
+
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
+        throw new Error(`API error ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`Failed to parse response JSON: ${parseError}`);
+      }
       this.imagesGenerated++;
 
       // Decode base64 to blob
@@ -328,12 +356,13 @@ export class ImageGenerationClient {
         imageUrl: null,  // No URL when using b64_json format
         imageBlob,
         revisedPrompt: data.data[0]?.revised_prompt,
+        debug,
         usage,
       };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[Image] Generation failed: ${message}`);
-      return { imageUrl: null, skipped: true, error: message };
+      return { imageUrl: null, skipped: true, error: message, debug };
     }
   }
 

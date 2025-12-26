@@ -256,7 +256,7 @@ export type NarrativeFormat = 'story' | 'document';
  * Narrative style - comprehensive configuration for chronicle generation
  * Supports both traditional stories and in-universe document formats
  */
-export interface NarrativeStyle {
+export interface BaseNarrativeStyle {
   /** Unique identifier */
   id: string;
   /** Display name */
@@ -265,35 +265,33 @@ export interface NarrativeStyle {
   description: string;
   /** Tags for categorization */
   tags?: string[];
-
-  /**
-   * Format type - determines which config fields are used
-   * - 'story': uses plotStructure, sceneTemplates, entityRules, etc.
-   * - 'document': uses documentConfig for simpler document generation
-   * Defaults to 'story' for backwards compatibility
-   */
-  format?: NarrativeFormat;
-
-  // Story format fields (used when format === 'story' or undefined)
-  /** Plot structure configuration */
-  plotStructure?: PlotStructure;
   /** Entity selection rules */
-  entityRules?: EntitySelectionRules;
+  entityRules: EntitySelectionRules;
   /** Event selection rules */
-  eventRules?: EventSelectionRules;
+  eventRules: EventSelectionRules;
+}
+
+export interface StoryNarrativeStyle extends BaseNarrativeStyle {
+  format: 'story';
+  /** Plot structure configuration */
+  plotStructure: PlotStructure;
   /** Available scene templates */
-  sceneTemplates?: SceneTemplate[];
+  sceneTemplates: SceneTemplate[];
   /** Pacing configuration */
-  pacing?: PacingConfig;
+  pacing: PacingConfig;
   /** Prose writing directives */
-  proseDirectives?: ProseDirectives;
+  proseDirectives: ProseDirectives;
   /** World data focus */
   worldDataFocus?: WorldDataFocus;
-
-  // Document format fields (used when format === 'document')
-  /** Document-based generation config */
-  documentConfig?: DocumentConfig;
 }
+
+export interface DocumentNarrativeStyle extends BaseNarrativeStyle {
+  format: 'document';
+  /** Document-based generation config */
+  documentConfig: DocumentConfig;
+}
+
+export type NarrativeStyle = StoryNarrativeStyle | DocumentNarrativeStyle;
 
 /**
  * Style library - collection of available styles
@@ -451,6 +449,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Epic Drama',
     description: 'Grand, sweeping narratives with world-shaking stakes and fateful confrontations',
     tags: ['dramatic', 'high-stakes', 'grand'],
+    format: 'story',
     plotStructure: {
       type: 'three-act',
       schemaDescription: `{
@@ -483,7 +482,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.7, max: 1.0 },
-      priorityKinds: ['era_transition', 'conflict', 'entity_lifecycle'],
+      priorityKinds: ['era_transition', 'entity_lifecycle', 'succession'],
       priorityTags: ['war', 'death', 'coronation', 'betrayal', 'alliance'],
       maxEvents: 12,
       usageInstructions: 'These are the turning points of history. Each event should feel inevitable in retrospect, part of a grand design.',
@@ -524,6 +523,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Action Adventure',
     description: 'Fast-paced, kinetic narratives driven by physical conflict, chases, and daring escapes',
     tags: ['action', 'fast-paced', 'thrilling'],
+    format: 'story',
     plotStructure: {
       type: 'in-medias-res',
       schemaDescription: `{
@@ -554,7 +554,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.5, max: 1.0 },
-      priorityKinds: ['conflict', 'achievement', 'discovery'],
+      priorityKinds: ['entity_lifecycle', 'succession', 'coalescence'],
       priorityTags: ['combat', 'chase', 'escape', 'confrontation', 'pursuit'],
       maxEvents: 15,
       usageInstructions: 'Chain these events into action sequences. Each event should force immediate reaction, not reflection.',
@@ -593,6 +593,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Romance',
     description: 'Character-driven narratives centered on emotional bonds, longing, and connection',
     tags: ['romantic', 'emotional', 'character-driven'],
+    format: 'story',
     plotStructure: {
       type: 'three-act',
       schemaDescription: `{
@@ -624,7 +625,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.3, max: 0.8 },
-      priorityKinds: ['relationship_change', 'state_change'],
+      priorityKinds: ['relationship_dissolved', 'state_change'],
       priorityTags: ['romance', 'betrayal', 'alliance', 'family', 'marriage'],
       excludeKinds: ['era_transition'],
       maxEvents: 10,
@@ -666,6 +667,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Slice of Life',
     description: 'Quiet, intimate narratives finding meaning in everyday moments and small connections',
     tags: ['quiet', 'intimate', 'contemplative'],
+    format: 'story',
     plotStructure: {
       type: 'episodic',
       schemaDescription: `{
@@ -695,7 +697,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.0, max: 0.4 },
-      excludeKinds: ['era_transition', 'conflict', 'entity_lifecycle'],
+      excludeKinds: ['era_transition', 'entity_lifecycle', 'succession'],
       priorityTags: ['daily', 'craft', 'family', 'friendship', 'labor'],
       maxEvents: 6,
       usageInstructions: 'These are background texture, not drivers. The story is not about events but about being present in a moment.',
@@ -735,6 +737,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Political Intrigue',
     description: 'Complex webs of power, manipulation, secret alliances, and dangerous information',
     tags: ['political', 'scheming', 'complex'],
+    format: 'story',
     plotStructure: {
       type: 'parallel',
       schemaDescription: `{
@@ -770,7 +773,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.4, max: 1.0 },
-      priorityKinds: ['relationship_change', 'state_change', 'conflict'],
+      priorityKinds: ['relationship_dissolved', 'state_change', 'succession'],
       priorityTags: ['alliance', 'betrayal', 'negotiation', 'secret', 'power'],
       maxEvents: 12,
       usageInstructions: 'Events have public interpretations and private meanings. The same event looks different to different players.',
@@ -811,6 +814,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Poetic/Lyrical',
     description: 'Beautiful, atmospheric prose emphasizing language, imagery, and emotional resonance over plot',
     tags: ['literary', 'atmospheric', 'beautiful'],
+    format: 'story',
     plotStructure: {
       type: 'circular',
       schemaDescription: `{
@@ -875,6 +879,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Dark Comedy',
     description: 'Humor found in grim situations, irony, absurdity, and the gap between expectation and reality',
     tags: ['comedy', 'dark', 'ironic'],
+    format: 'story',
     plotStructure: {
       type: 'accumulating',
       schemaDescription: `{
@@ -941,6 +946,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Heroic Fantasy',
     description: 'Classic hero\'s journey with clear good and evil, trials, and triumphant resolution',
     tags: ['heroic', 'fantasy', 'triumphant'],
+    format: 'story',
     plotStructure: {
       type: 'three-act',
       schemaDescription: `{
@@ -973,7 +979,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.5, max: 1.0 },
-      priorityKinds: ['conflict', 'achievement', 'discovery', 'entity_lifecycle'],
+      priorityKinds: ['entity_lifecycle', 'succession', 'coalescence', 'state_change'],
       priorityTags: ['combat', 'quest', 'magic', 'prophecy', 'triumph'],
       maxEvents: 12,
       usageInstructions: 'These are the legendary deeds that will be sung. Each event is a test or a victory.',
@@ -1014,6 +1020,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Tragedy',
     description: 'Stories of inevitable doom, fatal flaws, and the fall of great figures',
     tags: ['tragic', 'inevitable', 'cathartic'],
+    format: 'story',
     plotStructure: {
       type: 'rise-and-fall',
       schemaDescription: `{
@@ -1044,7 +1051,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.6, max: 1.0 },
-      priorityKinds: ['entity_lifecycle', 'state_change', 'relationship_change'],
+      priorityKinds: ['entity_lifecycle', 'state_change', 'relationship_dissolved'],
       priorityTags: ['death', 'betrayal', 'hubris', 'fall', 'ruin'],
       maxEvents: 10,
       usageInstructions: 'Each event is a step toward doom. The audience should see it coming before the characters do.',
@@ -1084,6 +1091,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     name: 'Mystery/Suspense',
     description: 'Stories built around secrets, investigation, and the revelation of hidden truths',
     tags: ['mystery', 'suspense', 'revelation'],
+    format: 'story',
     plotStructure: {
       type: 'mystery-reveal',
       schemaDescription: `{
@@ -1117,7 +1125,7 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     },
     eventRules: {
       significanceRange: { min: 0.3, max: 0.9 },
-      priorityKinds: ['state_change', 'relationship_change'],
+      priorityKinds: ['state_change', 'relationship_dissolved'],
       priorityTags: ['secret', 'discovery', 'hidden', 'betrayal', 'reveal'],
       maxEvents: 12,
       usageInstructions: 'Events are clues. Each should have a surface meaning and a hidden meaning that becomes clear on revelation.',
@@ -1156,6 +1164,58 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
 // Default Document Styles (for in-universe documents)
 // =============================================================================
 
+const DEFAULT_DOCUMENT_ENTITY_RULES: EntitySelectionRules = {
+  prominenceFilter: {
+    include: ['mythic', 'renowned', 'recognized', 'marginal'],
+    protagonistPreference: ['mythic', 'renowned', 'recognized'],
+  },
+  roles: [
+    { role: 'subject', count: { min: 1, max: 2 }, description: 'Primary focus of the document' },
+    { role: 'authority', count: { min: 0, max: 2 }, description: 'Official or institutional voice' },
+    { role: 'witness', count: { min: 0, max: 3 }, description: 'Witnesses or participants with direct knowledge' },
+    { role: 'mentioned', count: { min: 0, max: 4 }, description: 'Referenced entities that provide context' },
+  ],
+  maxCastSize: 8,
+};
+
+const DEFAULT_DOCUMENT_EVENT_RULES: EventSelectionRules = {
+  significanceRange: { min: 0.3, max: 1.0 },
+  maxEvents: 12,
+  usageInstructions: 'Events are cited facts that ground the document in history. Use them as evidence, context, or justification.',
+};
+
+function cloneDocumentEntityRules(): EntitySelectionRules {
+  return {
+    ...DEFAULT_DOCUMENT_ENTITY_RULES,
+    prominenceFilter: {
+      include: [...DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.include],
+      protagonistPreference: DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.protagonistPreference
+        ? [...DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.protagonistPreference]
+        : undefined,
+    },
+    roles: DEFAULT_DOCUMENT_ENTITY_RULES.roles.map((role) => ({
+      ...role,
+      count: { ...role.count },
+    })),
+  };
+}
+
+function cloneDocumentEventRules(): EventSelectionRules {
+  return {
+    ...DEFAULT_DOCUMENT_EVENT_RULES,
+    significanceRange: { ...DEFAULT_DOCUMENT_EVENT_RULES.significanceRange },
+    priorityKinds: DEFAULT_DOCUMENT_EVENT_RULES.priorityKinds
+      ? [...DEFAULT_DOCUMENT_EVENT_RULES.priorityKinds]
+      : undefined,
+    excludeKinds: DEFAULT_DOCUMENT_EVENT_RULES.excludeKinds
+      ? [...DEFAULT_DOCUMENT_EVENT_RULES.excludeKinds]
+      : undefined,
+    priorityTags: DEFAULT_DOCUMENT_EVENT_RULES.priorityTags
+      ? [...DEFAULT_DOCUMENT_EVENT_RULES.priorityTags]
+      : undefined,
+  };
+}
+
 export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
   // 1. HERALD'S DISPATCH
   {
@@ -1164,6 +1224,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Official news proclamation or town crier announcement about recent events',
     tags: ['document', 'news', 'official', 'proclamation'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'official news dispatch',
       structureSchema: `{
@@ -1198,6 +1260,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Scholarly analysis of abilities, magic, or supernatural phenomena',
     tags: ['document', 'scholarly', 'abilities', 'academic'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'academic treatise',
       structureSchema: `{
@@ -1238,6 +1302,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Commercial advertisement, trade announcement, or market bulletin',
     tags: ['document', 'commercial', 'trade', 'advertisement'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'commercial advertisement',
       structureSchema: `{
@@ -1274,6 +1340,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Exchange of letters between entities revealing relationships and events',
     tags: ['document', 'letters', 'personal', 'epistolary'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'letter collection',
       structureSchema: `{
@@ -1316,6 +1384,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Official historical record or archive entry documenting events',
     tags: ['document', 'historical', 'official', 'archive'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'historical chronicle entry',
       structureSchema: `{
@@ -1353,6 +1423,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Bounty poster, warning notice, or official alert about a person or threat',
     tags: ['document', 'warning', 'bounty', 'official'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'wanted poster or warning notice',
       structureSchema: `{
@@ -1392,6 +1464,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Treaty, alliance agreement, or formal pact between factions',
     tags: ['document', 'diplomatic', 'treaty', 'formal'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'diplomatic treaty or accord',
       structureSchema: `{
@@ -1429,6 +1503,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Collection of community postings: jobs, rumors, announcements, personal ads',
     tags: ['document', 'community', 'rumors', 'informal'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'community notice board collection',
       structureSchema: `{
@@ -1469,6 +1545,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Military scout report, expedition log, or reconnaissance document',
     tags: ['document', 'military', 'reconnaissance', 'tactical'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'military or expedition field report',
       structureSchema: `{
@@ -1509,6 +1587,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Detailed catalog of items, artifacts, or creations with descriptions and provenance',
     tags: ['document', 'catalog', 'items', 'artifacts'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'item catalog or collection inventory',
       structureSchema: `{
@@ -1553,6 +1633,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Religious scripture, prophecy, or spiritual teaching from a culture or faith tradition',
     tags: ['document', 'religious', 'spiritual', 'sacred'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'religious or sacred text',
       structureSchema: `{
@@ -1594,6 +1676,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Collection of folk wisdom, traditional sayings, and cultural aphorisms',
     tags: ['document', 'wisdom', 'folklore', 'cultural'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'collection of proverbs and sayings',
       structureSchema: `{
@@ -1635,6 +1719,8 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Customer testimonials and critiques of goods, services, or establishments',
     tags: ['document', 'commercial', 'reviews', 'informal'],
     format: 'document',
+    entityRules: cloneDocumentEntityRules(),
+    eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'collection of customer reviews',
       structureSchema: `{

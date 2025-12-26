@@ -29,6 +29,7 @@ export default function RelationshipKindEditor({
       dstKinds: [],
       cullable: true,
       decayRate: 'medium',
+      polarity: 'neutral',
       _key: stableKey,
     };
     onChange([...relationshipKinds, newRel]);
@@ -212,6 +213,19 @@ export default function RelationshipKindEditor({
                         <option value="slow">Slow</option>
                         <option value="medium">Medium</option>
                         <option value="fast">Fast</option>
+                      </select>
+                    </FormGroup>
+                    <FormGroup label="Polarity">
+                      <select
+                        className="input"
+                        value={rel.polarity || 'neutral'}
+                        disabled={isFramework}
+                        onChange={(e) => updateRel(rel.kind, { polarity: e.target.value })}
+                        title="Relationship polarity (affects narrative event types)"
+                      >
+                        <option value="positive">Positive (alliance, membership)</option>
+                        <option value="neutral">Neutral</option>
+                        <option value="negative">Negative (enmity, conflict)</option>
                       </select>
                     </FormGroup>
                     <FormGroup>

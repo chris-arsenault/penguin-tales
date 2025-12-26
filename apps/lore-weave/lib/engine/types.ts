@@ -154,6 +154,7 @@ export interface Era {
  * Framework enforces: coordinates → tags → name ordering
  */
 export interface CreateEntitySettings {
+  id: string; // Required - derived from entity name
   kind: string;
   subtype: string;
   coordinates: import('../coordinates/types').Point;  // REQUIRED - simple 2D+z coordinates
@@ -191,7 +192,7 @@ export interface Graph {
   // =============================================================================
   /**
    * Create a new entity with contract enforcement.
-   * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
+   * Enforces: id (required) → coordinates (required) → tags → name (auto-generated if not provided)
    * @returns The created entity's ID
    */
   createEntity(settings: CreateEntitySettings): Promise<string>;
@@ -773,11 +774,22 @@ export class GraphStore implements Graph {
 
   /**
    * Create a new entity with contract enforcement.
-   * Enforces: coordinates (required) → tags → name (auto-generated if not provided)
+   * Enforces: id (required) → coordinates (required) → tags → name (auto-generated if not provided)
    */
   async createEntity(settings: CreateEntitySettings): Promise<string> {
-    // Generate unique ID
-    const id = `${settings.kind}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = settings.id;
+    if (!id) {
+      throw new Error(
+        `createEntity: id is required for all entities. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
+    if (this.#entities.has(id)) {
+      throw new Error(
+        `createEntity: id "${id}" already exists. ` +
+        `Entity kind: ${settings.kind}, subtype: ${settings.subtype}.`
+      );
+    }
 
     // COORDINATES are REQUIRED - no silent defaults
     if (!settings.coordinates) {

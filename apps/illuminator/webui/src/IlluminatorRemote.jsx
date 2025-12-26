@@ -17,7 +17,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import './App.css';
 import EntityBrowser from './components/EntityBrowser';
-import NarrativesPanel from './components/NarrativesPanel';
 import ChroniclePanel from './components/ChroniclePanel';
 import WorldContextEditor from './components/WorldContextEditor';
 import PromptTemplateEditor from './components/PromptTemplateEditor';
@@ -47,7 +46,6 @@ const TABS = [
   { id: 'identity', label: 'Identity' },     // 4. Visual identity per culture
   { id: 'styles', label: 'Styles' },         // 5. Manage style library
   { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
-  { id: 'narratives', label: 'Narratives' }, // 7. Era/relationship narratives
   { id: 'chronicle', label: 'Chronicle' },   // 8. Wiki-ready long-form content
   { id: 'activity', label: 'Activity' },     // 9. Monitor queue
   { id: 'costs', label: 'Costs' },           // 10. Track spending
@@ -100,8 +98,8 @@ const IMAGE_FIELDS = [
   'estimatedCost',
   'actualCost',
 ];
-const NARRATIVE_FIELDS = [
-  'text',
+const STORY_FIELDS = [
+  'storyId',
   'generatedAt',
   'model',
   'estimatedCost',
@@ -119,13 +117,37 @@ const isSectionEqual = (left, right, fields) => {
   return true;
 };
 
+const isChroniclesEqual = (left, right) => {
+  if (left === right) return true;
+  if (!left && !right) return true;
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+
+  const normalize = (chronicles) => chronicles
+    .map((entry) => ({
+      chronicleId: entry.chronicleId,
+      title: entry.title,
+      format: entry.format,
+      content: entry.content,
+      entrypointId: entry.entrypointId,
+      acceptedAt: entry.acceptedAt,
+      generatedAt: entry.generatedAt,
+      model: entry.model,
+      entityIds: Array.isArray(entry.entityIds) ? [...entry.entityIds].sort() : [],
+    }))
+    .sort((a, b) => (a.chronicleId || '').localeCompare(b.chronicleId || ''));
+
+  return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
+};
+
 const isEnrichmentEqual = (left, right) => {
   if (left === right) return true;
   if (!left || !right) return false;
   return (
     isSectionEqual(left.description, right.description, DESCRIPTION_FIELDS) &&
     isSectionEqual(left.image, right.image, IMAGE_FIELDS) &&
-    isSectionEqual(left.eraNarrative, right.eraNarrative, NARRATIVE_FIELDS)
+    isSectionEqual(left.entityStory, right.entityStory, STORY_FIELDS) &&
+    isChroniclesEqual(left.chronicles, right.chronicles)
   );
 };
 
@@ -338,10 +360,6 @@ export default function IlluminatorRemote({
   // Entities with enrichment state
   const [entities, setEntities] = useState([]);
 
-  // Era and relationship narratives
-  const [eraNarratives, setEraNarratives] = useState({});
-  const [relationshipNarratives, setRelationshipNarratives] = useState({});
-
   // Initialize entities from worldData
   // NOTE: We do NOT carry over enrichment from previous state based on ID matching.
   // Enrichment is persisted in worldData itself (via onEnrichmentComplete callback).
@@ -410,26 +428,6 @@ export default function IlluminatorRemote({
 
   // Handle entity enrichment update from queue
   const handleEntityUpdate = useCallback((entityId, enrichment) => {
-    // Check if this is an era narrative (entityId matches an era)
-    const isEra = entities.some((e) => e.id === entityId && e.kind === 'era');
-    if (isEra && enrichment.eraNarrative) {
-      setEraNarratives((prev) => ({
-        ...prev,
-        [entityId]: enrichment.eraNarrative.text,
-      }));
-      return;
-    }
-
-    // Check if this is a relationship narrative (entityId contains _)
-    if (entityId.includes('_') && enrichment.eraNarrative) {
-      setRelationshipNarratives((prev) => ({
-        ...prev,
-        [entityId]: enrichment.eraNarrative.text,
-      }));
-      return;
-    }
-
-    // For regular entities, update their enrichment
     setEntities((prev) =>
       prev.map((entity) =>
         entity.id === entityId
@@ -437,7 +435,29 @@ export default function IlluminatorRemote({
           : entity
       )
     );
-  }, [entities]);
+  }, []);
+
+  const handleChronicleAccepted = useCallback((entityId, chronicle) => {
+    setEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id !== entityId) return entity;
+        const existing = Array.isArray(entity.enrichment?.chronicles)
+          ? entity.enrichment.chronicles
+          : [];
+        const updated = [
+          ...existing.filter((entry) => entry.chronicleId !== chronicle.chronicleId),
+          chronicle,
+        ].sort((a, b) => (b.acceptedAt || 0) - (a.acceptedAt || 0));
+        return {
+          ...entity,
+          enrichment: {
+            ...entity.enrichment,
+            chronicles: updated,
+          },
+        };
+      })
+    );
+  }, []);
 
   // Extract simulationRunId from worldData for content association
   const simulationRunId = worldData?.metadata?.simulationRunId;
@@ -875,21 +895,6 @@ export default function IlluminatorRemote({
           </div>
         )}
 
-        {activeTab === 'narratives' && (
-          <div className="illuminator-content">
-            <NarrativesPanel
-              worldData={worldData}
-              entities={entities}
-              queue={queue}
-              onEnqueue={enqueue}
-              onCancel={cancel}
-              worldContext={worldContext}
-              eraNarratives={eraNarratives}
-              relationshipNarratives={relationshipNarratives}
-            />
-          </div>
-        )}
-
         {activeTab === 'chronicle' && (
           <div className="illuminator-content">
             <ChroniclePanel
@@ -902,6 +907,7 @@ export default function IlluminatorRemote({
               projectId={projectId}
               simulationRunId={simulationRunId}
               buildPrompt={buildPrompt}
+              onChronicleAccepted={handleChronicleAccepted}
             />
           </div>
         )}

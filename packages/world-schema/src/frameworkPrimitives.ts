@@ -190,9 +190,9 @@ export const FRAMEWORK_ENTITY_KIND_DEFINITIONS: EntityKindDefinition[] = [
     isFramework: true,
     subtypes: [],
     statuses: [
-      { id: FRAMEWORK_STATUS.CURRENT, name: 'Current', isTerminal: false },
-      { id: FRAMEWORK_STATUS.FUTURE, name: 'Future', isTerminal: false },
-      { id: FRAMEWORK_STATUS.HISTORICAL, name: 'Historical', isTerminal: true },
+      { id: FRAMEWORK_STATUS.CURRENT, name: 'Current', isTerminal: false, polarity: 'neutral' },
+      { id: FRAMEWORK_STATUS.FUTURE, name: 'Future', isTerminal: false, polarity: 'neutral' },
+      { id: FRAMEWORK_STATUS.HISTORICAL, name: 'Historical', isTerminal: true, polarity: 'neutral' },
     ],
     defaultStatus: FRAMEWORK_STATUS.CURRENT,
     style: { color: '#FFD700', displayName: 'Era' },
@@ -203,8 +203,8 @@ export const FRAMEWORK_ENTITY_KIND_DEFINITIONS: EntityKindDefinition[] = [
     isFramework: true,
     subtypes: [],
     statuses: [
-      { id: FRAMEWORK_STATUS.ACTIVE, name: 'Active', isTerminal: false },
-      { id: FRAMEWORK_STATUS.HISTORICAL, name: 'Historical', isTerminal: true },
+      { id: FRAMEWORK_STATUS.ACTIVE, name: 'Active', isTerminal: false, polarity: 'neutral' },
+      { id: FRAMEWORK_STATUS.HISTORICAL, name: 'Historical', isTerminal: true, polarity: 'neutral' },
     ],
     defaultStatus: FRAMEWORK_STATUS.ACTIVE,
     style: { color: '#FCD76B', displayName: 'Occurrence' },
@@ -221,6 +221,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.PART_OF,
@@ -231,6 +232,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [],
     cullable: false,
     decayRate: 'none',
+    polarity: 'positive',  // Membership is generally positive
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.ACTIVE_DURING,
@@ -241,6 +243,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [FRAMEWORK_ENTITY_KINDS.ERA],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.PARTICIPANT_IN,
@@ -251,6 +254,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [FRAMEWORK_ENTITY_KINDS.OCCURRENCE],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.EPICENTER_OF,
@@ -261,6 +265,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.TRIGGERED_BY,
@@ -271,6 +276,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
   {
     kind: FRAMEWORK_RELATIONSHIP_KINDS.CREATED_DURING,
@@ -281,6 +287,7 @@ export const FRAMEWORK_RELATIONSHIP_KIND_DEFINITIONS: RelationshipKindDefinition
     dstKinds: [FRAMEWORK_ENTITY_KINDS.ERA],
     cullable: false,
     decayRate: 'none',
+    polarity: 'neutral',
   },
 ];
 

@@ -6,8 +6,14 @@
  */
 
 import type { NarrativeStyle } from '@canonry/world-schema';
+import type { ChronicleFormat } from './chronicleTypes';
 
-export type EnrichmentType = 'description' | 'image' | 'eraNarrative' | 'relationship' | 'entityStory';
+export type EnrichmentType = 'description' | 'image' | 'entityStory';
+
+export interface NetworkDebugInfo {
+  request: string;
+  response?: string;
+}
 
 export type EnrichmentStatus = 'missing' | 'queued' | 'running' | 'complete' | 'error';
 
@@ -28,6 +34,18 @@ export interface EnrichmentResult {
 export interface EnrichmentError {
   message: string;
   occurredAt: number;
+}
+
+export interface AcceptedChronicle {
+  chronicleId: string;
+  title: string;
+  format: ChronicleFormat;
+  content: string;
+  entrypointId: string;
+  entityIds: string[];
+  generatedAt?: number;
+  acceptedAt: number;
+  model?: string;
 }
 
 /**
@@ -53,15 +71,6 @@ export interface EntityEnrichment {
     inputTokens?: number;  // GPT Image models return token usage
     outputTokens?: number;
   };
-  eraNarrative?: {
-    text: string;
-    generatedAt: number;
-    model: string;
-    estimatedCost?: number;
-    actualCost?: number;
-    inputTokens?: number;
-    outputTokens?: number;
-  };
   entityStory?: {
     storyId: string;  // Reference to stored story in storyStore
     generatedAt: number;
@@ -71,6 +80,7 @@ export interface EntityEnrichment {
     inputTokens?: number;
     outputTokens?: number;
   };
+  chronicles?: AcceptedChronicle[];
 }
 
 /**
@@ -92,6 +102,7 @@ export interface QueueItem {
   completedAt?: number;
   result?: EnrichmentResult;
   error?: string;
+  debug?: NetworkDebugInfo;
   // Cost tracking
   estimatedCost?: number;
   // For entityStory tasks
@@ -112,8 +123,15 @@ export interface SerializableChronicleContext {
   tone: string;
 
   // Target metadata
-  targetType: 'eraChronicle' | 'entityStory';
+  targetType: 'entityStory';
   targetId: string;
+
+  // Optional era context (if available)
+  era?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
 
   // Target entity (for entity stories)
   entity?: {
@@ -140,6 +158,11 @@ export interface SerializableChronicleContext {
     prominence: string;
     culture?: string;
     status: string;
+    tags: Record<string, string>;
+    description?: string;
+    enrichedDescription?: string;
+    createdAt: number;
+    updatedAt: number;
   }>;
 
   // Relationships involving target
@@ -177,7 +200,7 @@ export interface SerializableChronicleContext {
 /**
  * Which step to run for entityStory tasks
  */
-export type ChronicleStep = 'plan' | 'expand' | 'assemble' | 'validate';
+export type ChronicleStep = 'plan' | 'expand' | 'assemble' | 'validate' | 'edit';
 
 /**
  * Worker task - what we send to the worker (single task)
@@ -212,6 +235,7 @@ export interface WorkerResult {
   success: boolean;
   result?: EnrichmentResult;
   error?: string;
+  debug?: NetworkDebugInfo;
 }
 
 /**
@@ -238,7 +262,6 @@ export function getEnrichmentStatus(
 
   if (type === 'description' && enrichment.description?.text) return 'complete';
   if (type === 'image' && enrichment.image?.imageId) return 'complete';
-  if (type === 'eraNarrative' && enrichment.eraNarrative?.text) return 'complete';
   if (type === 'entityStory' && enrichment.entityStory?.storyId) return 'complete';
 
   return 'missing';
@@ -256,7 +279,6 @@ export function needsEnrichment(
 
   if (type === 'description') return !enrichment.description?.text;
   if (type === 'image') return !enrichment.image?.imageId;
-  if (type === 'eraNarrative') return !enrichment.eraNarrative?.text;
   if (type === 'entityStory') return !enrichment.entityStory?.storyId;
 
   return true;
@@ -295,38 +317,6 @@ export function applyEnrichmentResult(
         generatedAt: result.generatedAt,
         model: result.model,
         revisedPrompt: result.revisedPrompt,
-        estimatedCost: result.estimatedCost,
-        actualCost: result.actualCost,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-      },
-    };
-  }
-
-  if (type === 'eraNarrative' && result.text) {
-    return {
-      ...existing,
-      eraNarrative: {
-        text: result.text,
-        generatedAt: result.generatedAt,
-        model: result.model,
-        estimatedCost: result.estimatedCost,
-        actualCost: result.actualCost,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-      },
-    };
-  }
-
-  // Relationship narratives are handled separately in IlluminatorRemote
-  // They use the same text format as other enrichments
-  if (type === 'relationship' && result.text) {
-    return {
-      ...existing,
-      eraNarrative: {
-        text: result.text,
-        generatedAt: result.generatedAt,
-        model: result.model,
         estimatedCost: result.estimatedCost,
         actualCost: result.actualCost,
         inputTokens: result.inputTokens,
