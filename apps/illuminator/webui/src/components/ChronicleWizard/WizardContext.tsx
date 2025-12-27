@@ -5,18 +5,29 @@
  */
 
 import { createContext, useContext, useReducer, ReactNode, useMemo, useCallback } from 'react';
-import type { NarrativeStyle } from '@canonry/world-schema';
+import type { NarrativeStyle, EntityKindDefinition, EntityCategory } from '@canonry/world-schema';
 import type {
   ChronicleRoleAssignment,
   EntityContext,
   RelationshipContext,
   NarrativeEventContext,
+  EraTemporalInfo,
+  ChronicleTemporalContext,
 } from '../../lib/chronicleTypes';
 import {
   buildWizardSelectionContext,
+  buildNeighborGraph,
   suggestRoleAssignments,
+  computeAllEntityMetrics,
+  computeAllEventMetrics,
+  computeTemporalContext,
+  computeFocalEra,
+  suggestEventSelection,
   getRelevantRelationships,
   getRelevantEvents,
+  buildKindToCategoryMap,
+  type EntitySelectionMetrics,
+  type EventSelectionMetrics,
 } from '../../lib/chronicle/selectionWizard';
 
 // =============================================================================
@@ -24,6 +35,18 @@ import {
 // =============================================================================
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * Chronicle seed data for initializing wizard from existing record.
+ * Uses the same field names as ChronicleRecord to avoid duplication.
+ */
+export interface ChronicleSeed {
+  narrativeStyleId: string;
+  entrypointId?: string; // Same field name as ChronicleRecord
+  roleAssignments: ChronicleRoleAssignment[];
+  selectedEventIds: string[];
+  selectedRelationshipIds: string[];
+}
 
 export interface WizardState {
   step: WizardStep;
@@ -64,11 +87,12 @@ type WizardAction =
   | { type: 'TOGGLE_PRIMARY'; entityId: string; role: string }
   | { type: 'TOGGLE_EVENT'; eventId: string }
   | { type: 'TOGGLE_RELATIONSHIP'; relationshipId: string }
-  | { type: 'SELECT_ALL_EVENTS' }
+  | { type: 'SELECT_ALL_EVENTS'; eventIds: string[] }
   | { type: 'DESELECT_ALL_EVENTS' }
-  | { type: 'SELECT_ALL_RELATIONSHIPS' }
+  | { type: 'SELECT_ALL_RELATIONSHIPS'; relationshipIds: string[] }
   | { type: 'DESELECT_ALL_RELATIONSHIPS' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'INIT_FROM_SEED'; seed: ChronicleSeed; style: NarrativeStyle; entryPoint: EntityContext; candidates: EntityContext[]; relationships: RelationshipContext[]; events: NarrativeEventContext[] };
 
 // =============================================================================
 // Initial State
@@ -205,7 +229,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SELECT_ALL_EVENTS':
       return {
         ...state,
-        selectedEventIds: new Set(state.candidateEvents.map(e => e.id)),
+        selectedEventIds: new Set(action.eventIds),
       };
 
     case 'DESELECT_ALL_EVENTS':
@@ -214,9 +238,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SELECT_ALL_RELATIONSHIPS':
       return {
         ...state,
-        selectedRelationshipIds: new Set(
-          state.candidateRelationships.map(r => `${r.src}:${r.dst}:${r.kind}`)
-        ),
+        selectedRelationshipIds: new Set(action.relationshipIds),
       };
 
     case 'DESELECT_ALL_RELATIONSHIPS':
@@ -224,6 +246,25 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'RESET':
       return initialState;
+
+    case 'INIT_FROM_SEED':
+      return {
+        ...initialState,
+        step: 5, // Go directly to generate step for review
+        narrativeStyleId: action.seed.narrativeStyleId,
+        narrativeStyle: action.style,
+        acceptDefaults: false,
+        entryPointId: action.seed.entryPointId,
+        entryPoint: action.entryPoint,
+        candidates: action.candidates,
+        roleAssignments: action.seed.roleAssignments,
+        candidateEvents: action.events,
+        candidateRelationships: action.relationships,
+        selectedEventIds: new Set(action.seed.selectedEventIds),
+        selectedRelationshipIds: new Set(action.seed.selectedRelationshipIds),
+        isValid: true,
+        validationErrors: [],
+      };
 
     default:
       return state;
@@ -238,6 +279,12 @@ interface WizardContextValue {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
 
+  /**
+   * Mapping from entity kinds to their categories.
+   * Used by step components to check if entities match primary/supporting subject categories.
+   */
+  kindToCategory: Map<string, EntityCategory>;
+
   // Navigation
   nextStep: () => void;
   prevStep: () => void;
@@ -251,21 +298,38 @@ interface WizardContextValue {
   selectEntryPoint: (entity: EntityContext, allEntities: EntityContext[], allRelationships: RelationshipContext[], allEvents: NarrativeEventContext[]) => void;
 
   // Step 3 actions
-  autoFillRoles: () => void;
+  autoFillRoles: (metricsMap?: Map<string, EntitySelectionMetrics>) => void;
   addRoleAssignment: (assignment: ChronicleRoleAssignment) => void;
   removeRoleAssignment: (entityId: string, role: string) => void;
   togglePrimary: (entityId: string, role: string) => void;
 
+  // Metrics computation helpers
+  computeMetrics: (usageStats: Map<string, { usageCount: number }>) => Map<string, EntitySelectionMetrics>;
+  computeEventMetricsForSelection: () => Map<string, EventSelectionMetrics>;
+
+  // Temporal context
+  temporalContext: ChronicleTemporalContext | null;
+  eras: EraTemporalInfo[];
+
   // Step 4 actions
+  autoFillEvents: (preferFocalEra?: boolean) => void;
   toggleEvent: (eventId: string) => void;
   toggleRelationship: (relationshipId: string) => void;
-  selectAllEvents: () => void;
+  selectAllEvents: (eventIds: string[]) => void;
   deselectAllEvents: () => void;
-  selectAllRelationships: () => void;
+  selectAllRelationships: (relationshipIds: string[]) => void;
   deselectAllRelationships: () => void;
 
-  // Reset
+  // Reset / Initialize
   reset: () => void;
+  initFromSeed: (
+    seed: ChronicleSeed,
+    style: NarrativeStyle,
+    entryPoint: EntityContext,
+    allEntities: EntityContext[],
+    allRelationships: RelationshipContext[],
+    allEvents: NarrativeEventContext[]
+  ) => void;
 }
 
 const WizardContext = createContext<WizardContextValue | null>(null);
@@ -274,8 +338,34 @@ const WizardContext = createContext<WizardContextValue | null>(null);
 // Provider
 // =============================================================================
 
-export function WizardProvider({ children }: { children: ReactNode }) {
+interface WizardProviderProps {
+  children: ReactNode;
+  /** Entity kind definitions from the domain schema, used for category mapping */
+  entityKinds: EntityKindDefinition[];
+  /** Era definitions with tick ranges for temporal alignment */
+  eras: EraTemporalInfo[];
+}
+
+export function WizardProvider({ children, entityKinds, eras }: WizardProviderProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
+
+  // Build kind-to-category mapping
+  const kindToCategory = useMemo(
+    () => buildKindToCategoryMap(entityKinds),
+    [entityKinds]
+  );
+
+  // Compute temporal context from selected events
+  const temporalContext = useMemo<ChronicleTemporalContext | null>(() => {
+    if (eras.length === 0) return null;
+
+    // Get selected events for temporal computation
+    const selectedEvents = state.candidateEvents.filter(
+      e => state.selectedEventIds.has(e.id)
+    );
+
+    return computeTemporalContext(selectedEvents, eras, state.entryPoint || undefined);
+  }, [eras, state.candidateEvents, state.selectedEventIds, state.entryPoint]);
 
   // Navigation
   const nextStep = useCallback(() => {
@@ -336,15 +426,81 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           state.narrativeStyle.entityRules.roles,
           entity.id,
           state.narrativeStyle.entityRules,
-          selectionContext.candidateRelationships
+          selectionContext.candidateRelationships,
+          kindToCategory
         );
         dispatch({ type: 'SET_ROLE_ASSIGNMENTS', assignments: suggested });
       }
     }
-  }, [state.narrativeStyle, state.acceptDefaults]);
+  }, [state.narrativeStyle, state.acceptDefaults, kindToCategory]);
+
+  // Compute metrics helper
+  const computeMetrics = useCallback((usageStats: Map<string, { usageCount: number }>) => {
+    if (!state.entryPoint) return new Map<string, EntitySelectionMetrics>();
+
+    const neighborGraph = buildNeighborGraph(
+      state.candidateRelationships,
+      state.entryPoint.id,
+      2
+    );
+
+    return computeAllEntityMetrics(
+      state.candidates,
+      state.entryPoint.id,
+      state.candidateRelationships,
+      neighborGraph.distances,
+      usageStats,
+      state.roleAssignments,
+      kindToCategory
+    );
+  }, [state.entryPoint, state.candidates, state.candidateRelationships, state.roleAssignments, kindToCategory]);
+
+  // Compute event metrics for selection
+  const computeEventMetricsForSelection = useCallback(() => {
+    if (!state.entryPoint || eras.length === 0) {
+      return new Map<string, EventSelectionMetrics>();
+    }
+
+    // Get assigned entity IDs
+    const assignedEntityIds = new Set(state.roleAssignments.map(a => a.entityId));
+
+    // Compute focal era from current candidate events
+    const focalEra = computeFocalEra(state.candidateEvents, eras);
+    const focalEraId = focalEra?.id || eras[0]?.id || '';
+
+    return computeAllEventMetrics(
+      state.candidateEvents,
+      state.entryPoint.id,
+      state.entryPoint.createdAt,
+      focalEraId,
+      eras,
+      assignedEntityIds
+    );
+  }, [state.entryPoint, state.candidateEvents, state.roleAssignments, eras]);
+
+  // Auto-fill events based on temporal alignment
+  const autoFillEvents = useCallback((preferFocalEra: boolean = true) => {
+    const metricsMap = computeEventMetricsForSelection();
+
+    // Get relevant events (those involving assigned entities)
+    const relevantEvents = getRelevantEvents(
+      state.roleAssignments,
+      state.candidateEvents,
+      state.narrativeStyle?.eventRules
+    );
+
+    const suggestedEventIds = suggestEventSelection(
+      relevantEvents,
+      metricsMap,
+      8, // maxEvents
+      preferFocalEra
+    );
+
+    dispatch({ type: 'SELECT_ALL_EVENTS', eventIds: suggestedEventIds });
+  }, [computeEventMetricsForSelection, state.roleAssignments, state.candidateEvents, state.narrativeStyle]);
 
   // Step 3: Auto-fill roles
-  const autoFillRoles = useCallback(() => {
+  const autoFillRoles = useCallback((metricsMap?: Map<string, EntitySelectionMetrics>) => {
     if (!state.narrativeStyle || !state.entryPoint) return;
 
     const suggested = suggestRoleAssignments(
@@ -352,10 +508,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       state.narrativeStyle.entityRules.roles,
       state.entryPoint.id,
       state.narrativeStyle.entityRules,
-      state.candidateRelationships
+      state.candidateRelationships,
+      kindToCategory,
+      metricsMap
     );
     dispatch({ type: 'SET_ROLE_ASSIGNMENTS', assignments: suggested });
-  }, [state.narrativeStyle, state.entryPoint, state.candidates, state.candidateRelationships]);
+  }, [state.narrativeStyle, state.entryPoint, state.candidates, state.candidateRelationships, kindToCategory]);
 
   const addRoleAssignment = useCallback((assignment: ChronicleRoleAssignment) => {
     dispatch({ type: 'ADD_ROLE_ASSIGNMENT', assignment });
@@ -378,16 +536,16 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'TOGGLE_RELATIONSHIP', relationshipId });
   }, []);
 
-  const selectAllEvents = useCallback(() => {
-    dispatch({ type: 'SELECT_ALL_EVENTS' });
+  const selectAllEvents = useCallback((eventIds: string[]) => {
+    dispatch({ type: 'SELECT_ALL_EVENTS', eventIds });
   }, []);
 
   const deselectAllEvents = useCallback(() => {
     dispatch({ type: 'DESELECT_ALL_EVENTS' });
   }, []);
 
-  const selectAllRelationships = useCallback(() => {
-    dispatch({ type: 'SELECT_ALL_RELATIONSHIPS' });
+  const selectAllRelationships = useCallback((relationshipIds: string[]) => {
+    dispatch({ type: 'SELECT_ALL_RELATIONSHIPS', relationshipIds });
   }, []);
 
   const deselectAllRelationships = useCallback(() => {
@@ -399,9 +557,39 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'RESET' });
   }, []);
 
+  // Initialize from existing chronicle seed
+  const initFromSeed = useCallback((
+    seed: ChronicleSeed,
+    style: NarrativeStyle,
+    entryPoint: EntityContext,
+    allEntities: EntityContext[],
+    allRelationships: RelationshipContext[],
+    allEvents: NarrativeEventContext[]
+  ) => {
+    // Get relevant candidates/events/relationships based on entry point
+    const selectionContext = buildWizardSelectionContext(
+      entryPoint,
+      allEntities,
+      allRelationships,
+      allEvents,
+      style
+    );
+
+    dispatch({
+      type: 'INIT_FROM_SEED',
+      seed,
+      style,
+      entryPoint,
+      candidates: selectionContext.candidates,
+      relationships: selectionContext.candidateRelationships,
+      events: selectionContext.candidateEvents,
+    });
+  }, []);
+
   const value = useMemo<WizardContextValue>(() => ({
     state,
     dispatch,
+    kindToCategory,
     nextStep,
     prevStep,
     goToStep,
@@ -412,6 +600,11 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
+    computeMetrics,
+    computeEventMetricsForSelection,
+    temporalContext,
+    eras,
+    autoFillEvents,
     toggleEvent,
     toggleRelationship,
     selectAllEvents,
@@ -419,8 +612,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     selectAllRelationships,
     deselectAllRelationships,
     reset,
+    initFromSeed,
   }), [
     state,
+    kindToCategory,
     nextStep,
     prevStep,
     goToStep,
@@ -431,6 +626,11 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
+    computeMetrics,
+    computeEventMetricsForSelection,
+    temporalContext,
+    eras,
+    autoFillEvents,
     toggleEvent,
     toggleRelationship,
     selectAllEvents,
@@ -438,6 +638,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     selectAllRelationships,
     deselectAllRelationships,
     reset,
+    initFromSeed,
   ]);
 
   return (

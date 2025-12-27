@@ -11,7 +11,7 @@
 // ============================================================================
 
 const IMAGE_DB_NAME = 'canonry-images';
-const IMAGE_DB_VERSION = 3;  // Bumped for chronicle image support (must match imageStore.js)
+const IMAGE_DB_VERSION = 4;  // Bumped for chronicleId index (must match imageStore.js)
 const IMAGE_STORE_NAME = 'images';
 
 // ============================================================================
@@ -39,8 +39,8 @@ function openImageDb(): Promise<IDBDatabase> {
         store.createIndex('entityKind', 'entityKind', { unique: false });
         store.createIndex('entityCulture', 'entityCulture', { unique: false });
         store.createIndex('model', 'model', { unique: false });
-        // Chronicle image indexes (v3)
-        store.createIndex('storyId', 'storyId', { unique: false });
+        // Chronicle image indexes (v4)
+        store.createIndex('chronicleId', 'chronicleId', { unique: false });
         store.createIndex('imageType', 'imageType', { unique: false });
       } else if (oldVersion < 2) {
         // Upgrade from v1 - add new indexes for global library search
@@ -57,12 +57,12 @@ function openImageDb(): Promise<IDBDatabase> {
         }
       }
 
-      if (oldVersion < 3) {
-        // Upgrade to v3 - add chronicle image indexes
+      if (oldVersion < 4) {
+        // Upgrade to v4 - add chronicle image indexes
         const tx = (event.target as IDBOpenDBRequest).transaction!;
         const store = tx.objectStore(IMAGE_STORE_NAME);
-        if (!store.indexNames.contains('storyId')) {
-          store.createIndex('storyId', 'storyId', { unique: false });
+        if (!store.indexNames.contains('chronicleId')) {
+          store.createIndex('chronicleId', 'chronicleId', { unique: false });
         }
         if (!store.indexNames.contains('imageType')) {
           store.createIndex('imageType', 'imageType', { unique: false });
@@ -106,8 +106,8 @@ export interface ImageMetadata {
   // Chronicle image fields (optional, present when imageType === 'chronicle')
   /** Type of image: 'entity' (default) or 'chronicle' */
   imageType?: ImageType;
-  /** For chronicle images: the story this belongs to */
-  storyId?: string;
+  /** For chronicle images: the chronicle this belongs to */
+  chronicleId?: string;
   /** For chronicle images: the image ref ID from ChronicleImageRefs */
   imageRefId?: string;
   /** For chronicle images: the scene description from the LLM */
@@ -160,4 +160,90 @@ export async function deleteImage(imageId: string): Promise<void> {
     tx.onerror = () => reject(tx.error || new Error('Failed to delete image'));
     tx.objectStore(IMAGE_STORE_NAME).delete(imageId);
   });
+}
+
+// ============================================================================
+// Bulk Export for Prompt Analysis
+// ============================================================================
+
+/**
+ * Exported prompt data for analysis (excludes image blob)
+ */
+export interface ImagePromptExport {
+  imageId: string;
+  entityId: string;
+  entityName?: string;
+  entityKind?: string;
+  entityCulture?: string;
+  generatedAt: number;
+  model: string;
+  /** The original prompt built from template (before Claude refinement) */
+  originalPrompt?: string;
+  /** The final prompt sent to image model (after Claude refinement) */
+  finalPrompt?: string;
+  /** The revised prompt returned by the image model (DALL-E's interpretation) */
+  revisedPrompt?: string;
+  imageType?: ImageType;
+  chronicleId?: string;
+  sceneDescription?: string;
+}
+
+/**
+ * Export all image prompt data for analysis.
+ * Useful for diagnosing prompt refinement issues.
+ * Excludes image blobs to keep export size manageable.
+ */
+export async function exportImagePrompts(): Promise<ImagePromptExport[]> {
+  const db = await openImageDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IMAGE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(IMAGE_STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const records = request.result as ImageRecord[];
+      const exports: ImagePromptExport[] = records.map((record) => ({
+        imageId: record.imageId,
+        entityId: record.entityId,
+        entityName: record.entityName,
+        entityKind: record.entityKind,
+        entityCulture: record.entityCulture,
+        generatedAt: record.generatedAt,
+        model: record.model,
+        originalPrompt: record.originalPrompt,
+        finalPrompt: record.finalPrompt,
+        revisedPrompt: record.revisedPrompt,
+        imageType: record.imageType,
+        chronicleId: record.chronicleId,
+        sceneDescription: record.sceneDescription,
+      }));
+      // Sort by generatedAt descending (newest first)
+      exports.sort((a, b) => b.generatedAt - a.generatedAt);
+      resolve(exports);
+    };
+
+    request.onerror = () => reject(request.error || new Error('Failed to export prompts'));
+  });
+}
+
+/**
+ * Export image prompts and download as JSON file.
+ * Call from browser console: (await import('./lib/workerStorage.ts')).downloadImagePromptExport()
+ */
+export async function downloadImagePromptExport(): Promise<void> {
+  const exports = await exportImagePrompts();
+  const json = JSON.stringify(exports, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `image-prompts-${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  console.log(`Exported ${exports.length} image prompt records`);
 }

@@ -1,29 +1,36 @@
 /**
- * StyleSelector - Select artistic and composition styles for image generation
+ * StyleSelector - Select artistic, composition, and color palette styles for image generation
  *
- * Two dropdowns for style selection:
+ * Three dropdowns for style selection:
  * - Artistic style (oil painting, watercolor, digital art, etc.)
  * - Composition style (portrait, full body, establishing shot, etc.)
+ * - Color palette (warm earth, jewel tones, sunset fire, etc.)
  *
- * Supports culture defaults - if "Use Culture Default" is selected,
- * the entity's culture default will be used at generation time.
+ * Supports:
+ * - "Random" option (default) - picks a random style at generation time
+ * - "Culture Default" - uses the entity's culture default at generation time
  */
 
 import { useMemo } from 'react';
 
 const CULTURE_DEFAULT_ID = 'culture-default';
+const RANDOM_ID = 'random';
+const NONE_ID = 'none';
 
 export default function StyleSelector({
   styleLibrary,
   selectedArtisticStyleId,
   selectedCompositionStyleId,
+  selectedColorPaletteId,
   onArtisticStyleChange,
   onCompositionStyleChange,
+  onColorPaletteChange,
   entityKind,
   compact = false,
 }) {
   const artisticStyles = styleLibrary?.artisticStyles || [];
   const compositionStyles = styleLibrary?.compositionStyles || [];
+  const colorPalettes = styleLibrary?.colorPalettes || [];
 
   // Filter composition styles based on entity kind
   const filteredCompositionStyles = useMemo(() => {
@@ -37,6 +44,7 @@ export default function StyleSelector({
 
   const selectedArtistic = artisticStyles.find((s) => s.id === selectedArtisticStyleId);
   const selectedComposition = compositionStyles.find((s) => s.id === selectedCompositionStyleId);
+  const selectedColorPalette = colorPalettes.find((s) => s.id === selectedColorPaletteId);
 
   if (compact) {
     return (
@@ -50,13 +58,13 @@ export default function StyleSelector({
       >
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Style:</span>
         <select
-          value={selectedArtisticStyleId || ''}
-          onChange={(e) => onArtisticStyleChange(e.target.value || null)}
+          value={selectedArtisticStyleId || RANDOM_ID}
+          onChange={(e) => onArtisticStyleChange(e.target.value || RANDOM_ID)}
           className="illuminator-select"
           style={{ width: 'auto', minWidth: '120px' }}
           title={selectedArtistic?.description || 'Select artistic style'}
         >
-          <option value="">No style</option>
+          <option value={RANDOM_ID}>Random</option>
           <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
           {artisticStyles.map((style) => (
             <option key={style.id} value={style.id}>
@@ -66,17 +74,33 @@ export default function StyleSelector({
         </select>
 
         <select
-          value={selectedCompositionStyleId || ''}
-          onChange={(e) => onCompositionStyleChange(e.target.value || null)}
+          value={selectedCompositionStyleId || RANDOM_ID}
+          onChange={(e) => onCompositionStyleChange(e.target.value || RANDOM_ID)}
           className="illuminator-select"
           style={{ width: 'auto', minWidth: '120px' }}
           title={selectedComposition?.description || 'Select composition style'}
         >
-          <option value="">No composition</option>
+          <option value={RANDOM_ID}>Random</option>
           <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
           {filteredCompositionStyles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedColorPaletteId || RANDOM_ID}
+          onChange={(e) => onColorPaletteChange(e.target.value || RANDOM_ID)}
+          className="illuminator-select"
+          style={{ width: 'auto', minWidth: '120px' }}
+          title={selectedColorPalette?.description || 'Select color palette'}
+        >
+          <option value={RANDOM_ID}>Random</option>
+          <option value={NONE_ID}>None</option>
+          {colorPalettes.map((palette) => (
+            <option key={palette.id} value={palette.id}>
+              {palette.name}
             </option>
           ))}
         </select>
@@ -88,7 +112,7 @@ export default function StyleSelector({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: '1fr 1fr 1fr',
         gap: '12px',
       }}
     >
@@ -105,12 +129,12 @@ export default function StyleSelector({
           Artistic Style
         </label>
         <select
-          value={selectedArtisticStyleId || ''}
-          onChange={(e) => onArtisticStyleChange(e.target.value || null)}
+          value={selectedArtisticStyleId || RANDOM_ID}
+          onChange={(e) => onArtisticStyleChange(e.target.value || RANDOM_ID)}
           className="illuminator-select"
         >
-          <option value="">No style override</option>
-          <option value={CULTURE_DEFAULT_ID}>Use Culture Default</option>
+          <option value={RANDOM_ID}>Random</option>
+          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
           {artisticStyles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name}
@@ -143,12 +167,12 @@ export default function StyleSelector({
           Composition Style{entityKind && ` (for ${entityKind})`}
         </label>
         <select
-          value={selectedCompositionStyleId || ''}
-          onChange={(e) => onCompositionStyleChange(e.target.value || null)}
+          value={selectedCompositionStyleId || RANDOM_ID}
+          onChange={(e) => onCompositionStyleChange(e.target.value || RANDOM_ID)}
           className="illuminator-select"
         >
-          <option value="">No composition override</option>
-          <option value={CULTURE_DEFAULT_ID}>Use Culture Default</option>
+          <option value={RANDOM_ID}>Random</option>
+          <option value={CULTURE_DEFAULT_ID}>Culture Default</option>
           {filteredCompositionStyles.map((style) => (
             <option key={style.id} value={style.id}>
               {style.name}
@@ -167,13 +191,59 @@ export default function StyleSelector({
           </div>
         )}
       </div>
+
+      {/* Color Palette */}
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            marginBottom: '4px',
+          }}
+        >
+          Color Palette
+        </label>
+        <select
+          value={selectedColorPaletteId || RANDOM_ID}
+          onChange={(e) => onColorPaletteChange(e.target.value || RANDOM_ID)}
+          className="illuminator-select"
+        >
+          <option value={RANDOM_ID}>Random</option>
+          <option value={NONE_ID}>None</option>
+          {colorPalettes.map((palette) => (
+            <option key={palette.id} value={palette.id}>
+              {palette.name}
+            </option>
+          ))}
+        </select>
+        {selectedColorPalette && (
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+              marginTop: '4px',
+            }}
+          >
+            {selectedColorPalette.description}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /**
+ * Pick a random element from an array
+ */
+function pickRandom(arr) {
+  if (!arr || arr.length === 0) return null;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
  * Resolve style selection to actual style definitions
- * Handles culture defaults and fallbacks
+ * Handles culture defaults, random selection, and fallbacks
  */
 export function resolveStyleSelection({
   selection,
@@ -185,39 +255,75 @@ export function resolveStyleSelection({
   const result = {
     artisticStyle: null,
     compositionStyle: null,
+    colorPalette: null,
     cultureKeywords: [],
   };
 
   if (!styleLibrary) return result;
 
+  const artisticStyles = styleLibrary.artisticStyles || [];
+  const compositionStyles = styleLibrary.compositionStyles || [];
+  const colorPalettes = styleLibrary.colorPalettes || [];
+
+  // Filter composition styles by entity kind
+  const filteredCompositionStyles = entityKind
+    ? compositionStyles.filter(
+        (s) => !s.suitableForKinds || s.suitableForKinds.length === 0 || s.suitableForKinds.includes(entityKind)
+      )
+    : compositionStyles;
+
   // Resolve artistic style
-  if (selection.artisticStyleId === CULTURE_DEFAULT_ID) {
+  if (selection.artisticStyleId === RANDOM_ID || !selection.artisticStyleId) {
+    result.artisticStyle = pickRandom(artisticStyles);
+  } else if (selection.artisticStyleId === CULTURE_DEFAULT_ID) {
     // Look up culture default
     const culture = cultures?.find((c) => c.id === entityCultureId);
     if (culture?.defaultArtisticStyleId) {
-      result.artisticStyle = styleLibrary.artisticStyles.find(
+      result.artisticStyle = artisticStyles.find(
         (s) => s.id === culture.defaultArtisticStyleId
       );
     }
-  } else if (selection.artisticStyleId) {
-    result.artisticStyle = styleLibrary.artisticStyles.find(
+    // Fallback to random if culture default not found
+    if (!result.artisticStyle) {
+      result.artisticStyle = pickRandom(artisticStyles);
+    }
+  } else {
+    result.artisticStyle = artisticStyles.find(
       (s) => s.id === selection.artisticStyleId
     );
   }
 
   // Resolve composition style
-  if (selection.compositionStyleId === CULTURE_DEFAULT_ID) {
+  if (selection.compositionStyleId === RANDOM_ID || !selection.compositionStyleId) {
+    result.compositionStyle = pickRandom(filteredCompositionStyles);
+  } else if (selection.compositionStyleId === CULTURE_DEFAULT_ID) {
     // Look up culture default for this entity kind
     const culture = cultures?.find((c) => c.id === entityCultureId);
     const defaultStyleId = culture?.defaultCompositionStyles?.[entityKind];
     if (defaultStyleId) {
-      result.compositionStyle = styleLibrary.compositionStyles.find(
+      result.compositionStyle = compositionStyles.find(
         (s) => s.id === defaultStyleId
       );
     }
-  } else if (selection.compositionStyleId) {
-    result.compositionStyle = styleLibrary.compositionStyles.find(
+    // Fallback to random if culture default not found
+    if (!result.compositionStyle) {
+      result.compositionStyle = pickRandom(filteredCompositionStyles);
+    }
+  } else {
+    result.compositionStyle = compositionStyles.find(
       (s) => s.id === selection.compositionStyleId
+    );
+  }
+
+  // Resolve color palette (no culture default for palettes)
+  if (selection.colorPaletteId === NONE_ID) {
+    // Explicitly no color palette - leave as null
+    result.colorPalette = null;
+  } else if (selection.colorPaletteId === RANDOM_ID || !selection.colorPaletteId) {
+    result.colorPalette = pickRandom(colorPalettes);
+  } else {
+    result.colorPalette = colorPalettes.find(
+      (p) => p.id === selection.colorPaletteId
     );
   }
 
@@ -230,4 +336,4 @@ export function resolveStyleSelection({
   return result;
 }
 
-export { CULTURE_DEFAULT_ID };
+export { CULTURE_DEFAULT_ID, RANDOM_ID, NONE_ID };

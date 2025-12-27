@@ -2,6 +2,7 @@
   {
     "kind": "abilities",
     "description": "Abilities & Techniques",
+    "category": "power",
     "subtypes": [
       {
         "id": "technology",
@@ -122,6 +123,7 @@
   {
     "kind": "occurrence",
     "description": "Events & Occurrences",
+    "category": "event",
     "subtypes": [
       {
         "id": "war",
@@ -188,6 +190,7 @@
   {
     "kind": "rules",
     "description": "Laws & Traditions",
+    "category": "concept",
     "subtypes": [
       {
         "id": "law",
@@ -306,6 +309,7 @@
   {
     "kind": "npc",
     "description": "NPCs",
+    "category": "character",
     "subtypes": [
       {
         "id": "merchant",
@@ -434,6 +438,7 @@
   {
     "kind": "location",
     "description": "Locations",
+    "category": "place",
     "subtypes": [
       {
         "id": "colony",
@@ -558,6 +563,7 @@
   {
     "kind": "faction",
     "description": "Factions",
+    "category": "collective",
     "subtypes": [
       {
         "id": "political",

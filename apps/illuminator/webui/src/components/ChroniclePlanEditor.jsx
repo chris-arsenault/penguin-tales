@@ -356,11 +356,6 @@ function SectionCard({ section, index, format, entityMap, eventMap }) {
               <strong>Required Elements:</strong> {section.requiredElements.join(', ')}
             </div>
           )}
-          {section.proseNotes && (
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
-              <strong>Prose Notes:</strong> {section.proseNotes}
-            </div>
-          )}
         </>
       )}
       {format === 'document' && section.contentGuidance && (

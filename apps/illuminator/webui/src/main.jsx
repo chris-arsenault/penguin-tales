@@ -2,9 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import IlluminatorRemote from './IlluminatorRemote';
 import './App.css';
+import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
 
 // Standalone entry point for development
 // In production, this is loaded via Module Federation from The Canonry
+
+// Expose diagnostic functions on window for console access
+window.illuminatorDebug = {
+  /** Export all image prompt data (original, refined, revised) as array */
+  exportImagePrompts,
+  /** Download image prompt data as JSON file */
+  downloadImagePromptExport,
+};
 
 const mockSchema = {
   entityKinds: [

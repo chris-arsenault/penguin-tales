@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react';
 import type { EntityContext, RelationshipContext, NarrativeEventContext } from '../../../lib/chronicleTypes';
 import { useWizard } from '../WizardContext';
+import { matchesPrimarySubjectKinds, matchesSupportingSubjectKinds } from '../../../lib/chronicle/selectionWizard';
 
 interface EntryPointStepProps {
   entities: EntityContext[];
@@ -19,7 +20,7 @@ export default function EntryPointStep({
   relationships,
   events,
 }: EntryPointStepProps) {
-  const { state, selectEntryPoint } = useWizard();
+  const { state, selectEntryPoint, kindToCategory } = useWizard();
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'prominence' | 'connections'>('prominence');
 
@@ -35,24 +36,8 @@ export default function EntryPointStep({
 
   // Filter entities based on style rules and search
   const filteredEntities = useMemo(() => {
-    const style = state.narrativeStyle;
+    // Exclude era entities - they are time periods, not cast members
     let filtered = entities.filter(e => e.kind !== 'era');
-
-    // Apply style's prominence filter if available
-    if (style?.entityRules.prominenceFilter?.include) {
-      const allowedProminence = new Set(style.entityRules.prominenceFilter.include);
-      filtered = filtered.filter(e => allowedProminence.has(e.prominence));
-    }
-
-    // Apply style's kind filter if available
-    if (style?.entityRules.kindFilter?.include?.length) {
-      const allowedKinds = new Set(style.entityRules.kindFilter.include);
-      filtered = filtered.filter(e => allowedKinds.has(e.kind));
-    }
-    if (style?.entityRules.kindFilter?.exclude?.length) {
-      const excludedKinds = new Set(style.entityRules.kindFilter.exclude);
-      filtered = filtered.filter(e => !excludedKinds.has(e.kind));
-    }
 
     // Apply search filter
     if (searchText.trim()) {
@@ -64,14 +49,18 @@ export default function EntryPointStep({
       );
     }
 
-    // Sort
-    const prominenceOrder = ['mythic', 'renowned', 'recognized', 'marginal', 'forgotten'];
+    // Sort - prioritize primary subjects, then supporting, then by connections
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
-        case 'prominence':
-          return prominenceOrder.indexOf(a.prominence) - prominenceOrder.indexOf(b.prominence);
+        case 'prominence': {
+          // Sort by kind match: primary first, then supporting, then others
+          const rules = state.narrativeStyle?.entityRules;
+          const aPrimary = rules && matchesPrimarySubjectKinds(a, rules, kindToCategory) ? 0 : (rules && matchesSupportingSubjectKinds(a, rules, kindToCategory) ? 1 : 2);
+          const bPrimary = rules && matchesPrimarySubjectKinds(b, rules, kindToCategory) ? 0 : (rules && matchesSupportingSubjectKinds(b, rules, kindToCategory) ? 1 : 2);
+          return aPrimary - bPrimary;
+        }
         case 'connections':
           return (connectionCounts.get(b.id) || 0) - (connectionCounts.get(a.id) || 0);
         default:
@@ -80,7 +69,7 @@ export default function EntryPointStep({
     });
 
     return filtered;
-  }, [entities, state.narrativeStyle, searchText, sortBy, connectionCounts]);
+  }, [entities, state.narrativeStyle, searchText, sortBy, connectionCounts, kindToCategory]);
 
   const handleSelect = (entity: EntityContext) => {
     selectEntryPoint(entity, entities, relationships, events);
@@ -111,7 +100,7 @@ export default function EntryPointStep({
           onChange={(e) => setSortBy(e.target.value as 'name' | 'prominence' | 'connections')}
           className="illuminator-select"
         >
-          <option value="prominence">Sort by Prominence</option>
+          <option value="prominence">Sort by Recommended</option>
           <option value="connections">Sort by Connections</option>
           <option value="name">Sort by Name</option>
         </select>
@@ -176,8 +165,40 @@ export default function EntryPointStep({
 
                 {/* Entity info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: '13px' }}>
+                  <div style={{ fontWeight: 500, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {entity.name}
+                    {/* Kind match badges */}
+                    {state.narrativeStyle && matchesPrimarySubjectKinds(entity, state.narrativeStyle.entityRules, kindToCategory) && (
+                      <span
+                        title="Recommended for primary subject"
+                        style={{
+                          padding: '1px 4px',
+                          background: isSelected ? 'rgba(255,255,255,0.3)' : 'var(--accent-color)',
+                          color: 'white',
+                          borderRadius: '3px',
+                          fontSize: '9px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        P
+                      </span>
+                    )}
+                    {state.narrativeStyle && matchesSupportingSubjectKinds(entity, state.narrativeStyle.entityRules, kindToCategory) && (
+                      <span
+                        title="Recommended for supporting subject"
+                        style={{
+                          padding: '1px 4px',
+                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
+                          color: isSelected ? 'white' : 'var(--text-muted)',
+                          borderRadius: '3px',
+                          fontSize: '9px',
+                          fontWeight: 600,
+                          border: isSelected ? 'none' : '1px solid var(--border-color)',
+                        }}
+                      >
+                        S
+                      </span>
+                    )}
                   </div>
                   <div style={{
                     fontSize: '11px',
@@ -194,7 +215,6 @@ export default function EntryPointStep({
 
                 {/* Metadata badges */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <ProminenceBadge prominence={entity.prominence} isSelected={isSelected} />
                   <span style={{
                     padding: '2px 6px',
                     background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
@@ -240,29 +260,3 @@ export default function EntryPointStep({
   );
 }
 
-// =============================================================================
-// Prominence Badge
-// =============================================================================
-
-function ProminenceBadge({ prominence, isSelected }: { prominence: string; isSelected: boolean }) {
-  const colors: Record<string, string> = {
-    mythic: '#8b5cf6',
-    renowned: '#3b82f6',
-    recognized: '#22c55e',
-    marginal: '#f59e0b',
-    forgotten: '#6b7280',
-  };
-
-  return (
-    <span style={{
-      padding: '2px 6px',
-      background: isSelected ? 'rgba(255,255,255,0.2)' : colors[prominence] || 'var(--bg-tertiary)',
-      color: isSelected ? 'white' : 'white',
-      borderRadius: '4px',
-      fontSize: '9px',
-      textTransform: 'uppercase',
-    }}>
-      {prominence}
-    </span>
-  );
-}

@@ -1,43 +1,53 @@
 /**
  * Chronicle Storage Module
  *
- * IndexedDB operations for persisting entity stories.
+ * IndexedDB operations for persisting chronicles.
  * Used by workers to save progress immediately, preventing data loss
  * on page navigation.
  */
 
-import type { ChroniclePlan, CohesionReport, ChronicleStatus, ChronicleImageRefs, ChronicleRoleAssignment } from './chronicleTypes';
+import type {
+  ChronicleFormat,
+  ChronicleRoleAssignment,
+  ChronicleFocusType,
+  ChronicleStatus,
+  ChronicleImageRefs,
+  CohesionReport,
+} from './chronicleTypes';
 import type { ChronicleStep } from './enrichmentTypes';
 
 // ============================================================================
 // Database Configuration
 // ============================================================================
 
-const STORY_DB_NAME = 'canonry-stories';
-const STORY_DB_VERSION = 6;  // Chronicle-first architecture: focus replaces entity-centric model
-const STORY_STORE_NAME = 'stories';
+const CHRONICLE_DB_NAME = 'canonry-chronicles';
+const CHRONICLE_DB_VERSION = 1;
+const CHRONICLE_STORE_NAME = 'chronicles';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface StoryRecord {
-  storyId: string;
+export interface ChronicleRecord {
+  chronicleId: string;
   projectId: string;
-  /** Unique ID for the simulation run this story belongs to */
+  /** Unique ID for the simulation run this chronicle belongs to */
   simulationRunId: string;
 
-  // ==========================================================================
+  // ========================================================================
   // Chronicle Identity (chronicle-first architecture)
-  // ==========================================================================
+  // ========================================================================
 
   /** User-visible title for the chronicle */
-  title?: string;
+  title: string;
+
+  /** Narrative format (story vs document) */
+  format: ChronicleFormat;
 
   /** Focus type: what is this chronicle about? */
-  focusType: 'single' | 'ensemble' | 'relationship' | 'event';
+  focusType: ChronicleFocusType;
 
-  /** Role assignments define the chronicle's cast - THIS IS THE PRIMARY IDENTITY */
+  /** Role assignments define the chronicle's cast */
   roleAssignments: ChronicleRoleAssignment[];
 
   /** Narrative style ID */
@@ -52,31 +62,16 @@ export interface StoryRecord {
   /** Selected relationship IDs (src:dst:kind format) */
   selectedRelationshipIds: string[];
 
-  // ==========================================================================
+  // ========================================================================
   // Mechanical metadata (used for graph traversal, not identity)
-  // ==========================================================================
+  // ========================================================================
 
   /** Entry point used for candidate discovery - purely mechanical, not displayed */
   entrypointId?: string;
 
-  // ==========================================================================
-  // Legacy fields (deprecated, kept for migration)
-  // ==========================================================================
-
-  /** @deprecated Use roleAssignments instead. Kept for backwards compat. */
-  entityId?: string;
-  /** @deprecated Use title or derive from roleAssignments */
-  entityName?: string;
-  /** @deprecated Derive from roleAssignments */
-  entityKind?: string;
-  /** @deprecated Derive from roleAssignments */
-  entityCulture?: string;
-  /** @deprecated Always true for new records */
-  wizardCompleted?: boolean;
-
-  // ==========================================================================
+  // ========================================================================
   // Generation metadata
-  // ==========================================================================
+  // ========================================================================
 
   /** Summary of what was selected for the prompt */
   selectionSummary?: {
@@ -91,19 +86,11 @@ export interface StoryRecord {
   failureReason?: string;
   failedAt?: number;
 
-  // Step 1: Plan
-  plan?: ChroniclePlan;
-  planGeneratedAt?: number;
-
-  // Step 2: Section content (stored in plan.sections[].generatedContent but also tracked here)
-  sectionsCompleted: number;
-  sectionsTotal: number;
-
-  // Step 3: Assembled content
+  // Content
   assembledContent?: string;
   assembledAt?: number;
 
-  // Step 4: Cohesion validation
+  // Cohesion validation
   cohesionReport?: CohesionReport;
   validatedAt?: number;
 
@@ -142,54 +129,47 @@ export interface StoryRecord {
 // Database Connection
 // ============================================================================
 
-let storyDbPromise: Promise<IDBDatabase> | null = null;
+let chronicleDbPromise: Promise<IDBDatabase> | null = null;
 
-function openStoryDb(): Promise<IDBDatabase> {
-  if (storyDbPromise) return storyDbPromise;
+function openChronicleDb(): Promise<IDBDatabase> {
+  if (chronicleDbPromise) return chronicleDbPromise;
 
-  storyDbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(STORY_DB_NAME, STORY_DB_VERSION);
+  chronicleDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(CHRONICLE_DB_NAME, CHRONICLE_DB_VERSION);
 
     request.onupgradeneeded = () => {
       const db = request.result;
 
-      if (db.objectStoreNames.contains(STORY_STORE_NAME)) {
-        db.deleteObjectStore(STORY_STORE_NAME);
+      if (!db.objectStoreNames.contains(CHRONICLE_STORE_NAME)) {
+        const store = db.createObjectStore(CHRONICLE_STORE_NAME, { keyPath: 'chronicleId' });
+
+        // Primary indexes (chronicle-first)
+        store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
+        store.createIndex('projectId', 'projectId', { unique: false });
+        store.createIndex('status', 'status', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+        store.createIndex('updatedAt', 'updatedAt', { unique: false });
+        store.createIndex('focusType', 'focusType', { unique: false });
+        store.createIndex('narrativeStyleId', 'narrativeStyleId', { unique: false });
+        store.createIndex('entrypointId', 'entrypointId', { unique: false });
       }
-
-      const store = db.createObjectStore(STORY_STORE_NAME, { keyPath: 'storyId' });
-
-      // Primary indexes (chronicle-first)
-      store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
-      store.createIndex('projectId', 'projectId', { unique: false });
-      store.createIndex('status', 'status', { unique: false });
-      store.createIndex('createdAt', 'createdAt', { unique: false });
-      store.createIndex('updatedAt', 'updatedAt', { unique: false });
-      store.createIndex('focusType', 'focusType', { unique: false });
-      store.createIndex('narrativeStyleId', 'narrativeStyleId', { unique: false });
-
-      // Mechanical index (for graph-based queries)
-      store.createIndex('entrypointId', 'entrypointId', { unique: false });
-
-      // Legacy index (deprecated, kept for migration)
-      store.createIndex('entityId', 'entityId', { unique: false });
     };
 
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('Failed to open story DB'));
+    request.onerror = () => reject(request.error || new Error('Failed to open chronicle DB'));
   });
 
-  return storyDbPromise;
+  return chronicleDbPromise;
 }
 
 // ============================================================================
-// Story Storage Operations
+// Chronicle Storage Operations
 // ============================================================================
 
 /**
- * Generate a unique story ID (no longer tied to entity)
+ * Generate a unique chronicle ID
  */
-export function generateStoryId(): string {
+export function generateChronicleId(): string {
   return `chronicle_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
@@ -197,7 +177,7 @@ export function generateStoryId(): string {
  * Derive a title from role assignments
  */
 export function deriveTitleFromRoles(roleAssignments: ChronicleRoleAssignment[]): string {
-  const primary = roleAssignments.filter(r => r.isPrimary);
+  const primary = roleAssignments.filter((r) => r.isPrimary);
   if (primary.length === 0) {
     const first = roleAssignments[0];
     return first ? `Chronicle of ${first.entityName}` : 'Untitled Chronicle';
@@ -214,8 +194,8 @@ export function deriveTitleFromRoles(roleAssignments: ChronicleRoleAssignment[])
 /**
  * Determine focus type from role assignments
  */
-export function deriveFocusType(roleAssignments: ChronicleRoleAssignment[]): 'single' | 'ensemble' | 'relationship' | 'event' {
-  const primaryCount = roleAssignments.filter(r => r.isPrimary).length;
+export function deriveFocusType(roleAssignments: ChronicleRoleAssignment[]): ChronicleFocusType {
+  const primaryCount = roleAssignments.filter((r) => r.isPrimary).length;
   if (primaryCount <= 1) return 'single';
   return 'ensemble';
 }
@@ -230,6 +210,7 @@ export interface ChronicleShellMetadata {
 
   // Chronicle identity
   title?: string;
+  format: ChronicleFormat;
   narrativeStyleId: string;
   roleAssignments: ChronicleRoleAssignment[];
   selectedEntityIds: string[];
@@ -245,21 +226,22 @@ export interface ChronicleShellMetadata {
  * This provides immediate UI feedback while generation is in progress.
  */
 export async function createChronicleShell(
-  storyId: string,
+  chronicleId: string,
   metadata: ChronicleShellMetadata
-): Promise<StoryRecord> {
-  const db = await openStoryDb();
+): Promise<ChronicleRecord> {
+  const db = await openChronicleDb();
 
   const focusType = deriveFocusType(metadata.roleAssignments);
   const title = metadata.title || deriveTitleFromRoles(metadata.roleAssignments);
 
-  const record: StoryRecord = {
-    storyId,
+  const record: ChronicleRecord = {
+    chronicleId,
     projectId: metadata.projectId,
     simulationRunId: metadata.simulationRunId,
 
     // Chronicle identity
     title,
+    format: metadata.format,
     focusType,
     narrativeStyleId: metadata.narrativeStyleId,
     roleAssignments: metadata.roleAssignments,
@@ -270,15 +252,8 @@ export async function createChronicleShell(
     // Mechanical
     entrypointId: metadata.entrypointId,
 
-    // Legacy fields for backwards compat
-    entityId: metadata.entrypointId,
-    entityName: title,
-    wizardCompleted: true,
-
     // Generation state - starts as 'generating'
     status: 'generating',
-    sectionsCompleted: 0,
-    sectionsTotal: 0,
     editVersion: 0,
     validationStale: false,
     totalEstimatedCost: 0,
@@ -291,10 +266,10 @@ export async function createChronicleShell(
   };
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
     tx.oncomplete = () => resolve(record);
     tx.onerror = () => reject(tx.error || new Error('Failed to create chronicle shell'));
-    tx.objectStore(STORY_STORE_NAME).put(record);
+    tx.objectStore(CHRONICLE_STORE_NAME).put(record);
   });
 }
 
@@ -308,6 +283,7 @@ export interface ChronicleMetadata {
 
   // Chronicle identity
   title?: string;
+  format: ChronicleFormat;
   narrativeStyleId: string;
   roleAssignments: ChronicleRoleAssignment[];
   selectedEntityIds: string[];
@@ -330,22 +306,23 @@ export interface ChronicleMetadata {
 /**
  * Create a chronicle record (single-shot generation, goes directly to assembly_ready)
  */
-export async function createStory(
-  storyId: string,
+export async function createChronicle(
+  chronicleId: string,
   metadata: ChronicleMetadata
-): Promise<StoryRecord> {
-  const db = await openStoryDb();
+): Promise<ChronicleRecord> {
+  const db = await openChronicleDb();
 
   const focusType = deriveFocusType(metadata.roleAssignments);
   const title = metadata.title || deriveTitleFromRoles(metadata.roleAssignments);
 
-  const record: StoryRecord = {
-    storyId,
+  const record: ChronicleRecord = {
+    chronicleId,
     projectId: metadata.projectId,
     simulationRunId: metadata.simulationRunId,
 
     // Chronicle identity
     title,
+    format: metadata.format,
     focusType,
     narrativeStyleId: metadata.narrativeStyleId,
     roleAssignments: metadata.roleAssignments,
@@ -356,16 +333,9 @@ export async function createStory(
     // Mechanical
     entrypointId: metadata.entrypointId,
 
-    // Legacy fields for backwards compat
-    entityId: metadata.entrypointId,
-    entityName: title,
-    wizardCompleted: true,
-
     // Generation result
     selectionSummary: metadata.selectionSummary,
-    status: 'assembly_ready',  // Single-shot generation goes directly to assembled
-    sectionsCompleted: 0,
-    sectionsTotal: 0,
+    status: 'assembly_ready',
     assembledContent: metadata.assembledContent,
     assembledAt: Date.now(),
     editVersion: 0,
@@ -380,37 +350,37 @@ export async function createStory(
   };
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
     tx.oncomplete = () => resolve(record);
-    tx.onerror = () => reject(tx.error || new Error('Failed to create story'));
-    tx.objectStore(STORY_STORE_NAME).put(record);
+    tx.onerror = () => reject(tx.error || new Error('Failed to create chronicle'));
+    tx.objectStore(CHRONICLE_STORE_NAME).put(record);
   });
 }
 
 /**
- * Update story with assembled content (regeneration or prose blend)
+ * Update chronicle with assembled content (regeneration or prose blend)
  */
-export async function updateStoryAssembly(
-  storyId: string,
+export async function updateChronicleAssembly(
+  chronicleId: string,
   assembledContent: string
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
       record.assembledContent = assembledContent;
       record.assembledAt = Date.now();
-      record.status = 'assembly_ready';  // Pause for user review before validation
+      record.status = 'assembly_ready';
       record.failureStep = undefined;
       record.failureReason = undefined;
       record.failedAt = undefined;
@@ -429,29 +399,29 @@ export async function updateStoryAssembly(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story assembly'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle assembly'));
   });
 }
 
 /**
- * Update story with revised content (post-validation edits)
+ * Update chronicle with revised content (post-validation edits)
  */
-export async function updateStoryEdit(
-  storyId: string,
+export async function updateChronicleEdit(
+  chronicleId: string,
   assembledContent: string,
   cost?: { estimated: number; actual: number; inputTokens: number; outputTokens: number }
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -486,29 +456,29 @@ export async function updateStoryEdit(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story edit'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle edit'));
   });
 }
 
 /**
- * Mark story as failed (worker error)
+ * Mark chronicle as failed (worker error)
  */
-export async function updateStoryFailure(
-  storyId: string,
+export async function updateChronicleFailure(
+  chronicleId: string,
   step: ChronicleStep,
   reason: string
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -522,29 +492,29 @@ export async function updateStoryFailure(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story failure'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle failure'));
   });
 }
 
 /**
- * Update story with cohesion report (Step 4 complete)
+ * Update chronicle with cohesion report (validation complete)
  */
-export async function updateStoryCohesion(
-  storyId: string,
+export async function updateChronicleCohesion(
+  chronicleId: string,
   cohesionReport: CohesionReport,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number }
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -565,34 +535,38 @@ export async function updateStoryCohesion(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story cohesion'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle cohesion'));
   });
 }
 
 /**
- * Update story with summary refinement
+ * Update chronicle with summary and title refinement
  */
-export async function updateStorySummary(
-  storyId: string,
+export async function updateChronicleSummary(
+  chronicleId: string,
   summary: string,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
-  model: string
+  model: string,
+  title?: string
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
       record.summary = summary;
+      if (title) {
+        record.title = title;
+      }
       record.summaryGeneratedAt = Date.now();
       record.summaryModel = model;
       record.totalEstimatedCost += cost.estimated;
@@ -605,30 +579,30 @@ export async function updateStorySummary(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story summary'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle summary'));
   });
 }
 
 /**
- * Update story with image refs refinement
+ * Update chronicle with image refs refinement
  */
-export async function updateStoryImageRefs(
-  storyId: string,
+export async function updateChronicleImageRefs(
+  chronicleId: string,
   imageRefs: ChronicleImageRefs,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
   model: string
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -645,15 +619,15 @@ export async function updateStoryImageRefs(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story image refs'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle image refs'));
   });
 }
 
 /**
- * Update a single image ref within a story (e.g., after generating an image for a prompt request)
+ * Update a single image ref within a chronicle (e.g., after generating an image for a prompt request)
  */
-export async function updateStoryImageRef(
-  storyId: string,
+export async function updateChronicleImageRef(
+  chronicleId: string,
   refId: string,
   updates: {
     status?: 'pending' | 'generating' | 'complete' | 'failed';
@@ -661,27 +635,27 @@ export async function updateStoryImageRef(
     error?: string;
   }
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
       if (!record.imageRefs) {
-        reject(new Error(`Story ${storyId} has no image refs`));
+        reject(new Error(`Chronicle ${chronicleId} has no image refs`));
         return;
       }
 
-      const refIndex = record.imageRefs.refs.findIndex(r => r.refId === refId);
+      const refIndex = record.imageRefs.refs.findIndex((r) => r.refId === refId);
       if (refIndex === -1) {
-        reject(new Error(`Image ref ${refId} not found in story ${storyId}`));
+        reject(new Error(`Image ref ${refId} not found in chronicle ${chronicleId}`));
         return;
       }
 
@@ -702,30 +676,30 @@ export async function updateStoryImageRef(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story image ref'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle image ref'));
   });
 }
 
 /**
- * Update story with prose blend refinement
+ * Update chronicle with prose blend refinement
  */
-export async function updateStoryProseBlend(
-  storyId: string,
+export async function updateChronicleProseBlend(
+  chronicleId: string,
   blendedContent: string,
   cost: { estimated: number; actual: number; inputTokens: number; outputTokens: number },
   model: string
 ): Promise<void> {
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -750,25 +724,25 @@ export async function updateStoryProseBlend(
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to update story prose blend'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to update chronicle prose blend'));
   });
 }
 
 /**
- * Mark story as complete (user accepted)
+ * Mark chronicle as complete (user accepted)
  */
-export async function acceptStory(storyId: string, finalContent?: string): Promise<void> {
-  const db = await openStoryDb();
+export async function acceptChronicle(chronicleId: string, finalContent?: string): Promise<void> {
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 
@@ -781,133 +755,136 @@ export async function acceptStory(storyId: string, finalContent?: string): Promi
     };
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to accept story'));
+    tx.onerror = () => reject(tx.error || new Error('Failed to accept chronicle'));
   });
 }
 
 /**
- * Get a story record
+ * Get a chronicle record
  */
-export async function getStory(storyId: string): Promise<StoryRecord | undefined> {
-  const db = await openStoryDb();
+export async function getChronicle(chronicleId: string): Promise<ChronicleRecord | undefined> {
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORY_STORE_NAME).get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+    const req = tx.objectStore(CHRONICLE_STORE_NAME).get(chronicleId);
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error || new Error('Failed to get story'));
+    req.onerror = () => reject(req.error || new Error('Failed to get chronicle'));
   });
 }
 
 /**
- * Get all stories for an entity
+ * Get all chronicles for a specific simulation run
  */
-export async function getStoriesForEntity(entityId: string): Promise<StoryRecord[]> {
-  const db = await openStoryDb();
+export async function getChroniclesForSimulation(simulationRunId: string): Promise<ChronicleRecord[]> {
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readonly');
-    const index = tx.objectStore(STORY_STORE_NAME).index('entityId');
-    const req = index.getAll(entityId);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error || new Error('Failed to get stories for entity'));
-  });
-}
-
-/**
- * Get all stories for a specific simulation run
- */
-export async function getStoriesForSimulation(simulationRunId: string): Promise<StoryRecord[]> {
-  const db = await openStoryDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORY_STORE_NAME);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readonly');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
     const index = store.index('simulationRunId');
     const req = index.getAll(simulationRunId);
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error || new Error('Failed to get stories for simulation'));
+    req.onerror = () => reject(req.error || new Error('Failed to get chronicles for simulation'));
   });
 }
 
 /**
- * Get all stories for a project (all simulation runs)
- * @deprecated Use getStoriesForSimulation with specific simulationRunId instead
+ * Delete a chronicle
  */
-export async function getStoriesForProject(projectId: string): Promise<StoryRecord[]> {
-  const db = await openStoryDb();
+export async function deleteChronicle(chronicleId: string): Promise<void> {
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readonly');
-    const index = tx.objectStore(STORY_STORE_NAME).index('projectId');
-    const req = index.getAll(projectId);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error || new Error('Failed to get stories for project'));
-  });
-}
-
-/**
- * Delete a story
- */
-export async function deleteStory(storyId: string): Promise<void> {
-  const db = await openStoryDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('Failed to delete story'));
-    tx.objectStore(STORY_STORE_NAME).delete(storyId);
+    tx.onerror = () => reject(tx.error || new Error('Failed to delete chronicle'));
+    tx.objectStore(CHRONICLE_STORE_NAME).delete(chronicleId);
   });
 }
 
 /**
- * Delete all stories for a simulation run
+ * Delete all chronicles for a simulation run
  */
-export async function deleteStoriesForSimulation(simulationRunId: string): Promise<number> {
-  const stories = await getStoriesForSimulation(simulationRunId);
-  if (stories.length === 0) return 0;
+export async function deleteChroniclesForSimulation(simulationRunId: string): Promise<number> {
+  const chronicles = await getChroniclesForSimulation(simulationRunId);
+  if (chronicles.length === 0) return 0;
 
-  const db = await openStoryDb();
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
 
-    for (const story of stories) {
-      store.delete(story.storyId);
+    for (const chronicle of chronicles) {
+      store.delete(chronicle.chronicleId);
     }
 
-    tx.oncomplete = () => resolve(stories.length);
-    tx.onerror = () => reject(tx.error || new Error('Failed to delete stories for simulation'));
+    tx.oncomplete = () => resolve(chronicles.length);
+    tx.onerror = () => reject(tx.error || new Error('Failed to delete chronicles for simulation'));
   });
 }
 
-/**
- * Get latest story for an entity (if any)
- */
-export async function getLatestStoryForEntity(entityId: string): Promise<StoryRecord | undefined> {
-  const stories = await getStoriesForEntity(entityId);
-  if (stories.length === 0) return undefined;
+// ============================================================================
+// Entity Usage Statistics
+// ============================================================================
 
-  // Return the most recent by updatedAt
-  return stories.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+/**
+ * Usage statistics for an entity across chronicles
+ */
+export interface EntityUsageStats {
+  entityId: string;
+  usageCount: number;
+  chronicleIds: string[];
+}
+
+/**
+ * Compute entity usage statistics from existing chronicles.
+ * Returns a map of entityId -> usage stats.
+ */
+export async function getEntityUsageStats(
+  simulationRunId: string
+): Promise<Map<string, EntityUsageStats>> {
+  const chronicles = await getChroniclesForSimulation(simulationRunId);
+  const stats = new Map<string, EntityUsageStats>();
+
+  for (const chronicle of chronicles) {
+    // Only count chronicles that have been generated (not just shells)
+    if (chronicle.status === 'generating') continue;
+
+    for (const entityId of chronicle.selectedEntityIds) {
+      const existing = stats.get(entityId);
+      if (existing) {
+        existing.usageCount += 1;
+        existing.chronicleIds.push(chronicle.chronicleId);
+      } else {
+        stats.set(entityId, {
+          entityId,
+          usageCount: 1,
+          chronicleIds: [chronicle.chronicleId],
+        });
+      }
+    }
+  }
+
+  return stats;
 }
 
 /**
  * Start validation step (user approved assembly)
  */
-export async function startValidationStep(storyId: string): Promise<void> {
-  const db = await openStoryDb();
+export async function startChronicleValidation(chronicleId: string): Promise<void> {
+  const db = await openChronicleDb();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORY_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORY_STORE_NAME);
-    const getReq = store.get(storyId);
+    const tx = db.transaction(CHRONICLE_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CHRONICLE_STORE_NAME);
+    const getReq = store.get(chronicleId);
 
     getReq.onsuccess = () => {
-      const record = getReq.result as StoryRecord | undefined;
+      const record = getReq.result as ChronicleRecord | undefined;
       if (!record) {
-        reject(new Error(`Story ${storyId} not found`));
+        reject(new Error(`Chronicle ${chronicleId} not found`));
         return;
       }
 

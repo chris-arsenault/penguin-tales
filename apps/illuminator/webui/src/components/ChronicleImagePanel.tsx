@@ -41,6 +41,7 @@ interface Culture {
 interface StyleLibrary {
   artisticStyles: Array<{ id: string; name: string; description?: string; promptFragment?: string }>;
   compositionStyles: Array<{ id: string; name: string; description?: string; promptFragment?: string; suitableForKinds?: string[] }>;
+  colorPalettes: Array<{ id: string; name: string; description?: string; promptFragment?: string }>;
 }
 
 interface WorldContext {
@@ -63,8 +64,8 @@ interface ChronicleImagePanelProps {
   /** Style library for style selection */
   styleLibrary?: StyleLibrary;
   /** Current style selection from parent (optional - uses local state if not provided) */
-  styleSelection?: { artisticStyleId?: string; compositionStyleId?: string };
-  onStyleSelectionChange?: (selection: { artisticStyleId?: string; compositionStyleId?: string }) => void;
+  styleSelection?: { artisticStyleId?: string; compositionStyleId?: string; colorPaletteId?: string };
+  onStyleSelectionChange?: (selection: { artisticStyleId?: string; compositionStyleId?: string; colorPaletteId?: string }) => void;
   /** Available cultures for visual identity */
   cultures?: Culture[];
   /** Prompt templates containing visual identity data */
@@ -390,8 +391,9 @@ export default function ChronicleImagePanel({
 }: ChronicleImagePanelProps) {
   // Local style selection state (used if not controlled externally)
   const [localStyleSelection, setLocalStyleSelection] = useState({
-    artisticStyleId: CULTURE_DEFAULT_ID,
-    compositionStyleId: CULTURE_DEFAULT_ID,
+    artisticStyleId: 'random',
+    compositionStyleId: 'random',
+    colorPaletteId: 'random',
   });
 
   // Use external or local style selection
@@ -466,7 +468,7 @@ export default function ChronicleImagePanel({
       entityCultureId: derivedCultureId,
       entityKind: DEFAULT_VISUAL_IDENTITY_KIND,
       cultures: cultures || [],
-      styleLibrary: styleLibrary || { artisticStyles: [], compositionStyles: [] },
+      styleLibrary: styleLibrary || { artisticStyles: [], compositionStyles: [], colorPalettes: [] },
     });
 
     // Get visual identity for the selected culture
@@ -484,6 +486,7 @@ export default function ChronicleImagePanel({
     return {
       artisticPromptFragment: resolved.artisticStyle?.promptFragment,
       compositionPromptFragment: resolved.compositionStyle?.promptFragment,
+      colorPalettePromptFragment: resolved.colorPalette?.promptFragment,
       cultureKeywords: resolved.cultureKeywords,
       visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
     };
@@ -607,8 +610,10 @@ export default function ChronicleImagePanel({
               styleLibrary={styleLibrary}
               selectedArtisticStyleId={styleSelection.artisticStyleId}
               selectedCompositionStyleId={styleSelection.compositionStyleId}
+              selectedColorPaletteId={styleSelection.colorPaletteId}
               onArtisticStyleChange={(id: string) => handleStyleChange({ ...styleSelection, artisticStyleId: id })}
               onCompositionStyleChange={(id: string) => handleStyleChange({ ...styleSelection, compositionStyleId: id })}
+              onColorPaletteChange={(id: string) => handleStyleChange({ ...styleSelection, colorPaletteId: id })}
               compact
             />
           </div>

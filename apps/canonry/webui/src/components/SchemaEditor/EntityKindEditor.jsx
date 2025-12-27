@@ -8,6 +8,7 @@
 import React, { useState, useMemo } from 'react';
 import { ExpandableCard, FormGroup, FormRow, SectionHeader, EmptyState, AddItemButton } from '@penguin-tales/shared-components';
 import { ToolUsageBadges as UsageBadges, getEntityKindUsageSummary } from '@penguin-tales/shared-components';
+import { ENTITY_CATEGORIES } from '@canonry/world-schema';
 
 /**
  * Compute naming profile usage for each entity kind
@@ -309,6 +310,21 @@ export default function EntityKindEditor({ entityKinds, onChange, schemaUsage = 
                         Color required
                       </div>
                     )}
+                  </FormGroup>
+                  <FormGroup label="Category" tooltip="Abstract category for narrative style recommendations">
+                    <select
+                      className="input"
+                      value={ek.category || ''}
+                      disabled={isFramework}
+                      onChange={(e) => updateKind(ek.kind, { category: e.target.value || undefined })}
+                    >
+                      <option value="">-- Not set --</option>
+                      {Object.entries(ENTITY_CATEGORIES).map(([categoryId, categoryInfo]) => (
+                        <option key={categoryId} value={categoryId}>
+                          {categoryInfo.name}
+                        </option>
+                      ))}
+                    </select>
                   </FormGroup>
                 </FormRow>
 

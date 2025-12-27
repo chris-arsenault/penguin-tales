@@ -5,7 +5,7 @@
  * Shows storage statistics and supports bulk operations.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   getAllImages,
   getStorageStats,
@@ -15,7 +15,11 @@ import {
   getImageBlob,
   formatBytes,
 } from '../../../../canonry/webui/src/storage/imageStore';
+import { downloadImagePromptExport } from '../lib/workerStorage';
 import ImageModal from './ImageModal';
+
+const DEFAULT_PAGE_SIZE = 24;
+const PAGE_SIZE_OPTIONS = [24, 48, 96];
 
 export default function StoragePanel({ projectId }) {
   const [images, setImages] = useState([]);
@@ -26,6 +30,10 @@ export default function StoragePanel({ projectId }) {
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
   const [thumbnailUrls, setThumbnailUrls] = useState({});
   const [downloadingIds, setDownloadingIds] = useState(new Set());
+  const [exportingPrompts, setExportingPrompts] = useState(false);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageIndex, setPageIndex] = useState(0);
+  const thumbnailUrlsRef = useRef({});
 
   // Load images and stats
   const loadData = useCallback(async () => {
@@ -48,38 +56,21 @@ export default function StoragePanel({ projectId }) {
     loadData();
   }, [loadData]);
 
-  // Load thumbnail URLs for visible images
   useEffect(() => {
-    const loadThumbnails = async () => {
-      const newUrls = {};
+    thumbnailUrlsRef.current = thumbnailUrls;
+  }, [thumbnailUrls]);
 
-      for (const img of images) {
-        if (!thumbnailUrls[img.imageId]) {
-          try {
-            const result = await loadImage(img.imageId);
-            if (result?.url) {
-              newUrls[img.imageId] = result.url;
-            }
-          } catch {
-            // Ignore errors
-          }
-        }
-      }
-
-      if (Object.keys(newUrls).length > 0) {
-        setThumbnailUrls((prev) => ({ ...prev, ...newUrls }));
-      }
-    };
-
-    loadThumbnails();
-
-    // Cleanup URLs on unmount
+  useEffect(() => {
     return () => {
-      for (const url of Object.values(thumbnailUrls)) {
+      for (const url of Object.values(thumbnailUrlsRef.current)) {
         URL.revokeObjectURL(url);
       }
     };
-  }, [images]);
+  }, []);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [filterProject]);
 
   // Filter images by project
   const filteredImages = useMemo(() => {
@@ -95,6 +86,68 @@ export default function StoragePanel({ projectId }) {
     }
     return Array.from(ids).sort();
   }, [images]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredImages.length / pageSize));
+  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const pageStart = currentPage * pageSize;
+  const pageEnd = pageStart + pageSize;
+  const visibleImages = useMemo(
+    () => filteredImages.slice(pageStart, pageEnd),
+    [filteredImages, pageStart, pageEnd],
+  );
+
+  useEffect(() => {
+    setPageIndex((prev) => Math.min(prev, Math.max(0, totalPages - 1)));
+  }, [totalPages]);
+
+  useEffect(() => {
+    const visibleIds = new Set(visibleImages.map((img) => img.imageId));
+    setThumbnailUrls((prev) => {
+      let changed = false;
+      const next = {};
+      for (const [imageId, url] of Object.entries(prev)) {
+        if (visibleIds.has(imageId)) {
+          next[imageId] = url;
+        } else {
+          URL.revokeObjectURL(url);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [visibleImages]);
+
+  // Load thumbnail URLs for visible images only
+  useEffect(() => {
+    let active = true;
+    const loadThumbnails = async () => {
+      const newUrls = {};
+      for (const img of visibleImages) {
+        if (!thumbnailUrls[img.imageId]) {
+          try {
+            const result = await loadImage(img.imageId);
+            if (result?.url) {
+              newUrls[img.imageId] = result.url;
+            }
+          } catch {
+            // Ignore errors
+          }
+        }
+      }
+
+      if (active && Object.keys(newUrls).length > 0) {
+        setThumbnailUrls((prev) => ({ ...prev, ...newUrls }));
+      }
+    };
+
+    if (visibleImages.length > 0) {
+      loadThumbnails();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [visibleImages, thumbnailUrls]);
 
   // Toggle selection
   const toggleSelect = useCallback((imageId) => {
@@ -118,6 +171,19 @@ export default function StoragePanel({ projectId }) {
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
+
+  const handlePageSizeChange = useCallback((event) => {
+    setPageSize(Number(event.target.value));
+    setPageIndex(0);
+  }, []);
+
+  const handlePrevPage = useCallback(() => {
+    setPageIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setPageIndex((prev) => Math.min(prev + 1, totalPages - 1));
+  }, [totalPages]);
 
   // Delete single image
   const handleDelete = useCallback(async (imageId) => {
@@ -251,6 +317,19 @@ export default function StoragePanel({ projectId }) {
     }
   }, [selectedIds, images]);
 
+  // Export prompt data for analysis
+  const handleExportPrompts = useCallback(async () => {
+    setExportingPrompts(true);
+    try {
+      await downloadImagePromptExport();
+    } catch (err) {
+      console.error('Failed to export prompts:', err);
+      alert('Failed to export prompt data');
+    } finally {
+      setExportingPrompts(false);
+    }
+  }, []);
+
   // Format date
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
@@ -261,6 +340,9 @@ export default function StoragePanel({ projectId }) {
       minute: '2-digit',
     });
   };
+
+  const showingFrom = filteredImages.length === 0 ? 0 : pageStart + 1;
+  const showingTo = pageStart + visibleImages.length;
 
   if (loading) {
     return (
@@ -278,13 +360,24 @@ export default function StoragePanel({ projectId }) {
       <div className="illuminator-card">
         <div className="illuminator-card-header">
           <h2 className="illuminator-card-title">Image Storage</h2>
-          <button
-            onClick={loadData}
-            className="illuminator-button illuminator-button-secondary"
-            style={{ padding: '4px 8px', fontSize: '11px' }}
-          >
-            Refresh
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleExportPrompts}
+              className="illuminator-button illuminator-button-secondary"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+              disabled={exportingPrompts || stats.totalCount === 0}
+              title="Export all image prompt data (original, refined, revised) as JSON for analysis"
+            >
+              {exportingPrompts ? 'Exporting...' : 'Export Prompt Data'}
+            </button>
+            <button
+              onClick={loadData}
+              className="illuminator-button illuminator-button-secondary"
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div
@@ -363,7 +456,9 @@ export default function StoragePanel({ projectId }) {
         <div className="illuminator-card-header">
           <h2 className="illuminator-card-title">Browse Images</h2>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            {filteredImages.length} images
+            {filteredImages.length === 0
+              ? '0 images'
+              : `Showing ${showingFrom}-${showingTo} of ${filteredImages.length} images`}
           </span>
         </div>
 
@@ -382,6 +477,22 @@ export default function StoragePanel({ projectId }) {
               </option>
             ))}
           </select>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Page size</span>
+            <select
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              className="illuminator-select"
+              style={{ width: 'auto', minWidth: '80px' }}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {selectedIds.size > 0 && (
             <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
@@ -444,6 +555,40 @@ export default function StoragePanel({ projectId }) {
           </div>
         )}
 
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '6px 0',
+              marginBottom: '12px',
+            }}
+          >
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Page {currentPage + 1} of {totalPages}
+            </span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={handlePrevPage}
+                className="illuminator-button illuminator-button-secondary"
+                style={{ padding: '4px 8px', fontSize: '11px' }}
+                disabled={currentPage === 0}
+              >
+                Prev
+              </button>
+              <button
+                onClick={handleNextPage}
+                className="illuminator-button illuminator-button-secondary"
+                style={{ padding: '4px 8px', fontSize: '11px' }}
+                disabled={currentPage + 1 >= totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Image grid */}
         {filteredImages.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -457,7 +602,7 @@ export default function StoragePanel({ projectId }) {
               gap: '12px',
             }}
           >
-            {filteredImages.map((img) => (
+            {visibleImages.map((img) => (
               <div
                 key={img.imageId}
                 style={{

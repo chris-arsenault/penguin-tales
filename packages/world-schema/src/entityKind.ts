@@ -6,6 +6,77 @@
 
 import type { Polarity } from './relationship.js';
 
+// =============================================================================
+// Entity Categories
+// =============================================================================
+
+/**
+ * Abstract entity categories that narrative styles use.
+ * These are domain-agnostic concepts that domains map their entity kinds to.
+ *
+ * Framework categories (1-1 mapping with framework kinds):
+ * - era: Temporal periods (maps to framework kind 'era')
+ * - event: Occurrences/happenings (maps to framework kind 'occurrence')
+ *
+ * Domain categories:
+ * - character: Individual sentient beings (e.g., npc, hero, citizen)
+ * - collective: Groups of entities (e.g., faction, guild, kingdom)
+ * - place: Locations (e.g., city, region, settlement)
+ * - object: Physical items/artifacts (e.g., relic, weapon, document)
+ * - concept: Abstract things (e.g., law, tradition, ideology)
+ * - power: Abilities, magic, technology (e.g., spell, skill, tech)
+ */
+export type EntityCategory =
+  | 'character'
+  | 'collective'
+  | 'place'
+  | 'object'
+  | 'concept'
+  | 'power'
+  | 'era'
+  | 'event';
+
+/**
+ * All available entity categories with their descriptions.
+ * Used for UI display and documentation.
+ */
+export const ENTITY_CATEGORIES: Record<EntityCategory, { name: string; description: string }> = {
+  // Framework categories (1-1 mapping)
+  era: {
+    name: 'Era',
+    description: 'Temporal periods and ages (framework kind)',
+  },
+  event: {
+    name: 'Event',
+    description: 'Occurrences and happenings (framework kind)',
+  },
+  // Domain categories
+  character: {
+    name: 'Character',
+    description: 'Individual sentient beings (e.g., NPCs, heroes, citizens)',
+  },
+  collective: {
+    name: 'Collective',
+    description: 'Groups of entities (e.g., factions, guilds, kingdoms)',
+  },
+  place: {
+    name: 'Place',
+    description: 'Locations and geographical features (e.g., cities, regions)',
+  },
+  object: {
+    name: 'Object',
+    description: 'Physical items and artifacts (e.g., relics, weapons, documents)',
+  },
+  concept: {
+    name: 'Concept',
+    description: 'Abstract things (e.g., laws, traditions, ideologies)',
+  },
+  power: {
+    name: 'Power',
+    description: 'Abilities, magic, and technology (e.g., spells, skills)',
+  },
+};
+
 /**
  * A subtype within an entity kind (e.g., "merchant" for NPC kind)
  */
@@ -151,6 +222,12 @@ export interface EntityKindDefinition {
   description?: string;
   /** True if this kind is defined by the framework and is read-only in editors */
   isFramework?: boolean;
+  /**
+   * Abstract category this entity kind belongs to.
+   * Used by narrative styles to specify subject kinds in a domain-agnostic way.
+   * Framework kinds have 1-1 category mappings (era → era, occurrence → event).
+   */
+  category?: EntityCategory;
   /** Valid subtypes for this entity kind */
   subtypes: Subtype[];
   /** Valid status values for this entity kind */

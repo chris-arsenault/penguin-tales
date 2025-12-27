@@ -6,6 +6,7 @@
 
 // Entity Kind types
 export type {
+  EntityCategory,
   Subtype,
   Status,
   RequiredRelationshipRule,
@@ -19,6 +20,8 @@ export type {
   EntityKindStyle,
   EntityKindDefinition,
 } from './entityKind.js';
+
+export { ENTITY_CATEGORIES } from './entityKind.js';
 
 // Relationship types
 export type { RelationshipKindDefinition, Polarity } from './relationship.js';
@@ -55,6 +58,7 @@ export type { DomainUIConfig } from './ui.js';
 export type {
   ArtisticStyle,
   CompositionStyle,
+  ColorPalette,
   BaseNarrativeStyle,
   StoryNarrativeStyle,
   DocumentNarrativeStyle,
@@ -78,11 +82,13 @@ export type {
 export {
   DEFAULT_ARTISTIC_STYLES,
   DEFAULT_COMPOSITION_STYLES,
+  DEFAULT_COLOR_PALETTES,
   DEFAULT_NARRATIVE_STYLES,
   DEFAULT_DOCUMENT_STYLES,
   createDefaultStyleLibrary,
   findArtisticStyle,
   findCompositionStyle,
+  findColorPalette,
   findNarrativeStyle,
 } from './style.js';
 

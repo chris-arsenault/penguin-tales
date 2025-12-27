@@ -23,8 +23,8 @@ import type {
   HardState,
   LoreRecord,
 } from '../types/world.ts';
-import type { StoryRecord } from './storyStorage.ts';
-import { getStoryContent } from './storyStorage.ts';
+import type { ChronicleRecord } from './chronicleStorage.ts';
+import { getChronicleContent } from './chronicleStorage.ts';
 
 /**
  * Chronicle image ref types (matching illuminator/chronicleTypes.ts)
@@ -33,6 +33,8 @@ interface ChronicleImageRef {
   refId: string;
   sectionId: string;
   anchorText: string;
+  /** Character index where anchorText was found (fallback if text changes) */
+  anchorIndex?: number;
   size: 'small' | 'medium' | 'large' | 'full-width';
   caption?: string;
   type: 'entity_ref' | 'prompt_request';
@@ -51,13 +53,13 @@ interface ChronicleImageRefs {
 /**
  * Build all wiki pages from world data (legacy full build)
  *
- * @param chronicles - Completed StoryRecords from IndexedDB (preferred source for chronicles)
+ * @param chronicles - Completed ChronicleRecords from IndexedDB (preferred source for chronicles)
  */
 export function buildWikiPages(
   worldData: WorldState,
   loreData: LoreData | null,
   imageData: ImageMetadata | null,
-  chronicles: StoryRecord[] = []
+  chronicles: ChronicleRecord[] = []
 ): WikiPage[] {
   const pages: WikiPage[] = [];
   const loreIndex = buildLoreIndex(loreData);
@@ -70,8 +72,8 @@ export function buildWikiPages(
     pages.push(page);
   }
 
-  // Build chronicle pages from StoryRecords (IndexedDB)
-  const chroniclePages = buildChroniclePagesFromStories(chronicles, worldData, aliasIndex);
+  // Build chronicle pages from ChronicleRecords (IndexedDB)
+  const chroniclePages = buildChroniclePagesFromChronicles(chronicles, worldData, aliasIndex);
   pages.push(...chroniclePages);
 
   // Build category pages
@@ -87,12 +89,12 @@ export function buildWikiPages(
  * Build lightweight page index for navigation and search
  * This is fast and should be called on initial load
  *
- * @param chronicles - Completed StoryRecords from IndexedDB (preferred source for chronicles)
+ * @param chronicles - Completed ChronicleRecords from IndexedDB (preferred source for chronicles)
  */
 export function buildPageIndex(
   worldData: WorldState,
   loreData: LoreData | null,
-  chronicles: StoryRecord[] = []
+  chronicles: ChronicleRecord[] = []
 ): WikiPageIndex {
   const entries: PageIndexEntry[] = [];
   const byId = new Map<string, PageIndexEntry>();
@@ -143,26 +145,30 @@ export function buildPageIndex(
     }
   }
 
-  // Build chronicle index entries from StoryRecords (IndexedDB)
-  for (const story of chronicles) {
-    const content = getStoryContent(story);
+  // Build chronicle index entries from ChronicleRecords (IndexedDB)
+  for (const chronicle of chronicles) {
+    const content = getChronicleContent(chronicle);
     if (!content) continue;
 
-    const title = deriveChronicleTitle(worldData, story.entityId, 'story');
+    const title = chronicle.title;
 
     const entry: PageIndexEntry = {
-      id: story.storyId,
+      id: chronicle.chronicleId,
       title,
       type: 'chronicle',
       slug: `chronicle/${slugify(title)}`,
-      summary: story.summary || undefined,
+      summary: chronicle.summary || undefined,
       categories: [],
       chronicle: {
-        format: 'story',
-        entrypointId: story.entityId,
+        format: chronicle.format,
+        entrypointId: chronicle.entrypointId,
+        narrativeStyleId: chronicle.narrativeStyleId,
+        roleAssignments: chronicle.roleAssignments,
+        selectedEventIds: chronicle.selectedEventIds,
+        selectedRelationshipIds: chronicle.selectedRelationshipIds,
       },
-      linkedEntities: [story.entityId],
-      lastUpdated: story.acceptedAt || story.updatedAt,
+      linkedEntities: chronicle.selectedEntityIds,
+      lastUpdated: chronicle.acceptedAt || chronicle.updatedAt,
     };
 
     entries.push(entry);
@@ -210,7 +216,7 @@ export function buildPageIndex(
  * Build a single page by ID (on-demand)
  * Returns null if page not found
  *
- * @param chronicles - Completed StoryRecords from IndexedDB (for chronicle pages)
+ * @param chronicles - Completed ChronicleRecords from IndexedDB (for chronicle pages)
  */
 export function buildPageById(
   pageId: string,
@@ -218,7 +224,7 @@ export function buildPageById(
   loreData: LoreData | null,
   imageData: ImageMetadata | null,
   pageIndex: WikiPageIndex,
-  chronicles: StoryRecord[] = []
+  chronicles: ChronicleRecord[] = []
 ): WikiPage | null {
   const indexEntry = pageIndex.byId.get(pageId);
   if (!indexEntry) return null;
@@ -236,11 +242,11 @@ export function buildPageById(
     return buildEntityPage(entity, worldData, loreIndex, imageIndex, aliasIndex);
   }
 
-  // Chronicle page - look up in StoryRecords
+  // Chronicle page - look up in ChronicleRecords
   if (indexEntry.type === 'chronicle') {
-    const story = chronicles.find(s => s.storyId === pageId);
-    if (!story) return null;
-    return buildChroniclePageFromStory(story, worldData, aliasIndex);
+    const chronicle = chronicles.find(c => c.chronicleId === pageId);
+    if (!chronicle) return null;
+    return buildChroniclePageFromChronicle(chronicle, worldData, aliasIndex);
   }
 
   // Category page
@@ -271,196 +277,63 @@ export function buildPageById(
 }
 
 /**
- * Build a single chronicle page from a StoryRecord (IndexedDB)
+ * Build a single chronicle page from a ChronicleRecord (IndexedDB)
  */
-function buildChroniclePageFromStory(
-  story: StoryRecord,
+function buildChroniclePageFromChronicle(
+  chronicle: ChronicleRecord,
   worldData: WorldState,
   aliasIndex: Map<string, string>
 ): WikiPage {
-  const content = getStoryContent(story);
-  const title = deriveChronicleTitle(worldData, story.entityId, 'story');
+  const content = getChronicleContent(chronicle);
+  const title = chronicle.title;
 
-  // Extract image refs from story
-  const imageRefs = story.imageRefs;
+  // Extract image refs from chronicle
+  const imageRefs = chronicle.imageRefs;
 
   const { sections } = buildChronicleSections(content, imageRefs, worldData);
-  const summary = story.summary || '';
+  const summary = chronicle.summary || '';
 
-  const linkedEntities = extractLinkedEntities(sections, worldData, aliasIndex);
-
-  if (story.entityId && !linkedEntities.includes(story.entityId)) {
-    linkedEntities.push(story.entityId);
-  }
+  const linkedEntities = Array.from(new Set([
+    ...chronicle.selectedEntityIds,
+    ...extractLinkedEntities(sections, worldData, aliasIndex),
+    ...(chronicle.entrypointId ? [chronicle.entrypointId] : []),
+  ]));
 
   return {
-    id: story.storyId,
+    id: chronicle.chronicleId,
     slug: `chronicle/${slugify(title)}`,
     title,
     type: 'chronicle',
     chronicle: {
-      format: 'story',
-      entrypointId: story.entityId,
+      format: chronicle.format,
+      entrypointId: chronicle.entrypointId,
+      narrativeStyleId: chronicle.narrativeStyleId,
+      roleAssignments: chronicle.roleAssignments,
+      selectedEventIds: chronicle.selectedEventIds,
+      selectedRelationshipIds: chronicle.selectedRelationshipIds,
     },
     content: {
       sections,
       summary: summary || undefined,
     },
     categories: [],
-    linkedEntities: Array.from(new Set(linkedEntities)),
+    linkedEntities,
     images: [],
-    lastUpdated: story.acceptedAt || story.updatedAt,
+    lastUpdated: chronicle.acceptedAt || chronicle.updatedAt,
   };
 }
 
 /**
- * Build all chronicle pages from StoryRecords (IndexedDB)
+ * Build all chronicle pages from ChronicleRecords (IndexedDB)
  */
-function buildChroniclePagesFromStories(
-  chronicles: StoryRecord[],
+function buildChroniclePagesFromChronicles(
+  chronicles: ChronicleRecord[],
   worldData: WorldState,
   aliasIndex: Map<string, string>
 ): WikiPage[] {
   return chronicles
-    .filter(story => getStoryContent(story)) // Only stories with content
-    .map(story => buildChroniclePageFromStory(story, worldData, aliasIndex));
-}
-
-// Legacy functions below - kept for backwards compatibility but no longer used
-
-/**
- * @deprecated Use buildChroniclePageFromStory instead
- */
-function buildSingleChroniclePage(
-  record: LoreRecord,
-  worldData: WorldState,
-  aliasIndex: Map<string, string>
-): WikiPage {
-  const metadata = record.metadata || {};
-  const format = metadata.format === 'document' ? 'document' : 'story';
-  const entrypointId = typeof metadata.entrypointId === 'string'
-    ? metadata.entrypointId
-    : record.targetId;
-  const entityIds = Array.isArray(metadata.entityIds)
-    ? metadata.entityIds.filter((id) => typeof id === 'string')
-    : [];
-
-  const title = typeof metadata.title === 'string' && metadata.title.trim().length > 0
-    ? metadata.title.trim()
-    : deriveChronicleTitle(worldData, entrypointId, format);
-
-  // Extract image refs from metadata
-  const imageRefs = isChronicleImageRefs(metadata.imageRefs)
-    ? metadata.imageRefs
-    : undefined;
-
-  const { sections } = buildChronicleSections(record.text, imageRefs, worldData);
-  const summary = typeof metadata.summary === 'string' ? metadata.summary.trim() : '';
-
-  const linkedEntities = entityIds.length > 0
-    ? entityIds
-    : extractLinkedEntities(sections, worldData, aliasIndex);
-
-  if (entrypointId && !linkedEntities.includes(entrypointId)) {
-    linkedEntities.push(entrypointId);
-  }
-
-  const acceptedAt = typeof metadata.acceptedAt === 'number' ? metadata.acceptedAt : Date.now();
-
-  return {
-    id: record.id,
-    slug: `chronicle/${slugify(title)}`,
-    title,
-    type: 'chronicle',
-    chronicle: {
-      format,
-      entrypointId: entrypointId || undefined,
-    },
-    content: {
-      sections,
-      summary: summary || undefined,
-    },
-    categories: [],
-    linkedEntities: Array.from(new Set(linkedEntities)),
-    images: [],
-    lastUpdated: acceptedAt,
-  };
-}
-
-/**
- * @deprecated Use buildChroniclePagesFromStories instead
- */
-function buildChroniclePages(
-  worldData: WorldState,
-  loreData: LoreData | null,
-  aliasIndex: Map<string, string>
-): WikiPage[] {
-  if (!loreData?.records) return [];
-
-  const chronicleRecords = loreData.records.filter(
-    (record) => record.type === 'chronicle' && record.text
-  );
-
-  return chronicleRecords.map((record) => {
-    const metadata = record.metadata || {};
-    const format = metadata.format === 'document' ? 'document' : 'story';
-    const entrypointId = typeof metadata.entrypointId === 'string'
-      ? metadata.entrypointId
-      : record.targetId;
-    const entityIds = Array.isArray(metadata.entityIds)
-      ? metadata.entityIds.filter((id) => typeof id === 'string')
-      : [];
-
-    const title = typeof metadata.title === 'string' && metadata.title.trim().length > 0
-      ? metadata.title.trim()
-      : deriveChronicleTitle(worldData, entrypointId, format);
-
-    // Extract image refs from metadata
-    const imageRefs = isChronicleImageRefs(metadata.imageRefs)
-      ? metadata.imageRefs
-      : undefined;
-
-    const { sections } = buildChronicleSections(record.text, imageRefs, worldData);
-    const summary = typeof metadata.summary === 'string' ? metadata.summary.trim() : '';
-
-    const linkedEntities = entityIds.length > 0
-      ? entityIds
-      : extractLinkedEntities(sections, worldData, aliasIndex);
-
-    if (entrypointId && !linkedEntities.includes(entrypointId)) {
-      linkedEntities.push(entrypointId);
-    }
-
-    const acceptedAt = typeof metadata.acceptedAt === 'number' ? metadata.acceptedAt : Date.now();
-
-    return {
-      id: record.id,
-      slug: `chronicle/${slugify(title)}`,
-      title,
-      type: 'chronicle',
-      chronicle: {
-        format,
-        entrypointId: entrypointId || undefined,
-      },
-      content: {
-        sections,
-        summary: summary || undefined,
-      },
-      categories: [],
-      linkedEntities: Array.from(new Set(linkedEntities)),
-      images: [],
-      lastUpdated: acceptedAt,
-    };
-  });
-}
-
-/**
- * Type guard for ChronicleImageRefs
- */
-function isChronicleImageRefs(value: unknown): value is ChronicleImageRefs {
-  if (typeof value !== 'object' || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  return Array.isArray(obj.refs) && typeof obj.generatedAt === 'number';
+    .filter(chronicle => getChronicleContent(chronicle)) // Only chronicles with content
+    .map((chronicle) => buildChroniclePageFromChronicle(chronicle, worldData, aliasIndex));
 }
 
 function buildChronicleSections(
@@ -588,6 +461,7 @@ function attachImagesToSections(
       type: ref.type === 'entity_ref' ? 'entity_ref' : 'chronicle_image',
       imageId,
       anchorText: ref.anchorText,
+      anchorIndex: ref.anchorIndex,
       size: ref.size,
       caption: ref.caption,
     };
@@ -631,7 +505,7 @@ function buildEntityPage(
       .filter(Boolean)
     : [];
   const eraChapter = entityLore.find(l => l.type === 'era_chapter');
-  const entityStory = entityLore.find(l => l.type === 'entity_story');
+  const entityChronicle = entityLore.find(l => l.type === 'entity_chronicle');
   const enhancedPage = entityLore.find(l => l.type === 'enhanced_entity_page');
 
   // Get relationships
@@ -664,11 +538,11 @@ function buildEntityPage(
     });
   }
 
-  // Long-form story for mythic entities
-  if (entityStory?.text) {
-    // If story has structured sections from wikiContent, use those
-    if (entityStory.wikiContent?.sections && entityStory.wikiContent.sections.length > 0) {
-      for (const section of entityStory.wikiContent.sections) {
+  // Long-form chronicle for mythic entities
+  if (entityChronicle?.text) {
+    // If chronicle has structured sections from wikiContent, use those
+    if (entityChronicle.wikiContent?.sections && entityChronicle.wikiContent.sections.length > 0) {
+      for (const section of entityChronicle.wikiContent.sections) {
         sections.push({
           id: `section-${sectionIndex++}`,
           heading: section.heading,
@@ -679,9 +553,9 @@ function buildEntityPage(
     } else {
       sections.push({
         id: `section-${sectionIndex++}`,
-        heading: 'Story',
+        heading: 'Chronicle',
         level: 2,
-        content: entityStory.text,
+        content: entityChronicle.text,
       });
     }
   }

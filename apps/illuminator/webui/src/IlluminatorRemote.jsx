@@ -25,6 +25,7 @@ import ActivityPanel from './components/ActivityPanel';
 import ConfigPanel from './components/ConfigPanel';
 import CostsPanel from './components/CostsPanel';
 import StoragePanel from './components/StoragePanel';
+import TraitPaletteSection from './components/TraitPaletteSection';
 import StyleLibraryEditor from './components/StyleLibraryEditor';
 import { useEnrichmentQueue } from './hooks/useEnrichmentQueue';
 import { useStyleLibrary } from './hooks/useStyleLibrary';
@@ -37,6 +38,17 @@ import {
 } from './lib/promptTemplates';
 import { buildEntityIndex, buildRelationshipIndex, resolveEraInfo } from './lib/worldData';
 import { resolveStyleSelection } from './components/StyleSelector';
+import { exportImagePrompts, downloadImagePromptExport } from './lib/workerStorage';
+
+// Expose diagnostic functions on window for console access (for Module Federation)
+if (typeof window !== 'undefined') {
+  window.illuminatorDebug = {
+    /** Export all image prompt data (original, refined, revised) as array */
+    exportImagePrompts,
+    /** Download image prompt data as JSON file */
+    downloadImagePromptExport,
+  };
+}
 
 // Tabs ordered by workflow: setup → work → monitor → manage
 const TABS = [
@@ -46,10 +58,11 @@ const TABS = [
   { id: 'identity', label: 'Identity' },     // 4. Visual identity per culture
   { id: 'styles', label: 'Styles' },         // 5. Manage style library
   { id: 'entities', label: 'Entities' },     // 6. Main enrichment work
-  { id: 'chronicle', label: 'Chronicle' },   // 8. Wiki-ready long-form content
-  { id: 'activity', label: 'Activity' },     // 9. Monitor queue
-  { id: 'costs', label: 'Costs' },           // 10. Track spending
-  { id: 'storage', label: 'Storage' },       // 11. Manage images
+  { id: 'chronicle', label: 'Chronicle' },   // 7. Wiki-ready long-form content
+  { id: 'activity', label: 'Activity' },     // 8. Monitor queue
+  { id: 'costs', label: 'Costs' },           // 9. Track spending
+  { id: 'storage', label: 'Storage' },       // 10. Manage images
+  { id: 'traits', label: 'Traits' },         // 11. Visual trait palettes
 ];
 
 // Default image prompt template for Claude formatting
@@ -61,7 +74,7 @@ Original prompt:
 // Default enrichment config
 const DEFAULT_CONFIG = {
   textModel: 'claude-sonnet-4-5-20250929',
-  chronicleModel: 'claude-sonnet-4-5-20250929',  // Model for entity stories
+  chronicleModel: 'claude-sonnet-4-5-20250929',  // Model for chronicles
   imageModel: 'gpt-image-1.5',
   imageSize: 'auto',
   imageQuality: 'auto',
@@ -137,8 +150,8 @@ const IMAGE_FIELDS = [
   'estimatedCost',
   'actualCost',
 ];
-const STORY_FIELDS = [
-  'storyId',
+const CHRONICLE_FIELDS = [
+  'chronicleId',
   'generatedAt',
   'model',
   'estimatedCost',
@@ -197,7 +210,7 @@ const isEnrichmentEqual = (left, right) => {
   return (
     isSectionEqual(left.description, right.description, DESCRIPTION_FIELDS) &&
     isSectionEqual(left.image, right.image, IMAGE_FIELDS) &&
-    isSectionEqual(left.entityStory, right.entityStory, STORY_FIELDS) &&
+    isSectionEqual(left.entityChronicle, right.entityChronicle, CHRONICLE_FIELDS) &&
     isChroniclesEqual(left.chronicles, right.chronicles)
   );
 };
@@ -313,7 +326,8 @@ export default function IlluminatorRemote({
   }, [onEnrichmentConfigChange]);
 
   // Style selection - use external prop if provided, else localStorage fallback
-  const DEFAULT_STYLE_SELECTION = { artisticStyleId: null, compositionStyleId: null };
+  // Default to 'random' for all style types to encourage visual variety
+  const DEFAULT_STYLE_SELECTION = { artisticStyleId: 'random', compositionStyleId: 'random', colorPaletteId: 'random' };
   const [localStyleSelection, setLocalStyleSelection] = useState(() => {
     // Prefer external style selection, fall back to localStorage
     if (externalStyleSelection) {
@@ -611,8 +625,10 @@ export default function IlluminatorRemote({
             prominence: entity.prominence,
             culture: entity.culture || '',
             status: entity.status || 'active',
+            summary: entity.enrichment?.description?.summary || '',
             description: entity.enrichment?.description?.description || '',
             tags: entity.tags || {},
+            visualTraits: entity.enrichment?.description?.visualTraits || [],
           },
           relationships,
           era: {
@@ -676,6 +692,7 @@ export default function IlluminatorRemote({
         const styleInfo = {
           artisticPromptFragment: resolvedStyle.artisticStyle?.promptFragment,
           compositionPromptFragment: resolvedStyle.compositionStyle?.promptFragment,
+          colorPalettePromptFragment: resolvedStyle.colorPalette?.promptFragment,
           cultureKeywords: resolvedStyle.cultureKeywords,
           visualIdentity: Object.keys(filteredVisualIdentity).length > 0 ? filteredVisualIdentity : undefined,
         };
@@ -996,7 +1013,7 @@ export default function IlluminatorRemote({
               onUpdateNarrativeStyle={updateNarrativeStyle}
               onDeleteNarrativeStyle={deleteNarrativeStyle}
               onReset={resetStyleLibrary}
-              entityKinds={(worldSchema?.entityKinds || []).map((k) => k.id)}
+              entityKinds={(worldSchema?.entityKinds || []).map((k) => k.kind)}
             />
           </div>
         )}
@@ -1024,6 +1041,25 @@ export default function IlluminatorRemote({
         {activeTab === 'storage' && (
           <div className="illuminator-content">
             <StoragePanel projectId={projectId} />
+          </div>
+        )}
+
+        {activeTab === 'traits' && (
+          <div className="illuminator-content">
+            <TraitPaletteSection
+              projectId={projectId}
+              simulationRunId={simulationRunId}
+              worldContext={worldContext?.description || ''}
+              entityKinds={(worldSchema?.entityKinds || []).map((k) => k.kind)}
+              cultures={(worldSchema?.cultures || []).map((c) => ({
+                name: c.name,
+                description: c.description,
+                visualIdentity: c.visualIdentity,
+              }))}
+              enqueue={enqueue}
+              queue={queue}
+              isWorkerReady={isWorkerReady}
+            />
           </div>
         )}
 

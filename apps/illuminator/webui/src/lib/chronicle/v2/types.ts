@@ -11,31 +11,25 @@ import type {
 } from '../chronicleTypes';
 
 /**
- * Configuration for V2 entity/event selection.
- * Uses simple random sampling instead of elaborate scoring.
+ * Configuration for V2 selection limits.
  */
 export interface V2SelectionConfig {
-  /** Maximum entities to include (default: 6) */
-  maxEntities: number;
   /** Maximum events to include (default: 4) */
   maxEvents: number;
   /** Maximum relationships to include (default: 10) */
   maxRelationships: number;
-  /** Optional seed for reproducible random sampling */
-  randomSeed?: number;
 }
 
 /**
- * Result of V2 selection - what goes into the prompt.
+ * Result of V2 selection - entities/relationships/events for the prompt.
+ * Extracted from the wizard's role assignments and selections.
  */
 export interface V2SelectionResult {
-  /** The graph entry point entity */
-  entrypoint: EntityContext;
-  /** Other entities from the 2-hop neighborhood */
+  /** Entities from role assignments */
   entities: EntityContext[];
-  /** Relationships between selected entities */
+  /** Selected relationships */
   relationships: RelationshipContext[];
-  /** Events involving selected entities */
+  /** Selected events */
   events: NarrativeEventContext[];
 }
 
@@ -43,8 +37,8 @@ export interface V2SelectionResult {
  * V2 generation result stored in IndexedDB.
  */
 export interface V2GenerationResult {
-  /** Story ID */
-  storyId: string;
+  /** Chronicle ID */
+  chronicleId: string;
   /** Entity ID (graph entry point) */
   entityId: string;
   /** Generated narrative content */
@@ -72,7 +66,6 @@ export interface V2GenerationResult {
  * Default selection config.
  */
 export const DEFAULT_V2_CONFIG: V2SelectionConfig = {
-  maxEntities: 6,
   maxEvents: 4,
   maxRelationships: 10,
 };

@@ -3,9 +3,9 @@
  *
  * ARCHITECTURE (chronicle-first):
  * - Chronicles are top-level objects, not tied to specific entities
- * - Stories are keyed by storyId (not entityId)
+ * - Chronicles are keyed by chronicleId (not entityId)
  * - Role assignments define the chronicle's identity
- * - IndexedDB is the SINGLE SOURCE OF TRUTH for all story data
+ * - IndexedDB is the SINGLE SOURCE OF TRUTH for all chronicle data
  * - React state is a mirror of IndexedDB, refreshed on changes
  * - Status is DERIVED from what data is present, not stored separately
  * - Worker completion triggers reload via callback (no polling)
@@ -22,10 +22,10 @@ import type { ChronicleGenerationContext } from '../lib/chronicleTypes';
 import type { SerializableChronicleContext, QueueItem, EnrichmentType, ChronicleStep, AcceptedChronicle } from '../lib/enrichmentTypes';
 import type { NarrativeStyle } from '@canonry/world-schema';
 import {
-  getStoriesForSimulation,
-  deleteStory as deleteStoryInDb,
-  acceptStory as acceptStoryInDb,
-  type StoryRecord,
+  getChroniclesForSimulation,
+  deleteChronicle as deleteChronicleInDb,
+  acceptChronicle as acceptChronicleInDb,
+  type ChronicleRecord,
 } from '../lib/chronicleStorage';
 import type { WikiLinkEntity } from '../lib/wikiLinkService';
 import { applyWikiLinks } from '../lib/wikiLinkService';
@@ -38,7 +38,7 @@ import { applyWikiLinks } from '../lib/wikiLinkService';
  * Derive status from what's present in the record.
  * This eliminates status synchronization issues.
  */
-export function deriveStatus(record: StoryRecord | undefined): string {
+export function deriveStatus(record: ChronicleRecord | undefined): string {
   if (!record) return 'not_started';
 
   if (record.status === 'failed') return 'failed';
@@ -46,7 +46,7 @@ export function deriveStatus(record: StoryRecord | undefined): string {
   // Check for in-progress states (worker is running)
   if (record.status === 'validating' ||
       record.status === 'editing' ||
-      record.status === 'generating_v2') {
+      record.status === 'generating') {
     return record.status;
   }
 
@@ -62,9 +62,9 @@ export function deriveStatus(record: StoryRecord | undefined): string {
  * Chronicle metadata passed when creating new chronicles
  */
 export interface ChronicleMetadata {
-  storyId: string;
+  chronicleId: string;
   title?: string;
-  focusType: 'single' | 'ensemble' | 'relationship' | 'event';
+  format: 'story' | 'document';
   roleAssignments: Array<{
     role: string;
     entityId: string;
@@ -80,20 +80,20 @@ export interface ChronicleMetadata {
 }
 
 export interface UseChronicleGenerationReturn {
-  // Story records keyed by storyId (chronicle-first: not entityId)
-  stories: Map<string, StoryRecord>;
+  // Chronicle records keyed by chronicleId (chronicle-first: not entityId)
+  chronicles: Map<string, ChronicleRecord>;
 
-  // Actions (chronicle-first: use storyId, not entityId)
-  generateV2: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle, metadata?: ChronicleMetadata) => void;
+  // Actions (chronicle-first: use chronicleId, not entityId)
+  generateV2: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle, metadata?: ChronicleMetadata) => void;
 
   // Post-generation refinements
-  correctSuggestions: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  generateSummary: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  generateImageRefs: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  blendProse: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  revalidateStory: (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
-  acceptStory: (storyId: string, entities: WikiLinkEntity[]) => Promise<AcceptedChronicle | null>;
-  restartStory: (storyId: string) => Promise<void>;
+  correctSuggestions: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  generateSummary: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  generateImageRefs: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  blendProse: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  revalidateChronicle: (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => void;
+  acceptChronicle: (chronicleId: string, entities: WikiLinkEntity[]) => Promise<AcceptedChronicle | null>;
+  restartChronicle: (chronicleId: string) => Promise<void>;
 
   // Status
   isGenerating: boolean;
@@ -116,47 +116,22 @@ function serializeContext(
     canonFacts: context.canonFacts,
     tone: context.tone,
 
-    // Chronicle-first: use focus instead of targetType/targetId
-    targetType: context.targetType,
-    targetId: context.targetId,
-
     // Chronicle focus (primary identity)
-    focus: context.focus
-      ? {
-        type: context.focus.type,
-        roleAssignments: context.focus.roleAssignments,
-        primaryEntityIds: context.focus.primaryEntityIds,
-        supportingEntityIds: context.focus.supportingEntityIds,
-        selectedEntityIds: context.focus.selectedEntityIds,
-        selectedEventIds: context.focus.selectedEventIds,
-        selectedRelationshipIds: context.focus.selectedRelationshipIds,
-      }
-      : undefined,
+    focus: {
+      type: context.focus.type,
+      roleAssignments: context.focus.roleAssignments,
+      primaryEntityIds: context.focus.primaryEntityIds,
+      supportingEntityIds: context.focus.supportingEntityIds,
+      selectedEntityIds: context.focus.selectedEntityIds,
+      selectedEventIds: context.focus.selectedEventIds,
+      selectedRelationshipIds: context.focus.selectedRelationshipIds,
+    },
 
     era: context.era
       ? {
         id: context.era.id,
         name: context.era.name,
         description: context.era.description,
-      }
-      : undefined,
-
-    // Legacy: entity field for backwards compat (deprecated)
-    entity: context.entity
-      ? {
-        id: context.entity.id,
-        name: context.entity.name,
-        kind: context.entity.kind,
-        subtype: context.entity.subtype,
-        prominence: context.entity.prominence,
-        culture: context.entity.culture,
-        status: context.entity.status,
-        tags: context.entity.tags,
-        summary: context.entity.summary,
-        description: context.entity.description,
-        aliases: context.entity.aliases,
-        createdAt: context.entity.createdAt,
-        updatedAt: context.entity.updatedAt,
       }
       : undefined,
 
@@ -221,12 +196,12 @@ export function useChronicleGeneration(
     prompt: string;
     chronicleContext?: SerializableChronicleContext;
     chronicleStep?: ChronicleStep;
-    storyId?: string;
+    chronicleId?: string;
     chronicleMetadata?: ChronicleMetadata;
   }>) => void
 ): UseChronicleGenerationReturn {
-  // Stories loaded from IndexedDB, keyed by storyId (chronicle-first)
-  const [stories, setStories] = useState<Map<string, StoryRecord>>(new Map());
+  // Chronicles loaded from IndexedDB, keyed by chronicleId (chronicle-first)
+  const [chronicles, setChronicles] = useState<Map<string, ChronicleRecord>>(new Map());
 
   // Track last simulation to detect changes
   const lastSimulationRunIdRef = useRef<string | undefined>(undefined);
@@ -235,30 +210,30 @@ export function useChronicleGeneration(
   const processedCompletionsRef = useRef<Set<string>>(new Set());
 
   // -------------------------------------------------------------------------
-  // Load stories from IndexedDB
+  // Load chronicles from IndexedDB
   // -------------------------------------------------------------------------
 
-  const loadStories = useCallback(async () => {
+  const loadChronicles = useCallback(async () => {
     if (!simulationRunId) {
-      console.log('[Chronicle] No simulationRunId, clearing stories');
-      setStories(new Map());
+      console.log('[Chronicle] No simulationRunId, clearing chronicles');
+      setChronicles(new Map());
       return;
     }
 
     try {
-      const records = await getStoriesForSimulation(simulationRunId);
-      console.log(`[Chronicle] Loaded ${records.length} stories from IndexedDB`);
+      const records = await getChroniclesForSimulation(simulationRunId);
+      console.log(`[Chronicle] Loaded ${records.length} chronicles from IndexedDB`);
 
-      // Build map keyed by storyId (chronicle-first: not entityId)
-      const storyMap = new Map<string, StoryRecord>();
+      // Build map keyed by chronicleId (chronicle-first: not entityId)
+      const chronicleMap = new Map<string, ChronicleRecord>();
       for (const record of records) {
-        // Use storyId as the key (each chronicle has its own unique ID)
-        storyMap.set(record.storyId, record);
+        // Use chronicleId as the key (each chronicle has its own unique ID)
+        chronicleMap.set(record.chronicleId, record);
       }
 
-      setStories(storyMap);
+      setChronicles(chronicleMap);
     } catch (err) {
-      console.error('[Chronicle] Failed to load stories:', err);
+      console.error('[Chronicle] Failed to load chronicles:', err);
     }
   }, [simulationRunId]);
 
@@ -271,19 +246,19 @@ export function useChronicleGeneration(
       console.log(`[Chronicle] Simulation changed: ${lastSimulationRunIdRef.current} → ${simulationRunId}`);
       lastSimulationRunIdRef.current = simulationRunId;
       processedCompletionsRef.current.clear();
-      loadStories();
+      loadChronicles();
     }
-  }, [simulationRunId, loadStories]);
+  }, [simulationRunId, loadChronicles]);
 
   // -------------------------------------------------------------------------
-  // Watch queue for entityStory completions → reload from IndexedDB
+  // Watch queue for entityChronicle completions → reload from IndexedDB
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    const storyTasks = queue.filter((item) => item.type === 'entityStory');
+    const chronicleTasks = queue.filter((item) => item.type === 'entityChronicle');
 
     // Find newly completed tasks
-    const completedTasks = storyTasks.filter(
+    const completedTasks = chronicleTasks.filter(
       (item) => (item.status === 'complete' || item.status === 'error') &&
                 !processedCompletionsRef.current.has(item.id)
     );
@@ -296,16 +271,16 @@ export function useChronicleGeneration(
       }
 
       // Reload from IndexedDB to get fresh data
-      loadStories();
+      loadChronicles();
     }
-  }, [queue, loadStories]);
+  }, [queue, loadChronicles]);
 
   // -------------------------------------------------------------------------
   // Compute isGenerating from queue
   // -------------------------------------------------------------------------
 
   const isGenerating = queue.some(
-    (item) => item.type === 'entityStory' &&
+    (item) => item.type === 'entityChronicle' &&
               (item.status === 'queued' || item.status === 'running')
   );
 
@@ -314,14 +289,13 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const generateV2 = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle, metadata?: ChronicleMetadata) => {
-      // Chronicle-first: use focus, not entity
-      if (!context.focus && !context.entity) {
-        console.error('[Chronicle V2] Focus or entity context required');
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle, metadata?: ChronicleMetadata) => {
+      if (!context.focus) {
+        console.error('[Chronicle V2] Focus context required');
         return;
       }
 
-      console.log(`[Chronicle V2] Starting single-shot generation for ${storyId}`);
+      console.log(`[Chronicle V2] Starting single-shot generation for ${chronicleId}`);
 
       if (!narrativeStyle) {
         console.error('[Chronicle V2] Narrative style required for generation');
@@ -330,10 +304,11 @@ export function useChronicleGeneration(
 
       const chronicleContext = serializeContext(context, narrativeStyle);
 
-      // Build entity reference for queue (uses first primary entity from focus, or legacy entity)
-      const primaryEntity = context.focus?.primaryEntityIds?.[0]
-        ? context.entities.find(e => e.id === context.focus?.primaryEntityIds?.[0])
-        : context.entity;
+      // Build entity reference for queue (uses first primary entity from focus)
+      const primaryEntityId = context.focus.primaryEntityIds[0] || context.focus.selectedEntityIds[0];
+      const primaryEntity = primaryEntityId
+        ? context.entities.find((e) => e.id === primaryEntityId)
+        : undefined;
 
       const entity = primaryEntity
         ? {
@@ -348,8 +323,8 @@ export function useChronicleGeneration(
             tags: primaryEntity.tags as Record<string, unknown>,
           }
         : {
-            // Fallback: create minimal entity reference from storyId
-            id: storyId,
+            // Fallback: create minimal entity reference from chronicleId
+            id: chronicleId,
             name: metadata?.title || 'Chronicle',
             kind: 'chronicle',
             subtype: '',
@@ -362,11 +337,11 @@ export function useChronicleGeneration(
 
       onEnqueue([{
         entity,
-        type: 'entityStory' as EnrichmentType,
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext,
         chronicleStep: 'generate_v2',
-        storyId: metadata?.storyId || storyId,
+        chronicleId: metadata?.chronicleId || chronicleId,
         chronicleMetadata: metadata,
       }]);
     },
@@ -378,13 +353,14 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const buildEntityRef = useCallback((
-    storyId: string,
+    chronicleId: string,
     context: ChronicleGenerationContext,
-    story?: StoryRecord
+    chronicle?: ChronicleRecord
   ) => {
-    const primaryEntity = context.focus?.primaryEntityIds?.[0]
-      ? context.entities.find(e => e.id === context.focus?.primaryEntityIds?.[0])
-      : context.entity;
+    const primaryEntityId = context.focus.primaryEntityIds[0] || context.focus.selectedEntityIds[0];
+    const primaryEntity = primaryEntityId
+      ? context.entities.find((e) => e.id === primaryEntityId)
+      : undefined;
 
     return primaryEntity
       ? {
@@ -399,8 +375,8 @@ export function useChronicleGeneration(
           tags: primaryEntity.tags as Record<string, unknown>,
         }
       : {
-          id: storyId,
-          name: story?.title || 'Chronicle',
+          id: chronicleId,
+          name: chronicle?.title || 'Chronicle',
           kind: 'chronicle',
           subtype: '',
           prominence: 'recognized',
@@ -416,13 +392,13 @@ export function useChronicleGeneration(
   // -------------------------------------------------------------------------
 
   const correctSuggestions = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const story = stories.get(storyId);
-      if (!story) {
-        console.error('[Chronicle] No story found for storyId', storyId);
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
         return;
       }
-      if (!story.cohesionReport || !story.assembledContent) {
+      if (!chronicle.cohesionReport || !chronicle.assembledContent) {
         console.error('[Chronicle] No validation report or assembled content to revise');
         return;
       }
@@ -432,29 +408,29 @@ export function useChronicleGeneration(
       }
 
       onEnqueue([{
-        entity: buildEntityRef(storyId, context, story),
-        type: 'entityStory' as EnrichmentType,
+        entity: buildEntityRef(chronicleId, context, chronicle),
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext: serializeContext(context, narrativeStyle),
         chronicleStep: 'edit',
-        storyId,
+        chronicleId,
       }]);
     },
-    [stories, onEnqueue, buildEntityRef]
+    [chronicles, onEnqueue, buildEntityRef]
   );
 
   const generateSummary = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const story = stories.get(storyId);
-      if (!story) {
-        console.error('[Chronicle] No story found for storyId', storyId);
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
         return;
       }
-      if (story.finalContent) {
+      if (chronicle.finalContent) {
         console.error('[Chronicle] Summary refinements are only available before acceptance');
         return;
       }
-      if (!story.assembledContent) {
+      if (!chronicle.assembledContent) {
         console.error('[Chronicle] No assembled content to summarize');
         return;
       }
@@ -464,29 +440,29 @@ export function useChronicleGeneration(
       }
 
       onEnqueue([{
-        entity: buildEntityRef(storyId, context, story),
-        type: 'entityStory' as EnrichmentType,
+        entity: buildEntityRef(chronicleId, context, chronicle),
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext: serializeContext(context, narrativeStyle),
         chronicleStep: 'summary',
-        storyId,
+        chronicleId,
       }]);
     },
-    [stories, onEnqueue, buildEntityRef]
+    [chronicles, onEnqueue, buildEntityRef]
   );
 
   const generateImageRefs = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const story = stories.get(storyId);
-      if (!story) {
-        console.error('[Chronicle] No story found for storyId', storyId);
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
         return;
       }
-      if (story.finalContent) {
+      if (chronicle.finalContent) {
         console.error('[Chronicle] Image refs are only available before acceptance');
         return;
       }
-      if (!story.assembledContent) {
+      if (!chronicle.assembledContent) {
         console.error('[Chronicle] No assembled content to draft image refs');
         return;
       }
@@ -496,29 +472,29 @@ export function useChronicleGeneration(
       }
 
       onEnqueue([{
-        entity: buildEntityRef(storyId, context, story),
-        type: 'entityStory' as EnrichmentType,
+        entity: buildEntityRef(chronicleId, context, chronicle),
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext: serializeContext(context, narrativeStyle),
         chronicleStep: 'image_refs',
-        storyId,
+        chronicleId,
       }]);
     },
-    [stories, onEnqueue, buildEntityRef]
+    [chronicles, onEnqueue, buildEntityRef]
   );
 
   const blendProse = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const story = stories.get(storyId);
-      if (!story) {
-        console.error('[Chronicle] No story found for storyId', storyId);
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
         return;
       }
-      if (story.finalContent) {
+      if (chronicle.finalContent) {
         console.error('[Chronicle] Prose blending is only available before acceptance');
         return;
       }
-      if (!story.assembledContent) {
+      if (!chronicle.assembledContent) {
         console.error('[Chronicle] No assembled content to blend');
         return;
       }
@@ -528,25 +504,25 @@ export function useChronicleGeneration(
       }
 
       onEnqueue([{
-        entity: buildEntityRef(storyId, context, story),
-        type: 'entityStory' as EnrichmentType,
+        entity: buildEntityRef(chronicleId, context, chronicle),
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext: serializeContext(context, narrativeStyle),
         chronicleStep: 'prose_blend',
-        storyId,
+        chronicleId,
       }]);
     },
-    [stories, onEnqueue, buildEntityRef]
+    [chronicles, onEnqueue, buildEntityRef]
   );
 
-  const revalidateStory = useCallback(
-    (storyId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
-      const story = stories.get(storyId);
-      if (!story) {
-        console.error('[Chronicle] No story found for storyId', storyId);
+  const revalidateChronicle = useCallback(
+    (chronicleId: string, context: ChronicleGenerationContext, narrativeStyle: NarrativeStyle) => {
+      const chronicle = chronicles.get(chronicleId);
+      if (!chronicle) {
+        console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
         return;
       }
-      if (!story.assembledContent) {
+      if (!chronicle.assembledContent) {
         console.error('[Chronicle] No assembled content to validate');
         return;
       }
@@ -556,28 +532,28 @@ export function useChronicleGeneration(
       }
 
       onEnqueue([{
-        entity: buildEntityRef(storyId, context, story),
-        type: 'entityStory' as EnrichmentType,
+        entity: buildEntityRef(chronicleId, context, chronicle),
+        type: 'entityChronicle' as EnrichmentType,
         prompt: '',
         chronicleContext: serializeContext(context, narrativeStyle),
         chronicleStep: 'validate',
-        storyId,
+        chronicleId,
       }]);
     },
-    [stories, onEnqueue, buildEntityRef]
+    [chronicles, onEnqueue, buildEntityRef]
   );
 
   // -------------------------------------------------------------------------
-  // Accept story (mark complete)
+  // Accept chronicle (mark complete)
   // -------------------------------------------------------------------------
 
-  const acceptStory = useCallback(async (storyId: string, entities: WikiLinkEntity[]) => {
-    const story = stories.get(storyId);
-    if (!story) {
-      console.error('[Chronicle] No story found for storyId', storyId);
+  const acceptChronicle = useCallback(async (chronicleId: string, entities: WikiLinkEntity[]) => {
+    const chronicle = chronicles.get(chronicleId);
+    if (!chronicle) {
+      console.error('[Chronicle] No chronicle found for chronicleId', chronicleId);
       return null;
     }
-    if (!story.assembledContent) {
+    if (!chronicle.assembledContent) {
       console.error('[Chronicle] Cannot accept without assembled content');
       return null;
     }
@@ -587,85 +563,71 @@ export function useChronicleGeneration(
     }
 
     try {
-      const linkResult = applyWikiLinks(story.assembledContent, entities);
-      await acceptStoryInDb(storyId, linkResult.content);
-      await loadStories(); // Reload to reflect change
-
-      const plan = story.plan;
-      // Chronicle-first: use title from story or derive from role assignments
-      const fallbackTitle = story.title ||
-        (story.roleAssignments?.filter(r => r.isPrimary).map(r => r.entityName).join(' & ')) ||
-        story.entityName ||
-        'Untitled Chronicle';
-
-      // Use selectedEntityIds from story (chronicle-first), fallback to plan focus
-      const selectedEntities = story.selectedEntityIds?.length
-        ? story.selectedEntityIds
-        : plan?.focus?.selectedEntityIds?.length
-        ? plan.focus.selectedEntityIds
-        : story.roleAssignments?.map(r => r.entityId) || [];
+      const linkResult = applyWikiLinks(chronicle.assembledContent, entities);
+      await acceptChronicleInDb(chronicleId, linkResult.content);
+      await loadChronicles(); // Reload to reflect change
 
       return {
-        chronicleId: storyId,
-        title: plan?.title || fallbackTitle,
-        format: plan?.format || 'story',
+        chronicleId,
+        title: chronicle.title,
+        format: chronicle.format,
         content: linkResult.content,
-        summary: story.summary,
-        imageRefs: story.imageRefs,
-        entrypointId: story.entrypointId || story.entityId,
-        entityIds: selectedEntities,
-        generatedAt: plan?.generatedAt,
+        summary: chronicle.summary,
+        imageRefs: chronicle.imageRefs,
+        entrypointId: chronicle.entrypointId,
+        entityIds: chronicle.selectedEntityIds,
+        generatedAt: chronicle.assembledAt,
         acceptedAt: Date.now(),
-        model: plan?.model || story.model,
+        model: chronicle.model,
       };
     } catch (err) {
-      console.error('[Chronicle] Failed to accept story:', err);
+      console.error('[Chronicle] Failed to accept chronicle:', err);
       return null;
     }
-  }, [stories, loadStories]);
+  }, [chronicles, loadChronicles]);
 
   // -------------------------------------------------------------------------
-  // Restart story (delete and reset)
+  // Restart chronicle (delete and reset)
   // -------------------------------------------------------------------------
 
-  const restartStory = useCallback(async (storyId: string) => {
-    const story = stories.get(storyId);
+  const restartChronicle = useCallback(async (chronicleId: string) => {
+    const chronicle = chronicles.get(chronicleId);
 
-    if (story) {
+    if (chronicle) {
       try {
-        await deleteStoryInDb(storyId);
-        console.log(`[Chronicle] Deleted story ${storyId}`);
+        await deleteChronicleInDb(chronicleId);
+        console.log(`[Chronicle] Deleted chronicle ${chronicleId}`);
       } catch (err) {
-        console.error('[Chronicle] Failed to delete story:', err);
+        console.error('[Chronicle] Failed to delete chronicle:', err);
       }
     }
 
     // Remove from local state immediately
-    setStories((prev) => {
+    setChronicles((prev) => {
       const next = new Map(prev);
-      next.delete(storyId);
+      next.delete(chronicleId);
       return next;
     });
-  }, [stories]);
+  }, [chronicles]);
 
   // -------------------------------------------------------------------------
   // Manual refresh
   // -------------------------------------------------------------------------
 
   const refresh = useCallback(async () => {
-    await loadStories();
-  }, [loadStories]);
+    await loadChronicles();
+  }, [loadChronicles]);
 
   return {
-    stories,
+    chronicles,
     generateV2,
     correctSuggestions,
     generateSummary,
     generateImageRefs,
     blendProse,
-    revalidateStory,
-    acceptStory,
-    restartStory,
+    revalidateChronicle,
+    acceptChronicle,
+    restartChronicle,
     isGenerating,
     refresh,
   };

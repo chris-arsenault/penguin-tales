@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import ImageModal from './ImageModal';
 import ImagePickerModal from './ImagePickerModal';
+import EntityDetailsModal from './EntityDetailsModal';
 import StyleSelector from './StyleSelector';
 import { useImageUrl } from '../hooks/useImageUrl';
 import {
@@ -150,6 +151,7 @@ function EntityRow({
   canQueueImage,
   needsDescription,
   onImageClick,
+  onEntityClick,
   descCost,
   imgCost,
 }) {
@@ -178,7 +180,18 @@ function EntityRow({
 
       {/* Entity info */}
       <div>
-        <div style={{ fontWeight: 500, marginBottom: '4px' }}>{entity.name}</div>
+        <div
+          style={{
+            fontWeight: 500,
+            marginBottom: '4px',
+            cursor: 'pointer',
+            color: 'var(--accent-color)',
+          }}
+          onClick={onEntityClick}
+          title="Click to view entity details"
+        >
+          {entity.name}
+        </div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
           {entity.kind}/{entity.subtype} · {entity.prominence}
           {entity.culture && ` · ${entity.culture}`}
@@ -198,7 +211,10 @@ function EntityRow({
                 borderRadius: '4px',
                 maxHeight: '80px',
                 overflow: 'hidden',
+                cursor: 'pointer',
               }}
+              onClick={onEntityClick}
+              title="Click to view entity details"
             >
               {enrichment.description.summary}
             </div>
@@ -391,6 +407,7 @@ export default function EntityBrowser({
   });
   const [hideCompleted, setHideCompleted] = useState(false);
   const [imageModal, setImageModal] = useState({ open: false, imageId: '', title: '' });
+  const [entityModal, setEntityModal] = useState({ open: false, entity: null });
   const [imagePickerEntity, setImagePickerEntity] = useState(null);
 
   // Get unique values for filters
@@ -673,6 +690,63 @@ export default function EntityBrowser({
     setImagePickerEntity(entity);
   }, []);
 
+  // Open entity details modal
+  const openEntityModal = useCallback((entity) => {
+    setEntityModal({ open: true, entity });
+  }, []);
+
+  // Download debug info for selected entities
+  const downloadSelectedDebug = useCallback(() => {
+    const debugData = [];
+
+    for (const entityId of selectedIds) {
+      const entity = entities.find((e) => e.id === entityId);
+      if (!entity) continue;
+
+      // First check persisted debug on entity enrichment
+      let debug = entity.enrichment?.description?.debug;
+      let timestamp = entity.enrichment?.description?.generatedAt;
+
+      // Fall back to queue if no persisted debug
+      if (!debug) {
+        const queueItem = queue.find(
+          (item) => item.entityId === entity.id && item.type === 'description' && item.debug
+        );
+        if (queueItem?.debug) {
+          debug = queueItem.debug;
+          timestamp = queueItem.completedAt || queueItem.startedAt || queueItem.queuedAt;
+        }
+      }
+
+      if (debug) {
+        debugData.push({
+          entityId: entity.id,
+          entityName: entity.name,
+          entityKind: entity.kind,
+          timestamp,
+          request: debug.request,
+          response: debug.response,
+        });
+      }
+    }
+
+    if (debugData.length === 0) {
+      alert('No debug data available for selected entities.');
+      return;
+    }
+
+    const json = JSON.stringify(debugData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `entity-debug-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [selectedIds, entities, queue]);
+
   // Handle image selection from picker
   const handleImageSelected = useCallback(
     (imageId, imageMetadata) => {
@@ -822,11 +896,15 @@ export default function EntityBrowser({
               styleLibrary={styleLibrary}
               selectedArtisticStyleId={styleSelection?.artisticStyleId}
               selectedCompositionStyleId={styleSelection?.compositionStyleId}
+              selectedColorPaletteId={styleSelection?.colorPaletteId}
               onArtisticStyleChange={(id) =>
                 onStyleSelectionChange?.({ ...styleSelection, artisticStyleId: id })
               }
               onCompositionStyleChange={(id) =>
                 onStyleSelectionChange?.({ ...styleSelection, compositionStyleId: id })
+              }
+              onColorPaletteChange={(id) =>
+                onStyleSelectionChange?.({ ...styleSelection, colorPaletteId: id })
               }
               compact
             />
@@ -916,6 +994,14 @@ export default function EntityBrowser({
             Regen Img
           </button>
           <button
+            onClick={downloadSelectedDebug}
+            className="illuminator-button illuminator-button-secondary"
+            style={{ padding: '6px 12px', fontSize: '12px' }}
+            title="Download debug request/response data for selected entities"
+          >
+            Download Debug
+          </button>
+          <button
             onClick={clearSelection}
             className="illuminator-button-link"
             style={{ marginLeft: 'auto' }}
@@ -985,6 +1071,7 @@ export default function EntityBrowser({
                     !(enrichment.description?.summary && enrichment.description?.description)
                   }
                   onImageClick={openImageModal}
+                  onEntityClick={() => openEntityModal(entity)}
                   descCost={getEntityCostDisplay(entity, 'description', descStatus, config, enrichment, buildPrompt)}
                   imgCost={getEntityCostDisplay(entity, 'image', imgStatus, config, enrichment, buildPrompt)}
                 />
@@ -1010,6 +1097,14 @@ export default function EntityBrowser({
         entityKind={imagePickerEntity?.kind}
         entityCulture={imagePickerEntity?.culture}
         currentImageId={imagePickerEntity?.enrichment?.image?.imageId}
+      />
+
+      {/* Entity Details Modal */}
+      <EntityDetailsModal
+        isOpen={entityModal.open}
+        entity={entityModal.entity}
+        queue={queue}
+        onClose={() => setEntityModal({ open: false, entity: null })}
       />
     </div>
   );

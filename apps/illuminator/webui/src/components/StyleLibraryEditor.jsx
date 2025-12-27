@@ -10,21 +10,14 @@
  */
 
 import { useState, useCallback } from 'react';
+import { ENTITY_CATEGORIES } from '@canonry/world-schema';
 
-// Plot structure types
-const PLOT_TYPES = [
-  { id: 'three-act', name: 'Three-Act', description: 'Classic rising action → climax → resolution' },
-  { id: 'episodic', name: 'Episodic', description: 'Connected vignettes around a theme' },
-  { id: 'mystery-reveal', name: 'Mystery Reveal', description: 'Clues leading to revelation' },
-  { id: 'rise-and-fall', name: 'Rise and Fall', description: 'Tragic arc from greatness to downfall' },
-  { id: 'circular', name: 'Circular', description: 'Return to beginning with new meaning' },
-  { id: 'parallel', name: 'Parallel', description: 'Two threads that converge' },
-  { id: 'in-medias-res', name: 'In Medias Res', description: 'Start in action, brief context' },
-  { id: 'accumulating', name: 'Accumulating', description: 'Escalating problems leading to catastrophe' },
-];
-
-// Prominence options
-const PROMINENCE_OPTIONS = ['mythic', 'renowned', 'recognized', 'marginal', 'forgotten'];
+// Category options (derived from ENTITY_CATEGORIES)
+const CATEGORY_OPTIONS = Object.entries(ENTITY_CATEGORIES).map(([id, info]) => ({
+  id,
+  name: info.name,
+  description: info.description,
+}));
 
 /**
  * Generate a unique ID for a new style
@@ -330,6 +323,57 @@ function DocumentStyleViewModal({ style, onCancel }) {
             <div>{docConfig.wordCount?.min || 300} - {docConfig.wordCount?.max || 800} words</div>
           </div>
 
+          {/* Subject categories */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            {style.entityRules?.primarySubjectCategories?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Primary Subject Categories</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {style.entityRules.primarySubjectCategories.map((cat) => {
+                    const info = ENTITY_CATEGORIES[cat];
+                    return (
+                      <span
+                        key={cat}
+                        style={{
+                          padding: '2px 8px',
+                          background: '#10b981',
+                          color: 'white',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                        }}
+                      >
+                        {info?.name || cat}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {style.entityRules?.supportingSubjectCategories?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Supporting Subject Categories</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {style.entityRules.supportingSubjectCategories.map((cat) => {
+                    const info = ENTITY_CATEGORIES[cat];
+                    return (
+                      <span
+                        key={cat}
+                        style={{
+                          padding: '2px 8px',
+                          background: 'var(--bg-tertiary)',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                        }}
+                      >
+                        {info?.name || cat}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Content instructions */}
           {docConfig.contentInstructions && (
             <div style={{ marginBottom: '16px' }}>
@@ -456,14 +500,11 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
     name: style?.name || '',
     description: style?.description || '',
     tags: style?.tags?.join(', ') || '',
-    // Plot structure
-    plotType: style?.plotStructure?.type || 'three-act',
+    // Plot structure - just instructions, no type dropdown
     plotInstructions: style?.plotStructure?.instructions || '',
-    // Entity rules
-    prominenceInclude: style?.entityRules?.prominenceFilter?.include?.join(', ') || 'mythic, renowned, recognized',
-    protagonistPreference: style?.entityRules?.prominenceFilter?.protagonistPreference?.join(', ') || 'mythic, renowned',
-    kindInclude: style?.entityRules?.kindFilter?.include?.join(', ') || '',
-    kindExclude: style?.entityRules?.kindFilter?.exclude?.join(', ') || 'era, occurrence',
+    // Entity rules - category-based
+    primarySubjectCategories: style?.entityRules?.primarySubjectCategories || ['character'],
+    supportingSubjectCategories: style?.entityRules?.supportingSubjectCategories || ['character', 'collective'],
     // Event rules
     significanceMin: style?.eventRules?.significanceRange?.min ?? 0.5,
     significanceMax: style?.eventRules?.significanceRange?.max ?? 1.0,
@@ -475,8 +516,6 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
     wordCountMax: style?.pacing?.totalWordCount?.max ?? 2500,
     sceneCountMin: style?.pacing?.sceneCount?.min ?? 3,
     sceneCountMax: style?.pacing?.sceneCount?.max ?? 5,
-    dialogueRatioMin: style?.pacing?.dialogueRatio?.min ?? 0.2,
-    dialogueRatioMax: style?.pacing?.dialogueRatio?.max ?? 0.4,
     // Prose directives
     toneKeywords: style?.proseDirectives?.toneKeywords?.join(', ') || '',
     dialogueStyle: style?.proseDirectives?.dialogueStyle || '',
@@ -501,8 +540,20 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const roles = getDefaultRolesForPlotType(formData.plotType);
-    const maxCastSize = roles.reduce((sum, role) => sum + role.count.max, 0);
+    // Preserve existing roles/scene templates, or use defaults for new styles
+    const roles = style?.entityRules?.roles || [
+      { role: 'protagonist', count: { min: 1, max: 1 }, description: 'Main character driving the story' },
+      { role: 'supporting', count: { min: 1, max: 4 }, description: 'Supporting characters' },
+    ];
+    const maxCastSize = style?.entityRules?.maxCastSize || 5;
+
+    // Preserve existing scene templates, or use defaults for new styles
+    const sceneTemplates = style?.sceneTemplates || [
+      { name: 'Opening', purpose: 'Establish world and character', requiredElements: ['setting', 'protagonist'], emotionalArc: 'anticipation' },
+      { name: 'Development', purpose: 'Build tension and stakes', requiredElements: ['conflict', 'stakes'], emotionalArc: 'tension' },
+      { name: 'Climax', purpose: 'Peak confrontation', requiredElements: ['confrontation', 'decision'], emotionalArc: 'intensity' },
+      { name: 'Resolution', purpose: 'Show aftermath', requiredElements: ['consequence', 'meaning'], emotionalArc: 'catharsis' },
+    ];
 
     const result = {
       id: isNew ? `narrative-${Date.now().toString(36)}` : formData.id,
@@ -511,21 +562,15 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
       tags: parseCommaSeparated(formData.tags),
       format: 'story',
 
+      // Preserve existing plot structure type if present, just update instructions
       plotStructure: {
-        type: formData.plotType,
+        ...(style?.plotStructure?.type && { type: style.plotStructure.type }),
         instructions: formData.plotInstructions.trim(),
-        schemaDescription: getPlotSchemaForType(formData.plotType),
       },
 
       entityRules: {
-        prominenceFilter: {
-          include: parseCommaSeparated(formData.prominenceInclude),
-          protagonistPreference: parseCommaSeparated(formData.protagonistPreference),
-        },
-        kindFilter: {
-          include: parseCommaSeparated(formData.kindInclude),
-          exclude: parseCommaSeparated(formData.kindExclude),
-        },
+        primarySubjectCategories: formData.primarySubjectCategories,
+        supportingSubjectCategories: formData.supportingSubjectCategories,
         roles,
         maxCastSize,
       },
@@ -540,7 +585,7 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
         usageInstructions: formData.eventUsageInstructions.trim(),
       },
 
-      sceneTemplates: getDefaultSceneTemplatesForPlotType(formData.plotType),
+      sceneTemplates,
 
       pacing: {
         totalWordCount: {
@@ -550,10 +595,6 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
         sceneCount: {
           min: parseInt(formData.sceneCountMin, 10),
           max: parseInt(formData.sceneCountMax, 10),
-        },
-        dialogueRatio: {
-          min: parseFloat(formData.dialogueRatioMin),
-          max: parseFloat(formData.dialogueRatioMax),
         },
       },
 
@@ -667,31 +708,16 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
             {activeTab === 'plot' && (
               <>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Plot Structure Type</label>
-                  <select
-                    value={formData.plotType}
-                    onChange={(e) => handleChange('plotType', e.target.value)}
-                    className="illuminator-input"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {PLOT_TYPES.map((pt) => (
-                      <option key={pt.id} value={pt.id}>
-                        {pt.name} - {pt.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Plot Instructions</label>
+                  <label className="illuminator-label">Narrative Structure Instructions</label>
                   <textarea
                     value={formData.plotInstructions}
                     onChange={(e) => handleChange('plotInstructions', e.target.value)}
                     className="illuminator-textarea"
-                    rows={3}
-                    placeholder="Instructions for how to structure the plot..."
+                    rows={6}
+                    placeholder="Describe the narrative structure for this style. For example: 'Build tension through a three-act structure with clear rising action, climax, and resolution. Focus on character transformation...'"
                   />
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Guidance for the AI on how to apply this plot structure.
+                    Freeform instructions for how to structure the narrative. This guides the AI in building plot, pacing, and dramatic beats.
                   </p>
                 </div>
               </>
@@ -701,50 +727,90 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
             {activeTab === 'entities' && (
               <>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Include Prominence Levels</label>
-                  <input
-                    type="text"
-                    value={formData.prominenceInclude}
-                    onChange={(e) => handleChange('prominenceInclude', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="mythic, renowned, recognized"
-                  />
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Which prominence levels to include. Options: {PROMINENCE_OPTIONS.join(', ')}
+                  <label className="illuminator-label">Primary Subject Categories</label>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Recommended entity categories for primary/protagonist roles.
                   </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {CATEGORY_OPTIONS.filter(c => c.id !== 'era' && c.id !== 'event').map((cat) => (
+                      <label
+                        key={cat.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          background: formData.primarySubjectCategories.includes(cat.id)
+                            ? '#10b981'
+                            : 'var(--bg-tertiary)',
+                          color: formData.primarySubjectCategories.includes(cat.id)
+                            ? 'white'
+                            : 'var(--text-secondary)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.primarySubjectCategories.includes(cat.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleChange('primarySubjectCategories', [...formData.primarySubjectCategories, cat.id]);
+                            } else {
+                              handleChange('primarySubjectCategories', formData.primarySubjectCategories.filter(c => c !== cat.id));
+                            }
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                        {cat.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div className="illuminator-form-group">
-                  <label className="illuminator-label">Protagonist Preference</label>
-                  <input
-                    type="text"
-                    value={formData.protagonistPreference}
-                    onChange={(e) => handleChange('protagonistPreference', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="mythic, renowned"
-                  />
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Preferred prominence levels for protagonist roles.
+                  <label className="illuminator-label">Supporting Subject Categories</label>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Recommended entity categories for supporting/secondary roles.
                   </p>
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Include Entity Kinds</label>
-                  <input
-                    type="text"
-                    value={formData.kindInclude}
-                    onChange={(e) => handleChange('kindInclude', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="Leave empty to include all kinds"
-                  />
-                </div>
-                <div className="illuminator-form-group">
-                  <label className="illuminator-label">Exclude Entity Kinds</label>
-                  <input
-                    type="text"
-                    value={formData.kindExclude}
-                    onChange={(e) => handleChange('kindExclude', e.target.value)}
-                    className="illuminator-input"
-                    placeholder="era, occurrence"
-                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {CATEGORY_OPTIONS.filter(c => c.id !== 'era' && c.id !== 'event').map((cat) => (
+                      <label
+                        key={cat.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          background: formData.supportingSubjectCategories.includes(cat.id)
+                            ? '#10b981'
+                            : 'var(--bg-tertiary)',
+                          color: formData.supportingSubjectCategories.includes(cat.id)
+                            ? 'white'
+                            : 'var(--text-secondary)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.supportingSubjectCategories.includes(cat.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleChange('supportingSubjectCategories', [...formData.supportingSubjectCategories, cat.id]);
+                            } else {
+                              handleChange('supportingSubjectCategories', formData.supportingSubjectCategories.filter(c => c !== cat.id));
+                            }
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                        {cat.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -863,35 +929,6 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
                     />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Min Dialogue Ratio</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      max="1"
-                      value={formData.dialogueRatioMin}
-                      onChange={(e) => handleChange('dialogueRatioMin', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                  <div className="illuminator-form-group">
-                    <label className="illuminator-label">Max Dialogue Ratio</label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      max="1"
-                      value={formData.dialogueRatioMax}
-                      onChange={(e) => handleChange('dialogueRatioMax', e.target.value)}
-                      className="illuminator-input"
-                    />
-                  </div>
-                </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Dialogue ratio: 0 = all narration, 1 = all dialogue
-                </p>
               </>
             )}
 
@@ -1004,133 +1041,6 @@ function NarrativeStyleEditModal({ style, onSave, onCancel }) {
       </div>
     </div>
   );
-}
-
-/**
- * Get default plot schema description for a plot type
- */
-function getPlotSchemaForType(plotType) {
-  const schemas = {
-    'three-act': `{
-    "incitingIncident": { "description": "...", "eventIds": [] },
-    "risingAction": [{ "description": "...", "eventIds": [] }],
-    "climax": { "description": "...", "eventIds": [] },
-    "resolution": { "description": "...", "eventIds": [] }
-  }`,
-    'episodic': `{
-    "setting_the_day": "...",
-    "vignettes": [{ "moment": "...", "insight": "..." }],
-    "closing_reflection": "..."
-  }`,
-    'mystery-reveal': `{
-    "initial_situation": { "description": "...", "eventIds": [] },
-    "investigation": [{ "clue": "...", "significance": "...", "eventIds": [] }],
-    "false_trail": { "description": "...", "eventIds": [] },
-    "true_revelation": { "description": "...", "eventIds": [] }
-  }`,
-    'rise-and-fall': `{
-    "initial_greatness": "...",
-    "the_flaw": "...",
-    "rise": [{ "description": "...", "eventIds": [] }],
-    "hubris_moment": { "description": "...", "eventIds": [] },
-    "fall": [{ "description": "...", "eventIds": [] }],
-    "recognition": "...",
-    "catastrophe": { "description": "...", "eventIds": [] }
-  }`,
-    'circular': `{
-    "opening_image": "...",
-    "wandering": [{ "description": "...", "eventIds": [] }],
-    "accumulating_meaning": "...",
-    "return": { "description": "...", "eventIds": [] }
-  }`,
-    'parallel': `{
-    "surface_situation": "...",
-    "hidden_situation": "...",
-    "thread_a": [{ "description": "...", "eventIds": [] }],
-    "thread_b": [{ "description": "...", "eventIds": [] }],
-    "convergence": { "description": "...", "eventIds": [] },
-    "new_equilibrium": { "description": "...", "eventIds": [] }
-  }`,
-    'in-medias-res': `{
-    "opening_action": { "description": "...", "eventIds": [] },
-    "brief_context": "...",
-    "escalating_obstacles": [{ "description": "...", "eventIds": [] }],
-    "false_victory_or_defeat": "...",
-    "final_confrontation": { "description": "...", "eventIds": [] },
-    "escape_or_triumph": { "description": "...", "eventIds": [] }
-  }`,
-    'accumulating': `{
-    "initial_problem": { "description": "...", "eventIds": [] },
-    "escalations": [{ "attempt": "...", "result": "...", "eventIds": [] }],
-    "point_of_no_return": "...",
-    "catastrophic_resolution": { "description": "...", "eventIds": [] }
-  }`,
-  };
-  return schemas[plotType] || schemas['three-act'];
-}
-
-/**
- * Get default roles for a plot type
- */
-function getDefaultRolesForPlotType(plotType) {
-  const rolesByType = {
-    'three-act': [
-      { role: 'protagonist', count: { min: 1, max: 1 }, description: 'Main character driving the story' },
-      { role: 'antagonist', count: { min: 0, max: 1 }, description: 'Opposition force' },
-      { role: 'supporting', count: { min: 1, max: 3 }, description: 'Supporting characters' },
-    ],
-    'episodic': [
-      { role: 'focal-character', count: { min: 1, max: 2 }, description: 'Character(s) we follow' },
-      { role: 'community-member', count: { min: 2, max: 5 }, description: 'Characters encountered' },
-    ],
-    'mystery-reveal': [
-      { role: 'investigator', count: { min: 1, max: 1 }, description: 'Character seeking truth' },
-      { role: 'suspect', count: { min: 1, max: 3 }, description: 'Potential sources of mystery' },
-      { role: 'witness', count: { min: 1, max: 2 }, description: 'Provide clues or misdirection' },
-    ],
-    'rise-and-fall': [
-      { role: 'tragic-hero', count: { min: 1, max: 1 }, description: 'Character who rises and falls' },
-      { role: 'chorus', count: { min: 1, max: 3 }, description: 'Observers who comment on fate' },
-    ],
-    'circular': [
-      { role: 'consciousness', count: { min: 1, max: 1 }, description: 'POV character' },
-      { role: 'memory', count: { min: 1, max: 3 }, description: 'Characters from past/present' },
-    ],
-    'parallel': [
-      { role: 'schemer', count: { min: 1, max: 2 }, description: 'Character with hidden agenda' },
-      { role: 'pawn', count: { min: 1, max: 2 }, description: 'Character being manipulated' },
-      { role: 'revealer', count: { min: 0, max: 1 }, description: 'Who exposes the truth' },
-    ],
-    'in-medias-res': [
-      { role: 'hero', count: { min: 1, max: 1 }, description: 'Action protagonist' },
-      { role: 'complication', count: { min: 1, max: 2 }, description: 'Creates obstacles' },
-    ],
-    'accumulating': [
-      { role: 'victim', count: { min: 1, max: 1 }, description: 'Character suffering escalation' },
-      { role: 'cause', count: { min: 1, max: 2 }, description: 'Sources of problems' },
-    ],
-  };
-  return rolesByType[plotType] || rolesByType['three-act'];
-}
-
-/**
- * Get default scene templates for a plot type
- */
-function getDefaultSceneTemplatesForPlotType(plotType) {
-  const templatesByType = {
-    'three-act': [
-      { name: 'Opening', purpose: 'Establish world and character', requiredElements: ['setting', 'protagonist'], emotionalArc: 'anticipation', wordCountTarget: 400, proseNotes: '' },
-      { name: 'Conflict', purpose: 'Introduce main conflict', requiredElements: ['obstacle', 'stakes'], emotionalArc: 'tension', wordCountTarget: 500, proseNotes: '' },
-      { name: 'Climax', purpose: 'Peak confrontation', requiredElements: ['confrontation', 'decision'], emotionalArc: 'intensity', wordCountTarget: 500, proseNotes: '' },
-      { name: 'Resolution', purpose: 'Show aftermath', requiredElements: ['consequence', 'growth'], emotionalArc: 'catharsis', wordCountTarget: 300, proseNotes: '' },
-    ],
-    'episodic': [
-      { name: 'Morning', purpose: 'Set the day', requiredElements: ['routine', 'mood'], emotionalArc: 'peaceful', wordCountTarget: 300, proseNotes: '' },
-      { name: 'Vignette', purpose: 'Moment of insight', requiredElements: ['observation', 'reflection'], emotionalArc: 'contemplative', wordCountTarget: 350, proseNotes: '' },
-      { name: 'Evening', purpose: 'Close the day', requiredElements: ['change', 'acceptance'], emotionalArc: 'bittersweet', wordCountTarget: 300, proseNotes: '' },
-    ],
-  };
-  return templatesByType[plotType] || templatesByType['three-act'];
 }
 
 /**

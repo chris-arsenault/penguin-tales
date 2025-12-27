@@ -10,6 +10,7 @@ import type {
   EntityContext,
   RelationshipContext,
   NarrativeEventContext,
+  ChronicleTemporalContext,
 } from '../chronicleTypes';
 import type {
   NarrativeStyle,
@@ -98,20 +99,37 @@ function buildWorldSection(context: ChronicleGenerationContext): string {
 
 /**
  * Build the entities section of the prompt.
+ * Shows primary entities with full details, supporting entities briefly.
  */
-function buildEntitySection(selection: V2SelectionResult): string {
+function buildEntitySection(
+  selection: V2SelectionResult,
+  primaryEntityIds: Set<string>
+): string {
+  const primaryEntities = selection.entities.filter(e => primaryEntityIds.has(e.id));
+  const supportingEntities = selection.entities.filter(e => !primaryEntityIds.has(e.id));
+
   const lines = [
-    `# Characters (${selection.entities.length + 1} from local graph)`,
-    '',
-    `## ${selection.entrypoint.name} (graph entry point)`,
-    formatEntityFull(selection.entrypoint),
+    `# Characters (${selection.entities.length} total)`,
   ];
 
-  if (selection.entities.length > 0) {
+  // Primary entities get full treatment
+  if (primaryEntities.length > 0) {
     lines.push('');
-    for (const entity of selection.entities) {
-      lines.push(formatEntityBrief(entity));
+    lines.push('## Primary Characters');
+    for (const entity of primaryEntities) {
       lines.push('');
+      lines.push(`### ${entity.name}`);
+      lines.push(formatEntityFull(entity));
+    }
+  }
+
+  // Supporting entities get brief treatment
+  if (supportingEntities.length > 0) {
+    lines.push('');
+    lines.push('## Supporting Characters');
+    for (const entity of supportingEntities) {
+      lines.push('');
+      lines.push(formatEntityBrief(entity));
     }
   }
 
@@ -137,6 +155,56 @@ function buildDataSection(selection: V2SelectionResult): string {
     for (const evt of selection.events) {
       lines.push(formatEvent(evt));
     }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Build the temporal context section.
+ * Provides era information and timeline context for the chronicle.
+ */
+function buildTemporalSection(temporalContext: ChronicleTemporalContext | undefined): string {
+  if (!temporalContext) return '';
+
+  const lines: string[] = ['# Historical Context'];
+
+  // Focal era
+  const focal = temporalContext.focalEra;
+  lines.push(`## Setting: ${focal.name}`);
+  if (focal.description) {
+    lines.push(focal.description);
+  }
+  lines.push(`Duration: ${focal.duration} ticks (ticks ${focal.startTick}–${focal.endTick})`);
+
+  // Chronicle timeline
+  lines.push('');
+  lines.push('## Chronicle Timeline');
+  lines.push(temporalContext.temporalDescription);
+  lines.push(`Tick range: ${temporalContext.chronicleTickRange[0]}–${temporalContext.chronicleTickRange[1]}`);
+  lines.push(`Scope: ${temporalContext.temporalScope}`);
+
+  // Multi-era notice
+  if (temporalContext.isMultiEra) {
+    lines.push('');
+    lines.push(`**Note:** This chronicle spans ${temporalContext.touchedEraIds.length} eras. Events from different eras should be woven together thoughtfully, acknowledging the passage of time.`);
+  }
+
+  // Brief era breakdown (all eras for context)
+  if (temporalContext.allEras.length > 1) {
+    lines.push('');
+    lines.push('## Era Overview');
+    for (const era of temporalContext.allEras) {
+      const isFocal = era.id === focal.id;
+      const marker = isFocal ? ' [FOCAL]' : '';
+      const touched = temporalContext.touchedEraIds.includes(era.id) ? ' *' : '';
+      lines.push(`- ${era.name}${marker}${touched}: ticks ${era.startTick}–${era.endTick} (${era.duration} ticks)`);
+      if (era.description && isFocal) {
+        lines.push(`  ${era.description}`);
+      }
+    }
+    lines.push('');
+    lines.push('* = era contains events in this chronicle');
   }
 
   return lines.join('\n');
@@ -191,23 +259,14 @@ function buildStoryStructureSection(style: StoryNarrativeStyle): string {
 
 /**
  * Build the cast rules section for story format.
- * Includes protagonist kind constraints and role expectations.
+ * Includes role expectations and cast size guidance.
  */
 function buildCastRulesSection(style: StoryNarrativeStyle): string {
   const lines: string[] = ['# Cast Rules'];
   let hasContent = false;
 
-  // Protagonist kind constraints
-  if (style.entityRules?.kindFilter?.protagonistKinds?.length) {
-    const kinds = style.entityRules.kindFilter.protagonistKinds;
-    lines.push(`Protagonist must be entity kind: ${kinds.join(' or ')}`);
-    lines.push('(Factions, organizations, locations, etc. are setting elements, not protagonists)');
-    hasContent = true;
-  }
-
   // Role expectations
   if (style.entityRules?.roles && style.entityRules.roles.length > 0) {
-    if (hasContent) lines.push('');
     lines.push('Expected roles in narrative:');
     for (const role of style.entityRules.roles) {
       const countStr = role.count.min === role.count.max
@@ -311,6 +370,7 @@ function buildStoryPrompt(
   worldSection: string,
   entitySection: string,
   dataSection: string,
+  temporalSection: string,
   style: StoryNarrativeStyle
 ): string {
   const pacing = style.pacing;
@@ -329,6 +389,7 @@ function buildStoryPrompt(
   // Combine non-empty sections
   const sections = [
     worldSection,
+    temporalSection,
     entitySection,
     dataSection,
     structureSection,
@@ -344,6 +405,7 @@ Write a ${wordRange} word narrative in ${sceneRange} distinct scenes.
 
 Requirements:
 - Follow the narrative structure type and scene progression above
+- Ground the story in the historical era and timeline provided
 - Protagonist must be an entity of the correct kind (typically a person, not a faction or location)
 - Use relationships to drive tension or connection
 - Incorporate events according to the usage instructions
@@ -440,6 +502,7 @@ function buildDocumentPrompt(
   worldSection: string,
   entitySection: string,
   dataSection: string,
+  temporalSection: string,
   style: DocumentNarrativeStyle
 ): string {
   const doc = style.documentConfig;
@@ -453,6 +516,7 @@ function buildDocumentPrompt(
   // Combine non-empty sections
   const sections = [
     worldSection,
+    temporalSection,
     entitySection,
     dataSection,
     structureSection,
@@ -466,9 +530,10 @@ Write a ${wordRange} word ${doc.documentType}.
 
 Requirements:
 - Follow the document structure and sections above
+- Ground the document in the historical era and timeline provided
 - Write in the specified voice and tone
 - Draw from the characters and events provided
-- Make the document feel authentic to the world
+- Make the document feel authentic to the world and its time period
 
 Write the document directly. No meta-commentary.`;
 
@@ -488,14 +553,17 @@ export function buildV2Prompt(
   selection: V2SelectionResult
 ): string {
   const worldSection = buildWorldSection(context);
-  const entitySection = buildEntitySection(selection);
+  const primaryEntityIds = new Set(context.focus?.primaryEntityIds || []);
+  const entitySection = buildEntitySection(selection, primaryEntityIds);
   const dataSection = buildDataSection(selection);
+  const temporalSection = buildTemporalSection(context.temporalContext);
 
   if (style.format === 'story') {
     return buildStoryPrompt(
       worldSection,
       entitySection,
       dataSection,
+      temporalSection,
       style as StoryNarrativeStyle
     );
   } else {
@@ -503,6 +571,7 @@ export function buildV2Prompt(
       worldSection,
       entitySection,
       dataSection,
+      temporalSection,
       style as DocumentNarrativeStyle
     );
   }

@@ -10,6 +10,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import type { WikiPage, WikiSection, WikiSectionImage, HardState, ImageMetadata, ImageLoader } from '../types/world.ts';
+import { SeedModal, type ChronicleSeedData } from './ChronicleSeedViewer.tsx';
 
 const colors = {
   bgPrimary: '#0a1929',
@@ -298,6 +299,19 @@ const styles = {
   clearfix: {
     clear: 'both' as const,
   },
+  seedButton: {
+    padding: '6px 12px',
+    fontSize: '12px',
+    background: colors.bgTertiary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    color: colors.textSecondary,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginTop: '12px',
+  },
 };
 
 /**
@@ -456,7 +470,11 @@ function SectionWithImages({
       // Find anchor position for block images to insert at paragraph boundaries
       const anchorLower = img.anchorText.toLowerCase();
       const contentLower = content.toLowerCase();
-      const position = contentLower.indexOf(anchorLower);
+      let position = contentLower.indexOf(anchorLower);
+      // Use anchorIndex as fallback if text not found (e.g., after edits)
+      if (position < 0 && img.anchorIndex !== undefined) {
+        position = img.anchorIndex;
+      }
       blockImages.push({ image: img, position: position >= 0 ? position : content.length });
     }
   }
@@ -565,6 +583,29 @@ export default function WikiPageView({
   onNavigate,
   onNavigateToEntity,
 }: WikiPageViewProps) {
+  const [showSeedModal, setShowSeedModal] = useState(false);
+
+  // Build seed data for chronicle pages
+  const seedData = useMemo((): ChronicleSeedData | null => {
+    if (page.type !== 'chronicle' || !page.chronicle) return null;
+    const chronicle = page.chronicle;
+    if (!chronicle.narrativeStyleId && !chronicle.roleAssignments?.length) return null;
+
+    // Get entrypoint name
+    const entrypoint = chronicle.entrypointId
+      ? entityIndex.get(chronicle.entrypointId)
+      : undefined;
+
+    return {
+      narrativeStyleId: chronicle.narrativeStyleId || '',
+      entrypointId: chronicle.entrypointId,
+      entrypointName: entrypoint?.name,
+      roleAssignments: chronicle.roleAssignments || [],
+      selectedEventIds: chronicle.selectedEventIds || [],
+      selectedRelationshipIds: chronicle.selectedRelationshipIds || [],
+    };
+  }, [page, entityIndex]);
+
   // Compute backlinks
   const chronicleLinks = useMemo(() => {
     return pages.filter(p =>
@@ -688,6 +729,14 @@ export default function WikiPageView({
         <h1 style={styles.title}>{page.title}</h1>
         {page.content.summary && (
           <div style={styles.summary}>{page.content.summary}</div>
+        )}
+        {seedData && (
+          <button
+            style={styles.seedButton}
+            onClick={() => setShowSeedModal(true)}
+          >
+            View Generation Context
+          </button>
         )}
       </div>
 
@@ -839,6 +888,16 @@ export default function WikiPageView({
           </div>
         )}
       </div>
+
+      {/* Generation Context Modal */}
+      {seedData && (
+        <SeedModal
+          isOpen={showSeedModal}
+          onClose={() => setShowSeedModal(false)}
+          seed={seedData}
+          title="Generation Context"
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@
 import type { NarrativeStyle } from '@canonry/world-schema';
 import type { ChronicleFormat, ChronicleImageRefs } from './chronicleTypes';
 
-export type EnrichmentType = 'description' | 'image' | 'entityStory';
+export type EnrichmentType = 'description' | 'image' | 'entityChronicle' | 'paletteExpansion';
 
 export interface NetworkDebugInfo {
   request: string;
@@ -21,8 +21,10 @@ export interface EnrichmentResult {
   summary?: string;
   description?: string;
   aliases?: string[];
+  /** Distinctive visual traits for image generation */
+  visualTraits?: string[];
   imageId?: string;  // Reference to stored image (worker saves directly to IndexedDB)
-  storyId?: string;  // Reference to stored entity story in storyStore
+  chronicleId?: string;  // Reference to stored chronicle in chronicleStore
   revisedPrompt?: string;
   generatedAt: number;
   model: string;
@@ -31,6 +33,8 @@ export interface EnrichmentResult {
   actualCost?: number;
   inputTokens?: number;
   outputTokens?: number;
+  // Debug info (persisted for description enrichments)
+  debug?: NetworkDebugInfo;
 }
 
 export interface EnrichmentError {
@@ -60,12 +64,16 @@ export interface EntityEnrichment {
     summary: string;
     description: string;
     aliases: string[];
+    /** Distinctive visual traits for image generation (e.g., scars, unusual build, distinctive gear) */
+    visualTraits: string[];
     generatedAt: number;
     model: string;
     estimatedCost?: number;
     actualCost?: number;
     inputTokens?: number;
     outputTokens?: number;
+    /** Debug request/response from most recent generation */
+    debug?: NetworkDebugInfo;
   };
   image?: {
     imageId: string;  // Reference to stored image in imageStore
@@ -77,8 +85,8 @@ export interface EntityEnrichment {
     inputTokens?: number;  // GPT Image models return token usage
     outputTokens?: number;
   };
-  entityStory?: {
-    storyId: string;  // Reference to stored story in storyStore
+  entityChronicle?: {
+    chronicleId: string;  // Reference to stored chronicle in chronicleStore
     generatedAt: number;
     model: string;
     estimatedCost?: number;
@@ -111,18 +119,27 @@ export interface QueueItem {
   debug?: NetworkDebugInfo;
   // Cost tracking
   estimatedCost?: number;
-  // For entityStory tasks
+  // For entityChronicle tasks
   chronicleContext?: SerializableChronicleContext;
   chronicleStep?: ChronicleStep;
-  storyId?: string;
+  chronicleId?: string;
   // For chronicle image tasks
   imageRefId?: string;
   sceneDescription?: string;
   imageType?: 'entity' | 'chronicle';
+  // For palette expansion tasks
+  paletteEntityKind?: string;
+  paletteWorldContext?: string;
+  /** Culture visual identities for grounding palette in world lore */
+  paletteCultureContext?: Array<{
+    name: string;
+    description?: string;
+    visualIdentity?: Record<string, string>;
+  }>;
 }
 
 /**
- * Serializable chronicle context (for entityStory tasks)
+ * Serializable chronicle context (for entityChronicle tasks)
  * Maps are converted to Record objects for serialization
  */
 export interface SerializableChronicleContext {
@@ -132,12 +149,8 @@ export interface SerializableChronicleContext {
   canonFacts: string[];
   tone: string;
 
-  // Target metadata (legacy, kept for backwards compat)
-  targetType?: 'entityStory';
-  targetId?: string;
-
   // Chronicle focus (primary identity - chronicle-first architecture)
-  focus?: {
+  focus: {
     type: 'single' | 'ensemble' | 'relationship' | 'event';
     roleAssignments: Array<{
       role: string;
@@ -158,23 +171,6 @@ export interface SerializableChronicleContext {
     id: string;
     name: string;
     description?: string;
-  };
-
-  // Target entity (for entity stories - legacy, kept for backwards compat)
-  entity?: {
-    id: string;
-    name: string;
-    kind: string;
-    subtype?: string;
-    prominence: string;
-    culture?: string;
-    status: string;
-    tags: Record<string, string>;
-    summary?: string;
-    description?: string;
-    aliases?: string[];
-    createdAt: number;
-    updatedAt: number;
   };
 
   // All entities (for cross-referencing)
@@ -227,7 +223,7 @@ export interface SerializableChronicleContext {
 }
 
 /**
- * Which step to run for entityStory tasks
+ * Which step to run for entityChronicle tasks
  */
 export type ChronicleStep =
   | 'generate_v2'  // Single-shot generation
@@ -252,16 +248,25 @@ export interface WorkerTask {
   simulationRunId: string;
   type: EnrichmentType;
   prompt: string;
-  // For entityStory tasks only
+  // For entityChronicle tasks only
   chronicleContext?: SerializableChronicleContext;
-  // Which step to run (for entityStory tasks)
+  // Which step to run (for entityChronicle tasks)
   chronicleStep?: ChronicleStep;
-  // Story ID (for continuing existing story, or for chronicle images)
-  storyId?: string;
+  // Chronicle ID (for continuing existing chronicle, or for chronicle images)
+  chronicleId?: string;
   // For chronicle image tasks
   imageRefId?: string;
   sceneDescription?: string;
   imageType?: 'entity' | 'chronicle';
+  // For palette expansion tasks
+  paletteEntityKind?: string;
+  paletteWorldContext?: string;
+  /** Culture visual identities for grounding palette in world lore */
+  paletteCultureContext?: Array<{
+    name: string;
+    description?: string;
+    visualIdentity?: Record<string, string>;
+  }>;
 }
 
 /**
@@ -301,7 +306,7 @@ export function getEnrichmentStatus(
 
   if (type === 'description' && enrichment.description?.summary && enrichment.description?.description) return 'complete';
   if (type === 'image' && enrichment.image?.imageId) return 'complete';
-  if (type === 'entityStory' && enrichment.entityStory?.storyId) return 'complete';
+  if (type === 'entityChronicle' && enrichment.entityChronicle?.chronicleId) return 'complete';
 
   return 'missing';
 }
@@ -318,7 +323,7 @@ export function needsEnrichment(
 
   if (type === 'description') return !(enrichment.description?.summary && enrichment.description?.description);
   if (type === 'image') return !enrichment.image?.imageId;
-  if (type === 'entityStory') return !enrichment.entityStory?.storyId;
+  if (type === 'entityChronicle') return !enrichment.entityChronicle?.chronicleId;
 
   return true;
 }
@@ -340,12 +345,14 @@ export function applyEnrichmentResult(
         summary: result.summary,
         description: result.description,
         aliases: result.aliases || [],
+        visualTraits: result.visualTraits || [],
         generatedAt: result.generatedAt,
         model: result.model,
         estimatedCost: result.estimatedCost,
         actualCost: result.actualCost,
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
+        debug: result.debug,
       },
     };
   }
@@ -366,11 +373,11 @@ export function applyEnrichmentResult(
     };
   }
 
-  if (type === 'entityStory' && result.storyId) {
+  if (type === 'entityChronicle' && result.chronicleId) {
     return {
       ...existing,
-      entityStory: {
-        storyId: result.storyId,
+      entityChronicle: {
+        chronicleId: result.chronicleId,
         generatedAt: result.generatedAt,
         model: result.model,
         estimatedCost: result.estimatedCost,

@@ -9,22 +9,18 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ChronicleReviewPanel from './ChronicleReviewPanel';
 import EventsPanel from './EventsPanel';
 import { ChronicleWizard } from './ChronicleWizard';
-import {
-  buildEntityStoryContext,
-  buildChronicleContext,
-} from '../lib/chronicleContextBuilder';
+import { buildChronicleContext } from '../lib/chronicleContextBuilder';
 import { useChronicleGeneration, deriveStatus } from '../hooks/useChronicleGeneration';
 import { buildChronicleImagePrompt } from '../lib/promptTemplates';
 import { resolveStyleSelection } from './StyleSelector';
 import {
-  updateStoryImageRef,
-  generateStoryId,
+  updateChronicleImageRef,
+  generateChronicleId,
   deriveTitleFromRoles,
-  deriveFocusType,
   createChronicleShell,
 } from '../lib/chronicleStorage';
 
-const REFINEMENT_STEPS = new Set(['summary', 'image_refs', 'prose_blend']);
+const REFINEMENT_STEPS = new Set(['summary', 'image_refs']);
 
 // Content type definitions
 const CONTENT_TYPES = [
@@ -221,10 +217,6 @@ export default function ChroniclePanel({
     const saved = localStorage.getItem('illuminator:chronicle:selectedItemId');
     return saved || null;
   });
-  const [selectedNarrativeStyleId, setSelectedNarrativeStyleId] = useState(() => {
-    const saved = localStorage.getItem('illuminator:chronicle:narrativeStyleId');
-    return saved || 'epic-drama';
-  });
 
   // Persist state changes to localStorage
   useEffect(() => {
@@ -239,41 +231,32 @@ export default function ChroniclePanel({
     }
   }, [selectedItemId]);
 
-  useEffect(() => {
-    localStorage.setItem('illuminator:chronicle:narrativeStyleId', selectedNarrativeStyleId);
-  }, [selectedNarrativeStyleId]);
-
   // State for restart confirmation modal
   const [showRestartModal, setShowRestartModal] = useState(false);
-  const [pendingRestartEntityId, setPendingRestartEntityId] = useState(null);
+  const [pendingRestartChronicleId, setPendingRestartChronicleId] = useState(null);
 
   // State for wizard modal
   const [showWizard, setShowWizard] = useState(false);
+  // Seed for restarting with previous settings
+  const [wizardSeed, setWizardSeed] = useState(null);
 
   // Style library loading state (derived from prop)
   const stylesLoading = !styleLibrary;
 
   // Use the chronicle generation hook
-  // Returns chronicle records Map<entityId, StoryRecord> loaded from IndexedDB
+  // Returns chronicle records Map<chronicleId, ChronicleRecord> loaded from IndexedDB
   const {
-    stories,
+    chronicles,
     generateV2,
     correctSuggestions,
     generateSummary,
     generateImageRefs,
-    blendProse,
-    revalidateStory,
-    acceptStory,
-    restartStory,
+    revalidateChronicle,
+    acceptChronicle,
+    restartChronicle,
     isGenerating,
     refresh,
   } = useChronicleGeneration(projectId, simulationRunId, queue, onEnqueue);
-
-  // Get the selected narrative style
-  const selectedNarrativeStyle = useMemo(() => {
-    if (stylesLoading || !styleLibrary?.narrativeStyles) return null;
-    return styleLibrary.narrativeStyles.find((s) => s.id === selectedNarrativeStyleId);
-  }, [styleLibrary, selectedNarrativeStyleId, stylesLoading]);
 
   // Build entity map for lookups
   const entityMap = useMemo(() => {
@@ -287,11 +270,11 @@ export default function ChroniclePanel({
   }, [worldData]);
 
   // Helper to get status considering both IndexedDB and queue state
-  const getEffectiveStatus = useCallback((entityId, story) => {
-    // First check queue for running/queued tasks for this entity
+  const getEffectiveStatus = useCallback((chronicleId, chronicle) => {
+    // First check queue for running/queued tasks for this chronicle
     const queueTask = queue.find(
-      (item) => item.type === 'entityStory' &&
-        item.entityId === entityId &&
+      (item) => item.type === 'entityChronicle' &&
+        item.chronicleId === chronicleId &&
         !REFINEMENT_STEPS.has(item.chronicleStep || '')
     );
 
@@ -302,7 +285,7 @@ export default function ChroniclePanel({
           case 'validate': return 'validating';
           case 'edit': return 'editing';
           case 'generate_v2': return 'generating';
-          default: return deriveStatus(story);
+          default: return deriveStatus(chronicle);
         }
       }
       if (queueTask.status === 'queued') {
@@ -310,21 +293,21 @@ export default function ChroniclePanel({
           case 'edit': return 'editing';
           case 'validate': return 'validating';
           case 'generate_v2': return 'generating';
-          default: return deriveStatus(story);
+          default: return deriveStatus(chronicle);
         }
       }
     }
 
     // Fall back to IndexedDB-derived status
-    return deriveStatus(story);
+    return deriveStatus(chronicle);
   }, [queue]);
 
-  // Build list of chronicle items from stories (chronicle-first architecture)
+  // Build list of chronicle items from storage (chronicle-first architecture)
   const chronicleItems = useMemo(() => {
     const items = [];
 
     // Get all chronicles from storage
-    const allChronicles = Array.from(stories.values());
+    const allChronicles = Array.from(chronicles.values());
 
     // All chronicles shown in the chronicles tab
     const filteredChronicles = activeType === 'chronicles' ? allChronicles : [];
@@ -332,80 +315,86 @@ export default function ChroniclePanel({
     // Sort by most recent first
     filteredChronicles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-    for (const story of filteredChronicles) {
+    for (const chronicle of filteredChronicles) {
       // Derive display name from title or role assignments
-      const displayName = story.title ||
-        (story.roleAssignments?.length > 0
-          ? story.roleAssignments.filter(r => r.isPrimary).map(r => r.entityName).join(' & ') ||
-            story.roleAssignments[0]?.entityName
-          : story.entityName) ||
+      const displayName = chronicle.title ||
+        (chronicle.roleAssignments?.length > 0
+          ? chronicle.roleAssignments.filter(r => r.isPrimary).map(r => r.entityName).join(' & ') ||
+            chronicle.roleAssignments[0]?.entityName
+          : '') ||
         'Untitled Chronicle';
 
       // Count primary and supporting roles
-      const primaryCount = story.roleAssignments?.filter(r => r.isPrimary).length || 0;
-      const supportingCount = (story.roleAssignments?.length || 0) - primaryCount;
+      const primaryCount = chronicle.roleAssignments?.filter(r => r.isPrimary).length || 0;
+      const supportingCount = (chronicle.roleAssignments?.length || 0) - primaryCount;
 
       items.push({
-        id: story.storyId,
+        id: chronicle.chronicleId,
         type: 'chronicles',
-        targetId: story.entrypointId || story.entityId,
-        storyId: story.storyId,
+        chronicleId: chronicle.chronicleId,
+        entrypointId: chronicle.entrypointId,
         name: displayName,
-        status: getEffectiveStatus(story.entrypointId || story.entityId, story),
+        status: getEffectiveStatus(chronicle.chronicleId, chronicle),
 
         // Chronicle-first metadata
-        title: story.title,
-        focusType: story.focusType,
-        roleAssignments: story.roleAssignments,
-        narrativeStyleId: story.narrativeStyleId,
+        title: chronicle.title,
+        format: chronicle.format,
+        focusType: chronicle.focusType,
+        roleAssignments: chronicle.roleAssignments,
+        narrativeStyleId: chronicle.narrativeStyleId,
         primaryCount,
         supportingCount,
+        selectedEntityIds: chronicle.selectedEntityIds,
+        selectedEventIds: chronicle.selectedEventIds,
+        selectedRelationshipIds: chronicle.selectedRelationshipIds,
 
         // Pipeline data
-        plan: story.plan,
-        sectionsCompleted: story.sectionsCompleted,
-        sectionsTotal: story.sectionsTotal,
-        assembledContent: story.assembledContent,
-        cohesionReport: story.cohesionReport,
-        finalContent: story.finalContent,
-        failureStep: story.failureStep,
-        failureReason: story.failureReason,
-        editVersion: story.editVersion ?? 0,
-        pipelineVersion: story.pipelineVersion,
+        assembledContent: chronicle.assembledContent,
+        cohesionReport: chronicle.cohesionReport,
+        finalContent: chronicle.finalContent,
+        failureStep: chronicle.failureStep,
+        failureReason: chronicle.failureReason,
+        editVersion: chronicle.editVersion ?? 0,
 
         // V2-specific
-        selectionSummary: story.selectionSummary,
+        selectionSummary: chronicle.selectionSummary,
 
         // Refinement fields
-        summary: story.summary,
-        summaryGeneratedAt: story.summaryGeneratedAt,
-        summaryModel: story.summaryModel,
-        imageRefs: story.imageRefs,
-        imageRefsGeneratedAt: story.imageRefsGeneratedAt,
-        imageRefsModel: story.imageRefsModel,
-        proseBlendGeneratedAt: story.proseBlendGeneratedAt,
-        proseBlendModel: story.proseBlendModel,
-        validationStale: story.validationStale,
+        summary: chronicle.summary,
+        summaryGeneratedAt: chronicle.summaryGeneratedAt,
+        summaryModel: chronicle.summaryModel,
+        imageRefs: chronicle.imageRefs,
+        imageRefsGeneratedAt: chronicle.imageRefsGeneratedAt,
+        imageRefsModel: chronicle.imageRefsModel,
+        validationStale: chronicle.validationStale,
 
         // Timestamps
-        createdAt: story.createdAt,
-        updatedAt: story.updatedAt,
+        createdAt: chronicle.createdAt,
+        updatedAt: chronicle.updatedAt,
+        model: chronicle.model,
       });
     }
 
     return items;
-  }, [activeType, stories, getEffectiveStatus]);
+  }, [activeType, chronicles, getEffectiveStatus]);
 
   // Get selected item
   const selectedItem = useMemo(() => {
     return chronicleItems.find((item) => item.id === selectedItemId);
   }, [chronicleItems, selectedItemId]);
 
+  // Get the narrative style from the selected chronicle's stored seed data
+  const selectedNarrativeStyle = useMemo(() => {
+    if (!selectedItem?.narrativeStyleId) return null;
+    if (stylesLoading || !styleLibrary?.narrativeStyles) return null;
+    return styleLibrary.narrativeStyles.find((s) => s.id === selectedItem.narrativeStyleId);
+  }, [selectedItem?.narrativeStyleId, styleLibrary, stylesLoading]);
+
   const refinementState = useMemo(() => {
     if (!selectedItem) return null;
     const isRunning = (step) => queue.some(
-      (item) => item.type === 'entityStory' &&
-        item.entityId === selectedItem.targetId &&
+      (item) => item.type === 'entityChronicle' &&
+        item.chronicleId === selectedItem.chronicleId &&
         item.chronicleStep === step &&
         (item.status === 'queued' || item.status === 'running')
     );
@@ -420,11 +409,6 @@ export default function ChroniclePanel({
         generatedAt: selectedItem.imageRefsGeneratedAt,
         model: selectedItem.imageRefsModel,
         running: isRunning('image_refs'),
-      },
-      proseBlend: {
-        generatedAt: selectedItem.proseBlendGeneratedAt,
-        model: selectedItem.proseBlendModel,
-        running: isRunning('prose_blend'),
       },
     };
   }, [selectedItem, queue]);
@@ -449,9 +433,18 @@ export default function ChroniclePanel({
         tone: worldContext?.tone || '',
       };
 
-      // Chronicles use the entity story context builder
+      // Chronicles use the chronicle-first context builder
       if (selectedItem.type === 'chronicles') {
-        return buildEntityStoryContext(selectedItem.targetId, worldData, wc);
+        return buildChronicleContext(
+          {
+            roleAssignments: selectedItem.roleAssignments || [],
+            selectedEventIds: selectedItem.selectedEventIds || [],
+            selectedRelationshipIds: selectedItem.selectedRelationshipIds || [],
+            entrypointId: selectedItem.entrypointId,
+          },
+          worldData,
+          wc
+        );
       }
     } catch (e) {
       console.error('Failed to build generation context:', e);
@@ -459,74 +452,79 @@ export default function ChroniclePanel({
     return null;
   }, [selectedItem, worldData, worldContext]);
 
-  // Handle chronicle generation (single-shot)
-  const handleGenerateChronicle = useCallback(() => {
-    if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    generateV2(selectedItem.id, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, generateV2, selectedNarrativeStyle]);
-
   // Handle accept chronicle - saves to IndexedDB (no entity enrichment copy needed)
   const handleAcceptChronicle = useCallback(async () => {
     if (!selectedItem || !entities || entities.length === 0) return;
-    await acceptStory(selectedItem.storyId, entities);
-  }, [selectedItem, entities, acceptStory]);
+    await acceptChronicle(selectedItem.chronicleId, entities);
+  }, [selectedItem, entities, acceptChronicle]);
 
   const handleCorrectSuggestions = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     if (!selectedNarrativeStyle) return;
-    correctSuggestions(selectedItem.storyId, generationContext, selectedNarrativeStyle);
+    correctSuggestions(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
   }, [selectedItem, generationContext, selectedNarrativeStyle, correctSuggestions]);
 
   const handleGenerateSummary = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     if (!selectedNarrativeStyle) return;
-    generateSummary(selectedItem.storyId, generationContext, selectedNarrativeStyle);
+    generateSummary(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
   }, [selectedItem, generationContext, selectedNarrativeStyle, generateSummary]);
 
   const handleGenerateImageRefs = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     if (!selectedNarrativeStyle) return;
-    generateImageRefs(selectedItem.storyId, generationContext, selectedNarrativeStyle);
+    generateImageRefs(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
   }, [selectedItem, generationContext, selectedNarrativeStyle, generateImageRefs]);
-
-  const handleBlendProse = useCallback(() => {
-    if (!selectedItem || !generationContext) return;
-    if (!selectedNarrativeStyle) return;
-    blendProse(selectedItem.storyId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, blendProse]);
 
   const handleRevalidate = useCallback(() => {
     if (!selectedItem || !generationContext) return;
     if (!selectedNarrativeStyle) return;
-    revalidateStory(selectedItem.storyId, generationContext, selectedNarrativeStyle);
-  }, [selectedItem, generationContext, selectedNarrativeStyle, revalidateStory]);
+    revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
+  }, [selectedItem, generationContext, selectedNarrativeStyle, revalidateChronicle]);
 
   // Handle regenerate (delete and go back to start screen) - uses restart modal
   const handleRegenerate = useCallback(() => {
     if (!selectedItem) return;
-    // Use the same restart modal - use storyId for chronicle-first
-    setPendingRestartEntityId(selectedItem.storyId);
+    // Use the same restart modal - use chronicleId for chronicle-first
+    setPendingRestartChronicleId(selectedItem.chronicleId);
     setShowRestartModal(true);
   }, [selectedItem]);
 
   // Handle restart with confirmation modal (for completed chronicles)
-  const handleRestartClick = useCallback((storyId) => {
-    setPendingRestartEntityId(storyId);
+  const handleRestartClick = useCallback((chronicleId) => {
+    setPendingRestartChronicleId(chronicleId);
     setShowRestartModal(true);
   }, []);
 
   const handleRestartConfirm = useCallback(async () => {
-    if (pendingRestartEntityId) {
-      await restartStory(pendingRestartEntityId);
+    if (pendingRestartChronicleId) {
+      // Get the chronicle record to extract seed before deleting
+      const chronicle = chronicles.get(pendingRestartChronicleId);
+      if (chronicle) {
+        // Extract seed from the chronicle record
+        const seed = {
+          narrativeStyleId: chronicle.narrativeStyleId,
+          entrypointId: chronicle.entrypointId,
+          roleAssignments: chronicle.roleAssignments || [],
+          selectedEventIds: chronicle.selectedEventIds || [],
+          selectedRelationshipIds: chronicle.selectedRelationshipIds || [],
+        };
+        setWizardSeed(seed);
+      }
+
+      // Delete the chronicle
+      await restartChronicle(pendingRestartChronicleId);
+
+      // Open wizard with seed
+      setShowWizard(true);
     }
     setShowRestartModal(false);
-    setPendingRestartEntityId(null);
-  }, [pendingRestartEntityId, restartStory]);
+    setPendingRestartChronicleId(null);
+  }, [pendingRestartChronicleId, restartChronicle, chronicles]);
 
   const handleRestartCancel = useCallback(() => {
     setShowRestartModal(false);
-    setPendingRestartEntityId(null);
+    setPendingRestartChronicleId(null);
   }, []);
 
   // Prepare wizard data
@@ -605,8 +603,8 @@ export default function ChroniclePanel({
       return;
     }
 
-    // Generate unique story ID (chronicle-first: ID is independent of entities)
-    const storyId = generateStoryId();
+    // Generate unique chronicle ID (chronicle-first: ID is independent of entities)
+    const chronicleId = generateChronicleId();
 
     // Build chronicle selections (chronicle-first format)
     const selections = {
@@ -632,8 +630,9 @@ export default function ChroniclePanel({
 
     // Chronicle metadata for storage (passed to generation functions)
     const chronicleMetadata = {
-      storyId,
+      chronicleId,
       title,
+      format: narrativeStyle.format,
       roleAssignments: wizardConfig.roleAssignments,
       narrativeStyleId: wizardConfig.narrativeStyleId,
       selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
@@ -643,7 +642,7 @@ export default function ChroniclePanel({
     };
 
     console.log('[Chronicle Wizard] Generated chronicle:', {
-      storyId,
+      chronicleId,
       title,
       roleCount: wizardConfig.roleAssignments.length,
       events: wizardConfig.selectedEventIds.length,
@@ -653,11 +652,12 @@ export default function ChroniclePanel({
     // Create shell record in IndexedDB BEFORE generation
     // This provides immediate UI feedback while generation is in progress
     try {
-      await createChronicleShell(storyId, {
+      await createChronicleShell(chronicleId, {
         projectId: simulationRunId ? simulationRunId.split('_')[0] : 'unknown',
         simulationRunId: simulationRunId || 'unknown',
         model: 'pending', // Will be updated by worker
         title,
+        format: narrativeStyle.format,
         narrativeStyleId: wizardConfig.narrativeStyleId,
         roleAssignments: wizardConfig.roleAssignments,
         selectedEntityIds: wizardConfig.roleAssignments.map(r => r.entityId),
@@ -672,10 +672,10 @@ export default function ChroniclePanel({
     }
 
     // Generate the chronicle
-    generateV2(storyId, context, narrativeStyle, chronicleMetadata);
+    generateV2(chronicleId, context, narrativeStyle, chronicleMetadata);
 
-    // Select the newly generated chronicle by its storyId
-    setSelectedItemId(storyId);
+    // Select the newly generated chronicle by its chronicleId
+    setSelectedItemId(chronicleId);
     setActiveType('chronicles');
 
     // Close the wizard
@@ -685,15 +685,15 @@ export default function ChroniclePanel({
   // Handle generating a chronicle image
   const handleGenerateChronicleImage = useCallback(
     (ref, prompt, _styleInfo) => {
-      if (!selectedItem?.storyId) return;
+      if (!selectedItem?.chronicleId) return;
       if (!entities?.length) return;
 
       // Get the entrypoint entity to use as the "entity" for the queue item
-      const entrypointEntity = entities.find((e) => e.id === selectedItem.targetId);
+      const entrypointEntity = entities.find((e) => e.id === selectedItem.entrypointId);
       if (!entrypointEntity) return;
 
       // First, update the image ref status to 'generating'
-      updateStoryImageRef(selectedItem.storyId, ref.refId, {
+      updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
         status: 'generating',
       }).then(() => refresh());
 
@@ -704,7 +704,7 @@ export default function ChroniclePanel({
           type: 'image',
           prompt,
           // Chronicle image specific fields
-          storyId: selectedItem.storyId,
+          chronicleId: selectedItem.chronicleId,
           imageRefId: ref.refId,
           sceneDescription: ref.sceneDescription,
           imageType: 'chronicle',
@@ -714,7 +714,7 @@ export default function ChroniclePanel({
     [selectedItem, entities, onEnqueue, refresh]
   );
 
-  // Track completed chronicle image tasks and update story records
+  // Track completed chronicle image tasks and update chronicle records
   const processedChronicleImageTasksRef = useRef(new Set());
   useEffect(() => {
     for (const task of queue) {
@@ -723,7 +723,7 @@ export default function ChroniclePanel({
         task.type === 'image' &&
         task.imageType === 'chronicle' &&
         task.status === 'complete' &&
-        task.storyId &&
+        task.chronicleId &&
         task.imageRefId &&
         task.result?.imageId &&
         !processedChronicleImageTasksRef.current.has(task.id)
@@ -731,8 +731,8 @@ export default function ChroniclePanel({
         // Mark as processed to avoid duplicate updates
         processedChronicleImageTasksRef.current.add(task.id);
 
-        // Update the story's image ref with the generated image ID
-        updateStoryImageRef(task.storyId, task.imageRefId, {
+        // Update the chronicle's image ref with the generated image ID
+        updateChronicleImageRef(task.chronicleId, task.imageRefId, {
           status: 'complete',
           generatedImageId: task.result.imageId,
         }).then(() => refresh());
@@ -743,13 +743,13 @@ export default function ChroniclePanel({
         task.type === 'image' &&
         task.imageType === 'chronicle' &&
         task.status === 'error' &&
-        task.storyId &&
+        task.chronicleId &&
         task.imageRefId &&
         !processedChronicleImageTasksRef.current.has(task.id)
       ) {
         processedChronicleImageTasksRef.current.add(task.id);
 
-        updateStoryImageRef(task.storyId, task.imageRefId, {
+        updateChronicleImageRef(task.chronicleId, task.imageRefId, {
           status: 'failed',
           error: task.error || 'Image generation failed',
         }).then(() => refresh());
@@ -911,156 +911,27 @@ export default function ChroniclePanel({
           ) : (
             <>
               {/* Pipeline stage content */}
+              {/* Not started = generation failed before producing content */}
               {selectedItem.status === 'not_started' && (
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        padding: '48px',
-                        background: 'var(--bg-secondary)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                      }}
-                    >
-                      <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>
-                        Ready to Generate
-                      </h3>
-                      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-                        Generate a narrative in a single LLM call.
-                      </p>
-
-                      {/* Narrative Style Selector */}
-                      <div style={{ marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px auto' }}>
-                        <label
-                          style={{
-                            display: 'block',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            marginBottom: '8px',
-                            textAlign: 'left',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          Narrative Style
-                        </label>
-                        <select
-                          value={selectedNarrativeStyleId}
-                          onChange={(e) => setSelectedNarrativeStyleId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            fontSize: '14px',
-                            background: 'var(--bg-primary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '6px',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {styleLibrary?.narrativeStyles?.map((style) => (
-                            <option key={style.id} value={style.id}>
-                              {style.name}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedNarrativeStyle && (
-                          <div
-                            style={{
-                              marginTop: '8px',
-                              padding: '12px',
-                              background: 'var(--bg-tertiary)',
-                              borderRadius: '6px',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                              {selectedNarrativeStyle.description}
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {/* Format badge */}
-                              <span
-                                style={{
-                                  fontSize: '10px',
-                                  padding: '2px 6px',
-                                  background: selectedNarrativeStyle.format === 'document' ? '#059669' : 'var(--accent-primary)',
-                                  color: 'white',
-                                  borderRadius: '4px',
-                                }}
-                              >
-                                {selectedNarrativeStyle.format === 'document'
-                                  ? selectedNarrativeStyle.documentConfig?.documentType || 'document'
-                                  : selectedNarrativeStyle.plotStructure?.type || 'narrative'}
-                              </span>
-                              {/* Word count badge */}
-                              <span
-                                style={{
-                                  fontSize: '10px',
-                                  padding: '2px 6px',
-                                  background: 'var(--bg-secondary)',
-                                  borderRadius: '4px',
-                                  color: 'var(--text-muted)',
-                                }}
-                              >
-                                {selectedNarrativeStyle.format === 'document'
-                                  ? `${selectedNarrativeStyle.documentConfig?.wordCount?.min || 500}-${selectedNarrativeStyle.documentConfig?.wordCount?.max || 1500} words`
-                                  : `${selectedNarrativeStyle.pacing?.totalWordCount?.min || 1000}-${selectedNarrativeStyle.pacing?.totalWordCount?.max || 2000} words`}
-                              </span>
-                              {/* Scenes/sections badge */}
-                              <span
-                                style={{
-                                  fontSize: '10px',
-                                  padding: '2px 6px',
-                                  background: 'var(--bg-secondary)',
-                                  borderRadius: '4px',
-                                  color: 'var(--text-muted)',
-                                }}
-                              >
-                                {selectedNarrativeStyle.format === 'document'
-                                  ? `${selectedNarrativeStyle.documentConfig?.sections?.length || 0} sections`
-                                  : `${selectedNarrativeStyle.pacing?.sceneCount?.min || 3}-${selectedNarrativeStyle.pacing?.sceneCount?.max || 5} sections`}
-                              </span>
-                            </div>
-                            {selectedNarrativeStyle.tags && selectedNarrativeStyle.tags.length > 0 && (
-                              <div style={{ marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                {selectedNarrativeStyle.tags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    style={{
-                                      fontSize: '10px',
-                                      padding: '2px 6px',
-                                      background: 'rgba(99, 102, 241, 0.2)',
-                                      borderRadius: '4px',
-                                      color: 'var(--text-muted)',
-                                    }}
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={handleGenerateChronicle}
-                        disabled={stylesLoading || !selectedNarrativeStyle}
-                        className="illuminator-button illuminator-button-primary"
-                        style={{
-                          padding: '12px 24px',
-                          fontSize: '14px',
-                          opacity: !stylesLoading && selectedNarrativeStyle ? 1 : 0.5,
-                        }}
-                      >
-                        Generate Chronicle
-                      </button>
-                    </div>
-                  )}
+                <div style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', color: '#ef4444' }}>Generation Failed</h3>
+                  <p style={{ margin: '0 0 16px 0', color: 'var(--text-secondary)' }}>
+                    {selectedItem.failureReason || 'Chronicle generation failed before producing content.'}
+                  </p>
+                  <button
+                    onClick={handleRegenerate}
+                    className="illuminator-button illuminator-button-primary"
+                    style={{ padding: '10px 18px', fontSize: '13px' }}
+                  >
+                    Delete &amp; Restart
+                  </button>
+                </div>
+              )}
 
               {/* In-progress states - show spinner */}
               {(selectedItem.status === 'validating' ||
                 selectedItem.status === 'editing' ||
-                selectedItem.status === 'generating_v2') && (
+                selectedItem.status === 'generating') && (
                 <div style={{ textAlign: 'center', padding: '48px' }}>
                   <div
                     style={{
@@ -1076,7 +947,7 @@ export default function ChroniclePanel({
                   <h3 style={{ margin: '0 0 8px 0' }}>
                     {selectedItem.status === 'validating' && 'Validating Cohesion...'}
                     {selectedItem.status === 'editing' && 'Applying Suggestions...'}
-                    {selectedItem.status === 'generating_v2' && 'Generating Chronicle...'}
+                    {selectedItem.status === 'generating' && 'Generating Chronicle...'}
                   </h3>
                   <div style={{ color: 'var(--text-muted)' }}>
                     <p>Generation in progress. This typically takes 30-60 seconds.</p>
@@ -1108,12 +979,12 @@ export default function ChroniclePanel({
                   item={selectedItem}
                   onContinueToValidation={() => {
                     if (generationContext && selectedNarrativeStyle) {
-                      revalidateStory(selectedItem.storyId, generationContext, selectedNarrativeStyle);
+                      revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
                     }
                   }}
                   onValidate={() => {
                     if (generationContext && selectedNarrativeStyle) {
-                      revalidateStory(selectedItem.storyId, generationContext, selectedNarrativeStyle);
+                      revalidateChronicle(selectedItem.chronicleId, generationContext, selectedNarrativeStyle);
                     }
                   }}
                   onAddImages={handleGenerateImageRefs}
@@ -1122,12 +993,11 @@ export default function ChroniclePanel({
                   onCorrectSuggestions={handleCorrectSuggestions}
                   onGenerateSummary={handleGenerateSummary}
                   onGenerateImageRefs={handleGenerateImageRefs}
-                  onBlendProse={handleBlendProse}
                   onRevalidate={handleRevalidate}
                   onGenerateChronicleImage={handleGenerateChronicleImage}
                   isGenerating={isGenerating}
                   refinements={refinementState}
-                  entities={entityMap}
+                  entities={entities}
                   styleLibrary={styleLibrary}
                   cultures={worldData?.schema?.cultures}
                   promptTemplates={promptTemplates}
@@ -1171,8 +1041,8 @@ export default function ChroniclePanel({
           >
             <h3 style={{ margin: '0 0 12px 0', fontSize: '18px' }}>Restart Chronicle?</h3>
             <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-              This will permanently delete the generated chronicle content and start over from the beginning.
-              This action cannot be undone.
+              This will delete the current chronicle and open the wizard with the same settings.
+              You can modify the settings before regenerating.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
@@ -1210,12 +1080,17 @@ export default function ChroniclePanel({
       {/* Chronicle Wizard Modal */}
       <ChronicleWizard
         isOpen={showWizard}
-        onClose={() => setShowWizard(false)}
+        onClose={() => {
+          setShowWizard(false);
+          setWizardSeed(null); // Clear seed after close
+        }}
         onGenerate={handleWizardGenerate}
         narrativeStyles={styleLibrary?.narrativeStyles || []}
         entities={wizardEntities}
         relationships={wizardRelationships}
         events={wizardEvents}
+        entityKinds={worldData?.schema?.entityKinds || []}
+        initialSeed={wizardSeed}
       />
 
       <style>{`

@@ -1,16 +1,13 @@
 /**
  * ChronicleReviewPanel - Shared review/refinement UI for chronicles
  *
- * Renders the review screen for both V1 and V2 chronicles.
- *
- * For V2: Shows full review experience immediately after generation
- * For V1: Shows intermediate assembly_ready state, then validation_ready
- *
- * This component is version-agnostic - it works with both pipeline versions.
+ * Renders the review screen for single-shot chronicle generation.
  */
 
+import { useMemo } from 'react';
 import CohesionReportViewer from './CohesionReportViewer';
 import ChronicleImagePanel from './ChronicleImagePanel';
+import { ExpandableSeedSection } from './ChronicleSeedViewer';
 
 // ============================================================================
 // Assembled Content Viewer
@@ -80,11 +77,10 @@ function RefinementOptionsPanel({
   onValidate,
   onGenerateSummary,
   onGenerateImageRefs,
-  onBlendProse,
   onGenerateChronicleImage,
   isGenerating,
   refinements,
-  entities,
+  entityMap,
   styleLibrary,
   cultures,
   promptTemplates,
@@ -93,7 +89,6 @@ function RefinementOptionsPanel({
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
   const summaryState = refinements?.summary || {};
   const imageRefsState = refinements?.imageRefs || {};
-  const proseBlendState = refinements?.proseBlend || {};
 
   return (
     <div
@@ -143,52 +138,6 @@ function RefinementOptionsPanel({
             </button>
           </div>
         )}
-
-        {/* Prose Blending */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 500 }}>Prose Blending</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Rewrite into a more cohesive, freeform narrative.
-            </div>
-            {proseBlendState.generatedAt && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Done - {formatTimestamp(proseBlendState.generatedAt)}
-                {proseBlendState.model ? ` - ${proseBlendState.model}` : ''}
-              </div>
-            )}
-            {!proseBlendState.generatedAt && !proseBlendState.running && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Not run yet
-              </div>
-            )}
-            {proseBlendState.running && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Running...
-              </div>
-            )}
-          </div>
-          {onBlendProse && (
-            <button
-              onClick={onBlendProse}
-              disabled={isGenerating || proseBlendState.running}
-              style={{
-                padding: '8px 14px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '6px',
-                color: 'var(--text-secondary)',
-                cursor: isGenerating || proseBlendState.running ? 'not-allowed' : 'pointer',
-                opacity: isGenerating || proseBlendState.running ? 0.6 : 1,
-                fontSize: '12px',
-                height: '32px',
-                alignSelf: 'center',
-              }}
-            >
-              {proseBlendState.generatedAt ? 'Re-run' : 'Run'}
-            </button>
-          )}
-        </div>
 
         {/* Summary */}
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
@@ -283,11 +232,11 @@ function RefinementOptionsPanel({
         </div>
 
         {/* Image Panel when refs are available */}
-        {item.imageRefs && entities && (
+        {item.imageRefs && entityMap && (
           <div style={{ marginTop: '4px' }}>
             <ChronicleImagePanel
               imageRefs={item.imageRefs}
-              entities={entities}
+              entities={entityMap}
               onGenerateImage={onGenerateChronicleImage}
               isGenerating={isGenerating}
               styleLibrary={styleLibrary}
@@ -308,7 +257,7 @@ function RefinementOptionsPanel({
 // ============================================================================
 
 export default function ChronicleReviewPanel({
-  // Story data
+  // Chronicle data
   item,
 
   // Actions
@@ -320,7 +269,6 @@ export default function ChronicleReviewPanel({
   onCorrectSuggestions,
   onGenerateSummary,
   onGenerateImageRefs,
-  onBlendProse,
   onRevalidate,
   onGenerateChronicleImage,
 
@@ -335,18 +283,34 @@ export default function ChronicleReviewPanel({
   promptTemplates,
   worldContext,
 }) {
+  // Build entity map for ChronicleImagePanel (expects Map, not array)
+  const entityMap = useMemo(() => {
+    if (!entities) return new Map();
+    return new Map(entities.map((e) => [e.id, e]));
+  }, [entities]);
+
   if (!item) return null;
 
   const wordCount = (content) => content?.split(/\s+/).filter(Boolean).length || 0;
   const copyToClipboard = (content) => navigator.clipboard.writeText(content);
 
-  // Determine if this is V2
-  const isV2 = item.pipelineVersion === 'v2';
+  // Build seed data from item for display
+  const seedData = {
+    narrativeStyleId: item.narrativeStyleId || '',
+    narrativeStyleName: styleLibrary?.narrativeStyles?.find(s => s.id === item.narrativeStyleId)?.name,
+    entrypointId: item.entrypointId,
+    entrypointName: item.entrypointId
+      ? entities?.find(e => e.id === item.entrypointId)?.name
+      : undefined,
+    roleAssignments: item.roleAssignments || [],
+    selectedEventIds: item.selectedEventIds || [],
+    selectedRelationshipIds: item.selectedRelationshipIds || [],
+  };
 
   // -------------------------------------------------------------------------
-  // V2 Assembly Ready - Full review experience immediately
+  // Assembly Ready - Full review experience
   // -------------------------------------------------------------------------
-  if (isV2 && item.status === 'assembly_ready' && item.assembledContent) {
+  if (item.status === 'assembly_ready' && item.assembledContent) {
     return (
       <div style={{ maxWidth: '900px' }}>
         {/* Header with primary actions */}
@@ -416,16 +380,18 @@ export default function ChronicleReviewPanel({
           onValidate={onValidate}
           onGenerateSummary={onGenerateSummary}
           onGenerateImageRefs={onGenerateImageRefs}
-          onBlendProse={onBlendProse}
           onGenerateChronicleImage={onGenerateChronicleImage}
           isGenerating={isGenerating}
           refinements={refinements}
-          entities={entities}
+          entityMap={entityMap}
           styleLibrary={styleLibrary}
           cultures={cultures}
           promptTemplates={promptTemplates}
           worldContext={worldContext}
         />
+
+        {/* Generation Context (expandable) */}
+        <ExpandableSeedSection seed={seedData} defaultExpanded={false} />
 
         {/* Content Preview */}
         <div>
@@ -441,33 +407,7 @@ export default function ChronicleReviewPanel({
   }
 
   // -------------------------------------------------------------------------
-  // V1 Assembly Ready - Continue to Validation flow
-  // -------------------------------------------------------------------------
-  if (!isV2 && item.status === 'assembly_ready' && item.assembledContent) {
-    return (
-      <div>
-        <h3 style={{ margin: '0 0 16px 0' }}>Content Assembled - Ready for Validation</h3>
-        <AssembledContentViewer
-          content={item.assembledContent}
-          wordCount={wordCount(item.assembledContent)}
-          onCopy={() => copyToClipboard(item.assembledContent)}
-        />
-        <div style={{ marginTop: '24px', textAlign: 'center' }}>
-          <button
-            onClick={onContinueToValidation}
-            disabled={isGenerating}
-            className="illuminator-button illuminator-button-primary"
-            style={{ padding: '12px 24px', fontSize: '14px' }}
-          >
-            Continue to Validation
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // -------------------------------------------------------------------------
-  // Validation Ready State (both V1 and V2)
+  // Validation Ready State
   // -------------------------------------------------------------------------
   if (item.status === 'validation_ready') {
     return (
@@ -475,26 +415,25 @@ export default function ChronicleReviewPanel({
         {item.cohesionReport && (
           <CohesionReportViewer
             report={item.cohesionReport}
-            plan={item.plan}
+            seedData={seedData}
             onAccept={onAccept}
             onRegenerate={onRegenerate}
             onCorrectSuggestions={onCorrectSuggestions}
             onGenerateSummary={onGenerateSummary}
             onGenerateImageRefs={onGenerateImageRefs}
-            onBlendProse={onBlendProse}
             onRevalidate={onRevalidate}
             refinements={refinements}
             isValidationStale={Boolean(item.validationStale)}
             editVersion={item.editVersion}
             isGenerating={isGenerating}
             imageRefs={item.imageRefs}
-            entities={entities}
+            entityMap={entityMap}
             onGenerateChronicleImage={onGenerateChronicleImage}
             styleLibrary={styleLibrary}
             cultures={cultures}
             promptTemplates={promptTemplates}
             worldContext={worldContext}
-            chronicleTitle={item.plan?.title || item.name}
+            chronicleTitle={item.title || item.name}
           />
         )}
         {item.assembledContent && (

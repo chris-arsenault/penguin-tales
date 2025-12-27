@@ -187,6 +187,7 @@ export const FRAMEWORK_ENTITY_KIND_DEFINITIONS: EntityKindDefinition[] = [
   {
     kind: FRAMEWORK_ENTITY_KINDS.ERA,
     description: 'Era',
+    category: 'era',
     isFramework: true,
     subtypes: [],
     statuses: [
@@ -200,6 +201,7 @@ export const FRAMEWORK_ENTITY_KIND_DEFINITIONS: EntityKindDefinition[] = [
   {
     kind: FRAMEWORK_ENTITY_KINDS.OCCURRENCE,
     description: 'Occurrence',
+    category: 'event',
     isFramework: true,
     subtypes: [],
     statuses: [

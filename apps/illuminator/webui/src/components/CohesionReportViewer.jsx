@@ -12,6 +12,7 @@
 
 import { useState, useMemo } from 'react';
 import ChronicleImagePanel from './ChronicleImagePanel';
+import { ExpandableSeedSection } from './ChronicleSeedViewer';
 
 const STATUS_STYLES = {
   excellent: { bg: '#10b98120', color: '#10b981', label: 'Excellent' },
@@ -194,20 +195,19 @@ function IssueCard({ issue, sectionTitle }) {
 
 export default function CohesionReportViewer({
   report,
-  plan,
+  seedData = null,
   onAccept,
   onRegenerate,
   onCorrectSuggestions,
   onGenerateSummary,
   onGenerateImageRefs,
-  onBlendProse,
   onRevalidate,
   refinements,
   isValidationStale = false,
   editVersion = 0,
   isGenerating = false,
   imageRefs = null,
-  entities = null,
+  entityMap = null,
   onGenerateChronicleImage = null,
   // Style library integration props
   styleLibrary = null,
@@ -259,12 +259,12 @@ export default function CohesionReportViewer({
 
   const statusStyle = STATUS_STYLES[assessment?.status || 'needs_revision'];
 
-  const sectionIdToName = new Map(plan?.sections?.map((s) => [s.id, s.name]) || []);
+  const sectionIdToName = new Map();
+  const resolveSectionLabel = (sectionId) => sectionIdToName.get(sectionId) || sectionId;
   const hasIssues = report.issues.length > 0;
   const formatTimestamp = (timestamp) => new Date(timestamp).toLocaleString();
   const summaryState = refinements?.summary || {};
   const imageRefsState = refinements?.imageRefs || {};
-  const proseBlendState = refinements?.proseBlend || {};
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -420,53 +420,7 @@ export default function CohesionReportViewer({
           Optional Refinements
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* 1. Prose Blending - should run first as it rewrites content */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>Prose Blending</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Rewrite into a more cohesive, freeform narrative.
-              </div>
-              {proseBlendState.generatedAt && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Done - {formatTimestamp(proseBlendState.generatedAt)}
-                  {proseBlendState.model ? ` - ${proseBlendState.model}` : ''}
-                </div>
-              )}
-              {!proseBlendState.generatedAt && !proseBlendState.running && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Not run yet
-                </div>
-              )}
-              {proseBlendState.running && (
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Running...
-                </div>
-              )}
-            </div>
-            {onBlendProse && (
-              <button
-                onClick={onBlendProse}
-                disabled={isGenerating || proseBlendState.running}
-                style={{
-                  padding: '8px 14px',
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  color: 'var(--text-secondary)',
-                  cursor: isGenerating || proseBlendState.running ? 'not-allowed' : 'pointer',
-                  opacity: isGenerating || proseBlendState.running ? 0.6 : 1,
-                  fontSize: '12px',
-                  height: '32px',
-                  alignSelf: 'center',
-                }}
-              >
-                {proseBlendState.generatedAt ? 'Re-run' : 'Run'}
-              </button>
-            )}
-          </div>
-
-          {/* 2. Summary */}
+          {/* Summary */}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 500 }}>Add Summary</div>
@@ -535,12 +489,6 @@ export default function CohesionReportViewer({
                   Running...
                 </div>
               )}
-              {/* Warning if image refs exist but prose blend is newer */}
-              {imageRefsState.generatedAt && proseBlendState.generatedAt && proseBlendState.generatedAt > imageRefsState.generatedAt && (
-                <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px' }}>
-                  Image refs are stale - regenerate after prose blending
-                </div>
-              )}
             </div>
             {onGenerateImageRefs && (
               <button
@@ -565,11 +513,11 @@ export default function CohesionReportViewer({
           </div>
 
           {/* Show ChronicleImagePanel when imageRefs are available */}
-          {imageRefs && entities && (
+          {imageRefs && entityMap && (
             <div style={{ marginTop: '4px' }}>
               <ChronicleImagePanel
                 imageRefs={imageRefs}
-                entities={entities}
+                entities={entityMap}
                 onGenerateImage={onGenerateChronicleImage}
                 isGenerating={isGenerating}
                 styleLibrary={styleLibrary}
@@ -582,6 +530,9 @@ export default function CohesionReportViewer({
           )}
         </div>
       </div>
+
+      {/* Generation Context (expandable) */}
+      {seedData && <ExpandableSeedSection seed={seedData} defaultExpanded={false} />}
 
       {/* Tabs */}
       <div
@@ -722,7 +673,7 @@ export default function CohesionReportViewer({
             <div key={sg.sectionId} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
                 <CheckItem
-                  label={sectionIdToName.get(sg.sectionId) || sg.sectionId}
+                  label={resolveSectionLabel(sg.sectionId)}
                   check={sg}
                   isSection
                 />
@@ -766,7 +717,7 @@ export default function CohesionReportViewer({
                       <IssueCard
                         key={idx}
                         issue={issue}
-                        sectionTitle={issue.sectionId ? sectionIdToName.get(issue.sectionId) : undefined}
+                        sectionTitle={issue.sectionId ? resolveSectionLabel(issue.sectionId) : undefined}
                       />
                     ))}
                 </div>
@@ -784,7 +735,7 @@ export default function CohesionReportViewer({
                       <IssueCard
                         key={idx}
                         issue={issue}
-                        sectionTitle={issue.sectionId ? sectionIdToName.get(issue.sectionId) : undefined}
+                        sectionTitle={issue.sectionId ? resolveSectionLabel(issue.sectionId) : undefined}
                       />
                     ))}
                 </div>

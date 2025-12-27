@@ -33,6 +33,7 @@ const PROJECT_FILES = [
   'seedEntities',
   'seedRelationships',
   'distributionTargets',
+  'illuminatorConfig',
 ];
 
 /**
@@ -63,9 +64,16 @@ async function fetchDefaultProject() {
     }
 
     // Assemble the project from individual files
+    // illuminatorConfig is handled separately (stored in worldStore, not project)
     let project = { ...manifestResult.data };
+    let illuminatorConfig = null;
     for (const { file, data } of responses) {
-      if (file !== 'manifest' && data !== null) {
+      if (file === 'manifest') continue;
+      if (file === 'illuminatorConfig') {
+        illuminatorConfig = data;
+        continue;
+      }
+      if (data !== null) {
         project[file] = data;
       }
     }
@@ -74,7 +82,7 @@ async function fetchDefaultProject() {
     const now = new Date().toISOString();
     project.createdAt = now;
     project.updatedAt = now;
-    return project;
+    return { project, illuminatorConfig };
   } catch (error) {
     console.warn('Failed to load default project:', error);
     return null;
@@ -232,10 +240,31 @@ export function useProjectStorage() {
 
         // If no projects exist, load the default seed project
         if (list.length === 0) {
-          const defaultProject = await fetchDefaultProject();
-          if (defaultProject) {
-            await saveProject(defaultProject);
+          const defaultData = await fetchDefaultProject();
+          if (defaultData?.project) {
+            await saveProject(defaultData.project);
             list = await listProjects();
+
+            // Store illuminatorConfig in worldStore if present
+            if (defaultData.illuminatorConfig) {
+              const worldStoreData = {
+                slots: {},
+                activeSlotIndex: 0,
+              };
+              if (defaultData.illuminatorConfig.worldContext) {
+                worldStoreData.worldContext = defaultData.illuminatorConfig.worldContext;
+              }
+              if (defaultData.illuminatorConfig.promptTemplates) {
+                worldStoreData.promptTemplates = defaultData.illuminatorConfig.promptTemplates;
+              }
+              if (defaultData.illuminatorConfig.enrichmentConfig) {
+                worldStoreData.enrichmentConfig = defaultData.illuminatorConfig.enrichmentConfig;
+              }
+              if (defaultData.illuminatorConfig.styleSelection) {
+                worldStoreData.styleSelection = defaultData.illuminatorConfig.styleSelection;
+              }
+              await saveWorldStore(defaultData.project.id, worldStoreData);
+            }
           }
         }
 

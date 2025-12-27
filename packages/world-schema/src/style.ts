@@ -6,6 +6,8 @@
  * Styles are stored in project config and referenced by cultures for defaults.
  */
 
+import type { EntityCategory } from './entityKind.js';
+
 /**
  * Artistic style - defines the visual rendering approach
  */
@@ -36,6 +38,20 @@ export interface CompositionStyle {
   promptFragment: string;
 }
 
+/**
+ * Color palette - defines color direction for image generation
+ */
+export interface ColorPalette {
+  /** Unique identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Human-readable description */
+  description?: string;
+  /** Prompt fragment for color direction (injected into image prompt) */
+  promptFragment: string;
+}
+
 // =============================================================================
 // Narrative Style Types (for chronicle generation)
 // =============================================================================
@@ -59,8 +75,6 @@ export type PlotStructureType =
 export interface PlotStructure {
   /** Structure type identifier */
   type: PlotStructureType;
-  /** JSON schema definition for the plot object (what LLM should output) */
-  schemaDescription: string;
   /** Instructions for LLM on how to use this structure */
   instructions: string;
 }
@@ -83,23 +97,16 @@ export interface RoleDefinition {
  * Entity selection rules - who gets featured in the story
  */
 export interface EntitySelectionRules {
-  /** Which prominence levels to include */
-  prominenceFilter: {
-    include: ('mythic' | 'renowned' | 'recognized' | 'marginal' | 'forgotten')[];
-    /** Prefer these prominences for protagonist */
-    protagonistPreference?: ('mythic' | 'renowned' | 'recognized' | 'marginal')[];
-  };
-  /** Entity kind filtering */
-  kindFilter?: {
-    include?: string[];
-    exclude?: string[];
-    protagonistKinds?: string[];
-  };
-  /** Relationship requirements */
-  relationshipRequirements?: {
-    protagonistMustHave?: string[];
-    minConnections?: number;
-  };
+  /**
+   * Recommended entity categories for primary subjects (main characters).
+   * At runtime, resolved to entity kinds via domain schema category mappings.
+   */
+  primarySubjectCategories?: EntityCategory[];
+  /**
+   * Recommended entity categories for supporting subjects (secondary characters).
+   * At runtime, resolved to entity kinds via domain schema category mappings.
+   */
+  supportingSubjectCategories?: EntityCategory[];
   /** Roles available in this narrative style */
   roles: RoleDefinition[];
   /** Maximum cast size */
@@ -138,10 +145,6 @@ export interface SceneTemplate {
   requiredElements: string[];
   /** Emotional direction */
   emotionalArc: string;
-  /** Target word count */
-  wordCountTarget: number;
-  /** Prose guidance */
-  proseNotes: string;
 }
 
 /**
@@ -160,8 +163,6 @@ export interface WorldDataFocus {
   /** Include era atmosphere */
   includeEraContext: boolean;
   eraUsage?: string;
-  /** Custom focus areas */
-  customFocus?: string[];
 }
 
 /**
@@ -190,8 +191,6 @@ export interface PacingConfig {
   totalWordCount: { min: number; max: number };
   /** Number of scenes */
   sceneCount: { min: number; max: number };
-  /** Dialogue to narration ratio (0-1, where 1 is all dialogue) */
-  dialogueRatio: { min: number; max: number };
 }
 
 // =============================================================================
@@ -223,8 +222,6 @@ export interface DocumentSection {
 export interface DocumentConfig {
   /** Type of document (shown to LLM for context) */
   documentType: string;
-  /** JSON schema or structure description for the output */
-  structureSchema: string;
   /** High-level instructions for content generation */
   contentInstructions: string;
   /** Section templates */
@@ -243,8 +240,6 @@ export interface DocumentConfig {
   eventUsage?: string;
   /** Voice/perspective guidance */
   voice?: string;
-  /** Era/setting guidance */
-  settingGuidance?: string;
 }
 
 /**
@@ -299,6 +294,7 @@ export type NarrativeStyle = StoryNarrativeStyle | DocumentNarrativeStyle;
 export interface StyleLibrary {
   artisticStyles: ArtisticStyle[];
   compositionStyles: CompositionStyle[];
+  colorPalettes: ColorPalette[];
   narrativeStyles: NarrativeStyle[];
 }
 
@@ -306,10 +302,12 @@ export interface StyleLibrary {
  * Style selection for image generation
  */
 export interface StyleSelection {
-  /** Selected artistic style ID, or 'culture-default' to use culture's default */
+  /** Selected artistic style ID, 'random' for random selection, or 'culture-default' to use culture's default */
   artisticStyleId?: string;
-  /** Selected composition style ID, or 'culture-default' to use culture's default */
+  /** Selected composition style ID, 'random' for random selection, or 'culture-default' to use culture's default */
   compositionStyleId?: string;
+  /** Selected color palette ID, or 'random' for random selection */
+  colorPaletteId?: string;
 }
 
 // =============================================================================
@@ -474,6 +472,99 @@ export const DEFAULT_COMPOSITION_STYLES: CompositionStyle[] = [
   },
 ];
 
+export const DEFAULT_COLOR_PALETTES: ColorPalette[] = [
+  {
+    id: 'warm-earth',
+    name: 'Warm Earth',
+    description: 'Rich browns, terracotta, amber, and gold',
+    promptFragment: 'COLOR PALETTE: warm earth tones, rich browns, terracotta orange, amber gold, ochre yellow, sienna accents',
+  },
+  {
+    id: 'jewel-tones',
+    name: 'Jewel Tones',
+    description: 'Deep saturated colors like ruby, emerald, sapphire',
+    promptFragment: 'COLOR PALETTE: jewel tones, deep ruby red, emerald green, sapphire blue, amethyst purple, rich saturated colors',
+  },
+  {
+    id: 'sunset-fire',
+    name: 'Sunset Fire',
+    description: 'Fiery oranges, reds, and magentas',
+    promptFragment: 'COLOR PALETTE: sunset colors, fiery orange, crimson red, magenta pink, golden yellow, warm gradients',
+  },
+  {
+    id: 'forest-moss',
+    name: 'Forest Moss',
+    description: 'Deep greens, browns, and golden highlights',
+    promptFragment: 'COLOR PALETTE: forest tones, deep moss green, olive, warm brown, golden highlights, natural woodland colors',
+  },
+  {
+    id: 'ocean-depths',
+    name: 'Ocean Depths',
+    description: 'Teals, navy blues, and bioluminescent accents',
+    promptFragment: 'COLOR PALETTE: ocean depths, teal blue, deep navy, bioluminescent cyan, coral pink accents, aquatic colors',
+  },
+  {
+    id: 'desert-sand',
+    name: 'Desert Sand',
+    description: 'Warm beiges, dusty rose, and copper accents',
+    promptFragment: 'COLOR PALETTE: desert tones, warm sand beige, dusty rose, copper accents, burnt orange, sun-bleached colors',
+  },
+  {
+    id: 'autumn-harvest',
+    name: 'Autumn Harvest',
+    description: 'Rich reds, burnt oranges, and golden yellows',
+    promptFragment: 'COLOR PALETTE: autumn colors, burnt orange, russet red, golden yellow, deep burgundy, harvest tones',
+  },
+  {
+    id: 'twilight-purple',
+    name: 'Twilight Purple',
+    description: 'Deep purples, magentas, and pink highlights',
+    promptFragment: 'COLOR PALETTE: twilight colors, deep purple, magenta, lavender, pink highlights, dusky violet tones',
+  },
+  {
+    id: 'spring-bloom',
+    name: 'Spring Bloom',
+    description: 'Fresh greens, soft pinks, and pale yellows',
+    promptFragment: 'COLOR PALETTE: spring colors, fresh green, soft pink, pale yellow, white blossoms, pastel accents',
+  },
+  {
+    id: 'volcanic',
+    name: 'Volcanic',
+    description: 'Black rock, molten orange, and red ember glows',
+    promptFragment: 'COLOR PALETTE: volcanic colors, black basalt, molten orange, ember red, ash gray, lava glow accents',
+  },
+  {
+    id: 'royal-gold',
+    name: 'Royal Gold',
+    description: 'Rich golds, deep reds, and royal purple',
+    promptFragment: 'COLOR PALETTE: royal colors, rich gold, deep crimson, royal purple, bronze accents, regal tones',
+  },
+  {
+    id: 'storm-gray',
+    name: 'Storm Gray',
+    description: 'Dramatic grays with electric blue and silver accents',
+    promptFragment: 'COLOR PALETTE: storm colors, slate gray, charcoal, electric blue accents, silver highlights, dramatic contrast',
+  },
+  {
+    id: 'copper-verdigris',
+    name: 'Copper Verdigris',
+    description: 'Oxidized copper greens with warm copper tones',
+    promptFragment: 'COLOR PALETTE: patina colors, verdigris green, oxidized copper, warm bronze, teal accents, aged metal tones',
+  },
+  {
+    id: 'blood-and-bone',
+    name: 'Blood and Bone',
+    description: 'Deep reds, ivory whites, and black accents',
+    promptFragment: 'COLOR PALETTE: stark contrast, deep blood red, ivory bone white, onyx black, crimson accents',
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    description: 'Shimmering greens, purples, and cyan against dark sky',
+    promptFragment: 'COLOR PALETTE: aurora borealis, shimmering green, purple, cyan, pink ribbons against deep blue-black sky',
+  },
+];
+
 // =============================================================================
 // Default Narrative Styles (for chronicle generation)
 // =============================================================================
@@ -488,33 +579,29 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'three-act',
-      schemaDescription: `{
-  "prophecy_or_stakes": "What hangs in the balance for the world",
-  "inciting_incident": { "description": "The fateful moment that sets events in motion", "eventIds": [] },
-  "rising_action": [{ "description": "Escalating conflicts", "eventIds": [] }],
-  "dark_moment": "When all seems lost",
-  "climax": { "description": "The decisive confrontation", "eventIds": [] },
-  "resolution": { "description": "The new world order", "eventIds": [] }
-}`,
-      instructions: 'Build toward an inevitable confrontation between great powers. Every scene should feel weighted with consequence. Include a moment where defeat seems certain before the climax.',
+      instructions: `Structure this as an epic historical drama with the weight of myth. The narrative should feel like a chronicle being told by future generations who already know how it ends.
+
+Opening: Begin in medias res or with an ominous portent. Establish the world through sensory details that convey both grandeur and fragility. The protagonist should be shown in their element, but seeds of the coming conflict must already be visible.
+
+Rising Action: Each scene escalates the stakes. Introduce the opposing force not as simple villainy but as an equally valid worldview in collision. Show councils where fate is debated, alliances forged and broken. Every conversation should carry subtext of what's unsaid.
+
+Climax: The confrontation should feel inevitable yet still surprising. Physical and ideological battles interweave. There must be a moment of apparent defeat before the turn. The cost of victory should be visible.
+
+Resolution: Don't tie everything up. Show the new order taking shape while acknowledging what was lost. End with an image that could become legend.
+
+Tone: Formal but not stiff. Characters speak with weight because they know they're living in consequential times. Descriptions should evoke oil paintings - rich, saturated, composed.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned'],
-        protagonistPreference: ['mythic', 'renowned'],
-      },
-      kindFilter: {
-        include: ['person', 'faction', 'organization'],
-        protagonistKinds: ['person'],
-      },
+      primarySubjectCategories: ['character', 'collective', 'power', 'concept'],
+      supportingSubjectCategories: ['character', 'collective', 'place', 'object'],
       roles: [
-        { role: 'protagonist', count: { min: 1, max: 1 }, description: 'The central figure upon whom fate pivots' },
-        { role: 'antagonist', count: { min: 1, max: 1 }, description: 'The opposing force of equal magnitude' },
-        { role: 'herald', count: { min: 0, max: 1 }, description: 'One who brings news of the coming storm' },
-        { role: 'sacrifice', count: { min: 0, max: 2 }, description: 'Those who fall along the way' },
-        { role: 'witness', count: { min: 1, max: 2 }, description: 'Those who will tell this tale to future generations' },
+        { role: 'protagonist', count: { min: 1, max: 1 }, description: 'The central force - a hero, rising faction, awakening power, or transformative idea' },
+        { role: 'antagonist', count: { min: 1, max: 1 }, description: 'The opposing force - a villain, rival power, dying order, or threatening ideology' },
+        { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What triggers the conflict - an artifact discovered, power awakened, or event occurred' },
+        { role: 'stakes', count: { min: 0, max: 2 }, description: 'What hangs in the balance - territories, traditions, treasures, or peoples' },
+        { role: 'witness', count: { min: 1, max: 2 }, description: 'Those who observe and will tell this tale to future generations' },
       ],
-      maxCastSize: 8,
+      maxCastSize: 7,
     },
     eventRules: {
       significanceRange: { min: 0.7, max: 1.0 },
@@ -524,15 +611,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'These are the turning points of history. Each event should feel inevitable in retrospect, part of a grand design.',
     },
     sceneTemplates: [
-      { id: 'omen', name: 'The Omen', purpose: 'Foreshadow what is to come', requiredElements: ['prophecy or sign', 'unease', 'dismissal by some'], emotionalArc: 'unease → dread', wordCountTarget: 300, proseNotes: 'Portentous language, imagery of nature reflecting fate' },
-      { id: 'council', name: 'The Council', purpose: 'Forces align and plans are made', requiredElements: ['multiple powers', 'conflicting agendas', 'fateful decision'], emotionalArc: 'tension → resolution → new tension', wordCountTarget: 400, proseNotes: 'Dialogue-heavy, weighted with subtext' },
-      { id: 'confrontation', name: 'The Confrontation', purpose: 'Direct clash of opposing forces', requiredElements: ['physical or ideological battle', 'cost', 'transformation'], emotionalArc: 'defiance → struggle → outcome', wordCountTarget: 500, proseNotes: 'Visceral, sensory, time slowing at crucial moments' },
-      { id: 'aftermath', name: 'The Aftermath', purpose: 'Reckon with what has changed', requiredElements: ['loss acknowledged', 'new order glimpsed', 'price named'], emotionalArc: 'grief → acceptance → resolve', wordCountTarget: 300, proseNotes: 'Elegiac, reflective, looking both backward and forward' },
+      { id: 'omen', name: 'The Omen', purpose: 'Foreshadow what is to come', requiredElements: ['prophecy or sign', 'unease', 'dismissal by some'], emotionalArc: 'unease → dread' },
+      { id: 'council', name: 'The Council', purpose: 'Forces align and plans are made', requiredElements: ['multiple powers', 'conflicting agendas', 'fateful decision'], emotionalArc: 'tension → resolution → new tension' },
+      { id: 'confrontation', name: 'The Confrontation', purpose: 'Direct clash of opposing forces', requiredElements: ['physical or ideological battle', 'cost', 'transformation'], emotionalArc: 'defiance → struggle → outcome' },
+      { id: 'aftermath', name: 'The Aftermath', purpose: 'Reckon with what has changed', requiredElements: ['loss acknowledged', 'new order glimpsed', 'price named'], emotionalArc: 'grief → acceptance → resolve' },
     ],
     pacing: {
       totalWordCount: { min: 1800, max: 2500 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.3, max: 0.5 },
     },
     proseDirectives: {
       toneKeywords: ['weighty', 'fateful', 'grand', 'inevitable', 'mythic'],
@@ -562,29 +648,28 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'in-medias-res',
-      schemaDescription: `{
-  "opening_action": { "description": "Start in the middle of danger", "eventIds": [] },
-  "brief_context": "Quick flashback or exposition establishing stakes",
-  "escalating_obstacles": [{ "description": "Each obstacle harder than the last", "eventIds": [] }],
-  "false_victory_or_defeat": "A twist that changes everything",
-  "final_confrontation": { "description": "The ultimate test", "eventIds": [] },
-  "escape_or_triumph": { "description": "Resolution through action", "eventIds": [] }
-}`,
-      instructions: 'Start with action already in progress. Maintain momentum - if a scene slows, introduce a new threat. Every problem is solved through doing, not talking.',
+      instructions: `This is pure kinetic storytelling. The reader should be breathless.
+
+Opening: Drop into action already happening. No setup, no backstory dump. The situation explains itself through urgent choices and physical details. A chase, a fight, a desperate escape - the reader figures out why as they go.
+
+Momentum: Never let the reader settle. Each scene ends with a new complication. The protagonist survives one threat only to face another. Quiet moments are brief - a breath before the next wave. Even dialogue happens while doing something else.
+
+Environment as Character: The setting isn't backdrop - it's obstacle and opportunity. Characters interact with their physical space constantly: using terrain, improvising weapons, exploiting weaknesses in architecture.
+
+Climax: The biggest, most desperate confrontation. Everything learned through the story becomes relevant. The protagonist must use their wits and their body at their limits.
+
+Resolution: Brief. The dust settles. We see the cost on the protagonist's body and face. Maybe a hint of what comes next, but the immediate crisis is resolved.
+
+Style: Short sentences during action. Visceral, physical language. We feel impacts, heat, cold, exhaustion. No time for reflection - only reaction.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned', 'recognized'],
-        protagonistPreference: ['renowned', 'recognized'],
-      },
-      kindFilter: {
-        protagonistKinds: ['person'],
-      },
+      primarySubjectCategories: ['character', 'object'],
+      supportingSubjectCategories: ['character', 'place', 'power'],
       roles: [
-        { role: 'hero', count: { min: 1, max: 2 }, description: 'The one who acts when others freeze', selectionCriteria: 'Prefer entities with combat or physical tags' },
-        { role: 'villain', count: { min: 1, max: 1 }, description: 'The active threat that must be overcome' },
-        { role: 'ally-in-peril', count: { min: 0, max: 2 }, description: 'Someone to rescue or protect' },
-        { role: 'rival', count: { min: 0, max: 1 }, description: 'Competing for the same goal' },
+        { role: 'hero', count: { min: 1, max: 2 }, description: 'The one who acts - daring, resourceful, driven' },
+        { role: 'threat', count: { min: 1, max: 1 }, description: 'What must be overcome - villain, hostile force, or dangerous power' },
+        { role: 'objective', count: { min: 0, max: 1 }, description: 'The goal of the chase - artifact sought, place to reach, person to save' },
+        { role: 'obstacle', count: { min: 0, max: 2 }, description: 'What blocks the path - treacherous terrain, rival, or wild power' },
       ],
       maxCastSize: 6,
     },
@@ -596,15 +681,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Chain these events into action sequences. Each event should force immediate reaction, not reflection.',
     },
     sceneTemplates: [
-      { id: 'cold-open', name: 'Cold Open', purpose: 'Immediate danger, no setup', requiredElements: ['action in progress', 'stakes clear through context', 'physical threat'], emotionalArc: 'adrenaline → brief relief', wordCountTarget: 350, proseNotes: 'Short sentences. Punch. Motion verbs. No time to think.' },
-      { id: 'pursuit', name: 'The Pursuit', purpose: 'Extended chase sequence', requiredElements: ['constant movement', 'obstacles', 'near misses'], emotionalArc: 'tension → escalation → narrow escape', wordCountTarget: 400, proseNotes: 'Rhythm of running. Breathless. Environment as obstacle course.' },
-      { id: 'confrontation', name: 'Showdown', purpose: 'Direct physical conflict', requiredElements: ['matched opponents', 'environment as weapon', 'decisive moment'], emotionalArc: 'clash → struggle → victory or defeat', wordCountTarget: 450, proseNotes: 'Blow-by-blow but not mechanical. Each strike matters.' },
-      { id: 'escape', name: 'The Escape', purpose: 'Getting away against odds', requiredElements: ['closing window', 'improvisation', 'cost of escape'], emotionalArc: 'desperation → ingenuity → relief', wordCountTarget: 350, proseNotes: 'Clock ticking. Choices made in split seconds.' },
+      { id: 'cold-open', name: 'Cold Open', purpose: 'Immediate danger, no setup', requiredElements: ['action in progress', 'stakes clear through context', 'physical threat'], emotionalArc: 'adrenaline → brief relief' },
+      { id: 'pursuit', name: 'The Pursuit', purpose: 'Extended chase sequence', requiredElements: ['constant movement', 'obstacles', 'near misses'], emotionalArc: 'tension → escalation → narrow escape' },
+      { id: 'confrontation', name: 'Showdown', purpose: 'Direct physical conflict', requiredElements: ['matched opponents', 'environment as weapon', 'decisive moment'], emotionalArc: 'clash → struggle → victory or defeat' },
+      { id: 'escape', name: 'The Escape', purpose: 'Getting away against odds', requiredElements: ['closing window', 'improvisation', 'cost of escape'], emotionalArc: 'desperation → ingenuity → relief' },
     ],
     pacing: {
       totalWordCount: { min: 1500, max: 2000 },
       sceneCount: { min: 4, max: 6 },
-      dialogueRatio: { min: 0.1, max: 0.3 },
     },
     proseDirectives: {
       toneKeywords: ['kinetic', 'urgent', 'visceral', 'breathless', 'sharp'],
@@ -632,32 +716,28 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'three-act',
-      schemaDescription: `{
-  "initial_state": "How the protagonists exist before meeting/connecting",
-  "the_spark": { "description": "The moment of connection", "eventIds": [] },
-  "growing_closer": [{ "description": "Moments that deepen the bond", "eventIds": [] }],
-  "the_obstacle": { "description": "What threatens to separate them", "eventIds": [] },
-  "the_choice": "What must be risked or sacrificed",
-  "resolution": { "description": "Union, separation, or transformation", "eventIds": [] }
-}`,
-      instructions: 'The story is about two people and what keeps them apart. External plot serves internal emotional journey. Every scene should advance the relationship.',
+      instructions: `This is an intimate story about connection. The external world exists only to illuminate the internal journey of two people finding each other.
+
+The Meeting: This must feel fated even when it appears accidental. Show what each character lacks that the other has. Their first impression should be incomplete, perhaps even wrong - but something catches. A detail they can't stop thinking about.
+
+Growing Close: This is the heart of the story. Show them discovering each other through accumulating small moments. Vulnerability exchanged for vulnerability. Laughter that surprises them. Silences that feel comfortable. Physical proximity that becomes electric.
+
+The Obstacle: What threatens them should feel real and earned. Internal barriers (fear, duty, old wounds) are often more powerful than external ones. The obstacle should make us understand why they can't just be together, even as we ache for them to try.
+
+Declaration: The moment of truth. One or both must risk rejection by speaking honestly. The response matters less than the courage of exposure. Even if things work out, there should be acknowledgment of what it cost to get here.
+
+Sensory Details: Romance lives in specifics. The exact shade of light. How someone's hand feels. The particular quality of a laugh. Avoid generic beauty - find what makes these specific people beautiful to each other.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned', 'recognized'],
-        protagonistPreference: ['renowned', 'recognized'],
-      },
-      relationshipRequirements: {
-        protagonistMustHave: ['ally', 'rival', 'family'],
-        minConnections: 2,
-      },
+      primarySubjectCategories: ['character', 'collective'],
+      supportingSubjectCategories: ['character', 'collective', 'place', 'concept'],
       roles: [
-        { role: 'lover-a', count: { min: 1, max: 1 }, description: 'First romantic lead' },
-        { role: 'lover-b', count: { min: 1, max: 1 }, description: 'Second romantic lead' },
-        { role: 'obstacle-person', count: { min: 0, max: 2 }, description: 'Someone who complicates the relationship' },
-        { role: 'confidant', count: { min: 0, max: 2 }, description: 'Friend who provides perspective' },
+        { role: 'lover-a', count: { min: 1, max: 1 }, description: 'First romantic lead - heart of the connection' },
+        { role: 'lover-b', count: { min: 1, max: 1 }, description: 'Second romantic lead - the other half' },
+        { role: 'obstacle', count: { min: 0, max: 2 }, description: 'What keeps them apart - rival, tradition, faction loyalty, or duty' },
+        { role: 'sanctuary', count: { min: 0, max: 1 }, description: 'Where connection is possible - secret place, shared memory, neutral ground' },
       ],
-      maxCastSize: 6,
+      maxCastSize: 5,
     },
     eventRules: {
       significanceRange: { min: 0.3, max: 0.8 },
@@ -668,15 +748,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Events are catalysts for emotional change. What matters is how characters feel about what happens, not the events themselves.',
     },
     sceneTemplates: [
-      { id: 'meeting', name: 'The Meeting', purpose: 'Establish the spark', requiredElements: ['first impression', 'unexpected connection', 'lingering thought'], emotionalArc: 'curiosity → intrigue → remembering', wordCountTarget: 400, proseNotes: 'Sensory details that lodge in memory. What they notice about each other.' },
-      { id: 'growing-close', name: 'Growing Closer', purpose: 'Deepen the bond', requiredElements: ['vulnerability shared', 'laughter or tears', 'physical proximity'], emotionalArc: 'guardedness → opening up → fear of loss', wordCountTarget: 450, proseNotes: 'Dialogue reveals character. Small gestures carry weight.' },
-      { id: 'obstacle', name: 'The Obstacle', purpose: 'Threaten the connection', requiredElements: ['external force or internal flaw', 'misunderstanding or duty', 'painful choice'], emotionalArc: 'hope → dread → resignation or defiance', wordCountTarget: 400, proseNotes: 'What they want vs what they feel they must do.' },
-      { id: 'declaration', name: 'The Declaration', purpose: 'Truth spoken aloud', requiredElements: ['risk of rejection', 'honesty', 'response'], emotionalArc: 'fear → exposure → answer', wordCountTarget: 350, proseNotes: 'Words that cannot be taken back. The moment before speaking.' },
+      { id: 'meeting', name: 'The Meeting', purpose: 'Establish the spark', requiredElements: ['first impression', 'unexpected connection', 'lingering thought'], emotionalArc: 'curiosity → intrigue → remembering' },
+      { id: 'growing-close', name: 'Growing Closer', purpose: 'Deepen the bond', requiredElements: ['vulnerability shared', 'laughter or tears', 'physical proximity'], emotionalArc: 'guardedness → opening up → fear of loss' },
+      { id: 'obstacle', name: 'The Obstacle', purpose: 'Threaten the connection', requiredElements: ['external force or internal flaw', 'misunderstanding or duty', 'painful choice'], emotionalArc: 'hope → dread → resignation or defiance' },
+      { id: 'declaration', name: 'The Declaration', purpose: 'Truth spoken aloud', requiredElements: ['risk of rejection', 'honesty', 'response'], emotionalArc: 'fear → exposure → answer' },
     ],
     pacing: {
       totalWordCount: { min: 1400, max: 1800 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.4, max: 0.6 },
     },
     proseDirectives: {
       toneKeywords: ['tender', 'yearning', 'intimate', 'bittersweet', 'hopeful'],
@@ -706,28 +785,27 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'episodic',
-      schemaDescription: `{
-  "setting_the_day": "The ordinary world before we enter it",
-  "vignettes": [
-    { "moment": "A small but meaningful occurrence", "insight": "What this reveals about life or character" }
-  ],
-  "throughline": "The thread connecting these moments",
-  "closing_reflection": "A thought that reframes everything we've seen"
-}`,
-      instructions: 'No dramatic conflict needed. Find the extraordinary in the ordinary. These are moments that would normally be skipped in other stories - here they are the story.',
+      instructions: `This is anti-plot storytelling. There is no crisis, no antagonist, no ticking clock. Instead, we witness life being lived - and in that witness, find meaning.
+
+Structure: The story follows a natural rhythm - a day, a season, a transition. Begin with waking or arriving. End with rest or departure. Between, capture moments that would be elided in other stories: preparing food, walking familiar paths, small talk that reveals character.
+
+The Extraordinary in the Ordinary: A story can be built from someone simply doing their work well. The satisfaction of craft. The texture of routine. Pay attention to the specific knowledge a character has about their world.
+
+Encounters: When others appear, there's no dramatic tension - just the genuine awkwardness and grace of people navigating proximity. Conversations wander. Silences are comfortable or uncomfortable. Nothing needs to be resolved.
+
+Emotion Through Accumulation: Feeling builds through layered small moments, not dramatic events. Melancholy might come from noticing that a tree has grown, or that a face has aged. Joy might come from the exact rightness of an afternoon.
+
+Ending: The story ends, it doesn't conclude. Perhaps the character notices something has shifted - a small change that holds the seed of the next chapter, which we won't see. Or perhaps we simply leave them in a moment of peace.
+
+Style: Unhurried prose. Rich sensory detail. Present tense works well. Let the reader sink into the rhythm.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['recognized', 'marginal', 'forgotten'],
-        protagonistPreference: ['marginal', 'recognized'],
-      },
-      kindFilter: {
-        protagonistKinds: ['person'],
-      },
+      primarySubjectCategories: ['character', 'place'],
+      supportingSubjectCategories: ['character', 'place', 'object', 'collective'],
       roles: [
-        { role: 'focal-character', count: { min: 1, max: 2 }, description: 'Whose day we are sharing', selectionCriteria: 'Prefer overlooked, everyday characters' },
-        { role: 'companion', count: { min: 0, max: 3 }, description: 'Those who pass through the day' },
-        { role: 'stranger', count: { min: 0, max: 2 }, description: 'Brief encounters that linger' },
+        { role: 'focal-point', count: { min: 1, max: 2 }, description: 'What we observe - a person going about their day, or a place and its rhythms' },
+        { role: 'passing-through', count: { min: 0, max: 3 }, description: 'Fleeting presences - strangers, objects changing hands, moments of connection' },
+        { role: 'backdrop', count: { min: 0, max: 1 }, description: 'The larger context - community, guild, or neighborhood that shapes daily life' },
       ],
       maxCastSize: 5,
     },
@@ -739,15 +817,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'These are background texture, not drivers. The story is not about events but about being present in a moment.',
     },
     sceneTemplates: [
-      { id: 'morning', name: 'Morning Ritual', purpose: 'Establish the rhythm of life', requiredElements: ['routine action', 'sensory grounding', 'small anticipation'], emotionalArc: 'stillness → awakening', wordCountTarget: 300, proseNotes: 'Precise sensory details. The texture of ordinary things.' },
-      { id: 'encounter', name: 'The Encounter', purpose: 'A moment of connection', requiredElements: ['another person', 'exchange', 'something learned or shared'], emotionalArc: 'solitude → connection → return to self', wordCountTarget: 350, proseNotes: 'Dialogue that reveals character without drama.' },
-      { id: 'work', name: 'The Work', purpose: 'Dignity of labor or craft', requiredElements: ['skilled action', 'competence', 'quiet satisfaction'], emotionalArc: 'focus → flow → completion', wordCountTarget: 300, proseNotes: 'The body knowing what to do. Hands and tools.' },
-      { id: 'evening', name: 'Evening Reflection', purpose: 'Day ending, meaning emerging', requiredElements: ['transition to rest', 'review of day', 'small gratitude or melancholy'], emotionalArc: 'winding down → peace or loneliness', wordCountTarget: 300, proseNotes: 'Quieter prose. Longer sentences. Fading light.' },
+      { id: 'morning', name: 'Morning Ritual', purpose: 'Establish the rhythm of life', requiredElements: ['routine action', 'sensory grounding', 'small anticipation'], emotionalArc: 'stillness → awakening' },
+      { id: 'encounter', name: 'The Encounter', purpose: 'A moment of connection', requiredElements: ['another person', 'exchange', 'something learned or shared'], emotionalArc: 'solitude → connection → return to self' },
+      { id: 'work', name: 'The Work', purpose: 'Dignity of labor or craft', requiredElements: ['skilled action', 'competence', 'quiet satisfaction'], emotionalArc: 'focus → flow → completion' },
+      { id: 'evening', name: 'Evening Reflection', purpose: 'Day ending, meaning emerging', requiredElements: ['transition to rest', 'review of day', 'small gratitude or melancholy'], emotionalArc: 'winding down → peace or loneliness' },
     ],
     pacing: {
       totalWordCount: { min: 1000, max: 1400 },
       sceneCount: { min: 3, max: 4 },
-      dialogueRatio: { min: 0.2, max: 0.4 },
     },
     proseDirectives: {
       toneKeywords: ['quiet', 'observant', 'gentle', 'present', 'textured'],
@@ -776,36 +853,30 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'parallel',
-      schemaDescription: `{
-  "surface_situation": "What appears to be happening",
-  "hidden_situation": "What is actually happening",
-  "thread_a": [{ "description": "Public-facing events", "eventIds": [] }],
-  "thread_b": [{ "description": "Behind-the-scenes maneuvering", "eventIds": [] }],
-  "convergence": { "description": "When hidden becomes visible", "eventIds": [] },
-  "new_equilibrium": { "description": "The reshaped power structure", "eventIds": [] }
-}`,
-      instructions: 'Every character has an agenda. Every conversation has subtext. Information is currency. Show the gap between public appearance and private maneuvering.',
+      instructions: `This is chess with people. The reader should feel the thrill of watching brilliant minds maneuver against each other, always two moves ahead.
+
+Dual Narratives: We follow both the surface action (what characters say, what appears to happen) and the hidden action (what they're really doing, what they actually want). The reader should frequently realize that a scene they just read meant something different than they thought.
+
+The Public Face: Formal occasions - councils, ceremonies, audiences - are where the real work happens through what's not said. Watch body language. Note who stands where. The most important communication happens in glances.
+
+The Private Meeting: When masks come off, conversations become transactions. Everyone wants something. Threats are couched in courtesy. Alliances shift based on new information. The reader should track who knows what.
+
+Information as Plot: The story advances through revelation. Each new piece of information changes the board. Characters make decisions based on what they know, which may be incomplete or manipulated.
+
+The Turn: At some point, the hidden game becomes visible. The revelation should recontextualize everything - but feel fair. The clues were there.
+
+Style: Precise, observant prose. Characters notice telling details. Dialogue carries multiple meanings. The reader must pay attention.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned', 'recognized'],
-      },
-      kindFilter: {
-        include: ['person', 'faction', 'organization'],
-        protagonistKinds: ['person'],
-      },
-      relationshipRequirements: {
-        protagonistMustHave: ['ally', 'rival'],
-        minConnections: 3,
-      },
+      primarySubjectCategories: ['character', 'collective', 'concept'],
+      supportingSubjectCategories: ['collective', 'place', 'object', 'power'],
       roles: [
-        { role: 'schemer', count: { min: 1, max: 2 }, description: 'The one pulling strings', selectionCriteria: 'Entities with many connections' },
-        { role: 'pawn', count: { min: 1, max: 3 }, description: 'Manipulated by others, may not know it' },
-        { role: 'rival-power', count: { min: 1, max: 2 }, description: 'Competing faction or individual' },
-        { role: 'secret-keeper', count: { min: 1, max: 1 }, description: 'Knows the truth, chooses when to reveal' },
-        { role: 'idealist', count: { min: 0, max: 1 }, description: 'Believes in principles, vulnerable to manipulation' },
+        { role: 'player', count: { min: 1, max: 3 }, description: 'Those maneuvering for advantage - schemers, factions, or ambitious powers' },
+        { role: 'prize', count: { min: 1, max: 2 }, description: 'What is being contested - law, territory, throne, or artifact of legitimacy' },
+        { role: 'pawn', count: { min: 0, max: 2 }, description: 'Manipulated pieces - people or groups used without knowing' },
+        { role: 'secret', count: { min: 0, max: 1 }, description: 'Hidden truth that could change everything - forbidden knowledge or damning evidence' },
       ],
-      maxCastSize: 10,
+      maxCastSize: 8,
     },
     eventRules: {
       significanceRange: { min: 0.4, max: 1.0 },
@@ -815,15 +886,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Events have public interpretations and private meanings. The same event looks different to different players.',
     },
     sceneTemplates: [
-      { id: 'public-face', name: 'The Public Face', purpose: 'Show the official version', requiredElements: ['formal setting', 'performance', 'hidden reactions'], emotionalArc: 'composure → mask slipping → recovery', wordCountTarget: 400, proseNotes: 'What everyone sees vs. what the reader knows.' },
-      { id: 'private-meeting', name: 'The Private Meeting', purpose: 'Real negotiations', requiredElements: ['secrecy', 'leverage', 'bargain or threat'], emotionalArc: 'circling → testing → deal or impasse', wordCountTarget: 450, proseNotes: 'What is said between the lines. Power dynamics.' },
-      { id: 'revelation', name: 'The Revelation', purpose: 'Hidden truth exposed', requiredElements: ['proof', 'reaction', 'consequence'], emotionalArc: 'tension → exposure → scramble', wordCountTarget: 400, proseNotes: 'The moment the game changes. Who knew what when.' },
-      { id: 'aftermath', name: 'New Positions', purpose: 'Recalculated alliances', requiredElements: ['new power balance', 'next move hinted', 'cost tallied'], emotionalArc: 'dust settling → new tension', wordCountTarget: 350, proseNotes: 'The game continues. Nothing is ever truly over.' },
+      { id: 'public-face', name: 'The Public Face', purpose: 'Show the official version', requiredElements: ['formal setting', 'performance', 'hidden reactions'], emotionalArc: 'composure → mask slipping → recovery' },
+      { id: 'private-meeting', name: 'The Private Meeting', purpose: 'Real negotiations', requiredElements: ['secrecy', 'leverage', 'bargain or threat'], emotionalArc: 'circling → testing → deal or impasse' },
+      { id: 'revelation', name: 'The Revelation', purpose: 'Hidden truth exposed', requiredElements: ['proof', 'reaction', 'consequence'], emotionalArc: 'tension → exposure → scramble' },
+      { id: 'aftermath', name: 'New Positions', purpose: 'Recalculated alliances', requiredElements: ['new power balance', 'next move hinted', 'cost tallied'], emotionalArc: 'dust settling → new tension' },
     ],
     pacing: {
       totalWordCount: { min: 1600, max: 2200 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.5, max: 0.7 },
     },
     proseDirectives: {
       toneKeywords: ['calculating', 'tense', 'layered', 'dangerous', 'controlled'],
@@ -853,22 +923,27 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'circular',
-      schemaDescription: `{
-  "opening_image": "A scene or moment that will be transformed by the end",
-  "wandering": [{ "description": "Explorations that seem disconnected but aren't", "eventIds": [] }],
-  "accumulating_meaning": "What starts to emerge as pattern",
-  "return": { "description": "The opening image, now understood differently", "eventIds": [] }
-}`,
-      instructions: 'Plot is secondary to language and feeling. The story should feel like a poem - images echo and transform. Trust the reader to find meaning without spelling it out.',
+      instructions: `This is prose poetry. Language itself is the experience. Plot exists only as a frame for imagery and emotion.
+
+Opening Image: Begin with a vivid, specific image that will return transformed at the end. This image is the story's secret heart - choose it with care. It should be concrete (a particular light, a particular object) but resonant with unspoken meaning.
+
+Movement Through Association: The story does not advance through cause and effect, but through emotional logic. One image leads to another through hidden rhymes of color, texture, feeling. The reader follows a path they sense rather than see.
+
+Encounters: When other characters appear, they are mirrors or contrasts. Conversation is less about information than about rhythm and gap - what's said, what's almost said, what remains silent.
+
+Time: Time is fluid. Past and present interweave. A memory can be more vivid than the present moment. The story exists in a kind of eternal now.
+
+Return: The ending circles back to the opening image, but everything has changed. The reader now sees what they couldn't see before. The image means something new while remaining what it always was.
+
+Style: Sensory precision is everything. Find the exact word. Rhythm matters - read sentences aloud. White space is as important as text. Less is more. Trust the reader.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned', 'recognized', 'marginal'],
-      },
+      primarySubjectCategories: ['character', 'place', 'era'],
+      supportingSubjectCategories: ['place', 'concept', 'object', 'character'],
       roles: [
-        { role: 'consciousness', count: { min: 1, max: 1 }, description: 'The perceiving sensibility' },
-        { role: 'presence', count: { min: 0, max: 3 }, description: 'Others who enter the awareness' },
-        { role: 'absent-one', count: { min: 0, max: 1 }, description: 'Someone remembered or longed for' },
+        { role: 'consciousness', count: { min: 1, max: 1 }, description: 'The perceiving presence - a mind, a place with memory, or an age contemplating itself' },
+        { role: 'presence', count: { min: 0, max: 2 }, description: 'What enters awareness - visitors, objects that hold meaning, ideas made tangible' },
+        { role: 'absence', count: { min: 0, max: 1 }, description: 'What is longed for or lost - the departed, the forgotten, the time that was' },
       ],
       maxCastSize: 4,
     },
@@ -879,15 +954,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Events are prompts for meditation, not drivers. What matters is the quality of attention paid to moments.',
     },
     sceneTemplates: [
-      { id: 'opening-image', name: 'The Image', purpose: 'Establish the central metaphor', requiredElements: ['vivid sensory scene', 'unstated meaning', 'beauty or strangeness'], emotionalArc: 'attention → mystery', wordCountTarget: 350, proseNotes: 'Language as music. Rhythm and sound matter.' },
-      { id: 'meditation', name: 'Meditation', purpose: 'Explore through association', requiredElements: ['memory or reflection', 'imagery that echoes', 'emotional undercurrent'], emotionalArc: 'wandering → deepening', wordCountTarget: 400, proseNotes: 'Let sentences unfold. Trust the reader. No explanations.' },
-      { id: 'encounter', name: 'The Encounter', purpose: 'Another presence enters', requiredElements: ['moment of connection', 'gap between people', 'something unsaid'], emotionalArc: 'closeness → distance', wordCountTarget: 350, proseNotes: 'What can be communicated? What cannot?' },
-      { id: 'return', name: 'Return', purpose: 'The opening transformed', requiredElements: ['same image', 'new understanding', 'closure without explanation'], emotionalArc: 'recognition → peace or sorrow', wordCountTarget: 300, proseNotes: 'Echo the opening. Changed by what came between.' },
+      { id: 'opening-image', name: 'The Image', purpose: 'Establish the central metaphor', requiredElements: ['vivid sensory scene', 'unstated meaning', 'beauty or strangeness'], emotionalArc: 'attention → mystery' },
+      { id: 'meditation', name: 'Meditation', purpose: 'Explore through association', requiredElements: ['memory or reflection', 'imagery that echoes', 'emotional undercurrent'], emotionalArc: 'wandering → deepening' },
+      { id: 'encounter', name: 'The Encounter', purpose: 'Another presence enters', requiredElements: ['moment of connection', 'gap between people', 'something unsaid'], emotionalArc: 'closeness → distance' },
+      { id: 'return', name: 'Return', purpose: 'The opening transformed', requiredElements: ['same image', 'new understanding', 'closure without explanation'], emotionalArc: 'recognition → peace or sorrow' },
     ],
     pacing: {
       totalWordCount: { min: 1200, max: 1600 },
       sceneCount: { min: 3, max: 4 },
-      dialogueRatio: { min: 0.1, max: 0.3 },
     },
     proseDirectives: {
       toneKeywords: ['luminous', 'haunting', 'delicate', 'resonant', 'precise'],
@@ -918,26 +992,28 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'accumulating',
-      schemaDescription: `{
-  "initial_problem": { "description": "A manageable situation", "eventIds": [] },
-  "escalations": [
-    { "attempt": "A reasonable solution", "result": "Makes things worse", "eventIds": [] }
-  ],
-  "point_of_no_return": "When the absurdity becomes undeniable",
-  "catastrophic_resolution": { "description": "The worst/best possible outcome", "eventIds": [] }
-}`,
-      instructions: 'Each attempt to fix things makes them worse. The humor comes from the gap between characters\' expectations and reality. Everyone takes themselves seriously while the situation is absurd.',
+      instructions: `This is comedy built on suffering. The protagonist's world falls apart, and the falling apart is funny because it's also true.
+
+The Setup: Establish a normal situation with a small problem. The protagonist is competent, perhaps even confident. They have a reasonable plan. This normalcy must be believable for its destruction to be funny.
+
+The First Crack: Something goes wrong. The protagonist's reasonable response makes it worse. This is the template: each logical action, each sensible choice, somehow magnifies the disaster. The humor is in the inexorability.
+
+Escalation: Problems multiply. Each new attempt at solution creates two new problems. The protagonist's self-awareness grows even as their situation deteriorates. Dark observations about life emerge through gritted teeth.
+
+The Cascade: Everything fails at once. Subplots collide. Characters' worst traits are exposed. The protagonist faces impossible choices where every option is terrible. They may laugh, inappropriately, because what else can you do.
+
+Aftermath: The smoke clears. Assess the damage. There should be a rueful acceptance - things are terrible, but the protagonist has learned something, even if what they've learned is grim. A note of genuine humanity amidst the wreckage.
+
+Style: Deadpan delivery. The characters rarely acknowledge the absurdity directly - that's for the reader. Dark material treated with lightness, light material treated with weight.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['renowned', 'recognized', 'marginal'],
-        protagonistPreference: ['recognized', 'marginal'],
-      },
+      primarySubjectCategories: ['character', 'collective', 'concept'],
+      supportingSubjectCategories: ['character', 'collective', 'object'],
       roles: [
-        { role: 'fool', count: { min: 1, max: 2 }, description: 'The one making things worse while trying to help', selectionCriteria: 'Characters with ironic or tragic potential' },
-        { role: 'straight-man', count: { min: 0, max: 1 }, description: 'The one who sees the absurdity' },
-        { role: 'authority', count: { min: 0, max: 2 }, description: 'Those who make things worse through competence or incompetence' },
-        { role: 'victim', count: { min: 0, max: 2 }, description: 'Caught in the crossfire' },
+        { role: 'fool', count: { min: 1, max: 2 }, description: 'Making things worse while trying to help - person or bumbling institution' },
+        { role: 'system', count: { min: 0, max: 1 }, description: 'The absurd structure - bureaucracy, tradition, or rule that creates chaos' },
+        { role: 'catalyst', count: { min: 0, max: 1 }, description: 'What sets disaster in motion - cursed object, minor problem, simple request' },
+        { role: 'victim', count: { min: 0, max: 2 }, description: 'Caught in the crossfire - people, places, or institutions damaged by folly' },
       ],
       maxCastSize: 6,
     },
@@ -949,15 +1025,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Find the absurdity in these events. What reasonable action led to unreasonable results?',
     },
     sceneTemplates: [
-      { id: 'setup', name: 'The Setup', purpose: 'Establish normalcy about to shatter', requiredElements: ['routine situation', 'small problem', 'confident protagonist'], emotionalArc: 'confidence → first crack', wordCountTarget: 350, proseNotes: 'Play it straight. The humor is in the gap.' },
-      { id: 'escalation', name: 'The Escalation', purpose: 'Solution makes things worse', requiredElements: ['logical action', 'unexpected consequence', 'doubling down'], emotionalArc: 'determination → dismay → denial', wordCountTarget: 400, proseNotes: 'Characters must take this seriously. Never wink at audience.' },
-      { id: 'cascade', name: 'The Cascade', purpose: 'Everything fails at once', requiredElements: ['multiple disasters', 'ironic connections', 'impossible choices'], emotionalArc: 'panic → absurdity → strange calm', wordCountTarget: 400, proseNotes: 'Rapid fire. Let disasters pile up. Comic timing in prose.' },
-      { id: 'aftermath', name: 'The Aftermath', purpose: 'Surveying the damage', requiredElements: ['consequences named', 'ironic observation', 'suggestion it will happen again'], emotionalArc: 'exhaustion → rueful acceptance', wordCountTarget: 300, proseNotes: 'Quiet after the storm. Dark punchline.' },
+      { id: 'setup', name: 'The Setup', purpose: 'Establish normalcy about to shatter', requiredElements: ['routine situation', 'small problem', 'confident protagonist'], emotionalArc: 'confidence → first crack' },
+      { id: 'escalation', name: 'The Escalation', purpose: 'Solution makes things worse', requiredElements: ['logical action', 'unexpected consequence', 'doubling down'], emotionalArc: 'determination → dismay → denial' },
+      { id: 'cascade', name: 'The Cascade', purpose: 'Everything fails at once', requiredElements: ['multiple disasters', 'ironic connections', 'impossible choices'], emotionalArc: 'panic → absurdity → strange calm' },
+      { id: 'aftermath', name: 'The Aftermath', purpose: 'Surveying the damage', requiredElements: ['consequences named', 'ironic observation', 'suggestion it will happen again'], emotionalArc: 'exhaustion → rueful acceptance' },
     ],
     pacing: {
       totalWordCount: { min: 1400, max: 1800 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.4, max: 0.6 },
     },
     proseDirectives: {
       toneKeywords: ['ironic', 'deadpan', 'absurd', 'rueful', 'dark'],
@@ -985,33 +1060,31 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'three-act',
-      schemaDescription: `{
-  "ordinary_world": "The hero before the call",
-  "call_to_adventure": { "description": "What summons the hero", "eventIds": [] },
-  "trials": [{ "description": "Tests that forge the hero", "eventIds": [] }],
-  "dark_night": "The moment of greatest doubt",
-  "revelation": "What the hero learns about themselves",
-  "final_battle": { "description": "Confrontation with ultimate evil", "eventIds": [] },
-  "return": { "description": "The hero transformed, world saved", "eventIds": [] }
-}`,
-      instructions: 'Follow the hero\'s journey structure. The hero must be tempted, must fail, must learn, must triumph. Good and evil are clear but the hero\'s choice is what matters.',
+      instructions: `This is mythic storytelling. The world is enchanted. Good and evil are real forces. The hero's journey transforms not just themselves but the world around them.
+
+The Call: The hero begins in their ordinary world, which is already touched by darkness or lacking something vital. The call to adventure disrupts their life. They may resist, but destiny is insistent.
+
+The Threshold: Crossing into the adventure should feel momentous. The hero leaves behind everything familiar. New allies appear - each representing virtues the hero will need. Mentors offer wisdom that will prove essential.
+
+Trials: Each challenge tests a specific aspect of the hero's character. Failure is not just possible but necessary - through defeat, the hero learns what they truly need. The dark night of the soul comes before the dawn.
+
+The Confrontation: The final battle is as much internal as external. The hero must use everything they've learned. Victory comes not from strength alone but from wisdom, from sacrifice, from becoming who they were meant to be.
+
+Return: The hero returns changed. The ordinary world is renewed by their transformation. We glimpse the future they've made possible.
+
+Style: Wonder should infuse the prose. Magic is real and costs something. Describe the world as a hero would see it - full of portent and meaning.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned', 'recognized'],
-        protagonistPreference: ['renowned', 'recognized'],
-      },
-      kindFilter: {
-        protagonistKinds: ['person'],
-      },
+      primarySubjectCategories: ['character', 'object', 'power'],
+      supportingSubjectCategories: ['character', 'collective', 'place', 'power'],
       roles: [
-        { role: 'hero', count: { min: 1, max: 1 }, description: 'The chosen one, reluctant or eager' },
-        { role: 'mentor', count: { min: 0, max: 1 }, description: 'The wise guide' },
-        { role: 'dark-lord', count: { min: 1, max: 1 }, description: 'The embodiment of evil' },
-        { role: 'companion', count: { min: 0, max: 2 }, description: 'Loyal friends on the journey' },
-        { role: 'fallen-ally', count: { min: 0, max: 1 }, description: 'One who falls along the way' },
+        { role: 'hero', count: { min: 1, max: 1 }, description: 'The chosen one - destined to confront the darkness' },
+        { role: 'darkness', count: { min: 1, max: 1 }, description: 'Evil to be vanquished - dark lord, corrupting power, or malevolent force' },
+        { role: 'quest-object', count: { min: 0, max: 1 }, description: 'What is sought or wielded - legendary artifact, awakening power, or sacred place' },
+        { role: 'guide', count: { min: 0, max: 1 }, description: 'Wisdom for the journey - mentor, ancient knowledge, or prophetic vision' },
+        { role: 'companion', count: { min: 0, max: 2 }, description: 'Those who stand with the hero - allies who may fall or triumph' },
       ],
-      maxCastSize: 7,
+      maxCastSize: 6,
     },
     eventRules: {
       significanceRange: { min: 0.5, max: 1.0 },
@@ -1021,15 +1094,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'These are the legendary deeds that will be sung. Each event is a test or a victory.',
     },
     sceneTemplates: [
-      { id: 'call', name: 'The Call', purpose: 'Summon the hero to adventure', requiredElements: ['disruption of normal', 'stakes established', 'choice to act'], emotionalArc: 'peace → urgency → commitment', wordCountTarget: 400, proseNotes: 'The world before and after the call.' },
-      { id: 'trial', name: 'The Trial', purpose: 'Test and forge the hero', requiredElements: ['obstacle', 'struggle', 'growth'], emotionalArc: 'determination → struggle → triumph or lesson', wordCountTarget: 400, proseNotes: 'What is learned cannot be unlearned.' },
-      { id: 'dark-night', name: 'The Dark Night', purpose: 'All seems lost', requiredElements: ['failure or loss', 'despair', 'spark of hope'], emotionalArc: 'defeat → despair → renewal', wordCountTarget: 350, proseNotes: 'The hero alone with doubt. What they find inside.' },
-      { id: 'triumph', name: 'The Triumph', purpose: 'Victory over evil', requiredElements: ['final confrontation', 'use of what was learned', 'evil defeated'], emotionalArc: 'determination → struggle → victory', wordCountTarget: 450, proseNotes: 'The hero as they were meant to be.' },
+      { id: 'call', name: 'The Call', purpose: 'Summon the hero to adventure', requiredElements: ['disruption of normal', 'stakes established', 'choice to act'], emotionalArc: 'peace → urgency → commitment' },
+      { id: 'trial', name: 'The Trial', purpose: 'Test and forge the hero', requiredElements: ['obstacle', 'struggle', 'growth'], emotionalArc: 'determination → struggle → triumph or lesson' },
+      { id: 'dark-night', name: 'The Dark Night', purpose: 'All seems lost', requiredElements: ['failure or loss', 'despair', 'spark of hope'], emotionalArc: 'defeat → despair → renewal' },
+      { id: 'triumph', name: 'The Triumph', purpose: 'Victory over evil', requiredElements: ['final confrontation', 'use of what was learned', 'evil defeated'], emotionalArc: 'determination → struggle → victory' },
     ],
     pacing: {
       totalWordCount: { min: 1600, max: 2200 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.3, max: 0.5 },
     },
     proseDirectives: {
       toneKeywords: ['heroic', 'inspiring', 'grand', 'hopeful', 'triumphant'],
@@ -1059,31 +1131,31 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'rise-and-fall',
-      schemaDescription: `{
-  "initial_greatness": "The protagonist at their height",
-  "the_flaw": "The weakness that will destroy them",
-  "rise": [{ "description": "Success that feeds the flaw", "eventIds": [] }],
-  "hubris_moment": { "description": "The fatal overreach", "eventIds": [] },
-  "fall": [{ "description": "Consequences unfolding", "eventIds": [] }],
-  "recognition": "When the protagonist sees the truth",
-  "catastrophe": { "description": "The final destruction", "eventIds": [] },
-  "aftermath": "What remains, what is learned by survivors"
-}`,
-      instructions: 'The ending is inevitable from the beginning. The protagonist causes their own destruction through a flaw inseparable from their greatness. We watch knowing what they cannot see.',
+      instructions: `This is tragedy in the classical sense. The protagonist is exceptional - their greatness is real. Their destruction is inevitable, not despite their virtues but because of them. We watch, knowing what they cannot know.
+
+At the Height: Show the protagonist at their peak. Their power, their glory, their confidence. But show also the flaw - invisible to them, visible to us. Pride becomes hubris. Strength becomes inflexibility. Vision becomes blindness.
+
+The Temptation: An opportunity appears that the protagonist cannot refuse. Taking it is completely in character - this is not a mistake, it's an expression of who they are. The audience sees the trap that the protagonist cannot.
+
+The Fall: Once the first step is taken, the rest follows inevitably. Each attempt to escape makes things worse. The protagonist may begin to see, but too late. Others suffer for their choices. The isolation grows.
+
+Recognition: The moment of terrible clarity. The protagonist finally sees what we have seen all along. They understand their flaw, their complicity in their own destruction. This recognition is devastating precisely because it comes too late.
+
+Catharsis: The ending should leave us with pity and fear - pity for the protagonist, fear that we might share their blindness. Something has been lost that cannot be recovered. But there may be a kind of peace in acceptance.
+
+Style: Elevated, formal language. The weight of fate in every word. Characters speak as if history is listening.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['mythic', 'renowned'],
-        protagonistPreference: ['mythic', 'renowned'],
-      },
+      primarySubjectCategories: ['character', 'collective', 'place', 'concept'],
+      supportingSubjectCategories: ['character', 'collective', 'place', 'object'],
       roles: [
-        { role: 'tragic-hero', count: { min: 1, max: 1 }, description: 'Great figure with fatal flaw', selectionCriteria: 'High prominence, capable of fall' },
-        { role: 'warning-voice', count: { min: 0, max: 1 }, description: 'One who sees what the hero cannot' },
-        { role: 'enabler', count: { min: 0, max: 2 }, description: 'Those who feed the flaw' },
-        { role: 'innocent', count: { min: 0, max: 2 }, description: 'Those destroyed in the fall' },
-        { role: 'survivor', count: { min: 0, max: 1 }, description: 'One who remains to tell the tale' },
+        { role: 'doomed', count: { min: 1, max: 1 }, description: 'What will fall - hero with fatal flaw, empire in decline, or ideal that cannot hold' },
+        { role: 'flaw', count: { min: 0, max: 1 }, description: 'The fatal weakness - hubris, corruption, cursed inheritance, or betrayed principle' },
+        { role: 'enabler', count: { min: 0, max: 2 }, description: 'Those who feed the destruction - sycophants, rivals, or circumstances' },
+        { role: 'innocent', count: { min: 0, max: 2 }, description: 'Destroyed in the fall - people, places, or hopes caught in the collapse' },
+        { role: 'witness', count: { min: 0, max: 1 }, description: 'Who remains to tell the tale and learn from the ruin' },
       ],
-      maxCastSize: 6,
+      maxCastSize: 7,
     },
     eventRules: {
       significanceRange: { min: 0.6, max: 1.0 },
@@ -1093,15 +1165,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Each event is a step toward doom. The audience should see it coming before the characters do.',
     },
     sceneTemplates: [
-      { id: 'height', name: 'At the Height', purpose: 'Show what will be lost', requiredElements: ['greatness displayed', 'flaw visible to reader', 'confidence'], emotionalArc: 'admiration → unease', wordCountTarget: 400, proseNotes: 'The glory that makes the fall meaningful.' },
-      { id: 'temptation', name: 'The Temptation', purpose: 'The flaw takes hold', requiredElements: ['opportunity', 'choice that seems right', 'first step down'], emotionalArc: 'desire → decision → crossing the line', wordCountTarget: 400, proseNotes: 'The moment that will echo in everything after.' },
-      { id: 'fall', name: 'The Fall', purpose: 'Consequences unfold', requiredElements: ['things falling apart', 'protagonist\s blindness', 'cost to others'], emotionalArc: 'denial → struggle → desperation', wordCountTarget: 450, proseNotes: 'Watching what cannot be stopped.' },
-      { id: 'recognition', name: 'The Recognition', purpose: 'Seeing the truth too late', requiredElements: ['clarity', 'horror', 'acceptance'], emotionalArc: 'blindness → sight → grief', wordCountTarget: 350, proseNotes: 'The most devastating moment. The flaw named.' },
+      { id: 'height', name: 'At the Height', purpose: 'Show what will be lost', requiredElements: ['greatness displayed', 'flaw visible to reader', 'confidence'], emotionalArc: 'admiration → unease' },
+      { id: 'temptation', name: 'The Temptation', purpose: 'The flaw takes hold', requiredElements: ['opportunity', 'choice that seems right', 'first step down'], emotionalArc: 'desire → decision → crossing the line' },
+      { id: 'fall', name: 'The Fall', purpose: 'Consequences unfold', requiredElements: ['things falling apart', 'protagonist\s blindness', 'cost to others'], emotionalArc: 'denial → struggle → desperation' },
+      { id: 'recognition', name: 'The Recognition', purpose: 'Seeing the truth too late', requiredElements: ['clarity', 'horror', 'acceptance'], emotionalArc: 'blindness → sight → grief' },
     ],
     pacing: {
       totalWordCount: { min: 1600, max: 2200 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.3, max: 0.5 },
     },
     proseDirectives: {
       toneKeywords: ['inevitable', 'doomed', 'magnificent', 'terrible', 'cathartic'],
@@ -1130,32 +1201,29 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
     format: 'story',
     plotStructure: {
       type: 'mystery-reveal',
-      schemaDescription: `{
-  "the_question": "What the reader wants to know",
-  "initial_situation": { "description": "How things appear at first", "eventIds": [] },
-  "investigation": [
-    { "clue": "Something discovered", "significance": "What it seems to mean", "actual_meaning": "What it really means", "eventIds": [] }
-  ],
-  "false_trail": { "description": "The wrong conclusion", "eventIds": [] },
-  "true_revelation": { "description": "The actual answer", "eventIds": [] },
-  "implications": "What the truth means for everyone"
-}`,
-      instructions: 'Plant clues fairly - the reader should be able to solve it. Misdirect but don\'t cheat. The revelation should recontextualize everything that came before.',
+      instructions: `This is a puzzle story. The reader should be engaged in solving it alongside the investigator. Play fair - all clues should be available to the reader, even if their significance isn't immediately clear.
+
+The Mystery: Establish the question that needs answering. Something is wrong, hidden, unexplained. The investigator is drawn in by duty, curiosity, or personal connection. Set up the world of suspects and possibilities.
+
+Investigation: Each scene should yield new information that both advances and complicates the solution. Interview witnesses whose accounts don't quite match. Discover evidence that points in multiple directions. Follow leads that prove to be dead ends - but don't make them feel like wasted time.
+
+The Red Herring: Plant at least one seemingly damning piece of evidence against the wrong suspect. It should be convincing enough that the reader considers it seriously, but on reflection, something should feel off. The misdirection should be clever, not cheap.
+
+The Revelation: The truth should feel inevitable once revealed, even if surprising. It should reframe everything that came before - scenes that seemed irrelevant become crucial, innocent details become damning. The solution should be findable by a careful reader, but not obvious.
+
+Resolution: Show the consequences of truth revealed. Justice may or may not be served. The investigator may be changed by what they've learned. Close the mystery while acknowledging its costs.
+
+Style: Precise, observant prose. Notice what's out of place. Dialogue should reveal character while potentially hiding or revealing information. The reader should feel the satisfaction of pieces clicking into place.`,
     },
     entityRules: {
-      prominenceFilter: {
-        include: ['renowned', 'recognized', 'marginal'],
-        protagonistPreference: ['recognized'],
-      },
-      relationshipRequirements: {
-        minConnections: 2,
-      },
+      primarySubjectCategories: ['character', 'object', 'place'],
+      supportingSubjectCategories: ['character', 'place', 'collective', 'concept'],
       roles: [
-        { role: 'investigator', count: { min: 1, max: 1 }, description: 'The one seeking truth' },
-        { role: 'suspect', count: { min: 2, max: 4 }, description: 'Those who might be guilty' },
-        { role: 'victim', count: { min: 0, max: 1 }, description: 'The one wronged by the secret' },
-        { role: 'true-culprit', count: { min: 1, max: 1 }, description: 'The actual answer', selectionCriteria: 'Should not be obvious' },
-        { role: 'witness', count: { min: 0, max: 2 }, description: 'Those who know pieces' },
+        { role: 'investigator', count: { min: 1, max: 1 }, description: 'The one seeking truth - detective, scholar, or curious outsider' },
+        { role: 'mystery', count: { min: 1, max: 1 }, description: 'What must be solved - artifact with hidden history, haunted place, or buried secret' },
+        { role: 'suspect', count: { min: 1, max: 3 }, description: 'Possible answers - people, factions, or beliefs that might be responsible' },
+        { role: 'culprit', count: { min: 1, max: 1 }, description: 'The true answer - should not be obvious until the revelation' },
+        { role: 'clue', count: { min: 0, max: 2 }, description: 'Evidence that illuminates - objects, places, or testimonies that reveal truth' },
       ],
       maxCastSize: 8,
     },
@@ -1167,15 +1235,14 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
       usageInstructions: 'Events are clues. Each should have a surface meaning and a hidden meaning that becomes clear on revelation.',
     },
     sceneTemplates: [
-      { id: 'mystery', name: 'The Mystery', purpose: 'Establish what needs solving', requiredElements: ['question posed', 'stakes clear', 'investigator engaged'], emotionalArc: 'curiosity → commitment', wordCountTarget: 350, proseNotes: 'Hook the reader. What don\'t we know?' },
-      { id: 'investigation', name: 'The Investigation', purpose: 'Gather clues and suspects', requiredElements: ['discovery', 'interview or observation', 'new question raised'], emotionalArc: 'progress → confusion → determination', wordCountTarget: 400, proseNotes: 'Fair clues. Reader should be able to notice them.' },
-      { id: 'false-trail', name: 'The False Trail', purpose: 'Mislead toward wrong conclusion', requiredElements: ['apparently damning evidence', 'almost-solution', 'something doesn\'t fit'], emotionalArc: 'certainty → doubt', wordCountTarget: 350, proseNotes: 'Make the wrong answer feel right. One loose thread.' },
-      { id: 'revelation', name: 'The Revelation', purpose: 'True answer revealed', requiredElements: ['the missing piece', 'recontextualization', 'confrontation'], emotionalArc: 'confusion → clarity → consequence', wordCountTarget: 450, proseNotes: 'Everything clicks. The reader should think "of course."' },
+      { id: 'mystery', name: 'The Mystery', purpose: 'Establish what needs solving', requiredElements: ['question posed', 'stakes clear', 'investigator engaged'], emotionalArc: 'curiosity → commitment' },
+      { id: 'investigation', name: 'The Investigation', purpose: 'Gather clues and suspects', requiredElements: ['discovery', 'interview or observation', 'new question raised'], emotionalArc: 'progress → confusion → determination' },
+      { id: 'false-trail', name: 'The False Trail', purpose: 'Mislead toward wrong conclusion', requiredElements: ['apparently damning evidence', 'almost-solution', 'something doesn\'t fit'], emotionalArc: 'certainty → doubt' },
+      { id: 'revelation', name: 'The Revelation', purpose: 'True answer revealed', requiredElements: ['the missing piece', 'recontextualization', 'confrontation'], emotionalArc: 'confusion → clarity → consequence' },
     ],
     pacing: {
       totalWordCount: { min: 1500, max: 2000 },
       sceneCount: { min: 4, max: 5 },
-      dialogueRatio: { min: 0.4, max: 0.6 },
     },
     proseDirectives: {
       toneKeywords: ['suspicious', 'tense', 'uncertain', 'curious', 'revelatory'],
@@ -1201,10 +1268,8 @@ export const DEFAULT_NARRATIVE_STYLES: NarrativeStyle[] = [
 // =============================================================================
 
 const DEFAULT_DOCUMENT_ENTITY_RULES: EntitySelectionRules = {
-  prominenceFilter: {
-    include: ['mythic', 'renowned', 'recognized', 'marginal'],
-    protagonistPreference: ['mythic', 'renowned', 'recognized'],
-  },
+  primarySubjectCategories: ['character', 'collective', 'place', 'object', 'concept'],
+  supportingSubjectCategories: ['character', 'collective', 'place', 'object', 'concept', 'power'],
   roles: [
     { role: 'subject', count: { min: 1, max: 2 }, description: 'Primary focus of the document' },
     { role: 'authority', count: { min: 0, max: 2 }, description: 'Official or institutional voice' },
@@ -1223,12 +1288,12 @@ const DEFAULT_DOCUMENT_EVENT_RULES: EventSelectionRules = {
 function cloneDocumentEntityRules(): EntitySelectionRules {
   return {
     ...DEFAULT_DOCUMENT_ENTITY_RULES,
-    prominenceFilter: {
-      include: [...DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.include],
-      protagonistPreference: DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.protagonistPreference
-        ? [...DEFAULT_DOCUMENT_ENTITY_RULES.prominenceFilter.protagonistPreference]
-        : undefined,
-    },
+    primarySubjectCategories: DEFAULT_DOCUMENT_ENTITY_RULES.primarySubjectCategories
+      ? [...DEFAULT_DOCUMENT_ENTITY_RULES.primarySubjectCategories]
+      : undefined,
+    supportingSubjectCategories: DEFAULT_DOCUMENT_ENTITY_RULES.supportingSubjectCategories
+      ? [...DEFAULT_DOCUMENT_ENTITY_RULES.supportingSubjectCategories]
+      : undefined,
     roles: DEFAULT_DOCUMENT_ENTITY_RULES.roles.map((role) => ({
       ...role,
       count: { ...role.count },
@@ -1260,18 +1325,21 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Official news proclamation or town crier announcement about recent events',
     tags: ['document', 'news', 'official', 'proclamation'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['collective', 'place', 'event', 'character'],
+      supportingSubjectCategories: ['character', 'concept', 'object'],
+      roles: [
+        { role: 'newsworthy-event', count: { min: 1, max: 2 }, description: 'The occurrence being announced', selectionCriteria: 'Prefer entities from event category' },
+        { role: 'affected-territory', count: { min: 0, max: 2 }, description: 'Locations impacted by the news', selectionCriteria: 'Prefer entities from place category' },
+        { role: 'faction-involved', count: { min: 0, max: 2 }, description: 'Organizations, kingdoms, or groups in the news', selectionCriteria: 'Prefer entities from collective category' },
+        { role: 'notable-figure', count: { min: 0, max: 2 }, description: 'Persons of importance mentioned' },
+        { role: 'decree-or-law', count: { min: 0, max: 1 }, description: 'New regulation or proclamation being announced', selectionCriteria: 'Prefer entities from concept category' },
+      ],
+      maxCastSize: 8,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'official news dispatch',
-      structureSchema: `{
-  "headline": "Attention-grabbing announcement (1 line)",
-  "dateline": "Location and era context",
-  "leadParagraph": "The most important facts - who, what, where",
-  "bodyParagraphs": ["Expanded details", "Quotes from witnesses or officials", "Context and implications"],
-  "officialStatement": "Quote from authority figure (optional)",
-  "closingNote": "What citizens should do or expect next"
-}`,
       contentInstructions: 'Write as if this will be read aloud in the town square. Lead with the most dramatic or important information. Include official-sounding language but remain accessible. Reference specific entities and events from the world data.',
       sections: [
         { id: 'headline', name: 'Headline', purpose: 'Grab attention immediately', wordCountTarget: 15, contentGuidance: 'Punchy, declarative. Start with action verb or dramatic noun.' },
@@ -1296,22 +1364,20 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Scholarly analysis of abilities, magic, or supernatural phenomena',
     tags: ['document', 'scholarly', 'abilities', 'academic'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['power', 'character'],
+      supportingSubjectCategories: ['character', 'object', 'concept', 'collective'],
+      roles: [
+        { role: 'studied-power', count: { min: 1, max: 2 }, description: 'The ability, magic, or phenomenon being analyzed', selectionCriteria: 'Prefer entities from power category' },
+        { role: 'documented-practitioner', count: { min: 0, max: 2 }, description: 'Those who wield or manifest the power' },
+        { role: 'scholarly-authority', count: { min: 0, max: 1 }, description: 'Expert or institution lending credibility' },
+        { role: 'related-artifact', count: { min: 0, max: 2 }, description: 'Objects associated with the power', selectionCriteria: 'Prefer entities from object category' },
+      ],
+      maxCastSize: 6,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'academic treatise',
-      structureSchema: `{
-  "title": "Formal academic title",
-  "author": "Scholar name and credentials",
-  "abstract": "Summary of findings",
-  "introduction": "Why this subject matters",
-  "observations": [{ "phenomenon": "What was observed", "analysis": "Scholarly interpretation" }],
-  "theoreticalFramework": "How this fits into broader understanding",
-  "practicalApplications": "Implications for practitioners",
-  "caveatsAndWarnings": "Dangers or limitations",
-  "conclusion": "Summary and future research directions",
-  "citations": ["References to other works or authorities"]
-}`,
       contentInstructions: 'Write as a scholar presenting findings to peers. Balance technical precision with readable prose. Include both empirical observations and theoretical speculation. Reference the ability/power/phenomenon in question using proper terminology.',
       sections: [
         { id: 'abstract', name: 'Abstract', purpose: 'Summarize findings', wordCountTarget: 80, contentGuidance: 'Concise overview of what was studied and concluded.' },
@@ -1342,15 +1408,6 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'commercial advertisement',
-      structureSchema: `{
-  "attention": "Eye-catching hook",
-  "merchantName": "Who is offering",
-  "offerings": [{ "item": "What's available", "description": "Why it's desirable", "terms": "Price or trade conditions" }],
-  "specialClaims": "What makes this merchant/goods unique",
-  "testimonials": ["Satisfied customer quotes"],
-  "whereAndWhen": "How to find the merchant",
-  "urgency": "Why act now"
-}`,
       contentInstructions: 'Write as a merchant trying to attract customers. Be enthusiastic but not absurdly so. Include specific products or services with enticing descriptions. Reference the culture and location to make it feel grounded.',
       sections: [
         { id: 'hook', name: 'Attention Grabber', purpose: 'Stop the reader', wordCountTarget: 30, contentGuidance: 'Bold claim, question, or announcement. Make them curious.' },
@@ -1380,22 +1437,6 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'letter collection',
-      structureSchema: `{
-  "collectionTitle": "What these letters concern",
-  "editorNote": "Brief context for why these letters were collected/preserved",
-  "letters": [
-    {
-      "from": "Sender name and context",
-      "to": "Recipient name",
-      "date": "When written",
-      "salutation": "How they address the recipient",
-      "body": "The letter content",
-      "closing": "Sign-off and signature",
-      "postscript": "Optional P.S."
-    }
-  ],
-  "editorClosing": "What these letters reveal (optional)"
-}`,
       contentInstructions: 'Write authentic personal letters between entities. Each letter should have distinct voice matching the sender. Letters should reveal character, advance a narrative through correspondence, and reference shared history. Include mundane details alongside important matters.',
       sections: [
         { id: 'context', name: "Editor's Note", purpose: 'Frame the collection', wordCountTarget: 60, contentGuidance: 'Why these letters were preserved. Who the correspondents were.' },
@@ -1420,20 +1461,21 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Official historical record or archive entry documenting events',
     tags: ['document', 'historical', 'official', 'archive'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['era', 'event', 'collective', 'character'],
+      supportingSubjectCategories: ['character', 'place', 'concept', 'collective'],
+      roles: [
+        { role: 'era-documented', count: { min: 0, max: 1 }, description: 'The age or period being recorded', selectionCriteria: 'Prefer entities from era category' },
+        { role: 'pivotal-event', count: { min: 0, max: 2 }, description: 'Key occurrence being chronicled', selectionCriteria: 'Prefer entities from event category' },
+        { role: 'historical-figure', count: { min: 0, max: 3 }, description: 'Notable persons documented' },
+        { role: 'faction-recorded', count: { min: 0, max: 2 }, description: 'Organizations or powers mentioned', selectionCriteria: 'Prefer entities from collective category' },
+        { role: 'chronicler', count: { min: 0, max: 1 }, description: 'The voice recording history' },
+      ],
+      maxCastSize: 8,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'historical chronicle entry',
-      structureSchema: `{
-  "entryDate": "When this was recorded",
-  "chronicler": "Who recorded it",
-  "period": "Era or reign this concerns",
-  "events": [{ "date": "When it occurred", "summary": "What happened", "significance": "Why it matters" }],
-  "principalFigures": ["Notable entities involved"],
-  "consequences": "Outcomes and lasting effects",
-  "sourcesConsulted": "How the chronicler knows this",
-  "chroniclerNotes": "Personal observations or uncertainties"
-}`,
       contentInstructions: 'Write as an official record-keeper documenting events for posterity. Maintain objectivity while acknowledging sources. Include specific dates and names. Note uncertainties honestly. The chronicler may occasionally reveal opinions through careful word choice.',
       sections: [
         { id: 'header', name: 'Entry Header', purpose: 'Identify the record', wordCountTarget: 40, contentGuidance: 'Date, period, chronicler identification.' },
@@ -1463,18 +1505,6 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'wanted poster or warning notice',
-      structureSchema: `{
-  "alertType": "WANTED | REWARD | WARNING | MISSING",
-  "subject": "Who or what this concerns",
-  "description": "Physical or identifying details",
-  "crimes": ["What they did or are suspected of"],
-  "dangerLevel": "How dangerous they are",
-  "lastSeen": "Where and when",
-  "reward": "What's offered for information/capture",
-  "contactAuthority": "Who to report to",
-  "issuingAuthority": "Who posted this notice",
-  "warnings": "Approach with caution, armed, magical abilities, etc."
-}`,
       contentInstructions: 'Write as an official notice meant to be posted publicly. Be direct and clear. Include specific identifying details. The tone should match the urgency - wanted criminals are described differently than missing children.',
       sections: [
         { id: 'header', name: 'Alert Header', purpose: 'Immediate classification', wordCountTarget: 20, contentGuidance: 'WANTED, REWARD OFFERED, or WARNING. Large and clear.' },
@@ -1500,20 +1530,21 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Treaty, alliance agreement, or formal pact between factions',
     tags: ['document', 'diplomatic', 'treaty', 'formal'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['collective', 'concept'],
+      supportingSubjectCategories: ['character', 'place', 'object'],
+      roles: [
+        { role: 'signatory-faction', count: { min: 2, max: 4 }, description: 'Party to the accord', selectionCriteria: 'Prefer entities from collective category' },
+        { role: 'binding-principle', count: { min: 0, max: 2 }, description: 'Law, tradition, or doctrine being established or invoked', selectionCriteria: 'Prefer entities from concept category' },
+        { role: 'territorial-subject', count: { min: 0, max: 2 }, description: 'Land or region covered by the accord', selectionCriteria: 'Prefer entities from place category' },
+        { role: 'signatory-leader', count: { min: 0, max: 2 }, description: 'Representative who signs on behalf of faction' },
+        { role: 'treaty-artifact', count: { min: 0, max: 1 }, description: 'Object exchanged or invoked as guarantee', selectionCriteria: 'Prefer entities from object category' },
+      ],
+      maxCastSize: 8,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'diplomatic treaty or accord',
-      structureSchema: `{
-  "treatyName": "Formal name of the accord",
-  "parties": [{ "name": "Faction/entity name", "representative": "Who signs for them", "title": "Their authority" }],
-  "preamble": "Why this treaty exists, shared values or goals",
-  "articles": [{ "number": "Article I, II, etc.", "title": "What it covers", "terms": "Specific obligations and rights" }],
-  "duration": "How long this lasts",
-  "disputeResolution": "How disagreements are handled",
-  "signatures": "Who signed and when",
-  "witnesses": "Who witnessed the signing"
-}`,
       contentInstructions: 'Write as a formal legal document between powers. Use precise diplomatic language. Each article should be clear and enforceable. Include both rights and obligations for all parties. The preamble may be more flowery; the articles must be precise.',
       sections: [
         { id: 'title', name: 'Treaty Title', purpose: 'Name the accord', wordCountTarget: 20, contentGuidance: 'Formal name including parties and purpose.' },
@@ -1543,18 +1574,6 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'community notice board collection',
-      structureSchema: `{
-  "location": "Which tavern or public house",
-  "notices": [
-    {
-      "type": "job | rumor | announcement | personal | warning | lost-found",
-      "poster": "Who posted it (may be anonymous)",
-      "content": "The notice text",
-      "compensation": "What's offered (for jobs)",
-      "contact": "How to respond"
-    }
-  ]
-}`,
       contentInstructions: 'Write a variety of notices as they would appear on a public board. Each notice has its own voice - from illiterate farmers to pompous nobles to mysterious strangers. Mix mundane (lost cat) with intriguing (strange lights seen). Some notices may reference the same events from different perspectives.',
       sections: [
         { id: 'header', name: 'Board Location', purpose: 'Set the scene', wordCountTarget: 30, contentGuidance: 'Name of establishment. Brief atmosphere.' },
@@ -1581,22 +1600,21 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Military scout report, expedition log, or reconnaissance document',
     tags: ['document', 'military', 'reconnaissance', 'tactical'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['collective', 'place'],
+      supportingSubjectCategories: ['character', 'power', 'object'],
+      roles: [
+        { role: 'enemy-force', count: { min: 0, max: 2 }, description: 'Hostile faction or army being observed', selectionCriteria: 'Prefer entities from collective category' },
+        { role: 'terrain-assessed', count: { min: 0, max: 2 }, description: 'Territory, fortification, or location being reported on', selectionCriteria: 'Prefer entities from place category' },
+        { role: 'capability-observed', count: { min: 0, max: 2 }, description: 'Enemy abilities, magic, or weapons noted', selectionCriteria: 'Prefer entities from power category' },
+        { role: 'reporting-unit', count: { min: 0, max: 1 }, description: 'Scout or reconnaissance party submitting report' },
+        { role: 'strategic-asset', count: { min: 0, max: 1 }, description: 'Resource, weapon, or item of tactical importance', selectionCriteria: 'Prefer entities from object category' },
+      ],
+      maxCastSize: 6,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'military or expedition field report',
-      structureSchema: `{
-  "classification": "Security level",
-  "reportingUnit": "Who is reporting",
-  "commander": "Who this is for",
-  "dateAndLocation": "When and where",
-  "missionObjective": "What they were sent to do",
-  "observations": [{ "subject": "What was observed", "details": "Specifics", "assessment": "Tactical significance" }],
-  "encountersOrContacts": "Any interactions",
-  "resourceStatus": "Supplies, casualties, condition",
-  "recommendations": "What should be done",
-  "attachments": "Maps, sketches mentioned"
-}`,
       contentInstructions: 'Write as a professional military or expedition report. Be concise and factual. Focus on tactically relevant information. Include honest assessment of situation. Recommend actions based on observations.',
       sections: [
         { id: 'header', name: 'Report Header', purpose: 'Identify document', wordCountTarget: 50, contentGuidance: 'Classification, date, unit, commander addressed.' },
@@ -1623,27 +1641,20 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Detailed catalog of items, artifacts, or creations with descriptions and provenance',
     tags: ['document', 'catalog', 'items', 'artifacts'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['object'],
+      supportingSubjectCategories: ['character', 'place', 'power', 'collective'],
+      roles: [
+        { role: 'catalogued-item', count: { min: 1, max: 3 }, description: 'Artifact, creation, or treasure being documented', selectionCriteria: 'Prefer entities from object category' },
+        { role: 'creator-or-owner', count: { min: 0, max: 2 }, description: 'Artisan who made it or notable previous owners' },
+        { role: 'provenance-place', count: { min: 0, max: 2 }, description: 'Locations significant to the item history', selectionCriteria: 'Prefer entities from place category' },
+        { role: 'associated-power', count: { min: 0, max: 1 }, description: 'Ability or enchantment the item possesses', selectionCriteria: 'Prefer entities from power category' },
+      ],
+      maxCastSize: 6,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'item catalog or collection inventory',
-      structureSchema: `{
-  "catalogTitle": "Name of the collection or catalog",
-  "curator": "Who compiled this",
-  "introduction": "Purpose of the catalog, scope, notable pieces",
-  "entries": [
-    {
-      "itemName": "Name of the item",
-      "category": "Type classification",
-      "description": "Physical description",
-      "properties": "Special qualities or abilities",
-      "provenance": "Where it came from, who owned it",
-      "currentStatus": "Where it is now, condition",
-      "valuationNotes": "Worth or significance"
-    }
-  ],
-  "acquisitionNotes": "How to obtain or commission similar items"
-}`,
       contentInstructions: 'Write as a knowledgeable collector or artisan documenting items. Balance technical description with evocative detail. Include provenance where known. Note special properties without being overly clinical. Each item should feel unique and desirable.',
       sections: [
         { id: 'introduction', name: 'Introduction', purpose: 'Frame the catalog', wordCountTarget: 80, contentGuidance: 'What this catalog covers. Notable inclusions. Curator credentials.' },
@@ -1669,24 +1680,21 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Religious scripture, prophecy, or spiritual teaching from a culture or faith tradition',
     tags: ['document', 'religious', 'spiritual', 'sacred'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['concept', 'power', 'character'],
+      supportingSubjectCategories: ['character', 'era', 'place', 'collective'],
+      roles: [
+        { role: 'divine-teaching', count: { min: 1, max: 2 }, description: 'Doctrine, law, or spiritual truth being revealed', selectionCriteria: 'Prefer entities from concept category' },
+        { role: 'sacred-power', count: { min: 0, max: 1 }, description: 'Divine ability, blessing, or cosmic force', selectionCriteria: 'Prefer entities from power category' },
+        { role: 'prophesied-era', count: { min: 0, max: 1 }, description: 'Age that was, is, or will be', selectionCriteria: 'Prefer entities from era category' },
+        { role: 'divine-figure', count: { min: 0, max: 2 }, description: 'God, prophet, or holy person' },
+        { role: 'sacred-place', count: { min: 0, max: 1 }, description: 'Holy site or realm', selectionCriteria: 'Prefer entities from place category' },
+      ],
+      maxCastSize: 6,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'religious or sacred text',
-      structureSchema: `{
-  "textName": "Name of this scripture or passage",
-  "tradition": "Which faith or culture this belongs to",
-  "speaker": "Divine voice, prophet, or sage (if applicable)",
-  "verses": [
-    {
-      "number": "Verse or passage number",
-      "text": "The sacred words",
-      "meaning": "Traditional interpretation (optional)"
-    }
-  ],
-  "context": "When/how this was revealed or written",
-  "ritualUse": "How this text is used in practice"
-}`,
       contentInstructions: 'Write with reverence and weight appropriate to sacred literature. Use elevated language without being incomprehensible. Include cosmological claims, moral teachings, or prophetic visions. The text should feel ancient and authoritative. May include creation myths, commandments, prophecies, or wisdom teachings.',
       sections: [
         { id: 'invocation', name: 'Invocation', purpose: 'Opening sacred formula', wordCountTarget: 40, contentGuidance: 'Traditional opening. Names of the divine. Blessing on the reader.' },
@@ -1712,24 +1720,20 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     description: 'Collection of folk wisdom, traditional sayings, and cultural aphorisms',
     tags: ['document', 'wisdom', 'folklore', 'cultural'],
     format: 'document',
-    entityRules: cloneDocumentEntityRules(),
+    entityRules: {
+      primarySubjectCategories: ['concept', 'collective'],
+      supportingSubjectCategories: ['character', 'place', 'object'],
+      roles: [
+        { role: 'cultural-value', count: { min: 1, max: 3 }, description: 'Tradition, belief, or principle expressed in the sayings', selectionCriteria: 'Prefer entities from concept category' },
+        { role: 'folk-hero', count: { min: 0, max: 2 }, description: 'Legendary figure referenced in proverbs' },
+        { role: 'cultural-institution', count: { min: 0, max: 1 }, description: 'Guild, temple, or social group whose wisdom is cited', selectionCriteria: 'Prefer entities from collective category' },
+        { role: 'proverbial-place', count: { min: 0, max: 1 }, description: 'Location referenced in cautionary tales', selectionCriteria: 'Prefer entities from place category' },
+      ],
+      maxCastSize: 6,
+    },
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'collection of proverbs and sayings',
-      structureSchema: `{
-  "collectionTitle": "Name or theme of this collection",
-  "culture": "Which culture or region these come from",
-  "collector": "Who gathered these (optional)",
-  "proverbs": [
-    {
-      "saying": "The proverb text",
-      "meaning": "What it teaches (optional)",
-      "usage": "When this is invoked"
-    }
-  ],
-  "themes": ["Common themes in these sayings"],
-  "relatedPractices": "Cultural context for these sayings"
-}`,
       contentInstructions: 'Create authentic-feeling folk wisdom. Proverbs should be pithy, memorable, and reveal cultural values. Use concrete imagery from the world (local animals, weather, trades). Some should be obvious in meaning, others more cryptic. Include contradictory proverbs - real cultures have these.',
       sections: [
         { id: 'introduction', name: 'Introduction', purpose: 'Frame the collection', wordCountTarget: 60, contentGuidance: 'Who uses these sayings. What they reveal about the culture.' },
@@ -1759,21 +1763,6 @@ export const DEFAULT_DOCUMENT_STYLES: NarrativeStyle[] = [
     eventRules: cloneDocumentEventRules(),
     documentConfig: {
       documentType: 'collection of customer reviews',
-      structureSchema: `{
-  "subject": "What is being reviewed (item, service, establishment)",
-  "vendor": "Who provides it",
-  "location": "Where to find it",
-  "reviews": [
-    {
-      "reviewer": "Name or description of reviewer",
-      "rating": "Stars, thumbs, or cultural equivalent",
-      "title": "Brief summary",
-      "review": "Full review text",
-      "verified": "Whether they actually purchased/used it"
-    }
-  ],
-  "overallRating": "Aggregate assessment"
-}`,
       contentInstructions: 'Write authentic-feeling reviews with varied voices and opinions. Include glowing reviews, complaints, and nuanced takes. Reviewers have different priorities and writing abilities. Some reviews are helpful, others rambling or petty. Reference specific features, experiences, and comparisons. Use period-appropriate rating systems.',
       sections: [
         { id: 'header', name: 'Subject Header', purpose: 'Identify what is reviewed', wordCountTarget: 30, contentGuidance: 'Name of product/service/place. Vendor. Basic info.' },
@@ -1800,6 +1789,7 @@ export function createDefaultStyleLibrary(): StyleLibrary {
   return {
     artisticStyles: [...DEFAULT_ARTISTIC_STYLES],
     compositionStyles: [...DEFAULT_COMPOSITION_STYLES],
+    colorPalettes: [...DEFAULT_COLOR_PALETTES],
     narrativeStyles: [...DEFAULT_NARRATIVE_STYLES, ...DEFAULT_DOCUMENT_STYLES],
   };
 }
@@ -1809,6 +1799,13 @@ export function createDefaultStyleLibrary(): StyleLibrary {
  */
 export function findArtisticStyle(library: StyleLibrary, id: string): ArtisticStyle | undefined {
   return library.artisticStyles.find(s => s.id === id);
+}
+
+/**
+ * Find a color palette by ID
+ */
+export function findColorPalette(library: StyleLibrary, id: string): ColorPalette | undefined {
+  return library.colorPalettes.find(s => s.id === id);
 }
 
 /**

@@ -155,73 +155,6 @@ function buildEventContext(
 }
 
 /**
- * Build generation context for an entity story
- */
-export function buildEntityStoryContext(
-  entityId: string,
-  worldData: WorldData,
-  worldContext: WorldContext
-): ChronicleGenerationContext {
-  const entityMap = new Map(worldData.hardState.map((e) => [e.id, e]));
-  const entity = entityMap.get(entityId);
-
-  if (!entity) {
-    throw new Error(`Entity not found: ${entityId}`);
-  }
-
-  // Get all entities for context
-  const entities = worldData.hardState
-    .filter((e) => e.kind !== 'era')
-    .map(buildEntityContext);
-
-  // Get relationships in the entrypoint subgraph (target + direct neighbors)
-  const directRelationships = worldData.relationships.filter(
-    (r) => r.src === entityId || r.dst === entityId
-  );
-  const relatedEntityIds = new Set<string>([entityId]);
-  for (const rel of directRelationships) {
-    relatedEntityIds.add(rel.src);
-    relatedEntityIds.add(rel.dst);
-  }
-  const relationships = worldData.relationships
-    .filter((r) => relatedEntityIds.has(r.src) && relatedEntityIds.has(r.dst))
-    .map((r) => buildRelationshipContext(r, entityMap));
-
-  // Get events involving this entity, sorted by significance
-  const events = (worldData.narrativeHistory || [])
-    .filter(
-      (e) =>
-        e.subject?.id === entityId ||
-        e.object?.id === entityId ||
-        e.stateChanges?.some((sc) => sc.entityId === entityId)
-    )
-    .sort((a, b) => b.significance - a.significance)
-    .map(buildEventContext);
-
-  // Find the era this entity was active during
-  const activeEraRel = worldData.relationships.find(
-    (r) => r.src === entityId && r.kind === 'active_during'
-  );
-  const era = activeEraRel ? entityMap.get(activeEraRel.dst) : undefined;
-
-  return {
-    worldName: worldContext.name || 'The World',
-    worldDescription: worldContext.description || '',
-    canonFacts: worldContext.canonFacts || [],
-    tone: worldContext.tone || '',
-
-    targetType: 'entityStory',
-    targetId: entityId,
-
-    entity: buildEntityContext(entity),
-    era: era ? buildEraContext(era) : undefined,
-    entities,
-    relationships,
-    events,
-  };
-}
-
-/**
  * Chronicle selections from wizard (chronicle-first architecture)
  */
 export interface ChronicleSelections {
@@ -336,46 +269,7 @@ export function buildChronicleContext(
     entities,
     relationships,
     events,
-
-    // Legacy fields for backwards compat
-    targetType: 'entityStory',
-    targetId: primaryEntityId || selections.entrypointId || '',
-    entity: primaryEntityId ? buildEntityContext(entityMap.get(primaryEntityId)!) : undefined,
-    roleAssignments: selections.roleAssignments,
   };
-}
-
-/**
- * Wizard selection data passed from the chronicle wizard
- * @deprecated Use ChronicleSelections instead
- */
-export interface WizardSelections {
-  entryPointId: string;
-  roleAssignments: ChronicleRoleAssignment[];
-  selectedEventIds: string[];
-  selectedRelationshipIds: string[];
-}
-
-/**
- * Build generation context from wizard selections
- * @deprecated Use buildChronicleContext instead
- */
-export function buildWizardChronicleContext(
-  selections: WizardSelections,
-  worldData: WorldData,
-  worldContext: WorldContext
-): ChronicleGenerationContext {
-  // Convert old format to new format
-  return buildChronicleContext(
-    {
-      roleAssignments: selections.roleAssignments,
-      selectedEventIds: selections.selectedEventIds,
-      selectedRelationshipIds: selections.selectedRelationshipIds,
-      entrypointId: selections.entryPointId,
-    },
-    worldData,
-    worldContext
-  );
 }
 
 /**
@@ -396,17 +290,8 @@ export function checkPrerequisites(
 ): PrerequisiteCheck {
   const missing: PrerequisiteCheck['missing'] = [];
 
-  // Handle contexts without focus (legacy or incomplete)
   if (!context.focus?.roleAssignments) {
-    // Fall back to checking the legacy entity field
-    if (context.entity && !(context.entity.summary && context.entity.description)) {
-      missing.push({
-        type: 'entityDescription',
-        id: context.entity.id,
-        name: context.entity.name,
-      });
-    }
-    return { ready: missing.length === 0, missing };
+    return { ready: false, missing };
   }
 
   // Check that primary entities have descriptions

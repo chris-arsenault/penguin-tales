@@ -27,20 +27,27 @@ import {
   generateImageId,
 } from '../lib/workerStorage';
 import {
-  createStory,
-  updateStoryAssembly,
-  updateStoryCohesion,
-  updateStoryEdit,
-  updateStorySummary,
-  updateStoryImageRefs,
-  updateStoryProseBlend,
-  updateStoryFailure,
-  generateStoryId,
-  getStory,
+  getTraitGuidance,
+  registerUsedTraits,
+  getPalette,
+  getHistoricalTraits,
+  updatePaletteItems,
+  type TraitGuidance,
+  type PaletteItem,
+} from '../lib/traitRegistry';
+import {
+  createChronicle,
+  updateChronicleAssembly,
+  updateChronicleCohesion,
+  updateChronicleEdit,
+  updateChronicleSummary,
+  updateChronicleImageRefs,
+  updateChronicleProseBlend,
+  updateChronicleFailure,
+  getChronicle,
 } from '../lib/chronicleStorage';
 import type {
   ChronicleGenerationContext,
-  ChroniclePlan,
   EntityContext,
   CohesionReport,
   ChronicleImageRefs,
@@ -71,7 +78,7 @@ export interface WorkerConfig {
   anthropicApiKey: string;
   openaiApiKey: string;
   textModel: string;
-  chronicleModel?: string;  // Model for entity stories (defaults to textModel)
+  chronicleModel?: string;  // Model for chronicles (defaults to textModel)
   imageModel: string;
   imageSize: string;
   imageQuality: string;
@@ -161,7 +168,7 @@ function stripLeadingWrapper(text: string): string {
   if (!text) return text;
   let result = text.trim();
 
-  const fenced = result.match(/```(?:markdown|md)?\s*([\s\S]*?)```/);
+  const fenced = result.match(/```(?:markdown|md|json)?\s*([\s\S]*?)```/);
   if (fenced) {
     result = fenced[1].trim();
   }
@@ -218,6 +225,7 @@ function parseDescriptionPayload(text: string): {
   summary: string;
   description: string;
   aliases: string[];
+  visualTraits: string[];
 } {
   const cleaned = stripLeadingWrapper(text);
   const candidate = extractFirstJsonObject(cleaned) || cleaned;
@@ -241,28 +249,34 @@ function parseDescriptionPayload(text: string): {
       .map((alias) => alias.trim())
       .filter(Boolean)
     : [];
+  const visualTraits = Array.isArray(obj.visualTraits)
+    ? obj.visualTraits
+      .filter((trait): trait is string => typeof trait === 'string')
+      .map((trait) => trait.trim())
+      .filter(Boolean)
+    : [];
 
   if (!summary || !description) {
     throw new Error('Description payload requires summary and description');
   }
 
-  return { summary, description, aliases };
+  return { summary, description, aliases, visualTraits };
 }
 
-async function markStoryFailure(
-  storyId: string,
+async function markChronicleFailure(
+  chronicleId: string,
   step: ChronicleStep,
   error: string
 ): Promise<void> {
   try {
-    await updateStoryFailure(storyId, step, error);
+    await updateChronicleFailure(chronicleId, step, error);
   } catch (err) {
-    console.error('[Worker] Failed to record story failure:', err);
+    console.error('[Worker] Failed to record chronicle failure:', err);
   }
 }
 
-export function buildSystemPrompt(): string {
-  return `You are a creative writer helping to build rich, consistent world lore.
+export function buildSystemPrompt(guidance?: TraitGuidance): string {
+  let basePrompt = `You are a creative writer helping to build rich, consistent world lore.
 
 Write descriptions that capture the ESSENCE of the entity - their personality, appearance, mannerisms, or defining traits. The description should stand on its own and make the entity feel real and distinctive.
 Provide a summary that is a compressed, faithful version of the description. The summary must not contradict or introduce new facts.
@@ -273,7 +287,43 @@ IMPORTANT: Do NOT write a tour of the entity's relationships. The description sh
 Bad example (relationship catalog): "She oversees the treasury of Place X, discovered the caverns of Place Y, and manages trade at Place Z."
 Good example (entity-focused): "Her obsidian beak angles perpetually downward, as if still searching for miscounted coins. Every word she speaks has the weight of a merchant's scale."
 
-Be concise but vivid. Avoid generic fantasy tropes unless they fit the world's tone.`;
+VISUAL TRAITS: Generate 2-4 distinctive visual traits that make this entity visually unique and instantly recognizable. These should be SPECIFIC and MEMORABLE features - the details an artist would need to distinguish this entity from others of its type.`;
+
+  // Add positive category assignment if available
+  if (guidance && guidance.assignedCategories.length > 0) {
+    basePrompt += `
+
+VISUAL DIRECTION ASSIGNMENT:
+This entity's visual identity should emphasize these thematic directions:
+${guidance.assignedCategories.map(p => `
+### ${p.category}
+${p.description}
+Examples: ${p.examples.join(' · ')}`).join('\n')}
+
+Create traits that fit within these assigned directions while being unique to this specific entity. You may include 1 trait outside these directions if it truly defines the entity.`;
+  } else {
+    // Default guidance when no palette exists yet
+    basePrompt += `
+
+Consider these independent visual dimensions:
+- FORM: Unusual shape, size, proportions, or silhouette
+- SURFACE: Distinctive colors, patterns, textures, or markings
+- CONDITION: Signs of age, wear, damage, enhancement, or transformation
+- PRESENCE: How they move, stand, or affect space around them
+- CULTURAL: Accessories, modifications, symbols, or status markers`;
+  }
+
+  basePrompt += `
+
+DISTINCTIVENESS MANDATE:
+- At least one trait must be visible from 50 feet away
+- A stranger should be able to identify this entity by ONE trait alone
+- Mix the grandiose with the grounded - not everything needs to be supernatural
+- Avoid generic fantasy tropes (glowing eyes, mysterious aura) unless truly fitting
+
+Be concise but vivid.`;
+
+  return basePrompt;
 }
 
 interface ImagePromptFormatResult {
@@ -467,7 +517,7 @@ export async function executeImageTask(
     outputTokens: result.usage?.outputTokens,
     // Chronicle image fields
     imageType: task.imageType,
-    storyId: task.storyId,
+    chronicleId: task.chronicleId,
     imageRefId: task.imageRefId,
     sceneDescription: task.sceneDescription,
   });
@@ -519,8 +569,23 @@ export async function executeTextTask(
   const taskType: CostType = 'description';
   const estimate = estimateTextCost(task.prompt, 'description', textModel);
 
+  // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
+  let traitGuidance: TraitGuidance | undefined;
+  try {
+    if (task.projectId && task.simulationRunId && task.entityKind) {
+      traitGuidance = await getTraitGuidance(
+        task.projectId,
+        task.simulationRunId,
+        task.entityKind
+      );
+    }
+  } catch (err) {
+    // Non-fatal - continue without guidance
+    console.warn('[Worker] Failed to fetch trait guidance:', err);
+  }
+
   const result = await llmClient.complete({
-    systemPrompt: buildSystemPrompt(),
+    systemPrompt: buildSystemPrompt(traitGuidance),
     prompt: task.prompt,
     model: textModel,
     maxTokens: 512,
@@ -557,6 +622,23 @@ export async function executeTextTask(
     };
   }
 
+  // Register generated traits for future diversity guidance
+  try {
+    if (task.projectId && task.simulationRunId && task.entityKind && payload.visualTraits.length > 0) {
+      await registerUsedTraits(
+        task.projectId,
+        task.simulationRunId,
+        task.entityKind,
+        task.entityId,
+        task.entityName,
+        payload.visualTraits
+      );
+    }
+  } catch (err) {
+    // Non-fatal - continue without registration
+    console.warn('[Worker] Failed to register traits:', err);
+  }
+
   // Save cost record independently
   await saveCostRecord({
     id: generateCostId(),
@@ -580,19 +662,22 @@ export async function executeTextTask(
       summary: payload.summary,
       description: payload.description,
       aliases: payload.aliases,
+      visualTraits: payload.visualTraits,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: estimate.estimatedCost,
       actualCost,
       inputTokens,
       outputTokens,
+      // Include debug in result for persistence to entity enrichment
+      debug,
     },
     debug,
   };
 }
 
 // ============================================================================
-// Entity Story Task Execution
+// Chronicle Task Execution
 // ============================================================================
 
 /**
@@ -616,31 +701,12 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
     updatedAt: e.updatedAt,
   }));
 
-  const entity: EntityContext | undefined = ctx.entity
-    ? {
-      id: ctx.entity.id,
-      name: ctx.entity.name,
-      kind: ctx.entity.kind,
-      subtype: ctx.entity.subtype,
-      prominence: ctx.entity.prominence,
-      culture: ctx.entity.culture,
-      status: ctx.entity.status,
-      tags: ctx.entity.tags,
-      summary: ctx.entity.summary,
-      description: ctx.entity.description,
-      aliases: ctx.entity.aliases,
-      createdAt: ctx.entity.createdAt,
-      updatedAt: ctx.entity.updatedAt,
-    }
-    : undefined;
-
   return {
     worldName: ctx.worldName,
     worldDescription: ctx.worldDescription,
     canonFacts: ctx.canonFacts,
     tone: ctx.tone,
-    targetType: ctx.targetType,
-    targetId: ctx.targetId,
+    focus: ctx.focus,
     era: ctx.era
       ? {
         id: ctx.era.id,
@@ -648,7 +714,6 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
         description: ctx.era.description,
       }
       : undefined,
-    entity,
     entities,
     relationships: ctx.relationships.map((r) => ({
       src: r.src,
@@ -678,10 +743,10 @@ function deserializeChronicleContext(ctx: SerializableChronicleContext): Chronic
 }
 
 /**
- * Execute a SINGLE step of entity story generation.
+ * Execute a SINGLE step of chronicle generation.
  * Each step pauses for user review before proceeding to the next.
  */
-export async function executeEntityStoryTask(
+export async function executeEntityChronicleTask(
   task: WorkerTask,
   config: WorkerConfig,
   llmClient: LLMClient,
@@ -693,7 +758,7 @@ export async function executeEntityStoryTask(
 
   const step = task.chronicleStep || 'generate_v2';
   const textModel = config.chronicleModel || config.textModel || 'claude-sonnet-4-20250514';
-  console.log(`[Worker] Entity story step=${step} for entity=${task.entityId}, model=${textModel}`);
+  console.log(`[Worker] Chronicle step=${step} for entity=${task.entityId}, model=${textModel}`);
 
   // V2 single-shot generation - primary generation path
   if (step === 'generate_v2') {
@@ -703,49 +768,49 @@ export async function executeEntityStoryTask(
     return executeV2GenerationStep(task, config, llmClient, isAborted, textModel);
   }
 
-  // For post-generation steps, we need the existing story
-  if (!task.storyId) {
-    return { success: false, error: `storyId required for ${step} step` };
+  // For post-generation steps, we need the existing chronicle
+  if (!task.chronicleId) {
+    return { success: false, error: `chronicleId required for ${step} step` };
   }
 
-  const storyRecord = await getStory(task.storyId);
-  if (!storyRecord) {
-    return { success: false, error: `Story ${task.storyId} not found` };
+  const chronicleRecord = await getChronicle(task.chronicleId);
+  if (!chronicleRecord) {
+    return { success: false, error: `Chronicle ${task.chronicleId} not found` };
   }
 
   if (step === 'edit') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for edit step' };
     }
-    return executeEditStep(task, storyRecord, config, llmClient, isAborted, textModel);
+    return executeEditStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
   }
 
   if (step === 'summary') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for summary step' };
     }
-    return executeSummaryStep(task, storyRecord, config, llmClient, isAborted, textModel);
+    return executeSummaryStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
   }
 
   if (step === 'image_refs') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for image refs step' };
     }
-    return executeImageRefsStep(task, storyRecord, config, llmClient, isAborted, textModel);
+    return executeImageRefsStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
   }
 
   if (step === 'prose_blend') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for prose blend step' };
     }
-    return executeProseBlendStep(task, storyRecord, config, llmClient, isAborted, textModel);
+    return executeProseBlendStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
   }
 
   if (step === 'validate') {
     if (!task.chronicleContext) {
       return { success: false, error: 'Chronicle context required for validate step' };
     }
-    return executeValidateStep(task, storyRecord, config, llmClient, isAborted, textModel);
+    return executeValidateStep(task, chronicleRecord, config, llmClient, isAborted, textModel);
   }
 
   return { success: false, error: `Unknown step: ${step}` };
@@ -770,8 +835,12 @@ async function executeV2GenerationStep(
     return { success: false, error: 'Narrative style is required for V2 generation' };
   }
 
-  const storyId = generateStoryId(task.entityId);
-  console.log(`[Worker] V2 generation for entity=${task.entityId}, style="${narrativeStyle.name}"`);
+  if (!task.chronicleId) {
+    return { success: false, error: 'chronicleId required for generate_v2 step' };
+  }
+
+  const chronicleId = task.chronicleId;
+  console.log(`[Worker] V2 generation for chronicle=${chronicleId}, style="${narrativeStyle.name}"`);
 
   // Simple entity/event selection from 2-hop neighborhood
   const selection = selectEntitiesV2(context, DEFAULT_V2_CONFIG);
@@ -807,7 +876,7 @@ async function executeV2GenerationStep(
   }
 
   // Note: Wikilinks are NOT applied here - they are applied once at acceptance time
-  // (in useChronicleGeneration.ts acceptStory) to avoid double-bracketing issues.
+  // (in useChronicleGeneration.ts acceptChronicle) to avoid double-bracketing issues.
 
   // Calculate cost
   const cost = {
@@ -819,19 +888,27 @@ async function executeV2GenerationStep(
     outputTokens: result.usage?.outputTokens || estimate.outputTokens,
   };
 
-  // Save story directly to assembled state (single-shot generation)
+  // Save chronicle directly to assembled state (single-shot generation)
   try {
     const focus = context.focus;
-    await createStory(storyId, {
+    const existingChronicle = await getChronicle(chronicleId);
+    const roleAssignments = existingChronicle?.roleAssignments ?? focus?.roleAssignments ?? [];
+    const selectedEntityIds = existingChronicle?.selectedEntityIds ?? focus?.selectedEntityIds ?? [];
+    const selectedEventIds = existingChronicle?.selectedEventIds ?? focus?.selectedEventIds ?? [];
+    const selectedRelationshipIds = existingChronicle?.selectedRelationshipIds ?? focus?.selectedRelationshipIds ?? [];
+
+    await createChronicle(chronicleId, {
       projectId: task.projectId,
       simulationRunId: task.simulationRunId,
       model: textModel,
-      narrativeStyleId: narrativeStyle.id,
-      roleAssignments: focus?.roleAssignments || [],
-      selectedEntityIds: focus?.selectedEntityIds || [],
-      selectedEventIds: focus?.selectedEventIds || [],
-      selectedRelationshipIds: focus?.selectedRelationshipIds || [],
-      entrypointId: task.entityId,
+      title: existingChronicle?.title,
+      format: existingChronicle?.format || narrativeStyle.format,
+      narrativeStyleId: existingChronicle?.narrativeStyleId || narrativeStyle.id,
+      roleAssignments,
+      selectedEntityIds,
+      selectedEventIds,
+      selectedRelationshipIds,
+      entrypointId: existingChronicle?.entrypointId,
       assembledContent: result.text,
       selectionSummary: {
         entityCount: selection.entities.length,
@@ -840,9 +917,9 @@ async function executeV2GenerationStep(
       },
       cost,
     });
-    console.log(`[Worker] Story saved: ${storyId}`);
+    console.log(`[Worker] Chronicle saved: ${chronicleId}`);
   } catch (err) {
-    return { success: false, error: `Failed to save story: ${err}` };
+    return { success: false, error: `Failed to save chronicle: ${err}` };
   }
 
   // Record cost
@@ -854,8 +931,8 @@ async function executeV2GenerationStep(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storyV2',
+    chronicleId,
+    type: 'chronicleV2',
     model: textModel,
     estimatedCost: cost.estimated,
     actualCost: cost.actual,
@@ -866,7 +943,7 @@ async function executeV2GenerationStep(
   return {
     success: true,
     result: {
-      storyId,
+      chronicleId,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: cost.estimated,
@@ -883,33 +960,33 @@ async function executeV2GenerationStep(
  */
 async function executeEditStep(
   task: WorkerTask,
-  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord) {
-    return { success: false, error: 'Story record missing for editing' };
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for editing' };
   }
 
-  const storyId = storyRecord.storyId;
+  const chronicleId = chronicleRecord.chronicleId;
   const failEdit = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
-    await markStoryFailure(storyId, 'edit', message);
+    await markChronicleFailure(chronicleId, 'edit', message);
     return { success: false, error: message, debug };
   };
 
-  if (!storyRecord.assembledContent) {
+  if (!chronicleRecord.assembledContent) {
     return failEdit('Chronicle has no assembled content to edit');
   }
-  if (!storyRecord.cohesionReport) {
+  if (!chronicleRecord.cohesionReport) {
     return failEdit('Chronicle has no validation report to edit against');
   }
 
   console.log('[Worker] Editing chronicle based on validation feedback...');
 
   // Build edit prompt from validation issues
-  const issues = storyRecord.cohesionReport.issues || [];
+  const issues = chronicleRecord.cohesionReport.issues || [];
   const issueList = issues
     .map((issue, i) => `${i + 1}. [${issue.severity}] ${issue.description}\n   Suggestion: ${issue.suggestion}`)
     .join('\n\n');
@@ -920,7 +997,7 @@ async function executeEditStep(
 ${issueList || 'No specific issues identified.'}
 
 ## Original Chronicle
-${storyRecord.assembledContent}
+${chronicleRecord.assembledContent}
 
 ## Instructions
 1. Address each issue while preserving the overall narrative flow
@@ -958,7 +1035,7 @@ ${storyRecord.assembledContent}
 
   const cleanedContent = stripLeadingWrapper(editResult.text);
 
-  await updateStoryEdit(storyId, cleanedContent, editCost);
+  await updateChronicleEdit(chronicleId, cleanedContent, editCost);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -968,8 +1045,8 @@ ${storyRecord.assembledContent}
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storyRevision',
+    chronicleId,
+    type: 'chronicleRevision',
     model: textModel,
     estimatedCost: editCost.estimated,
     actualCost: editCost.actual,
@@ -981,14 +1058,14 @@ ${storyRecord.assembledContent}
     return failEdit('Task aborted', debug);
   }
 
-  const updatedStoryRecord = {
-    ...storyRecord,
+  const updatedChronicleRecord = {
+    ...chronicleRecord,
     assembledContent: cleanedContent,
   };
 
   const validationResult = await executeValidateStep(
     task,
-    updatedStoryRecord,
+    updatedChronicleRecord,
     config,
     llmClient,
     isAborted,
@@ -1073,7 +1150,7 @@ Check the following:
 
 3. **Entity Usage**: Are entities from the provided list used appropriately? Are entity kinds (person, faction, location, etc.) treated correctly (e.g., factions are groups, not individual characters)?
 
-4. **Narrative Coherence**: Does the story flow logically? Is there a clear beginning, middle, and end?
+4. **Narrative Coherence**: Does the chronicle flow logically? Is there a clear beginning, middle, and end?
 
 5. **Factual Consistency**: Are entity facts (names, relationships, status) consistent throughout?
 
@@ -1150,23 +1227,23 @@ function parseV2ValidationResponse(text: string): CohesionReport {
  */
 async function executeValidateStep(
   task: WorkerTask,
-  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord) {
-    return { success: false, error: 'Story record missing for validation' };
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for validation' };
   }
 
-  const storyId = storyRecord.storyId;
+  const chronicleId = chronicleRecord.chronicleId;
   const failValidate = async (message: string, debug?: NetworkDebugInfo): Promise<TaskResult> => {
-    await markStoryFailure(storyId, 'validate', message);
+    await markChronicleFailure(chronicleId, 'validate', message);
     return { success: false, error: message, debug };
   };
 
-  if (!storyRecord.assembledContent) {
+  if (!chronicleRecord.assembledContent) {
     return failValidate('Chronicle has no assembled content to validate');
   }
 
@@ -1177,7 +1254,7 @@ async function executeValidateStep(
   }
 
   console.log('[Worker] Validating cohesion...');
-  const validationPrompt = buildV2ValidationPrompt(storyRecord.assembledContent, context, narrativeStyle);
+  const validationPrompt = buildV2ValidationPrompt(chronicleRecord.assembledContent, context, narrativeStyle);
   const systemPrompt = 'You are a narrative quality evaluator. Analyze the chronicle and provide a structured assessment.';
 
   const validationEstimate = estimateTextCost(validationPrompt, 'description', textModel);
@@ -1217,7 +1294,7 @@ async function executeValidateStep(
     return failValidate(`Failed to parse validation response: ${err}`, debug);
   }
 
-  await updateStoryCohesion(storyId, cohesionReport, validationCost);
+  await updateChronicleCohesion(chronicleId, cohesionReport, validationCost);
   console.log('[Worker] Validation complete');
 
   // Save cost record independently
@@ -1229,8 +1306,8 @@ async function executeValidateStep(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storyValidation',
+    chronicleId,
+    type: 'chronicleValidation',
     model: textModel,
     estimatedCost: validationCost.estimated,
     actualCost: validationCost.actual,
@@ -1241,7 +1318,7 @@ async function executeValidateStep(
   return {
     success: true,
     result: {
-      storyId,
+      chronicleId,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: validationCost.estimated,
@@ -1253,47 +1330,27 @@ async function executeValidateStep(
   };
 }
 
-function buildSummaryPrompt(content: string, plan?: ChroniclePlan): string {
-  const titleLine = plan?.title ? `Title: ${plan.title}` : '';
-  const formatLine = plan?.format ? `Format: ${plan.format}` : '';
-  const contextLines = [titleLine, formatLine].filter(Boolean).join('\n');
+function buildSummaryPrompt(content: string): string {
+  return `Generate a title and summary for the chronicle below.
 
-  return `Summarize the chronicle below in 2-4 sentences for a preview field.
 Rules:
-- Keep it factual and faithful to the chronicle.
-- Mention key entities and the main outcome.
-- Do not add new facts.
-Return ONLY the summary text.
+- Title: A compelling, evocative title (3-8 words) that captures the essence of the chronicle
+- Summary: 2-4 sentences summarizing the key events and outcome
+- Keep both factual and faithful to the chronicle
+- Mention key entities in the summary
 
-${contextLines ? `${contextLines}\n\n` : ''}Chronicle:
-${content}`;
+Chronicle:
+${content}
+
+Return ONLY valid JSON in this exact format:
+{"title": "...", "summary": "..."}`;
 }
 
-function formatImageRefEntities(plan: ChroniclePlan | undefined, context: ChronicleGenerationContext): string {
-  const entityMap = new Map(context.entities.map((entity) => [entity.id, entity]));
+function formatImageRefEntities(context: ChronicleGenerationContext): string {
+  if (context.entities.length === 0) return '(none)';
 
-  // For V2 stories (no plan), use all context entities
-  // For V1 stories, use the selected entities from the plan
-  let ids: string[];
-  if (!plan) {
-    // V2: use all entities from context
-    ids = context.entities.map((e) => e.id);
-  } else if (plan.focus?.selectedEntityIds?.length) {
-    ids = plan.focus.selectedEntityIds;
-  } else if (plan.entityRoles?.length) {
-    ids = plan.entityRoles.map((role) => role.entityId);
-  } else {
-    ids = [];
-  }
-
-  const uniqueIds = Array.from(new Set(ids));
-  if (uniqueIds.length === 0) return '(none)';
-
-  return uniqueIds
-    .map((id) => {
-      const name = entityMap.get(id)?.name || id;
-      return `- ${id}: ${name}`;
-    })
+  return context.entities
+    .map((entity) => `- ${entity.id}: ${entity.name}`)
     .join('\n');
 }
 
@@ -1326,10 +1383,9 @@ function extractSectionInfo(content: string): Array<{ id: string; name: string }
 
 function buildImageRefsPrompt(
   content: string,
-  plan: ChroniclePlan | undefined,
   context: ChronicleGenerationContext
 ): string {
-  const entityList = formatImageRefEntities(plan, context);
+  const entityList = formatImageRefEntities(context);
   const sections = extractSectionInfo(content);
   const sectionList = sections.map(s => `- ${s.id}: "${s.name}"`).join('\n');
 
@@ -1460,11 +1516,7 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
   });
 }
 
-function buildProseBlendPrompt(content: string, plan?: ChroniclePlan): string {
-  const titleLine = plan?.title ? `Title: ${plan.title}` : '';
-  const formatLine = plan?.format ? `Format: ${plan.format}` : '';
-  const contextLines = [titleLine, formatLine].filter(Boolean).join('\n');
-
+function buildProseBlendPrompt(content: string): string {
   return `Rewrite the chronicle into a more cohesive, freeform narrative while keeping ALL relevant details.
 Rules:
 - Preserve names, dates, facts, and outcomes.
@@ -1473,31 +1525,31 @@ Rules:
 - If the text is already a discrete document (letter, decree, log), keep that form and polish the prose.
 Return ONLY the rewritten chronicle content.
 
-${contextLines ? `${contextLines}\n\n` : ''}Chronicle:
+Chronicle:
 ${content}`;
 }
 
 async function executeSummaryStep(
   task: WorkerTask,
-  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord) {
-    return { success: false, error: 'Story record missing for summary' };
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for summary' };
   }
-  if (!storyRecord.assembledContent) {
+  if (!chronicleRecord.assembledContent) {
     return { success: false, error: 'Chronicle has no assembled content to summarize' };
   }
 
-  const storyId = storyRecord.storyId;
-  const summaryPrompt = buildSummaryPrompt(storyRecord.assembledContent, storyRecord.plan);
+  const chronicleId = chronicleRecord.chronicleId;
+  const summaryPrompt = buildSummaryPrompt(chronicleRecord.assembledContent);
   const summaryEstimate = estimateTextCost(summaryPrompt, 'description', textModel);
 
   const summaryResult = await llmClient.complete({
-    systemPrompt: 'You are a careful editor who writes concise, faithful summaries.',
+    systemPrompt: 'You are a careful editor who writes concise, faithful summaries. Always respond with valid JSON.',
     prompt: summaryPrompt,
     model: textModel,
     maxTokens: 512,
@@ -1513,9 +1565,26 @@ async function executeSummaryStep(
     return { success: false, error: `Summary failed: ${summaryResult.error || 'Empty response'}`, debug };
   }
 
-  const summaryText = stripLeadingWrapper(summaryResult.text).replace(/\s+/g, ' ').trim();
-  if (!summaryText) {
-    return { success: false, error: 'Summary response empty', debug };
+  // Parse JSON response for title and summary
+  let title: string | undefined;
+  let summaryText: string;
+
+  try {
+    const cleaned = stripLeadingWrapper(summaryResult.text).trim();
+    // Use extractFirstJsonObject for robust JSON extraction
+    const jsonStr = extractFirstJsonObject(cleaned) || cleaned;
+    const parsed = JSON.parse(jsonStr);
+    title = parsed.title?.trim();
+    summaryText = parsed.summary?.trim();
+    if (!summaryText) {
+      return { success: false, error: 'Summary response missing summary field', debug };
+    }
+  } catch {
+    // Fallback: treat entire response as summary (backwards compat)
+    summaryText = stripLeadingWrapper(summaryResult.text).replace(/\s+/g, ' ').trim();
+    if (!summaryText) {
+      return { success: false, error: 'Summary response empty', debug };
+    }
   }
 
   const summaryCost = {
@@ -1527,7 +1596,7 @@ async function executeSummaryStep(
     outputTokens: summaryResult.usage?.outputTokens || summaryEstimate.outputTokens,
   };
 
-  await updateStorySummary(storyId, summaryText, summaryCost, textModel);
+  await updateChronicleSummary(chronicleId, summaryText, summaryCost, textModel, title);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -1537,8 +1606,8 @@ async function executeSummaryStep(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storySummary' as CostType,
+    chronicleId,
+    type: 'chronicleSummary' as CostType,
     model: textModel,
     estimatedCost: summaryCost.estimated,
     actualCost: summaryCost.actual,
@@ -1549,7 +1618,7 @@ async function executeSummaryStep(
   return {
     success: true,
     result: {
-      storyId,
+      chronicleId,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: summaryCost.estimated,
@@ -1563,22 +1632,22 @@ async function executeSummaryStep(
 
 async function executeImageRefsStep(
   task: WorkerTask,
-  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord) {
-    return { success: false, error: 'Story record missing for image refs' };
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for image refs' };
   }
-  if (!storyRecord.assembledContent) {
+  if (!chronicleRecord.assembledContent) {
     return { success: false, error: 'Chronicle has no assembled content for image refs' };
   }
 
-  const storyId = storyRecord.storyId;
+  const chronicleId = chronicleRecord.chronicleId;
   const context = deserializeChronicleContext(task.chronicleContext!);
-  const imageRefsPrompt = buildImageRefsPrompt(storyRecord.assembledContent, storyRecord.plan, context);
+  const imageRefsPrompt = buildImageRefsPrompt(chronicleRecord.assembledContent, context);
   const imageRefsEstimate = estimateTextCost(imageRefsPrompt, 'description', textModel);
 
   const imageRefsResult = await llmClient.complete({
@@ -1614,6 +1683,19 @@ async function executeImageRefsStep(
     return { success: false, error: 'No image refs found in response', debug };
   }
 
+  // Calculate anchorIndex for each ref based on position in assembled content
+  const assembledContent = chronicleRecord.assembledContent;
+  for (const ref of parsedRefs) {
+    if (ref.anchorText) {
+      const anchorLower = ref.anchorText.toLowerCase();
+      const contentLower = assembledContent.toLowerCase();
+      const index = contentLower.indexOf(anchorLower);
+      if (index >= 0) {
+        ref.anchorIndex = index;
+      }
+    }
+  }
+
   // Create structured ChronicleImageRefs object
   const imageRefs: ChronicleImageRefs = {
     refs: parsedRefs,
@@ -1630,7 +1712,7 @@ async function executeImageRefsStep(
     outputTokens: imageRefsResult.usage?.outputTokens || imageRefsEstimate.outputTokens,
   };
 
-  await updateStoryImageRefs(storyId, imageRefs, imageRefsCost, textModel);
+  await updateChronicleImageRefs(chronicleId, imageRefs, imageRefsCost, textModel);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -1640,8 +1722,8 @@ async function executeImageRefsStep(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storyImageRefs' as CostType,
+    chronicleId,
+    type: 'chronicleImageRefs' as CostType,
     model: textModel,
     estimatedCost: imageRefsCost.estimated,
     actualCost: imageRefsCost.actual,
@@ -1652,7 +1734,7 @@ async function executeImageRefsStep(
   return {
     success: true,
     result: {
-      storyId,
+      chronicleId,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: imageRefsCost.estimated,
@@ -1666,21 +1748,21 @@ async function executeImageRefsStep(
 
 async function executeProseBlendStep(
   task: WorkerTask,
-  storyRecord: Awaited<ReturnType<typeof getStory>>,
+  chronicleRecord: Awaited<ReturnType<typeof getChronicle>>,
   config: WorkerConfig,
   llmClient: LLMClient,
   isAborted: () => boolean,
   textModel: string
 ): Promise<TaskResult> {
-  if (!storyRecord) {
-    return { success: false, error: 'Story record missing for prose blending' };
+  if (!chronicleRecord) {
+    return { success: false, error: 'Chronicle record missing for prose blending' };
   }
-  if (!storyRecord.assembledContent) {
+  if (!chronicleRecord.assembledContent) {
     return { success: false, error: 'Chronicle has no assembled content to blend' };
   }
 
-  const storyId = storyRecord.storyId;
-  const blendPrompt = buildProseBlendPrompt(storyRecord.assembledContent, storyRecord.plan);
+  const chronicleId = chronicleRecord.chronicleId;
+  const blendPrompt = buildProseBlendPrompt(chronicleRecord.assembledContent);
   const blendEstimate = estimateTextCost(blendPrompt, 'description', textModel);
 
   const blendResult = await llmClient.complete({
@@ -1714,7 +1796,7 @@ async function executeProseBlendStep(
     outputTokens: blendResult.usage?.outputTokens || blendEstimate.outputTokens,
   };
 
-  await updateStoryProseBlend(storyId, blendedContent, blendCost, textModel);
+  await updateChronicleProseBlend(chronicleId, blendedContent, blendCost, textModel);
 
   await saveCostRecord({
     id: generateCostId(),
@@ -1724,8 +1806,8 @@ async function executeProseBlendStep(
     entityId: task.entityId,
     entityName: task.entityName,
     entityKind: task.entityKind,
-    storyId,
-    type: 'storyProseBlend' as CostType,
+    chronicleId,
+    type: 'chronicleProseBlend' as CostType,
     model: textModel,
     estimatedCost: blendCost.estimated,
     actualCost: blendCost.actual,
@@ -1736,7 +1818,7 @@ async function executeProseBlendStep(
   return {
     success: true,
     result: {
-      storyId,
+      chronicleId,
       generatedAt: Date.now(),
       model: textModel,
       estimatedCost: blendCost.estimated,
@@ -1748,7 +1830,301 @@ async function executeProseBlendStep(
   };
 }
 
- 
+// ============================================================================
+// Palette Expansion Task
+// ============================================================================
+
+const PALETTE_EXPANSION_SYSTEM_PROMPT = `You are a visual design consultant creating trait palettes for worldbuilding. Your categories will be assigned to entities to ensure visual diversity - each entity gets 1-2 categories to focus on.
+
+CRITICAL REQUIREMENTS FOR ORTHOGONALITY:
+Categories must be INDEPENDENT - traits from one category should never overlap with another.
+Test: Could an entity have traits from ANY combination of your categories without contradiction?
+
+BAD (overlapping):
+- "Glowing Features" and "Bioluminescence" (both are light-based)
+- "Ice Manifestation" and "Cold Aura" (both are cold-based)
+- "Void Integration" and "Darkness Absorption" (both are darkness-based)
+
+GOOD (orthogonal):
+- "Asymmetric Proportions" (FORM) vs "Surface Weathering" (CONDITION) vs "Cultural Insignia" (SOCIAL)
+- An entity could be asymmetric, weathered, AND bearing insignia without overlap
+
+BALANCE MUNDANE AND SUPERNATURAL:
+- 40% should be achievable through natural variation, age, or craftsmanship
+- 30% should require cultural/technological modification
+- 30% can be supernatural/impossible
+NOT everything needs to be "void-consuming dimensional rifts"`;
+
+interface CultureContext {
+  name: string;
+  description?: string;
+  visualIdentity?: Record<string, string>;
+}
+
+function buildPaletteExpansionPrompt(
+  entityKind: string,
+  worldContext: string,
+  currentPalette: PaletteItem[],
+  _historicalTraits: string[], // Unused in new approach
+  cultureContext?: CultureContext[]
+): string {
+  const paletteSection = currentPalette.length > 0
+    ? currentPalette.map(p =>
+      `- [${p.id}] ${p.category} (used ${p.timesUsed}x): ${p.description}`
+    ).join('\n')
+    : '(no categories yet)';
+
+  // Define required dimensions to ensure orthogonality
+  const requiredDimensions = entityKind === 'location'
+    ? [
+        'FORM: Overall shape, architecture, scale, silhouette',
+        'SURFACE: Textures, materials, patterns, color palette',
+        'CONDITION: State of repair, age, damage, growth',
+        'ATMOSPHERE: Environmental effects, weather, light behavior',
+        'ACTIVITY: Signs of use, inhabitants, ongoing processes',
+        'CULTURAL: Symbols, modifications, territorial markers',
+      ]
+    : [
+        'FORM: Body shape, proportions, silhouette, posture',
+        'SURFACE: Skin/feather patterns, colors, textures, markings',
+        'CONDITION: Age, wear, scars, enhancements, health',
+        'MOVEMENT: Gait, mannerisms, how they carry themselves',
+        'EQUIPMENT: Clothing, tools, accessories, adornments',
+        'PRESENCE: Environmental effects, aura, space they occupy',
+      ];
+
+  // Build culture visual identity section
+  let cultureSection = '';
+  if (cultureContext && cultureContext.length > 0) {
+    const cultureDescriptions = cultureContext.map(c => {
+      let desc = `### ${c.name}`;
+      if (c.description) desc += `\n${c.description}`;
+      if (c.visualIdentity && Object.keys(c.visualIdentity).length > 0) {
+        desc += '\nVisual traditions:';
+        for (const [key, value] of Object.entries(c.visualIdentity)) {
+          desc += `\n- ${key}: ${value}`;
+        }
+      }
+      return desc;
+    }).join('\n\n');
+    cultureSection = `
+
+## Culture Visual Identities
+Use these as grounding for culturally-specific trait categories:
+${cultureDescriptions}`;
+  }
+
+  return `Design a VISUAL TRAIT PALETTE for "${entityKind}" entities.
+
+## World Context
+${worldContext || 'A fantasy world with diverse entities.'}
+${cultureSection}
+
+## Current Palette Categories
+${paletteSection}
+
+## Required Visual Dimensions
+Each category you create should map to ONE of these independent dimensions:
+${requiredDimensions.map(d => `- ${d}`).join('\n')}
+
+Ensure coverage across dimensions. If current palette over-indexes on one dimension (e.g., multiple "supernatural aura" categories), remove duplicates and add categories from underrepresented dimensions.
+
+## Your Task
+
+1. **AUDIT FOR OVERLAP**: Review current categories. Identify any that:
+   - Describe the same visual dimension differently
+   - Would produce similar-looking traits
+   - Are too abstract/generic to guide an artist
+   Mark overlapping categories for removal or merging.
+
+2. **EXPAND WITH ORTHOGONALITY**: Add 5-8 NEW categories ensuring:
+   - Each maps to a DIFFERENT dimension than existing categories
+   - Each produces visually DISTINCT results from all others
+   - Mix of mundane (natural variation) and supernatural
+
+3. **GROUND IN WORLD**: Reference specific world elements:
+   - Cultural practices, factions, traditions
+   - Environmental adaptations
+   - Historical events that left marks
+   - Technology or magic available
+
+4. **EXAMPLES MATTER**: Provide 3-5 specific, diverse examples per category. Examples should:
+   - Be concrete enough to draw
+   - Show the RANGE within the category
+   - Include at least one mundane and one dramatic option
+
+## Output Format (JSON only, no markdown)
+
+{
+  "removedCategories": ["id1", "id2"],
+  "mergedCategories": [
+    {
+      "keepId": "palette_xxx",
+      "mergeFromIds": ["palette_yyy"],
+      "newDescription": "Combined description"
+    }
+  ],
+  "newCategories": [
+    {
+      "category": "Category Name",
+      "dimension": "Which dimension this covers (FORM/SURFACE/etc)",
+      "description": "What this category means - be specific to the world",
+      "examples": ["Concrete example 1", "Concrete example 2", "Concrete example 3"]
+    }
+  ]
+}
+
+Return ONLY valid JSON. No explanation, no markdown code blocks.`;
+}
+
+interface PaletteExpansionResponse {
+  removedCategories?: string[];
+  mergedCategories?: Array<{
+    keepId: string;
+    mergeFromIds: string[];
+    newDescription: string;
+  }>;
+  newCategories?: Array<{
+    category: string;
+    description: string;
+    examples: string[];
+  }>;
+}
+
+function parsePaletteExpansionResponse(text: string): PaletteExpansionResponse {
+  // Extract JSON from response
+  let jsonStr = text.trim();
+
+  // Try to find JSON object if wrapped in other text
+  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[0];
+  }
+
+  const parsed = JSON.parse(jsonStr);
+
+  return {
+    removedCategories: Array.isArray(parsed.removedCategories)
+      ? parsed.removedCategories.filter((id: unknown) => typeof id === 'string')
+      : [],
+    mergedCategories: Array.isArray(parsed.mergedCategories)
+      ? parsed.mergedCategories.filter((m: unknown) =>
+          m && typeof m === 'object' &&
+          typeof (m as Record<string, unknown>).keepId === 'string'
+        )
+      : [],
+    newCategories: Array.isArray(parsed.newCategories)
+      ? parsed.newCategories.filter((c: unknown) =>
+          c && typeof c === 'object' &&
+          typeof (c as Record<string, unknown>).category === 'string'
+        )
+      : [],
+  };
+}
+
+export async function executePaletteExpansionTask(
+  task: WorkerTask,
+  config: WorkerConfig,
+  llmClient: LLMClient,
+  isAborted: () => boolean
+): Promise<TaskResult> {
+  if (!llmClient.isEnabled()) {
+    return { success: false, error: 'LLM client not configured' };
+  }
+
+  const entityKind = task.paletteEntityKind;
+  const worldContext = task.paletteWorldContext || '';
+
+  if (!entityKind) {
+    return { success: false, error: 'Entity kind required for palette expansion' };
+  }
+
+  const textModel = config.textModel || 'claude-sonnet-4-20250514';
+
+  // Gather current state
+  const currentPalette = await getPalette(task.projectId, entityKind);
+  const historicalTraits = await getHistoricalTraits(task.projectId, entityKind);
+
+  const prompt = buildPaletteExpansionPrompt(
+    entityKind,
+    worldContext,
+    currentPalette?.items || [],
+    historicalTraits,
+    task.paletteCultureContext
+  );
+
+  const estimate = estimateTextCost(prompt, 'description', textModel);
+
+  const result = await llmClient.complete({
+    systemPrompt: PALETTE_EXPANSION_SYSTEM_PROMPT,
+    prompt,
+    model: textModel,
+    maxTokens: 2048,
+    temperature: 0.7,
+  });
+  const debug = result.debug;
+
+  if (isAborted()) {
+    return { success: false, error: 'Task aborted', debug };
+  }
+
+  if (result.error || !result.text) {
+    return { success: false, error: result.error || 'Empty response', debug };
+  }
+
+  // Parse response
+  let expansion: PaletteExpansionResponse;
+  try {
+    expansion = parsePaletteExpansionResponse(result.text);
+  } catch (err) {
+    return {
+      success: false,
+      error: `Failed to parse expansion response: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      debug,
+    };
+  }
+
+  // Apply updates
+  await updatePaletteItems(task.projectId, entityKind, {
+    removeIds: expansion.removedCategories,
+    merges: expansion.mergedCategories,
+    newItems: expansion.newCategories,
+  });
+
+  // Calculate costs
+  const inputTokens = result.usage?.inputTokens || estimate.inputTokens;
+  const outputTokens = result.usage?.outputTokens || estimate.outputTokens;
+  const actualCost = result.usage
+    ? calculateActualTextCost(inputTokens, outputTokens, textModel)
+    : estimate.estimatedCost;
+
+  // Save cost record
+  await saveCostRecord({
+    id: generateCostId(),
+    timestamp: Date.now(),
+    projectId: task.projectId,
+    simulationRunId: task.simulationRunId,
+    type: 'paletteExpansion' as CostType,
+    model: textModel,
+    estimatedCost: estimate.estimatedCost,
+    actualCost,
+    inputTokens,
+    outputTokens,
+  });
+
+  return {
+    success: true,
+    result: {
+      generatedAt: Date.now(),
+      model: textModel,
+      estimatedCost: estimate.estimatedCost,
+      actualCost,
+      inputTokens,
+      outputTokens,
+    },
+    debug,
+  };
+}
 
 // Re-export types
 export type { WorkerTask, WorkerResult, EnrichmentResult, EnrichmentType };

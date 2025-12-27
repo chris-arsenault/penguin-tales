@@ -2,7 +2,7 @@
  * Cost Storage Module
  *
  * Independent IndexedDB store for tracking all LLM costs.
- * Costs are never deleted when entities/stories are regenerated.
+ * Costs are never deleted when entities/chronicles are regenerated.
  * Supports slicing by project, simulation, entity, type, model.
  */
 
@@ -14,15 +14,13 @@ export type CostType =
   | 'description'
   | 'image'
   | 'imagePrompt'      // Claude call to format image prompt
-  | 'storyPlan'
-  | 'storyScene'
-  | 'storyAssembly'    // No LLM cost, but tracked for completeness
-  | 'storyValidation'
-  | 'storyRevision'
-  | 'storySummary'
-  | 'storyImageRefs'
-  | 'storyProseBlend'
-  | 'storyV2';         // Single-shot V2 pipeline generation
+  | 'chronicleValidation'
+  | 'chronicleRevision'
+  | 'chronicleSummary'
+  | 'chronicleImageRefs'
+  | 'chronicleProseBlend'
+  | 'chronicleV2'          // Single-shot V2 pipeline generation
+  | 'paletteExpansion';    // Trait palette expansion/deduplication
 
 export interface CostRecord {
   id: string;
@@ -34,7 +32,7 @@ export interface CostRecord {
   entityId?: string;
   entityName?: string;
   entityKind?: string;
-  storyId?: string;
+  chronicleId?: string;
 
   // What was generated
   type: CostType;
@@ -60,7 +58,7 @@ export interface CostSummary {
 // ============================================================================
 
 const COST_DB_NAME = 'canonry-costs';
-const COST_DB_VERSION = 1;
+const COST_DB_VERSION = 2;
 const COST_STORE_NAME = 'costs';
 
 // ============================================================================
@@ -83,12 +81,20 @@ function openCostDb(): Promise<IDBDatabase> {
         store.createIndex('projectId', 'projectId', { unique: false });
         store.createIndex('simulationRunId', 'simulationRunId', { unique: false });
         store.createIndex('entityId', 'entityId', { unique: false });
-        store.createIndex('storyId', 'storyId', { unique: false });
+        store.createIndex('chronicleId', 'chronicleId', { unique: false });
         store.createIndex('type', 'type', { unique: false });
         store.createIndex('model', 'model', { unique: false });
         store.createIndex('timestamp', 'timestamp', { unique: false });
         // Compound index for project + simulation
         store.createIndex('projectSimulation', ['projectId', 'simulationRunId'], { unique: false });
+        return;
+      }
+
+      const tx = request.transaction;
+      if (!tx) return;
+      const store = tx.objectStore(COST_STORE_NAME);
+      if (!store.indexNames.contains('chronicleId')) {
+        store.createIndex('chronicleId', 'chronicleId', { unique: false });
       }
     };
 

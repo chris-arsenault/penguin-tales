@@ -11,7 +11,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { WorldState, LoreData, ImageMetadata, WikiPage, WikiPageIndex, PageIndexEntry, HardState, ImageLoader } from '../types/world.ts';
 import { buildPageIndex, buildPageById } from '../lib/wikiBuilder.ts';
-import { getCompletedStoriesForSimulation, type StoryRecord } from '../lib/storyStorage.ts';
+import { getCompletedChroniclesForSimulation, type ChronicleRecord } from '../lib/chronicleStorage.ts';
 import WikiNav from './WikiNav.tsx';
 import ChronicleIndex from './ChronicleIndex.tsx';
 import WikiPageView from './WikiPage.tsx';
@@ -108,7 +108,7 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
   const [searchQuery, setSearchQuery] = useState('');
 
   // Chronicles loaded from IndexedDB
-  const [chronicles, setChronicles] = useState<StoryRecord[]>([]);
+  const [chronicles, setChronicles] = useState<ChronicleRecord[]>([]);
   const simulationRunId = (worldData as { metadata?: { simulationRunId?: string } }).metadata?.simulationRunId;
 
   // Load chronicles from IndexedDB when simulationRunId changes
@@ -122,9 +122,9 @@ export default function WikiExplorer({ worldData, loreData, imageData, imageLoad
 
     async function loadChronicles() {
       try {
-        const stories = await getCompletedStoriesForSimulation(simulationRunId!);
+        const loadedChronicles = await getCompletedChroniclesForSimulation(simulationRunId!);
         if (!cancelled) {
-          setChronicles(stories);
+          setChronicles(loadedChronicles);
         }
       } catch (err) {
         console.error('[WikiExplorer] Failed to load chronicles:', err);

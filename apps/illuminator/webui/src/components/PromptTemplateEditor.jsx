@@ -32,8 +32,8 @@ const DESCRIPTION_SECTIONS = [
 
 // Note: Style and Composition are now controlled by the Style Library
 const IMAGE_SECTIONS = [
-  { key: 'mood', label: 'Mood', description: 'Emotional tone based on prominence' },
-  { key: 'avoidElements', label: 'Avoid', description: 'What NOT to include' },
+  { key: 'imageInstructions', label: 'Image Instructions', description: 'How to interpret this entity type for image generation' },
+  { key: 'avoidElements', label: 'Avoid', description: 'What NOT to include in generated images' },
 ];
 
 const NOTABLE_PROMINENCE = new Set(['mythic', 'renowned', 'recognized']);
@@ -132,8 +132,10 @@ function buildPromptContext(
         prominence: entity?.prominence || 'recognized',
         culture: entity?.culture || '',
         status: entity?.status || 'active',
+        summary: entity?.enrichment?.description?.summary || '',
         description: entity?.enrichment?.description?.description || '',
         tags: entity?.tags || {},
+        visualTraits: entity?.enrichment?.description?.visualTraits || [],
       },
       relationships,
       era: {

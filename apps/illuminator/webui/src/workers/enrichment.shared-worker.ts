@@ -18,7 +18,8 @@ import {
   createClients,
   executeImageTask,
   executeTextTask,
-  executeEntityStoryTask,
+  executeEntityChronicleTask,
+  executePaletteExpansionTask,
 } from './enrichmentCore';
 import type { LLMClient } from '../lib/llmClient';
 import type { ImageClient } from '../lib/imageClient';
@@ -55,8 +56,10 @@ async function executeTask(task: WorkerTask, port: MessagePort): Promise<void> {
 
     if (task.type === 'image') {
       result = await executeImageTask(task, config!, llmClient!, imageClient!, checkAborted);
-    } else if (task.type === 'entityStory') {
-      result = await executeEntityStoryTask(task, config!, llmClient!, checkAborted);
+    } else if (task.type === 'entityChronicle') {
+      result = await executeEntityChronicleTask(task, config!, llmClient!, checkAborted);
+    } else if (task.type === 'paletteExpansion') {
+      result = await executePaletteExpansionTask(task, config!, llmClient!, checkAborted);
     } else {
       result = await executeTextTask(task, config!, llmClient!, checkAborted);
     }

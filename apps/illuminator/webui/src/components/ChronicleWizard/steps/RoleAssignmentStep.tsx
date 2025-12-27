@@ -2,11 +2,20 @@
  * RoleAssignmentStep - Step 3: Assign entities to roles
  *
  * Two-column layout: available entities on left, roles on right.
+ * Features metrics display, sort/filter controls for diversity.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useWizard } from '../WizardContext';
-import { validateRoleAssignments } from '../../../lib/chronicle/selectionWizard';
+import {
+  validateRoleAssignments,
+  matchesPrimarySubjectKinds,
+  matchesSupportingSubjectKinds,
+  type EntitySelectionMetrics,
+} from '../../../lib/chronicle/selectionWizard';
+import { getEntityUsageStats } from '../../../lib/chronicleStorage';
+
+type SortOption = 'recommended' | 'distance' | 'least-used' | 'strength';
 
 export default function RoleAssignmentStep() {
   const {
@@ -15,24 +24,118 @@ export default function RoleAssignmentStep() {
     addRoleAssignment,
     removeRoleAssignment,
     togglePrimary,
+    kindToCategory,
+    computeMetrics,
   } = useWizard();
 
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [kindFilter, setKindFilter] = useState<'all' | 'primary' | 'supporting'>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [hideOverused, setHideOverused] = useState(false);
+  const [directOnly, setDirectOnly] = useState(false);
+  const [usageStats, setUsageStats] = useState<Map<string, { usageCount: number }>>(new Map());
+  const [metricsMap, setMetricsMap] = useState<Map<string, EntitySelectionMetrics>>(new Map());
 
   const style = state.narrativeStyle;
   const roles = style?.entityRules.roles || [];
   const maxCastSize = style?.entityRules.maxCastSize || 10;
+  const entityRules = style?.entityRules;
 
-  // Filter candidates
+  // Load usage stats on mount (we need simulationRunId from somewhere - for now use empty)
+  // In a real implementation, simulationRunId would be passed as a prop or from context
+  useEffect(() => {
+    // Try to get simulationRunId from URL or parent context
+    const urlParams = new URLSearchParams(window.location.search);
+    const simId = urlParams.get('simulationRunId') || urlParams.get('runId');
+    if (simId) {
+      getEntityUsageStats(simId).then(stats => {
+        setUsageStats(stats);
+      }).catch(() => {
+        // Silently fail - just use empty stats
+      });
+    }
+  }, []);
+
+  // Compute metrics when candidates or usage stats change
+  useEffect(() => {
+    if (state.candidates.length > 0 && state.entryPointId) {
+      const metrics = computeMetrics(usageStats);
+      setMetricsMap(metrics);
+    }
+  }, [state.candidates, state.entryPointId, usageStats, state.roleAssignments, computeMetrics]);
+
+  // Filter and sort candidates
   const filteredCandidates = useMemo(() => {
-    if (!searchText.trim()) return state.candidates;
-    const search = searchText.toLowerCase();
-    return state.candidates.filter(e =>
-      e.name.toLowerCase().includes(search) ||
-      e.kind.toLowerCase().includes(search)
-    );
-  }, [state.candidates, searchText]);
+    let filtered = state.candidates;
+
+    // Apply kind filter
+    if (kindFilter !== 'all' && entityRules) {
+      filtered = filtered.filter(e => {
+        if (kindFilter === 'primary') {
+          return matchesPrimarySubjectKinds(e, entityRules, kindToCategory);
+        } else {
+          return matchesSupportingSubjectKinds(e, entityRules, kindToCategory);
+        }
+      });
+    }
+
+    // Apply search filter
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.name.toLowerCase().includes(search) ||
+        e.kind.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply overused filter
+    if (hideOverused) {
+      filtered = filtered.filter(e => {
+        const metrics = metricsMap.get(e.id);
+        return !metrics || metrics.usageCount < 5;
+      });
+    }
+
+    // Apply direct-only filter
+    if (directOnly) {
+      filtered = filtered.filter(e => {
+        const metrics = metricsMap.get(e.id);
+        return metrics && metrics.distance <= 1;
+      });
+    }
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      const metricsA = metricsMap.get(a.id);
+      const metricsB = metricsMap.get(b.id);
+
+      switch (sortBy) {
+        case 'distance':
+          return (metricsA?.distance ?? 99) - (metricsB?.distance ?? 99);
+        case 'least-used':
+          return (metricsA?.usageCount ?? 0) - (metricsB?.usageCount ?? 0);
+        case 'strength':
+          return (metricsB?.avgStrength ?? 0) - (metricsA?.avgStrength ?? 0);
+        case 'recommended':
+        default:
+          // Primary match first, then by category novelty, then by usage
+          const primaryA = entityRules && matchesPrimarySubjectKinds(a, entityRules, kindToCategory) ? 1 : 0;
+          const primaryB = entityRules && matchesPrimarySubjectKinds(b, entityRules, kindToCategory) ? 1 : 0;
+          if (primaryA !== primaryB) return primaryB - primaryA;
+
+          // Then by category novelty
+          const noveltyA = metricsA?.addsNewCategory ? 1 : 0;
+          const noveltyB = metricsB?.addsNewCategory ? 1 : 0;
+          if (noveltyA !== noveltyB) return noveltyB - noveltyA;
+
+          // Then by least used
+          return (metricsA?.usageCount ?? 0) - (metricsB?.usageCount ?? 0);
+      }
+    });
+
+    return filtered;
+  }, [state.candidates, searchText, kindFilter, entityRules, kindToCategory, hideOverused, directOnly, sortBy, metricsMap]);
 
   // Get assigned entity IDs
   const assignedEntityIds = useMemo(() => {
@@ -87,7 +190,7 @@ export default function RoleAssignmentStep() {
           </p>
         </div>
         <button
-          onClick={autoFillRoles}
+          onClick={() => autoFillRoles(metricsMap)}
           className="illuminator-btn"
           style={{ fontSize: '12px' }}
         >
@@ -129,23 +232,78 @@ export default function RoleAssignmentStep() {
       <div style={{ display: 'flex', gap: '20px', height: '400px' }}>
         {/* Left: Available Entities */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Header and filters */}
           <div style={{
             marginBottom: '8px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '8px',
           }}>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
               Available Entities ({filteredCandidates.length})
             </span>
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search..."
-              className="illuminator-input"
-              style={{ width: '120px', padding: '4px 8px', fontSize: '11px' }}
-            />
+            <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+              <select
+                value={kindFilter}
+                onChange={(e) => setKindFilter(e.target.value as 'all' | 'primary' | 'supporting')}
+                className="illuminator-select"
+                style={{ padding: '4px 8px', fontSize: '11px' }}
+              >
+                <option value="all">All</option>
+                <option value="primary">Primary</option>
+                <option value="supporting">Supporting</option>
+              </select>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search..."
+                className="illuminator-input"
+                style={{ width: '100px', padding: '4px 8px', fontSize: '11px' }}
+              />
+            </div>
+          </div>
+          {/* Sort and diversity filters */}
+          <div style={{
+            marginBottom: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '10px',
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+              Sort:
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="illuminator-select"
+                style={{ padding: '2px 6px', fontSize: '10px' }}
+              >
+                <option value="recommended">Recommended</option>
+                <option value="distance">Closest</option>
+                <option value="least-used">Least Used</option>
+                <option value="strength">Strongest Link</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={directOnly}
+                onChange={(e) => setDirectOnly(e.target.checked)}
+                style={{ margin: 0 }}
+              />
+              Direct links only
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={hideOverused}
+                onChange={(e) => setHideOverused(e.target.checked)}
+                style={{ margin: 0 }}
+              />
+              Hide overused (5+)
+            </label>
           </div>
 
           <div style={{
@@ -158,6 +316,7 @@ export default function RoleAssignmentStep() {
               const isAssigned = assignedEntityIds.has(entity.id);
               const isSelected = selectedEntityId === entity.id;
               const isEntryPoint = entity.id === state.entryPointId;
+              const metrics = metricsMap.get(entity.id);
 
               return (
                 <div
@@ -176,10 +335,42 @@ export default function RoleAssignmentStep() {
                     opacity: isAssigned && !isSelected ? 0.6 : 1,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 500, fontSize: '12px' }}>
                       {entity.name}
                     </span>
+                    {/* Kind match badges */}
+                    {entityRules && matchesPrimarySubjectKinds(entity, entityRules, kindToCategory) && (
+                      <span
+                        title="Recommended for primary subject"
+                        style={{
+                          padding: '1px 4px',
+                          background: isSelected ? 'rgba(255,255,255,0.3)' : 'var(--accent-color)',
+                          color: 'white',
+                          borderRadius: '3px',
+                          fontSize: '8px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        P
+                      </span>
+                    )}
+                    {entityRules && matchesSupportingSubjectKinds(entity, entityRules, kindToCategory) && (
+                      <span
+                        title="Recommended for supporting subject"
+                        style={{
+                          padding: '1px 4px',
+                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
+                          color: isSelected ? 'white' : 'var(--text-muted)',
+                          borderRadius: '3px',
+                          fontSize: '8px',
+                          fontWeight: 600,
+                          border: isSelected ? 'none' : '1px solid var(--border-color)',
+                        }}
+                      >
+                        S
+                      </span>
+                    )}
                     {isEntryPoint && (
                       <span style={{
                         padding: '1px 4px',
@@ -204,11 +395,109 @@ export default function RoleAssignmentStep() {
                       </span>
                     )}
                   </div>
+                  {/* Entity kind and metrics row */}
                   <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     fontSize: '10px',
                     color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)',
+                    marginTop: '2px',
                   }}>
-                    {entity.kind} · {entity.prominence}
+                    <span>{entity.kind}</span>
+                    {metrics && (
+                      <>
+                        {/* Distance indicator */}
+                        <span
+                          title={`${metrics.distance === 0 ? 'Entry point' : metrics.distance === 1 ? 'Direct link (1 hop)' : `${metrics.distance} hops away`}`}
+                          style={{
+                            padding: '0 3px',
+                            background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
+                            borderRadius: '2px',
+                            fontSize: '9px',
+                          }}
+                        >
+                          {metrics.distance === 0 ? '★' : `${metrics.distance}h`}
+                        </span>
+                        {/* Usage count */}
+                        {metrics.usageCount > 0 && (
+                          <span
+                            title={`Used in ${metrics.usageCount} chronicle${metrics.usageCount > 1 ? 's' : ''}`}
+                            style={{
+                              padding: '0 3px',
+                              background: metrics.usageCount >= 5
+                                ? (isSelected ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.2)')
+                                : metrics.usageCount >= 2
+                                ? (isSelected ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.2)')
+                                : (isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)'),
+                              color: metrics.usageCount >= 5 ? 'var(--error)' : metrics.usageCount >= 2 ? 'var(--warning)' : 'inherit',
+                              borderRadius: '2px',
+                              fontSize: '9px',
+                            }}
+                          >
+                            {metrics.usageCount}×
+                          </span>
+                        )}
+                        {/* Relationship strength */}
+                        {metrics.avgStrength > 0 && (
+                          <span
+                            title={`Link strength: ${(metrics.avgStrength * 100).toFixed(0)}%`}
+                            style={{
+                              padding: '0 3px',
+                              background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--bg-tertiary)',
+                              borderRadius: '2px',
+                              fontSize: '9px',
+                            }}
+                          >
+                            {'●'.repeat(Math.min(3, Math.ceil(metrics.avgStrength * 3)))}
+                          </span>
+                        )}
+                        {/* Era aligned indicator */}
+                        {metrics.eraAligned && (
+                          <span
+                            title="Active in same era"
+                            style={{
+                              padding: '0 3px',
+                              background: isSelected ? 'rgba(34,197,94,0.4)' : 'rgba(34,197,94,0.2)',
+                              color: isSelected ? 'white' : 'var(--success)',
+                              borderRadius: '2px',
+                              fontSize: '9px',
+                            }}
+                          >
+                            ⏰
+                          </span>
+                        )}
+                        {/* Category novelty indicator */}
+                        {metrics.addsNewCategory && (
+                          <span
+                            title="Adds a new entity category to the cast"
+                            style={{
+                              padding: '0 3px',
+                              background: isSelected ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)',
+                              color: isSelected ? 'white' : 'var(--accent-color)',
+                              borderRadius: '2px',
+                              fontSize: '9px',
+                            }}
+                          >
+                            +cat
+                          </span>
+                        )}
+                        {/* New relationship types */}
+                        {metrics.newRelTypes > 0 && (
+                          <span
+                            title={`Adds ${metrics.newRelTypes} new relationship type${metrics.newRelTypes > 1 ? 's' : ''} to the narrative`}
+                            style={{
+                              padding: '0 3px',
+                              background: isSelected ? 'rgba(139,92,246,0.4)' : 'rgba(139,92,246,0.2)',
+                              borderRadius: '2px',
+                              fontSize: '9px',
+                            }}
+                          >
+                            +{metrics.newRelTypes}rel
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -294,7 +583,14 @@ export default function RoleAssignmentStep() {
                   </div>
 
                   {/* Assigned Entities */}
-                  {assignments.map(assignment => (
+                  {assignments.map(assignment => {
+                    // Check if the entity's primary/supporting status matches the style recommendation
+                    const entityForAssignment = state.candidates.find(e => e.id === assignment.entityId);
+                    const matchesPrimary = entityRules && entityForAssignment && matchesPrimarySubjectKinds(entityForAssignment, entityRules, kindToCategory);
+                    const matchesSupporting = entityRules && entityForAssignment && matchesSupportingSubjectKinds(entityForAssignment, entityRules, kindToCategory);
+                    const isRecommended = (assignment.isPrimary && matchesPrimary) || (!assignment.isPrimary && matchesSupporting);
+
+                    return (
                     <div
                       key={assignment.entityId}
                       style={{
@@ -314,24 +610,37 @@ export default function RoleAssignmentStep() {
                         </span>
                       </span>
 
-                      {/* Primary Toggle */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePrimary(assignment.entityId, assignment.role);
-                        }}
-                        style={{
-                          padding: '2px 6px',
-                          background: assignment.isPrimary ? 'var(--accent-color)' : 'var(--bg-secondary)',
-                          color: assignment.isPrimary ? 'white' : 'var(--text-muted)',
-                          border: 'none',
-                          borderRadius: '3px',
-                          fontSize: '9px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {assignment.isPrimary ? 'PRIMARY' : 'Supporting'}
-                      </button>
+                      {/* Primary Toggle with recommendation indicator */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePrimary(assignment.entityId, assignment.role);
+                          }}
+                          style={{
+                            padding: '2px 6px',
+                            background: assignment.isPrimary ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                            color: assignment.isPrimary ? 'white' : 'var(--text-muted)',
+                            border: 'none',
+                            borderRadius: '3px',
+                            fontSize: '9px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {assignment.isPrimary ? 'PRIMARY' : 'Supporting'}
+                        </button>
+                        {isRecommended && (
+                          <span
+                            title="This matches the style's recommendation"
+                            style={{
+                              color: 'var(--success)',
+                              fontSize: '11px',
+                            }}
+                          >
+                            ✓
+                          </span>
+                        )}
+                      </div>
 
                       {/* Remove Button */}
                       <button
@@ -351,7 +660,8 @@ export default function RoleAssignmentStep() {
                         &times;
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}

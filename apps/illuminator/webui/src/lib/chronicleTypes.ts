@@ -1,7 +1,7 @@
 /**
  * Chronicle Types
  *
- * Data structures for the multi-step story generation pipeline.
+ * Data structures for the chronicle generation pipeline.
  * See CHRONICLE_DESIGN.md for full architecture documentation.
  */
 
@@ -83,7 +83,6 @@ export interface ChronicleSection {
   // Story format fields
   requiredElements?: string[];
   emotionalArc?: string; // tension, relief, revelation, etc.
-  proseNotes?: string;
   setting?: string;
   // Document format fields
   contentGuidance?: string;
@@ -172,7 +171,6 @@ export type ChronicleStatus =
   | 'failed' // Generation failed; requires regeneration
   | 'complete'; // All steps done, accepted
 
-export type ChronicleType = 'entityStory';
 
 // =============================================================================
 // Chronicle Wizard Types - Role assignments from wizard flow
@@ -300,8 +298,11 @@ export interface ChronicleGenerationContext {
   // Chronicle focus (chronicle-first architecture)
   focus: ChronicleFocus;
 
-  // Optional era context
+  // Optional era context (legacy single era)
   era?: EraContext;
+
+  // Full temporal context with all eras and chronicle timeline
+  temporalContext?: ChronicleTemporalContext;
 
   // All selected entities (full context)
   entities: EntityContext[];
@@ -311,19 +312,6 @@ export interface ChronicleGenerationContext {
 
   // Selected events
   events: NarrativeEventContext[];
-
-  // ==========================================================================
-  // Legacy fields (deprecated, kept for backwards compat during migration)
-  // ==========================================================================
-
-  /** @deprecated Use focus.type instead */
-  targetType?: ChronicleType;
-  /** @deprecated Use focus.primaryEntityIds[0] instead */
-  targetId?: string;
-  /** @deprecated Use focus.roleAssignments to find primary entity */
-  entity?: EntityContext;
-  /** @deprecated Use focus.roleAssignments instead */
-  roleAssignments?: ChronicleRoleAssignment[];
 }
 
 // =============================================================================
@@ -351,6 +339,8 @@ interface BaseChronicleImageRef {
   sectionId: string;
   /** Text phrase to anchor image near (for paragraph-level positioning) */
   anchorText: string;
+  /** Character index where anchorText was found (fallback if text changes) */
+  anchorIndex?: number;
   /** Display size hint */
   size: ChronicleImageSize;
   /** Optional caption for the image */
@@ -380,9 +370,66 @@ export interface PromptRequestRef extends BaseChronicleImageRef {
 /** Union type for all chronicle image references */
 export type ChronicleImageRef = EntityImageRef | PromptRequestRef;
 
-/** Structured image refs stored in StoryRecord */
+/** Structured image refs stored in ChronicleRecord */
 export interface ChronicleImageRefs {
   refs: ChronicleImageRef[];
   generatedAt: number;
   model: string;
+}
+
+// =============================================================================
+// Chronicle Temporal Context - Era and time anchoring for chronicles
+// =============================================================================
+
+/**
+ * Temporal scope classification based on tick range covered.
+ * - moment: 1-5 ticks (a single scene or interaction)
+ * - episode: 5-20 ticks (a short adventure or incident)
+ * - arc: 20-50 ticks (a major storyline or campaign)
+ * - saga: 50+ ticks or multi-era (generational epic)
+ */
+export type TemporalScope = 'moment' | 'episode' | 'arc' | 'saga';
+
+/**
+ * Era info with tick range for temporal calculations.
+ */
+export interface EraTemporalInfo {
+  id: string;
+  name: string;
+  description?: string;
+  /** Order in the era sequence (0 = first era) */
+  order: number;
+  /** Starting tick of this era */
+  startTick: number;
+  /** Ending tick of this era (exclusive) */
+  endTick: number;
+  /** Duration in ticks */
+  duration: number;
+}
+
+/**
+ * Complete temporal context for a chronicle.
+ * Computed from selected events and entities.
+ */
+export interface ChronicleTemporalContext {
+  /** The primary era this chronicle takes place in */
+  focalEra: EraTemporalInfo;
+
+  /** All eras in the world (for context) */
+  allEras: EraTemporalInfo[];
+
+  /** Tick range covered by selected events [min, max] */
+  chronicleTickRange: [number, number];
+
+  /** Temporal scope classification */
+  temporalScope: TemporalScope;
+
+  /** Whether chronicle spans multiple eras */
+  isMultiEra: boolean;
+
+  /** Era IDs that the chronicle touches */
+  touchedEraIds: string[];
+
+  /** Human-readable temporal description */
+  temporalDescription: string;
 }

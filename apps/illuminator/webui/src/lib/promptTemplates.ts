@@ -19,6 +19,8 @@ export interface StyleInfo {
   artisticPromptFragment?: string;
   /** Composition style prompt fragment (e.g., "portrait composition, head and shoulders...") */
   compositionPromptFragment?: string;
+  /** Color palette prompt fragment (e.g., "warm earth tones: terracotta, amber, ochre...") */
+  colorPalettePromptFragment?: string;
   /** Additional culture-specific style keywords */
   cultureKeywords?: string[];
   /**
@@ -74,8 +76,13 @@ export interface EntityContext {
     prominence: string;
     culture: string;
     status: string;
-    description: string;        // Existing description (if any)
+    /** Short summary of the entity (1-2 sentences) */
+    summary?: string;
+    /** Full description (if any) - used for text prompts */
+    description: string;
     tags: Record<string, string | number | boolean>;
+    /** Distinctive visual traits for image generation */
+    visualTraits?: string[];
   };
 
   // Resolved relationships (not just IDs)
@@ -115,9 +122,9 @@ export interface DescriptionTemplate {
 }
 
 export interface ImageTemplate {
-  /** Mood guidance based on entity status and relationships */
-  mood: string;
-  /** Elements to avoid in the image */
+  /** Instructions for Claude on how to build the image prompt based on entity type */
+  imageInstructions: string;
+  /** Elements to avoid in the generated image */
   avoidElements: string;
   /** Advanced mode: full template override */
   fullTemplate?: string;
@@ -188,19 +195,20 @@ Consider their age in the world ({{entityAge}}) - ancient entities carry history
 
 Don't invent major relationships not implied by the data - the relationships provided are canonical.`,
 
-  outputFormat: `Return JSON only with keys summary, description, aliases.
+  outputFormat: `Return JSON only with keys summary, description, aliases, visualTraits.
 
 summary: 1-2 sentences, compressed and faithful to the description.
 description: 2-4 sentences, vivid and specific.
 aliases: array of alternate names or titles (can be empty).
+visualTraits: array of 2-4 distinctive visual traits that make this entity unique and recognizable.
 
 Summary and description must not contradict; the summary should not add new facts.`,
 };
 
+// Minimal code fallbacks - project config should provide actual values
 export const DEFAULT_IMAGE_TEMPLATE: ImageTemplate = {
-  mood: `Reflect the entity's current status ({{entity.status}}) and relationships. If they have rivals, perhaps tension in posture. If allied with a powerful faction, confidence. If ancient, gravitas.`,
-
-  avoidElements: `Generic fantasy tropes unless they fit {{world.name}}. No modern elements. No contradicting the entity's established cultural identity.`,
+  imageInstructions: `Create concept art that captures this entity's essence.`,
+  avoidElements: `Text, labels, watermarks, UI elements.`,
 };
 
 
@@ -208,89 +216,37 @@ export const DEFAULT_IMAGE_TEMPLATE: ImageTemplate = {
 // Kind-Specific Overrides
 // =============================================================================
 
+// Minimal code fallbacks for kind-specific templates
+// Project config should provide actual values via illuminatorConfig.json
 export const DEFAULT_KIND_OVERRIDES: PromptTemplates['byKind'] = {
   npc: {
     description: {
-      instructions: `This is a character in {{world.name}}. Focus on what makes them distinctive as a person.
-
-Their relationships define them:
-{{#relationships}}
-- {{kind}} {{targetName}} ({{targetKind}})
-{{/relationships}}
-
-Show personality through specifics - how they move, speak, what they care about. Their {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.
-
-{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}`,
+      instructions: `This is a character. Focus on what makes them distinctive as a person.`,
     },
   },
-
   location: {
     description: {
-      instructions: `This is a place in {{world.name}}. Evoke the sensory experience of being here.
-
-What entities are connected to this location?
-{{#relationships}}
-- {{kind}}: {{targetName}}
-{{/relationships}}
-
-Consider: What activities happen here? Who controls or claims it? What's the atmosphere - welcoming, dangerous, sacred, mundane? The {{entity.prominence}} level suggests how well-known or hidden it is.`,
+      instructions: `This is a place. Evoke the sensory experience of being here.`,
     },
   },
-
   faction: {
     description: {
-      instructions: `This is an organization/group in {{world.name}}. Focus on collective identity and purpose.
-
-Key relationships:
-{{#relationships}}
-- {{kind}}: {{targetName}} ({{targetKind}})
-{{/relationships}}
-
-What unites members? What do outsiders think of them? Their {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.
-
-{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}`,
+      instructions: `This is an organization. Focus on collective identity and purpose.`,
     },
   },
-
   occurrence: {
     description: {
-      instructions: `This is an event in {{world.name}}. Capture the pivotal moment and its impact.
-
-Entities involved:
-{{#relationships}}
-- {{kind}}: {{targetName}}
-{{/relationships}}
-
-What happened? Who was changed by it? The {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?`,
-    },
-    image: {
-      mood: `Match the nature of the event - triumphant, tragic, mysterious, transformative. The viewer should feel like they're witnessing history.`,
+      instructions: `This is an event. Capture the pivotal moment and its impact.`,
     },
   },
-
   era: {
     description: {
-      instructions: `This is a period of time in {{world.name}}. Convey the spirit of the age.
-
-What defined this era? What tensions or transformations characterized it? The {{entity.subtype}} tells us what kind of period this was.
-
-Key elements of this era:
-{{#relationships}}
-- {{kind}}: {{targetName}}
-{{/relationships}}`,
+      instructions: `This is a period of time. Convey the spirit of the age.`,
     },
   },
-
   artifact: {
     description: {
-      instructions: `This is an object/item in {{world.name}}. Focus on presence and significance.
-
-Who or what is connected to this artifact?
-{{#relationships}}
-- {{kind}}: {{targetName}}
-{{/relationships}}
-
-What does it look like? How does it feel to encounter? What's its history, purpose, cost? The {{entity.prominence}} suggests how famous or obscure it is.`,
+      instructions: `This is an object. Focus on presence and significance.`,
     },
   },
 };
@@ -385,11 +341,12 @@ export function buildDescriptionPrompt(
   descriptiveInfo?: DescriptiveInfo
 ): string {
   const requiredOutput = `OUTPUT FORMAT (required):
-Return JSON only with keys summary, description, aliases.
+Return JSON only with keys summary, description, aliases, visualTraits.
 
 summary: 1-2 sentences, compressed and faithful to the description.
 description: 2-4 sentences, vivid and specific.
 aliases: array of alternate names or titles (can be empty).
+visualTraits: array of 2-4 distinctive visual traits that make this entity unique and recognizable.
 
 Summary and description must not contradict; the summary should not add new facts.`;
 
@@ -456,7 +413,23 @@ Summary and description must not contradict; the summary should not add new fact
 }
 
 /**
+ * Build the individual traits section from entity's visual traits
+ */
+function buildIndividualTraitsSection(visualTraits: string[] | undefined): string {
+  if (!visualTraits || visualTraits.length === 0) {
+    return '';
+  }
+
+  const lines = visualTraits.map(trait => `- ${trait}`);
+  return `INDIVIDUAL TRAITS (PRIORITY - these define this specific entity):
+${lines.join('\n')}`;
+}
+
+/**
  * Build an image prompt from template + context
+ *
+ * This prompt is sent to Claude for refinement before being sent to an image model.
+ * It focuses on visual elements only - narrative context is handled elsewhere.
  */
 export function buildImagePrompt(
   template: ImageTemplate,
@@ -468,38 +441,53 @@ export function buildImagePrompt(
   }
 
   const e = context.entity.entity;
-  const descriptionText = e.description;
+  // Use summary for image prompts (shorter), fall back to description
+  const summaryText = e.summary || e.description;
 
-  // Build sections
+  // Build style sections
   const styleSection = styleInfo?.artisticPromptFragment
     ? `STYLE: ${styleInfo.artisticPromptFragment}`
+    : '';
+
+  const colorPaletteSection = styleInfo?.colorPalettePromptFragment
+    ? `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`
     : '';
 
   const compositionSection = styleInfo?.compositionPromptFragment
     ? `COMPOSITION: ${styleInfo.compositionPromptFragment}`
     : '';
 
+  // Individual traits section - the key differentiator
+  const individualTraitsSection = buildIndividualTraitsSection(e.visualTraits);
+
+  // Cultural visual identity - shared visual elements
   const visualIdentitySection = buildVisualIdentitySection(styleInfo?.visualIdentity, e.culture);
-  const tagsSection = formatTags(e.tags);
+
+  // Differentiation instruction when traits are present
+  const differentiationSection = e.visualTraits?.length
+    ? `BALANCE: Individual traits are the focal point. Cultural identity provides context. Both should be visible.`
+    : '';
 
   const parts = [
+    // Instructions for Claude (how to build the image prompt)
+    `IMAGE INSTRUCTIONS: ${expandTemplate(template.imageInstructions, context)}`,
+    '',
+    // Visual style settings
     styleSection,
-    '',
-    `SUBJECT: ${e.name}, a ${e.subtype} ${e.kind}`,
-    descriptionText ? `DESCRIPTION: ${descriptionText}` : '',
-    '',
-    `WORLD: ${context.world.name} - ${context.world.description}`,
-    context.world.tone ? `TONE: ${context.world.tone}` : '',
-    '',
-    visualIdentitySection,
-    tagsSection,
-    styleInfo?.cultureKeywords?.length ? `CULTURAL NOTES: ${styleInfo.cultureKeywords.join(', ')}` : '',
-    `STATUS: ${e.status} | PROMINENCE: ${e.prominence}`,
-    context.entity.relationships.length ? `KEY RELATIONSHIPS: ${context.entity.relationships.slice(0, 3).map(r => `${r.kind} ${r.targetName}`).join(', ')}` : '',
-    '',
+    colorPaletteSection,
     compositionSection,
     '',
-    `MOOD: ${expandTemplate(template.mood, context)}`,
+    // Subject identification
+    `SUBJECT: ${e.name}, a ${e.subtype} ${e.kind}`,
+    summaryText ? `CONTEXT: ${summaryText}` : '',
+    '',
+    // Visual details (priority order)
+    individualTraitsSection,
+    visualIdentitySection,
+    differentiationSection,
+    '',
+    // World context (brief)
+    `SETTING: ${context.world.name}`,
     '',
     `AVOID: ${expandTemplate(template.avoidElements, context)}`,
   ];
@@ -552,6 +540,11 @@ export function buildChronicleImagePrompt(
     ? `STYLE: ${styleInfo.artisticPromptFragment}`
     : '';
 
+  // Build color palette section
+  const colorPaletteSection = styleInfo?.colorPalettePromptFragment
+    ? `COLOR PALETTE: ${styleInfo.colorPalettePromptFragment}`
+    : '';
+
   // Build composition section - prefer explicit style, fall back to size-based hint
   const compositionHint = SIZE_COMPOSITION_HINTS[size] || SIZE_COMPOSITION_HINTS.medium;
   const compositionSection = styleInfo?.compositionPromptFragment
@@ -575,6 +568,7 @@ export function buildChronicleImagePrompt(
 
   const parts = [
     styleSection,
+    colorPaletteSection,
     '',
     `SCENE: ${sceneDescription}`,
     chronicleTitle ? `FROM: "${chronicleTitle}"` : '',
@@ -656,6 +650,30 @@ export function createDefaultPromptTemplates(): PromptTemplates {
 }
 
 /**
+ * Deep merge byKind templates - ensures both description and image sections are preserved
+ */
+function mergeByKind(
+  defaultsByKind: PromptTemplates['byKind'],
+  savedByKind: PromptTemplates['byKind'] | undefined
+): PromptTemplates['byKind'] {
+  if (!savedByKind) return { ...defaultsByKind };
+
+  const result: PromptTemplates['byKind'] = { ...defaultsByKind };
+
+  for (const kind of Object.keys(savedByKind)) {
+    const defaultKind = defaultsByKind[kind] || {};
+    const savedKind = savedByKind[kind] || {};
+
+    result[kind] = {
+      description: { ...defaultKind.description, ...savedKind.description },
+      image: { ...defaultKind.image, ...savedKind.image },
+    };
+  }
+
+  return result;
+}
+
+/**
  * Merge saved templates with defaults
  */
 export function mergeWithDefaults(
@@ -672,10 +690,7 @@ export function mergeWithDefaults(
       description: { ...defaults.defaults.description, ...saved.defaults?.description },
       image: { ...defaults.defaults.image, ...saved.defaults?.image },
     },
-    byKind: {
-      ...defaults.byKind,
-      ...saved.byKind,
-    },
+    byKind: mergeByKind(defaults.byKind, saved.byKind),
     visualIdentityKeysByKind: {
       ...saved.visualIdentityKeysByKind,
     },

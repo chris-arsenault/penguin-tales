@@ -10,9 +10,9 @@
  */
 
 import { useEffect, useCallback, useMemo } from 'react';
-import type { NarrativeStyle } from '@canonry/world-schema';
-import type { EntityContext, RelationshipContext, NarrativeEventContext } from '../../lib/chronicleTypes';
-import { WizardProvider, useWizard, WizardStep } from './WizardContext';
+import type { NarrativeStyle, EntityKindDefinition } from '@canonry/world-schema';
+import type { EntityContext, RelationshipContext, NarrativeEventContext, EraTemporalInfo } from '../../lib/chronicleTypes';
+import { WizardProvider, useWizard, WizardStep, ChronicleSeed } from './WizardContext';
 import StyleStep from './steps/StyleStep';
 import EntryPointStep from './steps/EntryPointStep';
 import RoleAssignmentStep from './steps/RoleAssignmentStep';
@@ -33,6 +33,13 @@ export interface ChronicleWizardProps {
   entities: EntityContext[];
   relationships: RelationshipContext[];
   events: NarrativeEventContext[];
+  /** Entity kind definitions for category mapping */
+  entityKinds: EntityKindDefinition[];
+  /** Era definitions with tick ranges for temporal alignment */
+  eras: EraTemporalInfo[];
+
+  // Optional seed to restore previous chronicle settings (same structure as ChronicleRecord)
+  initialSeed?: ChronicleSeed;
 }
 
 export interface WizardGenerateConfig {
@@ -49,7 +56,6 @@ export interface WizardGenerateConfig {
   }>;
   selectedEventIds: string[];
   selectedRelationshipIds: string[];
-  pipelineVersion: 'v1' | 'v2';
 }
 
 // =============================================================================
@@ -76,6 +82,7 @@ interface InnerWizardProps {
   entities: EntityContext[];
   relationships: RelationshipContext[];
   events: NarrativeEventContext[];
+  initialSeed?: ChronicleSeed;
 }
 
 function InnerWizard({
@@ -86,8 +93,21 @@ function InnerWizard({
   entities,
   relationships,
   events,
+  initialSeed,
 }: InnerWizardProps) {
-  const { state, nextStep, prevStep, reset, goToStep } = useWizard();
+  const { state, nextStep, prevStep, reset, goToStep, initFromSeed } = useWizard();
+
+  // Initialize from seed when opening with one
+  useEffect(() => {
+    if (isOpen && initialSeed) {
+      const style = narrativeStyles.find(s => s.id === initialSeed.narrativeStyleId);
+      const entryPoint = entities.find(e => e.id === initialSeed.entrypointId);
+
+      if (style && entryPoint) {
+        initFromSeed(initialSeed, style, entryPoint, entities, relationships, events);
+      }
+    }
+  }, [isOpen, initialSeed, narrativeStyles, entities, relationships, events, initFromSeed]);
 
   // Close handler with reset
   const handleClose = useCallback(() => {
@@ -146,7 +166,6 @@ function InnerWizard({
       roleAssignments: state.roleAssignments,
       selectedEventIds: Array.from(state.selectedEventIds),
       selectedRelationshipIds: Array.from(state.selectedRelationshipIds),
-      pipelineVersion: state.pipelineVersion,
     };
 
     onGenerate(config);
@@ -318,7 +337,7 @@ export default function ChronicleWizard(props: ChronicleWizardProps) {
   if (!props.isOpen) return null;
 
   return (
-    <WizardProvider>
+    <WizardProvider entityKinds={props.entityKinds} eras={props.eras}>
       <InnerWizard {...props} />
     </WizardProvider>
   );

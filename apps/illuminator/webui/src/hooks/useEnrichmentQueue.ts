@@ -220,11 +220,15 @@ export function useEnrichmentQueue(
         prompt: nextItem.prompt,
         chronicleContext: nextItem.chronicleContext,
         chronicleStep: nextItem.chronicleStep,
-        storyId: nextItem.storyId,
+        chronicleId: nextItem.chronicleId,
         // Chronicle image fields
         imageRefId: nextItem.imageRefId,
         sceneDescription: nextItem.sceneDescription,
         imageType: nextItem.imageType,
+        // Palette expansion fields
+        paletteEntityKind: nextItem.paletteEntityKind,
+        paletteWorldContext: nextItem.paletteWorldContext,
+        paletteCultureContext: nextItem.paletteCultureContext,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -394,11 +398,19 @@ export function useEnrichmentQueue(
       prompt: string;
       chronicleContext?: SerializableChronicleContext;
       chronicleStep?: ChronicleStep;
-      storyId?: string;
+      chronicleId?: string;
       // Chronicle image fields
       imageRefId?: string;
       sceneDescription?: string;
       imageType?: 'entity' | 'chronicle';
+      // Palette expansion fields
+      paletteEntityKind?: string;
+      paletteWorldContext?: string;
+      paletteCultureContext?: Array<{
+        name: string;
+        description?: string;
+        visualIdentity?: Record<string, string>;
+      }>;
     }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
@@ -416,11 +428,15 @@ export function useEnrichmentQueue(
           queuedAt: Date.now(),
           chronicleContext: item.chronicleContext,
           chronicleStep: item.chronicleStep,
-          storyId: item.storyId,
+          chronicleId: item.chronicleId,
           // Chronicle image fields
           imageRefId: item.imageRefId,
           sceneDescription: item.sceneDescription,
           imageType: item.imageType,
+          // Palette expansion fields
+          paletteEntityKind: item.paletteEntityKind,
+          paletteWorldContext: item.paletteWorldContext,
+          paletteCultureContext: item.paletteCultureContext,
         };
 
         // Find the least busy worker and assign this task

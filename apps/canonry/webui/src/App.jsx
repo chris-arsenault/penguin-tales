@@ -86,7 +86,7 @@ function extractLoreDataFromEntities(worldData) {
     if (enrichment.eraNarrative?.text) {
       records.push({
         id: `era_${entity.id}`,
-        type: entity.kind === 'era' ? 'era_chapter' : 'entity_story',
+        type: entity.kind === 'era' ? 'era_chapter' : 'entity_chronicle',
         targetId: entity.id,
         text: enrichment.eraNarrative.text,
         metadata: {
@@ -186,7 +186,7 @@ async function loadImageDataForProject(projectId, worldData) {
         imageId: imageRecord.imageId,
         // Chronicle-specific metadata
         imageType: 'chronicle',
-        storyId: imageRecord.storyId,
+        chronicleId: imageRecord.chronicleId,
         imageRefId: imageRecord.imageRefId,
       });
     }
@@ -357,7 +357,7 @@ export default function App() {
   } = useProjectStorage();
 
   const handleIlluminatorWorldDataChange = useCallback(async (enrichedWorld) => {
-    // Extract loreData from enriched entities (with current imageRefs from StoryRecords)
+    // Extract loreData from enriched entities (with current imageRefs from ChronicleRecords)
     const loreData = await extractLoreDataWithCurrentImageRefs(enrichedWorld);
 
     // Load imageData from IndexedDB

@@ -2,12 +2,12 @@
  * CostsPanel - Cost tracking and breakdown view
  *
  * Shows:
- * - Running totals by type (text, image, story)
+ * - Running totals by type (text, image, chronicle)
  * - Breakdown by model
  * - Simulation costs, project costs, all-time costs (from IndexedDB)
  *
  * Costs are tracked independently in IndexedDB and never deleted when
- * entities/stories are regenerated.
+ * entities/chronicles are regenerated.
  */
 
 import { useMemo, useEffect, useState, useCallback } from 'react';
@@ -61,22 +61,20 @@ function categorizeCosts(summary) {
     actual: 0,
     count: 0,
   };
-  const story = {
+  const chronicle = {
     actual: 0,
     count: 0,
   };
 
   const textTypes = ['description'];
   const imageTypes = ['image', 'imagePrompt'];
-  const storyTypes = [
-    'storyPlan',
-    'storyScene',
-    'storyAssembly',
-    'storyValidation',
-    'storyRevision',
-    'storySummary',
-    'storyImageRefs',
-    'storyProseBlend',
+  const chronicleTypes = [
+    'chronicleValidation',
+    'chronicleRevision',
+    'chronicleSummary',
+    'chronicleImageRefs',
+    'chronicleProseBlend',
+    'chronicleV2',
   ];
 
   for (const [type, data] of Object.entries(summary.byType)) {
@@ -86,13 +84,13 @@ function categorizeCosts(summary) {
     } else if (imageTypes.includes(type)) {
       image.actual += data.actual;
       image.count += data.count;
-    } else if (storyTypes.includes(type)) {
-      story.actual += data.actual;
-      story.count += data.count;
+    } else if (chronicleTypes.includes(type)) {
+      chronicle.actual += data.actual;
+      chronicle.count += data.count;
     }
   }
 
-  return { text, image, story };
+  return { text, image, chronicle };
 }
 
 export default function CostsPanel({ queue, projectId, simulationRunId }) {
@@ -154,29 +152,29 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
   const queueCosts = useMemo(() => {
     let textEstimated = 0;
     let imageEstimated = 0;
-    let storyEstimated = 0;
+    let chronicleEstimated = 0;
 
     for (const item of queue) {
       if (item.status === 'complete') continue;
       if (item.estimatedCost) {
         if (item.type === 'image') {
           imageEstimated += item.estimatedCost;
-        } else if (item.type === 'entityStory') {
-          storyEstimated += item.estimatedCost;
+        } else if (item.type === 'entityChronicle') {
+          chronicleEstimated += item.estimatedCost;
         } else {
           textEstimated += item.estimatedCost;
         }
-      } else if (item.type === 'entityStory' && item.status !== 'complete') {
-        // Estimate story cost if not available (~$0.05-0.15 per story depending on length)
-        storyEstimated += 0.08;
+      } else if (item.type === 'entityChronicle' && item.status !== 'complete') {
+        // Estimate chronicle cost if not available (~$0.05-0.15 per chronicle depending on length)
+        chronicleEstimated += 0.08;
       }
     }
 
     return {
       textEstimated,
       imageEstimated,
-      storyEstimated,
-      total: textEstimated + imageEstimated + storyEstimated,
+      chronicleEstimated,
+      total: textEstimated + imageEstimated + chronicleEstimated,
     };
   }, [queue]);
 
@@ -210,10 +208,10 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
             label={`  \u2514 ${simCategorized.image.count} images`}
             value={simCategorized.image.actual}
           />
-          <CostRow label="Chronicle generations" value={simCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={simCategorized.chronicle.actual} />
           <CostRow
-            label={`  \u2514 ${simCategorized.story.count} steps`}
-            value={simCategorized.story.actual}
+            label={`  \u2514 ${simCategorized.chronicle.count} steps`}
+            value={simCategorized.chronicle.actual}
           />
           <CostRow
             label="Simulation Total"
@@ -231,7 +229,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={queueCosts.textEstimated} isEstimated />
           <CostRow label="Image generations" value={queueCosts.imageEstimated} isEstimated />
-          <CostRow label="Chronicle generations" value={queueCosts.storyEstimated} isEstimated />
+          <CostRow label="Chronicle generations" value={queueCosts.chronicleEstimated} isEstimated />
           <CostRow label="Queue Total" value={queueCosts.total} isTotal isEstimated />
         </CostCard>
       )}
@@ -258,7 +256,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={projCategorized.text.actual} />
           <CostRow label="Image generations" value={projCategorized.image.actual} />
-          <CostRow label="Chronicle generations" value={projCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={projCategorized.chronicle.actual} />
           <CostRow
             label="Project Total"
             value={projectCosts.totalActual}
@@ -275,7 +273,7 @@ export default function CostsPanel({ queue, projectId, simulationRunId }) {
           </div>
           <CostRow label="Text generations" value={allCategorized.text.actual} />
           <CostRow label="Image generations" value={allCategorized.image.actual} />
-          <CostRow label="Chronicle generations" value={allCategorized.story.actual} />
+          <CostRow label="Chronicle generations" value={allCategorized.chronicle.actual} />
           <CostRow
             label="All Time Total"
             value={allTimeCosts.totalActual}

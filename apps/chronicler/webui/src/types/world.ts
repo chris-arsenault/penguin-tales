@@ -40,7 +40,7 @@ export type LoreType =
   | 'chain_link'
   | 'discovery_event'
   | 'era_chapter'
-  | 'entity_story'
+  | 'entity_chronicle'
   | 'enhanced_entity_page'
   | 'relationship_narrative'
   | 'chronicle';
@@ -135,6 +135,15 @@ export interface WikiPageIndex {
 }
 
 // Wiki-specific types
+/** Role assignment for chronicle seed */
+export interface ChronicleRoleAssignment {
+  role: string;
+  entityId: string;
+  entityName: string;
+  entityKind: string;
+  isPrimary: boolean;
+}
+
 export interface WikiPage {
   id: string;
   slug: string;
@@ -143,6 +152,11 @@ export interface WikiPage {
   chronicle?: {
     format: 'story' | 'document';
     entrypointId?: string;
+    // Seed data for generation context display
+    narrativeStyleId?: string;
+    roleAssignments?: ChronicleRoleAssignment[];
+    selectedEventIds?: string[];
+    selectedRelationshipIds?: string[];
   };
   aliases?: string[];
   content: WikiContent;
@@ -167,6 +181,8 @@ export interface WikiSectionImage {
   type: 'entity_ref' | 'chronicle_image';
   imageId: string;
   anchorText: string;
+  /** Character index where anchorText was found (fallback if text changes) */
+  anchorIndex?: number;
   size: WikiImageSize;
   caption?: string;
 }

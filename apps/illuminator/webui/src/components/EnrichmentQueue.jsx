@@ -108,7 +108,7 @@ function EntityTaskGroup({
               <span style={{ flex: 1, fontSize: '12px' }}>
                 {task.type === 'description' && 'Description'}
                 {task.type === 'image' && 'Image'}
-                {task.type === 'entityStory' && 'Chronicle'}
+                {task.type === 'entityChronicle' && 'Chronicle'}
               </span>
               <TaskStatusBadge status={task.status} />
               {(task.status === 'queued' || task.status === 'error') && (

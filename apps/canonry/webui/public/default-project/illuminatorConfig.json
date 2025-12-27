@@ -16,10 +16,8 @@
         "outputFormat": "2-3 sentences. Dense with meaning, grounded in specifics. Name at least one relationship or cultural detail when relevant."
       },
       "image": {
-        "style": "Japanese water color with minimalist color pallet. The entity's prominence ({{entity.prominence}}) should influence visual treatment: mythic entities are iconic, marginal ones intimate. NO TEXT",
-        "composition": "For {{entity.kind}}: Characters get portraits showing personality; locations get establishing shots; events get dynamic moments; factions get symbolic representation.",
-        "mood": "Reflect the entity's current status ({{entity.status}}) and relationships. If they have rivals, perhaps tension in posture. If allied with a powerful faction, confidence. If ancient, gravitas.",
-        "avoidElements": "Generic fantasy tropes unless they fit {{world.name}}. No modern elements. No contradicting the entity's established cultural identity."
+        "imageInstructions": "Create concept art that captures this entity's essence. Focus on the individual traits and visual identity provided. The image should feel like it belongs in an illustrated bestiary or game art book.",
+        "avoidElements": "Text, labels, watermarks, UI elements. Modern clothing or technology. Multiple versions of the same subject. Blurry or low-quality rendering. Human features on penguins. Contradicting the visual identity."
       },
       "relationship": "Describe how {{entity.name}} relates to others in {{world.name}}.\n\nENTITY: {{entity.name}} ({{entity.subtype}} {{entity.kind}})\nSTATUS: {{entity.status}} | PROMINENCE: {{entity.prominence}}\n\nKNOWN CONNECTIONS:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}}){{#strength}} [strength: {{strength}}]{{/strength}}\n{{/relationships}}\n{{^relationships}}\n(No established relationships yet)\n{{/relationships}}\n\n{{#culturalPeers.length}}\nCULTURAL PEERS ({{entity.culture}}): {{culturalPeers}}\n{{/culturalPeers.length}}\n\nWrite 2-3 sentences about how these connections shape {{entity.name}}'s place in the world. Focus on dynamics that create story potential - alliances, tensions, dependencies.",
       "eraNarrative": "Write a narrative summary for this era/event in {{world.name}}.\n\nNAME: {{entity.name}}\nTYPE: {{entity.subtype}} {{entity.kind}}\nEXISTING DESCRIPTION: {{entity.description}}\n\nThis {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.\n\nCanon facts: {{world.canonFacts}}\n\nCraft 2-3 sentences capturing the essence of this period - its defining tensions, what changed, why it matters. Reference specific entities or factions if relationships exist."
@@ -30,7 +28,7 @@
           "instructions": "This is a character in {{world.name}}. Focus on what makes them distinctive as a person.\n\nTheir relationships define them:\n{{#relationships}}\n- {{kind}} {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nShow personality through specifics - how they move, speak, what they care about. Their {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.\n\n{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}"
         },
         "image": {
-          "composition": "Character portrait showing personality and status. Include visual hints of their {{entity.subtype}} role and {{entity.culture}} identity. Relationships might influence attire or bearing (faction symbols, alliance tokens, etc)."
+          "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role."
         }
       },
       "location": {
@@ -38,7 +36,7 @@
           "instructions": "This is a place in {{world.name}}. Evoke the sensory experience of being here.\n\nWhat entities are connected to this location?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nConsider: What activities happen here? Who controls or claims it? What's the atmosphere - welcoming, dangerous, sacred, mundane? The {{entity.prominence}} level suggests how well-known or hidden it is."
         },
         "image": {
-          "composition": "Establishing shot showing scale and atmosphere. Include environmental storytelling - signs of the entities that inhabit or use this place. Weather/lighting should match the mood."
+          "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space."
         }
       },
       "faction": {
@@ -46,7 +44,7 @@
           "instructions": "This is an organization/group in {{world.name}}. Focus on collective identity and purpose.\n\nKey relationships:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nWhat unites members? What do outsiders think of them? Their {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.\n\n{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}"
         },
         "image": {
-          "composition": "Symbolic representation or group scene. Show distinguishing visual elements - banners, uniforms, meeting places, iconography. Should feel like a collective, not an individual."
+          "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose."
         }
       },
       "occurrence": {
@@ -54,8 +52,7 @@
           "instructions": "This is an event in {{world.name}}. Capture the pivotal moment and its impact.\n\nEntities involved:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nWhat happened? Who was changed by it? The {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?"
         },
         "image": {
-          "composition": "Dynamic scene capturing the key moment. Multiple figures if relevant. Dramatic lighting and composition conveying emotional weight.",
-          "mood": "Match the nature of the event - triumphant, tragic, mysterious, transformative. The viewer should feel like they're witnessing history."
+          "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative."
         }
       },
       "era": {
@@ -63,8 +60,7 @@
           "instructions": "This is a period of time in {{world.name}}. Convey the spirit of the age.\n\nWhat defined this era? What tensions or transformations characterized it? The {{entity.subtype}} tells us what kind of period this was.\n\nKey elements of this era:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}"
         },
         "image": {
-          "style": "Symbolic or allegorical representation. May use visual metaphor - a rising sun, crumbling walls, gathering storm. Should feel like looking at a historical period, not a moment.",
-          "composition": "Panoramic or symbolic. Multiple vignettes acceptable. Convey the era's dominant mood and themes."
+          "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood."
         }
       },
       "artifact": {
@@ -72,8 +68,17 @@
           "instructions": "This is an object/item in {{world.name}}. Focus on presence and significance.\n\nWho or what is connected to this artifact?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nWhat does it look like? How does it feel to encounter? What's its history, purpose, cost? The {{entity.prominence}} suggests how famous or obscure it is."
         },
         "image": {
-          "composition": "Object study with dramatic lighting. Show scale through context. Include details hinting at age, use, significance.",
-          "style": "Rich detail on materials and craftsmanship. Lighting should emphasize the object's nature."
+          "imageInstructions": "The main subject is an OBJECT or artifact. Create a focused study with dramatic lighting. Show fine details, materials, and any magical properties. The artifact should be the clear focal point."
+        }
+      },
+      "abilities": {
+        "image": {
+          "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action."
+        }
+      },
+      "rules": {
+        "image": {
+          "imageInstructions": "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces."
         }
       }
     },
