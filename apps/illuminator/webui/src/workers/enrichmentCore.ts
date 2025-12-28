@@ -355,7 +355,26 @@ Be vivid and specific. Let the entity's nature lead.`;
  * @param visualAvoid - Optional project-specific elements to avoid (overused motifs)
  */
 export function buildVisualThesisPrompt(visualAvoid?: string): string {
-  let prompt = `You design characters for a fighting game roster or anime ensemble cast.
+  // RULES at top for maximum attention
+  let prompt = `RULES (non-negotiable):
+- ONE sentence only - no compound sentences
+- Describe WHAT you see, not WHY it exists
+- No: "as if", "as though", "suggesting", "seeming"
+- Shape only - no colors, textures, or surface details
+- REQUIRE structural elements: headgear, armor, tools, weapons, magical effects, scars, clothing
+- Body language alone is NOT enough - there must be equipment or permanent body modifications`;
+
+  // Add project-specific avoid list immediately after rules
+  if (visualAvoid) {
+    prompt += `
+
+AVOID THESE (will cause rejection):
+${visualAvoid}`;
+  }
+
+  prompt += `
+
+You design characters for a fighting game roster or anime ensemble cast.
 
 Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes, League of Legends champions, or My Hero Academia students. When you see 20 characters as solid black shapes at thumbnail size, each one must be unmistakable.
 
@@ -366,69 +385,57 @@ THINK LIKE A CHARACTER DESIGNER:
 - What silhouette element would a cosplayer exaggerate?
 - If this were a fighting game select screen, what makes them pop?
 
-SHAPE ELEMENTS (what works):
-- Body shape: posture, proportions, mass distribution, asymmetry
+SHAPE ELEMENTS (prioritize structural over gestural):
 - Structural gear: oversized weapons, distinctive hats, floating objects, massive armor
-- Profile extensions: wings, tails, mounted equipment, carried tools
-
-RULES:
-- ONE sentence only - no compound sentences
-- Describe WHAT you see, not WHY it exists
-- No: "as if", "as though", "suggesting", "seeming"
-- Shape only - no colors, textures, or surface details
-
-REWRITES (causation → pure shape):
-- "Flipper raised as if blessing" → "Flipper raised, palm-forward, frozen at chest height"
-- "Hunched from years of labor" → "Shoulders drawn forward, spine curved into permanent stoop"
-- "Scarred flank showing battles" → "Asymmetrical bulk, left side visibly larger"`;
-
-  // Add project-specific avoid list with strong emphasis
-  if (visualAvoid) {
-    prompt += `
-
-CRITICAL - AVOID THESE (overused in this roster, will cause rejection):
-${visualAvoid}
-
-If your first instinct uses any of these, STOP and find a different dominant shape.`;
-  }
-
-  prompt += `
+- Profile extensions: mounted equipment, carried tools, backpacks, capes
+- Body modifications: scars, missing limbs, unusual proportions, asymmetry
+- Body shape: proportions, mass distribution (but NOT pose or gesture)
 
 OUTPUT FORMAT:
 Return JSON with key: visualThesis
 - visualThesis: ONE sentence, the dominant shape signal`;
 
+  // REWRITES section commented out - examples were teaching flipper gestures
+  // REWRITES (causation → pure shape):
+  // - "Flipper raised as if blessing" → "Flipper raised, palm-forward, frozen at chest height"
+  // - "Hunched from years of labor" → "Shoulders drawn forward, spine curved into permanent stoop"
+  // - "Scarred flank showing battles" → "Asymmetrical bulk, left side visibly larger"
+
   return prompt;
 }
 
 /**
- * Step 3: Visual traits prompt - 2-4 traits supporting the thesis
- * Uses action figure / concept art design as reference
+ * Step 3: Visual traits prompt - 2-4 traits EXPANDING the visual identity
+ * The thesis is the primary silhouette signal; traits add distinctive secondary features
  */
 export function buildVisualTraitsPrompt(guidance?: TraitGuidance): string {
-  let prompt = `You're adding detail to a character design brief for an action figure or concept art.
+  let prompt = `You're completing a character design brief for an action figure or concept art.
 
-The thesis defines the hero's silhouette. Traits are the 2-4 secondary details that reinforce it - the elements an artist would emphasize in key art.
+The thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover.
 
-Think action figure design: what are the 3-4 features that make the toy recognizable even without the box?
+Think action figure accessories: what extra details would the toy include? What would make collectors say "that's definitely [character name]"?
+
+TRAITS SHOULD ADD, NOT REPEAT:
+- If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear
+- If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons
+- Find what's MISSING from the thesis that would make the design more distinctive
 
 RULES:
 - 2-4 traits only, each 3-8 words
-- Each trait reinforces or complements the thesis
-- Mix body and equipment if appropriate
-- Favor stylized exaggeration over realism
-- No causation - describe WHAT, not WHY`;
+- Each trait adds something NEW to the visual identity
+- Draw from the description for ideas the thesis missed
+- Mix body features and equipment`;
 
   if (guidance && guidance.assignedCategories.length > 0) {
     prompt += `
 
-ASSIGNED DIRECTIONS (prioritize these):
+DIRECTIONS TO EXPLORE (not constraints):
 ${guidance.assignedCategories.map(p => `
 ### ${p.category}
 ${p.description}
 Examples: ${p.examples.join(' · ')}`).join('\n')}
 
-Create traits within these directions. You may include 1 trait outside if it truly defines the entity.`;
+Use these as inspiration. You may go beyond them if the description suggests something more distinctive.`;
   }
 
   prompt += `
@@ -855,13 +862,24 @@ export async function executeTextTask(
   // ============================================================================
   console.log('[Worker] Description chain step 2: Visual Thesis');
 
-  const thesisPrompt = `Entity context:
-${entityContext}
+  // Build slimmed down visual context - remove noise that doesn't inform silhouette
+  // Extract only: entity basics, world, era (skip tags, relationships, tone, constraints)
+  const worldMatch = entityContext.match(/WORLD:\s*(.+?)(?:\n\n|\nENTITY:)/s);
+  const eraMatch = entityContext.match(/ERA:\s*(.+?)(?:\n---|$)/s);
+  const worldContext = worldMatch ? worldMatch[1].trim() : '';
+  const eraContext = eraMatch ? eraMatch[1].trim() : '';
 
-Description (use to inform visual identity):
+  const visualContext = `Entity: ${task.entityName} (${task.entityKind})
+Culture: ${task.entityCulture || 'unaffiliated'}
+World: ${worldContext}
+Era: ${eraContext}`;
+
+  const thesisPrompt = `${visualContext}
+
+DESCRIPTION (extract visual elements from this):
 ${narrativePayload.description}
 
-Generate the visual thesis for this entity.`;
+Generate the visual thesis - focus on structural elements, not gestures or poses.`;
 
   const thesisResult = await llmClient.complete({
     systemPrompt: buildVisualThesisPrompt(task.visualAvoid),
@@ -923,13 +941,15 @@ Generate the visual thesis for this entity.`;
     console.warn('[Worker] Failed to fetch trait guidance:', err);
   }
 
-  const traitsPrompt = `Visual Thesis (traits must support this):
+  const traitsPrompt = `THESIS (the primary silhouette - don't repeat, expand):
 ${visualThesis}
 
-Entity context:
-${entityContext}
+${visualContext}
 
-Generate 2-4 visual traits that reinforce the thesis.`;
+DESCRIPTION (source material for additional distinctive features):
+${narrativePayload.description}
+
+Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
 
   const traitsResult = await llmClient.complete({
     systemPrompt: buildVisualTraitsPrompt(traitGuidance),

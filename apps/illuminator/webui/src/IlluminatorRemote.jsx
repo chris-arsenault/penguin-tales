@@ -598,11 +598,12 @@ export default function IlluminatorRemote({
   const hasRequiredKeys = hasAnthropicKey;
 
   // Get visualAvoid for an entity (used to prevent overused motifs in visual thesis)
+  // Uses avoidElements from the image template since visual thesis informs image generation
   const getVisualAvoid = useCallback(
     (entity) => {
       const templates = mergedPromptTemplates;
-      const template = getEffectiveTemplate(templates, entity.kind, 'description');
-      return template.visualAvoid;
+      const imageTemplate = getEffectiveTemplate(templates, entity.kind, 'image');
+      return imageTemplate.avoidElements;
     },
     [mergedPromptTemplates]
   );

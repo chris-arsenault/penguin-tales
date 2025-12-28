@@ -576,7 +576,7 @@
         {
           "relationshipKind": "allied_with",
           "direction": "out",
-          "maxCount": 3
+          "maxCount": 4
         }
       ],
       "filters": [
@@ -764,7 +764,7 @@
         {
           "relationshipKind": "originated_in",
           "direction": "in",
-          "maxCount": 4
+          "maxCount": 6
         }
       ]
     },
@@ -959,6 +959,18 @@
         "point_of_interest"
       ],
       "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "originated_in",
+          "direction": "in",
+          "maxCount": 4
+        },
+        {
+          "relationshipKind": "resident_of",
+          "direction": "in",
+          "maxCount": 5
+        }
+      ],
       "filters": [
         {
           "type": "has_any_tag",
@@ -1580,6 +1592,13 @@
         "colony"
       ],
       "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "originated_in",
+          "direction": "in",
+          "maxCount": 6
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",
@@ -2353,7 +2372,7 @@
         {
           "relationshipKind": "originated_in",
           "direction": "in",
-          "maxCount": 4
+          "maxCount": 6
         }
       ]
     },
@@ -2481,7 +2500,7 @@
         {
           "relationshipKind": "originated_in",
           "direction": "in",
-          "maxCount": 4
+          "maxCount": 6
         }
       ],
       "filters": [
@@ -2701,7 +2720,7 @@
         {
           "relationshipKind": "practitioner_of",
           "direction": "out",
-          "maxCount": 3
+          "maxCount": 2
         }
       ]
     },
@@ -2831,6 +2850,13 @@
       "kind": "npc",
       "subtypes": [
         "orca"
+      ],
+      "saturationLimits": [
+        {
+          "relationshipKind": "practitioner_of",
+          "direction": "out",
+          "maxCount": 2
+        }
       ],
       "filters": [
         {
@@ -2979,7 +3005,7 @@
         {
           "relationshipKind": "practitioner_of",
           "direction": "out",
-          "maxCount": 3
+          "maxCount": 2
         }
       ],
       "filters": [
@@ -3293,6 +3319,13 @@
         "anomaly"
       ],
       "statusFilter": "thriving",
+      "saturationLimits": [
+        {
+          "relationshipKind": "epicenter_of",
+          "direction": "in",
+          "maxCount": 2
+        }
+      ],
       "filters": [
         {
           "type": "has_any_tag",
@@ -3390,6 +3423,13 @@
         "anomaly"
       ],
       "statusFilter": "waning",
+      "saturationLimits": [
+        {
+          "relationshipKind": "epicenter_of",
+          "direction": "in",
+          "maxCount": 2
+        }
+      ],
       "filters": [
         {
           "type": "has_tag",
@@ -3475,6 +3515,13 @@
     "selection": {
       "strategy": "by_kind",
       "kind": "location",
+      "saturationLimits": [
+        {
+          "relationshipKind": "related_to",
+          "direction": "in",
+          "maxCount": 3
+        }
+      ],
       "filters": [
         {
           "type": "has_any_tag",
@@ -3939,6 +3986,13 @@
         "anomaly"
       ],
       "pickStrategy": "random",
+      "saturationLimits": [
+        {
+          "relationshipKind": "manifests_at",
+          "direction": "in",
+          "maxCount": 2
+        }
+      ],
       "filters": [
         {
           "type": "graph_path",

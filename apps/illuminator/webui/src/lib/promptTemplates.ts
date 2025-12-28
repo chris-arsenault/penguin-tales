@@ -120,8 +120,6 @@ export interface DescriptionTemplate {
   tone: string;
   constraints: string;
   outputFormat: string;
-  /** Elements to avoid in visual thesis/traits (e.g., overused motifs) */
-  visualAvoid?: string;
   fullTemplate?: string;        // Advanced mode override
 }
 
