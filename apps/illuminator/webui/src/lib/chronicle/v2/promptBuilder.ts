@@ -34,7 +34,6 @@ function formatEntityFull(e: EntityContext): string {
 
   const lines = [
     `Kind: ${e.kind}${e.subtype ? `/${e.subtype}` : ''}`,
-    `Status: ${e.status}`,
     `Prominence: ${e.prominence}`,
     e.culture ? `Culture: ${e.culture}` : null,
     tags ? `Tags: ${tags}` : null,
@@ -51,7 +50,7 @@ function formatEntityFull(e: EntityContext): string {
 function formatEntityBrief(e: EntityContext): string {
   const desc = e.description || e.summary || '(no description available)';
   return `## ${e.name} (${e.kind}${e.subtype ? `/${e.subtype}` : ''})
-Status: ${e.status}, Prominence: ${e.prominence}${e.culture ? `, Culture: ${e.culture}` : ''}
+Prominence: ${e.prominence}${e.culture ? `, Culture: ${e.culture}` : ''}
 ${desc}`;
 }
 
@@ -69,7 +68,13 @@ function formatEvent(e: NarrativeEventContext): string {
   const significance = Math.round(e.significance * 100);
   const subjectLine = e.subjectName ? ` (subject: ${e.subjectName})` : '';
   const objectLine = e.objectName ? ` (object: ${e.objectName})` : '';
-  return `- [${e.eventKind}, ${significance}%] ${e.headline}${subjectLine}${objectLine}`;
+  const participantNames = e.participants?.map(p => p.name).filter(Boolean) ?? [];
+  const uniqueParticipants = Array.from(new Set(participantNames))
+    .filter(name => name !== e.subjectName && name !== e.objectName);
+  const participantsLine = uniqueParticipants.length > 0
+    ? ` (participants: ${uniqueParticipants.join(', ')})`
+    : '';
+  return `- [${e.eventKind}, ${significance}%] ${e.headline}${subjectLine}${objectLine}${participantsLine}`;
 }
 
 // =============================================================================

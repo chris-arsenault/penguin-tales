@@ -589,6 +589,29 @@ export default function IlluminatorRemote({
     };
   }, [worldData?.metadata, currentEra]);
 
+  // Extract era entities for palette generation
+  const eraEntities = useMemo(() => {
+    return entities
+      .filter((e) => e.kind === 'era')
+      .map((e) => ({
+        id: e.id,
+        name: e.name,
+        description: e.enrichment?.description?.description || e.description,
+      }));
+  }, [entities]);
+
+  // Build subtypes by kind map for palette generation
+  // Extract subtype IDs from Subtype objects ({ id, name } → id)
+  const subtypesByKind = useMemo(() => {
+    const map = {};
+    for (const kindDef of worldSchema?.entityKinds || []) {
+      if (kindDef.kind && kindDef.subtypes?.length > 0) {
+        map[kindDef.kind] = kindDef.subtypes.map((st) => st.id);
+      }
+    }
+    return map;
+  }, [worldSchema?.entityKinds]);
+
   // Check if we have world data
   const hasWorldData = worldData?.hardState?.length > 0;
 
@@ -597,21 +620,31 @@ export default function IlluminatorRemote({
   const hasOpenaiKey = openaiApiKey.length > 0;
   const hasRequiredKeys = hasAnthropicKey;
 
-  // Get visual config for an entity (thesis/traits prompts, avoid elements)
+  // Get visual config for an entity (thesis/traits prompts, avoid elements, era)
   // Uses image template since visual thesis/traits inform image generation
   const getVisualConfig = useCallback(
     (entity) => {
       const templates = mergedPromptTemplates;
       const imageTemplate = getEffectiveTemplate(templates, entity.kind, 'image');
+
+      // Find entity's era via created_during relationship (origin era)
+      // Falls back to active_during if no created_during exists
+      const entityRels = relationshipsByEntity.get(entity.id) || [];
+      const eraRel = entityRels.find(r =>
+        (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entity.id
+      );
+      const entityEraId = eraRel?.dst;
+
       return {
         visualAvoid: imageTemplate.avoidElements,
         visualThesisInstructions: imageTemplate.visualThesisInstructions,
         visualThesisFraming: imageTemplate.visualThesisFraming,
         visualTraitsInstructions: imageTemplate.visualTraitsInstructions,
         visualTraitsFraming: imageTemplate.visualTraitsFraming,
+        entityEraId,
       };
     },
-    [mergedPromptTemplates]
+    [mergedPromptTemplates, relationshipsByEntity]
   );
 
   // Build prompt for entity
@@ -1074,6 +1107,8 @@ export default function IlluminatorRemote({
               simulationRunId={simulationRunId}
               worldContext={worldContext?.description || ''}
               entityKinds={(worldSchema?.entityKinds || []).map((k) => k.kind)}
+              subtypesByKind={subtypesByKind}
+              eras={eraEntities}
               cultures={(worldSchema?.cultures || []).map((c) => ({
                 name: c.name,
                 description: c.description,

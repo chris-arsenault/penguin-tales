@@ -150,12 +150,16 @@ export interface QueueItem {
   paletteWorldContext?: string;
   /** Available subtypes for this entity kind (for subtype-differentiated categories) */
   paletteSubtypes?: string[];
+  /** Available eras for era-specific categories (one category per era per kind) */
+  paletteEras?: Array<{ id: string; name: string; description?: string }>;
   /** Culture visual identities for grounding palette in world lore */
   paletteCultureContext?: Array<{
     name: string;
     description?: string;
     visualIdentity?: Record<string, string>;
   }>;
+  /** Era ID this entity was created during (for trait selection) */
+  entityEraId?: string;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
@@ -245,6 +249,12 @@ export interface SerializableChronicleContext {
     subjectName?: string;
     objectId?: string;
     objectName?: string;
+    participants?: {
+      id: string;
+      name: string;
+      kind: string;
+      subtype?: string;
+    }[];
     narrativeTags?: string[];
   }>;
 
@@ -294,12 +304,16 @@ export interface WorkerTask {
   paletteWorldContext?: string;
   /** Available subtypes for this entity kind (for subtype-differentiated categories) */
   paletteSubtypes?: string[];
+  /** Available eras for era-specific categories (one category per era per kind) */
+  paletteEras?: Array<{ id: string; name: string; description?: string }>;
   /** Culture visual identities for grounding palette in world lore */
   paletteCultureContext?: Array<{
     name: string;
     description?: string;
     visualIdentity?: Record<string, string>;
   }>;
+  /** Era ID this entity was created during (for trait selection) */
+  entityEraId?: string;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
   /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */

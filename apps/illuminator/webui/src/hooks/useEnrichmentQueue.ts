@@ -230,7 +230,10 @@ export function useEnrichmentQueue(
         paletteEntityKind: nextItem.paletteEntityKind,
         paletteWorldContext: nextItem.paletteWorldContext,
         paletteSubtypes: nextItem.paletteSubtypes,
+        paletteEras: nextItem.paletteEras,
         paletteCultureContext: nextItem.paletteCultureContext,
+        // Entity era for trait selection
+        entityEraId: nextItem.entityEraId,
         // Visual config for thesis/traits generation
         visualAvoid: nextItem.visualAvoid,
         visualThesisInstructions: nextItem.visualThesisInstructions,
@@ -415,11 +418,14 @@ export function useEnrichmentQueue(
       paletteEntityKind?: string;
       paletteWorldContext?: string;
       paletteSubtypes?: string[];
+      paletteEras?: Array<{ id: string; name: string; description?: string }>;
       paletteCultureContext?: Array<{
         name: string;
         description?: string;
         visualIdentity?: Record<string, string>;
       }>;
+      // Entity era for trait selection
+      entityEraId?: string;
       // Visual config for thesis/traits generation
       visualAvoid?: string;
       visualThesisInstructions?: string;
@@ -453,7 +459,10 @@ export function useEnrichmentQueue(
           paletteEntityKind: item.paletteEntityKind,
           paletteWorldContext: item.paletteWorldContext,
           paletteSubtypes: item.paletteSubtypes,
+          paletteEras: item.paletteEras,
           paletteCultureContext: item.paletteCultureContext,
+          // Entity era for trait selection
+          entityEraId: item.entityEraId,
           // Visual config for thesis/traits generation
           visualAvoid: item.visualAvoid,
           visualThesisInstructions: item.visualThesisInstructions,

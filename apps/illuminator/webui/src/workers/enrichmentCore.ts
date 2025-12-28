@@ -917,7 +917,7 @@ Generate the visual thesis.`;
   console.log('[Worker] Description chain step 3: Visual Traits');
 
   // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
-  // Pass subtype to filter categories relevant to this entity's subtype
+  // Pass subtype and era to filter categories relevant to this entity
   let traitGuidance: TraitGuidance | undefined;
   try {
     if (task.projectId && task.simulationRunId && task.entityKind) {
@@ -925,7 +925,8 @@ Generate the visual thesis.`;
         task.projectId,
         task.simulationRunId,
         task.entityKind,
-        task.entitySubtype
+        task.entitySubtype,
+        task.entityEraId
       );
     }
   } catch (err) {
@@ -1727,35 +1728,74 @@ function formatImageRefEntities(context: ChronicleGenerationContext): string {
   if (context.entities.length === 0) return '(none)';
 
   return context.entities
-    .map((entity) => `- ${entity.id}: ${entity.name}`)
+    .map((entity) => `- ${entity.id}: ${entity.name} (${entity.kind})`)
     .join('\n');
 }
 
 /**
- * Extract section IDs and names from chronicle content
+ * Split content into roughly equal chunks for distributed image placement.
+ * Splits at whitespace boundaries to avoid cutting words.
+ * Returns 3-7 chunks, weighted by content length (longer = more chunks).
  */
-function extractSectionInfo(content: string): Array<{ id: string; name: string }> {
-  const sections: Array<{ id: string; name: string }> = [];
-  const lines = content.split('\n');
-  let sectionIndex = 0;
+function splitIntoChunks(content: string): Array<{ index: number; text: string; startOffset: number }> {
+  // Estimate word count for chunk calculation
+  const wordCount = content.split(/\s+/).length;
 
-  for (const line of lines) {
-    if (line.startsWith('## ')) {
-      const name = line.replace('## ', '').trim();
-      sections.push({
-        id: `section-${sectionIndex}`,
-        name,
-      });
-      sectionIndex++;
+  // Calculate chunk count: 3-7, weighted by length
+  // Under 500 words: 3 chunks, 500-1000: 4, 1000-2000: 5, 2000-3000: 6, 3000+: 7
+  let baseChunkCount: number;
+  if (wordCount < 500) baseChunkCount = 3;
+  else if (wordCount < 1000) baseChunkCount = 4;
+  else if (wordCount < 2000) baseChunkCount = 5;
+  else if (wordCount < 3000) baseChunkCount = 6;
+  else baseChunkCount = 7;
+
+  // Add slight randomness: ±1 chunk
+  const randomOffset = Math.random() < 0.3 ? -1 : (Math.random() > 0.7 ? 1 : 0);
+  const chunkCount = Math.max(3, Math.min(7, baseChunkCount + randomOffset));
+
+  const targetChunkSize = Math.ceil(content.length / chunkCount);
+  const chunks: Array<{ index: number; text: string; startOffset: number }> = [];
+
+  let currentStart = 0;
+  for (let i = 0; i < chunkCount; i++) {
+    const targetEnd = Math.min(currentStart + targetChunkSize, content.length);
+
+    // Find next whitespace after target end (don't cut words)
+    let actualEnd = targetEnd;
+    if (targetEnd < content.length) {
+      // Look for whitespace within 50 chars after target
+      const searchEnd = Math.min(targetEnd + 50, content.length);
+      for (let j = targetEnd; j < searchEnd; j++) {
+        if (/\s/.test(content[j])) {
+          actualEnd = j;
+          break;
+        }
+      }
+      // If no whitespace found, use target (rare edge case)
+      if (actualEnd === targetEnd && targetEnd < content.length) {
+        actualEnd = targetEnd;
+      }
     }
+
+    chunks.push({
+      index: i,
+      text: content.substring(currentStart, actualEnd),
+      startOffset: currentStart,
+    });
+
+    currentStart = actualEnd;
+
+    // Skip leading whitespace for next chunk
+    while (currentStart < content.length && /\s/.test(content[currentStart])) {
+      currentStart++;
+    }
+
+    // If we've consumed all content, stop
+    if (currentStart >= content.length) break;
   }
 
-  // If no sections found, treat entire content as one section
-  if (sections.length === 0) {
-    sections.push({ id: 'section-0', name: 'Chronicle' });
-  }
-
-  return sections;
+  return chunks;
 }
 
 function buildImageRefsPrompt(
@@ -1763,65 +1803,69 @@ function buildImageRefsPrompt(
   context: ChronicleGenerationContext
 ): string {
   const entityList = formatImageRefEntities(context);
-  const sections = extractSectionInfo(content);
-  const sectionList = sections.map(s => `- ${s.id}: "${s.name}"`).join('\n');
+  const chunks = splitIntoChunks(content);
+
+  // Build chunk display with markers (full text, no truncation)
+  const chunksDisplay = chunks.map((chunk, i) => {
+    return `### CHUNK ${i + 1} of ${chunks.length}
+${chunk.text}
+---`;
+  }).join('\n\n');
 
   return `You are adding image references to a chronicle. Your task is to identify optimal placement points for images that enhance the narrative.
 
-## Available Entities (can reference their existing images)
+## Available Entities
 ${entityList}
 
-## Chronicle Sections
-${sectionList}
-
 ## Instructions
-Analyze the chronicle and suggest 2-5 image placements. For each image:
+The chronicle has been divided into ${chunks.length} chunks. For EACH chunk, decide whether it deserves an image (0 or 1 per chunk). This ensures images are distributed throughout the narrative.
 
-1. **Entity References** - Use when an entity with an existing image is prominently featured:
-   - Best for: Character introductions, key moments featuring specific entities
-   - Anchor to specific descriptive text about that entity
+For each image, choose one type:
 
-2. **Prompt Requests** - Use for scenes, events, or concepts without existing images:
-   - Best for: Battle scenes, landscapes, group gatherings, symbolic moments
-   - Provide a vivid scene description that captures the moment
+1. **Entity Reference** (type: "entity_ref") - Use when a specific entity is prominently featured
+   - Best for: Introductions, key moments focused on a single entity
+
+2. **Scene Prompt** (type: "prompt_request") - Use for scenes involving multiple entities or environments
+   - Best for: Multi-entity scenes, locations, action moments, atmospheric shots
+   - REQUIRED: Include involvedEntityIds with at least one entity that appears in the scene
 
 ## Output Format
-Return a JSON object with this exact structure:
+Return a JSON object. For each image placement, provide an entry with anchorText from the relevant chunk:
 {
   "imageRefs": [
     {
       "type": "entity_ref",
-      "entityId": "<entity id from the list above>",
-      "sectionId": "<section id from the list above>",
-      "anchorText": "<exact 5-15 word phrase from the chronicle text to anchor near>",
+      "entityId": "<entity id from list above>",
+      "anchorText": "<exact 5-15 word phrase from the chronicle>",
       "size": "small|medium|large|full-width",
-      "caption": "<optional caption for the image>"
+      "caption": "<optional>"
     },
     {
       "type": "prompt_request",
-      "sceneDescription": "<vivid 1-2 sentence description of the scene to generate>",
-      "sectionId": "<section id from the list above>",
-      "anchorText": "<exact 5-15 word phrase from the chronicle text to anchor near>",
+      "sceneDescription": "<vivid 1-2 sentence scene description>",
+      "involvedEntityIds": ["<entity-id-1>", "<entity-id-2>"],
+      "anchorText": "<exact 5-15 word phrase from the chronicle>",
       "size": "small|medium|large|full-width",
-      "caption": "<optional caption for the image>"
+      "caption": "<optional>"
     }
   ]
 }
 
 ## Size Guidelines
-- small: 150px thumbnail in margin, for supplementary images
-- medium: 300px inline, standard size for character portraits
-- large: 450px prominent, for key scenes
-- full-width: 100% width, for dramatic establishing shots and major events
+- small: 150px, supplementary/margin images
+- medium: 300px, standard single-entity images
+- large: 450px, key scenes
+- full-width: 100%, establishing shots
 
-## Important Rules
-- anchorText MUST be an exact phrase that appears in the chronicle text (5-15 words)
-- entityId MUST match an ID from the Available Entities list
-- sectionId MUST match an ID from the Chronicle Sections list
-- Return valid JSON only, no markdown code blocks
+## Rules
+- Suggest 0 or 1 image per chunk (total 2-5 images for the whole chronicle)
+- anchorText MUST be an exact phrase from that chunk's text
+- entityId and involvedEntityIds MUST use IDs from the Available Entities list
+- For prompt_request, involvedEntityIds MUST contain at least one entity ID
+- Return valid JSON only, no markdown
 
-## Chronicle Content
-${content}`;
+## Chronicle Chunks
+${chunksDisplay}`;
 }
 
 /**
@@ -1850,7 +1894,8 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
 
   return parsed.imageRefs.map((ref: Record<string, unknown>, index: number) => {
     const refId = `imgref_${Date.now()}_${index}`;
-    const sectionId = typeof ref.sectionId === 'string' ? ref.sectionId : `section-0`;
+    // sectionId is vestigial but kept for backwards compatibility
+    const sectionId = typeof ref.sectionId === 'string' ? ref.sectionId : `section-${index}`;
     const anchorText = typeof ref.anchorText === 'string' ? ref.anchorText : '';
     const rawSize = typeof ref.size === 'string' ? ref.size : 'medium';
     const size: ChronicleImageSize = validSizes.includes(rawSize as ChronicleImageSize)
@@ -1877,10 +1922,20 @@ function parseImageRefsResponse(text: string): ChronicleImageRef[] {
       if (!sceneDescription) {
         throw new Error(`prompt_request at index ${index} missing sceneDescription`);
       }
+      // Parse involvedEntityIds - can be array of strings or empty
+      let involvedEntityIds: string[] | undefined;
+      if (Array.isArray(ref.involvedEntityIds)) {
+        involvedEntityIds = ref.involvedEntityIds
+          .filter((id): id is string => typeof id === 'string' && id.length > 0);
+        if (involvedEntityIds.length === 0) {
+          involvedEntityIds = undefined;
+        }
+      }
       return {
         refId,
         type: 'prompt_request',
         sceneDescription,
+        involvedEntityIds,
         sectionId,
         anchorText,
         size,
@@ -2211,13 +2266,7 @@ async function executeProseBlendStep(
 // Palette Expansion Task
 // ============================================================================
 
-const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity across SUBTYPES.
-
-SUBTYPE DIFFERENTIATION (critical):
-Different subtypes within an entity kind should have different visual languages.
-- Combat abilities vs Magic abilities vs Technology abilities → completely different VFX styles
-- Merchant NPCs vs Warrior NPCs vs Scholar NPCs → different silhouettes, gear, postures
-- Each category should specify which subtypes it applies to
+const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity.
 
 THUMBNAIL TEST:
 Each category must be visible at 128px or in black silhouette.
@@ -2234,10 +2283,17 @@ interface CultureContext {
   visualIdentity?: Record<string, string>;
 }
 
+interface EraContext {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 function buildPaletteExpansionPrompt(
   entityKind: string,
   worldContext: string,
   subtypes: string[],
+  eras: EraContext[],
   cultureContext?: CultureContext[]
 ): string {
   // Build culture section if available
@@ -2257,10 +2313,19 @@ function buildPaletteExpansionPrompt(
     cultureSection = `\nCultures in this world:\n${cultureLines}\n`;
   }
 
-  // Build subtypes section
-  const subtypesSection = subtypes.length > 0
-    ? `\nSUBTYPES for ${entityKind}: ${subtypes.join(', ')}\n`
-    : '';
+  // Build subtypes section - REQUIRED, fail if none provided
+  if (subtypes.length === 0) {
+    throw new Error(`Cannot generate palette for ${entityKind}: no subtypes defined. Define subtypes in the schema.`);
+  }
+  const subtypesList = subtypes.join(', ');
+  const subtypesSection = `\nALLOWED SUBTYPES for ${entityKind} (use ONLY these exact values): ${subtypesList}\n`;
+
+  // Build eras section
+  let erasSection = '';
+  if (eras.length > 0) {
+    const eraLines = eras.map(e => `- ${e.id}: "${e.name}"${e.description ? ` — ${e.description}` : ''}`).join('\n');
+    erasSection = `\nERAS in this world (use exact IDs):\n${eraLines}\n`;
+  }
 
   // Dimension hints based on entity type
   const dimensionHints = entityKind === 'location'
@@ -2270,18 +2335,27 @@ function buildPaletteExpansionPrompt(
   return `Generate a visual trait palette for "${entityKind}" entities.
 
 WORLD: ${worldContext || 'A fantasy world.'}
-${cultureSection}${subtypesSection}
+${cultureSection}${subtypesSection}${erasSection}
 TASK:
-Create 6-10 categories that cover the visual dimensions (${dimensionHints}).
+Generate TWO types of categories:
 
-CRITICAL: Differentiate by subtype.
-${subtypes.length > 0
-    ? `The subtypes (${subtypes.join(', ')}) should have DIFFERENT visual languages.
-For each category, specify which subtypes it applies to:
-- Some categories apply to ALL subtypes (universal traits like "Scarring" or "Size Variation")
-- Some categories are SUBTYPE-SPECIFIC (e.g., "Spell Auras" for magic subtypes only)
-- Ensure each subtype has at least 2-3 categories specifically relevant to it`
-    : 'If subtypes exist, specify which ones each category applies to.'}
+## PART 1: Subtype Categories (6-10 categories)
+Cover the visual dimensions (${dimensionHints}).
+
+CRITICAL RULES FOR SUBTYPES:
+- Every category MUST have a "subtypes" array with 1+ values from: [${subtypesList}]
+- You can ONLY use these exact subtype values - do NOT invent new ones
+- Each category should apply to 1-2 subtypes (be specific, not universal)
+- Ensure good coverage: each subtype should have 3-5 categories that include it
+- Categories that would "apply to all" should instead be split into subtype-specific variants
+
+## PART 2: Era Categories (one per era)
+${eras.length > 0
+    ? `For EACH era listed above, create exactly ONE category specific to "${entityKind}".
+- Era categories reflect material conditions or dominant activities of that time
+- Era categories apply to ALL subtypes (leave subtypes empty)
+- Use the exact era ID from the list above`
+    : 'No eras defined - skip era categories.'}
 
 Each category must pass the SILHOUETTE TEST:
 - Visible at 128px or in black silhouette
@@ -2295,7 +2369,15 @@ OUTPUT (JSON only):
       "category": "Name",
       "description": "What this means visually",
       "examples": ["example 1", "example 2", "example 3"],
-      "subtypes": ["subtype1", "subtype2"] // or [] for all subtypes
+      "subtypes": ["${subtypes[0]}"],  // REQUIRED: 1+ subtypes from allowed list
+      "era": null
+    },
+    {
+      "category": "Era-Specific Name",
+      "description": "How this era manifests for ${entityKind}",
+      "examples": ["example 1", "example 2", "example 3"],
+      "subtypes": [],  // Era categories: empty (apply to all)
+      "era": "era-id"
     }
   ]
 }`;
@@ -2307,6 +2389,7 @@ interface PaletteExpansionResponse {
     description: string;
     examples: string[];
     subtypes?: string[];
+    era?: string;
   }>;
 }
 
@@ -2341,6 +2424,8 @@ function parsePaletteExpansionResponse(text: string): PaletteExpansionResponse {
             subtypes: Array.isArray(c.subtypes)
               ? (c.subtypes as unknown[]).filter((s): s is string => typeof s === 'string')
               : undefined,
+            // era can be null, undefined, or a string - only keep if it's a non-empty string
+            era: typeof c.era === 'string' && c.era.length > 0 ? c.era : undefined,
           }))
       : [],
   };
@@ -2367,13 +2452,15 @@ export async function executePaletteExpansionTask(
   const thinkingModel = config.thinkingModel || 'claude-sonnet-4-5-20250929';
   const thinkingBudget = config.thinkingBudget ?? 8192;
 
-  // Get available subtypes for this entity kind
+  // Get available subtypes and eras for this entity kind
   const subtypes = task.paletteSubtypes || [];
+  const eras = task.paletteEras || [];
 
   const prompt = buildPaletteExpansionPrompt(
     entityKind,
     worldContext,
     subtypes,
+    eras,
     task.paletteCultureContext
   );
 

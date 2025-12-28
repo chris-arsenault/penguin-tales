@@ -342,11 +342,11 @@ interface WizardProviderProps {
   children: ReactNode;
   /** Entity kind definitions from the domain schema, used for category mapping */
   entityKinds: EntityKindDefinition[];
-  /** Era definitions with tick ranges for temporal alignment */
-  eras: EraTemporalInfo[];
+  /** Era definitions with tick ranges for temporal alignment (optional - temporal features disabled if not provided) */
+  eras?: EraTemporalInfo[];
 }
 
-export function WizardProvider({ children, entityKinds, eras }: WizardProviderProps) {
+export function WizardProvider({ children, entityKinds, eras = [] }: WizardProviderProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
 
   // Build kind-to-category mapping

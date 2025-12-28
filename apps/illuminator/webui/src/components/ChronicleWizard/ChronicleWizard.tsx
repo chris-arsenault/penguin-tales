@@ -35,8 +35,8 @@ export interface ChronicleWizardProps {
   events: NarrativeEventContext[];
   /** Entity kind definitions for category mapping */
   entityKinds: EntityKindDefinition[];
-  /** Era definitions with tick ranges for temporal alignment */
-  eras: EraTemporalInfo[];
+  /** Era definitions with tick ranges for temporal alignment (optional) */
+  eras?: EraTemporalInfo[];
 
   // Optional seed to restore previous chronicle settings (same structure as ChronicleRecord)
   initialSeed?: ChronicleSeed;
@@ -337,7 +337,7 @@ export default function ChronicleWizard(props: ChronicleWizardProps) {
   if (!props.isOpen) return null;
 
   return (
-    <WizardProvider entityKinds={props.entityKinds} eras={props.eras}>
+    <WizardProvider entityKinds={props.entityKinds} eras={props.eras ?? []}>
       <InnerWizard {...props} />
     </WizardProvider>
   );

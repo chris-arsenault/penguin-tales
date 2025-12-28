@@ -37,7 +37,8 @@
     ],
     "cullable": false,
     "decayRate": "slow",
-    "polarity": "positive"
+    "polarity": "positive",
+    "narrativeRole": "leadership"
   },
   {
     "kind": "enemy_of",
@@ -80,7 +81,8 @@
     ],
     "cullable": true,
     "decayRate": "slow",
-    "polarity": "negative"
+    "polarity": "negative",
+    "narrativeRole": "war"
   },
   {
     "kind": "controls",

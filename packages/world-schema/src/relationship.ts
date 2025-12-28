@@ -13,6 +13,12 @@
 export type Polarity = 'positive' | 'neutral' | 'negative';
 
 /**
+ * Narrative role for relationship kinds.
+ * Used to detect higher-level narrative events (leadership, war).
+ */
+export type NarrativeRole = 'leadership' | 'war';
+
+/**
  * Definition of a relationship kind
  */
 export interface RelationshipKindDefinition {
@@ -44,4 +50,6 @@ export interface RelationshipKindDefinition {
    * - negative: rivals, enemies, opposes
    */
   polarity?: Polarity;
+  /** Optional narrative role for higher-level event detection */
+  narrativeRole?: NarrativeRole;
 }

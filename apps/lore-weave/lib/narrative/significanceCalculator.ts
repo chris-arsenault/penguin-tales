@@ -45,6 +45,7 @@ export function calculateSignificance(
     era_transition: 0.9,           // Era changes are very significant
     state_change: 0.3,             // Base for state changes
     relationship_dissolved: 0.4,   // Breaking ties is notable
+    relationship_ended: 0.4,       // Lifecycle-driven endings are notable
     succession: 0.6,               // Leadership transitions are significant
     coalescence: 0.5,              // Multiple entities uniting is notable
     // Polarity-based relationship events
@@ -55,6 +56,11 @@ export function calculateSignificance(
     // Status polarity events
     downfall: 0.6,                 // Negative status transitions are significant
     triumph: 0.5,                  // Positive status transitions are notable
+    // Leadership events
+    leadership_established: 0.6,   // First leadership is significant
+    // War events
+    war_started: 0.8,              // Wars starting are dramatic
+    war_ended: 0.7,                // Wars ending are significant
     // Authority events
     power_vacuum: 0.7,             // Leadership gaps are dramatic
   };

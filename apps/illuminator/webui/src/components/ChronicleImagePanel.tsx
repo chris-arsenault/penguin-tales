@@ -27,6 +27,10 @@ interface EntityContext {
     image?: {
       imageId: string;
     };
+    description?: {
+      visualThesis?: string;
+      visualTraits?: string[];
+    };
   };
 }
 
@@ -220,14 +224,21 @@ function PromptRequestCard({
   imageRef,
   onGenerate,
   isGenerating,
+  entities,
 }: {
   imageRef: PromptRequestRef;
   onGenerate?: () => void;
   isGenerating?: boolean;
+  entities?: Map<string, EntityContext>;
 }) {
   const { url, loading } = useImageUrl(imageRef.generatedImageId);
   const statusColor = STATUS_COLORS[imageRef.status] || STATUS_COLORS.pending;
   const canGenerate = imageRef.status === 'pending' && !isGenerating;
+
+  // Resolve involved entity names
+  const involvedEntityNames = imageRef.involvedEntityIds
+    ?.map(id => entities?.get(id)?.name)
+    .filter((name): name is string => Boolean(name));
 
   return (
     <div
@@ -331,6 +342,36 @@ function PromptRequestCard({
         >
           Anchor: &quot;{imageRef.anchorText.slice(0, 40)}{imageRef.anchorText.length > 40 ? '...' : ''}&quot;
         </div>
+
+        {involvedEntityNames && involvedEntityNames.length > 0 && (
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              marginTop: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ color: 'var(--text-muted)' }}>Figures:</span>
+            {involvedEntityNames.map((name, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: '1px 6px',
+                  background: 'rgba(168, 85, 247, 0.1)',
+                  color: '#a855f7',
+                  borderRadius: '3px',
+                  fontSize: '10px',
+                }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
 
         {imageRef.caption && (
           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -498,6 +539,21 @@ export default function ChronicleImagePanel({
 
     const styleInfo = buildStyleInfo();
 
+    // Look up involved entities and extract their visual identity
+    const involvedEntities = ref.involvedEntityIds
+      ?.map(id => {
+        const entity = entities.get(id);
+        if (!entity) return null;
+        return {
+          id: entity.id,
+          name: entity.name,
+          kind: entity.kind,
+          visualThesis: entity.enrichment?.description?.visualThesis,
+          visualTraits: entity.enrichment?.description?.visualTraits,
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+
     const prompt = buildChronicleImagePrompt(
       {
         sceneDescription: ref.sceneDescription,
@@ -509,12 +565,13 @@ export default function ChronicleImagePanel({
           description: worldContext.description,
           tone: worldContext.tone,
         } : undefined,
+        involvedEntities,
       },
       styleInfo
     );
 
     onGenerateImage(ref, prompt, styleInfo);
-  }, [onGenerateImage, buildStyleInfo, chronicleTitle, derivedCultureId, worldContext]);
+  }, [onGenerateImage, buildStyleInfo, chronicleTitle, derivedCultureId, worldContext, entities]);
 
   // No image refs yet
   if (!imageRefs) {
@@ -553,7 +610,7 @@ export default function ChronicleImagePanel({
     );
   }
 
-  const hasPendingPrompts = stats.pending > 0;
+  const hasSceneImages = promptRequests.length > 0;
 
   return (
     <div>
@@ -589,8 +646,8 @@ export default function ChronicleImagePanel({
         </div>
       </div>
 
-      {/* Style Selection - only show if there are pending scene images */}
-      {hasPendingPrompts && styleLibrary && (
+      {/* Style Selection - show when there are scene images (for generation/regeneration) */}
+      {hasSceneImages && (
         <div
           style={{
             marginBottom: '16px',
@@ -604,19 +661,25 @@ export default function ChronicleImagePanel({
             Generation Settings
           </div>
 
-          {/* Style Selector */}
-          <div style={{ marginBottom: '12px' }}>
-            <StyleSelector
-              styleLibrary={styleLibrary}
-              selectedArtisticStyleId={styleSelection.artisticStyleId}
-              selectedCompositionStyleId={styleSelection.compositionStyleId}
-              selectedColorPaletteId={styleSelection.colorPaletteId}
-              onArtisticStyleChange={(id: string) => handleStyleChange({ ...styleSelection, artisticStyleId: id })}
-              onCompositionStyleChange={(id: string) => handleStyleChange({ ...styleSelection, compositionStyleId: id })}
-              onColorPaletteChange={(id: string) => handleStyleChange({ ...styleSelection, colorPaletteId: id })}
-              compact
-            />
-          </div>
+          {/* Style Selector - only show when styleLibrary is available */}
+          {styleLibrary ? (
+            <div style={{ marginBottom: '12px' }}>
+              <StyleSelector
+                styleLibrary={styleLibrary}
+                selectedArtisticStyleId={styleSelection.artisticStyleId}
+                selectedCompositionStyleId={styleSelection.compositionStyleId}
+                selectedColorPaletteId={styleSelection.colorPaletteId}
+                onArtisticStyleChange={(id: string) => handleStyleChange({ ...styleSelection, artisticStyleId: id })}
+                onCompositionStyleChange={(id: string) => handleStyleChange({ ...styleSelection, compositionStyleId: id })}
+                onColorPaletteChange={(id: string) => handleStyleChange({ ...styleSelection, colorPaletteId: id })}
+                compact
+              />
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              Loading style options...
+            </div>
+          )}
 
           {/* Culture Selection */}
           {cultures && cultures.length > 0 && (
@@ -694,6 +757,7 @@ export default function ChronicleImagePanel({
                 imageRef={ref}
                 onGenerate={() => handleGenerateImage(ref)}
                 isGenerating={isGenerating}
+                entities={entities}
               />
             ))}
           </div>

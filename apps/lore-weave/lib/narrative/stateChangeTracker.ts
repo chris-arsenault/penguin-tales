@@ -70,12 +70,15 @@ export class StateChangeTracker {
   // Relationship tracking
   private relationshipSnapshotAtTickStart: Map<string, RelationshipSnapshot> = new Map();
   private partOfSnapshotAtTickStart: Map<string, PartOfSnapshot> = new Map();
+  private leadershipTargetsAtTickStart: Map<string, Set<string>> = new Map();
   private currentTick: number = 0;
 
   // Polarity lookup caches
   private relationshipPolarityCache: Map<string, Polarity | undefined> = new Map();
   private statusPolarityCache: Map<string, Polarity | undefined> = new Map();
   private authoritySubtypeCache: Set<string> = new Set();
+  private warRelationshipKinds: Set<string> = new Set(['at_war_with']);
+  private leadershipRelationshipKinds: Set<string> = new Set(['leader_of']);
 
   constructor(config: NarrativeConfig) {
     this.config = config;
@@ -112,6 +115,33 @@ export class StateChangeTracker {
         }
       }
     }
+
+    this.refreshNarrativeRelationshipKinds();
+  }
+
+  /**
+   * Refresh narrative relationship kind roles (war, leadership)
+   */
+  private refreshNarrativeRelationshipKinds(): void {
+    const warKinds = new Set(this.config.warRelationshipKinds ?? []);
+    const leadershipKinds = new Set(this.config.leadershipRelationshipKinds ?? []);
+
+    if (this.schema) {
+      for (const rel of this.schema.relationshipKinds) {
+        if (rel.narrativeRole === 'war') {
+          warKinds.add(rel.kind);
+        }
+        if (rel.narrativeRole === 'leadership') {
+          leadershipKinds.add(rel.kind);
+        }
+      }
+    }
+
+    if (warKinds.size === 0) warKinds.add('at_war_with');
+    if (leadershipKinds.size === 0) leadershipKinds.add('leader_of');
+
+    this.warRelationshipKinds = warKinds;
+    this.leadershipRelationshipKinds = leadershipKinds;
   }
 
   /**
@@ -176,6 +206,20 @@ export class StateChangeTracker {
           this.partOfSnapshotAtTickStart.set(containerId, snapshot);
         }
         snapshot.memberIds.add(rel.src);
+      }
+    }
+
+    // Snapshot leadership targets at tick start (for first-leadership detection)
+    this.leadershipTargetsAtTickStart.clear();
+    if (this.leadershipRelationshipKinds.size > 0) {
+      for (const rel of graph.getRelationships({ includeHistorical: false })) {
+        if (!this.leadershipRelationshipKinds.has(rel.kind)) continue;
+        let targets = this.leadershipTargetsAtTickStart.get(rel.kind);
+        if (!targets) {
+          targets = new Set<string>();
+          this.leadershipTargetsAtTickStart.set(rel.kind, targets);
+        }
+        targets.add(rel.dst);
       }
     }
 
@@ -260,22 +304,42 @@ export class StateChangeTracker {
     }
 
     const events: NarrativeEvent[] = [];
+    const endedEntityIds = this.collectEndedEntityIds();
+    const coalescenceChanges = this.detectCoalescenceChanges();
+    const coalescenceMemberIds = new Set<string>();
+    for (const memberIds of coalescenceChanges.values()) {
+      memberIds.forEach(id => coalescenceMemberIds.add(id));
+    }
+    const suppressedCoalescenceMembers = new Set<string>(
+      Array.from(coalescenceMemberIds).filter(id => endedEntityIds.has(id))
+    );
 
     // 1. Generate state change events (including downfall/triumph based on status polarity)
     events.push(...this.generateStateChangeEvents());
 
-    // 2. Generate relationship dissolution events (including betrayal/reconciliation)
-    events.push(...this.generateDissolutionEvents());
+    // 2. Generate leadership events (first leadership on target)
+    events.push(...this.generateLeadershipEvents());
 
-    // 3. Generate rivalry and alliance events (new negative/positive relationships)
+    // 3. Generate war events (aggregated)
+    const warResults = this.generateWarEvents();
+    events.push(...warResults.events);
+
+    // 4. Generate relationship dissolution events (including betrayal/reconciliation)
+    events.push(...this.generateDissolutionEvents(
+      endedEntityIds,
+      warResults.suppressedRelationshipKeys,
+      suppressedCoalescenceMembers
+    ));
+
+    // 5. Generate rivalry and alliance events (new negative/positive relationships)
     events.push(...this.generateRivalryAndAllianceEvents());
 
-    // 4. Generate succession events (container entities that became historical)
+    // 6. Generate succession events (container entities that became historical)
     // Also generates power_vacuum for authority subtypes
     events.push(...this.generateSuccessionEvents());
 
-    // 5. Generate coalescence events (new part_of relationships)
-    events.push(...this.generateCoalescenceEvents());
+    // 7. Generate coalescence events (new part_of relationships)
+    events.push(...this.generateCoalescenceEvents(coalescenceChanges));
 
     this.pendingChanges.clear();
     return events;
@@ -360,11 +424,262 @@ export class StateChangeTracker {
   }
 
   /**
+   * Collect entities that ended this tick (death, dissolution, historical)
+   */
+  private collectEndedEntityIds(): Set<string> {
+    const ended = new Set<string>();
+    for (const [entityId, changes] of this.pendingChanges) {
+      const becameHistorical = changes.some(c =>
+        c.field === 'status' &&
+        (c.newValue === 'historical' || c.newValue === 'dissolved' || c.newValue === 'dead')
+      );
+      if (becameHistorical) {
+        ended.add(entityId);
+      }
+    }
+    return ended;
+  }
+
+  /**
+   * Detect coalescence changes for this tick
+   */
+  private detectCoalescenceChanges(): Map<string, string[]> {
+    if (!this.graph) return new Map();
+
+    const currentPartOf = new Map<string, Set<string>>();
+    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
+      if (rel.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF) {
+        const containerId = rel.dst;
+        let members = currentPartOf.get(containerId);
+        if (!members) {
+          members = new Set();
+          currentPartOf.set(containerId, members);
+        }
+        members.add(rel.src);
+      }
+    }
+
+    const changes = new Map<string, string[]>();
+    for (const [containerId, currentMembers] of currentPartOf) {
+      const previousSnapshot = this.partOfSnapshotAtTickStart.get(containerId);
+      const previousMembers = previousSnapshot?.memberIds ?? new Set<string>();
+
+      const newMemberIds: string[] = [];
+      for (const memberId of currentMembers) {
+        if (!previousMembers.has(memberId)) {
+          newMemberIds.push(memberId);
+        }
+      }
+
+      if (newMemberIds.length >= 2) {
+        changes.set(containerId, newMemberIds);
+      }
+    }
+
+    return changes;
+  }
+
+  private undirectedEdgeKey(a: string, b: string): string {
+    return a < b ? `${a}|${b}` : `${b}|${a}`;
+  }
+
+  private getConnectedComponents(adjacency: Map<string, Set<string>>): string[][] {
+    const visited = new Set<string>();
+    const components: string[][] = [];
+
+    for (const node of adjacency.keys()) {
+      if (visited.has(node)) continue;
+      const stack = [node];
+      const component: string[] = [];
+      visited.add(node);
+
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        component.push(current);
+        const neighbors = adjacency.get(current);
+        if (!neighbors) continue;
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor);
+            stack.push(neighbor);
+          }
+        }
+      }
+
+      components.push(component);
+    }
+
+    return components;
+  }
+
+  /**
+   * Generate leadership events (first leadership on target)
+   */
+  private generateLeadershipEvents(): NarrativeEvent[] {
+    if (!this.eventBuilder || !this.graph) return [];
+    if (this.leadershipRelationshipKinds.size === 0) return [];
+
+    const events: NarrativeEvent[] = [];
+    const newLeadershipByTarget = new Map<string, { kind: string; targetId: string; leaderIds: Set<string> }>();
+
+    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
+      if (!this.leadershipRelationshipKinds.has(rel.kind)) continue;
+      const key = this.relationshipKey(rel.src, rel.dst, rel.kind);
+      if (this.relationshipSnapshotAtTickStart.has(key)) continue;
+
+      const targetsAtStart = this.leadershipTargetsAtTickStart.get(rel.kind);
+      if (targetsAtStart?.has(rel.dst)) continue;
+
+      const groupKey = `${rel.kind}|${rel.dst}`;
+      let group = newLeadershipByTarget.get(groupKey);
+      if (!group) {
+        group = { kind: rel.kind, targetId: rel.dst, leaderIds: new Set<string>() };
+        newLeadershipByTarget.set(groupKey, group);
+      }
+      group.leaderIds.add(rel.src);
+    }
+
+    for (const group of newLeadershipByTarget.values()) {
+      const targetEntity = this.graph.getEntity(group.targetId);
+      if (!targetEntity) continue;
+
+      const leaders: HardState[] = Array.from(group.leaderIds)
+        .map(id => this.graph!.getEntity(id))
+        .filter((e): e is HardState => Boolean(e));
+
+      if (leaders.length === 0) continue;
+
+      const event = this.eventBuilder.buildLeadershipEstablishedEvent(
+        targetEntity,
+        leaders,
+        group.kind
+      );
+      if (event.significance >= this.config.minSignificance) {
+        events.push(event);
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Generate war events (aggregated by connected components)
+   */
+  private generateWarEvents(): { events: NarrativeEvent[]; suppressedRelationshipKeys: Set<string> } {
+    if (!this.eventBuilder || !this.graph) return { events: [], suppressedRelationshipKeys: new Set() };
+    if (this.warRelationshipKinds.size === 0) return { events: [], suppressedRelationshipKeys: new Set() };
+
+    const events: NarrativeEvent[] = [];
+    const suppressedRelationshipKeys = new Set<string>();
+
+    const currentWarRels = this.graph.getRelationships({ includeHistorical: false })
+      .filter(rel => this.warRelationshipKinds.has(rel.kind));
+    const currentRelationshipKeys = new Set<string>(
+      currentWarRels.map(rel => this.relationshipKey(rel.src, rel.dst, rel.kind))
+    );
+
+    for (const [key, snapshot] of this.relationshipSnapshotAtTickStart) {
+      if (this.warRelationshipKinds.has(snapshot.kind) && !currentRelationshipKeys.has(key)) {
+        suppressedRelationshipKeys.add(key);
+      }
+    }
+
+    for (const kind of this.warRelationshipKinds) {
+      const currentEdges = new Set<string>();
+      const startEdges = new Set<string>();
+      const currentAdjacency = new Map<string, Set<string>>();
+      const startAdjacency = new Map<string, Set<string>>();
+
+      const addAdjacency = (adj: Map<string, Set<string>>, src: string, dst: string) => {
+        let srcSet = adj.get(src);
+        if (!srcSet) {
+          srcSet = new Set();
+          adj.set(src, srcSet);
+        }
+        srcSet.add(dst);
+        let dstSet = adj.get(dst);
+        if (!dstSet) {
+          dstSet = new Set();
+          adj.set(dst, dstSet);
+        }
+        dstSet.add(src);
+      };
+
+      for (const rel of currentWarRels) {
+        if (rel.kind !== kind) continue;
+        const edgeKey = this.undirectedEdgeKey(rel.src, rel.dst);
+        currentEdges.add(edgeKey);
+        addAdjacency(currentAdjacency, rel.src, rel.dst);
+      }
+
+      for (const snapshot of this.relationshipSnapshotAtTickStart.values()) {
+        if (snapshot.kind !== kind) continue;
+        const edgeKey = this.undirectedEdgeKey(snapshot.src, snapshot.dst);
+        startEdges.add(edgeKey);
+        addAdjacency(startAdjacency, snapshot.src, snapshot.dst);
+      }
+
+      const newEdges = new Set<string>();
+      for (const edge of currentEdges) {
+        if (!startEdges.has(edge)) newEdges.add(edge);
+      }
+
+      const currentComponents = this.getConnectedComponents(currentAdjacency);
+      for (const component of currentComponents) {
+        if (component.length < 2) continue;
+        const componentSet = new Set(component);
+        const hasNewEdge = Array.from(newEdges).some(edge => {
+          const [a, b] = edge.split('|');
+          return componentSet.has(a) && componentSet.has(b);
+        });
+        if (!hasNewEdge) continue;
+
+        const participants = component
+          .map(id => this.graph!.getEntity(id))
+          .filter((e): e is HardState => Boolean(e));
+        if (participants.length < 2) continue;
+
+        const event = this.eventBuilder.buildWarEvent('war_started', participants, kind);
+        if (event.significance >= this.config.minSignificance) {
+          events.push(event);
+        }
+      }
+
+      const startComponents = this.getConnectedComponents(startAdjacency);
+      for (const component of startComponents) {
+        if (component.length < 2) continue;
+        const componentSet = new Set(component);
+        const hasRemainingEdge = Array.from(currentEdges).some(edge => {
+          const [a, b] = edge.split('|');
+          return componentSet.has(a) && componentSet.has(b);
+        });
+        if (hasRemainingEdge) continue;
+
+        const participants = component
+          .map(id => this.graph!.getEntity(id))
+          .filter((e): e is HardState => Boolean(e));
+        if (participants.length < 2) continue;
+
+        const event = this.eventBuilder.buildWarEvent('war_ended', participants, kind);
+        if (event.significance >= this.config.minSignificance) {
+          events.push(event);
+        }
+      }
+    }
+
+    return { events, suppressedRelationshipKeys };
+  }
+
+  /**
    * Generate events for relationship dissolutions
    * Compares relationships at tick start vs tick end to find archived ones
    * Uses polarity to generate betrayal (positive dissolved) or reconciliation (negative dissolved)
    */
-  private generateDissolutionEvents(): NarrativeEvent[] {
+  private generateDissolutionEvents(
+    endedEntityIds: Set<string>,
+    suppressedRelationshipKeys: Set<string>,
+    suppressedEntityIds: Set<string>
+  ): NarrativeEvent[] {
     if (!this.eventBuilder || !this.graph) return [];
 
     const events: NarrativeEvent[] = [];
@@ -378,12 +693,33 @@ export class StateChangeTracker {
     // Find relationships that were active at tick start but are no longer active
     for (const [key, snapshot] of this.relationshipSnapshotAtTickStart) {
       if (!currentActiveKeys.has(key)) {
+        if (this.warRelationshipKinds.has(snapshot.kind)) continue;
+        if (suppressedRelationshipKeys.has(key)) continue;
+        if (suppressedEntityIds.has(snapshot.src) || suppressedEntityIds.has(snapshot.dst)) continue;
+
         // This relationship was dissolved
         const srcEntity = this.graph.getEntity(snapshot.src);
         const dstEntity = this.graph.getEntity(snapshot.dst);
 
         if (srcEntity && dstEntity) {
           const relationshipAge = this.currentTick - snapshot.createdAt;
+
+          const endedEntities: HardState[] = [];
+          if (endedEntityIds.has(srcEntity.id)) endedEntities.push(srcEntity);
+          if (endedEntityIds.has(dstEntity.id)) endedEntities.push(dstEntity);
+          if (endedEntities.length > 0) {
+            const event = this.eventBuilder.buildRelationshipEndedEvent(
+              srcEntity,
+              dstEntity,
+              snapshot.kind,
+              relationshipAge,
+              endedEntities
+            );
+            if (event.significance >= this.config.minSignificance) {
+              events.push(event);
+            }
+            continue;
+          }
 
           // Check polarity for specialized events
           if (snapshot.polarity === 'positive') {
@@ -443,6 +779,7 @@ export class StateChangeTracker {
     for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
       const key = this.relationshipKey(rel.src, rel.dst, rel.kind);
       if (!this.relationshipSnapshotAtTickStart.has(key)) {
+        if (this.warRelationshipKinds.has(rel.kind)) continue;
         // This is a new relationship
         const polarity = this.getRelationshipPolarity(rel.kind);
         const srcEntity = this.graph.getEntity(rel.src);
@@ -577,41 +914,13 @@ export class StateChangeTracker {
   /**
    * Generate coalescence events when multiple entities join under a container
    */
-  private generateCoalescenceEvents(): NarrativeEvent[] {
+  private generateCoalescenceEvents(coalescenceChanges?: Map<string, string[]>): NarrativeEvent[] {
     if (!this.eventBuilder || !this.graph) return [];
 
     const events: NarrativeEvent[] = [];
+    const changes = coalescenceChanges ?? this.detectCoalescenceChanges();
 
-    // Build current part_of relationships
-    const currentPartOf = new Map<string, Set<string>>();
-    for (const rel of this.graph.getRelationships({ includeHistorical: false })) {
-      if (rel.kind === FRAMEWORK_RELATIONSHIP_KINDS.PART_OF) {
-        const containerId = rel.dst;
-        let members = currentPartOf.get(containerId);
-        if (!members) {
-          members = new Set();
-          currentPartOf.set(containerId, members);
-        }
-        members.add(rel.src);
-      }
-    }
-
-    // Find containers that gained new members this tick
-    for (const [containerId, currentMembers] of currentPartOf) {
-      const previousSnapshot = this.partOfSnapshotAtTickStart.get(containerId);
-      const previousMembers = previousSnapshot?.memberIds ?? new Set<string>();
-
-      // Find new members added this tick
-      const newMemberIds: string[] = [];
-      for (const memberId of currentMembers) {
-        if (!previousMembers.has(memberId)) {
-          newMemberIds.push(memberId);
-        }
-      }
-
-      // Only generate coalescence if 2+ entities joined in the same tick
-      if (newMemberIds.length < 2) continue;
-
+    for (const [containerId, newMemberIds] of changes) {
       const containerEntity = this.graph.getEntity(containerId);
       if (!containerEntity) continue;
 
@@ -664,5 +973,7 @@ export function createDefaultNarrativeConfig(): NarrativeConfig {
   return {
     enabled: true,
     minSignificance: 0,
+    warRelationshipKinds: ['at_war_with'],
+    leadershipRelationshipKinds: ['leader_of'],
   };
 }

@@ -182,10 +182,10 @@ export function computeEntityMetrics(
   const usageCount = usage?.usageCount ?? 0;
 
   // Era alignment - check if entity shares any era with entry point
-  // This would require entity to have era relationships, simplified check
+  // Check both created_during (origin) and active_during (ongoing association)
   const entityEras = new Set(
     relationships
-      .filter(r => r.kind === 'active_during' && r.src === entity.id)
+      .filter(r => (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entity.id)
       .map(r => r.dst)
   );
   const eraAligned = entryPointEras.size === 0 ||
@@ -226,10 +226,10 @@ export function computeAllEntityMetrics(
   currentAssignments: ChronicleRoleAssignment[],
   kindToCategory: Map<string, EntityCategory>
 ): Map<string, EntitySelectionMetrics> {
-  // Get entry point's eras
+  // Get entry point's eras (check both created_during and active_during)
   const entryPointEras = new Set(
     relationships
-      .filter(r => r.kind === 'active_during' && r.src === entryPointId)
+      .filter(r => (r.kind === 'created_during' || r.kind === 'active_during') && r.src === entryPointId)
       .map(r => r.dst)
   );
 

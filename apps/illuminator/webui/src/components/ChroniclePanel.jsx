@@ -587,6 +587,42 @@ export default function ChroniclePanel({
     }));
   }, [worldData]);
 
+  // Build era temporal info from era entities and history events
+  const wizardEras = useMemo(() => {
+    if (!entities || !worldData?.history) return [];
+
+    // Get era entities
+    const eraEntities = entities.filter((e) => e.kind === 'era');
+    if (eraEntities.length === 0) return [];
+
+    // Sort by createdAt to determine order
+    const sortedEras = [...eraEntities].sort((a, b) => a.createdAt - b.createdAt);
+
+    // Build tick ranges from history events
+    const eraTickRanges = new Map();
+    for (const event of worldData.history) {
+      const eraId = event.era;
+      if (!eraId) continue;
+      const range = eraTickRanges.get(eraId) || { min: Infinity, max: -Infinity };
+      range.min = Math.min(range.min, event.tick);
+      range.max = Math.max(range.max, event.tick);
+      eraTickRanges.set(eraId, range);
+    }
+
+    return sortedEras.map((era, index) => {
+      const range = eraTickRanges.get(era.id) || { min: era.createdAt, max: era.createdAt };
+      return {
+        id: era.id,
+        name: era.name,
+        description: era.enrichment?.description?.summary || era.description || '',
+        order: index,
+        startTick: range.min,
+        endTick: range.max + 1, // exclusive
+        duration: range.max - range.min + 1,
+      };
+    });
+  }, [entities, worldData]);
+
   // Handle wizard completion
   const handleWizardGenerate = useCallback(async (wizardConfig) => {
     if (!worldData || !worldContext) {
@@ -686,21 +722,23 @@ export default function ChroniclePanel({
   const handleGenerateChronicleImage = useCallback(
     (ref, prompt, _styleInfo) => {
       if (!selectedItem?.chronicleId) return;
-      if (!entities?.length) return;
-
-      // Get the entrypoint entity to use as the "entity" for the queue item
-      const entrypointEntity = entities.find((e) => e.id === selectedItem.entrypointId);
-      if (!entrypointEntity) return;
 
       // First, update the image ref status to 'generating'
       updateChronicleImageRef(selectedItem.chronicleId, ref.refId, {
         status: 'generating',
       }).then(() => refresh());
 
+      // Use the chronicleId as the entityId for storage - chronicle images belong to chronicles, not entities
+      const chronicleEntity = {
+        id: selectedItem.chronicleId,
+        name: selectedItem.name || 'Chronicle',
+        kind: 'chronicle',
+      };
+
       // Enqueue the image generation task
       onEnqueue([
         {
-          entity: entrypointEntity,
+          entity: chronicleEntity,
           type: 'image',
           prompt,
           // Chronicle image specific fields
@@ -711,7 +749,7 @@ export default function ChroniclePanel({
         },
       ]);
     },
-    [selectedItem, entities, onEnqueue, refresh]
+    [selectedItem, onEnqueue, refresh]
   );
 
   // Track completed chronicle image tasks and update chronicle records
@@ -1090,6 +1128,7 @@ export default function ChroniclePanel({
         relationships={wizardRelationships}
         events={wizardEvents}
         entityKinds={worldData?.schema?.entityKinds || []}
+        eras={wizardEras}
         initialSeed={wizardSeed}
       />
 

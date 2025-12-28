@@ -18,8 +18,10 @@ export interface PaletteItem {
   examples: string[];
   timesUsed: number;
   addedAt: number;
-  /** Subtypes this category is relevant for (empty = all subtypes) */
+  /** Subtypes this category applies to - REQUIRED, must have 1+ values */
   subtypes?: string[];
+  /** Era this category is specific to (undefined = not era-specific) */
+  era?: string;
 }
 
 export interface TraitPalette {
@@ -179,6 +181,7 @@ export async function updatePaletteItems(
       description: newItem.description,
       examples: newItem.examples,
       subtypes: newItem.subtypes,
+      era: newItem.era,
       timesUsed: 0,
       addedAt: now,
     });
@@ -405,43 +408,43 @@ function selectCategoriesWeighted(
 }
 
 /**
+ * Check if a category matches the entity's subtype
+ * Categories MUST have subtypes array with 1+ values - no "applies to all" escape hatch
+ */
+function categoryMatchesSubtype(item: PaletteItem, subtype: string): boolean {
+  // Categories without subtypes are invalid - skip them
+  if (!item.subtypes || item.subtypes.length === 0) {
+    return false;
+  }
+  const subtypeLower = subtype.toLowerCase();
+  return item.subtypes.some(s => s.toLowerCase() === subtypeLower);
+}
+
+/**
  * Get trait guidance for description generation
- * Uses positive assignment: selects 1-2 categories for this entity to focus on
- * Filters by subtype if provided
+ * Uses positive assignment: selects categories for this entity to focus on
+ * - 2 categories from subtype pool (must match entity's subtype)
+ * - 1 category from era pool (matches entity's era, applies to all subtypes)
  */
 export async function getTraitGuidance(
   projectId: string,
   simulationRunId: string,
   entityKind: string,
-  subtype?: string
+  subtype?: string,
+  eraId?: string
 ): Promise<TraitGuidance> {
   // Get palette (project-scoped)
   const palette = await getPalette(projectId, entityKind);
-  let items = palette?.items || [];
+  const allItems = palette?.items || [];
 
   // Build usage map for transparency (before filtering)
   const categoryUsage: Record<string, number> = {};
-  for (const item of items) {
+  for (const item of allItems) {
     categoryUsage[item.category] = item.timesUsed;
   }
 
-  // Filter by subtype if provided
-  // Categories with no subtypes defined apply to all subtypes
-  // Categories with subtypes defined only apply if the entity's subtype matches
-  if (subtype && items.length > 0) {
-    const subtypeLower = subtype.toLowerCase();
-    items = items.filter(item => {
-      // No subtypes specified = applies to all
-      if (!item.subtypes || item.subtypes.length === 0) {
-        return true;
-      }
-      // Check if entity subtype matches any of the category's subtypes
-      return item.subtypes.some(s => s.toLowerCase() === subtypeLower);
-    });
-  }
-
-  // If no palette exists (or all filtered out), return fallback guidance
-  if (items.length === 0) {
+  // If no subtype provided, return fallback (can't select without subtype)
+  if (!subtype) {
     return {
       assignedCategories: [],
       categoryUsage,
@@ -449,9 +452,43 @@ export async function getTraitGuidance(
     };
   }
 
-  // Select 1-2 categories using weighted random (fewer uses = higher chance)
-  const numCategories = items.length >= 2 ? 2 : 1;
-  const assigned = selectCategoriesWeighted(items, numCategories);
+  // Split into subtype pool (non-era-specific) and era pool
+  const subtypePool: PaletteItem[] = [];
+  const eraPool: PaletteItem[] = [];
+
+  for (const item of allItems) {
+    if (item.era) {
+      // Era-specific category - add to era pool if era matches
+      // Era categories apply to all subtypes (no subtype filtering)
+      if (eraId && item.era.toLowerCase() === eraId.toLowerCase()) {
+        eraPool.push(item);
+      }
+    } else {
+      // Non-era-specific category - must match entity's subtype
+      if (categoryMatchesSubtype(item, subtype)) {
+        subtypePool.push(item);
+      }
+    }
+  }
+
+  // Select 2 from subtype pool (or fewer if pool is smaller)
+  const numSubtypeCategories = Math.min(2, subtypePool.length);
+  const subtypeAssigned = selectCategoriesWeighted(subtypePool, numSubtypeCategories);
+
+  // Select 1 from era pool (if available)
+  const eraAssigned = selectCategoriesWeighted(eraPool, 1);
+
+  // Combine: subtype categories first, then era category
+  const assigned = [...subtypeAssigned, ...eraAssigned];
+
+  // If no categories at all, return fallback
+  if (assigned.length === 0) {
+    return {
+      assignedCategories: [],
+      categoryUsage,
+      selectionMethod: 'fallback',
+    };
+  }
 
   return {
     assignedCategories: assigned,

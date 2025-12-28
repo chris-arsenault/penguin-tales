@@ -49,14 +49,12 @@ export function formatEntityRoster(
       const kind = entity?.kind || 'unknown';
       const subtype = entity?.subtype ? `/${entity.subtype}` : '';
       const culture = entity?.culture || '(none)';
-      const status = entity?.status || '(unknown)';
       const tags = formatTags(entity?.tags);
 
       return `- ${name} (${kind}${subtype})
   Role: ${role.role}
   Contribution: ${role.contribution}
   Culture: ${culture}
-  Status: ${status}
   Tags: ${tags}`;
     })
     .join('\n');

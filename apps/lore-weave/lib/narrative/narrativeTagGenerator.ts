@@ -41,6 +41,11 @@ export function generateNarrativeTags(
     tags.add('dissolution');
     tags.add('ended');
   }
+  if (eventKind === 'relationship_ended') {
+    tags.add('ended');
+    tags.add('loss');
+    tags.add('lifecycle');
+  }
   // Polarity-based relationship events
   if (eventKind === 'betrayal') {
     tags.add('treachery');
@@ -61,6 +66,21 @@ export function generateNarrativeTags(
     tags.add('cooperation');
     tags.add('unity');
     tags.add('pact');
+  }
+  if (eventKind === 'leadership_established') {
+    tags.add('leadership');
+    tags.add('authority');
+    tags.add('transition');
+  }
+  if (eventKind === 'war_started') {
+    tags.add('war');
+    tags.add('conflict');
+    tags.add('escalation');
+  }
+  if (eventKind === 'war_ended') {
+    tags.add('war');
+    tags.add('peace');
+    tags.add('resolution');
   }
   // Status polarity events
   if (eventKind === 'downfall') {

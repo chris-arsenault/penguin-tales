@@ -280,6 +280,10 @@ export class WorldEngine {
     // Initialize narrative event tracking
     const narrativeConfig = config.narrativeConfig || createDefaultNarrativeConfig();
     this.stateChangeTracker = new StateChangeTracker(narrativeConfig);
+    this.stateChangeTracker.setSchema({
+      relationshipKinds: config.schema.relationshipKinds,
+      entityKinds: config.schema.entityKinds,
+    });
     if (narrativeConfig.enabled) {
       this.emitter.log('info', 'Narrative event tracking enabled', {
         minSignificance: narrativeConfig.minSignificance,

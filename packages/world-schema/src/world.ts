@@ -96,6 +96,7 @@ export type NarrativeEventKind =
   // === Core events (no metadata required) ===
   | 'state_change'           // Entity status/prominence changed
   | 'relationship_dissolved' // Relationship ended (not creation - too noisy)
+  | 'relationship_ended'     // Relationship ended due to lifecycle
   | 'entity_lifecycle'       // Birth, death, formation, dissolution
   | 'era_transition'         // Era ended/began
   | 'succession'             // Container entity ended, members reorganized
@@ -108,6 +109,11 @@ export type NarrativeEventKind =
   // === Status polarity events (require status polarity metadata) ===
   | 'downfall'               // Status changed to negative polarity
   | 'triumph'                // Status changed to positive polarity
+  // === Leadership events ===
+  | 'leadership_established' // First leadership relationship for a target
+  // === War events ===
+  | 'war_started'            // War relationships formed (multi-entity)
+  | 'war_ended'              // War relationships dissolved (multi-entity)
   // === Authority events (require isAuthority subtype metadata) ===
   | 'power_vacuum';          // Authority entity ended with no clear successor
 
@@ -150,6 +156,8 @@ export interface NarrativeEvent {
   subject: NarrativeEntityRef;
   action: string;
   object?: NarrativeEntityRef;
+  /** Multi-entity participation for group events */
+  participants?: NarrativeEntityRef[];
   /** Short description: "King Aldric dies in battle" */
   headline: string;
   /** Longer narrative description */

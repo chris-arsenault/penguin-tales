@@ -22,11 +22,21 @@ interface CultureInfo {
   visualIdentity?: Record<string, string>;
 }
 
+interface EraInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 interface TraitPaletteSectionProps {
   projectId: string;
   simulationRunId?: string;
   worldContext: string;
   entityKinds: string[];
+  /** Map of entity kind to its subtypes */
+  subtypesByKind?: Record<string, string[]>;
+  /** Available eras for era-specific categories */
+  eras?: EraInfo[];
   /** Cultures with visual identities for grounding palettes in world lore */
   cultures?: CultureInfo[];
   // Queue integration
@@ -36,6 +46,8 @@ interface TraitPaletteSectionProps {
     prompt: string;
     paletteEntityKind?: string;
     paletteWorldContext?: string;
+    paletteSubtypes?: string[];
+    paletteEras?: EraInfo[];
     paletteCultureContext?: CultureInfo[];
   }>) => void;
   queue: QueueItem[];
@@ -47,6 +59,8 @@ export default function TraitPaletteSection({
   simulationRunId,
   worldContext,
   entityKinds: rawEntityKinds = [],
+  subtypesByKind = {},
+  eras = [],
   cultures = [],
   enqueue,
   queue,
@@ -151,15 +165,20 @@ export default function TraitPaletteSection({
         visualIdentity: c.visualIdentity,
       }));
 
+    // Get subtypes for this kind
+    const subtypes = subtypesByKind[entityKind] || [];
+
     enqueue([{
       entity: syntheticEntity,
       type: 'paletteExpansion',
       prompt: '', // Not used - worker builds prompt from paletteEntityKind + paletteWorldContext
       paletteEntityKind: entityKind,
       paletteWorldContext: worldContext || 'A fantasy world with diverse entities.',
+      paletteSubtypes: subtypes.length > 0 ? subtypes : undefined,
+      paletteEras: eras.length > 0 ? eras : undefined,
       paletteCultureContext: cultureContext.length > 0 ? cultureContext : undefined,
     }]);
-  }, [isWorkerReady, enqueue, worldContext, cultures]);
+  }, [isWorkerReady, enqueue, worldContext, subtypesByKind, eras, cultures]);
 
   // Export all palettes
   const handleExport = useCallback(async () => {
@@ -425,6 +444,47 @@ export default function TraitPaletteSection({
                           {item.examples.length > 0 && (
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                               <em>Examples:</em> {item.examples.join(' · ')}
+                            </div>
+                          )}
+                          {/* Binding tags: subtypes and era */}
+                          {(item.subtypes?.length || item.era) && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '4px',
+                                marginTop: '8px',
+                              }}
+                            >
+                              {item.era && (
+                                <span
+                                  style={{
+                                    fontSize: '10px',
+                                    padding: '2px 6px',
+                                    background: 'rgba(168, 85, 247, 0.2)',
+                                    color: '#a855f7',
+                                    borderRadius: '3px',
+                                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                                  }}
+                                >
+                                  era: {item.era}
+                                </span>
+                              )}
+                              {item.subtypes?.map((st) => (
+                                <span
+                                  key={st}
+                                  style={{
+                                    fontSize: '10px',
+                                    padding: '2px 6px',
+                                    background: 'rgba(59, 130, 246, 0.2)',
+                                    color: '#3b82f6',
+                                    borderRadius: '3px',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                  }}
+                                >
+                                  {st}
+                                </span>
+                              ))}
                             </div>
                           )}
                         </div>

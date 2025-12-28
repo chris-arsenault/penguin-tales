@@ -149,6 +149,12 @@ function buildEventContext(
     subjectName: event.subject?.name,
     objectId: event.object?.id,
     objectName: event.object?.name,
+    participants: event.participants?.map(p => ({
+      id: p.id,
+      name: p.name,
+      kind: p.kind,
+      subtype: p.subtype,
+    })),
     stateChanges: event.stateChanges,
     narrativeTags: event.narrativeTags,
   };
@@ -247,14 +253,14 @@ export function buildChronicleContext(
     .sort((a, b) => b.significance - a.significance)
     .map(buildEventContext);
 
-  // Find era from first primary entity
+  // Find era from first primary entity (prefer created_during, fall back to active_during)
   const primaryEntityId = focus.primaryEntityIds[0];
-  const activeEraRel = primaryEntityId
+  const eraRel = primaryEntityId
     ? worldData.relationships.find(
-        (r) => r.src === primaryEntityId && r.kind === 'active_during'
+        (r) => r.src === primaryEntityId && (r.kind === 'created_during' || r.kind === 'active_during')
       )
     : undefined;
-  const era = activeEraRel ? entityMap.get(activeEraRel.dst) : undefined;
+  const era = eraRel ? entityMap.get(eraRel.dst) : undefined;
 
   return {
     worldName: worldContext.name || 'The World',

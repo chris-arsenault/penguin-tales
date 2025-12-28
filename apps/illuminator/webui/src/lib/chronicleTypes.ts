@@ -249,6 +249,12 @@ export interface NarrativeEventContext {
   subjectName?: string;
   objectId?: string;
   objectName?: string;
+  participants?: {
+    id: string;
+    name: string;
+    kind: string;
+    subtype?: string;
+  }[];
   stateChanges?: {
     entityId: string;
     entityName: string;
@@ -359,6 +365,8 @@ export interface PromptRequestRef extends BaseChronicleImageRef {
   type: 'prompt_request';
   /** LLM-generated scene description for image generation */
   sceneDescription: string;
+  /** Entity IDs involved in this scene (for visual identity compositing) */
+  involvedEntityIds?: string[];
   /** Generation state */
   status: 'pending' | 'generating' | 'complete' | 'failed';
   /** Generated imageId (after generation) */

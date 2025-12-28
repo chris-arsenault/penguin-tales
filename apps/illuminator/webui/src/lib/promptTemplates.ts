@@ -536,6 +536,22 @@ const SIZE_COMPOSITION_HINTS: Record<string, string> = {
 };
 
 /**
+ * Visual identity info for an entity involved in a scene
+ */
+export interface InvolvedEntityVisual {
+  /** Entity ID */
+  id: string;
+  /** Entity name for display */
+  name: string;
+  /** Entity kind (npc, location, etc.) */
+  kind: string;
+  /** One-sentence visual thesis - the primary visual signal */
+  visualThesis?: string;
+  /** Supporting visual traits */
+  visualTraits?: string[];
+}
+
+/**
  * Context for building chronicle image prompts
  */
 export interface ChronicleImageContext {
@@ -553,6 +569,43 @@ export interface ChronicleImageContext {
     description?: string;
     tone?: string;
   };
+  /** Entities involved in this scene with their visual identity */
+  involvedEntities?: InvolvedEntityVisual[];
+}
+
+/**
+ * Build visual identity section for entities involved in a scene
+ * Composes visual thesis and traits for each entity
+ */
+function buildInvolvedEntitiesSection(involvedEntities: InvolvedEntityVisual[] | undefined): string {
+  if (!involvedEntities || involvedEntities.length === 0) {
+    return '';
+  }
+
+  // Filter to only entities with visual data
+  const entitiesWithVisuals = involvedEntities.filter(
+    e => e.visualThesis || (e.visualTraits && e.visualTraits.length > 0)
+  );
+
+  if (entitiesWithVisuals.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = ['KEY FIGURES (maintain visual identity):'];
+
+  for (const entity of entitiesWithVisuals) {
+    lines.push(`  ${entity.name} (${entity.kind}):`);
+    if (entity.visualThesis) {
+      lines.push(`    Thesis: ${entity.visualThesis}`);
+    }
+    if (entity.visualTraits && entity.visualTraits.length > 0) {
+      // Include up to 3 traits to keep prompt concise
+      const traits = entity.visualTraits.slice(0, 3);
+      lines.push(`    Traits: ${traits.join('; ')}`);
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**
@@ -563,7 +616,7 @@ export function buildChronicleImagePrompt(
   context: ChronicleImageContext,
   styleInfo?: StyleInfo
 ): string {
-  const { sceneDescription, size, chronicleTitle, culture, world } = context;
+  const { sceneDescription, size, chronicleTitle, culture, world, involvedEntities } = context;
 
   // Build style section from artistic style
   const styleSection = styleInfo?.artisticPromptFragment
@@ -596,6 +649,9 @@ export function buildChronicleImagePrompt(
     ? `WORLD: ${world.name}${world.description ? ` - ${world.description}` : ''}${world.tone ? `\nTONE: ${world.tone}` : ''}`
     : '';
 
+  // Involved entities visual identity
+  const involvedEntitiesSection = buildInvolvedEntitiesSection(involvedEntities);
+
   const parts = [
     styleSection,
     colorPaletteSection,
@@ -604,6 +660,8 @@ export function buildChronicleImagePrompt(
     chronicleTitle ? `FROM: "${chronicleTitle}"` : '',
     '',
     worldSection,
+    '',
+    involvedEntitiesSection,
     '',
     visualIdentitySection,
     cultureSection,
