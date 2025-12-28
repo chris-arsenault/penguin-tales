@@ -32,7 +32,7 @@
       "influenceGain": 0.1,
       "influenceLoss": 0.05,
       "pressureMultiplier": 1.1,
-      "prominenceUpChanceOnSuccess": 0.04,
+      "prominenceUpChanceOnSuccess": 0.2,
       "prominenceDownChanceOnFailure": 0.4
     },
     "enabled": true
@@ -146,16 +146,17 @@
       "description": "Entities with many connections gain prominence; isolated entities fade",
       "metric": {
         "type": "connection_count",
-        "direction": "both"
+        "direction": "both",
+        "minStrength": 0.2
       },
       "rules": [
         {
           "condition": {
             "operator": ">=",
-            "threshold": 11,
+            "threshold": 5,
             "multiplier": 6
           },
-          "probability": 0.12,
+          "probability": 0.1,
           "action": {
             "type": "adjust_prominence",
             "direction": "up",
@@ -165,7 +166,7 @@
         {
           "condition": {
             "operator": "<=",
-            "threshold": 3
+            "threshold": 2
           },
           "probability": 0.55,
           "action": {

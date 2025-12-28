@@ -122,6 +122,7 @@ export interface QueueItem {
   entityId: string;
   entityName: string;
   entityKind: string;
+  entitySubtype?: string;
   entityCulture?: string;
   /** Unique ID for the simulation run - used to associate content with specific world state */
   simulationRunId?: string;
@@ -147,6 +148,8 @@ export interface QueueItem {
   // For palette expansion tasks
   paletteEntityKind?: string;
   paletteWorldContext?: string;
+  /** Available subtypes for this entity kind (for subtype-differentiated categories) */
+  paletteSubtypes?: string[];
   /** Culture visual identities for grounding palette in world lore */
   paletteCultureContext?: Array<{
     name: string;
@@ -155,6 +158,14 @@ export interface QueueItem {
   }>;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
+  /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
+  visualThesisInstructions?: string;
+  /** Per-kind framing for visual thesis user message */
+  visualThesisFraming?: string;
+  /** Per-kind domain instructions for visual traits (REQUIRED) */
+  visualTraitsInstructions?: string;
+  /** Per-kind framing for visual traits user message */
+  visualTraitsFraming?: string;
 }
 
 /**
@@ -261,6 +272,7 @@ export interface WorkerTask {
   entityId: string;
   entityName: string;
   entityKind: string;
+  entitySubtype?: string;
   entityCulture?: string;
   projectId: string;
   /** Unique ID for the simulation run - used to associate content with specific world state */
@@ -280,6 +292,8 @@ export interface WorkerTask {
   // For palette expansion tasks
   paletteEntityKind?: string;
   paletteWorldContext?: string;
+  /** Available subtypes for this entity kind (for subtype-differentiated categories) */
+  paletteSubtypes?: string[];
   /** Culture visual identities for grounding palette in world lore */
   paletteCultureContext?: Array<{
     name: string;
@@ -288,6 +302,14 @@ export interface WorkerTask {
   }>;
   /** Elements to avoid in visual thesis (overused motifs, from project config) */
   visualAvoid?: string;
+  /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
+  visualThesisInstructions?: string;
+  /** Per-kind framing for visual thesis user message */
+  visualThesisFraming?: string;
+  /** Per-kind domain instructions for visual traits (REQUIRED) */
+  visualTraitsInstructions?: string;
+  /** Per-kind framing for visual traits user message */
+  visualTraitsFraming?: string;
 }
 
 /**

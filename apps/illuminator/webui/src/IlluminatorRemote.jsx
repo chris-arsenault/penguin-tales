@@ -597,13 +597,19 @@ export default function IlluminatorRemote({
   const hasOpenaiKey = openaiApiKey.length > 0;
   const hasRequiredKeys = hasAnthropicKey;
 
-  // Get visualAvoid for an entity (used to prevent overused motifs in visual thesis)
-  // Uses avoidElements from the image template since visual thesis informs image generation
-  const getVisualAvoid = useCallback(
+  // Get visual config for an entity (thesis/traits prompts, avoid elements)
+  // Uses image template since visual thesis/traits inform image generation
+  const getVisualConfig = useCallback(
     (entity) => {
       const templates = mergedPromptTemplates;
       const imageTemplate = getEffectiveTemplate(templates, entity.kind, 'image');
-      return imageTemplate.avoidElements;
+      return {
+        visualAvoid: imageTemplate.avoidElements,
+        visualThesisInstructions: imageTemplate.visualThesisInstructions,
+        visualThesisFraming: imageTemplate.visualThesisFraming,
+        visualTraitsInstructions: imageTemplate.visualTraitsInstructions,
+        visualTraitsFraming: imageTemplate.visualTraitsFraming,
+      };
     },
     [mergedPromptTemplates]
   );
@@ -954,7 +960,7 @@ export default function IlluminatorRemote({
               config={config}
               onConfigChange={updateConfig}
               buildPrompt={buildPrompt}
-              getVisualAvoid={getVisualAvoid}
+              getVisualConfig={getVisualConfig}
               styleLibrary={styleLibrary}
               styleSelection={styleSelection}
               onStyleSelectionChange={setStyleSelection}

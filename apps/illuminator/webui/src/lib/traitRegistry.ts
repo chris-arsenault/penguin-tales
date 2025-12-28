@@ -18,6 +18,8 @@ export interface PaletteItem {
   examples: string[];
   timesUsed: number;
   addedAt: number;
+  /** Subtypes this category is relevant for (empty = all subtypes) */
+  subtypes?: string[];
 }
 
 export interface TraitPalette {
@@ -176,6 +178,7 @@ export async function updatePaletteItems(
       category: newItem.category,
       description: newItem.description,
       examples: newItem.examples,
+      subtypes: newItem.subtypes,
       timesUsed: 0,
       addedAt: now,
     });
@@ -404,27 +407,44 @@ function selectCategoriesWeighted(
 /**
  * Get trait guidance for description generation
  * Uses positive assignment: selects 1-2 categories for this entity to focus on
+ * Filters by subtype if provided
  */
 export async function getTraitGuidance(
   projectId: string,
   simulationRunId: string,
-  entityKind: string
+  entityKind: string,
+  subtype?: string
 ): Promise<TraitGuidance> {
   // Get palette (project-scoped)
   const palette = await getPalette(projectId, entityKind);
-  const items = palette?.items || [];
+  let items = palette?.items || [];
 
-  // Build usage map for transparency
+  // Build usage map for transparency (before filtering)
   const categoryUsage: Record<string, number> = {};
   for (const item of items) {
     categoryUsage[item.category] = item.timesUsed;
   }
 
-  // If no palette exists, return fallback guidance
+  // Filter by subtype if provided
+  // Categories with no subtypes defined apply to all subtypes
+  // Categories with subtypes defined only apply if the entity's subtype matches
+  if (subtype && items.length > 0) {
+    const subtypeLower = subtype.toLowerCase();
+    items = items.filter(item => {
+      // No subtypes specified = applies to all
+      if (!item.subtypes || item.subtypes.length === 0) {
+        return true;
+      }
+      // Check if entity subtype matches any of the category's subtypes
+      return item.subtypes.some(s => s.toLowerCase() === subtypeLower);
+    });
+  }
+
+  // If no palette exists (or all filtered out), return fallback guidance
   if (items.length === 0) {
     return {
       assignedCategories: [],
-      categoryUsage: {},
+      categoryUsage,
       selectionMethod: 'fallback',
     };
   }

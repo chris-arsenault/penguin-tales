@@ -84,18 +84,18 @@
           "subtype": "hero"
         }
       ],
-            "negativeFeedback": [
-              {
-                "type": "tag_count",
-                "coefficient": 0.7,
-                "tags": [
-                  "hostile",
-                  "raider",
-                  "orca",
-                  "external"
-                ]
-              }
-            ]
+      "negativeFeedback": [
+        {
+          "type": "tag_count",
+          "coefficient": 0.7,
+          "tags": [
+            "hostile",
+            "raider",
+            "orca",
+            "external"
+          ]
+        }
+      ]
     },
     "description": "How well defended the 'berg is. Positive values mean no external threat / enough defenses, negative values mean a looming external threat (probably orcas)"
   },

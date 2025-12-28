@@ -25,7 +25,8 @@
       "succession": 0.4,
       "war_outbreak": 0.2,
       "location_discovery": 0.9,
-      "cult_formation": 0.4
+      "cult_formation": 0.4,
+      "war_apocalypse_resolution": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -49,7 +50,15 @@
       "economic_stress_detector": 1,
       "discovery_candidate_detector": 1,
       "thermal_recovery_detector": 1,
-      "thermal_stress_detector": 1
+      "thermal_stress_detector": 1,
+      "war_casualties": 1,
+      "heroic_sacrifice": 1,
+      "old_age_mortality": 1,
+      "war_fatigue_detector": 1,
+      "occurrence_resolution": 1,
+      "post_war_recovery": 1,
+      "war_tie_cleanup": 1,
+      "ability_fade": 1
     },
     "entryEffects": {
       "mutations": [
@@ -118,7 +127,8 @@
       "economic_colony_recovery": 0.6,
       "location_discovery": 0.6,
       "cult_formation": 0.6,
-      "succession": 0.8
+      "succession": 0.8,
+      "war_apocalypse_resolution": 1
     },
     "systemModifiers": {
       "conflict_contagion": 2,
@@ -143,7 +153,15 @@
       "economic_stress_detector": 0.2,
       "discovery_candidate_detector": 1,
       "thermal_recovery_detector": 1,
-      "thermal_stress_detector": 1
+      "thermal_stress_detector": 1,
+      "war_casualties": 1,
+      "heroic_sacrifice": 1,
+      "old_age_mortality": 1,
+      "war_fatigue_detector": 1,
+      "occurrence_resolution": 1,
+      "post_war_recovery": 1,
+      "war_tie_cleanup": 1,
+      "ability_fade": 1
     },
     "entryConditions": [],
     "entryEffects": {
@@ -216,7 +234,8 @@
       "location_discovery": 0.8,
       "colony_founding": 0.8,
       "hero_emergence": 0.6,
-      "succession": 0.6
+      "succession": 0.6,
+      "war_apocalypse_resolution": 1
     },
     "systemModifiers": {
       "belief_contagion": 1.5,
@@ -242,7 +261,15 @@
       "economic_stress_detector": 1,
       "discovery_candidate_detector": 1,
       "thermal_recovery_detector": 1,
-      "thermal_stress_detector": 1
+      "thermal_stress_detector": 1,
+      "war_casualties": 1,
+      "heroic_sacrifice": 1,
+      "old_age_mortality": 1,
+      "war_fatigue_detector": 1,
+      "occurrence_resolution": 1,
+      "post_war_recovery": 1,
+      "war_tie_cleanup": 1,
+      "ability_fade": 1
     },
     "entryConditions": [],
     "entryEffects": {
@@ -306,7 +333,8 @@
       "orca_combat_technique": 1.3,
       "location_discovery": 0.6,
       "cult_formation": 0.6,
-      "succession": 0.8
+      "succession": 0.8,
+      "war_apocalypse_resolution": 1
     },
     "systemModifiers": {
       "conflict_contagion": 0.3,
@@ -331,7 +359,15 @@
       "economic_stress_detector": 1,
       "discovery_candidate_detector": 1,
       "thermal_recovery_detector": 1,
-      "thermal_stress_detector": 1
+      "thermal_stress_detector": 1,
+      "war_casualties": 1,
+      "heroic_sacrifice": 1,
+      "old_age_mortality": 1,
+      "war_fatigue_detector": 1,
+      "occurrence_resolution": 1,
+      "post_war_recovery": 1,
+      "war_tie_cleanup": 1,
+      "ability_fade": 1
     },
     "entryConditions": [],
     "entryEffects": {
@@ -399,7 +435,7 @@
       "succession": 0.8,
       "orca_raider_arrival": 0,
       "great_festival": 0.4,
-      "ideology_emergence": 1.4,
+      "ideology_emergence": 0.4,
       "tech_breakthrough": 1.4,
       "legend_crystallization": 1.8,
       "guild_establishment": 1.6,
@@ -413,7 +449,8 @@
       "location_discovery": 0.8,
       "colony_founding": 1.2,
       "hero_emergence": 0.6,
-      "crisis_legislation": 0.6
+      "crisis_legislation": 0.6,
+      "war_apocalypse_resolution": 1
     },
     "systemModifiers": {
       "cultural_drift": 1.5,
@@ -438,7 +475,15 @@
       "economic_stress_detector": 1,
       "discovery_candidate_detector": 1,
       "thermal_recovery_detector": 1,
-      "thermal_stress_detector": 1
+      "thermal_stress_detector": 1,
+      "war_casualties": 1,
+      "heroic_sacrifice": 1,
+      "old_age_mortality": 1,
+      "war_fatigue_detector": 1,
+      "occurrence_resolution": 1,
+      "post_war_recovery": 1,
+      "war_tie_cleanup": 1,
+      "ability_fade": 1
     },
     "entryConditions": []
   }

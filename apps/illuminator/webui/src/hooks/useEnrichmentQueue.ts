@@ -213,6 +213,7 @@ export function useEnrichmentQueue(
         entityId: nextItem.entityId,
         entityName: nextItem.entityName,
         entityKind: nextItem.entityKind,
+        entitySubtype: nextItem.entitySubtype,
         entityCulture: nextItem.entityCulture,
         projectId: projectIdRef.current || 'unknown',
         simulationRunId: simulationRunIdRef.current || 'unknown',
@@ -228,9 +229,14 @@ export function useEnrichmentQueue(
         // Palette expansion fields
         paletteEntityKind: nextItem.paletteEntityKind,
         paletteWorldContext: nextItem.paletteWorldContext,
+        paletteSubtypes: nextItem.paletteSubtypes,
         paletteCultureContext: nextItem.paletteCultureContext,
-        // Visual avoid for thesis generation
+        // Visual config for thesis/traits generation
         visualAvoid: nextItem.visualAvoid,
+        visualThesisInstructions: nextItem.visualThesisInstructions,
+        visualThesisFraming: nextItem.visualThesisFraming,
+        visualTraitsInstructions: nextItem.visualTraitsInstructions,
+        visualTraitsFraming: nextItem.visualTraitsFraming,
       };
 
       workerState.worker.postMessage({ type: 'execute', task });
@@ -408,13 +414,18 @@ export function useEnrichmentQueue(
       // Palette expansion fields
       paletteEntityKind?: string;
       paletteWorldContext?: string;
+      paletteSubtypes?: string[];
       paletteCultureContext?: Array<{
         name: string;
         description?: string;
         visualIdentity?: Record<string, string>;
       }>;
-      // Visual avoid for thesis generation
+      // Visual config for thesis/traits generation
       visualAvoid?: string;
+      visualThesisInstructions?: string;
+      visualThesisFraming?: string;
+      visualTraitsInstructions?: string;
+      visualTraitsFraming?: string;
     }>) => {
       const newItems: QueueItem[] = [];
       const currentQueue = queueRef.current;
@@ -425,6 +436,7 @@ export function useEnrichmentQueue(
           entityId: item.entity.id,
           entityName: item.entity.name,
           entityKind: item.entity.kind,
+          entitySubtype: item.entity.subtype,
           entityCulture: item.entity.culture,
           type: item.type,
           prompt: item.prompt,
@@ -440,9 +452,14 @@ export function useEnrichmentQueue(
           // Palette expansion fields
           paletteEntityKind: item.paletteEntityKind,
           paletteWorldContext: item.paletteWorldContext,
+          paletteSubtypes: item.paletteSubtypes,
           paletteCultureContext: item.paletteCultureContext,
-          // Visual avoid for thesis generation
+          // Visual config for thesis/traits generation
           visualAvoid: item.visualAvoid,
+          visualThesisInstructions: item.visualThesisInstructions,
+          visualThesisFraming: item.visualThesisFraming,
+          visualTraitsInstructions: item.visualTraitsInstructions,
+          visualTraitsFraming: item.visualTraitsFraming,
         };
 
         // Find the least busy worker and assign this task

@@ -394,7 +394,7 @@ export default function EntityBrowser({
   config,
   onConfigChange,
   buildPrompt,
-  getVisualAvoid,
+  getVisualConfig,
   styleLibrary,
   styleSelection,
   onStyleSelectionChange,
@@ -516,11 +516,11 @@ export default function EntityBrowser({
       const prompt = buildPrompt(entity, type);
       // For image tasks, pass previousImageId if entity already has an image (for cleanup on regen)
       const previousImageId = type === 'image' ? entity.enrichment?.image?.imageId : undefined;
-      // For description tasks, pass visualAvoid from template
-      const visualAvoid = type === 'description' && getVisualAvoid ? getVisualAvoid(entity) : undefined;
-      onEnqueue([{ entity, type, prompt, previousImageId, visualAvoid }]);
+      // For description tasks, pass visual config from template
+      const visualConfig = type === 'description' && getVisualConfig ? getVisualConfig(entity) : {};
+      onEnqueue([{ entity, type, prompt, previousImageId, ...visualConfig }]);
     },
-    [onEnqueue, buildPrompt, getVisualAvoid]
+    [onEnqueue, buildPrompt, getVisualConfig]
   );
 
   // Cancel single item
@@ -542,14 +542,14 @@ export default function EntityBrowser({
     for (const entityId of selectedIds) {
       const entity = entities.find((e) => e.id === entityId);
       if (entity && getStatus(entity, 'description') === 'missing') {
-        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
+        const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), ...visualConfig });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
+  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualConfig]);
 
   // Queue all missing images for selected
   const queueSelectedImages = useCallback(() => {
@@ -576,14 +576,14 @@ export default function EntityBrowser({
     for (const entityId of selectedIds) {
       const entity = entities.find((e) => e.id === entityId);
       if (entity && getStatus(entity, 'description') === 'complete') {
-        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
+        const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), ...visualConfig });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
+  }, [selectedIds, entities, getStatus, onEnqueue, buildPrompt, getVisualConfig]);
 
   // Regenerate all images for selected (those with existing images)
   const regenSelectedImages = useCallback(() => {
@@ -610,14 +610,14 @@ export default function EntityBrowser({
     const items = [];
     for (const entity of filteredEntities) {
       if (getStatus(entity, 'description') === 'missing') {
-        const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
-        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
+        const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
+        items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), ...visualConfig });
       }
     }
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualAvoid]);
+  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualConfig]);
 
   // Quick action: queue all missing images (and dependent descriptions if required)
   const queueAllMissingImages = useCallback(() => {
@@ -633,8 +633,8 @@ export default function EntityBrowser({
           !(entity.enrichment?.description?.summary && entity.enrichment?.description?.description) &&
           getStatus(entity, 'description') === 'missing'
         ) {
-          const visualAvoid = getVisualAvoid ? getVisualAvoid(entity) : undefined;
-          items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), visualAvoid });
+          const visualConfig = getVisualConfig ? getVisualConfig(entity) : {};
+          items.push({ entity, type: 'description', prompt: buildPrompt(entity, 'description'), ...visualConfig });
         }
         items.push({ entity, type: 'image', prompt: buildPrompt(entity, 'image') });
       }
@@ -642,7 +642,7 @@ export default function EntityBrowser({
     if (items.length > 0) {
       onEnqueue(items);
     }
-  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualAvoid, config.minProminenceForImage, config.requireDescription]);
+  }, [filteredEntities, getStatus, onEnqueue, buildPrompt, getVisualConfig, config.minProminenceForImage, config.requireDescription]);
 
   // Count missing and calculate aggregate costs
   const { missingDescCount, missingDescCost } = useMemo(() => {

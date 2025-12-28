@@ -36,6 +36,14 @@ const IMAGE_SECTIONS = [
   { key: 'avoidElements', label: 'Avoid', description: 'What NOT to include in generated images' },
 ];
 
+// Visual generation step overrides (shown in separate collapsible section)
+const VISUAL_STEP_SECTIONS = [
+  { key: 'visualThesisInstructions', label: 'Visual Thesis Instructions', description: 'Domain-specific instructions (REQUIRED - e.g., VFX design, environment design, character design)' },
+  { key: 'visualThesisFraming', label: 'Visual Thesis Framing', description: 'Context prepended to thesis user message (e.g., "This is a MAGICAL ABILITY...")' },
+  { key: 'visualTraitsInstructions', label: 'Visual Traits Instructions', description: 'Domain-specific instructions for traits (REQUIRED)' },
+  { key: 'visualTraitsFraming', label: 'Visual Traits Framing', description: 'Context prepended to traits user message' },
+];
+
 const NOTABLE_PROMINENCE = new Set(['mythic', 'renowned', 'recognized']);
 
 // Calculate entity age based on creation tick relative to simulation progress
@@ -202,6 +210,7 @@ export default function PromptTemplateEditor({
   const [selectedKind, setSelectedKind] = useState(null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [selectedEntityId, setSelectedEntityId] = useState('');
+  const [showVisualSteps, setShowVisualSteps] = useState(false);
 
   // Merge external templates with defaults
   const templates = useMemo(
@@ -588,6 +597,40 @@ export default function PromptTemplateEditor({
               <div className="illuminator-template-override-notice">
                 These sections are overridden by a full template.
                 Switch to Advanced mode to edit.
+              </div>
+            )}
+
+            {/* Visual Step Overrides - only show for image type */}
+            {selectedType === 'image' && (
+              <div className="illuminator-template-visual-steps">
+                <button
+                  className="illuminator-template-visual-steps-toggle"
+                  onClick={() => setShowVisualSteps(!showVisualSteps)}
+                >
+                  <span>{showVisualSteps ? '▼' : '▶'}</span>
+                  <span>Visual Generation Steps</span>
+                  <span className="illuminator-template-visual-steps-hint">
+                    Override thesis/traits prompts for this kind
+                  </span>
+                </button>
+                {showVisualSteps && (
+                  <div className="illuminator-template-visual-steps-content">
+                    {VISUAL_STEP_SECTIONS.map((section) => (
+                      <TemplateSection
+                        key={section.key}
+                        section={section}
+                        value={currentTemplate[section.key]}
+                        onChange={handleSectionChange}
+                        disabled={!!currentTemplate.fullTemplate}
+                      />
+                    ))}
+                    <div className="illuminator-template-visual-steps-info">
+                      These prompts control the 3-step visual generation chain:
+                      Narrative → Visual Thesis → Visual Traits.
+                      Leave empty to use defaults (optimized for NPCs/characters).
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

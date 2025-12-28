@@ -31,11 +31,8 @@ import {
   getTraitGuidance,
   registerUsedTraits,
   incrementPaletteUsage,
-  getPalette,
-  getHistoricalTraits,
   updatePaletteItems,
   type TraitGuidance,
-  type PaletteItem,
 } from '../lib/traitRegistry';
 import {
   createChronicle,
@@ -350,98 +347,84 @@ Be vivid and specific. Let the entity's nature lead.`;
 }
 
 /**
- * Step 2: Visual thesis prompt - ONE silhouette sentence
- * Uses fighting game/anime roster design as reference domain
- * @param visualAvoid - Optional project-specific elements to avoid (overused motifs)
+ * Step 2: Visual thesis prompt - ONE sentence describing the dominant visual feature
+ *
+ * @param kindInstructions - REQUIRED per-kind domain instructions (VFX, environment, character)
+ * @param visualAvoid - Optional project-specific elements to avoid
  */
-export function buildVisualThesisPrompt(visualAvoid?: string): string {
-  // RULES at top for maximum attention
+export function buildVisualThesisPrompt(
+  kindInstructions: string,
+  visualAvoid?: string
+): string {
+  // Common rules at top
   let prompt = `RULES (non-negotiable):
 - ONE sentence only - no compound sentences
 - Describe WHAT you see, not WHY it exists
 - No: "as if", "as though", "suggesting", "seeming"
-- Shape only - no colors, textures, or surface details
-- REQUIRE structural elements: headgear, armor, tools, weapons, magical effects, scars, clothing
-- Body language alone is NOT enough - there must be equipment or permanent body modifications`;
+- Shape only - no colors, textures, or surface details`;
 
-  // Add project-specific avoid list immediately after rules
+  // Add project-specific avoid list
   if (visualAvoid) {
     prompt += `
 
-AVOID THESE (will cause rejection):
-${visualAvoid}`;
+AVOID: ${visualAvoid}`;
   }
 
+  // Per-kind instructions (REQUIRED)
   prompt += `
 
-You design characters for a fighting game roster or anime ensemble cast.
+${kindInstructions}`;
 
-Each character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes, League of Legends champions, or My Hero Academia students. When you see 20 characters as solid black shapes at thumbnail size, each one must be unmistakable.
+  // Common output format - plain text
+  prompt += `
 
-The visual thesis is the ONE THING that makes this character's shape unique in the roster.
-
-THINK LIKE A CHARACTER DESIGNER:
-- What's their "read" at thumbnail size?
-- What silhouette element would a cosplayer exaggerate?
-- If this were a fighting game select screen, what makes them pop?
-
-SHAPE ELEMENTS (prioritize structural over gestural):
-- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor
-- Profile extensions: mounted equipment, carried tools, backpacks, capes
-- Body modifications: scars, missing limbs, unusual proportions, asymmetry
-- Body shape: proportions, mass distribution (but NOT pose or gesture)
-
-OUTPUT FORMAT:
-Return JSON with key: visualThesis
-- visualThesis: ONE sentence, the dominant shape signal`;
-
-  // REWRITES section commented out - examples were teaching flipper gestures
-  // REWRITES (causation → pure shape):
-  // - "Flipper raised as if blessing" → "Flipper raised, palm-forward, frozen at chest height"
-  // - "Hunched from years of labor" → "Shoulders drawn forward, spine curved into permanent stoop"
-  // - "Scarred flank showing battles" → "Asymmetrical bulk, left side visibly larger"
+OUTPUT: One sentence describing the dominant visual feature. No JSON, no preamble.`;
 
   return prompt;
 }
 
 /**
  * Step 3: Visual traits prompt - 2-4 traits EXPANDING the visual identity
- * The thesis is the primary silhouette signal; traits add distinctive secondary features
+ *
+ * @param kindInstructions - REQUIRED per-kind domain instructions
+ * @param guidance - Optional palette guidance for diversity
+ * @param subtype - Optional entity subtype for context
  */
-export function buildVisualTraitsPrompt(guidance?: TraitGuidance): string {
-  let prompt = `You're completing a character design brief for an action figure or concept art.
+export function buildVisualTraitsPrompt(
+  kindInstructions: string,
+  guidance?: TraitGuidance,
+  subtype?: string
+): string {
+  // Per-kind instructions (REQUIRED)
+  let prompt = kindInstructions;
 
-The thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover.
+  // Add subtype context if available
+  if (subtype) {
+    prompt += `\n\nSUBTYPE: ${subtype} (let this inform the visual style)`;
+  }
 
-Think action figure accessories: what extra details would the toy include? What would make collectors say "that's definitely [character name]"?
-
-TRAITS SHOULD ADD, NOT REPEAT:
-- If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear
-- If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons
-- Find what's MISSING from the thesis that would make the design more distinctive
-
-RULES:
-- 2-4 traits only, each 3-8 words
-- Each trait adds something NEW to the visual identity
-- Draw from the description for ideas the thesis missed
-- Mix body features and equipment`;
-
+  // Add palette guidance if available - REQUIRED directions, not optional
   if (guidance && guidance.assignedCategories.length > 0) {
     prompt += `
 
-DIRECTIONS TO EXPLORE (not constraints):
+REQUIRED DIRECTIONS (you MUST address at least one):
 ${guidance.assignedCategories.map(p => `
 ### ${p.category}
 ${p.description}
 Examples: ${p.examples.join(' · ')}`).join('\n')}
 
-Use these as inspiration. You may go beyond them if the description suggests something more distinctive.`;
+At least one of your traits MUST explore one of these assigned directions. The other traits can go beyond them if the description suggests something more distinctive.`;
   }
 
+  // Common output format - one trait per line
   prompt += `
 
-OUTPUT: Return JSON only. No prose. No explanation.
-{ "visualTraits": ["trait 1", "trait 2", "trait 3"] }`;
+RULES:
+- 2-4 traits only, each 3-8 words
+- Each trait adds something NEW to the visual identity
+${guidance && guidance.assignedCategories.length > 0 ? '- At least ONE trait must address an assigned direction above' : ''}
+
+OUTPUT: 2-4 traits, one per line. No numbering, no JSON, no preamble.`;
 
   return prompt;
 }
@@ -874,15 +857,28 @@ Culture: ${task.entityCulture || 'unaffiliated'}
 World: ${worldContext}
 Era: ${eraContext}`;
 
-  const thesisPrompt = `${visualContext}
+  // Validate instructions are provided (from defaults or per-kind override)
+  if (!task.visualThesisInstructions) {
+    return {
+      success: false,
+      error: `Missing visualThesisInstructions for entity kind '${task.entityKind}'. Configure in promptTemplates.defaults.image.visualThesisInstructions or promptTemplates.byKind.${task.entityKind}.image.visualThesisInstructions`,
+    };
+  }
+
+  // Build thesis prompt - use per-kind framing if provided
+  const thesisFraming = task.visualThesisFraming || '';
+  const thesisPrompt = `${thesisFraming ? thesisFraming + '\n\n' : ''}${visualContext}
 
 DESCRIPTION (extract visual elements from this):
 ${narrativePayload.description}
 
-Generate the visual thesis - focus on structural elements, not gestures or poses.`;
+Generate the visual thesis.`;
+
+  // Build system prompt with per-kind instructions
+  const thesisSystemPrompt = buildVisualThesisPrompt(task.visualThesisInstructions, task.visualAvoid);
 
   const thesisResult = await llmClient.complete({
-    systemPrompt: buildVisualThesisPrompt(task.visualAvoid),
+    systemPrompt: thesisSystemPrompt,
     prompt: thesisPrompt,
     model,
     maxTokens: 256,
@@ -898,18 +894,12 @@ Generate the visual thesis - focus on structural elements, not gestures or poses
     return { success: false, error: `Visual thesis step failed: ${thesisResult.error || 'Empty response'}`, debug: thesisResult.debug };
   }
 
-  // Parse thesis response
-  let visualThesis = '';
-  try {
-    const parsed = parseJsonField<Record<string, unknown>>(thesisResult.text, 'visualThesis');
-    visualThesis = typeof parsed.visualThesis === 'string' ? parsed.visualThesis.trim() : '';
-    if (!visualThesis) {
-      throw new Error('Missing visualThesis');
-    }
-  } catch (err) {
+  // Parse thesis response - plain text, just trim
+  const visualThesis = thesisResult.text.trim();
+  if (!visualThesis) {
     return {
       success: false,
-      error: `Visual thesis parse failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      error: 'Visual thesis step returned empty response',
       debug: thesisResult.debug,
     };
   }
@@ -927,13 +917,15 @@ Generate the visual thesis - focus on structural elements, not gestures or poses
   console.log('[Worker] Description chain step 3: Visual Traits');
 
   // Fetch trait guidance for diversity (run-scoped avoidance, project-scoped palette)
+  // Pass subtype to filter categories relevant to this entity's subtype
   let traitGuidance: TraitGuidance | undefined;
   try {
     if (task.projectId && task.simulationRunId && task.entityKind) {
       traitGuidance = await getTraitGuidance(
         task.projectId,
         task.simulationRunId,
-        task.entityKind
+        task.entityKind,
+        task.entitySubtype
       );
     }
   } catch (err) {
@@ -941,7 +933,17 @@ Generate the visual thesis - focus on structural elements, not gestures or poses
     console.warn('[Worker] Failed to fetch trait guidance:', err);
   }
 
-  const traitsPrompt = `THESIS (the primary silhouette - don't repeat, expand):
+  // Validate instructions are provided (from defaults or per-kind override)
+  if (!task.visualTraitsInstructions) {
+    return {
+      success: false,
+      error: `Missing visualTraitsInstructions for entity kind '${task.entityKind}'. Configure in promptTemplates.defaults.image.visualTraitsInstructions or promptTemplates.byKind.${task.entityKind}.image.visualTraitsInstructions`,
+    };
+  }
+
+  // Build traits prompt - use per-kind framing if provided
+  const traitsFraming = task.visualTraitsFraming || '';
+  const traitsPrompt = `${traitsFraming ? traitsFraming + '\n\n' : ''}THESIS (the primary silhouette - don't repeat, expand):
 ${visualThesis}
 
 ${visualContext}
@@ -951,8 +953,11 @@ ${narrativePayload.description}
 
 Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
 
+  // Build system prompt with per-kind instructions (include subtype for context)
+  const traitsSystemPrompt = buildVisualTraitsPrompt(task.visualTraitsInstructions, traitGuidance, task.entitySubtype);
+
   const traitsResult = await llmClient.complete({
-    systemPrompt: buildVisualTraitsPrompt(traitGuidance),
+    systemPrompt: traitsSystemPrompt,
     prompt: traitsPrompt,
     model,
     maxTokens: 512,
@@ -968,20 +973,11 @@ Generate 2-4 visual traits that ADD to the thesis - features it didn't cover.`;
     return { success: false, error: `Visual traits step failed: ${traitsResult.error || 'Empty response'}`, debug: traitsResult.debug };
   }
 
-  // Parse traits response
-  let visualTraits: string[] = [];
-  try {
-    const parsed = parseJsonField<Record<string, unknown>>(traitsResult.text, 'visualTraits');
-    visualTraits = Array.isArray(parsed.visualTraits)
-      ? parsed.visualTraits.filter((t): t is string => typeof t === 'string').map(t => t.trim()).filter(Boolean)
-      : [];
-  } catch (err) {
-    return {
-      success: false,
-      error: `Visual traits parse failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      debug: traitsResult.debug,
-    };
-  }
+  // Parse traits response - one trait per line
+  const visualTraits = traitsResult.text
+    .split('\n')
+    .map(line => line.replace(/^[-*•]\s*/, '').trim())  // Strip bullet markers
+    .filter(line => line.length > 0);  // Filter empty lines
 
   // Accumulate costs
   if (traitsResult.usage) {
@@ -2215,21 +2211,21 @@ async function executeProseBlendStep(
 // Palette Expansion Task
 // ============================================================================
 
-const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity.
+const PALETTE_EXPANSION_SYSTEM_PROMPT = `You curate visual trait palettes for worldbuilding. Each category gets assigned to entities to ensure visual diversity across SUBTYPES.
 
-THUMBNAIL TEST (critical):
-If two categories would look similar when rendered as 128px thumbnails or black silhouettes, they are NOT orthogonal.
-- FAIL: "Weathered Feathers" vs "Environmental Scarring" → both produce worn-looking entities
-- FAIL: "Ceremonial Gear" vs "Technological Adornments" → both add stuff to the body
-- PASS: "Asymmetric Build" vs "Gait Abnormality" → one changes shape, one changes motion
+SUBTYPE DIFFERENTIATION (critical):
+Different subtypes within an entity kind should have different visual languages.
+- Combat abilities vs Magic abilities vs Technology abilities → completely different VFX styles
+- Merchant NPCs vs Warrior NPCs vs Scholar NPCs → different silhouettes, gear, postures
+- Each category should specify which subtypes it applies to
 
-THINK LIKE A RENDERER:
-Each category must create a distinct: silhouette, motion profile, spatial footprint, or high-contrast signal.
+THUMBNAIL TEST:
+Each category must be visible at 128px or in black silhouette.
 Color/hue differences alone are insufficient. Semantic differences are insufficient.
 Ask: "Would an artist draw these differently?"
 
 MUNDANE MATTERS:
-The most memorable characters have simple, drawable distinctions: a missing finger, a pronounced limp, sun-weathered skin, a distinctive hat.
+The most memorable visuals have simple, drawable distinctions: a missing finger, a pronounced limp, sun-weathered skin, a distinctive hat.
 Ground categories in what survives stylization.`;
 
 interface CultureContext {
@@ -2241,8 +2237,7 @@ interface CultureContext {
 function buildPaletteExpansionPrompt(
   entityKind: string,
   worldContext: string,
-  currentPalette: PaletteItem[],
-  _historicalTraits: string[], // Unused in new approach
+  subtypes: string[],
   cultureContext?: CultureContext[]
 ): string {
   // Build culture section if available
@@ -2262,64 +2257,56 @@ function buildPaletteExpansionPrompt(
     cultureSection = `\nCultures in this world:\n${cultureLines}\n`;
   }
 
-  // Current palette summary
-  let paletteSection = '';
-  if (currentPalette.length > 0) {
-    const lines = currentPalette.map(p => `- [${p.id}] "${p.category}" (used ${p.timesUsed}x)`);
-    paletteSection = `\nCurrent categories (${currentPalette.length}):\n${lines.join('\n')}\n`;
-  }
+  // Build subtypes section
+  const subtypesSection = subtypes.length > 0
+    ? `\nSUBTYPES for ${entityKind}: ${subtypes.join(', ')}\n`
+    : '';
 
   // Dimension hints based on entity type
   const dimensionHints = entityKind === 'location'
     ? 'shape/architecture, surface/texture, condition/age, atmosphere, activity, cultural markers'
     : 'body shape, surface patterns, condition/scars, movement/gait, equipment, presence/aura';
 
-  return `Curate a visual trait palette for "${entityKind}" entities.
+  return `Generate a visual trait palette for "${entityKind}" entities.
 
 WORLD: ${worldContext || 'A fantasy world.'}
-${cultureSection}${paletteSection}
+${cultureSection}${subtypesSection}
 TASK:
-${currentPalette.length === 0
-    ? `Create 6-8 initial categories spanning different visual dimensions (${dimensionHints}).`
-    : `Review the ${currentPalette.length} existing categories. Remove overlapping ones, then add categories for underrepresented dimensions.`}
+Create 6-10 categories that cover the visual dimensions (${dimensionHints}).
+
+CRITICAL: Differentiate by subtype.
+${subtypes.length > 0
+    ? `The subtypes (${subtypes.join(', ')}) should have DIFFERENT visual languages.
+For each category, specify which subtypes it applies to:
+- Some categories apply to ALL subtypes (universal traits like "Scarring" or "Size Variation")
+- Some categories are SUBTYPE-SPECIFIC (e.g., "Spell Auras" for magic subtypes only)
+- Ensure each subtype has at least 2-3 categories specifically relevant to it`
+    : 'If subtypes exist, specify which ones each category applies to.'}
 
 Each category must pass the SILHOUETTE TEST:
-- Would this trait be visible in a black silhouette or simple animation?
-- Would an artist draw this differently from other categories?
-- Does this change shape, motion, or spatial presence (not just color/texture)?
-
-DIMENSION BOUNDARIES:
-- SURFACE = patterns, materials, textures (NOT damage or wear)
-- CONDITION = damage, aging, scars, modifications (NOT patterns)
-- EQUIPMENT = items that change the outline/negative space (NOT decorative detail)
-
-GOOD CATEGORIES (each reads differently at thumbnail size):
-- "Limb Asymmetry" — missing/extra/malformed limbs, uneven proportions
-- "Occupational Deformation" — specific muscle development, repetitive stress changes
-- "Mobility Impairment" — limps, favoring sides, compensatory movements
-- "Spatial Presence" — personal space behavior, how they occupy a room
+- Visible at 128px or in black silhouette
+- An artist would draw this differently from other categories
+- Changes shape, motion, or spatial presence (not just color/texture)
 
 OUTPUT (JSON only):
 {
-  "removedCategories": ["palette_id_1"],
-  "mergedCategories": [{"keepId": "palette_x", "mergeFromIds": ["palette_y"], "newDescription": "..."}],
-  "newCategories": [
-    {"category": "Name", "description": "What this means", "examples": ["example 1", "example 2", "example 3"]}
+  "categories": [
+    {
+      "category": "Name",
+      "description": "What this means visually",
+      "examples": ["example 1", "example 2", "example 3"],
+      "subtypes": ["subtype1", "subtype2"] // or [] for all subtypes
+    }
   ]
 }`;
 }
 
 interface PaletteExpansionResponse {
-  removedCategories?: string[];
-  mergedCategories?: Array<{
-    keepId: string;
-    mergeFromIds: string[];
-    newDescription: string;
-  }>;
-  newCategories?: Array<{
+  categories: Array<{
     category: string;
     description: string;
     examples: string[];
+    subtypes?: string[];
   }>;
 }
 
@@ -2335,21 +2322,26 @@ function parsePaletteExpansionResponse(text: string): PaletteExpansionResponse {
 
   const parsed = JSON.parse(jsonStr);
 
+  // Handle both old format (newCategories) and new format (categories)
+  const rawCategories = parsed.categories || parsed.newCategories || [];
+
   return {
-    removedCategories: Array.isArray(parsed.removedCategories)
-      ? parsed.removedCategories.filter((id: unknown) => typeof id === 'string')
-      : [],
-    mergedCategories: Array.isArray(parsed.mergedCategories)
-      ? parsed.mergedCategories.filter((m: unknown) =>
-          m && typeof m === 'object' &&
-          typeof (m as Record<string, unknown>).keepId === 'string'
-        )
-      : [],
-    newCategories: Array.isArray(parsed.newCategories)
-      ? parsed.newCategories.filter((c: unknown) =>
-          c && typeof c === 'object' &&
-          typeof (c as Record<string, unknown>).category === 'string'
-        )
+    categories: Array.isArray(rawCategories)
+      ? rawCategories
+          .filter((c: unknown) =>
+            c && typeof c === 'object' &&
+            typeof (c as Record<string, unknown>).category === 'string'
+          )
+          .map((c: Record<string, unknown>) => ({
+            category: c.category as string,
+            description: (c.description as string) || '',
+            examples: Array.isArray(c.examples)
+              ? (c.examples as unknown[]).filter((e): e is string => typeof e === 'string')
+              : [],
+            subtypes: Array.isArray(c.subtypes)
+              ? (c.subtypes as unknown[]).filter((s): s is string => typeof s === 'string')
+              : undefined,
+          }))
       : [],
   };
 }
@@ -2375,15 +2367,13 @@ export async function executePaletteExpansionTask(
   const thinkingModel = config.thinkingModel || 'claude-sonnet-4-5-20250929';
   const thinkingBudget = config.thinkingBudget ?? 8192;
 
-  // Gather current state
-  const currentPalette = await getPalette(task.projectId, entityKind);
-  const historicalTraits = await getHistoricalTraits(task.projectId, entityKind);
+  // Get available subtypes for this entity kind
+  const subtypes = task.paletteSubtypes || [];
 
   const prompt = buildPaletteExpansionPrompt(
     entityKind,
     worldContext,
-    currentPalette?.items || [],
-    historicalTraits,
+    subtypes,
     task.paletteCultureContext
   );
 
@@ -2422,11 +2412,9 @@ export async function executePaletteExpansionTask(
     };
   }
 
-  // Apply updates
+  // Apply updates - replace entire palette with new categories
   await updatePaletteItems(task.projectId, entityKind, {
-    removeIds: expansion.removedCategories,
-    merges: expansion.mergedCategories,
-    newItems: expansion.newCategories,
+    newItems: expansion.categories,
   });
 
   // Calculate costs

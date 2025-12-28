@@ -17,7 +17,7 @@
       },
       "image": {
         "imageInstructions": "Create concept art that captures this entity's essence. Focus on the individual traits and visual identity provided. The image should feel like it belongs in an illustrated bestiary or game art book.",
-        "avoidElements": "Text, labels, watermarks, UI elements. Modern clothing or technology. Multiple versions of the same subject. Blurry or low-quality rendering. Human features on penguins. Contradicting the visual identity. Flipper/wing gestures as primary identifying element (raised flipper, wing pressed to chest, arms folded). Generic upright poses without distinctive equipment or markings. Body language alone as visual thesis - require structural elements like headgear, armor, tools, magical effects, scars, or clothing."
+        "avoidElements": "Text, labels, watermarks, UI elements. Modern clothing or technology. Multiple versions of the same subject. Blurry or low-quality rendering. Human features on penguins. Contradicting the visual identity."
       },
       "relationship": "Describe how {{entity.name}} relates to others in {{world.name}}.\n\nENTITY: {{entity.name}} ({{entity.subtype}} {{entity.kind}})\nSTATUS: {{entity.status}} | PROMINENCE: {{entity.prominence}}\n\nKNOWN CONNECTIONS:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}}){{#strength}} [strength: {{strength}}]{{/strength}}\n{{/relationships}}\n{{^relationships}}\n(No established relationships yet)\n{{/relationships}}\n\n{{#culturalPeers.length}}\nCULTURAL PEERS ({{entity.culture}}): {{culturalPeers}}\n{{/culturalPeers.length}}\n\nWrite 2-3 sentences about how these connections shape {{entity.name}}'s place in the world. Focus on dynamics that create story potential - alliances, tensions, dependencies.",
       "eraNarrative": "Write a narrative summary for this era/event in {{world.name}}.\n\nNAME: {{entity.name}}\nTYPE: {{entity.subtype}} {{entity.kind}}\nEXISTING DESCRIPTION: {{entity.description}}\n\nThis {{entityAge}} {{entity.kind}} exists within the broader context of {{world.description}}.\n\nCanon facts: {{world.canonFacts}}\n\nCraft 2-3 sentences capturing the essence of this period - its defining tensions, what changed, why it matters. Reference specific entities or factions if relationships exist."
@@ -28,7 +28,12 @@
           "instructions": "This is a character in {{world.name}}. Focus on what makes them distinctive as a person.\n\nTheir relationships define them:\n{{#relationships}}\n- {{kind}} {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nShow personality through specifics - how they move, speak, what they care about. Their {{entity.subtype}} role shapes their worldview. Their {{entity.prominence}} status affects how others see them.\n\n{{#culturalPeers.length}}They exist alongside other {{entity.culture}} figures like {{culturalPeers}}.{{/culturalPeers.length}}"
         },
         "image": {
-          "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role."
+          "imageInstructions": "The main subject is a CHARACTER. Create a portrait that showcases their individual traits as the focal point. The character should feel like a distinct individual, not a generic representative of their species or role.",
+          "avoidElements": "Flipper/wing gestures as primary identifying element (raised flipper, wing pressed to chest, arms folded). Generic upright poses without distinctive equipment or markings. Body language alone as visual thesis - require structural elements like headgear, armor, tools, magical effects, scars, or clothing.",
+          "visualThesisInstructions": "You design characters for a fighting game roster or anime ensemble cast.\n\nEach character must be INSTANTLY RECOGNIZABLE from silhouette alone - like Overwatch heroes or League of Legends champions.\n\nThe visual thesis is the ONE THING that makes this character's shape unique in the roster.\n\nSHAPE ELEMENTS (prioritize structural over gestural):\n- Structural gear: oversized weapons, distinctive hats, floating objects, massive armor\n- Profile extensions: mounted equipment, carried tools, backpacks, capes\n- Body modifications: scars, missing limbs, unusual proportions, asymmetry",
+          "visualThesisFraming": "This is a CHARACTER - describe the dominant silhouette feature that makes them instantly recognizable.\n\nFocus on: equipment, gear, armor, weapons, magical effects, body modifications.\nDO NOT use pose or gesture as the primary identifier.",
+          "visualTraitsInstructions": "You're completing a character design brief for an action figure or concept art.\n\nThe thesis defines the PRIMARY silhouette. Your job is to add 2-4 ADDITIONAL distinctive features that make this character unique - things the thesis didn't cover.\n\nThink action figure accessories: what extra details would the toy include?\n\nTRAITS SHOULD ADD, NOT REPEAT:\n- If thesis mentions robes → traits could add floating orbs, glowing eyes, unusual footwear\n- If thesis mentions armor → traits could add trophy skulls, ritual scars, bound weapons\n- Find what's MISSING from the thesis",
+          "visualTraitsFraming": "This is a CHARACTER - traits should describe additional distinctive features that complement the primary silhouette."
         }
       },
       "location": {
@@ -36,7 +41,11 @@
           "instructions": "This is a place in {{world.name}}. Evoke the sensory experience of being here.\n\nWhat entities are connected to this location?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nConsider: What activities happen here? Who controls or claims it? What's the atmosphere - welcoming, dangerous, sacred, mundane? The {{entity.prominence}} level suggests how well-known or hidden it is."
         },
         "image": {
-          "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space."
+          "imageInstructions": "The main subject is a PLACE. Create an environmental shot that captures the atmosphere and character of this location. Include architectural or natural details that make it feel like a real, lived-in space.",
+          "visualThesisInstructions": "You design environments for a video game or animated film.\n\nThe visual thesis is what makes THIS location visually distinct from other places. Think iconic game levels - each has a defining visual landmark or spatial quality.\n\nENVIRONMENT ELEMENTS:\n- Structures: towers, bridges, walls, platforms, monuments\n- Natural formations: cliffs, caves, crystals, ice formations, chasms\n- Spatial qualities: vast open, claustrophobic tunnels, vertical spires, layered depths\n- Lighting character: aurora-lit, shadow-shrouded, fire-warmed, crystal-refracted",
+          "visualThesisFraming": "This is a LOCATION or PLACE - describe the environment's defining architectural or natural feature.\n\nFocus on: structures, formations, spatial relationships, the shape of the space itself.\nDO NOT describe characters or creatures.",
+          "visualTraitsInstructions": "You're adding detail to an environment design brief for a location.\n\nThe thesis defines the primary visual landmark. Your job is to add 2-4 ADDITIONAL environmental details that make this place distinctive.\n\nThink video game level design: what secondary features, atmospheric effects, or environmental storytelling elements make this location memorable?",
+          "visualTraitsFraming": "This is a LOCATION - traits should describe additional environmental details and atmospheric qualities."
         }
       },
       "faction": {
@@ -44,7 +53,11 @@
           "instructions": "This is an organization/group in {{world.name}}. Focus on collective identity and purpose.\n\nKey relationships:\n{{#relationships}}\n- {{kind}}: {{targetName}} ({{targetKind}})\n{{/relationships}}\n\nWhat unites members? What do outsiders think of them? Their {{entity.prominence}} reflects their influence. Their {{entity.status}} shows their current state.\n\n{{#factionMembers.length}}Notable members include: {{factionMembers}}{{/factionMembers.length}}"
         },
         "image": {
-          "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose."
+          "imageInstructions": "The main subject is an ORGANIZATION. Choose one of: a council of leaders, the faction's headquarters, their banner or symbol, or a representative member in ceremonial attire. The image should convey collective identity and purpose.",
+          "visualThesisInstructions": "You design faction identity for a strategy game or worldbuilding project.\n\nThe visual thesis captures the faction's ESSENCE in one iconic visual - what makes them instantly recognizable as a group.\n\nFACTION IDENTITY ELEMENTS:\n- Symbols: banners, insignias, heraldic devices, sacred objects\n- Architecture: headquarters, meeting halls, monuments, fortifications\n- Regalia: ceremonial dress, uniforms, shared equipment\n- Gathering: council formation, ritual arrangement, military display",
+          "visualThesisFraming": "This is a FACTION or ORGANIZATION - describe the visual element that defines their collective identity.\n\nFocus on: symbols, architecture, ceremonial objects, group formations.\nThis should represent the GROUP, not an individual member.",
+          "visualTraitsInstructions": "You're adding detail to a faction design brief.\n\nThe thesis defines the primary visual identity. Your job is to add 2-4 ADDITIONAL elements that reinforce what this faction stands for.\n\nThink faction design in strategy games: what secondary symbols, colors, or motifs make them distinctive?",
+          "visualTraitsFraming": "This is a FACTION - traits should describe additional elements of collective identity (symbols, colors, architectural details, ceremonial objects)."
         }
       },
       "occurrence": {
@@ -52,7 +65,11 @@
           "instructions": "This is an event in {{world.name}}. Capture the pivotal moment and its impact.\n\nEntities involved:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nWhat happened? Who was changed by it? The {{entity.prominence}} indicates historical significance. As an {{entityAge}} event, how present is it in memory?"
         },
         "image": {
-          "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative."
+          "imageInstructions": "The main subject is an EVENT. Create a dramatic scene capturing the pivotal moment. Show the action as if witnessed firsthand - triumphant, tragic, or transformative.",
+          "visualThesisInstructions": "You design key frames for historical moments in an animated film or graphic novel.\n\nThe visual thesis captures the PIVOTAL MOMENT - the single frame that would represent this event in a history book.\n\nEVENT COMPOSITION ELEMENTS:\n- Action: the central dramatic gesture or movement\n- Stakes: visual tension showing what's at risk\n- Scale: intimate confrontation vs epic battlefield vs cosmic phenomenon\n- Aftermath indicators: smoke, debris, fallen figures, changed landscape",
+          "visualThesisFraming": "This is an EVENT or OCCURRENCE - describe the pivotal visual moment that defines this event.\n\nFocus on: action, tension, scale, consequences.\nCapture the MOMENT, not a static scene.",
+          "visualTraitsInstructions": "You're adding detail to an event illustration brief.\n\nThe thesis defines the central dramatic moment. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the event's significance.\n\nThink key frame illustration: what environmental details, secondary actions, or atmospheric effects enhance the drama?",
+          "visualTraitsFraming": "This is an EVENT - traits should describe additional dramatic elements (environmental effects, secondary actions, atmospheric conditions, visual stakes)."
         }
       },
       "era": {
@@ -60,25 +77,29 @@
           "instructions": "This is a period of time in {{world.name}}. Convey the spirit of the age.\n\nWhat defined this era? What tensions or transformations characterized it? The {{entity.subtype}} tells us what kind of period this was.\n\nKey elements of this era:\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}"
         },
         "image": {
-          "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood."
-        }
-      },
-      "artifact": {
-        "description": {
-          "instructions": "This is an object/item in {{world.name}}. Focus on presence and significance.\n\nWho or what is connected to this artifact?\n{{#relationships}}\n- {{kind}}: {{targetName}}\n{{/relationships}}\n\nWhat does it look like? How does it feel to encounter? What's its history, purpose, cost? The {{entity.prominence}} suggests how famous or obscure it is."
-        },
-        "image": {
-          "imageInstructions": "The main subject is an OBJECT or artifact. Create a focused study with dramatic lighting. Show fine details, materials, and any magical properties. The artifact should be the clear focal point."
+          "imageInstructions": "The main subject is a TIME PERIOD. Create a symbolic or panoramic scene that captures the spirit of this era. Use visual metaphor - rising sun, gathering storm, crumbling walls - to convey the age's defining mood.",
+          "visualThesisInstructions": "You design chapter headers and era illustrations for a history book or fantasy chronicle.\n\nThe visual thesis captures the SPIRIT OF THE AGE - what single symbolic image represents this time period?\n\nERA VISUALIZATION ELEMENTS:\n- Symbolic landscapes: rising/setting suns, storms gathering, seasons changing\n- Architectural states: cities rising, ruins crumbling, monuments being built\n- Atmospheric conditions: golden age light, dark age shadows, transitional twilight\n- Emblematic objects: crowns, weapons, tools, symbols of the era's defining activity",
+          "visualThesisFraming": "This is an ERA or TIME PERIOD - describe the symbolic visual that captures the spirit of this age.\n\nFocus on: symbolic imagery, atmospheric mood, emblematic objects.\nThis is SYMBOLIC - not a specific moment, but the essence of an entire period.",
+          "visualTraitsInstructions": "You're adding detail to an era illustration.\n\nThe thesis defines the central symbolic image. Your job is to add 2-4 ADDITIONAL visual elements that reinforce the era's character.\n\nThink history book chapter headers: what secondary symbols, atmospheric details, or visual metaphors enhance the mood?",
+          "visualTraitsFraming": "This is an ERA - traits should describe additional symbolic elements (atmospheric effects, secondary symbols, visual metaphors for the age's character)."
         }
       },
       "abilities": {
         "image": {
-          "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action."
+          "imageInstructions": "The main subject is a MAGICAL POWER or ability. Focus on the manifestation of the power itself, not on characters using it. Show energy, effects, or the visual signature of this magic in action.",
+          "visualThesisInstructions": "You design VFX and magical effects for a video game or animated film.\n\nThe visual thesis is what makes THIS magic visually distinct from other powers. Think spell effects in a fighting game - each power has a unique visual signature.\n\nVFX ELEMENTS:\n- Energy patterns: spirals, fractals, geometric shapes, organic flows\n- Elemental forms: ice crystals, fire tongues, light beams, shadow tendrils\n- Manifestation style: explosive, creeping, pulsing, steady glow\n- Scale and intensity: subtle shimmer vs massive eruption",
+          "visualThesisFraming": "This is a MAGICAL ABILITY or POWER - describe how the magic MANIFESTS, not a character using it.\n\nFocus on: energy patterns, visual effects, elemental forms, the shape of the magic itself.\nDO NOT describe a character wearing gear or holding items.",
+          "visualTraitsInstructions": "You're adding detail to a VFX design brief for a magical power.\n\nThe thesis defines the primary visual effect. Your job is to add 2-4 ADDITIONAL visual properties that make this magic distinctive.\n\nThink video game spell effects: what secondary particles, afterimages, or environmental reactions make this power unique?",
+          "visualTraitsFraming": "This is a MAGICAL ABILITY - traits should describe additional visual properties of the magic effect itself."
         }
       },
       "rules": {
         "image": {
-          "imageInstructions": "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces."
+          "imageInstructions": "The main subject is a MAGICAL SYSTEM or rule. Create an abstract or symbolic representation that conveys how this magic works - perhaps glyphs, energy flows, or the interaction of elemental forces.",
+          "visualThesisInstructions": "You design magic system diagrams and abstract visualizations for a fantasy RPG rulebook.\n\nThe visual thesis captures the FUNDAMENTAL PRINCIPLE - how does this rule or system manifest visually?\n\nSYSTEM VISUALIZATION ELEMENTS:\n- Diagrams: flow charts, circular patterns, hierarchical structures\n- Symbols: glyphs, runes, geometric shapes, elemental icons\n- Energy flows: connections, channels, nodes, barriers\n- Abstract representations: balance scales, interlocking forces, transformation cycles",
+          "visualThesisFraming": "This is a MAGICAL SYSTEM or RULE - describe the abstract visual representation of how this system works.\n\nFocus on: diagrams, symbols, energy flows, conceptual structures.\nThis is ABSTRACT - not a scene, not a character, but a visualization of a principle.",
+          "visualTraitsInstructions": "You're adding detail to a magic system diagram.\n\nThe thesis defines the core visual concept. Your job is to add 2-4 ADDITIONAL symbolic or diagrammatic elements that clarify how the system works.\n\nThink RPG rulebook illustrations: what secondary symbols, flows, or annotations make the system clearer?",
+          "visualTraitsFraming": "This is a MAGICAL SYSTEM - traits should describe additional abstract elements (symbols, flows, connections, visual metaphors for the rules)."
         }
       }
     },
@@ -137,6 +158,7 @@
   },
   "enrichmentConfig": {
     "textModel": "claude-haiku-4-5-20251001",
+    "chronicleModel": "claude-haiku-4-5-20251001",
     "imageModel": "gpt-image-1.5",
     "imageSize": "1536x1024",
     "imageQuality": "low",
@@ -147,7 +169,7 @@
     "claudeImagePromptTemplate": "Transform the below knowledge graph into a single, coherent image prompt for {{modelName}}. Do NOT simply reformat—actively synthesize and reshape:\n\nExtract the core visual essence: Identify the single most compelling visual moment or aspect of this entity. Discard extraneous metadata.\nTranslate non-visual data into visual directives:\n\nConvert abstract concepts (magic, history, relationships) into concrete visual metaphors\nTurn status/prominence into visual hierarchy and focus\nMake any fantastical/non-standard elements explicit visual directives (size, material, form)\n\nBuild a coherent artistic vision: Combine STYLE + SUBJECT + TONE into a unified visual strategy. Make these reinforce each other, not just coexist.\nEstablish clear composition and perspective:\n\nChoose a specific vantage point (macro, wide-establishing, intimate detail, aerial, etc.)\nDecide what the viewer is meant to feel spatially\nUse environmental storytelling (objects, weathering, traces) to convey history\n\nCreate specific visual instructions: Rather than listing adjectives, use concrete visual language: \"weathered by decades of X,\" \"visible scars of Y,\" \"rendered in the style of Z but with the emotional weight of W\"\nCondense to a single, authoritative prompt: Output should be 150-300 words, reading as a clear artistic direction that could be handed to a concept artist—not a bulleted list or knowledge base entry.\n\nOriginal prompt:\n{{prompt}}"
   },
   "styleSelection": {
-    "artisticStyleId": "watercolor",
-    "compositionStyleId": "full-body"
+    "artisticStyleId": "hdr-nature-photography",
+    "compositionStyleId": "action-battle"
   }
 }

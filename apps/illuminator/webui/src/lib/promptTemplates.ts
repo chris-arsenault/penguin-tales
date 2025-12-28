@@ -126,10 +126,18 @@ export interface DescriptionTemplate {
 export interface ImageTemplate {
   /** Instructions for Claude on how to build the image prompt based on entity type */
   imageInstructions: string;
-  /** Elements to avoid in the generated image */
+  /** Elements to avoid in the generated image (also used for visual thesis) */
   avoidElements: string;
   /** Advanced mode: full template override */
   fullTemplate?: string;
+  /** Per-kind domain instructions for visual thesis (REQUIRED - e.g., VFX, environment, character) */
+  visualThesisInstructions?: string;
+  /** Per-kind framing for visual thesis user message (prepended to provide context) */
+  visualThesisFraming?: string;
+  /** Per-kind domain instructions for visual traits (REQUIRED) */
+  visualTraitsInstructions?: string;
+  /** Per-kind framing for visual traits user message (prepended to provide context) */
+  visualTraitsFraming?: string;
 }
 
 export interface PromptTemplates {
